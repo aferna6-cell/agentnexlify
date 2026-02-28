@@ -1,9 +1,13 @@
+import { notifications } from '../data/mockData';
+
+const unreadCount = notifications.filter((n) => n.minutesAgo < 360).length;
+
 const navItems = [
   { key: 'dashboard', icon: '\u{1F4CA}', label: 'Dashboard' },
   { key: 'chat', icon: '\u{1F4AC}', label: 'Live Chat' },
   { key: 'faq', icon: '\u{1F916}', label: 'FAQ Bot' },
   { key: 'automations', icon: '\u26A1', label: 'Automations' },
-  { key: 'notifications', icon: '\u{1F514}', label: 'Notifications', badge: 12 },
+  { key: 'notifications', icon: '\u{1F514}', label: 'Notifications', badge: unreadCount },
   { key: 'settings', icon: '\u2699\uFE0F', label: 'Settings' },
 ];
 

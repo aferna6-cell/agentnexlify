@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, Component } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import LiveChat from './components/LiveChat';
@@ -13,6 +13,22 @@ const pages = {
   automations: Automations,
   notifications: Notifications,
 };
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return <div style={{ padding: '2rem', textAlign: 'center' }}>Something went wrong — refresh to retry.</div>;
+    }
+    return this.props.children;
+  }
+}
 
 function SkeletonLoader() {
   return (
@@ -58,7 +74,7 @@ export default function App() {
           <SkeletonLoader />
         ) : (
           <div className="fade-in" key={`${currentPage}-${refreshKey}`}>
-            <PageComponent />
+            <ErrorBoundary><PageComponent /></ErrorBoundary>
           </div>
         )}
       </main>

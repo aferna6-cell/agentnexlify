@@ -222,12 +222,6 @@ export function formatTimeAgo(minutesAgo) {
   return `${Math.floor(minutesAgo / 1440)} days ago`;
 }
 
-export function getScoreColor(score) {
-  if (score === 'hot') return '#ff4444';
-  if (score === 'warm') return '#f5a623';
-  return '#00bfff';
-}
-
 export function getScoreEmoji(score) {
   if (score === 'hot') return '\u{1F534}';
   if (score === 'warm') return '\u{1F7E1}';

@@ -38,9 +38,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AgentNexLiFy Demo API", lifespan=lifespan)
 
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
