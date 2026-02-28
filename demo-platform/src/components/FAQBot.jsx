@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { faqKnowledge } from '../data/mockData';
+
+const FAQ_SYSTEM_PROMPT = `You are a support bot for Smith's Home Solutions. Answer questions about hours (M-F 7am-6pm, Sat 8am-2pm, 24/7 emergency), pricing (kitchen remodel $15K-50K, free estimates), service area (Austin metro within 30 miles), financing (0% for 12 months over $5K via GreenSky), and warranty (2-year labor, 5-year workmanship on remodels). Be warm and offer to book appointments.`;
 
 const quickQuestions = [
   'What are your hours?',
@@ -37,33 +39,63 @@ export default function FAQBot() {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [stats, setStats] = useState({ handled: 0, escalated: 0, timeSaved: 0 });
+  const [useApi, setUseApi] = useState(false);
   const messagesEnd = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((r) => r.json())
+      .then((data) => setUseApi(data.ai_enabled === true))
+      .catch(() => setUseApi(false));
+  }, []);
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
-  const handleSend = (text) => {
+  const handleSend = useCallback(async (text) => {
     const msg = text || input.trim();
     if (!msg || typing) return;
 
-    setMessages((prev) => [...prev, { role: 'user', text: msg }]);
+    const newMessages = [...messages, { role: 'user', text: msg }];
+    setMessages(newMessages);
     setInput('');
     setTyping(true);
 
-    setTimeout(() => {
-      const response = matchFaq(msg);
-      const isEscalated = response.includes("don't have that specific info");
+    let response;
 
-      setTyping(false);
-      setMessages((prev) => [...prev, { role: 'bot', text: response }]);
-      setStats((prev) => ({
-        handled: prev.handled + (isEscalated ? 0 : 1),
-        escalated: prev.escalated + (isEscalated ? 1 : 0),
-        timeSaved: prev.timeSaved + (isEscalated ? 0 : 3),
-      }));
-    }, 500 + Math.random() * 500);
-  };
+    if (useApi) {
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: newMessages.map((m) => ({
+              role: m.role === 'bot' ? 'assistant' : 'user',
+              content: m.text,
+            })),
+            system: FAQ_SYSTEM_PROMPT,
+          }),
+        });
+        const data = await res.json();
+        response = data.response || data.error || 'Sorry, something went wrong.';
+      } catch {
+        response = matchFaq(msg);
+      }
+    } else {
+      response = matchFaq(msg);
+    }
+
+    const isEscalated = response.includes("don't have that specific info");
+
+    setTyping(false);
+    setMessages((prev) => [...prev, { role: 'bot', text: response }]);
+    setStats((prev) => ({
+      handled: prev.handled + (isEscalated ? 0 : 1),
+      escalated: prev.escalated + (isEscalated ? 1 : 0),
+      timeSaved: prev.timeSaved + (isEscalated ? 0 : 3),
+    }));
+  }, [input, messages, typing, useApi]);
 
   return (
     <>
