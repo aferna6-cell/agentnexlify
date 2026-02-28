@@ -1,4 +1,5 @@
 import { notifications } from '../data/mockData';
+import demoConfig from '../config/demoConfig';
 
 const unreadCount = notifications.filter((n) => n.minutesAgo < 360).length;
 
@@ -8,6 +9,7 @@ const navItems = [
   { key: 'faq', icon: '\u{1F916}', label: 'FAQ Bot' },
   { key: 'automations', icon: '\u26A1', label: 'Automations' },
   { key: 'notifications', icon: '\u{1F514}', label: 'Notifications', badge: unreadCount },
+  { key: 'widget', icon: '\u{1F9E9}', label: 'Widget Demo' },
   { key: 'settings', icon: '\u2699\uFE0F', label: 'Settings' },
 ];
 
@@ -16,7 +18,7 @@ export default function Sidebar({ currentPage, onNavigate }) {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <img src="/logo.png" alt="AgentNexLiFy" />
-        <span>AgentNexLiFy</span>
+        <span>{demoConfig.bizName}</span>
       </div>
 
       <nav className="sidebar-nav">

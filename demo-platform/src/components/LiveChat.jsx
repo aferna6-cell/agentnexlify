@@ -1,21 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { chatSimulation } from '../data/mockData';
-
-const SYSTEM_PROMPT = `You are a friendly AI assistant for a home services company called "Smith's Home Solutions" in Austin, TX. You help capture leads and answer questions.
-
-Services offered: Plumbing, HVAC, Electrical, Kitchen/Bath Remodeling
-Hours: Mon-Fri 7am-6pm, Sat 8am-2pm, Emergency service 24/7
-Service area: Austin metro area, within 30 miles
-
-Your job:
-1. Greet warmly and ask how you can help
-2. Understand what service they need
-3. Capture their name, phone, and email (give a reason: "so we can send you a detailed quote")
-4. Ask about timeline and budget range
-5. Offer to book an appointment
-6. Be conversational, not robotic
-
-When you capture contact info, confirm it back to them.`;
+import demoConfig from '../config/demoConfig';
 
 function extractInfo(messages) {
   const info = { name: '', email: '', phone: '', service: '', budget: '', timeline: '' };
@@ -34,7 +19,7 @@ function extractInfo(messages) {
   if (phoneMatch) info.phone = phoneMatch[0];
 
   // Service
-  const services = { plumbing: 'Plumbing', hvac: 'HVAC', heating: 'HVAC', cooling: 'HVAC', 'air conditioning': 'HVAC', electrical: 'Electrical', kitchen: 'Kitchen Remodel', bath: 'Bath Remodel', remodel: 'Remodeling' };
+  const services = demoConfig.serviceKeywords;
   for (const [kw, svc] of Object.entries(services)) {
     if (userMsgs.toLowerCase().includes(kw)) { info.service = svc; break; }
   }
@@ -126,7 +111,7 @@ function getSimulatedResponse(messages) {
 
 export default function LiveChat() {
   const [messages, setMessages] = useState([
-    { role: 'bot', text: chatSimulation.greeting },
+    { role: 'bot', text: demoConfig.greeting },
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -163,7 +148,7 @@ export default function LiveChat() {
               role: m.role === 'bot' ? 'assistant' : 'user',
               content: m.text,
             })),
-            system: SYSTEM_PROMPT,
+            system: demoConfig.systemPrompt,
           }),
         });
         const data = await res.json();
@@ -205,7 +190,7 @@ export default function LiveChat() {
           <div className="chat-header">
             <img src="/logo.png" alt="Logo" />
             <div>
-              <div className="chat-header-title">AgentNexLiFy AI Assistant</div>
+              <div className="chat-header-title">{demoConfig.bizName} — {demoConfig.botName}</div>
               <div className="chat-header-status">
                 <span className="chat-header-dot" />
                 Online

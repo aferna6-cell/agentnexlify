@@ -23,6 +23,36 @@ npm start
 
 The chat page will show "Connected to AI backend" when the API key is active.
 
+## Customizing Per Prospect
+
+Use URL parameters to customize the demo for any business — no code changes needed:
+
+```
+?biz=       Business name (default: Smith's Home Solutions)
+?industry=  Industry preset (default: plumbing)
+?city=      City name (default: Austin)
+```
+
+**Supported industries:** `plumbing`, `dental`, `restaurant`, `realestate`, `legal`, `fitness`
+
+### Example URLs
+
+```
+http://localhost:3000?biz=Austin+Dental+Group&industry=dental&city=Austin
+http://localhost:3000?biz=Capitol+Fitness&industry=fitness&city=Austin
+http://localhost:3000?biz=River+City+Realty&industry=realestate&city=San+Antonio
+http://localhost:3000?biz=Downtown+Legal+Group&industry=legal&city=Dallas
+http://localhost:3000?biz=Lua+Kitchen+%26+Bar&industry=restaurant&city=Houston
+```
+
+Each industry preset configures:
+- Chat system prompt and bot persona
+- FAQ knowledge base and quick questions
+- Dashboard stat labels
+- Sidebar company name and page title
+
+No URL params = default Smith's Home Solutions plumbing demo.
+
 ## Pages
 
 | Page | What It Demonstrates |

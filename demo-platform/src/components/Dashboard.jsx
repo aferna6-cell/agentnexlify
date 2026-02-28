@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { leads, activityFeed, weeklyData, pipelineStages, formatTimeAgo, getScoreEmoji } from '../data/mockData';
+import demoConfig from '../config/demoConfig';
 
 function StatCard({ label, value, trend, trendDir, color }) {
   return (
@@ -70,8 +71,8 @@ export default function Dashboard() {
       </div>
 
       <div className="stats-row">
-        <StatCard label="New Leads Today" value="7" trend="↑ 23% vs last week" trendDir="up" color="var(--accent)" />
-        <StatCard label="Appointments Booked" value="3" trend="↑ 15% vs last week" trendDir="up" color="var(--green)" />
+        <StatCard label={demoConfig.dashboardLabels.leads} value="7" trend="↑ 23% vs last week" trendDir="up" color="var(--accent)" />
+        <StatCard label={demoConfig.dashboardLabels.booked} value="3" trend="↑ 15% vs last week" trendDir="up" color="var(--green)" />
         <StatCard label="Automations Running" value="12" trend="All systems active" trendDir="neutral" color="var(--accent)" />
         <StatCard label="Response Time" value="47s" trend="Avg — under target" trendDir="up" color="var(--green)" />
       </div>

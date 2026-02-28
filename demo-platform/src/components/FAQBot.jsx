@@ -1,17 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { faqKnowledge } from '../data/mockData';
+import demoConfig from '../config/demoConfig';
 
-const FAQ_SYSTEM_PROMPT = `You are a support bot for Smith's Home Solutions. Answer questions about hours (M-F 7am-6pm, Sat 8am-2pm, 24/7 emergency), pricing (kitchen remodel $15K-50K, free estimates), service area (Austin metro within 30 miles), financing (0% for 12 months over $5K via GreenSky), and warranty (2-year labor, 5-year workmanship on remodels). Be warm and offer to book appointments.`;
-
-const quickQuestions = [
-  'What are your hours?',
-  'How much does a kitchen remodel cost?',
-  'Do you offer emergency service?',
-  'What areas do you serve?',
-  'How do I schedule an appointment?',
-  'Do you offer financing?',
-  "What's your warranty policy?",
-];
+const faqKnowledge = demoConfig.faqKnowledge;
 
 function matchFaq(input) {
   const lower = input.toLowerCase();
@@ -34,7 +24,7 @@ function matchFaq(input) {
 
 export default function FAQBot() {
   const [messages, setMessages] = useState([
-    { role: 'bot', text: "Hi there! I'm the AI support bot for Smith's Home Solutions. Ask me anything about our services, hours, pricing, or policies. You can also tap one of the quick questions below!" },
+    { role: 'bot', text: demoConfig.faqGreeting },
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -74,7 +64,7 @@ export default function FAQBot() {
               role: m.role === 'bot' ? 'assistant' : 'user',
               content: m.text,
             })),
-            system: FAQ_SYSTEM_PROMPT,
+            system: demoConfig.faqSystemPrompt,
           }),
         });
         const data = await res.json();
@@ -101,7 +91,7 @@ export default function FAQBot() {
     <>
       <div className="page-header">
         <h1>AI Customer Support Bot — Demo</h1>
-        <p>Trained on Smith's Home Solutions FAQ. Ask anything.</p>
+        <p>Trained on {demoConfig.bizName} FAQ. Ask anything.</p>
       </div>
 
       <div className="faq-container">
@@ -118,7 +108,7 @@ export default function FAQBot() {
         </div>
 
         <div className="faq-quick-buttons">
-          {quickQuestions.map((q) => (
+          {demoConfig.quickQuestions.map((q) => (
             <button key={q} className="faq-quick-btn" onClick={() => handleSend(q)}>
               {q}
             </button>
