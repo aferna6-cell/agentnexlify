@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentNexLiFy Widget — Test Page</title>
+  <style>
+    /* Intentionally aggressive host-page styles to verify Shadow DOM isolation */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      background: #f0f0f0;
+      color: #333;
+      padding: 40px;
+      line-height: 1.8;
+    }
+    h1 { font-size: 28px; margin-bottom: 16px; color: #111; }
+    h2 { font-size: 20px; margin: 24px 0 12px; color: #555; }
+    p { margin-bottom: 12px; max-width: 640px; }
+    input, button {
+      font-family: Georgia, serif;
+      font-size: 18px;
+      padding: 12px;
+      border: 3px solid red;
+      background: yellow;
+      color: green;
+      border-radius: 0;
+    }
+    a { color: purple; }
+    div { border: 1px dashed #ccc; padding: 8px; margin: 4px 0; }
+    .test-section {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      max-width: 700px;
+    }
+    code {
+      background: #e8e8e8;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+    pre {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>AgentNexLiFy Widget Test Page</h1>
+
+  <div class="test-section">
+    <h2>Shadow DOM Isolation Test</h2>
+    <p>
+      This page has intentionally ugly global styles (yellow buttons, red borders,
+      Georgia font, green text). The chat widget should look completely normal
+      because it renders inside a Shadow DOM.
+    </p>
+    <input type="text" value="This input has host-page styles" />
+    <button>Host Page Button</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Embed Code</h2>
+    <p>The widget is loaded with a test API key. Change <code>data-key</code>
+    to test with a real tenant.</p>
+    <pre>&lt;script src="/public/widget.js"
+  data-key="test-demo-key"
+  data-color="#6366f1"
+  data-name="Smith's AI Assistant"
+  data-position="bottom-right"
+  data-greeting="Hi! Welcome to Smith's Home Solutions. How can I help you today?"&gt;
+&lt;/script&gt;</pre>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Scenarios</h2>
+    <p>1. Click the chat bubble &mdash; panel should open (300px wide)</p>
+    <p>2. Type a message &mdash; should show typing indicator, then response</p>
+    <p>3. Type an email like <code>test@example.com</code> &mdash; should trigger lead submission</p>
+    <p>4. Type a phone like <code>512-555-1234</code> &mdash; should trigger lead submission</p>
+    <p>5. Disconnect network &mdash; should show offline error</p>
+    <p>6. Check console for <code>[AgentNexLiFy]</code> log messages</p>
+  </div>
+
+  <div class="test-section">
+    <h2>Content Below the Fold</h2>
+    <p>Scrollable content to verify the widget stays fixed.</p>
+    <p style="height:800px;background:linear-gradient(to bottom,#f0f0f0,#d0d0d0);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#999;">
+      (spacer)
+    </p>
+  </div>
+
+  <!-- Widget embed -->
+  <script src="widget.js"
+    data-key="test-demo-key"
+    data-color="#6366f1"
+    data-name="Smith's AI Assistant"
+    data-position="bottom-right"
+    data-greeting="Hi! Welcome to Smith's Home Solutions. How can I help you today?">
+  </script>
+</body>
+</html>

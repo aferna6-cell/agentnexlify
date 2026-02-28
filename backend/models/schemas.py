@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # --- Request / Response schemas ---
@@ -17,6 +17,38 @@ class ChatMessageRequest(BaseModel):
 class ChatMessageResponse(BaseModel):
     reply: str
     conversation_id: str
+
+
+# --- Signup schemas ---
+
+
+class SignupRequest(BaseModel):
+    business_name: str
+    owner_name: str
+    email: str
+    industry: str = "other"
+    city: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        import re
+        if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
+            raise ValueError("Invalid email address")
+        return v
+
+
+class SignupResponse(BaseModel):
+    client_id: str
+    widget_api_key: str
+    embed_code: str
+
+
+class WidgetConfigUpdate(BaseModel):
+    bot_name: str | None = None
+    brand_color: str | None = None
+    greeting_message: str | None = None
+    position: str | None = None
 
 
 class CreateClientRequest(BaseModel):
@@ -69,6 +101,69 @@ class MessageRow(BaseModel):
     role: str
     content: str
     metadata: dict[str, Any] | None = None
+
+
+# --- Widget (multi-tenant) schemas ---
+
+
+# --- Billing schemas ---
+
+
+class CreateCheckoutRequest(BaseModel):
+    tenant_id: str
+    plan: str  # foundation|growth|operations|enterprise
+    promo_code: str | None = None
+
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str
+
+
+class PortalResponse(BaseModel):
+    portal_url: str
+
+
+# --- Widget (multi-tenant) schemas ---
+
+
+class WidgetChatRequest(BaseModel):
+    api_key: str
+    session_id: str
+    message: str
+    visitor_info: dict[str, Any] | None = None
+
+
+class WidgetChatResponse(BaseModel):
+    response: str
+    session_id: str
+    lead_captured: bool
+    show_watermark: bool
+
+
+class WidgetConfigResponse(BaseModel):
+    bot_name: str
+    primary_color: str
+    greeting_message: str | None
+    position: str
+    show_watermark: bool
+    allowed_domains: list[str] | None
+
+
+class WidgetLeadRequest(BaseModel):
+    api_key: str
+    session_id: str
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    service: str | None = None
+
+
+class WidgetLeadResponse(BaseModel):
+    lead_id: str
+    updated_fields: list[str]
+
+
+# --- Database row models (old single-tenant) ---
 
 
 class LeadRow(BaseModel):

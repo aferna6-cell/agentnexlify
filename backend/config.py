@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_pass: str = ""
 
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    frontend_url: str = "http://localhost:5173"
+
     widget_allowed_origins: str = "*"
     api_secret_key: str = secrets.token_urlsafe(32)
 
