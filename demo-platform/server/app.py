@@ -4,6 +4,10 @@ import os
 import json
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -71,8 +75,8 @@ async def chat(req: ChatRequest):
         ]
 
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=512,
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=1024,
             system=req.system or "",
             messages=messages,
         )
