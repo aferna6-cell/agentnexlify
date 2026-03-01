@@ -669,7 +669,7 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Anyone who wants to try AI lead capture risk-free</div>
-              <a href="/free-widget" className="pricing-cta">
+              <a href="/signup" className="pricing-cta">
                 Get Started {"\u2192"}
               </a>
             </div>
@@ -713,7 +713,7 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Contractors, med spas, law firms, home services</div>
-              <a href={CALENDLY_URL} className="pricing-cta">
+              <a href="/signup" className="pricing-cta">
                 Get Started {"\u2192"}
               </a>
             </div>
@@ -757,7 +757,7 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Growing businesses ready to systematize sales</div>
-              <a href={CALENDLY_URL} className="pricing-cta">
+              <a href="/signup" className="pricing-cta">
                 Get Started {"\u2192"}
               </a>
             </div>
@@ -801,7 +801,7 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Businesses ready to eliminate admin busywork</div>
-              <a href={CALENDLY_URL} className="pricing-cta">
+              <a href="/signup" className="pricing-cta">
                 Get Started {"\u2192"}
               </a>
             </div>
@@ -846,7 +846,7 @@ export default function Home() {
               </ul>
               <div className="pricing-best">Best for: Businesses ready for full AI-powered growth</div>
               <a href={CALENDLY_URL} className="pricing-cta">
-                Get Started {"\u2192"}
+                Contact Sales {"\u2192"}
               </a>
             </div>
           </div>

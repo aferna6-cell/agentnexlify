@@ -172,7 +172,7 @@ export default function FreeWidget() {
               </svg>
               <span>Try Demo</span>
             </a>
-            <a href="/free-signup" className="nav-cta">Get Free Chatbot</a>
+            <a href="/signup" className="nav-cta">Get Free Chatbot</a>
           </div>
         </div>
       </nav>
@@ -190,7 +190,7 @@ export default function FreeWidget() {
           </h1>
           <p className="hero-sub reveal" ref={revealRef}>No credit card. No coding. Cancel anytime.</p>
           <div className="hero-buttons reveal" ref={revealRef}>
-            <a href="/free-signup" className="btn-primary">Get My Free Chatbot {"\u2192"}</a>
+            <a href="/signup" className="btn-primary">Get My Free Chatbot {"\u2192"}</a>
             <a href="/demo" className="btn-secondary">See It In Action {"\u2193"}</a>
           </div>
           <p className="hero-note reveal" ref={revealRef}>50 conversations/month free forever {"\u2014"} upgrade anytime</p>
@@ -355,7 +355,7 @@ export default function FreeWidget() {
           <h2 className="section-title reveal" ref={revealRef}>Ready to Stop Missing Leads?</h2>
           <p className="section-subtitle reveal" ref={revealRef}>Your next customer could be on your website right now. Give them someone to talk to.</p>
           <div className="hero-buttons reveal" ref={revealRef} style={{ marginBottom: 0 }}>
-            <a href="/free-signup" className="btn-primary" style={{ padding: "18px 40px", fontSize: "18px" }}>Create My Free Chatbot {"\u2192"}</a>
+            <a href="/signup" className="btn-primary" style={{ padding: "18px 40px", fontSize: "18px" }}>Create My Free Chatbot {"\u2192"}</a>
           </div>
           <p className="cta-note reveal" ref={revealRef}>No credit card required. Cancel anytime.</p>
         </div>
@@ -368,7 +368,7 @@ export default function FreeWidget() {
             <div className="footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="footer-brand-logo" />
               <p>AI-powered operations for businesses.</p>
-              <a href="/free-signup" className="btn-primary" style={{ marginTop: "16px", fontSize: "14px", padding: "12px 24px" }}>Get Free Chatbot {"\u2192"}</a>
+              <a href="/signup" className="btn-primary" style={{ marginTop: "16px", fontSize: "14px", padding: "12px 24px" }}>Get Free Chatbot {"\u2192"}</a>
             </div>
             <div className="footer-col">
               <h4>Product</h4>
@@ -376,7 +376,7 @@ export default function FreeWidget() {
                 <li><a href="/#features">Features</a></li>
                 <li><a href="/pricing">Pricing</a></li>
                 <li><a href="/#faq">FAQ</a></li>
-                <li><a href="/free-signup">Free Signup</a></li>
+                <li><a href="/signup">Free Signup</a></li>
               </ul>
             </div>
             <div className="footer-col">
