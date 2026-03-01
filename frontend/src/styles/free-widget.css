@@ -236,8 +236,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
   inset: 0;
   background:
     radial-gradient(ellipse 60% 50% at 50% 30%, var(--accent-glow) 0%, transparent 70%),
-    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px);
   background-size: 100% 100%, 60px 60px, 60px 60px;
   pointer-events: none;
 }

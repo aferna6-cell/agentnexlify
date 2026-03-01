@@ -463,26 +463,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============ STATS BAR ============ */}
-      <section className="stats-bar">
-        <div className="container">
-          <div className="stats-grid">
-            <div className="stat-item reveal">
-              <div className="stat-number">48hr</div>
-              <div className="stat-label">Setup Time</div>
-            </div>
-            <div className="stat-item reveal">
-              <div className="stat-number">24/7</div>
-              <div className="stat-label">AI Automation</div>
-            </div>
-            <div className="stat-item reveal">
-              <div className="stat-number">100%</div>
-              <div className="stat-label">Done-For-You</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ============ WHAT WE AUTOMATE ============ */}
       <section className="section" id="features">
         <div className="container">
