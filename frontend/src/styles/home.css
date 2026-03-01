@@ -214,11 +214,11 @@ button { font-family: inherit; cursor: pointer; border: none; }
   .nav-inner { grid-template-columns: auto 1fr auto; }
   .nav-toggle { display: block; order: -1; }
   .nav-left {
-    position: fixed;
+    position: absolute;
     top: 64px;
     left: 0;
     right: 0;
-    bottom: 0;
+    max-height: calc(100vh - 64px);
     background: #ffffff;
     flex-direction: column;
     padding: 0;
@@ -227,7 +227,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
     transform: translateY(-120%);
     opacity: 0;
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
-    z-index: 999;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
   }
   .nav-left.open { transform: translateY(0); opacity: 1; }
   .nav-left li {
@@ -513,7 +514,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  color: var(--accent);
   margin-bottom: 20px;
 }
 .feature-card h3 {
@@ -608,8 +609,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
   transform: translateY(-3px);
 }
 .who-card-icon {
-  font-size: 28px;
+  color: var(--accent);
   margin-bottom: 14px;
+  line-height: 1;
 }
 .who-card h3 {
   font-size: 17px;
@@ -838,13 +840,10 @@ button { font-family: inherit; cursor: pointer; border: none; }
   border-color: var(--border-light);
 }
 .testimonial-deco {
-  font-family: var(--font-heading);
-  font-size: 64px;
-  font-weight: 800;
   color: var(--accent);
-  opacity: 0.15;
+  opacity: 0.25;
   line-height: 1;
-  margin-bottom: -12px;
+  margin-bottom: 8px;
   pointer-events: none;
 }
 .testimonial-quote {

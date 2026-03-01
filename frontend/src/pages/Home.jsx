@@ -482,42 +482,42 @@ export default function Home() {
           <div className="features-grid">
             <div className="feature-card reveal">
               <div className="feature-icon" aria-hidden="true">
-                {"\uD83D\uDCAC"}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <h3>Lead Capture &amp; Qualification</h3>
               <p>AI chatbot captures, qualifies, and routes leads 24/7 so you never miss an opportunity.</p>
             </div>
             <div className="feature-card reveal">
               <div className="feature-icon" aria-hidden="true">
-                {"\uD83D\uDD04"}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
               </div>
               <h3>Follow-Up Sequences</h3>
               <p>Automated email + SMS drip campaigns that nurture every lead with AI-personalized messaging.</p>
             </div>
             <div className="feature-card reveal">
               <div className="feature-icon" aria-hidden="true">
-                {"\u2B50"}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
               </div>
               <h3>Reviews &amp; Reputation</h3>
               <p>Automatic review requests after every job. More 5-star reviews on autopilot.</p>
             </div>
             <div className="feature-card reveal">
               <div className="feature-icon" aria-hidden="true">
-                {"\uD83D\uDCC5"}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </div>
               <h3>Scheduling &amp; Reminders</h3>
               <p>AI books appointments, sends reminders, handles reschedules. No more no-shows.</p>
             </div>
             <div className="feature-card reveal">
               <div className="feature-icon" aria-hidden="true">
-                {"\uD83D\uDCCA"}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               </div>
               <h3>CRM &amp; Pipeline</h3>
               <p>Auto-tag leads, move deal stages, trigger alerts. Your pipeline manages itself.</p>
             </div>
             <div className="feature-card reveal">
               <div className="feature-icon" aria-hidden="true">
-                {"\uD83E\uDD16"}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93"/><path d="M8.24 9.93A4 4 0 0 1 12 2"/><path d="M12 18v4"/><path d="M8 22h8"/><rect x="7" y="10" width="10" height="8" rx="1"/></svg>
               </div>
               <h3>AI Sales &amp; Support</h3>
               <p>
@@ -577,42 +577,42 @@ export default function Home() {
           <div className="who-grid">
             <div className="who-card reveal">
               <div className="who-card-icon" aria-hidden="true">
-                {"\uD83C\uDFE0"}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               </div>
               <h3>Real Estate Agents</h3>
               <p>Capture and qualify leads while you&#39;re showing homes.</p>
             </div>
             <div className="who-card reveal">
               <div className="who-card-icon" aria-hidden="true">
-                {"\uD83E\uDDB7"}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
               </div>
               <h3>Dental &amp; Medical Offices</h3>
               <p>Automate appointment reminders and patient intake.</p>
             </div>
             <div className="who-card reveal">
               <div className="who-card-icon" aria-hidden="true">
-                {"\u2696\uFE0F"}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
               </div>
               <h3>Law Firms</h3>
               <p>Triage client inquiries and manage follow-ups.</p>
             </div>
             <div className="who-card reveal">
               <div className="who-card-icon" aria-hidden="true">
-                {"\uD83D\uDD27"}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
               </div>
               <h3>Home Services</h3>
               <p>Never miss a service request or estimate follow-up.</p>
             </div>
             <div className="who-card reveal">
               <div className="who-card-icon" aria-hidden="true">
-                {"\uD83C\uDFCB\uFE0F"}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
               </div>
               <h3>Fitness &amp; Wellness</h3>
               <p>Automate class bookings, reminders, and re-engagement.</p>
             </div>
             <div className="who-card reveal">
               <div className="who-card-icon" aria-hidden="true">
-                {"\uD83C\uDFE2"}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
               </div>
               <h3>Agencies &amp; Consultants</h3>
               <p>Streamline client onboarding and reporting.</p>
@@ -866,7 +866,7 @@ export default function Home() {
           <div className="testimonials-grid">
             <div className="testimonial-card reveal">
               <div className="testimonial-deco" aria-hidden="true">
-                {"\u26A1"}
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
               </div>
               <h3 className="testimonial-author">Getting Started Guide</h3>
               <p className="testimonial-quote">
@@ -877,7 +877,7 @@ export default function Home() {
             </div>
             <div className="testimonial-card reveal">
               <div className="testimonial-deco" aria-hidden="true">
-                {"\uD83D\uDCDA"}
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               </div>
               <h3 className="testimonial-author">Automation Playbooks</h3>
               <p className="testimonial-quote">
@@ -888,7 +888,7 @@ export default function Home() {
             </div>
             <div className="testimonial-card reveal">
               <div className="testimonial-deco" aria-hidden="true">
-                {"\uD83C\uDF93"}
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
               </div>
               <h3 className="testimonial-author">AI for Business Blog</h3>
               <p className="testimonial-quote">
