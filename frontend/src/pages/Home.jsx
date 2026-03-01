@@ -632,6 +632,48 @@ export default function Home() {
             </p>
           </div>
           <div className="pricing-grid">
+            {/* Free AI Widget */}
+            <div className="pricing-card reveal">
+              <div className="pricing-plan-name">Free AI Widget</div>
+              <div className="pricing-tagline">Start capturing leads today. Zero cost.</div>
+              <div className="pricing-amount">
+                <span className="pricing-dollar">$0</span>
+                <span className="pricing-period">/month</span>
+              </div>
+              <div className="pricing-setup">No setup fee</div>
+              <div className="pricing-divider"></div>
+              <ul className="pricing-features">
+                <li>
+                  <strong>AI Chatbot Widget</strong>
+                  <div className="feat-desc">
+                    Embed a conversational chatbot on your website that greets visitors and answers basic questions 24/7.
+                  </div>
+                </li>
+                <li>
+                  <strong>Lead Capture Form</strong>
+                  <div className="feat-desc">
+                    Collects name, email, and phone from visitors. Sends you an instant notification for every new lead.
+                  </div>
+                </li>
+                <li>
+                  <strong>Up to 50 Conversations/Month</strong>
+                  <div className="feat-desc">
+                    Handles up to 50 chatbot conversations per month at no charge. Upgrade anytime for unlimited.
+                  </div>
+                </li>
+                <li>
+                  <strong>Easy Install</strong>
+                  <div className="feat-desc">
+                    Copy-paste one line of code onto your website. Works with any site builder or platform.
+                  </div>
+                </li>
+              </ul>
+              <div className="pricing-best">Best for: Anyone who wants to try AI lead capture risk-free</div>
+              <a href="/free-widget" className="pricing-cta">
+                Get Started {"\u2192"}
+              </a>
+            </div>
+
             {/* Foundation */}
             <div className="pricing-card reveal">
               <div className="pricing-plan-name">Foundation</div>
@@ -804,7 +846,7 @@ export default function Home() {
               </ul>
               <div className="pricing-best">Best for: Businesses ready for full AI-powered growth</div>
               <a href={CALENDLY_URL} className="pricing-cta">
-                Book a Strategy Call {"\u2192"}
+                Get Started {"\u2192"}
               </a>
             </div>
           </div>
