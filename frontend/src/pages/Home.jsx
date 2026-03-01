@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
+import { Link } from "react-router-dom";
 import "../styles/home.css";
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
@@ -351,9 +352,9 @@ export default function Home() {
               </a>
             </li>
             <li>
-              <a href="/free-widget" onClick={closeMenu}>
+              <Link to="/free-widget" onClick={closeMenu}>
                 Free AI Widget
-              </a>
+              </Link>
             </li>
             <li>
               <button className="nav-search" aria-label="Search">
@@ -1010,6 +1011,20 @@ export default function Home() {
                 </li>
                 <li>
                   <a href="#faq">FAQ</a>
+                </li>
+              </ul>
+            </div>
+            <div className="footer-col">
+              <h4>Compare</h4>
+              <ul>
+                <li>
+                  <Link to="/intercom-alternative">vs. Intercom</Link>
+                </li>
+                <li>
+                  <Link to="/livechat-alternative">vs. LiveChat</Link>
+                </li>
+                <li>
+                  <Link to="/tidio-alternative">vs. Tidio</Link>
                 </li>
               </ul>
             </div>

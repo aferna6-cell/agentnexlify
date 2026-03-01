@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -162,9 +163,9 @@ export default function SignupPage() {
         </form>
         <p className="login-footer">
           Already have an account?{" "}
-          <a href="/login" className="login-link">
+          <Link to="/login" className="login-link">
             Sign in
-          </a>
+          </Link>
         </p>
       </div>
     </div>

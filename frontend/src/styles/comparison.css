@@ -1,0 +1,150 @@
+/* ============================================
+   COMPARISON PAGE — unique styles
+   Reuses home.css: nav, hero, footer, .section,
+   .section-label/title/subtitle, .btn-*, .reveal,
+   .faq-*, .cta-*
+   ============================================ */
+
+/* --- Comparison Table --- */
+.compare-section { background: var(--bg-secondary); }
+.compare-header { text-align: center; margin-bottom: 48px; }
+.compare-header .section-subtitle { margin: 0 auto; }
+
+.compare-table-wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.compare-table thead th {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 20px 24px;
+  text-align: left;
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border);
+  color: var(--text-primary);
+}
+.compare-table thead th:first-child { width: 40%; }
+.compare-table thead th.col-nexlify {
+  color: var(--accent);
+  background: rgba(29, 78, 216, 0.04);
+}
+
+.compare-table tbody td {
+  padding: 18px 24px;
+  font-size: 15px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+.compare-table tbody tr:last-child td { border-bottom: none; }
+.compare-table tbody td:first-child {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.compare-table tbody td.col-nexlify {
+  background: rgba(29, 78, 216, 0.02);
+}
+
+.check { color: #16a34a; font-weight: 700; }
+.cross { color: #dc2626; font-weight: 600; }
+/* .muted already exists via --text-muted in home.css, but we add explicit class */
+.compare-table .muted { color: var(--text-muted); }
+
+@media (max-width: 600px) {
+  .compare-table thead th,
+  .compare-table tbody td {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+}
+
+/* --- Reasons --- */
+.reasons { background: var(--bg-primary); }
+.reasons-header { text-align: center; margin-bottom: 48px; }
+.reasons-header .section-subtitle { margin: 0 auto; }
+
+.reasons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.reason-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 28px;
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+.reason-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-light);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+.reason-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--accent-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+.reason-card h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.reason-card p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .reasons-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+}
+
+/* --- Cross Links --- */
+.cross-links {
+  text-align: center;
+  padding: 32px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.cross-links p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.cross-links a {
+  color: var(--accent);
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.cross-links a:hover { color: var(--accent-dim); }
+.cross-links .sep {
+  margin: 0 8px;
+  color: var(--border-light);
+}

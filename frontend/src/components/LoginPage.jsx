@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -69,9 +70,9 @@ export default function LoginPage() {
         </form>
         <p className="login-footer">
           Don't have an account?{" "}
-          <a href="/signup" className="login-link">
+          <Link to="/signup" className="login-link">
             Sign up free
-          </a>
+          </Link>
         </p>
       </div>
     </div>

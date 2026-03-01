@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
+import { Link } from "react-router-dom";
 import "../styles/free-widget.css";
 
 export default function FreeWidget() {
@@ -154,15 +155,15 @@ export default function FreeWidget() {
             <span></span><span></span><span></span>
           </button>
           <ul className={`nav-left${menuOpen ? " open" : ""}`}>
-            <li><a href="/" onClick={closeMenu}>Home</a></li>
-            <li><a href="/pricing" onClick={closeMenu}>Pricing</a></li>
+            <li><Link to="/" onClick={closeMenu}>Home</Link></li>
+            <li><a href="/#pricing" onClick={closeMenu}>Pricing</a></li>
             <li><a href="#how-it-works" onClick={closeMenu}>How It Works</a></li>
             <li><a href="#included" onClick={closeMenu}>What's Included</a></li>
             <li><a href="#compare" onClick={closeMenu}>Compare Plans</a></li>
           </ul>
-          <a href="/" className="nav-logo">
+          <Link to="/" className="nav-logo">
             <img src="/logo.png" alt="Agent NexLiFy" />
-          </a>
+          </Link>
           <div className="nav-right">
             <a href="/demo" className="nav-login">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -172,7 +173,7 @@ export default function FreeWidget() {
               </svg>
               <span>Try Demo</span>
             </a>
-            <a href="/signup" className="nav-cta">Get Free Chatbot</a>
+            <Link to="/signup" className="nav-cta">Get Free Chatbot</Link>
           </div>
         </div>
       </nav>
@@ -190,7 +191,7 @@ export default function FreeWidget() {
           </h1>
           <p className="hero-sub reveal" ref={revealRef}>No credit card. No coding. Cancel anytime.</p>
           <div className="hero-buttons reveal" ref={revealRef}>
-            <a href="/signup" className="btn-primary">Get My Free Chatbot {"\u2192"}</a>
+            <Link to="/signup" className="btn-primary">Get My Free Chatbot {"\u2192"}</Link>
             <a href="/demo" className="btn-secondary">See It In Action {"\u2193"}</a>
           </div>
           <p className="hero-note reveal" ref={revealRef}>50 conversations/month free forever {"\u2014"} upgrade anytime</p>
@@ -355,7 +356,7 @@ export default function FreeWidget() {
           <h2 className="section-title reveal" ref={revealRef}>Ready to Stop Missing Leads?</h2>
           <p className="section-subtitle reveal" ref={revealRef}>Your next customer could be on your website right now. Give them someone to talk to.</p>
           <div className="hero-buttons reveal" ref={revealRef} style={{ marginBottom: 0 }}>
-            <a href="/signup" className="btn-primary" style={{ padding: "18px 40px", fontSize: "18px" }}>Create My Free Chatbot {"\u2192"}</a>
+            <Link to="/signup" className="btn-primary" style={{ padding: "18px 40px", fontSize: "18px" }}>Create My Free Chatbot {"\u2192"}</Link>
           </div>
           <p className="cta-note reveal" ref={revealRef}>No credit card required. Cancel anytime.</p>
         </div>
@@ -368,15 +369,15 @@ export default function FreeWidget() {
             <div className="footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="footer-brand-logo" />
               <p>AI-powered operations for businesses.</p>
-              <a href="/signup" className="btn-primary" style={{ marginTop: "16px", fontSize: "14px", padding: "12px 24px" }}>Get Free Chatbot {"\u2192"}</a>
+              <Link to="/signup" className="btn-primary" style={{ marginTop: "16px", fontSize: "14px", padding: "12px 24px" }}>Get Free Chatbot {"\u2192"}</Link>
             </div>
             <div className="footer-col">
               <h4>Product</h4>
               <ul>
                 <li><a href="/#features">Features</a></li>
-                <li><a href="/pricing">Pricing</a></li>
+                <li><a href="/#pricing">Pricing</a></li>
                 <li><a href="/#faq">FAQ</a></li>
-                <li><a href="/signup">Free Signup</a></li>
+                <li><Link to="/signup">Free Signup</Link></li>
               </ul>
             </div>
             <div className="footer-col">

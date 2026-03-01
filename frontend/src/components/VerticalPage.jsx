@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { Link } from "react-router-dom";
 
 const VERTICALS = [
   { slug: "restaurant-chatbot", label: "Restaurants" },
@@ -41,9 +42,9 @@ export default function VerticalPage({ meta, hero, features, stats, slug, childr
           <p className="vp-hero__subhead">{hero.subhead}</p>
           <p className="vp-hero__pain">{hero.painPoint}</p>
           <div className="vp-hero__cta">
-            <a href="/signup" className="vp-btn vp-btn--primary">
+            <Link to="/signup" className="vp-btn vp-btn--primary">
               Start Free
-            </a>
+            </Link>
             <a href="/demo" className="vp-btn vp-btn--outline">
               Book a Demo
             </a>
@@ -89,14 +90,14 @@ export default function VerticalPage({ meta, hero, features, stats, slug, childr
           <p className="vp-links__heading">Also explore:</p>
           <div className="vp-links__list">
             {otherVerticals.map((v) => (
-              <a key={v.slug} href={`/${v.slug}`} className="vp-links__link">
+              <Link key={v.slug} to={`/${v.slug}`} className="vp-links__link">
                 {v.label}
-              </a>
+              </Link>
             ))}
-            <a href="/free-chatbot" className="vp-links__link">
+            <Link to="/free-widget" className="vp-links__link">
               Free Chatbot
-            </a>
-            <a href="/pricing" className="vp-links__link">
+            </Link>
+            <a href="/#pricing" className="vp-links__link">
               Pricing
             </a>
           </div>
