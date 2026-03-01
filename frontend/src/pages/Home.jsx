@@ -351,6 +351,11 @@ export default function Home() {
               </a>
             </li>
             <li>
+              <a href="/free-widget" onClick={closeMenu}>
+                Free AI Widget
+              </a>
+            </li>
+            <li>
               <button className="nav-search" aria-label="Search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <circle cx="11" cy="11" r="8" />
@@ -528,7 +533,7 @@ export default function Home() {
         <div className="container">
           <div className="how-header">
             <div className="section-label reveal">How It Works</div>
-            <h2 className="section-title reveal">Up and running in 48 hours. We do the heavy lifting.</h2>
+            <h2 className="section-title reveal">Simple setup. We do the heavy lifting.</h2>
           </div>
           <div className="how-steps">
             <div className="how-step reveal">

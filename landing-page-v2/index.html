@@ -274,6 +274,17 @@ button { font-family: inherit; cursor: pointer; border: none; }
   .nav-login span { display: none; }
 }
 
+/* Nav on dark hero (not scrolled) */
+.nav:not(.scrolled) .nav-left a { color: rgba(255,255,255,0.7); }
+.nav:not(.scrolled) .nav-left a:hover { color: #ffffff; }
+.nav:not(.scrolled) .nav-lang { color: rgba(255,255,255,0.7); }
+.nav:not(.scrolled) .nav-lang:hover { color: #ffffff; }
+.nav:not(.scrolled) .nav-login { color: rgba(255,255,255,0.7); }
+.nav:not(.scrolled) .nav-login:hover { color: #ffffff; }
+.nav:not(.scrolled) .nav-toggle span { background: #ffffff; }
+.nav:not(.scrolled) .nav-search { color: rgba(255,255,255,0.7); }
+.nav:not(.scrolled) .nav-search:hover { color: #ffffff; }
+
 /* ============================================
    HERO
    ============================================ */
@@ -282,15 +293,16 @@ button { font-family: inherit; cursor: pointer; border: none; }
   padding: 140px 0 64px;
   text-align: center;
   overflow: hidden;
+  background: #111827;
 }
 .hero::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 50% at 50% 30%, var(--accent-glow) 0%, transparent 70%),
-    linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px);
+    radial-gradient(ellipse 60% 50% at 50% 30%, rgba(29, 78, 216, 0.15) 0%, transparent 70%),
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
   background-size: 100% 100%, 60px 60px, 60px 60px;
   pointer-events: none;
 }
@@ -299,31 +311,31 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: 120px;
   height: auto;
   margin: 0 auto 32px;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
+  filter: brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
 }
 .hero-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 18px;
-  background: rgba(29, 78, 216, 0.06);
-  border: 1px solid rgba(29, 78, 216, 0.15);
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.2);
   border-radius: 100px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--accent);
+  color: #60a5fa;
   margin-bottom: 32px;
 }
 .hero-badge-dot {
   width: 8px;
   height: 8px;
-  background: var(--accent);
+  background: #60a5fa;
   border-radius: 50%;
   animation: pulse-dot 2s infinite;
 }
 @keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(29, 78, 216, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(96, 165, 250, 0); }
 }
 .hero h1 {
   font-size: clamp(44px, 8vw, 72px);
@@ -331,11 +343,12 @@ button { font-family: inherit; cursor: pointer; border: none; }
   line-height: 1.08;
   margin-bottom: 24px;
   letter-spacing: -1px;
+  color: #ffffff;
 }
-.hero h1 .accent { color: var(--accent); }
+.hero h1 .accent { color: #60a5fa; }
 .hero-sub {
   font-size: clamp(17px, 2.5vw, 21px);
-  color: var(--text-secondary);
+  color: #94a3b8;
   max-width: 620px;
   margin: 0 auto 40px;
   line-height: 1.6;
@@ -371,16 +384,16 @@ button { font-family: inherit; cursor: pointer; border: none; }
   gap: 8px;
   padding: 16px 32px;
   background: transparent;
-  color: var(--text-primary);
+  color: #ffffff;
   font-weight: 600;
   font-size: 16px;
   border-radius: 12px;
-  border: 1px solid var(--border-light);
+  border: 1px solid rgba(255,255,255,0.2);
   transition: border-color 0.2s, background 0.2s, transform 0.15s;
 }
 .btn-secondary:hover {
-  border-color: var(--text-muted);
-  background: rgba(0,0,0,0.03);
+  border-color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.05);
   transform: translateY(-2px);
 }
 
@@ -398,7 +411,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .trust-bar-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: #64748b;
   letter-spacing: 0.5px;
   margin-bottom: 20px;
 }
@@ -414,7 +427,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: auto;
   opacity: 0.4;
   transition: opacity 0.3s;
-  fill: var(--text-secondary);
+  fill: #94a3b8;
 }
 .trust-bar-logos svg:hover {
   opacity: 0.7;
@@ -1230,6 +1243,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       <li><a href="#how-it-works">How It Works</a></li>
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#about-us">About</a></li>
+      <li><a href="free-chatbot.html">Free AI Widget</a></li>
       <li><button class="nav-search" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></li>
     </ul>
     <a href="#" class="nav-logo">
@@ -1336,7 +1350,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   <div class="container">
     <div class="how-header">
       <div class="section-label reveal">How It Works</div>
-      <h2 class="section-title reveal">Up and running in 48 hours. We do the heavy lifting.</h2>
+      <h2 class="section-title reveal">Simple setup. We do the heavy lifting.</h2>
     </div>
     <div class="how-steps">
       <div class="how-step reveal">
