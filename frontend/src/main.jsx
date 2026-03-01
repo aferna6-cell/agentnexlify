@@ -8,9 +8,13 @@ import AutoShopChatbot from "./pages/AutoShopChatbot";
 import SalonChatbot from "./pages/SalonChatbot";
 import MedicalOfficeChatbot from "./pages/MedicalOfficeChatbot";
 import RestaurantChatbot from "./pages/RestaurantChatbot";
+import Home from "./pages/Home";
+import FreeWidget from "./pages/FreeWidget";
 import "./index.css";
 
 const publicRoutes = {
+  "/": Home,
+  "/free-widget": FreeWidget,
   "/dental-chatbot": DentalChatbot,
   "/auto-shop-chatbot": AutoShopChatbot,
   "/salon-booking-chatbot": SalonChatbot,
