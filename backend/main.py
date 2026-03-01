@@ -14,7 +14,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
-from backend.routers import automations, billing, chat, leads, clients, signup, webhooks, widget
+from backend.routers import auth, automations, billing, chat, leads, clients, signup, webhooks, widget
 
 logging.basicConfig(
     level=logging.INFO,
@@ -77,6 +77,7 @@ async def log_requests(request: Request, call_next):
 
 
 # --- Routers ---
+app.include_router(auth.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
 app.include_router(chat.router)

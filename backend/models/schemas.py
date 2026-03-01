@@ -51,6 +51,60 @@ class WidgetConfigUpdate(BaseModel):
     position: str | None = None
 
 
+# --- Auth schemas ---
+
+
+class RegisterRequest(BaseModel):
+    business_name: str
+    owner_name: str
+    email: str
+    password: str
+    industry: str = "other"
+    city: str = ""
+
+    @field_validator("email")
+    @classmethod
+    def validate_register_email(cls, v: str) -> str:
+        import re
+        if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
+            raise ValueError("Invalid email address")
+        return v.lower().strip()
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class RegisterResponse(BaseModel):
+    tenant_id: str
+    api_key: str
+    token: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    tenant_id: str
+    token: str
+    business_name: str
+    plan: str
+
+
+class MeResponse(BaseModel):
+    tenant_id: str
+    email: str
+    business_name: str
+    plan: str
+    city: str | None = None
+    owner_name: str | None = None
+
+
 class CreateClientRequest(BaseModel):
     agent_name: str
     agent_type: str = "agent"

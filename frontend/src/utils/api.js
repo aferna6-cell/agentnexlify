@@ -1,4 +1,4 @@
-const BASE = "";
+const BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 class ApiError extends Error {
   constructor(status, body) {
@@ -50,6 +50,10 @@ export function fetchWidgetConfig(tenantId, token) {
 
 export function fetchUsage(tenantId, token) {
   return request(`/api/v1/usage/${tenantId}`, { token });
+}
+
+export function getMe(token) {
+  return request("/api/v1/auth/me", { token });
 }
 
 export { ApiError };

@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = "anx_token";
+const TENANT_KEY = "anx_tenant_id";
 
 function parseJwt(token) {
   try {
@@ -27,8 +28,10 @@ export function AuthProvider({ children }) {
       logout();
       return;
     }
+    const tenantId = payload.tenant_id || payload.sub;
+    localStorage.setItem(TENANT_KEY, tenantId);
     setUser({
-      tenantId: payload.tenant_id || payload.sub,
+      tenantId,
       email: payload.email,
       plan: payload.plan || "starter",
       businessName: payload.business_name || "",
@@ -42,6 +45,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TENANT_KEY);
     setToken(null);
     setUser(null);
   }, []);

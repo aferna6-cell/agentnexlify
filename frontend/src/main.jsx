@@ -10,11 +10,13 @@ import MedicalOfficeChatbot from "./pages/MedicalOfficeChatbot";
 import RestaurantChatbot from "./pages/RestaurantChatbot";
 import Home from "./pages/Home";
 import FreeWidget from "./pages/FreeWidget";
+import SignupPage from "./pages/SignupPage";
 import "./index.css";
 
 const publicRoutes = {
   "/": Home,
   "/free-widget": FreeWidget,
+  "/signup": SignupPage,
   "/dental-chatbot": DentalChatbot,
   "/auto-shop-chatbot": AutoShopChatbot,
   "/salon-booking-chatbot": SalonChatbot,

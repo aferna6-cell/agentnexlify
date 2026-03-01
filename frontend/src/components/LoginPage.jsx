@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
 export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -13,7 +15,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/auth/login", {
+      const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -22,7 +24,8 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || "Invalid credentials");
       }
-      const { token } = await res.json();
+      const { token, tenant_id } = await res.json();
+      localStorage.setItem("anx_tenant_id", tenant_id);
       login(token);
     } catch (err) {
       setError(err.message);
@@ -64,6 +67,12 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+        <p className="login-footer">
+          Don't have an account?{" "}
+          <a href="/signup" className="login-link">
+            Sign up free
+          </a>
+        </p>
       </div>
     </div>
   );
