@@ -714,7 +714,7 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Contractors, med spas, law firms, home services</div>
-              <a href="/signup" className="pricing-cta">
+              <a href="https://buy.stripe.com/test_7sYdRb4CedaQaxk2J14AU01" target="_blank" rel="noopener noreferrer" className="pricing-cta">
                 Get Started {"\u2192"}
               </a>
             </div>
@@ -758,7 +758,7 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Growing businesses ready to systematize sales</div>
-              <a href="/signup" className="pricing-cta">
+              <a href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02" target="_blank" rel="noopener noreferrer" className="pricing-cta">
                 Get Started {"\u2192"}
               </a>
             </div>
@@ -802,7 +802,7 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Businesses ready to eliminate admin busywork</div>
-              <a href="/signup" className="pricing-cta">
+              <a href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03" target="_blank" rel="noopener noreferrer" className="pricing-cta">
                 Get Started {"\u2192"}
               </a>
             </div>
@@ -846,8 +846,8 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Businesses ready for full AI-powered growth</div>
-              <a href={CALENDLY_URL} className="pricing-cta">
-                Contact Sales {"\u2192"}
+              <a href="https://buy.stripe.com/test_bJebJ30lYeeUaxkgzR4AU04" target="_blank" rel="noopener noreferrer" className="pricing-cta">
+                Get Started {"\u2192"}
               </a>
             </div>
           </div>
