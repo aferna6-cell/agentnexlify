@@ -103,11 +103,16 @@ async def register(req: RegisterRequest):
     tenant = result.data[0]
     tenant_id = str(tenant["id"])
 
-    # Create widget config with prefixed api_key
+    # Create widget config with prefixed api_key and defaults
     api_key = f"anx_{secrets.token_urlsafe(32)}"
     db.table("widget_configs").insert({
         "tenant_id": tenant_id,
         "api_key": api_key,
+        "bot_name": f"{req.business_name} Assistant",
+        "primary_color": "#00BFFF",
+        "greeting_message": "Hi! How can I help you today?",
+        "position": "bottom-right",
+        "show_watermark": True,
     }).execute()
 
     token = _create_token(tenant_id, req.email, "free", req.business_name)
@@ -196,7 +201,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         raise HTTPException(status_code=404, detail="Tenant not found")
     t = tenant_result.data[0]
 
-    # Widget api_key
+    # Widget api_key — auto-create if missing (legacy tenants)
     widget_result = (
         db.table("widget_configs")
         .select("api_key")
@@ -204,7 +209,19 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         .limit(1)
         .execute()
     )
-    api_key = widget_result.data[0]["api_key"] if widget_result.data else None
+    if widget_result.data:
+        api_key = widget_result.data[0]["api_key"]
+    else:
+        api_key = f"anx_{secrets.token_urlsafe(32)}"
+        db.table("widget_configs").insert({
+            "tenant_id": tenant_id,
+            "api_key": api_key,
+            "bot_name": f"{t.get('business_name', 'AI')} Assistant",
+            "primary_color": "#00BFFF",
+            "greeting_message": "Hi! How can I help you today?",
+            "position": "bottom-right",
+            "show_watermark": True,
+        }).execute()
 
     # Leads count
     leads_result = (

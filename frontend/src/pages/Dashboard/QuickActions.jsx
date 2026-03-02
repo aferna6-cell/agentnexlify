@@ -25,12 +25,17 @@ const actions = [
   },
 ];
 
-export default function QuickActions() {
+export default function QuickActions({ onNavigate }) {
   return (
     <div className="quick-actions">
       <div className="quick-actions-title">Quick Actions</div>
       {actions.map((action) => (
-        <div className="quick-action-card" key={action.page}>
+        <div
+          className="quick-action-card"
+          key={action.page}
+          onClick={() => onNavigate && onNavigate(action.page)}
+          style={{ cursor: "pointer" }}
+        >
           <span className="quick-action-icon">{action.icon}</span>
           <div className="quick-action-body">
             <div className="quick-action-label">{action.label}</div>

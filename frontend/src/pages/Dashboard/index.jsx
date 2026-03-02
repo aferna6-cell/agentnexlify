@@ -9,7 +9,7 @@ import QuickActions from "./QuickActions";
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigate }) {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
@@ -93,7 +93,7 @@ export default function Dashboard() {
             />
           </div>
         </div>
-        <QuickActions />
+        <QuickActions onNavigate={onNavigate} />
       </div>
 
       {selectedLead && (

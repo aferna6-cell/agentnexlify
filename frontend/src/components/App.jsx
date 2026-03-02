@@ -4,15 +4,26 @@ import LoginPage from "./LoginPage";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
 import Dashboard from "../pages/Dashboard";
+import ComingSoon from "../pages/Dashboard/ComingSoon";
+
+function Leads() { return <ComingSoon title="Leads" />; }
+function Conversations() { return <ComingSoon title="Conversations" />; }
+function Automations() { return <ComingSoon title="Automations" />; }
+function Widget() { return <ComingSoon title="Widget" />; }
+function FaqManager() { return <ComingSoon title="FAQ Manager" />; }
+function Billing() { return <ComingSoon title="Billing" />; }
+function Settings() { return <ComingSoon title="Settings" />; }
 
 const pages = {
   dashboard: Dashboard,
+  leads: Leads,
+  conversations: Conversations,
+  automations: Automations,
+  widget: Widget,
+  faq: FaqManager,
+  billing: Billing,
+  settings: Settings,
 };
-
-function ErrorBoundary({ children }) {
-  // Simple class-based error boundary via wrapper
-  return children;
-}
 
 export default function App() {
   const { user } = useAuth();
@@ -39,7 +50,7 @@ export default function App() {
     <div className="app">
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
       <main className="content">
-        {loading ? <SkeletonLoader /> : <PageComponent />}
+        {loading ? <SkeletonLoader /> : <PageComponent onNavigate={handleNavigate} />}
       </main>
     </div>
   );
