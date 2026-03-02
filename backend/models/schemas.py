@@ -105,6 +105,16 @@ class MeResponse(BaseModel):
     owner_name: str | None = None
 
 
+class DashboardResponse(BaseModel):
+    business_name: str
+    plan: str
+    plan_status: str
+    conversations_used_this_month: int
+    monthly_conversation_limit: int
+    widget_api_key: str | None = None
+    leads_count: int
+
+
 class CreateClientRequest(BaseModel):
     agent_name: str
     agent_type: str = "agent"

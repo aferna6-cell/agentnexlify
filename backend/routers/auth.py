@@ -12,6 +12,7 @@ from jose import JWTError, jwt
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.models.schemas import (
+    DashboardResponse,
     LoginRequest,
     LoginResponse,
     MeResponse,
@@ -173,4 +174,53 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         plan=t.get("plan", "free"),
         city=t.get("city"),
         owner_name=t.get("owner_name"),
+    )
+
+
+@router.get("/dashboard/{tenant_id}", response_model=DashboardResponse)
+async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Tenant row
+    tenant_result = (
+        db.table("tenants")
+        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not tenant_result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    t = tenant_result.data[0]
+
+    # Widget api_key
+    widget_result = (
+        db.table("widget_configs")
+        .select("api_key")
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    api_key = widget_result.data[0]["api_key"] if widget_result.data else None
+
+    # Leads count
+    leads_result = (
+        db.table("leads")
+        .select("id", count="exact")
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    leads_count = leads_result.count if leads_result.count is not None else 0
+
+    return DashboardResponse(
+        business_name=t.get("business_name", ""),
+        plan=t.get("plan", "free"),
+        plan_status=t.get("plan_status", "active"),
+        conversations_used_this_month=t.get("conversations_used_this_month", 0),
+        monthly_conversation_limit=t.get("monthly_conversation_limit", 50),
+        widget_api_key=api_key,
+        leads_count=leads_count,
     )

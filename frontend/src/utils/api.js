@@ -52,6 +52,10 @@ export function fetchUsage(tenantId, token) {
   return request(`/api/v1/usage/${tenantId}`, { token });
 }
 
+export function fetchDashboard(tenantId, token) {
+  return request(`/api/v1/auth/dashboard/${tenantId}`, { token });
+}
+
 export function getMe(token) {
   return request("/api/v1/auth/me", { token });
 }

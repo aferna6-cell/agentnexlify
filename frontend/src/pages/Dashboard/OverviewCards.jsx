@@ -1,20 +1,21 @@
-export default function OverviewCards({ usage, leadCount, summary, automationCount, plan }) {
-  const convUsed = usage?.conversations_used ?? 0;
-  const convLimit = usage?.conversations_limit ?? 100;
-  const convPct = convLimit > 0 ? Math.round((convUsed / convLimit) * 100) : 0;
+export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan }) {
+  const convPct = conversationsLimit > 0 ? Math.round((conversationsUsed / conversationsLimit) * 100) : 0;
   const nearLimit = convPct >= 80;
 
-  const leadsLastMonth = summary?.last_month_total ?? 0;
-  const leadsThisMonth = leadCount;
-  const leadTrend = leadsLastMonth > 0
-    ? Math.round(((leadsThisMonth - leadsLastMonth) / leadsLastMonth) * 100)
-    : 0;
-
   const planLabels = {
-    starter: "Starter",
+    free: "Free",
+    foundation: "Foundation",
     growth: "Growth",
-    pro: "Pro",
+    operations: "Operations",
     enterprise: "Enterprise",
+  };
+
+  const planConvoLabels = {
+    free: "50 conversations/mo",
+    foundation: "500 conversations/mo",
+    growth: "2,000 conversations/mo",
+    operations: "10,000 conversations/mo",
+    enterprise: "Unlimited",
   };
 
   return (
@@ -22,7 +23,7 @@ export default function OverviewCards({ usage, leadCount, summary, automationCou
       {/* Conversations This Month */}
       <div className="stat-card">
         <div className="stat-label">Conversations This Month</div>
-        <div className="stat-value">{convUsed}</div>
+        <div className="stat-value">{conversationsUsed}</div>
         <div className="stat-usage-bar">
           <div
             className={`stat-usage-fill${nearLimit ? " near-limit" : ""}`}
@@ -30,7 +31,7 @@ export default function OverviewCards({ usage, leadCount, summary, automationCou
           />
         </div>
         <div className="stat-usage-text">
-          {convUsed} / {convLimit} used
+          {conversationsUsed} / {conversationsLimit} used
           {nearLimit && (
             <button className="upgrade-cta-inline">Upgrade</button>
           )}
@@ -40,9 +41,9 @@ export default function OverviewCards({ usage, leadCount, summary, automationCou
       {/* Leads Captured */}
       <div className="stat-card">
         <div className="stat-label">Leads Captured</div>
-        <div className="stat-value">{leadsThisMonth}</div>
-        <div className={`stat-trend ${leadTrend >= 0 ? "up" : "down"}`}>
-          {leadTrend >= 0 ? "\u2191" : "\u2193"} {Math.abs(leadTrend)}% vs last month
+        <div className="stat-value">{leadCount}</div>
+        <div className="stat-trend neutral">
+          Total leads captured
         </div>
       </div>
 
@@ -65,10 +66,7 @@ export default function OverviewCards({ usage, leadCount, summary, automationCou
           )}
         </div>
         <div className="stat-trend neutral">
-          {plan === "starter" && "50 conversations/mo"}
-          {plan === "growth" && "500 conversations/mo"}
-          {plan === "pro" && "2,000 conversations/mo"}
-          {plan === "enterprise" && "Unlimited"}
+          {planConvoLabels[plan] || ""}
         </div>
       </div>
     </div>

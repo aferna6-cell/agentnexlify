@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeads, fetchLeadSummary, fetchAutomations, fetchActivity, fetchUsage, fetchWidgetConfig } from "../../utils/api";
+import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity } from "../../utils/api";
 import OverviewCards from "./OverviewCards";
 import LeadPipeline from "./LeadPipeline";
 import ActivityFeed from "./ActivityFeed";
@@ -13,11 +13,9 @@ export default function Dashboard() {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
-  const [summary, setSummary] = useState(null);
+  const [dashData, setDashData] = useState(null);
   const [automations, setAutomations] = useState([]);
   const [activity, setActivity] = useState([]);
-  const [usage, setUsage] = useState(null);
-  const [widgetConfig, setWidgetConfig] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
   const [error, setError] = useState(null);
 
@@ -29,24 +27,20 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
       try {
-        const [leadsRes, summaryRes, autoRes, activityRes, usageRes, widgetRes] =
+        const [dashRes, leadsRes, autoRes, activityRes] =
           await Promise.allSettled([
+            fetchDashboard(user.tenantId, token),
             fetchLeads(user.tenantId, token),
-            fetchLeadSummary(user.tenantId, token),
             fetchAutomations(user.tenantId, token),
             fetchActivity(user.tenantId, token),
-            fetchUsage(user.tenantId, token),
-            fetchWidgetConfig(user.tenantId, token),
           ]);
 
         if (cancelled) return;
 
+        if (dashRes.status === "fulfilled") setDashData(dashRes.value);
         if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.leads || []);
-        if (summaryRes.status === "fulfilled") setSummary(summaryRes.value);
         if (autoRes.status === "fulfilled") setAutomations(autoRes.value.automations || []);
         if (activityRes.status === "fulfilled") setActivity(activityRes.value.activity || []);
-        if (usageRes.status === "fulfilled") setUsage(usageRes.value);
-        if (widgetRes.status === "fulfilled") setWidgetConfig(widgetRes.value);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -77,15 +71,15 @@ export default function Dashboard() {
     <div className="fade-in">
       <div className="page-header">
         <h1>Dashboard</h1>
-        <p>Welcome back{user.businessName ? `, ${user.businessName}` : ""}</p>
+        <p>Welcome back{dashData?.business_name ? `, ${dashData.business_name}` : user.businessName ? `, ${user.businessName}` : ""}</p>
       </div>
 
       <OverviewCards
-        usage={usage}
-        leadCount={leads.length}
-        summary={summary}
+        conversationsUsed={dashData?.conversations_used_this_month ?? 0}
+        conversationsLimit={dashData?.monthly_conversation_limit ?? 50}
+        leadCount={dashData?.leads_count ?? leads.length}
         automationCount={enabledAutomations.length}
-        plan={user.plan}
+        plan={dashData?.plan ?? user.plan}
       />
 
       <div className="dashboard-main-grid">
@@ -93,7 +87,10 @@ export default function Dashboard() {
           <LeadPipeline leads={leads} onSelectLead={setSelectedLead} />
           <div className="dashboard-bottom-row">
             <ActivityFeed activity={activity} />
-            <WidgetEmbed config={widgetConfig} tenantId={user.tenantId} />
+            <WidgetEmbed
+              apiKey={dashData?.widget_api_key}
+              tenantId={user.tenantId}
+            />
           </div>
         </div>
         <QuickActions />
