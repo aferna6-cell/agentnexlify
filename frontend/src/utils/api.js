@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE_URL || "";
+const BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
 
 class ApiError extends Error {
   constructor(status, body) {

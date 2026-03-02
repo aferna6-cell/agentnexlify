@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -15,6 +15,8 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    console.log('API URL:', import.meta.env.VITE_API_BASE_URL);
+    console.log('Full login URL:', `${API_BASE}/api/v1/auth/login`);
     try {
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
