@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -19,6 +20,8 @@ from backend.models.schemas import (
     RegisterRequest,
     RegisterResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -189,10 +192,10 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
 
     db = get_supabase()
 
-    # Tenant row
+    # Tenant row — also grab api_key column as fallback
     tenant_result = (
         db.table("tenants")
-        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit")
+        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit, api_key")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -200,8 +203,10 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     if not tenant_result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     t = tenant_result.data[0]
+    logger.info("Dashboard tenant row for %s: %s", tenant_id, t)
 
-    # Widget api_key — auto-create if missing (legacy tenants)
+    # Widget api_key — try widget_configs first
+    api_key = None
     widget_result = (
         db.table("widget_configs")
         .select("api_key")
@@ -209,19 +214,29 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         .limit(1)
         .execute()
     )
+    logger.info("Dashboard widget_configs query for tenant_id=%s: data=%s", tenant_id, widget_result.data)
+
     if widget_result.data:
         api_key = widget_result.data[0]["api_key"]
     else:
-        api_key = f"anx_{secrets.token_urlsafe(32)}"
-        db.table("widget_configs").insert({
-            "tenant_id": tenant_id,
-            "api_key": api_key,
-            "bot_name": f"{t.get('business_name', 'AI')} Assistant",
-            "primary_color": "#00BFFF",
-            "greeting_message": "Hi! How can I help you today?",
-            "position": "bottom-right",
-            "show_watermark": True,
-        }).execute()
+        # Fallback: check tenants.api_key column
+        tenant_api_key = t.get("api_key")
+        logger.info("Dashboard fallback tenants.api_key for %s: %s", tenant_id, tenant_api_key)
+        if tenant_api_key:
+            api_key = tenant_api_key
+        else:
+            # Last resort: auto-create widget_config
+            api_key = f"anx_{secrets.token_urlsafe(32)}"
+            logger.info("Dashboard auto-creating widget_config for %s with api_key=%s", tenant_id, api_key)
+            db.table("widget_configs").insert({
+                "tenant_id": tenant_id,
+                "api_key": api_key,
+                "bot_name": f"{t.get('business_name', 'AI')} Assistant",
+                "primary_color": "#00BFFF",
+                "greeting_message": "Hi! How can I help you today?",
+                "position": "bottom-right",
+                "show_watermark": True,
+            }).execute()
 
     # Leads count
     leads_result = (
@@ -232,7 +247,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     )
     leads_count = leads_result.count if leads_result.count is not None else 0
 
-    return DashboardResponse(
+    response = DashboardResponse(
         business_name=t.get("business_name", ""),
         plan=t.get("plan", "free"),
         plan_status=t.get("plan_status", "active"),
@@ -241,3 +256,5 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         widget_api_key=api_key,
         leads_count=leads_count,
     )
+    logger.info("Dashboard response for %s: %s", tenant_id, response.model_dump())
+    return response
