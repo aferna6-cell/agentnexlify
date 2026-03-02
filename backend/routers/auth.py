@@ -231,14 +231,18 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             "show_watermark": True,
         }).execute()
 
-    # Leads count
-    leads_result = (
-        db.table("leads")
-        .select("id", count="exact")
-        .eq("tenant_id", tenant_id)
-        .execute()
-    )
-    leads_count = leads_result.count if leads_result.count is not None else 0
+    # Leads count — wrapped in try/except until we confirm the FK column name
+    try:
+        leads_result = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+        leads_count = leads_result.count or 0
+    except Exception:
+        logger.warning("Leads count query failed for tenant %s", tenant_id, exc_info=True)
+        leads_count = 0
 
     response = DashboardResponse(
         business_name=t.get("business_name", ""),
