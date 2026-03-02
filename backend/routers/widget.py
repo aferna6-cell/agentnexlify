@@ -222,14 +222,19 @@ async def widget_chat(request: Request, req: WidgetChatRequest):
 
     # 6. Build system prompt with FAQ
     db = get_supabase()
-    faq_result = (
-        db.table("faq_entries")
-        .select("question, answer")
-        .eq("tenant_id", tenant["id"])
-        .eq("is_active", True)
-        .execute()
-    )
-    system_prompt = _build_system_prompt(tenant, faq_result.data or [])
+    try:
+        faq_result = (
+            db.table("faq_entries")
+            .select("question, answer")
+            .eq("tenant_id", tenant["id"])
+            .eq("is_active", True)
+            .execute()
+        )
+        faq_data = faq_result.data or []
+    except Exception:
+        logger.warning("faq_entries query failed for tenant %s", tenant["id"], exc_info=True)
+        faq_data = []
+    system_prompt = _build_system_prompt(tenant, faq_data)
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
@@ -258,13 +263,20 @@ async def widget_chat(request: Request, req: WidgetChatRequest):
 
     # 9. Save messages back to conversation JSONB
     messages.append({"role": "assistant", "content": assistant_text})
-    db.table("conversations").update(
-        {"messages": messages, "last_message_at": "now()"}
-    ).eq("id", conversation_id).execute()
+    try:
+        db.table("conversations").update(
+            {"messages": messages, "last_message_at": "now()"}
+        ).eq("id", conversation_id).execute()
+    except Exception:
+        logger.warning("Failed to save conversation %s", conversation_id, exc_info=True)
 
     # 10. Lead extraction
-    extracted = _extract_lead_info(req.message)
-    lead_id = _upsert_lead(tenant["id"], conversation_id, extracted)
+    lead_id = None
+    try:
+        extracted = _extract_lead_info(req.message)
+        lead_id = _upsert_lead(tenant["id"], conversation_id, extracted)
+    except Exception:
+        logger.warning("Lead extraction failed for conversation %s", conversation_id, exc_info=True)
 
     # 11. Watermark logic
     if tenant.get("plan") == "free":
