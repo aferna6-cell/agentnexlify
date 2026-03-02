@@ -33,6 +33,13 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/intercom-alternative" element={<IntercomAlternative />} />
           <Route path="/livechat-alternative" element={<LiveChatAlternative />} />
           <Route path="/tidio-alternative" element={<TidioAlternative />} />
+          {/* Marketing paths — render Home so anchor sections work */}
+          <Route path="/pricing" element={<Home />} />
+          <Route path="/features" element={<Home />} />
+          <Route path="/about" element={<Home />} />
+          <Route path="/demo" element={<Home />} />
+          <Route path="/industries/*" element={<Home />} />
+          <Route path="/compare/*" element={<Home />} />
           <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
         </Routes>
       </BrowserRouter>
