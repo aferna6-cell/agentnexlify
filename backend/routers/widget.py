@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+from uuid import uuid4
 
 import anthropic
 from fastapi import APIRouter, HTTPException, Request
@@ -76,25 +77,29 @@ def _get_or_create_conversation(
     tenant_id: str, session_id: str
 ) -> tuple[dict[str, Any], bool]:
     """Return (conversation_row, is_new)."""
-    db = get_supabase()
-    result = (
-        db.table("conversations")
-        .select("*")
-        .eq("tenant_id", tenant_id)
-        .eq("session_id", session_id)
-        .order("started_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-    if result.data:
-        return result.data[0], False
+    try:
+        db = get_supabase()
+        result = (
+            db.table("conversations")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .eq("session_id", session_id)
+            .order("started_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0], False
 
-    new_conv = (
-        db.table("conversations")
-        .insert({"tenant_id": tenant_id, "session_id": session_id, "messages": []})
-        .execute()
-    )
-    return new_conv.data[0], True
+        new_conv = (
+            db.table("conversations")
+            .insert({"tenant_id": tenant_id, "session_id": session_id, "messages": []})
+            .execute()
+        )
+        return new_conv.data[0], True
+    except Exception as e:
+        logger.error("Conversation error: %s", e, exc_info=True)
+        return {"id": session_id or str(uuid4()), "messages": []}, True
 
 
 def _build_system_prompt(tenant: dict, faq_entries: list[dict]) -> str:
@@ -212,10 +217,13 @@ async def widget_chat(request: Request, req: WidgetChatRequest):
 
     # Increment usage counter only for new conversations
     if is_new:
-        db = get_supabase()
-        db.table("tenants").update(
-            {"conversations_used_this_month": used + 1}
-        ).eq("id", tenant["id"]).execute()
+        try:
+            db = get_supabase()
+            db.table("tenants").update(
+                {"conversations_used_this_month": used + 1}
+            ).eq("id", tenant["id"]).execute()
+        except Exception:
+            logger.warning("Failed to increment usage counter for tenant %s", tenant["id"], exc_info=True)
 
     # 5. Load message history from JSONB
     messages: list[dict[str, str]] = conversation.get("messages") or []
