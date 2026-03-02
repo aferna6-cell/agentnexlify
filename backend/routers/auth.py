@@ -192,10 +192,10 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
 
     db = get_supabase()
 
-    # Tenant row — also grab api_key column as fallback
+    # Tenant row
     tenant_result = (
         db.table("tenants")
-        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit, api_key")
+        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -205,8 +205,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     t = tenant_result.data[0]
     logger.info("Dashboard tenant row for %s: %s", tenant_id, t)
 
-    # Widget api_key — try widget_configs first
-    api_key = None
+    # Widget api_key — only lives in widget_configs
     widget_result = (
         db.table("widget_configs")
         .select("api_key")
@@ -219,24 +218,18 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     if widget_result.data:
         api_key = widget_result.data[0]["api_key"]
     else:
-        # Fallback: check tenants.api_key column
-        tenant_api_key = t.get("api_key")
-        logger.info("Dashboard fallback tenants.api_key for %s: %s", tenant_id, tenant_api_key)
-        if tenant_api_key:
-            api_key = tenant_api_key
-        else:
-            # Last resort: auto-create widget_config
-            api_key = f"anx_{secrets.token_urlsafe(32)}"
-            logger.info("Dashboard auto-creating widget_config for %s with api_key=%s", tenant_id, api_key)
-            db.table("widget_configs").insert({
-                "tenant_id": tenant_id,
-                "api_key": api_key,
-                "bot_name": f"{t.get('business_name', 'AI')} Assistant",
-                "primary_color": "#00BFFF",
-                "greeting_message": "Hi! How can I help you today?",
-                "position": "bottom-right",
-                "show_watermark": True,
-            }).execute()
+        # Auto-create widget_config if missing
+        api_key = f"anx_{secrets.token_urlsafe(32)}"
+        logger.info("Dashboard auto-creating widget_config for %s with api_key=%s", tenant_id, api_key)
+        db.table("widget_configs").insert({
+            "tenant_id": tenant_id,
+            "api_key": api_key,
+            "bot_name": f"{t.get('business_name', 'AI')} Assistant",
+            "primary_color": "#00BFFF",
+            "greeting_message": "Hi! How can I help you today?",
+            "position": "bottom-right",
+            "show_watermark": True,
+        }).execute()
 
     # Leads count
     leads_result = (
