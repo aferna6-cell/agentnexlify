@@ -115,7 +115,7 @@ async def stripe_webhook(request: Request):
 
     if event_type == "checkout.session.completed":
         _handle_checkout_completed(db, data)
-    elif event_type == "customer.subscription.updated":
+    elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
         _handle_subscription_updated(db, data)
     elif event_type == "customer.subscription.deleted":
         _handle_subscription_deleted(db, data)

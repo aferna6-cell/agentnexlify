@@ -14,7 +14,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
-from backend.routers import auth, automations, billing, chat, leads, clients, signup, webhooks, widget
+from backend.routers import auth, automations, billing, chat, leads, clients, signup, stripe_webhooks, webhooks, widget
 
 logging.basicConfig(
     level=logging.INFO,
@@ -84,6 +84,7 @@ app.include_router(chat.router)
 app.include_router(leads.router)
 app.include_router(clients.router)
 app.include_router(signup.router)
+app.include_router(stripe_webhooks.router)
 app.include_router(webhooks.router)
 app.include_router(widget.router)
 
