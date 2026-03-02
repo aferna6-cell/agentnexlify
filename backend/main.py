@@ -43,6 +43,7 @@ app.add_middleware(
     allow_origins=[
         "https://app.agentnexlify.com",
         "https://agentnexlify.com",
+        "https://www.agentnexlify.com",
         "http://localhost:5173",
         "http://localhost:3000",
     ],
