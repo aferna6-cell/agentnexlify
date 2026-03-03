@@ -493,14 +493,7 @@ export default function OnboardingChecklist({
                 <iframe
                   title="Widget Preview"
                   className="onboarding-preview-iframe"
-                  srcDoc={`<!DOCTYPE html>
-<html>
-<head><style>body{margin:0;background:#1a1a2e;height:100vh;font-family:sans-serif;display:flex;align-items:center;justify-content:center;color:#aaa;}p{text-align:center;font-size:14px;}</style></head>
-<body>
-<p>Widget preview loading...</p>
-<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${dashData?.widget_api_key || ""}" data-api-base="https://agentnexlify-production.up.railway.app"></script>
-</body>
-</html>`}
+                  src={`https://app.agentnexlify.com/widget/preview.html?key=${encodeURIComponent(dashData?.widget_api_key || "")}&base=${encodeURIComponent(apiBase)}`}
                 />
               </div>
             )}
