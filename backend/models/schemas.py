@@ -3,10 +3,21 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # --- Request / Response schemas ---
+
+class ContactRequest(BaseModel):
+    name: str
+    email: EmailStr
+    message: str
+
+
+class ContactResponse(BaseModel):
+    success: bool
+    message: str
+
 
 class ChatMessageRequest(BaseModel):
     client_api_key: str

@@ -97,4 +97,10 @@ export async function deleteFaqEntry(tenantId, token, faqId) {
   }
 }
 
+// --- Contact / Support ---
+
+export function submitContactForm(data) {
+  return request("/api/v1/support/contact", { method: "POST", body: data });
+}
+
 export { ApiError };

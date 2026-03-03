@@ -25,6 +25,7 @@ const navItems = [
   { key: "faq", icon: "\u2753", label: "FAQ Manager" },
   { key: "billing", icon: "\u{1F4B3}", label: "Billing" },
   { key: "settings", icon: "\u2699\uFE0F", label: "Settings" },
+  { key: "support", icon: "\uD83D\uDEDF", label: "Support" },
 ];
 
 export default function Sidebar({ currentPage, onNavigate, plan }) {
@@ -41,7 +42,7 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
           <div
             key={item.key}
             className={`nav-item${currentPage === item.key ? " active" : ""}`}
-            onClick={() => onNavigate(item.key)}
+            onClick={() => item.key === "support" ? window.open("/contact", "_blank") : onNavigate(item.key)}
           >
             <span className="nav-item-icon">{item.icon}</span>
             <span className="nav-item-label">{item.label}</span>

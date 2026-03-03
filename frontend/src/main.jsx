@@ -12,6 +12,9 @@ import RestaurantChatbot from "./pages/RestaurantChatbot";
 import Home from "./pages/Home";
 import FreeWidget from "./pages/FreeWidget";
 import SignupPage from "./pages/SignupPage";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Contact from "./pages/Contact";
 import IntercomAlternative from "./pages/IntercomAlternative";
 import LiveChatAlternative from "./pages/LiveChatAlternative";
 import TidioAlternative from "./pages/TidioAlternative";
@@ -66,6 +69,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/" element={<Home />} />
           <Route path="/free-widget" element={<FreeWidget />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/contact" element={<Contact />} />
           {/* Vertical chatbot pages (canonical URLs) */}
           <Route path="/dental-chatbot" element={<DentalChatbot />} />
           <Route path="/auto-shop-chatbot" element={<AutoShopChatbot />} />

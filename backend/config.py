@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     widget_allowed_origins: str = "*"
     api_secret_key: str = secrets.token_urlsafe(32)
+    sentry_dsn: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

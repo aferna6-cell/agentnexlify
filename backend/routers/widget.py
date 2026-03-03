@@ -11,6 +11,7 @@ import anthropic
 from fastapi import APIRouter, HTTPException, Request
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.models.schemas import (
     WidgetChatRequest,
@@ -190,6 +191,7 @@ def _upsert_lead(
 
 
 @router.post("/chat", response_model=WidgetChatResponse)
+@limiter.limit("60/minute")
 async def widget_chat(request: Request, req: WidgetChatRequest):
     """Process a chat message through the multi-tenant widget pipeline."""
     # 1. Look up widget config + tenant
@@ -301,7 +303,8 @@ async def widget_chat(request: Request, req: WidgetChatRequest):
 
 
 @router.get("/config/{api_key}", response_model=WidgetConfigResponse)
-async def get_config(api_key: str):
+@limiter.limit("120/minute")
+async def get_config(request: Request, api_key: str):
     """Return widget configuration for the embedded chat widget."""
     widget = _get_widget_config(api_key)
     tenant = _get_tenant(widget["tenant_id"])
@@ -323,7 +326,8 @@ async def get_config(api_key: str):
 
 
 @router.post("/lead", response_model=WidgetLeadResponse)
-async def submit_lead(req: WidgetLeadRequest):
+@limiter.limit("60/minute")
+async def submit_lead(request: Request, req: WidgetLeadRequest):
     """Manually submit or update lead information from the widget."""
     widget = _get_widget_config(req.api_key)
     tenant = _get_tenant(widget["tenant_id"])

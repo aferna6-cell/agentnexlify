@@ -160,6 +160,11 @@ export default function SignupPage() {
           <button type="submit" className="login-btn" disabled={loading}>
             {loading ? "Creating account..." : "Get Started Free"}
           </button>
+          <p className="login-legal-note">
+            By signing up, you agree to our{" "}
+            <Link to="/terms">Terms of Service</Link> and{" "}
+            <Link to="/privacy">Privacy Policy</Link>.
+          </p>
         </form>
         <p className="login-footer">
           Already have an account?{" "}

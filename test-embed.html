@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riverside Dental — Family Dentistry You Can Trust</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+      color: #333;
+      background: #fff;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    header {
+      background: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      color: #2563eb;
+    }
+    .logo span { color: #333; }
+    .nav-links { display: flex; gap: 24px; list-style: none; }
+    .nav-links a {
+      text-decoration: none;
+      color: #555;
+      font-weight: 500;
+      font-size: 15px;
+      transition: color .15s;
+    }
+    .nav-links a:hover { color: #2563eb; }
+    .nav-cta {
+      background: #2563eb;
+      color: #fff !important;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-weight: 600 !important;
+    }
+    .nav-cta:hover { background: #1d4ed8; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: #fff;
+      padding: 80px 32px 72px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 44px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      line-height: 1.15;
+    }
+    .hero p {
+      font-size: 19px;
+      max-width: 600px;
+      margin: 0 auto 32px;
+      opacity: .9;
+    }
+    .hero-btn {
+      display: inline-block;
+      padding: 14px 36px;
+      background: #fff;
+      color: #2563eb;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .hero-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
+    }
+
+    /* Sections */
+    .section { padding: 64px 32px; max-width: 1100px; margin: 0 auto; }
+    .section h2 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #222;
+    }
+    .section .subtitle {
+      color: #666;
+      font-size: 17px;
+      margin-bottom: 40px;
+    }
+
+    /* Services grid */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .service-card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 28px 24px;
+      border: 1px solid #e2e8f0;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .service-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 28px rgba(0,0,0,.08);
+    }
+    .service-card h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+      color: #222;
+    }
+    .service-card p {
+      color: #666;
+      font-size: 15px;
+    }
+
+    /* About */
+    .about-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .about-text p { margin-bottom: 16px; color: #555; }
+    .about-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .stat {
+      text-align: center;
+      padding: 24px;
+      background: #eff6ff;
+      border-radius: 12px;
+    }
+    .stat .number { font-size: 36px; font-weight: 800; color: #2563eb; }
+    .stat .label { font-size: 14px; color: #666; margin-top: 4px; }
+
+    /* Contact */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 32px;
+    }
+    .contact-item h3 {
+      font-size: 18px;
+      color: #2563eb;
+      margin-bottom: 6px;
+    }
+    .contact-item p { color: #555; }
+
+    /* Footer */
+    footer {
+      background: #1e293b;
+      color: rgba(255,255,255,.6);
+      text-align: center;
+      padding: 28px 32px;
+      font-size: 14px;
+    }
+
+    /* Debug panel */
+    #debug-panel {
+      position: fixed;
+      top: 80px;
+      left: 16px;
+      width: 320px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      z-index: 99999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      border: 1px solid #45475a;
+    }
+    #debug-panel h3 {
+      color: #89b4fa;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .debug-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #313244;
+    }
+    .debug-ok { color: #a6e3a1; }
+    .debug-fail { color: #f38ba8; }
+    .debug-warn { color: #fab387; }
+    .debug-info { color: #89dceb; }
+    #debug-toggle {
+      position: fixed;
+      top: 80px;
+      left: 16px;
+      z-index: 100000;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border: 1px solid #45475a;
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 30px; }
+      .about-content { grid-template-columns: 1fr; }
+      #debug-panel { width: calc(100% - 32px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo"><span>Riverside</span> Dental</div>
+    <ul class="nav-links">
+      <li><a href="#services">Services</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li><a href="#contact" class="nav-cta">Book Appointment</a></li>
+    </ul>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Gentle, Compassionate<br>Family Dentistry</h1>
+    <p>Serving the Riverside community for over 15 years. Modern technology, warm care, and beautiful smiles for the whole family.</p>
+    <a href="#contact" class="hero-btn">Schedule Your Visit</a>
+  </section>
+
+  <!-- Services -->
+  <section class="section" id="services">
+    <h2>Our Services</h2>
+    <p class="subtitle">Comprehensive dental care for every stage of life</p>
+    <div class="services-grid">
+      <div class="service-card">
+        <h3>General Dentistry</h3>
+        <p>Routine cleanings, exams, fillings, and preventive care to keep your smile healthy year-round.</p>
+      </div>
+      <div class="service-card">
+        <h3>Cosmetic Dentistry</h3>
+        <p>Teeth whitening, veneers, and smile makeovers to give you the confidence you deserve.</p>
+      </div>
+      <div class="service-card">
+        <h3>Orthodontics</h3>
+        <p>Clear aligners and traditional braces for children, teens, and adults. Free consultations available.</p>
+      </div>
+      <div class="service-card">
+        <h3>Emergency Care</h3>
+        <p>Same-day emergency appointments for toothaches, broken teeth, and dental trauma.</p>
+      </div>
+      <div class="service-card">
+        <h3>Pediatric Dentistry</h3>
+        <p>A fun, kid-friendly environment with gentle care tailored to young patients.</p>
+      </div>
+      <div class="service-card">
+        <h3>Dental Implants</h3>
+        <p>Permanent tooth replacement solutions that look, feel, and function like natural teeth.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="section" id="about" style="background: #f8fafc; max-width: none;">
+    <div style="max-width: 1100px; margin: 0 auto;">
+      <h2>Why Choose Riverside Dental?</h2>
+      <p class="subtitle">We believe everyone deserves a healthy, beautiful smile</p>
+      <div class="about-content">
+        <div class="about-text">
+          <p>At Riverside Dental, we combine cutting-edge technology with a warm, patient-first approach. Dr. Emily Chen and our team of experienced professionals are dedicated to making every visit comfortable and stress-free.</p>
+          <p>From your child's first dental visit to complex restorative procedures, we provide personalized care plans tailored to your unique needs and goals.</p>
+          <p>We accept most insurance plans and offer flexible financing options to make quality dental care accessible to everyone in our community.</p>
+        </div>
+        <div class="about-stats">
+          <div class="stat"><div class="number">15+</div><div class="label">Years of Experience</div></div>
+          <div class="stat"><div class="number">5,000+</div><div class="label">Happy Patients</div></div>
+          <div class="stat"><div class="number">4.9</div><div class="label">Google Rating</div></div>
+          <div class="stat"><div class="number">24hr</div><div class="label">Emergency Response</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="section" id="contact">
+    <h2>Contact Us</h2>
+    <p class="subtitle">Ready to schedule? We'd love to hear from you!</p>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <h3>Phone</h3>
+        <p>(555) 987-6543</p>
+        <p>Mon-Fri 8am-6pm</p>
+      </div>
+      <div class="contact-item">
+        <h3>Email</h3>
+        <p>hello@riversidedental.com</p>
+        <p>We reply within 1 hour</p>
+      </div>
+      <div class="contact-item">
+        <h3>Location</h3>
+        <p>456 Oak Avenue, Suite 200</p>
+        <p>Riverside, CA 92501</p>
+      </div>
+      <div class="contact-item">
+        <h3>Hours</h3>
+        <p>Mon-Fri: 8 AM - 6 PM</p>
+        <p>Sat: 9 AM - 2 PM</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    &copy; 2026 Riverside Dental. All rights reserved. | Dr. Emily Chen, DDS | CA License #DEN-54321
+  </footer>
+
+  <!-- ============================================================ -->
+  <!-- DEBUG PANEL: Traces widget loading, config, and chat flow     -->
+  <!-- ============================================================ -->
+  <button id="debug-toggle" onclick="toggleDebug()">Debug Panel</button>
+  <div id="debug-panel" style="display:none;">
+    <h3>Widget Embed Test</h3>
+    <div id="debug-log"></div>
+  </div>
+
+  <script>
+    // Debug utilities
+    const debugLog = document.getElementById('debug-log');
+    function log(msg, cls = 'debug-info') {
+      const entry = document.createElement('div');
+      entry.className = 'debug-entry ' + cls;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      debugLog.appendChild(entry);
+      debugLog.scrollTop = debugLog.scrollHeight;
+      console.log(`[WIDGET-TEST] ${msg}`);
+    }
+    function toggleDebug() {
+      const p = document.getElementById('debug-panel');
+      p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Intercept fetch to trace all widget API calls
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+      const method = args[1]?.method || 'GET';
+
+      if (url.includes('agentnexlify') || url.includes('widget') || url.includes('/api/v1/')) {
+        log(`>> ${method} ${url}`, 'debug-info');
+        const startTime = performance.now();
+        try {
+          const response = await originalFetch.apply(this, args);
+          const elapsed = (performance.now() - startTime).toFixed(0);
+          if (response.ok) {
+            log(`<< ${response.status} OK (${elapsed}ms)`, 'debug-ok');
+          } else {
+            const text = await response.clone().text();
+            log(`<< ${response.status} FAIL: ${text.slice(0, 100)} (${elapsed}ms)`, 'debug-fail');
+          }
+          // Check CORS headers
+          const corsHeader = response.headers.get('access-control-allow-origin');
+          if (corsHeader) {
+            log(`   CORS: ${corsHeader}`, 'debug-info');
+          }
+          return response;
+        } catch (err) {
+          const elapsed = (performance.now() - startTime).toFixed(0);
+          log(`<< NETWORK ERROR: ${err.message} (${elapsed}ms)`, 'debug-fail');
+          throw err;
+        }
+      }
+      return originalFetch.apply(this, args);
+    };
+
+    // Monitor DOM for widget injection
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.id === 'anx-container') {
+            log('Widget container injected into DOM', 'debug-ok');
+          }
+          if (node.id === 'anx-styles') {
+            log('Widget styles injected', 'debug-ok');
+          }
+          if (node.id === 'anx-bubble' || node.querySelector?.('#anx-bubble')) {
+            log('Chat bubble rendered', 'debug-ok');
+          }
+        }
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    // Check widget loaded after a delay
+    setTimeout(() => {
+      const bubble = document.getElementById('anx-bubble');
+      const container = document.getElementById('anx-container');
+      const window_ = document.getElementById('anx-window');
+
+      log('--- Widget Load Check ---', 'debug-info');
+      log(`Container: ${container ? 'PRESENT' : 'MISSING'}`, container ? 'debug-ok' : 'debug-fail');
+      log(`Bubble: ${bubble ? 'PRESENT' : 'MISSING'}`, bubble ? 'debug-ok' : 'debug-fail');
+      log(`Window: ${window_ ? 'PRESENT' : 'MISSING'}`, window_ ? 'debug-ok' : 'debug-fail');
+
+      if (bubble) {
+        const style = getComputedStyle(bubble);
+        log(`Bubble position: ${style.position} bottom:${style.bottom} right:${style.right}`, 'debug-info');
+        log(`Bubble bg color: ${style.backgroundColor}`, 'debug-info');
+      }
+    }, 3000);
+
+    // Check after auto-open timer (widget auto-opens at 5s)
+    setTimeout(() => {
+      const window_ = document.getElementById('anx-window');
+      if (window_ && window_.classList.contains('open')) {
+        log('Widget auto-opened after 5s', 'debug-ok');
+      } else {
+        log('Widget did NOT auto-open (check localStorage state)', 'debug-warn');
+      }
+
+      const messages = document.getElementById('anx-messages');
+      if (messages) {
+        const count = messages.children.length;
+        log(`Messages in view: ${count}`, count > 0 ? 'debug-ok' : 'debug-warn');
+      }
+    }, 8000);
+
+    log('Debug panel initialized. Loading widget...', 'debug-info');
+  </script>
+
+  <!-- ============================================================ -->
+  <!-- AgentNexLiFy Widget Embed Code (exactly as dashboard shows)  -->
+  <!-- ============================================================ -->
+  <script
+    src="https://app.agentnexlify.com/widget/agentnexlify-widget.js"
+    data-api-key="TEST_KEY_HERE"
+    data-api-base="https://agentnexlify-production.up.railway.app">
+  </script>
+
+</body>
+</html>
