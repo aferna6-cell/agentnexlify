@@ -1,12 +1,18 @@
-function scoreLabel(temp) {
-  if (temp === "hot") return "Hot";
-  if (temp === "warm") return "Warm";
+function scoreClass(score) {
+  if (score >= 70) return "score-hot";
+  if (score >= 40) return "score-warm";
+  return "score-cold";
+}
+
+function scoreLabel(score) {
+  if (score >= 70) return "Hot";
+  if (score >= 40) return "Warm";
   return "Cold";
 }
 
-function scoreColor(temp) {
-  if (temp === "hot") return "var(--red)";
-  if (temp === "warm") return "var(--yellow)";
+function scoreColor(score) {
+  if (score >= 70) return "var(--red)";
+  if (score >= 40) return "var(--yellow)";
   return "var(--accent)";
 }
 
@@ -24,15 +30,15 @@ export default function LeadDetailDrawer({ lead, onClose }) {
           <div className="lead-score-display">
             <div>
               <div className="lead-score-label">Lead Score</div>
-              <div className="lead-score-value" style={{ color: scoreColor(lead.lead_temperature) }}>
+              <div className="lead-score-value" style={{ color: scoreColor(lead.lead_score) }}>
                 {lead.lead_score ?? "N/A"} / 100
               </div>
             </div>
             <span
-              className={`lead-tag score-${lead.lead_temperature || "cold"}`}
+              className={`lead-tag ${scoreClass(lead.lead_score)}`}
               style={{ marginLeft: "auto", fontSize: 13 }}
             >
-              {scoreLabel(lead.lead_temperature)}
+              {scoreLabel(lead.lead_score)}
             </span>
           </div>
 
@@ -115,7 +121,7 @@ export default function LeadDetailDrawer({ lead, onClose }) {
             <div className="intel-title">Status</div>
             <div className="intel-row">
               <span className="intel-label">Stage</span>
-              <span className="intel-value">{lead.status || lead.lead_stage || "new"}</span>
+              <span className="intel-value">{lead.lead_stage || "new"}</span>
             </div>
             {lead.appointment_date && (
               <div className="intel-row">

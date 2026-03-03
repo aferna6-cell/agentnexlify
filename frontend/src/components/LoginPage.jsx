@@ -15,8 +15,6 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    console.log('API URL:', import.meta.env.VITE_API_BASE_URL);
-    console.log('Full login URL:', `${API_BASE}/api/v1/auth/login`);
     try {
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",

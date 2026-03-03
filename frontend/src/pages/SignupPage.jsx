@@ -17,7 +17,6 @@ const INDUSTRIES = [
 ];
 
 export default function SignupPage() {
-  console.log('ENV:', import.meta.env.VITE_API_BASE_URL);
   const [form, setForm] = useState({
     business_name: "",
     owner_name: "",
@@ -45,7 +44,6 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      console.log('API URL:', `${API_BASE}/api/v1/auth/register`);
       const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

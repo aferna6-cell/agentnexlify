@@ -21,15 +21,15 @@ function formatTimeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-function scoreClass(temp) {
-  if (temp === "hot") return "score-hot";
-  if (temp === "warm") return "score-warm";
+function scoreClass(score) {
+  if (score >= 70) return "score-hot";
+  if (score >= 40) return "score-warm";
   return "score-cold";
 }
 
-function scoreLabel(temp) {
-  if (temp === "hot") return "Hot";
-  if (temp === "warm") return "Warm";
+function scoreLabel(score) {
+  if (score >= 70) return "Hot";
+  if (score >= 40) return "Warm";
   return "Cold";
 }
 
@@ -41,8 +41,8 @@ function LeadCard({ lead, onClick }) {
         {lead.lead_type || lead.areas_of_interest || "No details"}
       </div>
       <div className="lead-meta">
-        <span className={`lead-tag ${scoreClass(lead.lead_temperature)}`}>
-          {scoreLabel(lead.lead_temperature)}
+        <span className={`lead-tag ${scoreClass(lead.lead_score)}`}>
+          {scoreLabel(lead.lead_score)}
         </span>
         <span className="lead-time">{formatTimeAgo(lead.created_at)}</span>
       </div>
@@ -55,7 +55,7 @@ export default function LeadPipeline({ leads, onSelectLead, onNavigate }) {
     const map = {};
     for (const s of STAGES) map[s.key] = [];
     for (const lead of leads) {
-      const stage = lead.lead_stage || lead.status || "new";
+      const stage = lead.lead_stage || "new";
       if (map[stage]) map[stage].push(lead);
       else map["new"].push(lead);
     }
