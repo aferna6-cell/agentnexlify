@@ -1,5 +1,13 @@
 import { useAuth } from "../context/AuthContext";
 
+const planLabels = {
+  free: "Free",
+  foundation: "Foundation",
+  growth: "Growth",
+  operations: "Operations",
+  enterprise: "Enterprise",
+};
+
 const navItems = [
   { key: "dashboard", icon: "\u{1F4CA}", label: "Dashboard" },
   { key: "leads", icon: "\u{1F465}", label: "Leads" },
@@ -11,8 +19,9 @@ const navItems = [
   { key: "settings", icon: "\u2699\uFE0F", label: "Settings" },
 ];
 
-export default function Sidebar({ currentPage, onNavigate }) {
+export default function Sidebar({ currentPage, onNavigate, plan }) {
   const { user, logout } = useAuth();
+  const activePlan = plan || user?.plan || "free";
 
   return (
     <div className="sidebar">
@@ -35,7 +44,7 @@ export default function Sidebar({ currentPage, onNavigate }) {
         {user && (
           <div className="sidebar-user">
             <div className="sidebar-user-name">{user.businessName || user.email}</div>
-            <div className="sidebar-plan-badge">{user.plan}</div>
+            <div className="sidebar-plan-badge">{planLabels[activePlan] || activePlan}</div>
           </div>
         )}
         <button className="sidebar-logout" onClick={logout}>

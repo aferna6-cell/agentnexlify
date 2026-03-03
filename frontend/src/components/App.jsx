@@ -29,6 +29,7 @@ export default function App() {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [loading, setLoading] = useState(false);
+  const [activePlan, setActivePlan] = useState(null);
 
   const handleNavigate = useCallback(
     (page) => {
@@ -48,9 +49,9 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
+      <Sidebar currentPage={currentPage} onNavigate={handleNavigate} plan={activePlan} />
       <main className="content">
-        {loading ? <SkeletonLoader /> : <PageComponent onNavigate={handleNavigate} />}
+        {loading ? <SkeletonLoader /> : <PageComponent onNavigate={handleNavigate} onPlanLoaded={setActivePlan} />}
       </main>
     </div>
   );

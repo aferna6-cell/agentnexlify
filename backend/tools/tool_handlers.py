@@ -45,10 +45,10 @@ async def _handle_book_appointment(
 
     # Store appointment in leads table
     lead_data: dict[str, Any] = {
-        "client_id": client.id,
+        "tenant_id": client.id,
         "conversation_id": conversation_id,
-        "status": "appointment_booked",
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "lead_stage": "qualified",
+        "source": "chat",
     }
     if inputs.get("lead_name"):
         lead_data["name"] = inputs["lead_name"]

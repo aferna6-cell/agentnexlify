@@ -9,7 +9,7 @@ import QuickActions from "./QuickActions";
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
-export default function Dashboard({ onNavigate }) {
+export default function Dashboard({ onNavigate, onPlanLoaded }) {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
@@ -37,7 +37,10 @@ export default function Dashboard({ onNavigate }) {
 
         if (cancelled) return;
 
-        if (dashRes.status === "fulfilled") setDashData(dashRes.value);
+        if (dashRes.status === "fulfilled") {
+          setDashData(dashRes.value);
+          if (onPlanLoaded) onPlanLoaded(dashRes.value.plan);
+        }
         if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.leads || []);
         if (autoRes.status === "fulfilled") setAutomations(autoRes.value.automations || []);
         if (activityRes.status === "fulfilled") setActivity(activityRes.value.activity || []);

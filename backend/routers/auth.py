@@ -231,7 +231,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             "show_watermark": True,
         }).execute()
 
-    # Leads count — wrapped in try/except until we confirm the FK column name
+    # Leads count (tenant_id is the correct FK — confirmed from schema)
     try:
         leads_result = (
             db.table("leads")

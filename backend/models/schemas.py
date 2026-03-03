@@ -227,27 +227,21 @@ class WidgetLeadResponse(BaseModel):
     updated_fields: list[str]
 
 
-# --- Database row models (old single-tenant) ---
+# --- Database row models ---
 
 
 class LeadRow(BaseModel):
     id: str
-    client_id: str
+    tenant_id: str
     conversation_id: str | None = None
     created_at: datetime
-    updated_at: datetime
     name: str | None = None
     email: str | None = None
     phone: str | None = None
-    lead_type: str | None = None
+    service_interest: str | None = None
     timeline: str | None = None
     budget: str | None = None
-    pre_approved: bool | None = None
-    areas_of_interest: str | None = None
-    must_haves: str | None = None
     lead_score: int | None = None
-    lead_temperature: str | None = None
-    conversation_summary: str | None = None
-    next_steps: str | None = None
-    status: str = "new"
-    appointment_date: datetime | None = None
+    lead_stage: str = "new"
+    source: str = "widget"
+    notes: str | None = None
