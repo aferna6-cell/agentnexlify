@@ -25,7 +25,16 @@ export default function ActivityFeed({ activity }) {
     return (
       <div className="activity-feed">
         <div className="activity-feed-title">Recent Activity</div>
-        <div className="activity-empty">No recent activity</div>
+        <div className="empty-state empty-state-compact">
+          <div className="empty-state-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+          </div>
+          <p className="empty-state-text">
+            Activity from conversations and leads will show here once your widget is live
+          </p>
+        </div>
       </div>
     );
   }

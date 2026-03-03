@@ -1,10 +1,14 @@
 import { useState } from "react";
 
-export default function WidgetEmbed({ apiKey, tenantId }) {
+export default function WidgetEmbed({ apiKey, tenantId, widgetConfig }) {
   const [copied, setCopied] = useState(false);
 
   const displayKey = apiKey || "your-api-key";
   const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${displayKey}"></script>`;
+
+  const isConfigured = widgetConfig &&
+    (widgetConfig.greeting_message !== "Hi! How can I help you today?" ||
+     widgetConfig.primary_color !== "#00BFFF");
 
   function handleCopy() {
     navigator.clipboard.writeText(embedCode).then(() => {
@@ -23,6 +27,12 @@ export default function WidgetEmbed({ apiKey, tenantId }) {
           {apiKey ? "Widget Active" : "Widget Not Configured"}
         </span>
       </div>
+
+      {!isConfigured && apiKey && (
+        <div className="widget-configure-hint">
+          Configure your AI agent first to get the most out of your widget.
+        </div>
+      )}
 
       <div className="widget-code-block">
         <pre>

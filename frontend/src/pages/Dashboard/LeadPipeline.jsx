@@ -50,7 +50,7 @@ function LeadCard({ lead, onClick }) {
   );
 }
 
-export default function LeadPipeline({ leads, onSelectLead }) {
+export default function LeadPipeline({ leads, onSelectLead, onNavigate }) {
   const grouped = useMemo(() => {
     const map = {};
     for (const s of STAGES) map[s.key] = [];
@@ -61,6 +61,33 @@ export default function LeadPipeline({ leads, onSelectLead }) {
     }
     return map;
   }, [leads]);
+
+  if (!leads || leads.length === 0) {
+    return (
+      <div className="pipeline">
+        <div className="pipeline-header">Lead Pipeline</div>
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <p className="empty-state-text">
+            Leads captured from widget conversations will appear here
+          </p>
+          <button
+            className="empty-state-cta"
+            onClick={() => onNavigate?.("widget")}
+          >
+            Set up your widget &rarr;
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pipeline">

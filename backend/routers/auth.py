@@ -14,11 +14,15 @@ from backend.config import settings
 from backend.models.database import get_supabase
 from backend.models.schemas import (
     DashboardResponse,
+    FaqCreateRequest,
+    FaqEntryResponse,
     LoginRequest,
     LoginResponse,
     MeResponse,
     RegisterRequest,
     RegisterResponse,
+    WidgetConfigDetail,
+    WidgetConfigUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -205,10 +209,10 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     t = tenant_result.data[0]
     logger.info("Dashboard tenant row for %s: %s", tenant_id, t)
 
-    # Widget api_key — only lives in widget_configs
+    # Widget config — full details for onboarding
     widget_result = (
         db.table("widget_configs")
-        .select("api_key")
+        .select("api_key, bot_name, primary_color, greeting_message, position")
         .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()
@@ -216,7 +220,14 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     logger.info("Dashboard widget_configs query for tenant_id=%s: data=%s", tenant_id, widget_result.data)
 
     if widget_result.data:
-        api_key = widget_result.data[0]["api_key"]
+        w = widget_result.data[0]
+        api_key = w["api_key"]
+        widget_config = WidgetConfigDetail(
+            bot_name=w.get("bot_name", ""),
+            primary_color=w.get("primary_color", "#00BFFF"),
+            greeting_message=w.get("greeting_message", "Hi! How can I help you today?"),
+            position=w.get("position", "bottom-right"),
+        )
     else:
         # Auto-create widget_config if missing
         api_key = f"anx_{secrets.token_urlsafe(32)}"
@@ -230,6 +241,9 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             "position": "bottom-right",
             "show_watermark": True,
         }).execute()
+        widget_config = WidgetConfigDetail(
+            bot_name=f"{t.get('business_name', 'AI')} Assistant",
+        )
 
     # Leads count (tenant_id is the correct FK — confirmed from schema)
     try:
@@ -244,14 +258,136 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         logger.warning("Leads count query failed for tenant %s", tenant_id, exc_info=True)
         leads_count = 0
 
+    # FAQ count
+    try:
+        faq_result = (
+            db.table("faq_entries")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("is_active", True)
+            .execute()
+        )
+        faq_count = faq_result.count or 0
+    except Exception:
+        logger.warning("FAQ count query failed for tenant %s", tenant_id, exc_info=True)
+        faq_count = 0
+
+    conversations_used = t.get("conversations_used_this_month", 0)
+
     response = DashboardResponse(
         business_name=t.get("business_name", ""),
         plan=t.get("plan", "free"),
         plan_status=t.get("plan_status", "active"),
-        conversations_used_this_month=t.get("conversations_used_this_month", 0),
+        conversations_used_this_month=conversations_used,
         monthly_conversation_limit=t.get("monthly_conversation_limit", 50),
         widget_api_key=api_key,
         leads_count=leads_count,
+        widget_config=widget_config,
+        faq_count=faq_count,
+        has_conversations=conversations_used > 0,
     )
     logger.info("Dashboard response for %s: %s", tenant_id, response.model_dump())
     return response
+
+
+# ── Widget Config ────────────────────────────────────────────
+
+
+@router.put("/widget-config/{tenant_id}", response_model=WidgetConfigDetail)
+async def update_widget_config(
+    tenant_id: str,
+    req: WidgetConfigUpdateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    result = (
+        db.table("widget_configs")
+        .update(updates)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Widget config not found")
+
+    w = result.data[0]
+    return WidgetConfigDetail(
+        bot_name=w.get("bot_name", ""),
+        primary_color=w.get("primary_color", "#00BFFF"),
+        greeting_message=w.get("greeting_message", ""),
+        position=w.get("position", "bottom-right"),
+    )
+
+
+# ── FAQ CRUD ─────────────────────────────────────────────────
+
+
+@router.get("/faq/{tenant_id}", response_model=list[FaqEntryResponse])
+async def list_faq(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("faq_entries")
+        .select("id, question, answer, category, is_active")
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", True)
+        .order("created_at", desc=False)
+        .execute()
+    )
+    return [FaqEntryResponse(**row) for row in (result.data or [])]
+
+
+@router.post("/faq/{tenant_id}", response_model=FaqEntryResponse, status_code=201)
+async def create_faq(
+    tenant_id: str,
+    req: FaqCreateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("faq_entries")
+        .insert({
+            "tenant_id": tenant_id,
+            "question": req.question,
+            "answer": req.answer,
+            "category": req.category,
+            "is_active": True,
+        })
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create FAQ entry")
+
+    row = result.data[0]
+    return FaqEntryResponse(
+        id=str(row["id"]),
+        question=row["question"],
+        answer=row["answer"],
+        category=row.get("category"),
+        is_active=row.get("is_active", True),
+    )
+
+
+@router.delete("/faq/{tenant_id}/{faq_id}", status_code=204)
+async def delete_faq(
+    tenant_id: str,
+    faq_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    # Soft delete — mark inactive
+    db.table("faq_entries").update({"is_active": False}).eq("id", faq_id).eq("tenant_id", tenant_id).execute()

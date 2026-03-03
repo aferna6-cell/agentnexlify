@@ -1,4 +1,4 @@
-export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan }) {
+export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan, onNavigate }) {
   const convPct = conversationsLimit > 0 ? Math.round((conversationsUsed / conversationsLimit) * 100) : 0;
   const nearLimit = convPct >= 80;
 
@@ -36,6 +36,11 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
             <button className="upgrade-cta-inline">Upgrade</button>
           )}
         </div>
+        {conversationsUsed === 0 && (
+          <div className="stat-empty-hint">
+            Set up your widget to start capturing conversations
+          </div>
+        )}
       </div>
 
       {/* Leads Captured */}
@@ -45,6 +50,11 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
         <div className="stat-trend neutral">
           Total leads captured
         </div>
+        {leadCount === 0 && (
+          <div className="stat-empty-hint">
+            Leads appear automatically from widget chats
+          </div>
+        )}
       </div>
 
       {/* Automations Active */}
@@ -54,6 +64,14 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
         <div className="stat-trend neutral">
           {automationCount === 0 ? "Set up your first automation" : "Running"}
         </div>
+        {automationCount === 0 && (
+          <button
+            className="stat-empty-link"
+            onClick={() => onNavigate?.("automations")}
+          >
+            Set up automated follow-ups &rarr;
+          </button>
+        )}
       </div>
 
       {/* Plan Status */}
