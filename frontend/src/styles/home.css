@@ -769,27 +769,12 @@
   text-align: center;
 }
 
-.landing-page .lp-demo-frame {
-  position: relative;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--bg-card);
-  min-height: 400px;
+.landing-page .lp-demo-cta-block {
   display: flex;
-  align-items: center;
+  gap: 16px;
   justify-content: center;
-}
-
-.landing-page .lp-demo-placeholder {
-  padding: 60px 40px;
-  text-align: center;
-}
-
-.landing-page .lp-demo-placeholder p {
-  color: var(--text-secondary);
-  font-size: 16px;
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+  margin-top: 40px;
 }
 
 /* ============================================

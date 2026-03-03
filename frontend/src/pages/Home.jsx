@@ -43,7 +43,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the one below it. Foundation ($99) covers lead capture, review requests, missed call texts, and appointment reminders. Growth ($249) adds follow-up sequences, FAQ bot, quote automation, and CRM. Operations ($499) adds AI booking, invoice follow-up, task automation, and lead scoring. Enterprise ($999) is the full package with AI sales assistant, marketing engine, dashboard, and re-engagement campaigns.",
+      "Every plan builds on the previous tier. Foundation covers lead capture, reviews, and reminders. Growth adds follow-up sequences, FAQ bot, and CRM. Operations adds AI booking, invoicing, task automation, and lead scoring.",
   },
   {
     id: "faq-a2",
@@ -61,13 +61,13 @@ const faqData = [
     id: "faq-a4",
     question: "How long does setup take?",
     answer:
-      "Most businesses we work with are fully live within 48 hours of our kickoff call. Complex custom workflows may take up to a week.",
+      "Most businesses are fully live within 48 hours of our kickoff call. Complex custom workflows may take up to a week.",
   },
   {
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Absolutely. Most of our partners start with Foundation or Growth and upgrade within a few months once they see results. We\u2019ll migrate everything seamlessly with no downtime and no lost data.",
+      "Absolutely. Most partners start with Foundation or Growth and upgrade within a few months once they see results. We migrate everything seamlessly \u2014 no downtime, no lost data.",
   },
   {
     id: "faq-a6",
@@ -78,7 +78,7 @@ const faqData = [
     id: "faq-a7",
     question: "What if AI makes a mistake?",
     answer:
-      "Our automations are designed with human-in-the-loop checkpoints. For emails, you review and approve before sending. For lead capture, the AI qualifies and you close. You stay in control.",
+      "You stay in control. Emails are drafted for your approval before sending. The AI qualifies leads \u2014 you decide how to close them. Nothing goes out without your say-so.",
   },
   {
     id: "faq-a8",
@@ -147,25 +147,25 @@ export default function Home() {
       <Helmet>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>AgentNexLiFy | Free AI Chatbot for Local Businesses</title>
+        <title>Agent NexLiFy | AI Receptionist for Local Businesses</title>
         <meta
           name="description"
-          content="Add a free AI chatbot to your local business website. Handle inquiries 24/7, capture leads, and automate bookings — no coding required."
+          content="Agent NexLiFy is an AI receptionist that answers calls, captures leads, and books appointments for local businesses — 24/7. Set up in under 5 minutes."
         />
         <link rel="canonical" href="https://agentnexlify.com/" />
-        <meta property="og:title" content="AgentNexLiFy | Free AI Chatbot for Local Businesses" />
+        <meta property="og:title" content="Agent NexLiFy | AI Receptionist for Local Businesses" />
         <meta
           property="og:description"
-          content="Add a free AI chatbot to your local business website. Handle inquiries 24/7, capture leads, and automate bookings — no coding required."
+          content="Agent NexLiFy is an AI receptionist that answers calls, captures leads, and books appointments for local businesses — 24/7. Set up in under 5 minutes."
         />
         <meta property="og:image" content="https://agentnexlify.com/og-image.png" />
         <meta property="og:url" content="https://agentnexlify.com/" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="AgentNexLiFy | Free AI Chatbot for Local Businesses" />
+        <meta name="twitter:title" content="Agent NexLiFy | AI Receptionist for Local Businesses" />
         <meta
           name="twitter:description"
-          content="Add a free AI chatbot to your local business website. Handle inquiries 24/7, capture leads, and automate bookings — no coding required."
+          content="Agent NexLiFy is an AI receptionist that answers calls, captures leads, and books appointments for local businesses — 24/7. Set up in under 5 minutes."
         />
         <meta name="twitter:image" content="https://agentnexlify.com/og-image.png" />
         <meta name="google-site-verification" content="87NEEvBU6dL3QuI_1iZK9wgq4Jtws60z1M3bKu-mS6s" />
@@ -227,13 +227,13 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the one below it. Foundation ($99) covers lead capture, review requests, missed call texts, and appointment reminders. Growth ($249) adds follow-up sequences, FAQ bot, quote automation, and CRM. Operations ($499) adds AI booking, invoice follow-up, task automation, and lead scoring." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Foundation covers lead capture, reviews, and reminders. Growth adds follow-up sequences, FAQ bot, and CRM. Operations adds AI booking, invoicing, task automation, and lead scoring." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
     { "@type": "Question", "name": "How long does setup take?", "acceptedAnswer": { "@type": "Answer", "text": "Most businesses are fully live within 48 hours of our kickoff call." } },
     { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Most partners start with Foundation or Growth and upgrade within a few months." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
-    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "Our automations have human-in-the-loop checkpoints. You stay in control." } },
+    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. The AI qualifies leads — you decide how to close them." } },
     { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you manage yourself. Agent NexLiFy is a done-for-you service." } }
   ]
 }
@@ -286,22 +286,22 @@ export default function Home() {
             <div className="lp-hero-text">
               <div className="lp-hero-badge reveal">
                 <span className="lp-hero-badge-dot" aria-hidden="true"></span>
-                AI-Powered Lead Capture
+                Now serving 500+ local businesses
               </div>
               <h1 className="reveal">
-                Turn Every Visitor Into a{" "}
-                <span className="accent-gradient">Customer</span>
+                Never Miss a{" "}
+                <span className="accent-gradient">Lead</span> Again
               </h1>
               <p className="lp-hero-sub reveal">
-                An AI chatbot that captures leads, answers questions, and books appointments 24/7.
-                Paste one line of code and start converting visitors while you sleep.
+                An AI receptionist for your website that answers questions, captures contact info,
+                and books appointments — even at 2 AM. Set up in 5 minutes, no coding needed.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
                   Start Free {"\u2192"}
                 </Link>
                 <a href="#demo" className="btn-secondary">
-                  See It In Action {"\u2193"}
+                  Watch Demo {"\u2193"}
                 </a>
               </div>
             </div>
@@ -311,7 +311,7 @@ export default function Home() {
               <div className="widget-mockup-header">
                 <div className="widget-mockup-avatar">AI</div>
                 <div className="widget-mockup-header-text">
-                  <div className="widget-mockup-name">AI Assistant</div>
+                  <div className="widget-mockup-name">Bright Smile Dental</div>
                   <div className="widget-mockup-status">
                     <span className="widget-mockup-status-dot"></span>
                     Online
@@ -320,22 +320,22 @@ export default function Home() {
               </div>
               <div className="widget-mockup-body">
                 <div className="wm-msg wm-msg-bot">
-                  Hi! Welcome to our site. How can I help you today?
+                  Hi! Welcome to Bright Smile Dental. I can help you book an appointment, check insurance, or answer any questions.
                 </div>
                 <div className="wm-msg wm-msg-user">
-                  I&apos;m interested in your pricing for home services.
+                  Do you accept Delta Dental insurance?
                 </div>
                 <div className="wm-typing" aria-hidden="true">
                   <span></span><span></span><span></span>
                 </div>
                 <div className="wm-msg wm-msg-bot">
-                  Great question! Our plans start at $99/mo. Let me grab your info so we can set up a quick demo.
+                  Yes! We&apos;re in-network with Delta Dental. Would you like to book a cleaning? I have openings this Thursday and Friday.
                 </div>
                 <div className="wm-form">
-                  <div className="wm-form-label">Get a free demo</div>
+                  <div className="wm-form-label">Book your appointment</div>
                   <div className="wm-form-input">Your name</div>
-                  <div className="wm-form-input">Email address</div>
-                  <div className="wm-form-btn">Book My Demo</div>
+                  <div className="wm-form-input">Phone number</div>
+                  <div className="wm-form-btn">Book My Appointment</div>
                 </div>
               </div>
             </div>
@@ -346,7 +346,7 @@ export default function Home() {
       {/* ============ TRUST BAR ============ */}
       <section className="lp-trust">
         <div className="container">
-          <p className="lp-trust-label reveal">Integrates with your favorite tools</p>
+          <p className="lp-trust-label reveal">Works with the tools you already use</p>
           <div className="lp-trust-logos reveal">
             <svg viewBox="0 0 24 24" aria-label="Gmail">
               <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" />
@@ -375,23 +375,21 @@ export default function Home() {
         <div className="container">
           <div className="lp-how-header">
             <div className="section-label reveal">How It Works</div>
-            <h2 className="section-title reveal">Up and running in minutes.</h2>
+            <h2 className="section-title reveal">Live on your website in 5 minutes.</h2>
           </div>
           <div className="lp-how-steps">
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">1</div>
-              <h3>Install the Widget</h3>
+              <h3>Paste One Line of Code</h3>
               <p>
-                Copy-paste one line of code onto your website. Works with any site builder
-                — WordPress, Squarespace, Wix, or custom HTML.
+                Add a single script tag to your site. Works with WordPress, Squarespace, Wix, or any website.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">2</div>
-              <h3>AI Handles Conversations</h3>
+              <h3>AI Answers, Captures, Books</h3>
               <p>
-                Your chatbot greets visitors, answers questions, and captures lead information
-                24/7. No human intervention required.
+                Your AI receptionist greets every visitor, answers FAQs, collects contact info, and books appointments — automatically.
               </p>
             </div>
             <div className="lp-how-step reveal">
@@ -411,9 +409,9 @@ export default function Home() {
         <div className="container">
           <div className="lp-features-header">
             <div className="section-label reveal">Features</div>
-            <h2 className="section-title reveal">Everything you need to convert more leads.</h2>
+            <h2 className="section-title reveal">Everything your front desk does — without the front desk.</h2>
             <p className="section-subtitle reveal">
-              A complete AI toolkit that works around the clock so you don&apos;t have to.
+              Six tools that work 24/7 so you can focus on the work that matters.
             </p>
           </div>
           <div className="lp-features-grid">
@@ -422,42 +420,42 @@ export default function Home() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <h3>AI Chat Widget</h3>
-              <p>Conversational chatbot that greets visitors, answers questions, and captures leads on autopilot.</p>
+              <p>Greets every website visitor instantly. Answers their questions, captures their info, and hands you a qualified lead.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
               <h3>Lead Capture</h3>
-              <p>Collects name, email, and phone from every visitor. Instant notification so you never miss a lead.</p>
+              <p>Collects name, email, and phone from every visitor — then pings you instantly so you can follow up while they&apos;re still interested.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
               </div>
               <h3>Smart Follow-Up</h3>
-              <p>Automated email and SMS drip campaigns that nurture every lead with AI-personalized messaging.</p>
+              <p>Sends personalized email and SMS sequences automatically. Turns &ldquo;maybe later&rdquo; into booked appointments.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
               <h3>FAQ Bot</h3>
-              <p>Trained on your business FAQs. Handles 60-70% of common questions via chat and SMS automatically.</p>
+              <p>Trained on your business. Answers the same 20 questions you get every day — so you don&apos;t have to.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </div>
               <h3>Appointment Booking</h3>
-              <p>AI books appointments, sends reminders, handles reschedules. Syncs with Google Calendar.</p>
+              <p>Books appointments, sends reminders, and handles reschedules. Syncs with Google Calendar so nothing falls through the cracks.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               </div>
               <h3>Lead Scoring</h3>
-              <p>Scores every lead based on behavior and engagement. Alerts you when a lead is hot and ready to close.</p>
+              <p>Ranks every lead by buying intent. Alerts you the moment someone is ready to close — so you call them first.</p>
             </div>
           </div>
         </div>
@@ -467,19 +465,18 @@ export default function Home() {
       <section className="section lp-demo" id="demo">
         <div className="container">
           <div className="lp-demo-inner">
-            <div className="section-label reveal">Live Demo</div>
-            <h2 className="section-title reveal">See the AI in action.</h2>
+            <div className="section-label reveal">See It In Action</div>
+            <h2 className="section-title reveal">See it work on a real website.</h2>
             <p className="section-subtitle reveal">
-              Try having a conversation with our AI assistant. Ask it anything about our service
-              and watch it handle leads in real time.
+              Watch how a dental office uses Agent NexLiFy to book appointments and capture leads around the clock.
             </p>
-            <div className="lp-demo-frame reveal">
-              <div className="lp-demo-placeholder">
-                <p>Interactive widget demo loads here when you deploy the widget.</p>
-                <Link to="/signup" className="btn-primary">
-                  Try It Yourself {"\u2192"}
-                </Link>
-              </div>
+            <div className="lp-demo-cta-block reveal">
+              <a href={CALENDLY_URL} className="btn-primary" target="_blank" rel="noopener noreferrer">
+                Book a Live Demo {"\u2192"}
+              </a>
+              <Link to="/free-widget" className="btn-secondary">
+                Or try the free version on your site {"\u2192"}
+              </Link>
             </div>
           </div>
         </div>
@@ -499,12 +496,12 @@ export default function Home() {
             {/* Free */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Free</div>
-              <div className="lp-pricing-tagline">Start capturing leads today.</div>
+              <div className="lp-pricing-tagline">See it work on your site.</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$0</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">No setup fee</div>
+              <div className="lp-pricing-setup">No credit card required</div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>Up to 50 conversations/month</li>
@@ -520,7 +517,7 @@ export default function Home() {
             {/* Foundation */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Foundation</div>
-              <div className="lp-pricing-tagline">Automate the basics.</div>
+              <div className="lp-pricing-tagline">Stop losing leads to voicemail.</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$99</span>
                 <span className="lp-pricing-period">/month</span>
@@ -529,6 +526,7 @@ export default function Home() {
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>Unlimited conversations</li>
+                <li>Lead capture &amp; instant alerts</li>
                 <li>Automated review requests</li>
                 <li>Missed call text-back</li>
                 <li>Appointment reminders</li>
@@ -541,7 +539,7 @@ export default function Home() {
             {/* Growth — Popular */}
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">Growth</div>
-              <div className="lp-pricing-tagline">Never lose a lead again.</div>
+              <div className="lp-pricing-tagline">Your highest-ROI employee.</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$249</span>
                 <span className="lp-pricing-period">/month</span>
@@ -550,10 +548,11 @@ export default function Home() {
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Foundation, plus:</div>
               <ul className="lp-pricing-features">
-                <li>Follow-up drip sequences</li>
+                <li>Automated follow-up sequences</li>
                 <li>AI FAQ &amp; support bot</li>
                 <li>Quote &amp; estimate automation</li>
-                <li>CRM setup &amp; pipeline automation</li>
+                <li>CRM setup &amp; pipeline</li>
+                <li>Priority support</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02">
                 Get Started {"\u2192"}
@@ -575,7 +574,8 @@ export default function Home() {
                 <li>AI appointment booking agent</li>
                 <li>Invoice &amp; payment follow-up</li>
                 <li>Internal task automation</li>
-                <li>AI lead scoring</li>
+                <li>AI lead scoring &amp; alerts</li>
+                <li>Dedicated account manager</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03">
                 Get Started {"\u2192"}
@@ -635,9 +635,9 @@ export default function Home() {
       {/* ============ FINAL CTA ============ */}
       <section className="lp-cta-section" id="cta">
         <div className="container lp-cta-content">
-          <h2 className="section-title reveal">Ready to automate your business?</h2>
+          <h2 className="section-title reveal">Your competitors are already using AI. Are you?</h2>
           <p className="section-subtitle reveal">
-            Start capturing leads today with our free AI chatbot. No credit card required.
+            Start capturing leads today with our free AI receptionist. No credit card required.
           </p>
           <div className="lp-cta-buttons reveal">
             <Link to="/signup" className="btn-primary">
@@ -647,7 +647,7 @@ export default function Home() {
               Book a Demo
             </a>
           </div>
-          <p className="lp-cta-note reveal">No commitment. No pressure. Just results.</p>
+          <p className="lp-cta-note reveal">Free forever plan. No credit card. Cancel anytime.</p>
         </div>
       </section>
 
