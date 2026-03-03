@@ -284,10 +284,6 @@ export default function Home() {
         <div className="container">
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
-              <div className="lp-hero-badge reveal">
-                <span className="lp-hero-badge-dot" aria-hidden="true"></span>
-                Now serving 500+ local businesses
-              </div>
               <h1 className="reveal">
                 Never Miss a{" "}
                 <span className="accent-gradient">Lead</span> Again
@@ -672,15 +668,15 @@ export default function Home() {
               <h4>Company</h4>
               <ul>
                 <li><a href="#how-it-works">How It Works</a></li>
-                <li><a href="mailto:hello@agentnexlify.com">Contact</a></li>
+                <li><Link to="/contact">Contact</Link></li>
                 <li><a href={CALENDLY_URL} target="_blank" rel="noopener noreferrer">Book a Demo</a></li>
               </ul>
             </div>
             <div className="lp-footer-col">
               <h4>Legal</h4>
               <ul>
-                <li><a href="#">Privacy Policy</a></li>
-                <li><a href="#">Terms of Service</a></li>
+                <li><Link to="/privacy">Privacy Policy</Link></li>
+                <li><Link to="/terms">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
