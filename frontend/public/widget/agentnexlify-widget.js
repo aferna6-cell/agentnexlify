@@ -6,7 +6,10 @@
   const API_KEY = scriptTag?.getAttribute("data-api-key") || "";
   const BRAND_COLOR =
     scriptTag?.getAttribute("data-brand-color") || "#6cff5c";
-  const API_BASE = "https://agentnexlify-production.up.railway.app";
+  const API_BASE =
+    scriptTag?.getAttribute("data-api-base") ||
+    scriptTag?.src?.replace(/\/widget\/agentnexlify-widget\.js.*$/, "") ||
+    "";
 
   const SESSION_KEY = "anx_session_id";
   const STATE_KEY = "anx_widget_state";
@@ -368,6 +371,7 @@
     const container = document.createElement("div");
     container.id = "anx-container";
 
+    // Bubble
     container.innerHTML = `
       <div id="anx-bubble">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
@@ -378,7 +382,7 @@
           <div id="anx-header-info">
             <div id="anx-header-avatar">A</div>
             <div id="anx-header-text">
-              <h3 id="anx-title">AI Assistant</h3>
+              <h3 id="anx-title">Aria</h3>
               <p><span class="anx-header-status"></span>Typically replies instantly</p>
             </div>
           </div>
@@ -394,7 +398,7 @@
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div id="anx-powered">Powered by <a href="https://agentnexlify.com" target="_blank" rel="noopener">AgentNexLiFy</a></div>
+        <div id="anx-powered">Powered by <a href="#">AgentNexLiFy</a></div>
       </div>
     `;
 
@@ -407,7 +411,8 @@
   let isLoading = false;
   let hasAutoOpened = false;
   let unreadCount = 0;
-  let botName = "AI Assistant";
+  let botName = "Aria";
+  let agentName = "Agent";
 
   // --- API calls ---
   async function fetchConfig() {
@@ -417,24 +422,19 @@
       );
       if (!resp.ok) return;
       const data = await resp.json();
-      botName = data.bot_name || data.name || "AI Assistant";
-      if (data.brand_color) {
-        // Server-provided brand color (data-attr takes priority if set)
-      }
-      if (data.greeting) {
-        window.__anx_greeting = data.greeting;
-      }
-      // Hide watermark for paid plans
-      if (data.plan && data.plan !== "free") {
-        const powered = document.getElementById("anx-powered");
-        if (powered) powered.style.display = "none";
-      }
+      botName = data.bot_name || "Aria";
+      agentName = data.agent_name || "Agent";
     } catch (e) {
       console.warn("AgentNexLiFy: Failed to fetch config", e);
     }
   }
 
-  async function sendChatMessage(text) {
+  async function fetchHistory() {
+    // History is loaded from localStorage session; no dedicated history endpoint
+    return [];
+  }
+
+  async function sendMessage(text) {
     const resp = await fetch(`${API_BASE}/api/v1/widget/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -457,6 +457,7 @@
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 
+    // Notification when minimized
     if (!isOpen && role === "assistant") {
       unreadCount++;
       const badge = document.getElementById("anx-badge");
@@ -483,7 +484,7 @@
   function updateHeader() {
     const title = document.getElementById("anx-title");
     const avatar = document.getElementById("anx-header-avatar");
-    if (title) title.textContent = botName;
+    if (title) title.textContent = `${botName} \u2022 ${agentName}'s AI Assistant`;
     if (avatar) avatar.textContent = botName.charAt(0).toUpperCase();
   }
 
@@ -521,9 +522,9 @@
     showTyping();
 
     try {
-      const data = await sendChatMessage(text);
+      const data = await sendMessage(text);
       hideTyping();
-      addMessage("assistant", data.reply || data.response || data.message);
+      addMessage("assistant", data.response);
     } catch (e) {
       hideTyping();
       addMessage(
@@ -556,6 +557,14 @@
     await fetchConfig();
     updateHeader();
 
+    // Load existing history
+    const history = await fetchHistory();
+    for (const msg of history) {
+      if (msg.role === "user" || msg.role === "assistant") {
+        addMessage(msg.role, msg.content);
+      }
+    }
+
     // Event listeners
     document
       .getElementById("anx-bubble")
@@ -579,15 +588,16 @@
     });
     input.addEventListener("input", () => autoResize(input));
 
-    // Auto-open after 5 seconds if not manually closed before
+    // Auto-open after 5 seconds if no history and not manually closed
     const savedState = localStorage.getItem(STATE_KEY);
     if (savedState === "open") {
       toggleWindow(true);
-    } else if (savedState !== "closed") {
+    } else if (history.length === 0 && savedState !== "closed") {
       setTimeout(() => {
         if (!isOpen && !hasAutoOpened) {
           hasAutoOpened = true;
           toggleWindow(true);
+          // Send initial greeting
           if (
             document.getElementById("anx-messages").children.length === 0
           ) {
@@ -599,19 +609,17 @@
   }
 
   async function triggerGreeting() {
-    const greeting = window.__anx_greeting;
-    if (greeting) {
-      addMessage("assistant", greeting);
-      return;
-    }
     showTyping();
     try {
-      const data = await sendChatMessage("hi");
+      const data = await sendMessage("hi");
       hideTyping();
-      addMessage("assistant", data.reply || data.response || data.message);
+      addMessage("assistant", data.response);
     } catch (e) {
       hideTyping();
-      addMessage("assistant", "Hey there! How can I help you today?");
+      addMessage(
+        "assistant",
+        `Hey there! How can I help you today?`
+      );
     }
   }
 
