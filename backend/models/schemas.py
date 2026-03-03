@@ -105,6 +105,13 @@ class MeResponse(BaseModel):
     owner_name: str | None = None
 
 
+class WidgetConfigDetail(BaseModel):
+    bot_name: str = ""
+    primary_color: str = "#00BFFF"
+    greeting_message: str = "Hi! How can I help you today?"
+    position: str = "bottom-right"
+
+
 class DashboardResponse(BaseModel):
     business_name: str
     plan: str
@@ -113,6 +120,30 @@ class DashboardResponse(BaseModel):
     monthly_conversation_limit: int
     widget_api_key: str | None = None
     leads_count: int
+    widget_config: WidgetConfigDetail | None = None
+    faq_count: int = 0
+    has_conversations: bool = False
+
+
+class WidgetConfigUpdateRequest(BaseModel):
+    bot_name: str | None = None
+    primary_color: str | None = None
+    greeting_message: str | None = None
+    position: str | None = None
+
+
+class FaqEntryResponse(BaseModel):
+    id: str
+    question: str
+    answer: str
+    category: str | None = None
+    is_active: bool = True
+
+
+class FaqCreateRequest(BaseModel):
+    question: str
+    answer: str
+    category: str | None = None
 
 
 class CreateClientRequest(BaseModel):
@@ -145,26 +176,6 @@ class ClientRow(BaseModel):
     active: bool
     custom_instructions: str | None = None
     brand_color: str
-
-
-class ConversationRow(BaseModel):
-    id: str
-    client_id: str
-    created_at: datetime
-    updated_at: datetime
-    channel: str
-    session_id: str
-    status: str
-    lead_id: str | None = None
-
-
-class MessageRow(BaseModel):
-    id: str
-    conversation_id: str
-    created_at: datetime
-    role: str
-    content: str
-    metadata: dict[str, Any] | None = None
 
 
 # --- Widget (multi-tenant) schemas ---

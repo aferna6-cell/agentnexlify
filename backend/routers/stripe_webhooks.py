@@ -60,6 +60,6 @@ async def stripe_webhook(request: Request):
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:
         logger.exception("Stripe webhook handler failed for event %s", event_type)
-        return {"status": "error", "detail": "handler failed — see logs"}
+        raise HTTPException(status_code=500, detail="Webhook handler failed")
 
     return {"status": "ok"}

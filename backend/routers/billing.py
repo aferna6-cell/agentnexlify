@@ -130,8 +130,8 @@ async def stripe_webhook(request: Request):
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:
         logger.exception("Stripe webhook handler failed for event %s", event_type)
-        # Still return 200 so Stripe doesn't retry endlessly, but log the error
-        return {"status": "error", "detail": "handler failed — see logs"}
+        # Return 500 so Stripe retries (Stripe retries for up to 3 days)
+        raise HTTPException(status_code=500, detail="Webhook handler failed")
 
     return {"status": "ok"}
 

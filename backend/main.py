@@ -14,7 +14,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
-from backend.routers import auth, automations, billing, chat, leads, clients, signup, stripe_webhooks, webhooks, widget
+from backend.routers import auth, automations, billing, leads, stripe_webhooks, widget
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,9 +53,10 @@ app.add_middleware(
 )
 
 # --- Rate limiting ---
-# Import the limiter from chat router so it's shared
-from backend.routers.chat import limiter  # noqa: E402
+from slowapi import Limiter  # noqa: E402
+from slowapi.util import get_remote_address  # noqa: E402
 
+limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -80,12 +81,8 @@ async def log_requests(request: Request, call_next):
 app.include_router(auth.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
-app.include_router(chat.router)
 app.include_router(leads.router)
-app.include_router(clients.router)
-app.include_router(signup.router)
 app.include_router(stripe_webhooks.router)
-app.include_router(webhooks.router)
 app.include_router(widget.router)
 
 
@@ -102,6 +99,12 @@ async def health():
 # --- Global error handler ---
 @app.exception_handler(Exception)
 async def global_error_handler(request: Request, exc: Exception):
+    from fastapi import HTTPException as _HTTPException
+
+    # Let FastAPI handle HTTPExceptions natively (4xx, etc.)
+    if isinstance(exc, _HTTPException):
+        raise exc
+
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,

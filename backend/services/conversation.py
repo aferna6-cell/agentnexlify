@@ -1,8 +1,11 @@
-"""Conversation state management — load, create, and persist conversations."""
+"""Conversation state management — load, create, and persist conversations.
+
+Schema (conversations table):
+  id, tenant_id, session_id, messages (JSONB), lead_id, started_at, last_message_at
+"""
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -14,16 +17,16 @@ logger = logging.getLogger(__name__)
 MAX_HISTORY_MESSAGES = 50
 
 
-def get_or_create_conversation(client_id: str, session_id: str, channel: str = "web") -> dict:
-    """Find an active conversation for this session or create a new one."""
+def get_or_create_conversation(tenant_id: str, session_id: str) -> dict:
+    """Find an existing conversation for this session or create a new one."""
     db = get_supabase()
+
     result = (
         db.table("conversations")
         .select("*")
-        .eq("client_id", client_id)
+        .eq("tenant_id", tenant_id)
         .eq("session_id", session_id)
-        .eq("status", "active")
-        .order("created_at", desc=True)
+        .order("started_at", desc=True)
         .limit(1)
         .execute()
     )
@@ -31,45 +34,59 @@ def get_or_create_conversation(client_id: str, session_id: str, channel: str = "
         return result.data[0]
 
     new_conv = {
-        "client_id": client_id,
+        "tenant_id": tenant_id,
         "session_id": session_id,
-        "channel": channel,
-        "status": "active",
+        "messages": [],
     }
-    result = db.table("conversations").insert(new_conv).execute()
-    return result.data[0]
+    try:
+        result = db.table("conversations").insert(new_conv).execute()
+        if result.data:
+            return result.data[0]
+    except Exception:
+        logger.exception("Failed to create conversation for tenant %s", tenant_id)
+
+    # Return a minimal dict so callers can continue even if DB insert fails
+    return {"id": session_id, "tenant_id": tenant_id, "session_id": session_id, "messages": []}
 
 
 def load_message_history(conversation_id: str) -> list[dict[str, Any]]:
-    """Load message history for a conversation, trimmed to the last N messages.
+    """Load message history from the JSONB messages column.
 
-    Returns messages in the Anthropic API format:
+    Returns messages in Anthropic API format:
     [{"role": "user"|"assistant", "content": ...}, ...]
     """
     db = get_supabase()
-    result = (
-        db.table("messages")
-        .select("role, content, metadata")
-        .eq("conversation_id", conversation_id)
-        .order("created_at", desc=False)
-        .execute()
-    )
 
-    rows = result.data or []
+    try:
+        result = (
+            db.table("conversations")
+            .select("messages")
+            .eq("id", conversation_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to load conversation %s", conversation_id)
+        return []
+
+    if not result.data:
+        return []
+
+    raw_messages = result.data[0].get("messages") or []
+
     # Trim to last N messages
-    if len(rows) > MAX_HISTORY_MESSAGES:
-        rows = rows[-MAX_HISTORY_MESSAGES:]
+    if len(raw_messages) > MAX_HISTORY_MESSAGES:
+        raw_messages = raw_messages[-MAX_HISTORY_MESSAGES:]
 
     messages: list[dict[str, Any]] = []
-    for row in rows:
-        role = row["role"]
-        content = row["content"]
-        metadata = row.get("metadata") or {}
+    for msg in raw_messages:
+        role = msg.get("role")
+        content = msg.get("content")
+        metadata = msg.get("metadata") or {}
 
         if role in ("user", "assistant"):
-            # Check if this assistant message had tool use blocks
+            # Reconstruct tool_use blocks if present
             if role == "assistant" and metadata.get("tool_use_blocks"):
-                # Reconstruct the content blocks
                 blocks: list[dict] = [{"type": "text", "text": content}] if content else []
                 for tb in metadata["tool_use_blocks"]:
                     blocks.append({
@@ -101,33 +118,70 @@ def save_message(
     role: str,
     content: str,
     metadata: dict[str, Any] | None = None,
-) -> dict:
-    """Persist a message to the database."""
+) -> None:
+    """Append a message to the JSONB messages array on the conversation row."""
     db = get_supabase()
-    msg = {
-        "conversation_id": conversation_id,
+
+    msg_entry: dict[str, Any] = {
         "role": role,
         "content": content,
-        "metadata": metadata,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    result = db.table("messages").insert(msg).execute()
+    if metadata:
+        msg_entry["metadata"] = metadata
 
-    # Update conversation timestamp
-    db.table("conversations").update(
-        {"updated_at": datetime.now(timezone.utc).isoformat()}
-    ).eq("id", conversation_id).execute()
+    try:
+        # Load current messages, append, and save back
+        result = (
+            db.table("conversations")
+            .select("messages")
+            .eq("id", conversation_id)
+            .limit(1)
+            .execute()
+        )
+        if not result.data:
+            logger.warning("Conversation %s not found — cannot save message", conversation_id)
+            return
 
-    return result.data[0]
+        current_messages = result.data[0].get("messages") or []
+        current_messages.append(msg_entry)
+
+        db.table("conversations").update({
+            "messages": current_messages,
+            "last_message_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", conversation_id).execute()
+    except Exception:
+        logger.exception("Failed to save message to conversation %s", conversation_id)
 
 
 def get_conversation_messages(conversation_id: str) -> list[dict]:
     """Get raw messages for API response (chat history endpoint)."""
     db = get_supabase()
-    result = (
-        db.table("messages")
-        .select("id, role, content, created_at, metadata")
-        .eq("conversation_id", conversation_id)
-        .order("created_at", desc=False)
-        .execute()
-    )
-    return result.data or []
+
+    try:
+        result = (
+            db.table("conversations")
+            .select("messages")
+            .eq("id", conversation_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to get messages for conversation %s", conversation_id)
+        return []
+
+    if not result.data:
+        return []
+
+    messages = result.data[0].get("messages") or []
+
+    # Filter to user/assistant messages for display
+    return [
+        {
+            "role": m["role"],
+            "content": m["content"],
+            "timestamp": m.get("timestamp"),
+        }
+        for m in messages
+        if m.get("role") in ("user", "assistant") and m.get("content")
+    ]

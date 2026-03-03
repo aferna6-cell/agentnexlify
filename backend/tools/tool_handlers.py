@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 from backend.models.database import get_supabase
@@ -130,15 +129,13 @@ async def _handle_log_lead(
     db = get_supabase()
 
     lead_data: dict[str, Any] = {
-        "client_id": client.id,
+        "tenant_id": client.id,
         "conversation_id": conversation_id,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    # Map all provided fields
+    # Map fields that exist in the leads schema
     field_map = [
-        "name", "email", "phone", "lead_type", "timeline", "budget",
-        "pre_approved", "areas_of_interest", "must_haves", "lead_score",
-        "lead_temperature", "conversation_summary", "next_steps",
+        "name", "email", "phone", "timeline", "budget",
+        "lead_score", "service_interest", "notes",
     ]
     for field in field_map:
         if field in inputs and inputs[field] is not None:
@@ -160,16 +157,15 @@ async def _handle_log_lead(
         # Link lead to conversation
         db.table("conversations").update({"lead_id": lead_id}).eq("id", conversation_id).execute()
 
-    # If it's a hot lead, auto-notify the agent
-    if inputs.get("lead_temperature") == "hot":
+    # If it's a hot lead (score >= 8), auto-notify the agent
+    lead_score = inputs.get("lead_score")
+    if lead_score is not None and lead_score >= 8:
         msg = (
             f"Hot lead captured!\n"
             f"Name: {inputs.get('name', 'Unknown')}\n"
             f"Phone: {inputs.get('phone', 'N/A')}\n"
             f"Email: {inputs.get('email', 'N/A')}\n"
-            f"Type: {inputs.get('lead_type', 'unknown')}\n"
-            f"Score: {inputs.get('lead_score', '?')}/10\n"
-            f"Summary: {inputs.get('conversation_summary', 'N/A')}"
+            f"Score: {lead_score}/10"
         )
         await send_agent_notification(client, "hot_lead", msg)
 
