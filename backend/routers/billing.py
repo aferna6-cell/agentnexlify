@@ -139,11 +139,13 @@ def _resolve_plan(session: dict) -> str | None:
     """Determine plan from metadata, line items, or amount."""
     metadata = session.get("metadata", {})
     plan = metadata.get("plan")
+    logger.info("_resolve_plan: metadata.plan=%s", plan)
     if plan and plan in PLAN_LIMITS:
         return plan
 
     # Try amount_total (in cents)
     amount = session.get("amount_total")
+    logger.info("_resolve_plan: amount_total=%s, known amounts=%s", amount, list(AMOUNT_TO_PLAN.keys()))
     if amount and amount in AMOUNT_TO_PLAN:
         return AMOUNT_TO_PLAN[amount]
 
@@ -155,6 +157,7 @@ def _resolve_tenant_id(db, session: dict) -> str | None:
     metadata = session.get("metadata", {})
     tenant_id = metadata.get("tenant_id")
     if tenant_id:
+        logger.info("_resolve_tenant_id: found tenant_id in metadata: %s", tenant_id)
         return tenant_id
 
     # Fall back to email lookup
@@ -162,24 +165,48 @@ def _resolve_tenant_id(db, session: dict) -> str | None:
         session.get("customer_email")
         or session.get("customer_details", {}).get("email")
     )
+    logger.info(
+        "_resolve_tenant_id: no metadata tenant_id, trying email lookup: "
+        "customer_email=%s, customer_details.email=%s",
+        session.get("customer_email"),
+        session.get("customer_details", {}).get("email"),
+    )
     if not email:
+        logger.warning("_resolve_tenant_id: no email found in session")
         return None
 
+    search_email = email.lower().strip()
+    logger.info("_resolve_tenant_id: searching tenants for owner_email=%s", search_email)
     result = (
         db.table("tenants")
-        .select("id")
-        .eq("owner_email", email.lower().strip())
+        .select("id, owner_email")
+        .eq("owner_email", search_email)
         .limit(1)
         .execute()
     )
+    logger.info("_resolve_tenant_id: query result data=%s", result.data)
     if result.data:
         return str(result.data[0]["id"])
     return None
 
 
 def _handle_checkout_completed(db, session: dict) -> None:
+    logger.info(
+        "checkout.session.completed: customer_email=%s, customer=%s, "
+        "metadata=%s, amount_total=%s, subscription=%s, mode=%s, status=%s",
+        session.get("customer_email"),
+        session.get("customer"),
+        session.get("metadata"),
+        session.get("amount_total"),
+        session.get("subscription"),
+        session.get("mode"),
+        session.get("status"),
+    )
+
     tenant_id = _resolve_tenant_id(db, session)
     plan = _resolve_plan(session)
+
+    logger.info("checkout.session.completed: resolved tenant_id=%s, plan=%s", tenant_id, plan)
 
     if not tenant_id:
         logger.warning(
@@ -194,13 +221,17 @@ def _handle_checkout_completed(db, session: dict) -> None:
         )
         return
 
-    db.table("tenants").update({
+    update_data = {
         "plan": plan,
         "plan_status": "active",
         "stripe_customer_id": session.get("customer"),
         "stripe_subscription_id": session.get("subscription"),
         "monthly_conversation_limit": PLAN_LIMITS.get(plan, 50),
-    }).eq("id", tenant_id).execute()
+    }
+    logger.info("checkout.session.completed: updating tenant %s with %s", tenant_id, update_data)
+
+    update_result = db.table("tenants").update(update_data).eq("id", tenant_id).execute()
+    logger.info("checkout.session.completed: update result data=%s", update_result.data)
 
     logger.info("Tenant %s upgraded to %s", tenant_id, plan)
 
