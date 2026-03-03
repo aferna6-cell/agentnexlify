@@ -106,32 +106,54 @@ async def stripe_webhook(request: Request):
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
+    except (stripe.SignatureVerificationError, Exception) as exc:
+        # stripe.error.SignatureVerificationError is deprecated in v11+
+        if "SignatureVerification" in type(exc).__name__:
+            raise HTTPException(status_code=400, detail="Invalid signature")
+        raise
 
     event_type = event["type"]
     data = event["data"]["object"]
+    logger.info("Stripe webhook received: type=%s, id=%s", event_type, event.get("id"))
     db = get_supabase()
 
-    if event_type == "checkout.session.completed":
-        _handle_checkout_completed(db, data)
-    elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
-        _handle_subscription_updated(db, data)
-    elif event_type == "customer.subscription.deleted":
-        _handle_subscription_deleted(db, data)
-    elif event_type == "invoice.payment_failed":
-        _handle_payment_failed(db, data)
-    else:
-        logger.debug("Unhandled Stripe event: %s", event_type)
+    try:
+        if event_type == "checkout.session.completed":
+            _handle_checkout_completed(db, data)
+        elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
+            _handle_subscription_updated(db, data)
+        elif event_type == "customer.subscription.deleted":
+            _handle_subscription_deleted(db, data)
+        elif event_type == "invoice.payment_failed":
+            _handle_payment_failed(db, data)
+        else:
+            logger.debug("Unhandled Stripe event: %s", event_type)
+    except Exception:
+        logger.exception("Stripe webhook handler failed for event %s", event_type)
+        # Still return 200 so Stripe doesn't retry endlessly, but log the error
+        return {"status": "error", "detail": "handler failed — see logs"}
 
     return {"status": "ok"}
 
 
 AMOUNT_TO_PLAN: dict[int, str] = {
+    # Monthly only
     9900: "foundation",
     24900: "growth",
     49900: "operations",
     99900: "enterprise",
+    # Monthly + setup fee (first invoice)
+    24800: "foundation",   # $99 + $149 setup
+    64800: "growth",       # $249 + $399 setup
+    109800: "operations",  # $499 + $599 setup
+}
+
+# Keywords to match in product/price descriptions
+PLAN_KEYWORDS: dict[str, str] = {
+    "foundation": "foundation",
+    "growth": "growth",
+    "operations": "operations",
+    "enterprise": "enterprise",
 }
 
 
@@ -149,6 +171,24 @@ def _resolve_plan(session: dict) -> str | None:
     if amount and amount in AMOUNT_TO_PLAN:
         return AMOUNT_TO_PLAN[amount]
 
+    # Try matching plan name from display_items or line_items descriptions
+    for field in ("display_items", "line_items"):
+        items = session.get(field, {})
+        if isinstance(items, dict):
+            items = items.get("data", [])
+        for item in (items or []):
+            desc = (
+                item.get("description", "")
+                or item.get("price", {}).get("nickname", "")
+                or item.get("plan", {}).get("nickname", "")
+                or ""
+            ).lower()
+            logger.info("_resolve_plan: checking line item desc=%s", desc)
+            for keyword, plan_name in PLAN_KEYWORDS.items():
+                if keyword in desc:
+                    return plan_name
+
+    logger.warning("_resolve_plan: could not determine plan from session")
     return None
 
 

@@ -37,22 +37,29 @@ async def stripe_webhook(request: Request):
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
+    except (stripe.SignatureVerificationError, Exception) as exc:
+        if "SignatureVerification" in type(exc).__name__:
+            raise HTTPException(status_code=400, detail="Invalid signature")
+        raise
 
     event_type = event["type"]
     data = event["data"]["object"]
+    logger.info("Stripe webhook received: type=%s, id=%s", event_type, event.get("id"))
     db = get_supabase()
 
-    if event_type == "checkout.session.completed":
-        _handle_checkout_completed(db, data)
-    elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
-        _handle_subscription_updated(db, data)
-    elif event_type == "customer.subscription.deleted":
-        _handle_subscription_deleted(db, data)
-    elif event_type == "invoice.payment_failed":
-        _handle_payment_failed(db, data)
-    else:
-        logger.debug("Unhandled Stripe event: %s", event_type)
+    try:
+        if event_type == "checkout.session.completed":
+            _handle_checkout_completed(db, data)
+        elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
+            _handle_subscription_updated(db, data)
+        elif event_type == "customer.subscription.deleted":
+            _handle_subscription_deleted(db, data)
+        elif event_type == "invoice.payment_failed":
+            _handle_payment_failed(db, data)
+        else:
+            logger.debug("Unhandled Stripe event: %s", event_type)
+    except Exception:
+        logger.exception("Stripe webhook handler failed for event %s", event_type)
+        return {"status": "error", "detail": "handler failed — see logs"}
 
     return {"status": "ok"}
