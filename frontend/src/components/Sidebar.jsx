@@ -8,6 +8,14 @@ const planLabels = {
   enterprise: "Enterprise",
 };
 
+const planColors = {
+  free: { color: "var(--green)", bg: "var(--green-dim)" },
+  foundation: { color: "var(--accent)", bg: "var(--accent-dim)" },
+  growth: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
+  operations: { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+  enterprise: { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+};
+
 const navItems = [
   { key: "dashboard", icon: "\u{1F4CA}", label: "Dashboard" },
   { key: "leads", icon: "\u{1F465}", label: "Leads" },
@@ -44,7 +52,10 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
         {user && (
           <div className="sidebar-user">
             <div className="sidebar-user-name">{user.businessName || user.email}</div>
-            <div className="sidebar-plan-badge">{planLabels[activePlan] || activePlan}</div>
+            <div
+              className="sidebar-plan-badge"
+              style={planColors[activePlan] ? { color: planColors[activePlan].color, background: planColors[activePlan].bg } : undefined}
+            >{planLabels[activePlan] || activePlan}</div>
           </div>
         )}
         <button className="sidebar-logout" onClick={logout}>
