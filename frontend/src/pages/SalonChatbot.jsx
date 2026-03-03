@@ -3,12 +3,12 @@ import VerticalPage from "../components/VerticalPage";
 const meta = {
   title: "Salon Booking Chatbot | AI Appointment Scheduling for Hair Salons",
   description:
-    "AI receptionist for salons. Clients self-book 24/7, no-shows drop 30%, and you save 2 hours a day on phone calls.",
+    "AI booking automation for salons. Clients self-book 24/7, no-shows drop 30%, and you save 2 hours a day on phone calls.",
   canonical: "https://agentnexlify.com/salon-booking-chatbot",
 };
 
 const hero = {
-  h1: "Your Salon\u2019s 24/7 AI Receptionist \u2014 Book Appointments While You Sleep",
+  h1: "Your Salon\u2019s 24/7 AI Booking Agent \u2014 Book Appointments While You Sleep",
   subhead:
     "Clients self-book any time. Reminders go out automatically.",
   painPoint: "Clients call during your busiest hours. Stop losing them.",

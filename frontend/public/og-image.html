@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px;
+    height: 630px;
+    background: #0a0a0f;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .container {
+    text-align: center;
+    padding: 0 80px;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .logo-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #00bfff, #6366f1);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-icon svg { width: 32px; height: 32px; }
+  .logo-text {
+    font-size: 42px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+  }
+  .headline {
+    font-size: 64px;
+    font-weight: 800;
+    color: #00bfff;
+    line-height: 1.15;
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+  }
+  .subtext {
+    font-size: 28px;
+    font-weight: 500;
+    color: #8a8f98;
+    line-height: 1.4;
+  }
+  .glow {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,191,255,0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="container">
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="white">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+        </svg>
+      </div>
+      <span class="logo-text">AgentNexLiFy</span>
+    </div>
+    <div class="headline">Never Miss a Lead Again</div>
+    <div class="subtext">AI Business Automation Platform</div>
+  </div>
+</body>
+</html>

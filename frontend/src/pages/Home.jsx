@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { trackEvent } from "../utils/analytics";
 import "../styles/home.css";
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
@@ -28,6 +29,7 @@ function StripeCta({ href, children }) {
       return;
     }
     e.preventDefault();
+    trackEvent("begin_checkout", { event_label: "home_pricing" });
     const url = `${href}?prefilled_email=${encodeURIComponent(email)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
@@ -147,25 +149,25 @@ export default function Home() {
       <Helmet>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Agent NexLiFy | AI Receptionist for Local Businesses</title>
+        <title>Agent NexLiFy | AI Business Automation Platform</title>
         <meta
           name="description"
-          content="Agent NexLiFy is an AI receptionist that answers calls, captures leads, and books appointments for local businesses — 24/7. Set up in under 5 minutes."
+          content="Automate your business operations with AI. Capture leads, follow up automatically, book appointments, score leads, and manage your pipeline — all on autopilot."
         />
         <link rel="canonical" href="https://agentnexlify.com/" />
-        <meta property="og:title" content="Agent NexLiFy | AI Receptionist for Local Businesses" />
+        <meta property="og:title" content="Agent NexLiFy | AI Business Automation Platform" />
         <meta
           property="og:description"
-          content="Agent NexLiFy is an AI receptionist that answers calls, captures leads, and books appointments for local businesses — 24/7. Set up in under 5 minutes."
+          content="Automate your business operations with AI. Capture leads, follow up automatically, book appointments, score leads, and manage your pipeline — all on autopilot."
         />
         <meta property="og:image" content="https://agentnexlify.com/og-image.png" />
         <meta property="og:url" content="https://agentnexlify.com/" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Agent NexLiFy | AI Receptionist for Local Businesses" />
+        <meta name="twitter:title" content="Agent NexLiFy | AI Business Automation Platform" />
         <meta
           name="twitter:description"
-          content="Agent NexLiFy is an AI receptionist that answers calls, captures leads, and books appointments for local businesses — 24/7. Set up in under 5 minutes."
+          content="Automate your business operations with AI. Capture leads, follow up automatically, book appointments, score leads, and manage your pipeline — all on autopilot."
         />
         <meta name="twitter:image" content="https://agentnexlify.com/og-image.png" />
         <meta name="google-site-verification" content="87NEEvBU6dL3QuI_1iZK9wgq4Jtws60z1M3bKu-mS6s" />
@@ -182,7 +184,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "url": "https://agentnexlify.com",
   "logo": "https://agentnexlify.com/logo.png",
-  "description": "AI-powered customer service platform for local businesses",
+  "description": "AI-powered business automation platform for local businesses",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Clemson",
@@ -203,7 +205,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "AI-powered customer service chatbot for local businesses",
+  "description": "AI-powered business automation platform for local businesses",
   "url": "https://agentnexlify.com",
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
@@ -289,8 +291,8 @@ export default function Home() {
                 <span className="accent-gradient">Lead</span> Again
               </h1>
               <p className="lp-hero-sub reveal">
-                An AI receptionist for your website that answers questions, captures contact info,
-                and books appointments — even at 2 AM. Set up in 5 minutes, no coding needed.
+                Automate your leads, follow-ups, appointments, and daily operations — powered by AI.
+                Set up in minutes, no coding needed.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
@@ -371,29 +373,28 @@ export default function Home() {
         <div className="container">
           <div className="lp-how-header">
             <div className="section-label reveal">How It Works</div>
-            <h2 className="section-title reveal">Live on your website in 5 minutes.</h2>
+            <h2 className="section-title reveal">Up and running in minutes.</h2>
           </div>
           <div className="lp-how-steps">
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">1</div>
-              <h3>Paste One Line of Code</h3>
+              <h3>Connect Your Business</h3>
               <p>
-                Add a single script tag to your site. Works with WordPress, Squarespace, Wix, or any website.
+                Set up your profile, services, and preferences in minutes. Works with the tools you already use.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">2</div>
-              <h3>AI Answers, Captures, Books</h3>
+              <h3>AI Takes Over</h3>
               <p>
-                Your AI receptionist greets every visitor, answers FAQs, collects contact info, and books appointments — automatically.
+                Your AI agent handles leads, follow-ups, bookings, and customer questions automatically.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
               <h3>You Close Deals</h3>
               <p>
-                Qualified leads are delivered straight to your dashboard with full conversation
-                history, contact info, and AI-generated scores.
+                Focus on the work that matters while AI handles the rest. Qualified leads land in your dashboard with scores and full history.
               </p>
             </div>
           </div>
@@ -405,9 +406,9 @@ export default function Home() {
         <div className="container">
           <div className="lp-features-header">
             <div className="section-label reveal">Features</div>
-            <h2 className="section-title reveal">Everything your front desk does — without the front desk.</h2>
+            <h2 className="section-title reveal">Six AI agents working for your business.</h2>
             <p className="section-subtitle reveal">
-              Six tools that work 24/7 so you can focus on the work that matters.
+              Automate every step from visitor to customer.
             </p>
           </div>
           <div className="lp-features-grid">
@@ -415,43 +416,43 @@ export default function Home() {
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
-              <h3>AI Chat Widget</h3>
-              <p>Greets every website visitor instantly. Answers their questions, captures their info, and hands you a qualified lead.</p>
+              <h3>AI Lead Capture</h3>
+              <p>Your AI agent engages every website visitor, answers their questions, and captures their info automatically.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
-              <h3>Lead Capture</h3>
-              <p>Collects name, email, and phone from every visitor — then pings you instantly so you can follow up while they&apos;re still interested.</p>
+              <h3>Smart Pipeline</h3>
+              <p>Leads flow into your pipeline, scored and staged automatically. Get pinged instantly so you follow up while they&apos;re still interested.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
               </div>
-              <h3>Smart Follow-Up</h3>
-              <p>Sends personalized email and SMS sequences automatically. Turns &ldquo;maybe later&rdquo; into booked appointments.</p>
+              <h3>Automated Follow-Ups</h3>
+              <p>AI-powered email and SMS sequences that nurture every lead. Turns &ldquo;maybe later&rdquo; into booked appointments.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
-              <h3>FAQ Bot</h3>
-              <p>Trained on your business. Answers the same 20 questions you get every day — so you don&apos;t have to.</p>
+              <h3>AI Assistant</h3>
+              <p>Handles customer questions across chat and SMS so you don&apos;t have to. Trained on your business, available 24/7.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </div>
-              <h3>Appointment Booking</h3>
-              <p>Books appointments, sends reminders, and handles reschedules. Syncs with Google Calendar so nothing falls through the cracks.</p>
+              <h3>Appointment Automation</h3>
+              <p>Books, reminds, and reschedules without the back-and-forth. Syncs with Google Calendar so nothing falls through the cracks.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               </div>
-              <h3>Lead Scoring</h3>
-              <p>Ranks every lead by buying intent. Alerts you the moment someone is ready to close — so you call them first.</p>
+              <h3>AI Lead Scoring</h3>
+              <p>Ranks every lead by buying intent so you focus on the hottest ones. Alerts you the moment someone is ready to close.</p>
             </div>
           </div>
         </div>
@@ -633,7 +634,7 @@ export default function Home() {
         <div className="container lp-cta-content">
           <h2 className="section-title reveal">Your competitors are already using AI. Are you?</h2>
           <p className="section-subtitle reveal">
-            Start capturing leads today with our free AI receptionist. No credit card required.
+            Start automating your business today. No credit card required.
           </p>
           <div className="lp-cta-buttons reveal">
             <Link to="/signup" className="btn-primary">
@@ -653,7 +654,7 @@ export default function Home() {
           <div className="lp-footer-inner">
             <div className="lp-footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="lp-footer-brand-logo" />
-              <p>AI-powered lead capture and automation for local businesses.</p>
+              <p>AI-powered business automation for local businesses.</p>
             </div>
             <div className="lp-footer-col">
               <h4>Product</h4>
