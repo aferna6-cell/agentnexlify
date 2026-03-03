@@ -5,6 +5,39 @@ import "../styles/home.css";
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
 
+/* Read email from JWT in localStorage (works outside AuthProvider) */
+function getUserEmail() {
+  try {
+    const token = localStorage.getItem("anx_token");
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now()) return null;
+    return payload.email || null;
+  } catch {
+    return null;
+  }
+}
+
+/* Pricing CTA that prefills email or redirects to signup */
+function StripeCta({ href, children }) {
+  const handleClick = (e) => {
+    const email = getUserEmail();
+    if (!email) {
+      e.preventDefault();
+      window.location.href = "/signup";
+      return;
+    }
+    e.preventDefault();
+    const url = `${href}?prefilled_email=${encodeURIComponent(email)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+  return (
+    <a href={href} onClick={handleClick} className="pricing-cta">
+      {children}
+    </a>
+  );
+}
+
 const faqData = [
   {
     id: "faq-a1",
@@ -714,9 +747,9 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Contractors, med spas, law firms, home services</div>
-              <a href="https://buy.stripe.com/test_7sYdRb4CedaQaxk2J14AU01" target="_blank" rel="noopener noreferrer" className="pricing-cta">
+              <StripeCta href="https://buy.stripe.com/test_7sYdRb4CedaQaxk2J14AU01">
                 Get Started {"\u2192"}
-              </a>
+              </StripeCta>
             </div>
 
             {/* Growth */}
@@ -758,9 +791,9 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Growing businesses ready to systematize sales</div>
-              <a href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02" target="_blank" rel="noopener noreferrer" className="pricing-cta">
+              <StripeCta href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02">
                 Get Started {"\u2192"}
-              </a>
+              </StripeCta>
             </div>
 
             {/* Operations */}
@@ -802,9 +835,9 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Businesses ready to eliminate admin busywork</div>
-              <a href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03" target="_blank" rel="noopener noreferrer" className="pricing-cta">
+              <StripeCta href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03">
                 Get Started {"\u2192"}
-              </a>
+              </StripeCta>
             </div>
 
             {/* Enterprise */}
@@ -846,9 +879,9 @@ export default function Home() {
                 </li>
               </ul>
               <div className="pricing-best">Best for: Businesses ready for full AI-powered growth</div>
-              <a href="https://buy.stripe.com/test_bJebJ30lYeeUaxkgzR4AU04" target="_blank" rel="noopener noreferrer" className="pricing-cta">
+              <StripeCta href="https://buy.stripe.com/test_bJebJ30lYeeUaxkgzR4AU04">
                 Get Started {"\u2192"}
-              </a>
+              </StripeCta>
             </div>
           </div>
           <p className="pricing-footer-note reveal">

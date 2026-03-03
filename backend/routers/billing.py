@@ -127,12 +127,71 @@ async def stripe_webhook(request: Request):
     return {"status": "ok"}
 
 
-def _handle_checkout_completed(db, session: dict) -> None:
+AMOUNT_TO_PLAN: dict[int, str] = {
+    9900: "foundation",
+    24900: "growth",
+    49900: "operations",
+    99900: "enterprise",
+}
+
+
+def _resolve_plan(session: dict) -> str | None:
+    """Determine plan from metadata, line items, or amount."""
+    metadata = session.get("metadata", {})
+    plan = metadata.get("plan")
+    if plan and plan in PLAN_LIMITS:
+        return plan
+
+    # Try amount_total (in cents)
+    amount = session.get("amount_total")
+    if amount and amount in AMOUNT_TO_PLAN:
+        return AMOUNT_TO_PLAN[amount]
+
+    return None
+
+
+def _resolve_tenant_id(db, session: dict) -> str | None:
+    """Determine tenant_id from metadata or customer_email."""
     metadata = session.get("metadata", {})
     tenant_id = metadata.get("tenant_id")
-    plan = metadata.get("plan")
-    if not tenant_id or not plan:
-        logger.warning("checkout.session.completed missing tenant_id or plan metadata")
+    if tenant_id:
+        return tenant_id
+
+    # Fall back to email lookup
+    email = (
+        session.get("customer_email")
+        or session.get("customer_details", {}).get("email")
+    )
+    if not email:
+        return None
+
+    result = (
+        db.table("tenants")
+        .select("id")
+        .eq("owner_email", email.lower().strip())
+        .limit(1)
+        .execute()
+    )
+    if result.data:
+        return str(result.data[0]["id"])
+    return None
+
+
+def _handle_checkout_completed(db, session: dict) -> None:
+    tenant_id = _resolve_tenant_id(db, session)
+    plan = _resolve_plan(session)
+
+    if not tenant_id:
+        logger.warning(
+            "checkout.session.completed: could not resolve tenant (email=%s, metadata=%s)",
+            session.get("customer_email"), session.get("metadata"),
+        )
+        return
+    if not plan:
+        logger.warning(
+            "checkout.session.completed: could not resolve plan (amount=%s, metadata=%s)",
+            session.get("amount_total"), session.get("metadata"),
+        )
         return
 
     db.table("tenants").update({
@@ -144,15 +203,35 @@ def _handle_checkout_completed(db, session: dict) -> None:
     }).eq("id", tenant_id).execute()
 
     logger.info("Tenant %s upgraded to %s", tenant_id, plan)
-    # TODO: Send welcome/upgrade email via notifications service
+
+
+def _resolve_tenant_from_subscription(db, subscription: dict) -> str | None:
+    """Get tenant_id from subscription metadata or stripe_customer_id."""
+    tenant_id = subscription.get("metadata", {}).get("tenant_id")
+    if tenant_id:
+        return tenant_id
+
+    customer_id = subscription.get("customer")
+    if not customer_id:
+        return None
+
+    result = (
+        db.table("tenants")
+        .select("id")
+        .eq("stripe_customer_id", customer_id)
+        .limit(1)
+        .execute()
+    )
+    if result.data:
+        return str(result.data[0]["id"])
+    return None
 
 
 def _handle_subscription_updated(db, subscription: dict) -> None:
-    metadata = subscription.get("metadata", {})
-    tenant_id = metadata.get("tenant_id")
-    plan = metadata.get("plan")
+    tenant_id = _resolve_tenant_from_subscription(db, subscription)
+    plan = subscription.get("metadata", {}).get("plan")
     if not tenant_id:
-        logger.warning("subscription.updated missing tenant_id metadata")
+        logger.warning("subscription.updated: could not resolve tenant (customer=%s)", subscription.get("customer"))
         return
 
     update_data: dict = {"plan_status": subscription.get("status", "active")}
@@ -165,10 +244,9 @@ def _handle_subscription_updated(db, subscription: dict) -> None:
 
 
 def _handle_subscription_deleted(db, subscription: dict) -> None:
-    metadata = subscription.get("metadata", {})
-    tenant_id = metadata.get("tenant_id")
+    tenant_id = _resolve_tenant_from_subscription(db, subscription)
     if not tenant_id:
-        logger.warning("subscription.deleted missing tenant_id metadata")
+        logger.warning("subscription.deleted: could not resolve tenant (customer=%s)", subscription.get("customer"))
         return
 
     db.table("tenants").update({
