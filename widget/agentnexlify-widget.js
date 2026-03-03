@@ -8,7 +8,7 @@
     scriptTag?.getAttribute("data-brand-color") || "#6cff5c";
   const API_BASE =
     scriptTag?.getAttribute("data-api-base") ||
-    scriptTag?.src?.replace(/\/widget\/anx-widget\.js.*$/, "") ||
+    scriptTag?.src?.replace(/\/widget\/agentnexlify-widget\.js.*$/, "") ||
     "";
 
   const SESSION_KEY = "anx_session_id";
@@ -418,42 +418,28 @@
   async function fetchConfig() {
     try {
       const resp = await fetch(
-        `${API_BASE}/api/chat/config?client_api_key=${encodeURIComponent(API_KEY)}`
+        `${API_BASE}/api/v1/widget/config/${encodeURIComponent(API_KEY)}`
       );
       if (!resp.ok) return;
       const data = await resp.json();
       botName = data.bot_name || "Aria";
       agentName = data.agent_name || "Agent";
-      if (data.brand_color) {
-        // brand color from server (already set via data-attr takes priority)
-      }
     } catch (e) {
       console.warn("AgentNexLiFy: Failed to fetch config", e);
     }
   }
 
   async function fetchHistory() {
-    try {
-      const resp = await fetch(
-        `${API_BASE}/api/chat/history/${encodeURIComponent(getSessionId())}?client_api_key=${encodeURIComponent(API_KEY)}`
-      );
-      if (!resp.ok) return [];
-      const data = await resp.json();
-      if (data.bot_name) botName = data.bot_name;
-      if (data.agent_name) agentName = data.agent_name;
-      return data.messages || [];
-    } catch (e) {
-      console.warn("AgentNexLiFy: Failed to fetch history", e);
-      return [];
-    }
+    // History is loaded from localStorage session; no dedicated history endpoint
+    return [];
   }
 
   async function sendMessage(text) {
-    const resp = await fetch(`${API_BASE}/api/chat/message`, {
+    const resp = await fetch(`${API_BASE}/api/v1/widget/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        client_api_key: API_KEY,
+        api_key: API_KEY,
         session_id: getSessionId(),
         message: text,
       }),
@@ -538,7 +524,7 @@
     try {
       const data = await sendMessage(text);
       hideTyping();
-      addMessage("assistant", data.reply);
+      addMessage("assistant", data.response);
     } catch (e) {
       hideTyping();
       addMessage(
@@ -627,7 +613,7 @@
     try {
       const data = await sendMessage("hi");
       hideTyping();
-      addMessage("assistant", data.reply);
+      addMessage("assistant", data.response);
     } catch (e) {
       hideTyping();
       addMessage(

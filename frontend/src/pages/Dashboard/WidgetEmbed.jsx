@@ -4,7 +4,8 @@ export default function WidgetEmbed({ apiKey, tenantId, widgetConfig }) {
   const [copied, setCopied] = useState(false);
 
   const displayKey = apiKey || "your-api-key";
-  const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${displayKey}"></script>`;
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+  const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${displayKey}" data-api-base="${apiBase}"></script>`;
 
   const isConfigured = widgetConfig &&
     (widgetConfig.greeting_message !== "Hi! How can I help you today?" ||
@@ -41,7 +42,9 @@ export default function WidgetEmbed({ apiKey, tenantId, widgetConfig }) {
             <span className="code-attr">src</span>=
             <span className="code-string">"https://app.agentnexlify.com/widget/agentnexlify-widget.js"</span>{" "}
             <span className="code-attr">data-api-key</span>=
-            <span className="code-string">"{displayKey}"</span>
+            <span className="code-string">"{displayKey}"</span>{" "}
+            <span className="code-attr">data-api-base</span>=
+            <span className="code-string">"{apiBase}"</span>
             <span className="code-tag">&gt;&lt;/script&gt;</span>
           </code>
         </pre>

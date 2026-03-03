@@ -857,6 +857,12 @@ body {
 }
 .onboarding-add-btn:hover { background: var(--accent-dim); }
 .onboarding-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.onboarding-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  width: 100%;
+}
 
 /* FAQ items */
 .onboarding-faq-section {

@@ -112,6 +112,7 @@ export default function OnboardingChecklist({
   const [customColor, setCustomColor] = useState("");
   const [position, setPosition] = useState("bottom-right");
   const [saving, setSaving] = useState(false);
+  const [faqError, setFaqError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [platform, setPlatform] = useState("HTML");
   const [showPreview, setShowPreview] = useState(false);
@@ -181,6 +182,7 @@ export default function OnboardingChecklist({
   const handleAddFaq = async () => {
     if (!newFaqQ.trim() || !newFaqA.trim()) return;
     setSaving(true);
+    setFaqError(null);
     try {
       const entry = await createFaqEntry(tenantId, token, {
         question: newFaqQ.trim(),
@@ -192,6 +194,7 @@ export default function OnboardingChecklist({
       onStepComplete?.();
     } catch (e) {
       console.error("Failed to create FAQ:", e);
+      setFaqError(e.body?.detail || e.message || "Failed to save FAQ entry");
     } finally {
       setSaving(false);
     }
@@ -227,7 +230,8 @@ export default function OnboardingChecklist({
     }
   };
 
-  const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${dashData?.widget_api_key || "your-api-key"}"></script>`;
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+  const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${dashData?.widget_api_key || "your-api-key"}" data-api-base="${apiBase}"></script>`;
 
   const handleCopyEmbed = () => {
     navigator.clipboard.writeText(embedCode).then(() => {
@@ -335,8 +339,11 @@ export default function OnboardingChecklist({
                   onClick={handleAddFaq}
                   disabled={saving || !newFaqQ.trim() || !newFaqA.trim()}
                 >
-                  Add FAQ
+                  {saving ? "Adding..." : "Add FAQ"}
                 </button>
+                {faqError && (
+                  <div className="onboarding-error">{faqError}</div>
+                )}
               </div>
             </div>
           </div>
@@ -446,6 +453,10 @@ export default function OnboardingChecklist({
                   <span className="code-attr">data-api-key</span>=
                   <span className="code-string">
                     "{dashData?.widget_api_key || "your-api-key"}"
+                  </span>{" "}
+                  <span className="code-attr">data-api-base</span>=
+                  <span className="code-string">
+                    "{apiBase}"
                   </span>
                   <span className="code-tag">&gt;&lt;/script&gt;</span>
                 </code>
@@ -487,7 +498,7 @@ export default function OnboardingChecklist({
 <head><style>body{margin:0;background:#1a1a2e;height:100vh;font-family:sans-serif;display:flex;align-items:center;justify-content:center;color:#aaa;}p{text-align:center;font-size:14px;}</style></head>
 <body>
 <p>Widget preview loading...</p>
-<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${dashData?.widget_api_key || ""}"></script>
+<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${dashData?.widget_api_key || ""}" data-api-base="https://agentnexlify-production.up.railway.app"></script>
 </body>
 </html>`}
                 />
