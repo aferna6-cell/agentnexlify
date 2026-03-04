@@ -242,46 +242,12 @@ def _advance_execution(db, execution: dict, current_step: dict) -> None:
 
 
 async def check_no_response_leads() -> int:
-    """Find leads with no response in 24h and trigger sequences. Returns count triggered."""
-    db = get_supabase()
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    """Find leads with no response in 24h and trigger sequences. Returns count triggered.
 
-    # Find conversations older than 24h with no recent activity.
-    # Live DB may only have created_at (started_at/last_message_at from
-    # migration 001 were never applied to the live schema).
-    try:
-        convs = (
-            db.table("conversations")
-            .select("id, tenant_id")
-            .lt("created_at", cutoff)
-            .limit(BATCH_LIMIT)
-            .execute()
-        )
-    except Exception:
-        logger.warning("check_no_response_leads: conversations query failed", exc_info=True)
-        return 0
-
-    triggered = 0
-    for conv in convs.data or []:
-        try:
-            # Find the lead for this conversation
-            lead_result = (
-                db.table("leads")
-                .select("id")
-                .eq("conversation_id", conv["id"])
-                .limit(1)
-                .execute()
-            )
-            if not lead_result.data:
-                continue
-
-            lead_id = lead_result.data[0]["id"]
-            count = await trigger_sequence(
-                conv["tenant_id"], lead_id, "no_response_24h"
-            )
-            triggered += count
-        except Exception:
-            logger.warning("check_no_response_leads: failed for conv %s", conv.get("id"), exc_info=True)
-            continue
-
-    return triggered
+    DISABLED: The live conversations table schema doesn't reliably have the
+    columns needed for this query (started_at, last_message_at, and even
+    created_at filters return HTTP 400).  Re-enable once the conversations
+    schema is verified / migrated.
+    """
+    logger.debug("check_no_response_leads: skipped (disabled — conversations schema mismatch)")
+    return 0

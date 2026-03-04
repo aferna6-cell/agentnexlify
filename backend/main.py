@@ -117,6 +117,34 @@ def _rate_limit_handler_with_cors(request: Request, exc: RateLimitExceeded):
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler_with_cors)
 
 
+# --- Validation error handler (logs actual field errors for debugging) ---
+from fastapi.exceptions import RequestValidationError
+
+
+async def _validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(
+        "Validation error on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
+    # Try to log the raw body for widget endpoints
+    if request.url.path.startswith("/api/v1/widget"):
+        try:
+            body = await request.body()
+            logger.error("Request body was: %s", body[:2000])
+        except Exception:
+            pass
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+        headers=_CORS_HEADERS,
+    )
+
+
+app.add_exception_handler(RequestValidationError, _validation_exception_handler)
+
+
 # --- Request logging middleware ---
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
