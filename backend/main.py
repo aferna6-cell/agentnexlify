@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pythonjsonlogger.jsonlogger import JsonFormatter
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
@@ -79,27 +78,39 @@ app = FastAPI(
 )
 
 # --- CORS ---
-# Widget is embedded on customer websites (arbitrary origins), so we must
+# Widget is embedded on customer websites (arbitrary origins), so we MUST
 # allow all origins.  Per-widget domain restrictions are enforced at the
 # application level in widget.py:_check_origin().
 #
 # Note: allow_credentials cannot be True when allow_origins is ["*"], so
 # we disable it.  The widget uses API-key auth, not cookies.
-_cors_origins: list[str] = ["*"]
-if settings.widget_allowed_origins and settings.widget_allowed_origins != "*":
-    _cors_origins = [o.strip() for o in settings.widget_allowed_origins.split(",") if o.strip()]
+_CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "*",
+}
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=_cors_origins != ["*"],
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # --- Rate limiting ---
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+def _rate_limit_handler_with_cors(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Try again later."},
+        headers=_CORS_HEADERS,
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler_with_cors)
 
 
 # --- Request logging middleware ---
@@ -196,10 +207,18 @@ async def global_error_handler(request: Request, exc: Exception):
 
     # Let FastAPI handle HTTPExceptions natively (4xx, etc.)
     if isinstance(exc, _HTTPException):
+        # Ensure CORS headers on HTTP error responses for widget endpoints
+        if request.url.path.startswith("/api/v1/widget"):
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
+                headers=_CORS_HEADERS,
+            )
         raise exc
 
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal error occurred. Please try again."},
+        headers=_CORS_HEADERS,
     )
