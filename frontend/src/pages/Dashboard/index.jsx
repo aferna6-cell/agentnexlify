@@ -8,6 +8,7 @@ import WidgetEmbed from "./WidgetEmbed";
 import QuickActions from "./QuickActions";
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import OnboardingChecklist from "./OnboardingChecklist";
+import TodayAppointments from "./TodayAppointments";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 const ONBOARDING_KEY_PREFIX = "anx_onboarding_";
@@ -38,12 +39,13 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
     setLoading(true);
     setError(null);
     try {
-      const [dashRes, leadsRes, autoRes, activityRes] =
+      const [dashRes, leadsRes, autoRes, activityRes, crmRes] =
         await Promise.allSettled([
           fetchDashboard(user.tenantId, token),
           fetchLeads(user.tenantId, token),
           fetchAutomations(user.tenantId, token),
           fetchActivity(user.tenantId, token),
+          fetchCrmDashboardWidgets(user.tenantId, token),
         ]);
 
       if (dashRes.status === "fulfilled") {
@@ -54,6 +56,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.leads || []);
       if (autoRes.status === "fulfilled") setAutomations(autoRes.value.automations || []);
       if (activityRes.status === "fulfilled") setActivity(activityRes.value.activity || []);
+      if (crmRes.status === "fulfilled") setCrmWidgets(crmRes.value);
     } catch (err) {
       setError(err.message);
     } finally {

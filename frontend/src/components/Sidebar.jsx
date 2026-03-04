@@ -19,6 +19,7 @@ const planColors = {
 const navItems = [
   { key: "dashboard", icon: "\u{1F4CA}", label: "Dashboard" },
   { key: "clients", icon: "\u{1F465}", label: "Clients" },
+  { key: "calendar", icon: "\u{1F4C5}", label: "Calendar" },
   { key: "conversations", icon: "\u{1F4AC}", label: "Conversations" },
   { key: "automations", icon: "\u26A1", label: "Automations" },
   { key: "widget", icon: "\u{1F4BB}", label: "Widget" },
