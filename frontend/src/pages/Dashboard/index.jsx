@@ -165,6 +165,66 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         <QuickActions onNavigate={onNavigate} />
       </div>
 
+      {/* CRM Dashboard Widgets */}
+      {crmWidgets && (
+        <div className="crm-widgets">
+          <div className="crm-widget-card">
+            <h3>Weekly Stats</h3>
+            <div className="crm-stat-grid">
+              <div className="crm-stat">
+                <div className="crm-stat-value">{crmWidgets.weekly_stats?.new_leads ?? 0}</div>
+                <div className="crm-stat-label">New Leads</div>
+              </div>
+              <div className="crm-stat">
+                <div className="crm-stat-value">{crmWidgets.weekly_stats?.messages ?? 0}</div>
+                <div className="crm-stat-label">Messages</div>
+              </div>
+              <div className="crm-stat">
+                <div className="crm-stat-value">{crmWidgets.weekly_stats?.notes_added ?? 0}</div>
+                <div className="crm-stat-label">Notes</div>
+              </div>
+              <div className="crm-stat">
+                <div className="crm-stat-value">{crmWidgets.weekly_stats?.stage_changes ?? 0}</div>
+                <div className="crm-stat-label">Stage Changes</div>
+              </div>
+            </div>
+          </div>
+          <div className="crm-widget-card">
+            <h3>Recent Activity</h3>
+            {(crmWidgets.recent_activity || []).slice(0, 5).map((a) => (
+              <div key={a.id} className="attention-item" onClick={() => a.lead_id && onNavigate("client_profile", { leadId: a.lead_id })}>
+                <span>{a.description}</span>
+                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                  {(() => {
+                    const diff = Date.now() - new Date(a.created_at).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    if (mins < 60) return `${mins}m`;
+                    const hrs = Math.floor(mins / 60);
+                    if (hrs < 24) return `${hrs}h`;
+                    return `${Math.floor(hrs / 24)}d`;
+                  })()}
+                </span>
+              </div>
+            ))}
+            {(!crmWidgets.recent_activity || crmWidgets.recent_activity.length === 0) && (
+              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No recent activity</p>
+            )}
+          </div>
+          <div className="crm-widget-card">
+            <h3>Needs Attention</h3>
+            {(crmWidgets.needs_attention || []).slice(0, 5).map((c) => (
+              <div key={c.id} className="attention-item" onClick={() => onNavigate("client_profile", { leadId: c.id })}>
+                <span>{c.name || c.email || c.phone || "Unknown"}</span>
+                <span className={`stage-badge ${c.lead_stage}`}>{c.lead_stage}</span>
+              </div>
+            ))}
+            {(!crmWidgets.needs_attention || crmWidgets.needs_attention.length === 0) && (
+              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>All caught up!</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {selectedLead && (
         <LeadDetailDrawer
           lead={selectedLead}
