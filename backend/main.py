@@ -50,12 +50,16 @@ async def _automation_loop():
             processed = await process_pending_steps()
             if processed:
                 logger.info("Automation loop: processed %d steps", processed)
-            # Also check for no-response leads
+        except Exception:
+            logger.exception("Automation loop: process_pending_steps failed")
+
+        try:
             triggered = await check_no_response_leads()
             if triggered:
                 logger.info("Automation loop: triggered %d no-response sequences", triggered)
         except Exception:
-            logger.exception("Automation loop error")
+            logger.exception("Automation loop: check_no_response_leads failed")
+
         await asyncio.sleep(60)
 
 

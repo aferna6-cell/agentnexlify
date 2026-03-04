@@ -246,33 +246,42 @@ async def check_no_response_leads() -> int:
     db = get_supabase()
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
 
-    # Find conversations with last_message_at older than 24h
-    # that have leads not already in a no_response_24h execution
-    convs = (
-        db.table("conversations")
-        .select("id, tenant_id")
-        .lt("last_message_at", cutoff)
-        .limit(BATCH_LIMIT)
-        .execute()
-    )
+    # Find conversations with last activity older than 24h.
+    # Use started_at as a safe fallback — last_message_at may not exist
+    # in older database schemas.
+    try:
+        convs = (
+            db.table("conversations")
+            .select("id, tenant_id")
+            .lt("started_at", cutoff)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.warning("check_no_response_leads: conversations query failed", exc_info=True)
+        return 0
 
     triggered = 0
     for conv in convs.data or []:
-        # Find the lead for this conversation
-        lead_result = (
-            db.table("leads")
-            .select("id")
-            .eq("conversation_id", conv["id"])
-            .limit(1)
-            .execute()
-        )
-        if not lead_result.data:
-            continue
+        try:
+            # Find the lead for this conversation
+            lead_result = (
+                db.table("leads")
+                .select("id")
+                .eq("conversation_id", conv["id"])
+                .limit(1)
+                .execute()
+            )
+            if not lead_result.data:
+                continue
 
-        lead_id = lead_result.data[0]["id"]
-        count = await trigger_sequence(
-            conv["tenant_id"], lead_id, "no_response_24h"
-        )
-        triggered += count
+            lead_id = lead_result.data[0]["id"]
+            count = await trigger_sequence(
+                conv["tenant_id"], lead_id, "no_response_24h"
+            )
+            triggered += count
+        except Exception:
+            logger.warning("check_no_response_leads: failed for conv %s", conv.get("id"), exc_info=True)
+            continue
 
     return triggered

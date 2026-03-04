@@ -635,6 +635,9 @@
   }
 
   async function sendMessage(text) {
+    if (!API_KEY || !API_BASE) {
+      throw new Error("Widget not configured: missing data-api-key or data-api-base");
+    }
     const resp = await fetch(`${API_BASE}/api/v1/widget/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -644,7 +647,10 @@
         message: text,
       }),
     });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (!resp.ok) {
+      const err = await resp.text().catch(() => "");
+      throw new Error(`HTTP ${resp.status}: ${err}`);
+    }
     return resp.json();
   }
 
