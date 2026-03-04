@@ -11,8 +11,9 @@ import ClientProfile from "../pages/Dashboard/ClientProfile";
 import Calendar from "../pages/Calendar";
 import Availability from "../pages/Availability";
 
+import AutomationsPage from "../pages/Automations";
+
 function Conversations() { return <ComingSoon title="Conversations" />; }
-function Automations() { return <ComingSoon title="Automations" />; }
 function Widget() { return <ComingSoon title="Widget" />; }
 function FaqManager() { return <ComingSoon title="FAQ Manager" />; }
 function Billing() { return <ComingSoon title="Billing" />; }
@@ -26,7 +27,7 @@ const pages = {
   calendar: Calendar,
   availability: Availability,
   conversations: Conversations,
-  automations: Automations,
+  automations: AutomationsPage,
   widget: Widget,
   faq: FaqManager,
   billing: Billing,
