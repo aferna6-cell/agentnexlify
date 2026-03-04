@@ -246,14 +246,14 @@ async def check_no_response_leads() -> int:
     db = get_supabase()
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
 
-    # Find conversations with last activity older than 24h.
-    # Use started_at as a safe fallback — last_message_at may not exist
-    # in older database schemas.
+    # Find conversations older than 24h with no recent activity.
+    # Live DB may only have created_at (started_at/last_message_at from
+    # migration 001 were never applied to the live schema).
     try:
         convs = (
             db.table("conversations")
             .select("id, tenant_id")
-            .lt("started_at", cutoff)
+            .lt("created_at", cutoff)
             .limit(BATCH_LIMIT)
             .execute()
         )

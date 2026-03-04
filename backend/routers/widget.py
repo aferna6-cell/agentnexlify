@@ -87,7 +87,7 @@ def _get_or_create_conversation(
             .select("*")
             .eq("tenant_id", tenant_id)
             .eq("session_id", session_id)
-            .order("started_at", desc=True)
+            .order("created_at", desc=True)
             .limit(1)
             .execute()
         )
@@ -213,9 +213,14 @@ def _upsert_lead(
 @limiter.limit("60/minute")
 async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks: BackgroundTasks):
     """Process a chat message through the multi-tenant widget pipeline."""
+    logger.info("widget_chat: received request session=%s api_key=%s...%s",
+                req.session_id, req.api_key[:8] if req.api_key else "NONE",
+                req.api_key[-4:] if req.api_key else "")
+
     # 1. Look up widget config + tenant
     widget = _get_widget_config(req.api_key)
     tenant = _get_tenant(widget["tenant_id"])
+    logger.info("widget_chat: tenant=%s business=%s", tenant["id"], tenant.get("business_name"))
 
     # 2. Origin check
     _check_origin(request, widget.get("allowed_domains"))
@@ -235,6 +240,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 4. Get or create conversation
     conversation, is_new = _get_or_create_conversation(tenant["id"], req.session_id)
     conversation_id = conversation["id"]
+    logger.info("widget_chat: conversation=%s is_new=%s", conversation_id, is_new)
 
     # Increment usage counter only for new conversations
     if is_new:
@@ -273,6 +279,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     messages.append({"role": "user", "content": req.message})
 
     # 8. Call Anthropic
+    api_key_present = bool(settings.anthropic_api_key)
+    api_key_preview = (settings.anthropic_api_key or "")[:12] + "..." if api_key_present else "MISSING"
+    logger.info("widget_chat: calling Anthropic model=%s api_key=%s msg_count=%d",
+                MODEL, api_key_preview, len(messages))
     try:
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         api_response = client.messages.create(
@@ -283,8 +293,27 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             messages=messages,
         )
         assistant_text = api_response.content[0].text
-    except Exception:
-        logger.exception("Anthropic API error")
+        logger.info("widget_chat: Anthropic success, response_len=%d", len(assistant_text))
+    except anthropic.AuthenticationError as e:
+        logger.error("widget_chat: Anthropic AUTH error — API key invalid: %s", e)
+        assistant_text = (
+            "I'm sorry, I'm having trouble right now. "
+            "Please try again in a moment or contact us directly."
+        )
+    except anthropic.RateLimitError as e:
+        logger.error("widget_chat: Anthropic RATE LIMIT: %s", e)
+        assistant_text = (
+            "I'm sorry, I'm having trouble right now. "
+            "Please try again in a moment or contact us directly."
+        )
+    except anthropic.APIError as e:
+        logger.error("widget_chat: Anthropic API error status=%s: %s", getattr(e, 'status_code', '?'), e)
+        assistant_text = (
+            "I'm sorry, I'm having trouble right now. "
+            "Please try again in a moment or contact us directly."
+        )
+    except Exception as e:
+        logger.exception("widget_chat: unexpected error calling Anthropic: %s", e)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
@@ -294,7 +323,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     messages.append({"role": "assistant", "content": assistant_text})
     try:
         db.table("conversations").update(
-            {"messages": messages, "last_message_at": "now()"}
+            {"messages": messages}
         ).eq("id", conversation_id).execute()
     except Exception:
         logger.warning("Failed to save conversation %s", conversation_id, exc_info=True)
@@ -398,7 +427,7 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
         .select("id")
         .eq("tenant_id", tenant["id"])
         .eq("session_id", req.session_id)
-        .order("started_at", desc=True)
+        .order("created_at", desc=True)
         .limit(1)
         .execute()
     )
