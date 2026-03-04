@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity } from "../../utils/api";
+import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity, updateLead, deleteLead, fetchCrmDashboardWidgets } from "../../utils/api";
 import OverviewCards from "./OverviewCards";
 import LeadPipeline from "./LeadPipeline";
 import ActivityFeed from "./ActivityFeed";
@@ -31,6 +31,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   const [selectedLead, setSelectedLead] = useState(null);
   const [error, setError] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [crmWidgets, setCrmWidgets] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -48,7 +49,6 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
       if (dashRes.status === "fulfilled") {
         setDashData(dashRes.value);
         if (onPlanLoaded) onPlanLoaded(dashRes.value.plan);
-        // Show onboarding if not dismissed
         setShowOnboarding(!isOnboardingDismissed(user.tenantId));
       }
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.leads || []);
@@ -66,14 +66,36 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   }, [loadDashboard]);
 
   const handleStepComplete = useCallback(() => {
-    // Re-fetch dashboard so computed steps update
     if (user?.tenantId) {
       fetchDashboard(user.tenantId, token)
-        .then((data) => {
-          setDashData(data);
-        })
+        .then((data) => setDashData(data))
         .catch(() => {});
     }
+  }, [user?.tenantId, token]);
+
+  const handleStageDrop = useCallback(async (leadId, newStage) => {
+    const prev = leads.slice();
+    // Optimistic update
+    setLeads((cur) =>
+      cur.map((l) => (l.id === leadId ? { ...l, lead_stage: newStage } : l))
+    );
+    try {
+      await updateLead(user.tenantId, token, leadId, { lead_stage: newStage });
+    } catch {
+      setLeads(prev); // Revert on failure
+    }
+  }, [leads, user?.tenantId, token]);
+
+  const handleLeadSave = useCallback(async (leadId, updates) => {
+    const updated = await updateLead(user.tenantId, token, leadId, updates);
+    setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, ...updated } : l)));
+    setSelectedLead((cur) => (cur?.id === leadId ? { ...cur, ...updated } : cur));
+  }, [user?.tenantId, token]);
+
+  const handleLeadDelete = useCallback(async (leadId) => {
+    await deleteLead(user.tenantId, token, leadId);
+    setLeads((cur) => cur.filter((l) => l.id !== leadId));
+    setSelectedLead(null);
   }, [user?.tenantId, token]);
 
   if (loading) return <SkeletonLoader />;
@@ -116,11 +138,17 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         automationCount={enabledAutomations.length}
         plan={dashData?.plan ?? user.plan}
         onNavigate={onNavigate}
+        hotLeadsCount={dashData?.hot_leads_count ?? 0}
       />
 
       <div className="dashboard-main-grid">
         <div className="dashboard-main-content">
-          <LeadPipeline leads={leads} onSelectLead={setSelectedLead} onNavigate={onNavigate} />
+          <LeadPipeline
+            leads={leads}
+            onSelectLead={setSelectedLead}
+            onNavigate={onNavigate}
+            onStageDrop={handleStageDrop}
+          />
           <div className="dashboard-bottom-row">
             <ActivityFeed activity={activity} />
             <WidgetEmbed
@@ -137,6 +165,8 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         <LeadDetailDrawer
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
+          onSave={handleLeadSave}
+          onDelete={handleLeadDelete}
         />
       )}
     </div>

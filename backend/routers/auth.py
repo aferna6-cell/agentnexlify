@@ -258,6 +258,20 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         logger.warning("Leads count query failed for tenant %s", tenant_id, exc_info=True)
         leads_count = 0
 
+    # Hot leads count (score >= 80)
+    try:
+        hot_result = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .gte("lead_score", 80)
+            .execute()
+        )
+        hot_leads_count = hot_result.count or 0
+    except Exception:
+        logger.warning("Hot leads count query failed for tenant %s", tenant_id, exc_info=True)
+        hot_leads_count = 0
+
     # FAQ count
     try:
         faq_result = (
@@ -285,6 +299,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         widget_config=widget_config,
         faq_count=faq_count,
         has_conversations=conversations_used > 0,
+        hot_leads_count=hot_leads_count,
     )
     logger.info("Dashboard response for %s: %s", tenant_id, response.model_dump())
     return response

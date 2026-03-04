@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     frontend_url: str = "http://localhost:5173"
 
+    resend_api_key: str = ""
+
     widget_allowed_origins: str = "*"
     api_secret_key: str = secrets.token_urlsafe(32)
     sentry_dsn: str = ""

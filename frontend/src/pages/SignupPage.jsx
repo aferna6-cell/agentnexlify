@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { trackEvent } from "../utils/analytics";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
 
@@ -65,6 +66,7 @@ export default function SignupPage() {
       const { token, tenant_id } = await res.json();
       localStorage.setItem("anx_token", token);
       localStorage.setItem("anx_tenant_id", tenant_id);
+      trackEvent("sign_up", { method: "email" });
       window.location.href = "/dashboard";
     } catch (err) {
       setError(err.message);

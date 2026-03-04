@@ -8,7 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 import anthropic
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from backend.config import settings
 from backend.limiter import limiter
@@ -20,6 +20,8 @@ from backend.models.schemas import (
     WidgetLeadRequest,
     WidgetLeadResponse,
 )
+from backend.services.activity import log_activity
+from backend.services.lead_scoring import score_lead_background
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
@@ -145,10 +147,10 @@ def _extract_lead_info(text: str) -> dict[str, str]:
 
 def _upsert_lead(
     tenant_id: str, conversation_id: str, fields: dict[str, str]
-) -> str | None:
-    """Upsert lead row. Returns lead_id if anything was written, else None."""
+) -> tuple[str | None, bool]:
+    """Upsert lead row. Returns (lead_id, is_new) tuple."""
     if not fields:
-        return None
+        return None, False
     db = get_supabase()
 
     # Check for existing lead on this conversation
@@ -174,15 +176,32 @@ def _upsert_lead(
         # Only update fields that are currently NULL
         updates = {k: v for k, v in db_fields.items() if not lead.get(k)}
         if not updates:
-            return lead["id"]
+            return lead["id"], False
         db.table("leads").update(updates).eq("id", lead["id"]).execute()
-        return lead["id"]
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="lead_updated",
+            description=f"Lead info captured: {', '.join(updates.keys())}",
+            lead_id=lead["id"],
+            metadata={"source": "widget", "fields": list(updates.keys())},
+        )
+        return lead["id"], False
     else:
         db_fields["tenant_id"] = tenant_id
         db_fields["conversation_id"] = conversation_id
         db_fields["source"] = "widget"
+        db_fields["lead_stage"] = "new"
         result = db.table("leads").insert(db_fields).execute()
-        return result.data[0]["id"]
+        lead_id = result.data[0]["id"]
+        lead_name = db_fields.get("name", "New visitor")
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="lead_created",
+            description=f"New lead from widget: {lead_name}",
+            lead_id=lead_id,
+            metadata={"source": "widget", "fields": list(db_fields.keys())},
+        )
+        return lead_id, True
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +211,7 @@ def _upsert_lead(
 
 @router.post("/chat", response_model=WidgetChatResponse)
 @limiter.limit("60/minute")
-async def widget_chat(request: Request, req: WidgetChatRequest):
+async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks: BackgroundTasks):
     """Process a chat message through the multi-tenant widget pipeline."""
     # 1. Look up widget config + tenant
     widget = _get_widget_config(req.api_key)
@@ -282,11 +301,49 @@ async def widget_chat(request: Request, req: WidgetChatRequest):
 
     # 10. Lead extraction
     lead_id = None
+    is_new_lead = False
     try:
         extracted = _extract_lead_info(req.message)
-        lead_id = _upsert_lead(tenant["id"], conversation_id, extracted)
+        lead_id, is_new_lead = _upsert_lead(tenant["id"], conversation_id, extracted)
     except Exception:
         logger.warning("Lead extraction failed for conversation %s", conversation_id, exc_info=True)
+
+    # 10a. Fire automation trigger for new leads
+    if lead_id and is_new_lead:
+        try:
+            from backend.services.automation_engine import trigger_sequence
+            import asyncio
+            asyncio.create_task(trigger_sequence(tenant["id"], lead_id, "new_lead"))
+        except Exception:
+            logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
+
+    # 10b. Background re-score
+    score_target = lead_id
+    if not score_target:
+        try:
+            existing = (
+                db.table("leads")
+                .select("id")
+                .eq("conversation_id", conversation_id)
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                score_target = existing.data[0]["id"]
+        except Exception:
+            pass
+    if score_target:
+        background_tasks.add_task(score_lead_background, score_target)
+
+    # 10c. Log message activity
+    if lead_id or score_target:
+        log_activity(
+            tenant_id=tenant["id"],
+            activity_type="message",
+            description="Widget chat message",
+            lead_id=lead_id or score_target,
+            metadata={"conversation_id": conversation_id},
+        )
 
     # 11. Watermark logic
     if tenant.get("plan") == "free":
@@ -322,12 +379,14 @@ async def get_config(request: Request, api_key: str):
         position=widget.get("position", "bottom-right"),
         show_watermark=show_watermark,
         allowed_domains=widget.get("allowed_domains"),
+        tenant_id=widget.get("tenant_id"),
+        booking_enabled=widget.get("booking_enabled", False),
     )
 
 
 @router.post("/lead", response_model=WidgetLeadResponse)
 @limiter.limit("60/minute")
-async def submit_lead(request: Request, req: WidgetLeadRequest):
+async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks: BackgroundTasks):
     """Manually submit or update lead information from the widget."""
     widget = _get_widget_config(req.api_key)
     tenant = _get_tenant(widget["tenant_id"])
@@ -362,7 +421,19 @@ async def submit_lead(request: Request, req: WidgetLeadRequest):
     if not fields:
         raise HTTPException(status_code=400, detail="No lead fields provided")
 
-    lead_id = _upsert_lead(tenant["id"], conversation_id, fields)
+    lead_id, is_new_lead = _upsert_lead(tenant["id"], conversation_id, fields)
+
+    if lead_id:
+        background_tasks.add_task(score_lead_background, lead_id)
+
+    # Fire automation trigger for new leads
+    if lead_id and is_new_lead:
+        try:
+            from backend.services.automation_engine import trigger_sequence
+            import asyncio
+            asyncio.create_task(trigger_sequence(tenant["id"], lead_id, "new_lead"))
+        except Exception:
+            logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
     return WidgetLeadResponse(
         lead_id=lead_id,

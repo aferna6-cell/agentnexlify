@@ -1,4 +1,6 @@
-export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan, onNavigate }) {
+import { trackEvent } from "../../utils/analytics";
+
+export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0 }) {
   const convPct = conversationsLimit > 0 ? Math.round((conversationsUsed / conversationsLimit) * 100) : 0;
   const nearLimit = convPct >= 80;
 
@@ -33,7 +35,7 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
         <div className="stat-usage-text">
           {conversationsUsed} / {conversationsLimit} used
           {nearLimit && (
-            <button className="upgrade-cta-inline">Upgrade</button>
+            <button className="upgrade-cta-inline" onClick={() => trackEvent("begin_checkout", { event_label: "dashboard_usage_limit" })}>Upgrade</button>
           )}
         </div>
         {conversationsUsed === 0 && (
@@ -47,9 +49,18 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
       <div className="stat-card">
         <div className="stat-label">Leads Captured</div>
         <div className="stat-value">{leadCount}</div>
-        <div className="stat-trend neutral">
-          Total leads captured
-        </div>
+        {hotLeadsCount > 0 ? (
+          <div
+            className="stat-trend hot-alert"
+            onClick={() => onNavigate?.("leads")}
+          >
+            {hotLeadsCount} hot lead{hotLeadsCount !== 1 ? "s" : ""} need attention
+          </div>
+        ) : (
+          <div className="stat-trend neutral">
+            Total leads captured
+          </div>
+        )}
         {leadCount === 0 && (
           <div className="stat-empty-hint">
             Leads appear automatically from widget chats
@@ -80,7 +91,7 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
         <div className="stat-plan-row">
           <span className="plan-badge">{planLabels[plan] || plan}</span>
           {plan !== "enterprise" && (
-            <button className="upgrade-btn">Upgrade</button>
+            <button className="upgrade-btn" onClick={() => trackEvent("begin_checkout", { event_label: "dashboard_plan_status" })}>Upgrade</button>
           )}
         </div>
         <div className="stat-trend neutral">

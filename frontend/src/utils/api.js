@@ -28,8 +28,35 @@ async function request(path, { method = "GET", body, token } = {}) {
 
 // --- Dashboard API ---
 
-export function fetchLeads(tenantId, token) {
-  return request(`/api/v1/leads/${tenantId}`, { token });
+export function fetchLeads(tenantId, token, { stage, search, sort, order } = {}) {
+  const params = new URLSearchParams();
+  if (stage) params.set("stage", stage);
+  if (search) params.set("search", search);
+  if (sort) params.set("sort", sort);
+  if (order) params.set("order", order);
+  const qs = params.toString();
+  return request(`/api/v1/leads/${tenantId}${qs ? `?${qs}` : ""}`, { token });
+}
+
+export function updateLead(tenantId, token, leadId, data) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}`, {
+    method: "PATCH",
+    token,
+    body: data,
+  });
+}
+
+export async function deleteLead(tenantId, token, leadId) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/v1/leads/${tenantId}/${leadId}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, err);
+  }
 }
 
 export function fetchLeadSummary(tenantId, token) {
@@ -95,6 +122,102 @@ export async function deleteFaqEntry(tenantId, token, faqId) {
     const err = await res.json().catch(() => ({}));
     throw new ApiError(res.status, err);
   }
+}
+
+// --- Lead Scoring ---
+
+export function fetchLeadScore(tenantId, leadId, token) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}/score`, { token });
+}
+
+export function rescoreAllLeads(tenantId, token) {
+  return request(`/api/v1/leads/${tenantId}/score-all`, { method: "POST", token });
+}
+
+// --- CRM / Clients ---
+
+export function fetchClients(tenantId, token, { search, stage, sort, order } = {}) {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (stage) params.set("stage", stage);
+  if (sort) params.set("sort", sort);
+  if (order) params.set("order", order);
+  const qs = params.toString();
+  return request(`/api/v1/clients/${tenantId}${qs ? `?${qs}` : ""}`, { token });
+}
+
+export function fetchClientProfile(tenantId, leadId, token) {
+  return request(`/api/v1/clients/${tenantId}/${leadId}`, { token });
+}
+
+export function fetchClientTimeline(tenantId, leadId, token, { offset = 0, limit = 20 } = {}) {
+  return request(`/api/v1/clients/${tenantId}/${leadId}/timeline?offset=${offset}&limit=${limit}`, { token });
+}
+
+export function addClientNote(tenantId, leadId, token, content) {
+  return request(`/api/v1/clients/${tenantId}/${leadId}/notes`, {
+    method: "POST",
+    token,
+    body: { content },
+  });
+}
+
+export function updateClient(tenantId, leadId, token, data) {
+  return request(`/api/v1/clients/${tenantId}/${leadId}`, {
+    method: "PUT",
+    token,
+    body: data,
+  });
+}
+
+export function changeClientStage(tenantId, leadId, token, stage) {
+  return request(`/api/v1/clients/${tenantId}/${leadId}/stage`, {
+    method: "PUT",
+    token,
+    body: { stage },
+  });
+}
+
+export function fetchCrmDashboardWidgets(tenantId, token) {
+  return request(`/api/v1/clients/${tenantId}/dashboard-widgets`, { token });
+}
+
+// --- Appointments / Availability ---
+
+export function fetchAvailability(tenantId, token) {
+  return request(`/api/v1/appointments/availability/${tenantId}`, { token });
+}
+
+export function updateAvailability(tenantId, token, data) {
+  return request(`/api/v1/appointments/availability/${tenantId}`, {
+    method: "PUT",
+    token,
+    body: data,
+  });
+}
+
+export function fetchAppointments(tenantId, token, { startDate, endDate, status } = {}) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  return request(`/api/v1/appointments/${tenantId}${qs ? `?${qs}` : ""}`, { token });
+}
+
+export function updateAppointment(tenantId, token, appointmentId, data) {
+  return request(`/api/v1/appointments/${tenantId}/${appointmentId}`, {
+    method: "PATCH",
+    token,
+    body: data,
+  });
+}
+
+export function cancelAppointment(tenantId, token, appointmentId) {
+  return request(`/api/v1/appointments/${tenantId}/${appointmentId}`, {
+    method: "DELETE",
+    token,
+  });
 }
 
 // --- Contact / Support ---

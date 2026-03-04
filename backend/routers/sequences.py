@@ -1,0 +1,493 @@
+"""Automation sequences API — CRUD for email follow-up sequences."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import datetime, timezone
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from backend.models.database import get_supabase
+from backend.models.schemas import (
+    LeadStageUpdate,
+    SequenceCreateRequest,
+    SequenceUpdateRequest,
+)
+from backend.routers.auth import _get_current_tenant
+from backend.services.automation_engine import trigger_sequence
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/v1/sequences", tags=["sequences"])
+
+# Pre-built templates
+TEMPLATES = {
+    "welcome": {
+        "name": "Welcome Email Series",
+        "trigger_event": "new_lead",
+        "trigger_config": {},
+        "steps": [
+            {
+                "step_order": 1,
+                "delay_minutes": 0,
+                "subject_template": "Welcome to {{business_name}}!",
+                "body_template": (
+                    "<h2>Hi {{name}},</h2>"
+                    "<p>Thanks for reaching out to {{business_name}}! "
+                    "We received your inquiry and wanted to personally welcome you.</p>"
+                    "<p>One of our team members will be in touch shortly to help "
+                    "with whatever you need.</p>"
+                    "<p>In the meantime, feel free to reply to this email with any questions.</p>"
+                    "<p>Best regards,<br>The {{business_name}} Team</p>"
+                ),
+            },
+            {
+                "step_order": 2,
+                "delay_minutes": 1440,  # 24 hours
+                "subject_template": "Following up — {{business_name}}",
+                "body_template": (
+                    "<h2>Hi {{name}},</h2>"
+                    "<p>Just wanted to follow up on your recent inquiry. "
+                    "We'd love to learn more about what you're looking for.</p>"
+                    "<p>Is there a good time for a quick chat? We're here to help!</p>"
+                    "<p>Best,<br>The {{business_name}} Team</p>"
+                ),
+            },
+        ],
+    },
+    "no_response": {
+        "name": "No Response Follow-Up",
+        "trigger_event": "no_response_24h",
+        "trigger_config": {},
+        "steps": [
+            {
+                "step_order": 1,
+                "delay_minutes": 0,
+                "subject_template": "We're still here to help — {{business_name}}",
+                "body_template": (
+                    "<h2>Hi {{name}},</h2>"
+                    "<p>We noticed we haven't heard back from you. "
+                    "No worries — we know life gets busy!</p>"
+                    "<p>If you're still interested, we'd love to pick up "
+                    "where we left off. Just reply to this email.</p>"
+                    "<p>Best,<br>The {{business_name}} Team</p>"
+                ),
+            },
+        ],
+    },
+    "appointment": {
+        "name": "Appointment Booked Series",
+        "trigger_event": "lead_stage_change",
+        "trigger_config": {"target_stage": "appointment"},
+        "steps": [
+            {
+                "step_order": 1,
+                "delay_minutes": 0,
+                "subject_template": "Your appointment is confirmed — {{business_name}}",
+                "body_template": (
+                    "<h2>Hi {{name}},</h2>"
+                    "<p>Great news! Your appointment with {{business_name}} has been confirmed.</p>"
+                    "<p>We're looking forward to speaking with you. "
+                    "If you need to reschedule, just reply to this email.</p>"
+                    "<p>See you soon!<br>The {{business_name}} Team</p>"
+                ),
+            },
+            {
+                "step_order": 2,
+                "delay_minutes": 1440,  # 24h after
+                "subject_template": "Reminder: Your upcoming appointment",
+                "body_template": (
+                    "<h2>Hi {{name}},</h2>"
+                    "<p>Just a friendly reminder about your appointment with {{business_name}}.</p>"
+                    "<p>We can't wait to connect! If anything comes up, "
+                    "don't hesitate to reach out.</p>"
+                    "<p>Best,<br>The {{business_name}} Team</p>"
+                ),
+            },
+        ],
+    },
+}
+
+
+def _verify_tenant(tenant_id: str, claims: dict) -> None:
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+
+
+@router.get("/{tenant_id}")
+async def list_sequences(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    """List all sequences with step count and execution stats."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    seqs = (
+        db.table("automation_sequences")
+        .select("*")
+        .eq("tenant_id", tenant_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    result = []
+    for seq in seqs.data or []:
+        # Step count
+        steps = (
+            db.table("automation_steps")
+            .select("id", count="exact")
+            .eq("sequence_id", seq["id"])
+            .execute()
+        )
+        # Execution stats
+        execs = (
+            db.table("automation_executions")
+            .select("status")
+            .eq("sequence_id", seq["id"])
+            .execute()
+        )
+        exec_data = execs.data or []
+        result.append({
+            **seq,
+            "step_count": steps.count or 0,
+            "total_enrolled": len(exec_data),
+            "active_count": sum(1 for e in exec_data if e["status"] == "in_progress"),
+            "completed_count": sum(1 for e in exec_data if e["status"] == "completed"),
+        })
+
+    return {"sequences": result}
+
+
+@router.post("/{tenant_id}")
+async def create_sequence(
+    tenant_id: str,
+    req: SequenceCreateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Create a new sequence with steps."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    # Create sequence
+    seq_result = db.table("automation_sequences").insert({
+        "tenant_id": tenant_id,
+        "name": req.name,
+        "trigger_event": req.trigger_event,
+        "trigger_config": req.trigger_config,
+    }).execute()
+    seq = seq_result.data[0]
+
+    # Create steps
+    steps_data = []
+    for step in req.steps:
+        steps_data.append({
+            "sequence_id": seq["id"],
+            "step_order": step.step_order,
+            "delay_minutes": step.delay_minutes,
+            "action_type": step.action_type,
+            "subject_template": step.subject_template,
+            "body_template": step.body_template,
+        })
+
+    if steps_data:
+        db.table("automation_steps").insert(steps_data).execute()
+
+    return {"sequence": seq, "steps_created": len(steps_data)}
+
+
+@router.get("/{tenant_id}/stats")
+async def get_sequence_stats(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    """Dashboard stats for sequences."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    # Active sequences count
+    active_seqs = (
+        db.table("automation_sequences")
+        .select("id", count="exact")
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", True)
+        .execute()
+    )
+
+    # Emails sent today
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00+00:00")
+    logs = (
+        db.table("automation_logs")
+        .select("id", count="exact")
+        .eq("action", "email_sent")
+        .gte("created_at", today)
+        .execute()
+    )
+
+    # Total active executions
+    active_execs = (
+        db.table("automation_executions")
+        .select("id", count="exact")
+        .eq("tenant_id", tenant_id)
+        .eq("status", "in_progress")
+        .execute()
+    )
+
+    return {
+        "active_sequences": active_seqs.count or 0,
+        "emails_sent_today": logs.count or 0,
+        "active_executions": active_execs.count or 0,
+    }
+
+
+@router.get("/{tenant_id}/{seq_id}")
+async def get_sequence_detail(
+    tenant_id: str, seq_id: str, claims: dict = Depends(_get_current_tenant)
+):
+    """Get sequence detail with steps and recent logs."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    seq = (
+        db.table("automation_sequences")
+        .select("*")
+        .eq("id", seq_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not seq.data:
+        raise HTTPException(status_code=404, detail="Sequence not found")
+
+    steps = (
+        db.table("automation_steps")
+        .select("*")
+        .eq("sequence_id", seq_id)
+        .order("step_order")
+        .execute()
+    )
+
+    # Execution stats
+    execs = (
+        db.table("automation_executions")
+        .select("status")
+        .eq("sequence_id", seq_id)
+        .execute()
+    )
+    exec_data = execs.data or []
+
+    # Recent logs (join through executions)
+    exec_ids = [e["id"] for e in (
+        db.table("automation_executions")
+        .select("id")
+        .eq("sequence_id", seq_id)
+        .execute()
+    ).data or []]
+
+    logs: list[dict[str, Any]] = []
+    if exec_ids:
+        logs_result = (
+            db.table("automation_logs")
+            .select("*")
+            .in_("execution_id", exec_ids)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        logs = logs_result.data or []
+
+    return {
+        "sequence": seq.data[0],
+        "steps": steps.data or [],
+        "stats": {
+            "total_enrolled": len(exec_data),
+            "active": sum(1 for e in exec_data if e["status"] == "in_progress"),
+            "completed": sum(1 for e in exec_data if e["status"] == "completed"),
+            "failed": sum(1 for e in exec_data if e["status"] == "failed"),
+        },
+        "recent_logs": logs,
+    }
+
+
+@router.put("/{tenant_id}/{seq_id}")
+async def update_sequence(
+    tenant_id: str,
+    seq_id: str,
+    req: SequenceUpdateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Update sequence and optionally replace steps."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    # Verify exists
+    existing = (
+        db.table("automation_sequences")
+        .select("id")
+        .eq("id", seq_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Sequence not found")
+
+    # Update sequence fields
+    updates: dict[str, Any] = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if req.name is not None:
+        updates["name"] = req.name
+    if req.trigger_event is not None:
+        updates["trigger_event"] = req.trigger_event
+    if req.trigger_config is not None:
+        updates["trigger_config"] = req.trigger_config
+
+    db.table("automation_sequences").update(updates).eq("id", seq_id).execute()
+
+    # Replace steps if provided
+    if req.steps is not None:
+        # Delete old steps
+        db.table("automation_steps").delete().eq("sequence_id", seq_id).execute()
+        # Insert new steps
+        steps_data = []
+        for step in req.steps:
+            steps_data.append({
+                "sequence_id": seq_id,
+                "step_order": step.step_order,
+                "delay_minutes": step.delay_minutes,
+                "action_type": step.action_type,
+                "subject_template": step.subject_template,
+                "body_template": step.body_template,
+            })
+        if steps_data:
+            db.table("automation_steps").insert(steps_data).execute()
+
+    return {"updated": True}
+
+
+@router.delete("/{tenant_id}/{seq_id}")
+async def delete_sequence(
+    tenant_id: str, seq_id: str, claims: dict = Depends(_get_current_tenant)
+):
+    """Delete a sequence (cascade deletes steps/executions/logs)."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    result = (
+        db.table("automation_sequences")
+        .delete()
+        .eq("id", seq_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Sequence not found")
+
+    return {"deleted": True}
+
+
+@router.post("/{tenant_id}/{seq_id}/toggle")
+async def toggle_sequence(
+    tenant_id: str, seq_id: str, claims: dict = Depends(_get_current_tenant)
+):
+    """Toggle sequence active/inactive."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    seq = (
+        db.table("automation_sequences")
+        .select("id, is_active")
+        .eq("id", seq_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not seq.data:
+        raise HTTPException(status_code=404, detail="Sequence not found")
+
+    new_state = not seq.data[0]["is_active"]
+    db.table("automation_sequences").update({
+        "is_active": new_state,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("id", seq_id).execute()
+
+    return {"is_active": new_state}
+
+
+@router.post("/{tenant_id}/templates")
+async def create_from_template(
+    tenant_id: str,
+    body: dict = {},
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Create a sequence from a pre-built template."""
+    _verify_tenant(tenant_id, claims)
+
+    template_id = body.get("template_id", "")
+    if template_id not in TEMPLATES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown template. Available: {list(TEMPLATES.keys())}",
+        )
+
+    template = TEMPLATES[template_id]
+    db = get_supabase()
+
+    seq_result = db.table("automation_sequences").insert({
+        "tenant_id": tenant_id,
+        "name": template["name"],
+        "trigger_event": template["trigger_event"],
+        "trigger_config": template["trigger_config"],
+    }).execute()
+    seq = seq_result.data[0]
+
+    steps_data = []
+    for step in template["steps"]:
+        steps_data.append({
+            "sequence_id": seq["id"],
+            **step,
+            "action_type": "email",
+        })
+
+    if steps_data:
+        db.table("automation_steps").insert(steps_data).execute()
+
+    return {"sequence": seq, "steps_created": len(steps_data)}
+
+
+# --- Lead stage update with automation trigger ---
+
+leads_router = APIRouter(prefix="/api/v1/leads", tags=["leads"])
+
+
+@leads_router.patch("/{tenant_id}/{lead_id}/stage")
+async def update_lead_stage(
+    tenant_id: str,
+    lead_id: str,
+    req: LeadStageUpdate,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Update a lead's stage and fire automation triggers."""
+    _verify_tenant(tenant_id, claims)
+    db = get_supabase()
+
+    # Verify lead belongs to tenant
+    lead = (
+        db.table("leads")
+        .select("id, lead_stage")
+        .eq("id", lead_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not lead.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    old_stage = lead.data[0]["lead_stage"]
+    db.table("leads").update({"lead_stage": req.stage}).eq("id", lead_id).execute()
+
+    # Fire automation trigger
+    if old_stage != req.stage:
+        asyncio.create_task(
+            trigger_sequence(
+                tenant_id, lead_id, "lead_stage_change",
+                {"old_stage": old_stage, "new_stage": req.stage},
+            )
+        )
+
+    return {"lead_id": lead_id, "old_stage": old_stage, "new_stage": req.stage}

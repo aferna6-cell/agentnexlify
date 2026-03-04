@@ -16,6 +16,7 @@ from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import PlainTextResponse
 
 from backend.models.database import get_supabase
+from backend.services.activity import log_activity
 from backend.services.twilio_service import (
     format_textback_message,
     looks_like_booking_request,
@@ -112,13 +113,29 @@ async def twilio_missed_call(
     await send_sms(to=From, body=body)
 
     # 4. Create lead
-    db.table("leads").insert({
+    lead_result = db.table("leads").insert({
         "tenant_id": tenant_id,
         "phone": From,
         "source": "missed_call",
         "lead_stage": "new",
         "notes": f"Missed call text-back sent (CallSid: {CallSid})",
     }).execute()
+
+    if lead_result.data:
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="lead_created",
+            description=f"New lead from missed call: {From}",
+            lead_id=lead_result.data[0]["id"],
+            metadata={"source": "missed_call", "call_sid": CallSid},
+        )
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="automation_triggered",
+            description="Missed call text-back sent",
+            lead_id=lead_result.data[0]["id"],
+            metadata={"automation": "missed_call_textback"},
+        )
 
     # 5. Increment runs_total
     db.table("automations").update({
@@ -171,6 +188,14 @@ async def twilio_sms_reply(
         existing_notes = lead.get("notes") or ""
         updated_notes = f"{existing_notes}\nCustomer reply: {Body}".strip()
         db.table("leads").update({"notes": updated_notes}).eq("id", lead["id"]).execute()
+
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="message",
+            description=f"SMS reply from {From}",
+            lead_id=lead["id"],
+            metadata={"source": "sms", "preview": Body[:100]},
+        )
 
     # 4. Booking keyword detection
     if looks_like_booking_request(Body):

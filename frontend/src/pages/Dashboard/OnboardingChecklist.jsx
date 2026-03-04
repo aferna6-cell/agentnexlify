@@ -5,6 +5,7 @@ import {
   createFaqEntry,
   deleteFaqEntry,
 } from "../../utils/api";
+import { trackEvent } from "../../utils/analytics";
 
 const STORAGE_KEY_PREFIX = "anx_onboarding_";
 
@@ -257,6 +258,7 @@ export default function OnboardingChecklist({
   };
 
   const handleFinish = () => {
+    trackEvent("onboarding_complete");
     updateStored({ dismissed: true });
     onDismiss?.();
   };

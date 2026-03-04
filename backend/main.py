@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -17,7 +18,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import auth, automations, billing, leads, stripe_webhooks, support, widget
+from backend.routers import appointments, auth, automations, billing, clients, leads, sequences, stripe_webhooks, support, widget
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -42,12 +43,31 @@ if settings.sentry_dsn:
 _startup_time: float = 0.0
 
 
+async def _automation_loop():
+    """Background loop that processes pending automation steps every 60 seconds."""
+    from backend.services.automation_engine import check_no_response_leads, process_pending_steps
+    while True:
+        try:
+            processed = await process_pending_steps()
+            if processed:
+                logger.info("Automation loop: processed %d steps", processed)
+            # Also check for no-response leads
+            triggered = await check_no_response_leads()
+            if triggered:
+                logger.info("Automation loop: triggered %d no-response sequences", triggered)
+        except Exception:
+            logger.exception("Automation loop error")
+        await asyncio.sleep(60)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _startup_time
     _startup_time = time.time()
     logger.info("AgentNexLiFy starting up")
+    task = asyncio.create_task(_automation_loop())
     yield
+    task.cancel()
     logger.info("AgentNexLiFy shutting down")
 
 
@@ -124,11 +144,15 @@ async def log_requests(request: Request, call_next):
 
 
 # --- Routers ---
+app.include_router(appointments.router)
 app.include_router(auth.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
+app.include_router(clients.router)
 app.include_router(leads.router)
 app.include_router(stripe_webhooks.router)
+app.include_router(sequences.router)
+app.include_router(sequences.leads_router)
 app.include_router(support.router)
 app.include_router(widget.router)
 
