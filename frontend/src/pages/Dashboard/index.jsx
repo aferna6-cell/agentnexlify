@@ -154,6 +154,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           />
           <div className="dashboard-bottom-row">
             <ActivityFeed activity={activity} />
+            <TodayAppointments tenantId={user.tenantId} token={token} onNavigate={onNavigate} />
             <WidgetEmbed
               apiKey={dashData?.widget_api_key}
               tenantId={user.tenantId}
