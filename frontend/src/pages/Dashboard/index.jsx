@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity, updateLead, deleteLead, fetchCrmDashboardWidgets } from "../../utils/api";
+import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity, updateLead, deleteLead, fetchCrmDashboardWidgets, fetchSequenceStats } from "../../utils/api";
 import OverviewCards from "./OverviewCards";
 import LeadPipeline from "./LeadPipeline";
 import ActivityFeed from "./ActivityFeed";
@@ -33,19 +33,21 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   const [error, setError] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [crmWidgets, setCrmWidgets] = useState(null);
+  const [seqStats, setSeqStats] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
     setError(null);
     try {
-      const [dashRes, leadsRes, autoRes, activityRes, crmRes] =
+      const [dashRes, leadsRes, autoRes, activityRes, crmRes, seqStatsRes] =
         await Promise.allSettled([
           fetchDashboard(user.tenantId, token),
           fetchLeads(user.tenantId, token),
           fetchAutomations(user.tenantId, token),
           fetchActivity(user.tenantId, token),
           fetchCrmDashboardWidgets(user.tenantId, token),
+          fetchSequenceStats(user.tenantId, token),
         ]);
 
       if (dashRes.status === "fulfilled") {
@@ -57,6 +59,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
       if (autoRes.status === "fulfilled") setAutomations(autoRes.value.automations || []);
       if (activityRes.status === "fulfilled") setActivity(activityRes.value.activity || []);
       if (crmRes.status === "fulfilled") setCrmWidgets(crmRes.value);
+      if (seqStatsRes.status === "fulfilled") setSeqStats(seqStatsRes.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -138,10 +141,11 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         conversationsUsed={dashData?.conversations_used_this_month ?? 0}
         conversationsLimit={dashData?.monthly_conversation_limit ?? 50}
         leadCount={dashData?.leads_count ?? leads.length}
-        automationCount={enabledAutomations.length}
+        automationCount={seqStats?.active_sequences ?? enabledAutomations.length}
         plan={dashData?.plan ?? user.plan}
         onNavigate={onNavigate}
         hotLeadsCount={dashData?.hot_leads_count ?? 0}
+        emailsSentToday={seqStats?.emails_sent_today ?? 0}
       />
 
       <div className="dashboard-main-grid">

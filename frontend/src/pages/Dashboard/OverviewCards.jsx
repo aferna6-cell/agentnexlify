@@ -1,6 +1,6 @@
 import { trackEvent } from "../../utils/analytics";
 
-export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0 }) {
+export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0, emailsSentToday = 0 }) {
   const convPct = conversationsLimit > 0 ? Math.round((conversationsUsed / conversationsLimit) * 100) : 0;
   const nearLimit = convPct >= 80;
 
@@ -73,7 +73,7 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
         <div className="stat-label">Automations Active</div>
         <div className="stat-value">{automationCount}</div>
         <div className="stat-trend neutral">
-          {automationCount === 0 ? "Set up your first automation" : "Running"}
+          {automationCount === 0 ? "Set up your first automation" : emailsSentToday > 0 ? `${emailsSentToday} email${emailsSentToday !== 1 ? "s" : ""} sent today` : "Running"}
         </div>
         {automationCount === 0 && (
           <button

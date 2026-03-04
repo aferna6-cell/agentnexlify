@@ -362,6 +362,193 @@
           right: 16px;
         }
       }
+
+      /* Booking UI */
+      #anx-booking {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.1) transparent;
+      }
+
+      #anx-booking-btn {
+        width: 30px;
+        height: 30px;
+        border: none;
+        background: rgba(255,255,255,0.06);
+        border-radius: 8px;
+        cursor: pointer;
+        color: rgba(255,255,255,0.5);
+        font-size: 16px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, color 0.2s;
+      }
+      #anx-booking-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+      .anx-booking-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+
+      .anx-booking-back {
+        background: none;
+        border: none;
+        color: rgba(255,255,255,0.5);
+        cursor: pointer;
+        font-size: 12px;
+        padding: 4px 0;
+        text-align: left;
+      }
+      .anx-booking-back:hover { color: #fff; }
+
+      /* Date picker */
+      .anx-cal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .anx-cal-header span {
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .anx-cal-nav {
+        background: none;
+        border: none;
+        color: rgba(255,255,255,0.5);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 4px 8px;
+      }
+      .anx-cal-nav:hover { color: #fff; }
+      .anx-cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        text-align: center;
+      }
+      .anx-cal-dow {
+        font-size: 10px;
+        color: rgba(255,255,255,0.35);
+        padding: 4px 0;
+        text-transform: uppercase;
+      }
+      .anx-cal-day {
+        padding: 8px 4px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #e0e0e5;
+        cursor: pointer;
+        border: none;
+        background: none;
+        transition: background 0.15s;
+      }
+      .anx-cal-day:hover { background: rgba(255,255,255,0.08); }
+      .anx-cal-day.disabled { color: rgba(255,255,255,0.15); pointer-events: none; }
+      .anx-cal-day.today { border: 1px solid ${BRAND_COLOR}44; }
+      .anx-cal-day.selected { background: ${BRAND_COLOR}; color: #0a0a0f; font-weight: 600; }
+      .anx-cal-day.empty { pointer-events: none; }
+
+      /* Time slots */
+      .anx-slots-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .anx-slot-btn {
+        padding: 10px 4px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.04);
+        color: #e0e0e5;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .anx-slot-btn:hover { border-color: ${BRAND_COLOR}66; background: rgba(255,255,255,0.06); }
+      .anx-slot-btn.selected { background: ${BRAND_COLOR}; color: #0a0a0f; border-color: ${BRAND_COLOR}; font-weight: 600; }
+      .anx-slots-empty {
+        color: rgba(255,255,255,0.4);
+        font-size: 13px;
+        text-align: center;
+        padding: 16px 0;
+      }
+
+      /* Contact form */
+      .anx-form-group { display: flex; flex-direction: column; gap: 4px; }
+      .anx-form-label { font-size: 11px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px; }
+      .anx-form-input {
+        padding: 10px 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.04);
+        border-radius: 8px;
+        color: #e0e0e5;
+        font-size: 13px;
+        outline: none;
+        font-family: inherit;
+      }
+      .anx-form-input:focus { border-color: ${BRAND_COLOR}44; }
+      .anx-form-input::placeholder { color: rgba(255,255,255,0.25); }
+      .anx-book-submit {
+        padding: 12px;
+        background: ${BRAND_COLOR};
+        color: #0a0a0f;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.15s;
+      }
+      .anx-book-submit:hover { opacity: 0.85; }
+      .anx-book-submit:disabled { opacity: 0.5; cursor: default; }
+
+      /* Confirmation */
+      .anx-confirm-check {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: ${BRAND_COLOR};
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 8px auto;
+        font-size: 24px;
+        color: #0a0a0f;
+      }
+      .anx-confirm-title {
+        text-align: center;
+        font-size: 16px;
+        font-weight: 600;
+        color: #fff;
+      }
+      .anx-confirm-detail {
+        text-align: center;
+        font-size: 13px;
+        color: rgba(255,255,255,0.5);
+      }
+      .anx-confirm-back {
+        padding: 10px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #e0e0e5;
+        font-size: 13px;
+        cursor: pointer;
+        text-align: center;
+        margin-top: 8px;
+      }
+      .anx-confirm-back:hover { background: rgba(255,255,255,0.1); }
     `;
     document.head.appendChild(style);
   }
@@ -387,10 +574,12 @@
             </div>
           </div>
           <div id="anx-header-actions">
+            <button id="anx-booking-btn" title="Book Appointment">&#128197;</button>
             <button id="anx-minimize" title="Minimize">&#8722;</button>
             <button id="anx-close" title="Close">&times;</button>
           </div>
         </div>
+        <div id="anx-booking"></div>
         <div id="anx-messages"></div>
         <div id="anx-input-area">
           <textarea id="anx-input" placeholder="Type a message..." rows="1"></textarea>
@@ -414,6 +603,15 @@
   let botName = "Aria";
   let agentName = "Agent";
 
+  // Booking state
+  let tenantId = "";
+  let bookingEnabled = false;
+  let bookingStep = null; // null | "date" | "slots" | "form" | "confirmed"
+  let selectedDate = null;
+  let availableSlots = [];
+  let selectedSlot = null;
+  let bookingMaxDays = 30;
+
   // --- API calls ---
   async function fetchConfig() {
     try {
@@ -424,6 +622,8 @@
       const data = await resp.json();
       botName = data.bot_name || "Aria";
       agentName = data.agent_name || "Agent";
+      tenantId = data.tenant_id || "";
+      bookingEnabled = data.booking_enabled || false;
     } catch (e) {
       console.warn("AgentNexLiFy: Failed to fetch config", e);
     }
@@ -513,6 +713,16 @@
     const text = input.value.trim();
     if (!text || isLoading) return;
 
+    // Booking intent detection
+    if (bookingEnabled && tenantId && /\b(book|appointment|schedule|available|booking)\b/i.test(text)) {
+      input.value = "";
+      input.style.height = "auto";
+      addMessage("user", text);
+      addMessage("assistant", "I can help you book an appointment! Let me show you our available times.");
+      setTimeout(() => showBooking("date"), 500);
+      return;
+    }
+
     input.value = "";
     input.style.height = "auto";
     addMessage("user", text);
@@ -544,6 +754,230 @@
     textarea.style.height = Math.min(textarea.scrollHeight, 80) + "px";
   }
 
+  // --- Booking UI ---
+
+  function showBooking(step) {
+    bookingStep = step;
+    const booking = document.getElementById("anx-booking");
+    const messages = document.getElementById("anx-messages");
+    const inputArea = document.getElementById("anx-input-area");
+
+    if (!step) {
+      booking.style.display = "none";
+      booking.innerHTML = "";
+      messages.style.display = "flex";
+      inputArea.style.display = "flex";
+      return;
+    }
+
+    messages.style.display = "none";
+    inputArea.style.display = "none";
+    booking.style.display = "flex";
+
+    if (step === "date") renderDatePicker();
+    else if (step === "slots") renderSlots();
+    else if (step === "form") renderContactForm();
+    else if (step === "confirmed") renderConfirmation();
+  }
+
+  function renderDatePicker() {
+    const booking = document.getElementById("anx-booking");
+    const now = new Date();
+    const viewMonth = selectedDate ? new Date(selectedDate) : new Date(now);
+    viewMonth.setDate(1);
+
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDow = new Date(year, month, 1).getDay();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + bookingMaxDays);
+
+    let html = `<button class="anx-booking-back" onclick="document.getElementById('anx-booking').__anxBack()">&#8592; Back to chat</button>`;
+    html += `<div class="anx-booking-title">Select a Date</div>`;
+    html += `<div class="anx-cal-header">`;
+    html += `<button class="anx-cal-nav" data-dir="-1">&#8249;</button>`;
+    html += `<span>${monthNames[month]} ${year}</span>`;
+    html += `<button class="anx-cal-nav" data-dir="1">&#8250;</button>`;
+    html += `</div>`;
+    html += `<div class="anx-cal-grid">`;
+    ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(d => { html += `<div class="anx-cal-dow">${d}</div>`; });
+    for (let i = 0; i < firstDow; i++) html += `<button class="anx-cal-day empty"></button>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dt = new Date(year, month, d);
+      const isPast = dt < today;
+      const isBeyond = dt > maxDate;
+      const isToday = dt.getTime() === today.getTime();
+      const isSel = selectedDate && dt.toDateString() === new Date(selectedDate).toDateString();
+      let cls = "anx-cal-day";
+      if (isPast || isBeyond) cls += " disabled";
+      if (isToday) cls += " today";
+      if (isSel) cls += " selected";
+      html += `<button class="${cls}" data-date="${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}">${d}</button>`;
+    }
+    html += `</div>`;
+
+    booking.innerHTML = html;
+
+    // Back to chat
+    booking.__anxBack = () => showBooking(null);
+
+    // Month nav
+    booking.querySelectorAll(".anx-cal-nav").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const dir = parseInt(btn.dataset.dir);
+        const nv = new Date(year, month + dir, 1);
+        selectedDate = nv.toISOString().split("T")[0];
+        renderDatePicker();
+      });
+    });
+
+    // Day selection
+    booking.querySelectorAll(".anx-cal-day:not(.disabled):not(.empty)").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedDate = btn.dataset.date;
+        showBooking("slots");
+      });
+    });
+  }
+
+  async function renderSlots() {
+    const booking = document.getElementById("anx-booking");
+    booking.innerHTML = `<button class="anx-booking-back" onclick="document.getElementById('anx-booking').__anxBack()">&#8592; Back</button><div class="anx-booking-title">Available Times</div><div class="anx-slots-empty">Loading...</div>`;
+    booking.__anxBack = () => { showBooking("date"); };
+
+    try {
+      const resp = await fetch(
+        `${API_BASE}/api/v1/appointments/slots/${tenantId}?date=${selectedDate}&api_key=${encodeURIComponent(API_KEY)}`
+      );
+      if (!resp.ok) throw new Error("Failed to fetch slots");
+      const data = await resp.json();
+      availableSlots = data.slots || [];
+    } catch (e) {
+      console.error("AgentNexLiFy: Slots fetch failed", e);
+      availableSlots = [];
+    }
+
+    let html = `<button class="anx-booking-back" onclick="document.getElementById('anx-booking').__anxBack()">&#8592; Back</button>`;
+    html += `<div class="anx-booking-title">${formatBookingDate(selectedDate)}</div>`;
+
+    if (availableSlots.length === 0) {
+      html += `<div class="anx-slots-empty">No available slots for this date. Please try another day.</div>`;
+    } else {
+      html += `<div class="anx-slots-grid">`;
+      availableSlots.forEach((slot, i) => {
+        html += `<button class="anx-slot-btn" data-idx="${i}">${slot.start}</button>`;
+      });
+      html += `</div>`;
+    }
+
+    booking.innerHTML = html;
+    booking.__anxBack = () => { showBooking("date"); };
+
+    booking.querySelectorAll(".anx-slot-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedSlot = availableSlots[parseInt(btn.dataset.idx)];
+        booking.querySelectorAll(".anx-slot-btn").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        setTimeout(() => showBooking("form"), 300);
+      });
+    });
+  }
+
+  function renderContactForm() {
+    const booking = document.getElementById("anx-booking");
+    let html = `<button class="anx-booking-back" onclick="document.getElementById('anx-booking').__anxBack()">&#8592; Back</button>`;
+    html += `<div class="anx-booking-title">Your Details</div>`;
+    html += `<div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px;">${formatBookingDate(selectedDate)} at ${selectedSlot.start}</div>`;
+    html += `<div class="anx-form-group"><label class="anx-form-label">Name *</label><input class="anx-form-input" id="anx-book-name" placeholder="Your name" required></div>`;
+    html += `<div class="anx-form-group"><label class="anx-form-label">Email *</label><input class="anx-form-input" id="anx-book-email" type="email" placeholder="your@email.com" required></div>`;
+    html += `<div class="anx-form-group"><label class="anx-form-label">Phone</label><input class="anx-form-input" id="anx-book-phone" type="tel" placeholder="(optional)"></div>`;
+    html += `<div class="anx-form-group"><label class="anx-form-label">Notes</label><input class="anx-form-input" id="anx-book-notes" placeholder="(optional)"></div>`;
+    html += `<button class="anx-book-submit" id="anx-book-confirm">Confirm Appointment</button>`;
+    html += `<div id="anx-book-error" style="color:#ff4444;font-size:12px;text-align:center;display:none;"></div>`;
+
+    booking.innerHTML = html;
+    booking.__anxBack = () => { showBooking("slots"); };
+
+    document.getElementById("anx-book-confirm").addEventListener("click", submitBooking);
+  }
+
+  async function submitBooking() {
+    const name = document.getElementById("anx-book-name").value.trim();
+    const email = document.getElementById("anx-book-email").value.trim();
+    const phone = document.getElementById("anx-book-phone").value.trim();
+    const notes = document.getElementById("anx-book-notes").value.trim();
+    const errEl = document.getElementById("anx-book-error");
+    const btn = document.getElementById("anx-book-confirm");
+
+    if (!name || !email) {
+      errEl.textContent = "Name and email are required.";
+      errEl.style.display = "block";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Booking...";
+    errEl.style.display = "none";
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/v1/appointments/${tenantId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: API_KEY,
+          customer_name: name,
+          customer_email: email,
+          customer_phone: phone || null,
+          start_utc: selectedSlot.start_utc,
+          end_utc: selectedSlot.end_utc,
+          notes: notes || null,
+        }),
+      });
+
+      if (resp.status === 409) {
+        errEl.textContent = "This slot was just taken. Please select another time.";
+        errEl.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Confirm Appointment";
+        setTimeout(() => showBooking("slots"), 1500);
+        return;
+      }
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      showBooking("confirmed");
+    } catch (e) {
+      console.error("AgentNexLiFy: Booking failed", e);
+      errEl.textContent = "Something went wrong. Please try again.";
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Confirm Appointment";
+    }
+  }
+
+  function renderConfirmation() {
+    const booking = document.getElementById("anx-booking");
+    let html = `<div class="anx-confirm-check">&#10003;</div>`;
+    html += `<div class="anx-confirm-title">Appointment Confirmed!</div>`;
+    html += `<div class="anx-confirm-detail">${formatBookingDate(selectedDate)} at ${selectedSlot.start}</div>`;
+    html += `<button class="anx-confirm-back" id="anx-book-done">Back to Chat</button>`;
+    booking.innerHTML = html;
+
+    document.getElementById("anx-book-done").addEventListener("click", () => {
+      bookingStep = null;
+      selectedDate = null;
+      selectedSlot = null;
+      availableSlots = [];
+      showBooking(null);
+    });
+  }
+
+  function formatBookingDate(dateStr) {
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  }
+
   // --- Initialization ---
   async function init() {
     if (!API_KEY) {
@@ -556,6 +990,15 @@
 
     await fetchConfig();
     updateHeader();
+
+    // Show booking button if enabled
+    if (bookingEnabled && tenantId) {
+      const bookBtn = document.getElementById("anx-booking-btn");
+      if (bookBtn) {
+        bookBtn.style.display = "flex";
+        bookBtn.addEventListener("click", () => showBooking("date"));
+      }
+    }
 
     // Load existing history
     const history = await fetchHistory();

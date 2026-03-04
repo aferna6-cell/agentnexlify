@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 
 from backend.models.database import get_supabase
 from backend.models.schemas import (
@@ -412,13 +412,11 @@ async def toggle_sequence(
 @router.post("/{tenant_id}/templates")
 async def create_from_template(
     tenant_id: str,
-    body: dict = {},
+    template_id: str = Body(..., embed=True),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Create a sequence from a pre-built template."""
     _verify_tenant(tenant_id, claims)
-
-    template_id = body.get("template_id", "")
     if template_id not in TEMPLATES:
         raise HTTPException(
             status_code=400,
