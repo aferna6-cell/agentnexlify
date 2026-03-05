@@ -145,36 +145,8 @@ export default function Home() {
   return (
     <div className="landing-page">
       <Helmet>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Agent NexLiFy | AI That Runs Your Front Desk</title>
-        <meta
-          name="description"
-          content="Capture leads, book appointments, and follow up with customers — automatically. AI built for local businesses."
-        />
         <link rel="canonical" href="https://agentnexlify.com/" />
-        <meta property="og:title" content="Agent NexLiFy | AI That Runs Your Front Desk" />
-        <meta
-          property="og:description"
-          content="Capture leads, book appointments, and follow up with customers — automatically. AI built for local businesses."
-        />
-        <meta property="og:image" content="https://agentnexlify.com/og-image.png" />
-        <meta property="og:url" content="https://agentnexlify.com/" />
-        <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Agent NexLiFy | AI That Runs Your Front Desk" />
-        <meta
-          name="twitter:description"
-          content="Capture leads, book appointments, and follow up with customers — automatically. AI built for local businesses."
-        />
-        <meta name="twitter:image" content="https://agentnexlify.com/og-image.png" />
         <meta name="google-site-verification" content="87NEEvBU6dL3QuI_1iZK9wgq4Jtws60z1M3bKu-mS6s" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
         <script type="application/ld+json">{`
 {
   "@context": "https://schema.org",
