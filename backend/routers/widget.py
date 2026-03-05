@@ -80,31 +80,81 @@ def _check_origin(request: Request, allowed_domains: list[str] | None) -> None:
 
 def _get_or_create_conversation(
     tenant_id: str, session_id: str
-) -> tuple[dict[str, Any], bool]:
-    """Return (conversation_row, is_new)."""
+) -> tuple[str, bool]:
+    """Return (conversation_id, is_new).
+
+    The live conversations table schema is unreliable (missing columns), so
+    this function tries to look up / create a row but falls back to using the
+    session_id itself as a stable identifier.  Message history is stored in the
+    separate ``chat_messages`` table, not in conversations JSONB.
+    """
+    db = get_supabase()
+
+    # Try to find an existing conversation
     try:
-        db = get_supabase()
         result = (
             db.table("conversations")
-            .select("*")
+            .select("id")
             .eq("tenant_id", tenant_id)
             .eq("session_id", session_id)
-            .order("created_at", desc=True)
             .limit(1)
             .execute()
         )
         if result.data:
-            return result.data[0], False
+            return result.data[0]["id"], False
+    except Exception:
+        logger.debug("conversations lookup failed for session %s", session_id)
 
+    # Try to create one
+    try:
         new_conv = (
             db.table("conversations")
-            .insert({"tenant_id": tenant_id, "session_id": session_id, "messages": []})
+            .insert({"tenant_id": tenant_id, "session_id": session_id})
             .execute()
         )
-        return new_conv.data[0], True
-    except Exception as e:
-        logger.error("Conversation error: %s", e, exc_info=True)
-        return {"id": session_id or str(uuid4()), "messages": []}, True
+        if new_conv.data:
+            return new_conv.data[0]["id"], True
+    except Exception:
+        logger.debug("conversations insert failed for session %s", session_id)
+
+    # Fallback: use session_id as a stable conversation identifier.
+    # This lets chat_messages still accumulate history by session_id.
+    return session_id, True
+
+
+def _load_chat_history(
+    tenant_id: str, session_id: str, limit: int = 20
+) -> list[dict[str, str]]:
+    """Load recent chat messages from the chat_messages table."""
+    try:
+        db = get_supabase()
+        result = (
+            db.table("chat_messages")
+            .select("role, content")
+            .eq("tenant_id", tenant_id)
+            .eq("session_id", session_id)
+            .order("created_at")
+            .limit(limit)
+            .execute()
+        )
+        return [{"role": m["role"], "content": m["content"]} for m in (result.data or [])]
+    except Exception:
+        logger.warning("chat_messages load failed for session %s", session_id, exc_info=True)
+        return []
+
+
+def _save_chat_messages(
+    tenant_id: str, session_id: str, user_text: str, assistant_text: str
+) -> None:
+    """Persist both user and assistant messages to chat_messages table."""
+    try:
+        db = get_supabase()
+        db.table("chat_messages").insert([
+            {"tenant_id": tenant_id, "session_id": session_id, "role": "user", "content": user_text},
+            {"tenant_id": tenant_id, "session_id": session_id, "role": "assistant", "content": assistant_text},
+        ]).execute()
+    except Exception:
+        logger.warning("chat_messages save failed for session %s", session_id, exc_info=True)
 
 
 def _build_system_prompt(tenant: dict, faq_entries: list[dict]) -> str:
@@ -240,8 +290,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         )
 
     # 4. Get or create conversation
-    conversation, is_new = _get_or_create_conversation(tenant["id"], req.session_id)
-    conversation_id = conversation["id"]
+    conversation_id, is_new = _get_or_create_conversation(tenant["id"], req.session_id)
     logger.info("widget_chat: conversation=%s is_new=%s", conversation_id, is_new)
 
     # Increment usage counter only for new conversations
@@ -254,8 +303,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         except Exception:
             logger.warning("Failed to increment usage counter for tenant %s", tenant["id"], exc_info=True)
 
-    # 5. Load message history from JSONB
-    messages: list[dict[str, str]] = conversation.get("messages") or []
+    # 5. Load message history from chat_messages table (last 20 messages)
+    messages = _load_chat_history(tenant["id"], req.session_id)
+    logger.info("widget_chat: loaded %d previous messages", len(messages))
 
     # 6. Build system prompt with FAQ
     db = get_supabase()
@@ -321,14 +371,8 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             "Please try again in a moment or contact us directly."
         )
 
-    # 9. Save messages back to conversation JSONB
-    messages.append({"role": "assistant", "content": assistant_text})
-    try:
-        db.table("conversations").update(
-            {"messages": messages}
-        ).eq("id", conversation_id).execute()
-    except Exception:
-        logger.warning("Failed to save conversation %s", conversation_id, exc_info=True)
+    # 9. Save user + assistant messages to chat_messages table
+    _save_chat_messages(tenant["id"], req.session_id, req.message, assistant_text)
 
     # 10. Lead extraction
     lead_id = None
@@ -422,21 +466,8 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     widget = _get_widget_config(req.api_key)
     tenant = _get_tenant(widget["tenant_id"])
 
-    # Find conversation
-    db = get_supabase()
-    conv_result = (
-        db.table("conversations")
-        .select("id")
-        .eq("tenant_id", tenant["id"])
-        .eq("session_id", req.session_id)
-        .order("created_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-    if not conv_result.data:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    conversation_id = conv_result.data[0]["id"]
+    # Find or create conversation
+    conversation_id, _ = _get_or_create_conversation(tenant["id"], req.session_id)
 
     # Build fields from request
     fields: dict[str, str] = {}
