@@ -238,7 +238,12 @@ def _capture_leads_from_session(
     """Background task: scan all user messages in session for contact info,
     create or update a lead.  Deduplicates by email + tenant_id."""
     try:
+        logger.info(
+            "lead_capture START: tenant=%s session=%s conv=%s",
+            tenant_id, session_id, conversation_id,
+        )
         messages = _load_chat_history(tenant_id, session_id, limit=50)
+        logger.info("lead_capture: loaded %d messages from session", len(messages))
 
         # Scan ALL user messages for contact info
         combined: dict[str, str] = {}
@@ -246,25 +251,45 @@ def _capture_leads_from_session(
             if msg["role"] != "user":
                 continue
             extracted = _extract_lead_info(msg["content"])
+            if extracted:
+                logger.info(
+                    "lead_capture: extracted from message %r → %s",
+                    msg["content"][:80], extracted,
+                )
             combined.update(extracted)
 
+        logger.info("lead_capture: combined info = %s", combined)
+
         if not combined.get("email") and not combined.get("phone"):
-            return  # Not enough info to create a lead
+            logger.info("lead_capture: no email or phone found, skipping")
+            return
 
         db = get_supabase()
 
         # Dedup: check by email + tenant_id first
         if combined.get("email"):
-            existing = (
-                db.table("leads")
-                .select("id, name, phone")
-                .eq("tenant_id", tenant_id)
-                .eq("email", combined["email"])
-                .limit(1)
-                .execute()
+            logger.info(
+                "lead_capture: dedup check — email=%s tenant=%s",
+                combined["email"], tenant_id,
             )
+            try:
+                existing = (
+                    db.table("leads")
+                    .select("id, name, phone")
+                    .eq("tenant_id", tenant_id)
+                    .eq("email", combined["email"])
+                    .limit(1)
+                    .execute()
+                )
+            except Exception as dedup_err:
+                logger.error(
+                    "lead_capture: dedup query FAILED: %s", dedup_err, exc_info=True,
+                )
+                existing = type("R", (), {"data": []})()
+
             if existing.data:
                 lead = existing.data[0]
+                logger.info("lead_capture: existing lead found id=%s", lead["id"])
                 updates: dict[str, str] = {}
                 if combined.get("name") and not lead.get("name"):
                     updates["name"] = combined["name"]
@@ -279,6 +304,7 @@ def _capture_leads_from_session(
                         lead_id=lead["id"],
                         metadata={"source": "widget", "fields": list(updates.keys())},
                     )
+                    logger.info("lead_capture: updated lead %s fields=%s", lead["id"], list(updates.keys()))
                 return
 
         # Create new lead
@@ -297,9 +323,18 @@ def _capture_leads_from_session(
             UUID(conversation_id)
             lead_fields["conversation_id"] = conversation_id
         except (ValueError, AttributeError):
-            pass
+            logger.debug("lead_capture: conversation_id %r is not a UUID, omitting", conversation_id)
 
-        result = db.table("leads").insert(lead_fields).execute()
+        logger.info("lead_capture: inserting new lead with fields=%s", lead_fields)
+        try:
+            result = db.table("leads").insert(lead_fields).execute()
+        except Exception as insert_err:
+            logger.error(
+                "lead_capture: INSERT FAILED: %s — fields were %s",
+                insert_err, lead_fields, exc_info=True,
+            )
+            return
+
         if result.data:
             lead_id = result.data[0]["id"]
             lead_name = combined.get("name", "New visitor")
@@ -310,7 +345,7 @@ def _capture_leads_from_session(
                 lead_id=lead_id,
                 metadata={"source": "widget", "fields": list(lead_fields.keys())},
             )
-            logger.info("Lead captured: %s for tenant %s", lead_id, tenant_id)
+            logger.info("lead_capture: SUCCESS lead_id=%s tenant=%s", lead_id, tenant_id)
 
             # Fire automation trigger for new leads
             try:
@@ -325,9 +360,11 @@ def _capture_leads_from_session(
                 score_lead_background(lead_id)
             except Exception:
                 pass
+        else:
+            logger.warning("lead_capture: INSERT returned no data — result=%s", result)
 
     except Exception:
-        logger.warning("Lead capture failed for session %s", session_id, exc_info=True)
+        logger.error("lead_capture FAILED: session=%s tenant=%s", session_id, tenant_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
