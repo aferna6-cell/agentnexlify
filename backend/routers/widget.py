@@ -1,6 +1,8 @@
 """Widget API endpoints — multi-tenant chat, config, and lead capture."""
 
-from __future__ import annotations
+# NOTE: Do NOT add `from __future__ import annotations` here.
+# It breaks FastAPI's parameter introspection — Pydantic body models and
+# BackgroundTasks get treated as query params, causing 422 errors.
 
 import logging
 import re
