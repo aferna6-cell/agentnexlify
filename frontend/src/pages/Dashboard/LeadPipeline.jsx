@@ -3,9 +3,9 @@ import { useMemo, useState } from "react";
 const STAGES = [
   { key: "new", label: "New" },
   { key: "contacted", label: "Contacted" },
-  { key: "qualified", label: "Qualified" },
-  { key: "appointment", label: "Appointment" },
+  { key: "appointment_booked", label: "Appointment" },
   { key: "closed", label: "Closed" },
+  { key: "lost", label: "Lost" },
 ];
 
 function formatTimeAgo(dateStr) {
@@ -53,7 +53,7 @@ function LeadCard({ lead, onClick, onDragStart, onDragEnd }) {
     >
       <div className="lead-name">{lead.name || "Unknown"}</div>
       <div className="lead-desc">
-        {lead.service_interest || lead.email || "No details"}
+        {lead.areas_of_interest || lead.email || "No details"}
       </div>
       <div className="lead-meta">
         <span className={`lead-tag ${scoreClass(lead.lead_score)}`}>
@@ -114,7 +114,7 @@ export default function LeadPipeline({ leads, onSelectLead, onNavigate, onStageD
     const map = {};
     for (const s of STAGES) map[s.key] = [];
     for (const lead of leads) {
-      const stage = lead.lead_stage || "new";
+      const stage = lead.status || "new";
       if (map[stage]) map[stage].push(lead);
       else map["new"].push(lead);
     }

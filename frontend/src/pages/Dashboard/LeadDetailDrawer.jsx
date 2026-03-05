@@ -5,9 +5,9 @@ import { fetchLeadScore } from "../../utils/api";
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },
   { value: "contacted", label: "Contacted" },
-  { value: "qualified", label: "Qualified" },
-  { value: "appointment", label: "Appointment" },
+  { value: "appointment_booked", label: "Appointment" },
   { value: "closed", label: "Closed" },
+  { value: "lost", label: "Lost" },
 ];
 
 function scoreClass(score) {
@@ -79,9 +79,9 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     name: "",
     email: "",
     phone: "",
-    notes: "",
-    lead_stage: "new",
-    service_interest: "",
+    conversation_summary: "",
+    status: "new",
+    areas_of_interest: "",
     timeline: "",
     budget: "",
   });
@@ -93,9 +93,9 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
       name: lead.name || "",
       email: lead.email || "",
       phone: lead.phone || "",
-      notes: lead.notes || "",
-      lead_stage: lead.lead_stage || "new",
-      service_interest: lead.service_interest || "",
+      conversation_summary: lead.conversation_summary || "",
+      status: lead.status || "new",
+      areas_of_interest: lead.areas_of_interest || "",
       timeline: lead.timeline || "",
       budget: lead.budget || "",
     });
@@ -185,15 +185,15 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
             <div className="intel-title">Details</div>
             <div className="drawer-field">
               <label className="drawer-label">Stage</label>
-              <select className="drawer-select" value={form.lead_stage} onChange={handleChange("lead_stage")}>
+              <select className="drawer-select" value={form.status} onChange={handleChange("status")}>
                 {STAGE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
             </div>
             <div className="drawer-field">
-              <label className="drawer-label">Service Interest</label>
-              <input className="drawer-input" value={form.service_interest} onChange={handleChange("service_interest")} placeholder="Service interest" />
+              <label className="drawer-label">Areas of Interest</label>
+              <input className="drawer-input" value={form.areas_of_interest} onChange={handleChange("areas_of_interest")} placeholder="Areas of interest" />
             </div>
             <div className="drawer-field">
               <label className="drawer-label">Timeline</label>
@@ -205,7 +205,7 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
             </div>
             <div className="drawer-field">
               <label className="drawer-label">Notes</label>
-              <textarea className="drawer-textarea" value={form.notes} onChange={handleChange("notes")} placeholder="Add notes..." rows={3} />
+              <textarea className="drawer-textarea" value={form.conversation_summary} onChange={handleChange("conversation_summary")} placeholder="Add notes..." rows={3} />
             </div>
           </div>
 
@@ -213,8 +213,8 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
           <div className="intel-section">
             <div className="intel-title">Info</div>
             <div className="intel-row">
-              <span className="intel-label">Source</span>
-              <span className="intel-value">{lead.source || "widget"}</span>
+              <span className="intel-label">Temperature</span>
+              <span className="intel-value">{lead.lead_temperature || "-"}</span>
             </div>
             <div className="intel-row">
               <span className="intel-label">Created</span>

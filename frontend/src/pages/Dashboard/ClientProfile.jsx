@@ -9,7 +9,7 @@ import {
 } from "../../utils/api";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
-const STAGES = ["new", "contacted", "qualified", "appointment", "closed"];
+const STAGES = ["new", "contacted", "appointment_booked", "closed", "lost"];
 
 function scoreLabel(score) {
   if (score >= 70) return "hot";
@@ -70,7 +70,7 @@ export default function ClientProfile({ onNavigate, pageData }) {
     if (!user?.tenantId) return;
     try {
       await changeClientStage(user.tenantId, leadId, token, stage);
-      setProfile((p) => (p ? { ...p, lead_stage: stage } : p));
+      setProfile((p) => (p ? { ...p, status: stage } : p));
       // Refresh timeline to show the stage change
       const timelineRes = await fetchClientTimeline(user.tenantId, leadId, token);
       setTimeline(timelineRes.timeline || []);
@@ -163,7 +163,7 @@ export default function ClientProfile({ onNavigate, pageData }) {
         </span>
         <select
           className="profile-stage-select"
-          value={profile.lead_stage}
+          value={profile.status}
           onChange={(e) => handleStageChange(e.target.value)}
         >
           {STAGES.map((s) => (
@@ -236,16 +236,16 @@ export default function ClientProfile({ onNavigate, pageData }) {
                 )}
               </div>
             ))}
-            {profile.service_interest && (
+            {profile.areas_of_interest && (
               <div className="sidebar-panel-row">
                 <span className="sidebar-panel-label">Interest</span>
-                <span className="sidebar-panel-value">{profile.service_interest}</span>
+                <span className="sidebar-panel-value">{profile.areas_of_interest}</span>
               </div>
             )}
-            {profile.source && (
+            {profile.lead_temperature && (
               <div className="sidebar-panel-row">
-                <span className="sidebar-panel-label">Source</span>
-                <span className="sidebar-panel-value">{profile.source}</span>
+                <span className="sidebar-panel-label">Temperature</span>
+                <span className="sidebar-panel-value">{profile.lead_temperature}</span>
               </div>
             )}
           </div>
@@ -276,7 +276,7 @@ export default function ClientProfile({ onNavigate, pageData }) {
                 {saving ? "..." : "Add"}
               </button>
             </div>
-            {profile.client_notes.length === 0 && !profile.notes_text ? (
+            {profile.client_notes.length === 0 && !profile.conversation_summary ? (
               <p style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>No notes yet.</p>
             ) : (
               <>
@@ -286,10 +286,10 @@ export default function ClientProfile({ onNavigate, pageData }) {
                     <div className="note-time">{timeAgo(n.created_at)}</div>
                   </div>
                 ))}
-                {profile.notes_text && (
+                {profile.conversation_summary && (
                   <div className="note-item">
-                    <div className="note-content">{profile.notes_text}</div>
-                    <div className="note-time">Legacy note</div>
+                    <div className="note-content">{profile.conversation_summary}</div>
+                    <div className="note-time">Conversation summary</div>
                   </div>
                 )}
               </>

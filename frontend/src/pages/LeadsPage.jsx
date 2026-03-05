@@ -28,9 +28,9 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
     { key: "name", label: "Name" },
     { key: "email", label: "Email" },
     { key: "phone", label: "Phone" },
-    { key: "lead_stage", label: "Stage" },
+    { key: "status", label: "Stage" },
     { key: "lead_score", label: "Score" },
-    { key: "source", label: "Source" },
+    { key: "lead_temperature", label: "Temp" },
     { key: "created_at", label: "Created" },
   ];
 
@@ -59,13 +59,13 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
               <td>{lead.name || "Unknown"}</td>
               <td>{lead.email || "\u2014"}</td>
               <td>{lead.phone || "\u2014"}</td>
-              <td><span className={`stage-badge stage-${lead.lead_stage || "new"}`}>{lead.lead_stage || "new"}</span></td>
+              <td><span className={`stage-badge stage-${lead.status || "new"}`}>{lead.status || "new"}</span></td>
               <td>
                 <span className={`lead-tag ${scoreClass(lead.lead_score)}`}>
                   {lead.lead_score ?? "N/A"} &middot; {scoreLabel(lead.lead_score)}
                 </span>
               </td>
-              <td>{lead.source || "widget"}</td>
+              <td>{lead.lead_temperature || "-"}</td>
               <td>{formatDate(lead.created_at)}</td>
             </tr>
           ))}
@@ -133,10 +133,10 @@ export default function LeadsPage() {
   const handleStageDrop = useCallback(async (leadId, newStage) => {
     const prev = leads.slice();
     setLeads((cur) =>
-      cur.map((l) => (l.id === leadId ? { ...l, lead_stage: newStage } : l))
+      cur.map((l) => (l.id === leadId ? { ...l, status: newStage } : l))
     );
     try {
-      await updateLead(user.tenantId, token, leadId, { lead_stage: newStage });
+      await updateLead(user.tenantId, token, leadId, { status: newStage });
     } catch {
       setLeads(prev);
     }
@@ -158,9 +158,9 @@ export default function LeadsPage() {
     if (!leads.length) return;
     const headers = ["Name", "Email", "Phone", "Stage", "Score", "Source", "Service Interest", "Timeline", "Budget", "Notes", "Created"];
     const rows = leads.map((l) => [
-      l.name || "", l.email || "", l.phone || "", l.lead_stage || "", l.lead_score ?? "",
-      l.source || "", l.service_interest || "", l.timeline || "", l.budget || "",
-      (l.notes || "").replace(/"/g, '""'), l.created_at || "",
+      l.name || "", l.email || "", l.phone || "", l.status || "", l.lead_score ?? "",
+      l.lead_temperature || "", l.areas_of_interest || "", l.timeline || "", l.budget || "",
+      (l.conversation_summary || "").replace(/"/g, '""'), l.created_at || "",
     ]);
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });

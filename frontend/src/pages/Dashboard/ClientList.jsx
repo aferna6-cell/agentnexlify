@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { fetchClients, changeClientStage } from "../../utils/api";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
-const STAGES = ["new", "contacted", "qualified", "appointment", "closed"];
+const STAGES = ["new", "contacted", "appointment_booked", "closed", "lost"];
 
 function scoreLabel(score) {
   if (score >= 70) return "hot";
@@ -94,14 +94,14 @@ export default function ClientList({ onNavigate }) {
   };
 
   const exportCsv = () => {
-    const headers = ["Name", "Email", "Phone", "Score", "Stage", "Source", "Created"];
+    const headers = ["Name", "Email", "Phone", "Score", "Stage", "Temperature", "Created"];
     const rows = clients.map((c) => [
       c.name || "",
       c.email || "",
       c.phone || "",
       c.lead_score,
-      c.lead_stage,
-      c.source,
+      c.status,
+      c.lead_temperature || "",
       new Date(c.created_at).toLocaleDateString(),
     ]);
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
@@ -172,7 +172,7 @@ export default function ClientList({ onNavigate }) {
               <th onClick={() => handleSort("email")}>Email{sortIndicator("email")}</th>
               <th onClick={() => handleSort("phone")}>Phone{sortIndicator("phone")}</th>
               <th onClick={() => handleSort("lead_score")}>Score{sortIndicator("lead_score")}</th>
-              <th onClick={() => handleSort("lead_stage")}>Stage{sortIndicator("lead_stage")}</th>
+              <th onClick={() => handleSort("status")}>Stage{sortIndicator("status")}</th>
               <th onClick={() => handleSort("created_at")}>Last Activity{sortIndicator("created_at")}</th>
             </tr>
           </thead>
@@ -198,8 +198,8 @@ export default function ClientList({ onNavigate }) {
                   </span>
                 </td>
                 <td>
-                  <span className={`stage-badge ${c.lead_stage}`}>
-                    {c.lead_stage}
+                  <span className={`stage-badge ${c.status}`}>
+                    {c.status}
                   </span>
                 </td>
                 <td>{timeAgo(c.last_activity || c.created_at)}</td>

@@ -83,10 +83,10 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
     const prev = leads.slice();
     // Optimistic update
     setLeads((cur) =>
-      cur.map((l) => (l.id === leadId ? { ...l, lead_stage: newStage } : l))
+      cur.map((l) => (l.id === leadId ? { ...l, status: newStage } : l))
     );
     try {
-      await updateLead(user.tenantId, token, leadId, { lead_stage: newStage });
+      await updateLead(user.tenantId, token, leadId, { status: newStage });
     } catch {
       setLeads(prev); // Revert on failure
     }
@@ -219,7 +219,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
             {(crmWidgets.needs_attention || []).slice(0, 5).map((c) => (
               <div key={c.id} className="attention-item" onClick={() => onNavigate("client_profile", { leadId: c.id })}>
                 <span>{c.name || c.email || c.phone || "Unknown"}</span>
-                <span className={`stage-badge ${c.lead_stage}`}>{c.lead_stage}</span>
+                <span className={`stage-badge ${c.status}`}>{c.status}</span>
               </div>
             ))}
             {(!crmWidgets.needs_attention || crmWidgets.needs_attention.length === 0) && (
