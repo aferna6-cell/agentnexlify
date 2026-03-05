@@ -286,7 +286,23 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         logger.warning("FAQ count query failed for tenant %s", tenant_id, exc_info=True)
         faq_count = 0
 
+    # Count actual conversations from chat_messages (distinct session_ids).
+    # Supabase REST doesn't support COUNT(DISTINCT), so we fetch session_ids
+    # and deduplicate in Python.  Limit to 500 rows for safety.
     conversations_used = t.get("conversations_used_this_month", 0)
+    try:
+        chat_sessions = (
+            db.table("chat_messages")
+            .select("session_id")
+            .eq("tenant_id", tenant_id)
+            .limit(500)
+            .execute()
+        )
+        if chat_sessions.data:
+            unique_sessions = len({r["session_id"] for r in chat_sessions.data})
+            conversations_used = max(conversations_used, unique_sessions)
+    except Exception:
+        logger.debug("chat_messages count failed for tenant %s", tenant_id)
 
     response = DashboardResponse(
         business_name=t.get("business_name", ""),

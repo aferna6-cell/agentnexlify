@@ -32,11 +32,15 @@ MODEL = "claude-sonnet-4-5-20250929"
 MAX_TOKENS = 500
 TEMPERATURE = 0.7
 
-# Lead extraction patterns (ported from LiveChat.jsx:extractInfo)
+# Lead extraction patterns
 NAME_RE = re.compile(
     r"(?:i'm|im|i am|my name is|this is|name's|call me)\s+"
     r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)",
     re.IGNORECASE,
+)
+# Standalone name: entire message is 1-3 capitalized words (e.g. "John Smith")
+STANDALONE_NAME_RE = re.compile(
+    r"^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){0,2})\.?$"
 )
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
 PHONE_RE = re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
@@ -188,6 +192,9 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     name_match = NAME_RE.search(text)
     if name_match:
         info["name"] = name_match.group(1).strip()
+    elif STANDALONE_NAME_RE.match(text.strip()):
+        # Catch bare name responses like "John Smith"
+        info["name"] = STANDALONE_NAME_RE.match(text.strip()).group(1)
     email_match = EMAIL_RE.search(text)
     if email_match:
         info["email"] = email_match.group(0)
@@ -197,63 +204,102 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     return info
 
 
-def _upsert_lead(
-    tenant_id: str, conversation_id: str, fields: dict[str, str]
-) -> tuple[str | None, bool]:
-    """Upsert lead row. Returns (lead_id, is_new) tuple."""
-    if not fields:
-        return None, False
-    db = get_supabase()
+def _capture_leads_from_session(
+    tenant_id: str, session_id: str, conversation_id: str
+) -> None:
+    """Background task: scan all user messages in session for contact info,
+    create or update a lead.  Deduplicates by email + tenant_id."""
+    try:
+        messages = _load_chat_history(tenant_id, session_id, limit=50)
 
-    # Check for existing lead on this conversation
-    existing = (
-        db.table("leads")
-        .select("id, name, email, phone, service_interest")
-        .eq("tenant_id", tenant_id)
-        .eq("conversation_id", conversation_id)
-        .limit(1)
-        .execute()
-    )
+        # Scan ALL user messages for contact info
+        combined: dict[str, str] = {}
+        for msg in messages:
+            if msg["role"] != "user":
+                continue
+            extracted = _extract_lead_info(msg["content"])
+            combined.update(extracted)
 
-    # Map 'service' to the DB column name 'service_interest'
-    db_fields: dict[str, Any] = {}
-    for k, v in fields.items():
-        if k == "service":
-            db_fields["service_interest"] = v
-        else:
-            db_fields[k] = v
+        if not combined.get("email") and not combined.get("phone"):
+            return  # Not enough info to create a lead
 
-    if existing.data:
-        lead = existing.data[0]
-        # Only update fields that are currently NULL
-        updates = {k: v for k, v in db_fields.items() if not lead.get(k)}
-        if not updates:
-            return lead["id"], False
-        db.table("leads").update(updates).eq("id", lead["id"]).execute()
-        log_activity(
-            tenant_id=tenant_id,
-            activity_type="lead_updated",
-            description=f"Lead info captured: {', '.join(updates.keys())}",
-            lead_id=lead["id"],
-            metadata={"source": "widget", "fields": list(updates.keys())},
-        )
-        return lead["id"], False
-    else:
-        db_fields["tenant_id"] = tenant_id
-        db_fields["conversation_id"] = conversation_id
-        db_fields["source"] = "widget"
-        db_fields["lead_stage"] = "new"
-        result = db.table("leads").insert(db_fields).execute()
-        lead_id = result.data[0]["id"]
-        lead_name = db_fields.get("name", "New visitor")
-        log_activity(
-            tenant_id=tenant_id,
-            activity_type="lead_created",
-            description=f"New lead from widget: {lead_name}",
-            lead_id=lead_id,
-            metadata={"source": "widget", "fields": list(db_fields.keys())},
-        )
-        return lead_id, True
+        db = get_supabase()
+
+        # Dedup: check by email + tenant_id first
+        if combined.get("email"):
+            existing = (
+                db.table("leads")
+                .select("id, name, phone")
+                .eq("tenant_id", tenant_id)
+                .eq("email", combined["email"])
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                lead = existing.data[0]
+                updates: dict[str, str] = {}
+                if combined.get("name") and not lead.get("name"):
+                    updates["name"] = combined["name"]
+                if combined.get("phone") and not lead.get("phone"):
+                    updates["phone"] = combined["phone"]
+                if updates:
+                    db.table("leads").update(updates).eq("id", lead["id"]).execute()
+                    log_activity(
+                        tenant_id=tenant_id,
+                        activity_type="lead_updated",
+                        description=f"Lead info captured: {', '.join(updates.keys())}",
+                        lead_id=lead["id"],
+                        metadata={"source": "widget", "fields": list(updates.keys())},
+                    )
+                return
+
+        # Create new lead
+        lead_fields: dict[str, Any] = {
+            "tenant_id": tenant_id,
+            "source": "widget",
+            "lead_stage": "new",
+        }
+        for key in ("name", "email", "phone"):
+            if combined.get(key):
+                lead_fields[key] = combined[key]
+
+        # Only set conversation_id if it looks like a valid UUID
+        try:
+            from uuid import UUID
+            UUID(conversation_id)
+            lead_fields["conversation_id"] = conversation_id
+        except (ValueError, AttributeError):
+            pass
+
+        result = db.table("leads").insert(lead_fields).execute()
+        if result.data:
+            lead_id = result.data[0]["id"]
+            lead_name = combined.get("name", "New visitor")
+            log_activity(
+                tenant_id=tenant_id,
+                activity_type="lead_created",
+                description=f"New lead from widget: {lead_name}",
+                lead_id=lead_id,
+                metadata={"source": "widget", "fields": list(lead_fields.keys())},
+            )
+            logger.info("Lead captured: %s for tenant %s", lead_id, tenant_id)
+
+            # Fire automation trigger for new leads
+            try:
+                from backend.services.automation_engine import trigger_sequence
+                import asyncio
+                asyncio.create_task(trigger_sequence(tenant_id, lead_id, "new_lead"))
+            except Exception:
+                logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
+
+            # Score the lead
+            try:
+                score_lead_background(lead_id)
+            except Exception:
+                pass
+
+    except Exception:
+        logger.warning("Lead capture failed for session %s", session_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -374,51 +420,12 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 9. Save user + assistant messages to chat_messages table
     _save_chat_messages(tenant["id"], req.session_id, req.message, assistant_text)
 
-    # 10. Lead extraction
-    lead_id = None
-    is_new_lead = False
-    try:
-        extracted = _extract_lead_info(req.message)
-        lead_id, is_new_lead = _upsert_lead(tenant["id"], conversation_id, extracted)
-    except Exception:
-        logger.warning("Lead extraction failed for conversation %s", conversation_id, exc_info=True)
-
-    # 10a. Fire automation trigger for new leads
-    if lead_id and is_new_lead:
-        try:
-            from backend.services.automation_engine import trigger_sequence
-            import asyncio
-            asyncio.create_task(trigger_sequence(tenant["id"], lead_id, "new_lead"))
-        except Exception:
-            logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
-
-    # 10b. Background re-score
-    score_target = lead_id
-    if not score_target:
-        try:
-            existing = (
-                db.table("leads")
-                .select("id")
-                .eq("conversation_id", conversation_id)
-                .limit(1)
-                .execute()
-            )
-            if existing.data:
-                score_target = existing.data[0]["id"]
-        except Exception:
-            pass
-    if score_target:
-        background_tasks.add_task(score_lead_background, score_target)
-
-    # 10c. Log message activity
-    if lead_id or score_target:
-        log_activity(
-            tenant_id=tenant["id"],
-            activity_type="message",
-            description="Widget chat message",
-            lead_id=lead_id or score_target,
-            metadata={"conversation_id": conversation_id},
-        )
+    # 10. Lead capture — runs in background so it doesn't slow the response.
+    # Scans ALL messages in the session (not just the current one) for
+    # email, phone, and name.  Deduplicates by email + tenant_id.
+    background_tasks.add_task(
+        _capture_leads_from_session, tenant["id"], req.session_id, conversation_id,
+    )
 
     # 11. Watermark logic
     if tenant.get("plan") == "free":
@@ -478,18 +485,54 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     if req.phone:
         fields["phone"] = req.phone
     if req.service:
-        fields["service"] = req.service
+        fields["service_interest"] = req.service
 
     if not fields:
         raise HTTPException(status_code=400, detail="No lead fields provided")
 
-    lead_id, is_new_lead = _upsert_lead(tenant["id"], conversation_id, fields)
+    db = get_supabase()
+    lead_id = None
+    is_new = False
+
+    # Dedup by email + tenant_id
+    if fields.get("email"):
+        existing = (
+            db.table("leads")
+            .select("id, name, phone")
+            .eq("tenant_id", tenant["id"])
+            .eq("email", fields["email"])
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            lead_id = existing.data[0]["id"]
+            updates = {k: v for k, v in fields.items()
+                       if k != "email" and not existing.data[0].get(k)}
+            if updates:
+                db.table("leads").update(updates).eq("id", lead_id).execute()
+
+    if not lead_id:
+        lead_fields: dict[str, Any] = {
+            "tenant_id": tenant["id"],
+            "source": "widget",
+            "lead_stage": "new",
+            **fields,
+        }
+        try:
+            from uuid import UUID
+            UUID(conversation_id)
+            lead_fields["conversation_id"] = conversation_id
+        except (ValueError, AttributeError):
+            pass
+        result = db.table("leads").insert(lead_fields).execute()
+        if result.data:
+            lead_id = result.data[0]["id"]
+            is_new = True
 
     if lead_id:
         background_tasks.add_task(score_lead_background, lead_id)
 
-    # Fire automation trigger for new leads
-    if lead_id and is_new_lead:
+    if lead_id and is_new:
         try:
             from backend.services.automation_engine import trigger_sequence
             import asyncio
