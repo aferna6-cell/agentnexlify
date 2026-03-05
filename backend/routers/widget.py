@@ -436,7 +436,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     return WidgetChatResponse(
         response=assistant_text,
         session_id=req.session_id,
-        lead_captured=lead_id is not None,
+        lead_captured=False,  # Actual capture runs in background task
         show_watermark=show_watermark,
     )
 

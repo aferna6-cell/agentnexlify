@@ -1,6 +1,5 @@
 """Activity logging service — fire-and-forget, never raises."""
 
-from __future__ import annotations
 
 import logging
 from typing import Any

@@ -4,7 +4,6 @@ Delegates to the same handlers in billing.py. This gives Stripe a
 dedicated /webhooks/ URL while keeping the logic in one place.
 """
 
-from __future__ import annotations
 
 import logging
 

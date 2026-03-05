@@ -8,7 +8,6 @@ And messaging webhook to:
     https://<ngrok-id>.ngrok-free.app/api/v1/twilio/sms-reply
 """
 
-from __future__ import annotations
 
 import logging
 import re

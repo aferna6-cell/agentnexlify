@@ -1,6 +1,5 @@
 """Appointment booking endpoints — availability config, slot queries, booking."""
 
-from __future__ import annotations
 
 import logging
 from datetime import date as date_type

@@ -1,6 +1,5 @@
 """Email sending service using Resend API with template rendering and rate limiting."""
 
-from __future__ import annotations
 
 import html
 import logging

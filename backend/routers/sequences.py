@@ -1,6 +1,5 @@
 """Automation sequences API — CRUD for email follow-up sequences."""
 
-from __future__ import annotations
 
 import asyncio
 import logging

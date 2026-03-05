@@ -1,6 +1,5 @@
 """Lead scoring engine — rule-based 0-100 scoring with engagement, intent, recency, and decay."""
 
-from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone

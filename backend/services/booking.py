@@ -1,6 +1,5 @@
 """Appointment booking service — slot generation, conflict detection, lead linkage."""
 
-from __future__ import annotations
 
 import logging
 from datetime import date, datetime, time, timedelta, timezone

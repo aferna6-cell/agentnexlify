@@ -4,7 +4,6 @@ Schema (conversations table):
   id, tenant_id, session_id, messages (JSONB), lead_id, started_at, last_message_at
 """
 
-from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone

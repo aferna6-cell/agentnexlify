@@ -1,6 +1,5 @@
 """Stripe billing endpoints — checkout, webhooks, and customer portal."""
 
-from __future__ import annotations
 
 import logging
 

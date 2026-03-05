@@ -1,6 +1,5 @@
 """Stripe client singleton and billing helpers."""
 
-from __future__ import annotations
 
 import logging
 
