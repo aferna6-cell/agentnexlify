@@ -186,26 +186,28 @@ def _save_chat_messages(
 
 
 def _build_system_prompt(tenant: dict, faq_entries: list[dict]) -> str:
-    bot_name = "AI Assistant"
-    # Get bot_name from widget config if available (caller should pass it),
-    # but fall back to a sensible default.
     business_name = tenant.get("business_name", "our company")
-    business_type = tenant.get("business_type", "general")
-    city = tenant.get("city", "your area")
+    business_type = tenant.get("business_type", "")
+    city = tenant.get("city", "")
+
+    location = f" in {city}" if city else ""
+    btype = f" ({business_type})" if business_type else ""
 
     faq_block = ""
     if faq_entries:
         lines = [f"Q: {e['question']}\nA: {e['answer']}" for e in faq_entries]
-        faq_block = "\n\nFAQ knowledge:\n" + "\n\n".join(lines)
+        faq_block = "\n\nFAQs:\n" + "\n\n".join(lines)
 
     return (
-        f"You are {bot_name} for {business_name} in {city}.\n"
-        f"Business type: {business_type}.\n"
-        f"Your goal is to help visitors, answer questions, and capture leads.\n"
-        f"Collect the visitor's name, email, and phone number. "
-        f"Ask for one piece of information at a time, naturally.\n"
-        f"Keep responses concise (1-3 sentences).\n"
-        f"Never claim to be human. Be helpful and friendly."
+        f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
+        f"Rules:\n"
+        f"- Be helpful, friendly, and concise (2-3 sentences max)\n"
+        f"- Answer questions about the business using the FAQs below\n"
+        f"- During conversation, naturally collect name, email, and phone — but ONLY what's missing\n"
+        f"- NEVER re-ask for info already in the conversation. If they said their name, use it. If they gave email, move on.\n"
+        f"- Don't follow a rigid script. Have a natural conversation.\n"
+        f"- If you don't know something, say you'll have someone follow up\n"
+        f"- Never claim to be human"
         f"{faq_block}"
     )
 
