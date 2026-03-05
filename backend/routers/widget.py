@@ -42,7 +42,7 @@ NAME_RE = re.compile(
 STANDALONE_NAME_RE = re.compile(
     r"^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){0,2})\.?$"
 )
-EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 PHONE_RE = re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
 
 
@@ -219,12 +219,16 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     elif STANDALONE_NAME_RE.match(text.strip()):
         # Catch bare name responses like "John Smith"
         info["name"] = STANDALONE_NAME_RE.match(text.strip()).group(1)
-    email_match = EMAIL_RE.search(text)
+    # Strip spaces from text before email search to handle "sara@ test.com"
+    email_match = EMAIL_RE.search(text.replace(" ", ""))
     if email_match:
-        info["email"] = email_match.group(0)
+        email = email_match.group(0).strip().lower()
+        # Final validation: no spaces, has @ and at least one dot after @
+        if " " not in email and "@" in email and "." in email.split("@")[1]:
+            info["email"] = email
     phone_match = PHONE_RE.search(text)
     if phone_match:
-        info["phone"] = phone_match.group(0)
+        info["phone"] = phone_match.group(0).strip()
     return info
 
 

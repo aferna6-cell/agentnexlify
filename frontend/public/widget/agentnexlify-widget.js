@@ -12,19 +12,42 @@
     "";
 
   const SESSION_KEY = "anx_session_id";
+  const SESSION_TS_KEY = "anx_session_ts";
   const STATE_KEY = "anx_widget_state";
+  const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
   // --- Session Management ---
+  function _newSessionId() {
+    return (
+      "web_" +
+      Date.now().toString(36) +
+      "_" +
+      Math.random().toString(36).slice(2, 10)
+    );
+  }
+
   function getSessionId() {
     let sid = localStorage.getItem(SESSION_KEY);
-    if (!sid) {
-      sid =
-        "web_" +
-        Date.now().toString(36) +
-        "_" +
-        Math.random().toString(36).slice(2, 10);
+    const ts = parseInt(localStorage.getItem(SESSION_TS_KEY) || "0", 10);
+
+    // Start a new session if none exists or last message was >30 min ago
+    if (!sid || (ts && Date.now() - ts > SESSION_TIMEOUT_MS)) {
+      sid = _newSessionId();
       localStorage.setItem(SESSION_KEY, sid);
     }
+
+    // Update activity timestamp on every call
+    localStorage.setItem(SESSION_TS_KEY, String(Date.now()));
+    return sid;
+  }
+
+  function resetSession() {
+    const sid = _newSessionId();
+    localStorage.setItem(SESSION_KEY, sid);
+    localStorage.setItem(SESSION_TS_KEY, String(Date.now()));
+    // Clear chat UI
+    const container = document.getElementById("anx-messages");
+    if (container) container.innerHTML = "";
     return sid;
   }
 
@@ -711,6 +734,8 @@
       win.classList.remove("open");
       bubble.classList.remove("hidden");
       localStorage.setItem(STATE_KEY, "closed");
+      // Reset session on close so next open starts fresh
+      resetSession();
     }
   }
 
