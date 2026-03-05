@@ -141,10 +141,33 @@ def _load_chat_history(
             .limit(limit)
             .execute()
         )
-        return [{"role": m["role"], "content": m["content"]} for m in (result.data or [])]
-    except Exception:
-        logger.warning("chat_messages load failed for session %s", session_id, exc_info=True)
-        return []
+        msgs = [{"role": m["role"], "content": m["content"]} for m in (result.data or [])]
+        logger.info(
+            "chat_history: tenant=%s session=%s → %d messages loaded",
+            tenant_id, session_id, len(msgs),
+        )
+        return msgs
+    except Exception as e:
+        logger.error(
+            "chat_history FAILED: tenant=%s session=%s error=%s",
+            tenant_id, session_id, e, exc_info=True,
+        )
+        # Retry without .order() in case created_at column is missing
+        try:
+            result = (
+                db.table("chat_messages")
+                .select("role, content")
+                .eq("tenant_id", tenant_id)
+                .eq("session_id", session_id)
+                .limit(limit)
+                .execute()
+            )
+            msgs = [{"role": m["role"], "content": m["content"]} for m in (result.data or [])]
+            logger.info("chat_history: retry without order succeeded, %d messages", len(msgs))
+            return msgs
+        except Exception as e2:
+            logger.error("chat_history retry also FAILED: %s", e2, exc_info=True)
+            return []
 
 
 def _save_chat_messages(
@@ -157,8 +180,9 @@ def _save_chat_messages(
             {"tenant_id": tenant_id, "session_id": session_id, "role": "user", "content": user_text},
             {"tenant_id": tenant_id, "session_id": session_id, "role": "assistant", "content": assistant_text},
         ]).execute()
-    except Exception:
-        logger.warning("chat_messages save failed for session %s", session_id, exc_info=True)
+        logger.info("chat_save: OK tenant=%s session=%s", tenant_id, session_id)
+    except Exception as e:
+        logger.error("chat_save FAILED: tenant=%s session=%s error=%s", tenant_id, session_id, e, exc_info=True)
 
 
 def _build_system_prompt(tenant: dict, faq_entries: list[dict]) -> str:
@@ -351,7 +375,11 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
     # 5. Load message history from chat_messages table (last 20 messages)
     messages = _load_chat_history(tenant["id"], req.session_id)
-    logger.info("widget_chat: loaded %d previous messages", len(messages))
+    logger.info(
+        "widget_chat: session=%s loaded %d previous messages, first_role=%s",
+        req.session_id, len(messages),
+        messages[0]["role"] if messages else "NONE",
+    )
 
     # 6. Build system prompt with FAQ
     db = get_supabase()
