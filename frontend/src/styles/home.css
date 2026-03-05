@@ -500,8 +500,9 @@
 
 .landing-page .wm-msg:nth-child(1) { animation-delay: 0.5s; }
 .landing-page .wm-msg:nth-child(2) { animation-delay: 2s; }
-.landing-page .wm-msg:nth-child(3) { animation-delay: 3.5s; }
 .landing-page .wm-msg:nth-child(4) { animation-delay: 5s; }
+.landing-page .wm-msg:nth-child(5) { animation-delay: 6.5s; }
+.landing-page .wm-msg:nth-child(6) { animation-delay: 8s; }
 
 @keyframes lp-msg-in {
   to {
@@ -518,7 +519,7 @@
   align-self: flex-start;
   opacity: 0;
   animation: lp-msg-in 0.3s ease forwards;
-  animation-delay: 2.8s;
+  animation-delay: 3.5s;
 }
 
 .landing-page .wm-typing span {
@@ -578,48 +579,6 @@
   margin-top: 2px;
 }
 
-/* ============================================
-   TRUST BAR
-   ============================================ */
-.landing-page .lp-trust {
-  padding: 48px 0;
-  text-align: center;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.landing-page .lp-trust-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
-  margin-bottom: 24px;
-}
-
-.landing-page .lp-trust-logos {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-  flex-wrap: wrap;
-}
-
-.landing-page .lp-trust-logos svg {
-  height: 24px;
-  width: auto;
-  opacity: 0.35;
-  transition: opacity 0.3s;
-  fill: var(--text-secondary);
-}
-
-.landing-page .lp-trust-logos svg:hover {
-  opacity: 0.7;
-}
-
-@media (max-width: 480px) {
-  .landing-page .lp-trust-logos { gap: 24px; }
-  .landing-page .lp-trust-logos svg { height: 20px; }
-}
 
 /* ============================================
    HOW IT WORKS
@@ -751,31 +710,6 @@
   .landing-page .lp-features-grid { grid-template-columns: 1fr; }
 }
 
-/* ============================================
-   DEMO SECTION
-   ============================================ */
-.landing-page .lp-demo {
-  background: var(--bg-secondary);
-}
-
-.landing-page .lp-demo-inner {
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.landing-page .lp-demo-inner .section-subtitle {
-  margin: 0 auto 40px;
-  text-align: center;
-}
-
-.landing-page .lp-demo-cta-block {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 40px;
-}
 
 /* ============================================
    PRICING
@@ -1174,6 +1108,101 @@
 
 @media (max-width: 480px) {
   .landing-page .lp-footer-inner { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   MOBILE OPTIMIZATION
+   ============================================ */
+@media (max-width: 768px) {
+  .landing-page .section {
+    padding: 40px 0;
+  }
+
+  .landing-page .lp-hero {
+    padding: 100px 0 40px;
+  }
+
+  .landing-page .lp-hero h1 {
+    font-size: 28px;
+  }
+
+  .landing-page .lp-hero-sub {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+
+  .landing-page .lp-hero-buttons {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .landing-page .lp-hero-buttons .btn-primary,
+  .landing-page .lp-hero-buttons .btn-secondary {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .landing-page .widget-mockup {
+    max-width: 320px;
+  }
+
+  .landing-page .widget-mockup-body {
+    min-height: 220px;
+    padding: 12px;
+  }
+
+  .landing-page .section-title {
+    font-size: 24px;
+  }
+
+  .landing-page .section-subtitle {
+    font-size: 15px;
+  }
+
+  .landing-page .lp-features-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .landing-page .lp-feature-card {
+    padding: 24px 20px;
+  }
+
+  .landing-page .lp-pricing-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin: 0 auto;
+    gap: 16px;
+  }
+
+  .landing-page .lp-pricing-card {
+    padding: 24px 20px;
+  }
+
+  .landing-page .lp-pricing-card.popular { order: -1; }
+
+  .landing-page .lp-cta-section {
+    padding: 40px 0;
+  }
+
+  .landing-page .lp-cta-buttons {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .landing-page .lp-cta-buttons .btn-primary,
+  .landing-page .lp-cta-buttons .btn-secondary {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .landing-page .lp-footer {
+    padding: 40px 0 24px;
+  }
 }
 
 /* ============================================
