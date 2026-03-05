@@ -236,7 +236,11 @@ def _capture_leads_from_session(
     tenant_id: str, session_id: str, conversation_id: str
 ) -> None:
     """Background task: scan all user messages in session for contact info,
-    create or update a lead.  Deduplicates by email + tenant_id."""
+    create or update a lead.  Deduplicates by email + client_id.
+
+    NOTE: Live Supabase leads table uses the archive schema:
+      client_id (not tenant_id), status (not lead_stage), no source column.
+    """
     try:
         logger.info(
             "lead_capture START: tenant=%s session=%s conv=%s",
@@ -266,17 +270,17 @@ def _capture_leads_from_session(
 
         db = get_supabase()
 
-        # Dedup: check by email + tenant_id first
+        # Dedup: check by email + client_id first
         if combined.get("email"):
             logger.info(
-                "lead_capture: dedup check — email=%s tenant=%s",
+                "lead_capture: dedup check — email=%s client_id=%s",
                 combined["email"], tenant_id,
             )
             try:
                 existing = (
                     db.table("leads")
                     .select("id, name, phone")
-                    .eq("tenant_id", tenant_id)
+                    .eq("client_id", tenant_id)
                     .eq("email", combined["email"])
                     .limit(1)
                     .execute()
@@ -307,11 +311,10 @@ def _capture_leads_from_session(
                     logger.info("lead_capture: updated lead %s fields=%s", lead["id"], list(updates.keys()))
                 return
 
-        # Create new lead
+        # Create new lead — live schema: client_id, status (not tenant_id, lead_stage)
         lead_fields: dict[str, Any] = {
-            "tenant_id": tenant_id,
-            "source": "widget",
-            "lead_stage": "new",
+            "client_id": tenant_id,
+            "status": "new",
         }
         for key in ("name", "email", "phone"):
             if combined.get(key):
@@ -345,7 +348,7 @@ def _capture_leads_from_session(
                 lead_id=lead_id,
                 metadata={"source": "widget", "fields": list(lead_fields.keys())},
             )
-            logger.info("lead_capture: SUCCESS lead_id=%s tenant=%s", lead_id, tenant_id)
+            logger.info("lead_capture: SUCCESS lead_id=%s client_id=%s", lead_id, tenant_id)
 
             # Fire automation trigger for new leads
             try:
@@ -563,12 +566,12 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     lead_id = None
     is_new = False
 
-    # Dedup by email + tenant_id
+    # Dedup by email + client_id (live schema uses client_id, not tenant_id)
     if fields.get("email"):
         existing = (
             db.table("leads")
             .select("id, name, phone")
-            .eq("tenant_id", tenant["id"])
+            .eq("client_id", tenant["id"])
             .eq("email", fields["email"])
             .limit(1)
             .execute()
@@ -582,9 +585,8 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
 
     if not lead_id:
         lead_fields: dict[str, Any] = {
-            "tenant_id": tenant["id"],
-            "source": "widget",
-            "lead_stage": "new",
+            "client_id": tenant["id"],
+            "status": "new",
             **fields,
         }
         try:

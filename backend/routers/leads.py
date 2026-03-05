@@ -31,10 +31,10 @@ async def get_leads(
 
     db = get_supabase()
     try:
-        query = db.table("leads").select("*").eq("tenant_id", tenant_id)
+        query = db.table("leads").select("*").eq("client_id", tenant_id)
 
         if stage:
-            query = query.eq("lead_stage", stage)
+            query = query.eq("status", stage)
 
         if search:
             query = query.or_(
@@ -61,22 +61,22 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
     try:
         result = (
             db.table("leads")
-            .select("lead_stage, lead_score")
-            .eq("tenant_id", tenant_id)
+            .select("status, lead_score")
+            .eq("client_id", tenant_id)
             .execute()
         )
         leads = result.data or []
         return {
             "total": len(leads),
-            "new": sum(1 for l in leads if l.get("lead_stage") == "new"),
-            "contacted": sum(1 for l in leads if l.get("lead_stage") == "contacted"),
-            "qualified": sum(1 for l in leads if l.get("lead_stage") == "qualified"),
-            "appointment": sum(1 for l in leads if l.get("lead_stage") == "appointment"),
-            "closed": sum(1 for l in leads if l.get("lead_stage") == "closed"),
+            "new": sum(1 for l in leads if l.get("status") == "new"),
+            "contacted": sum(1 for l in leads if l.get("status") == "contacted"),
+            "appointment_booked": sum(1 for l in leads if l.get("status") == "appointment_booked"),
+            "closed": sum(1 for l in leads if l.get("status") == "closed"),
+            "lost": sum(1 for l in leads if l.get("status") == "lost"),
         }
     except Exception:
         logger.warning("Lead summary query failed for tenant %s", tenant_id, exc_info=True)
-        return {"total": 0, "new": 0, "contacted": 0, "qualified": 0, "appointment": 0, "closed": 0}
+        return {"total": 0, "new": 0, "contacted": 0, "appointment_booked": 0, "closed": 0, "lost": 0}
 
 
 @router.post("/{tenant_id}/score-all", response_model=ScoreAllResponse)
@@ -122,7 +122,7 @@ async def update_lead(
         db.table("leads")
         .update(updates)
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .execute()
     )
     if not result.data:
@@ -145,7 +145,7 @@ async def delete_lead(
         db.table("leads")
         .delete()
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .execute()
     )
     if not result.data:

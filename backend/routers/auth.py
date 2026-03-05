@@ -244,12 +244,12 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             bot_name=f"{t.get('business_name', 'AI')} Assistant",
         )
 
-    # Leads count (tenant_id is the correct FK — confirmed from schema)
+    # Leads count (live schema uses client_id, not tenant_id)
     try:
         leads_result = (
             db.table("leads")
             .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .execute()
         )
         leads_count = leads_result.count or 0
@@ -257,13 +257,13 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         logger.warning("Leads count query failed for tenant %s", tenant_id, exc_info=True)
         leads_count = 0
 
-    # Hot leads count (score >= 80)
+    # Hot leads count (live schema: lead_score is 1-10, hot = 8+)
     try:
         hot_result = (
             db.table("leads")
             .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .gte("lead_score", 80)
+            .eq("client_id", tenant_id)
+            .gte("lead_score", 8)
             .execute()
         )
         hot_leads_count = hot_result.count or 0

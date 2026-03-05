@@ -48,10 +48,10 @@ async def get_clients(
     _check_tenant(claims, tenant_id)
 
     db = get_supabase()
-    query = db.table("leads").select("*").eq("tenant_id", tenant_id)
+    query = db.table("leads").select("*").eq("client_id", tenant_id)
 
     if stage:
-        query = query.eq("lead_stage", stage)
+        query = query.eq("status", stage)
 
     if search:
         query = query.or_(
@@ -94,8 +94,8 @@ async def get_clients(
                 email=l.get("email"),
                 phone=l.get("phone"),
                 lead_score=l.get("lead_score", 0),
-                lead_stage=l.get("lead_stage", "new"),
-                source=l.get("source", "widget"),
+                status=l.get("status", "new"),
+                lead_temperature=l.get("lead_temperature"),
                 created_at=l["created_at"],
                 last_activity=last_activities.get(l["id"]),
             ).model_dump()
@@ -151,8 +151,8 @@ async def get_dashboard_widgets(
         new_leads = (
             db.table("leads")
             .select("*")
-            .eq("tenant_id", tenant_id)
-            .eq("lead_stage", "new")
+            .eq("client_id", tenant_id)
+            .eq("status", "new")
             .lt("created_at", cutoff)
             .order("created_at")
             .limit(10)
@@ -165,8 +165,8 @@ async def get_dashboard_widgets(
                 email=l.get("email"),
                 phone=l.get("phone"),
                 lead_score=l.get("lead_score", 0),
-                lead_stage=l.get("lead_stage", "new"),
-                source=l.get("source", "widget"),
+                status=l.get("status", "new"),
+                lead_temperature=l.get("lead_temperature"),
                 created_at=l["created_at"],
             ).model_dump()
             for l in (new_leads.data or [])
@@ -221,12 +221,12 @@ async def get_client_profile(
 
     db = get_supabase()
 
-    # Lead
+    # Lead (live schema uses client_id)
     lead_result = (
         db.table("leads")
         .select("*")
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -258,47 +258,49 @@ async def get_client_profile(
     except Exception:
         logger.warning("Failed to fetch notes for lead %s", lead_id, exc_info=True)
 
-    # Conversations
+    # Conversations — try chat_messages for session-based convos
     convos = []
     try:
-        conv_result = (
-            db.table("conversations")
-            .select("id, session_id, started_at, last_message_at, messages")
+        chat_result = (
+            db.table("chat_messages")
+            .select("session_id, created_at")
             .eq("tenant_id", tenant_id)
-            .eq("lead_id", lead_id)
-            .order("started_at", desc=True)
+            .limit(200)
             .execute()
         )
-        for c in conv_result.data or []:
-            msgs = c.get("messages") or []
+        # Group by session_id
+        sessions: dict[str, list[str]] = {}
+        for row in chat_result.data or []:
+            sid = row["session_id"]
+            sessions.setdefault(sid, []).append(row["created_at"])
+        for sid, timestamps in sessions.items():
             convos.append({
-                "id": c["id"],
-                "session_id": c.get("session_id"),
-                "started_at": c.get("started_at"),
-                "last_message_at": c.get("last_message_at"),
-                "message_count": len(msgs),
+                "id": sid,
+                "session_id": sid,
+                "started_at": min(timestamps),
+                "last_message_at": max(timestamps),
+                "message_count": len(timestamps),
             })
     except Exception:
         logger.warning("Failed to fetch conversations for lead %s", lead_id, exc_info=True)
 
-    # Also check by conversation_id if lead has one
+    # Also try legacy conversations table
     if not convos and lead.get("conversation_id"):
         try:
             conv_result = (
                 db.table("conversations")
-                .select("id, session_id, started_at, last_message_at, messages")
+                .select("id, session_id, created_at")
                 .eq("id", lead["conversation_id"])
                 .limit(1)
                 .execute()
             )
             for c in conv_result.data or []:
-                msgs = c.get("messages") or []
                 convos.append({
                     "id": c["id"],
                     "session_id": c.get("session_id"),
-                    "started_at": c.get("started_at"),
-                    "last_message_at": c.get("last_message_at"),
-                    "message_count": len(msgs),
+                    "started_at": c.get("created_at"),
+                    "last_message_at": c.get("created_at"),
+                    "message_count": 0,
                 })
         except Exception:
             pass
@@ -335,12 +337,14 @@ async def get_client_profile(
         email=lead.get("email"),
         phone=lead.get("phone"),
         lead_score=lead.get("lead_score", 0),
-        lead_stage=lead.get("lead_stage", "new"),
-        source=lead.get("source", "widget"),
-        service_interest=lead.get("service_interest"),
+        status=lead.get("status", "new"),
+        lead_type=lead.get("lead_type"),
+        lead_temperature=lead.get("lead_temperature"),
+        areas_of_interest=lead.get("areas_of_interest"),
         timeline=lead.get("timeline"),
         budget=lead.get("budget"),
-        notes_text=lead.get("notes"),
+        conversation_summary=lead.get("conversation_summary"),
+        next_steps=lead.get("next_steps"),
         created_at=lead["created_at"],
         client_notes=notes,
         conversations=convos,
@@ -366,12 +370,12 @@ async def get_client_timeline(
 
     db = get_supabase()
 
-    # Verify lead exists
+    # Verify lead exists (live schema: client_id)
     lead_check = (
         db.table("leads")
         .select("id")
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -420,12 +424,12 @@ async def add_client_note(
 
     db = get_supabase()
 
-    # Verify lead exists
+    # Verify lead exists (live schema: client_id)
     lead_check = (
         db.table("leads")
         .select("id, name")
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -484,7 +488,7 @@ async def update_client(
         db.table("leads")
         .update(updates)
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .execute()
     )
     if not result.data:
@@ -520,25 +524,25 @@ async def change_client_stage(
 
     db = get_supabase()
 
-    # Get current stage
+    # Get current stage (live schema: status, client_id)
     current = (
         db.table("leads")
-        .select("id, name, lead_stage")
+        .select("id, name, status")
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
     if not current.data:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    old_stage = current.data[0].get("lead_stage", "new")
+    old_stage = current.data[0].get("status", "new")
     lead_name = current.data[0].get("name") or "Unknown"
 
     if old_stage == req.stage:
-        return {"id": lead_id, "lead_stage": req.stage, "changed": False}
+        return {"id": lead_id, "status": req.stage, "changed": False}
 
-    db.table("leads").update({"lead_stage": req.stage}).eq("id", lead_id).execute()
+    db.table("leads").update({"status": req.stage}).eq("id", lead_id).execute()
 
     log_activity(
         tenant_id=tenant_id,
@@ -548,4 +552,4 @@ async def change_client_stage(
         metadata={"old_stage": old_stage, "new_stage": req.stage},
     )
 
-    return {"id": lead_id, "lead_stage": req.stage, "changed": True}
+    return {"id": lead_id, "status": req.stage, "changed": True}

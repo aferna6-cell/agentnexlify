@@ -205,7 +205,7 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
     existing = (
         db.table("leads")
         .select("id")
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .eq("email", email)
         .limit(1)
         .execute()
@@ -214,15 +214,14 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
     if existing.data:
         return existing.data[0]["id"]
 
-    # Create new lead
+    # Create new lead (live schema: client_id, status, no source/notes columns)
     lead = db.table("leads").insert({
-        "tenant_id": tenant_id,
+        "client_id": tenant_id,
         "name": appointment.get("customer_name"),
         "email": email,
         "phone": appointment.get("customer_phone"),
-        "source": "booking",
-        "lead_stage": "qualified",
-        "notes": "Created from appointment booking",
+        "status": "appointment_booked",
+        "conversation_summary": "Created from appointment booking",
     }).execute()
 
     return lead.data[0]["id"] if lead.data else None

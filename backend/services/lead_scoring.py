@@ -180,8 +180,9 @@ def score_lead(lead_id: str) -> dict[str, Any]:
     raw_score = min(engagement + intent + recency, 100)
     final_score = max(0, raw_score - decay)
 
-    # 5. Persist score
-    db.table("leads").update({"lead_score": final_score}).eq("id", lead_id).execute()
+    # 5. Persist score (live schema: lead_score CHECK 1-10, scale from 0-100)
+    db_score = max(1, min(10, round(final_score / 10)))
+    db.table("leads").update({"lead_score": db_score}).eq("id", lead_id).execute()
 
     return {
         "lead_id": lead_id,
@@ -199,7 +200,7 @@ def score_lead(lead_id: str) -> dict[str, Any]:
 def score_all_leads(tenant_id: str) -> dict[str, Any]:
     """Re-score all leads for a tenant. Returns summary."""
     db = get_supabase()
-    result = db.table("leads").select("id").eq("tenant_id", tenant_id).execute()
+    result = db.table("leads").select("id").eq("client_id", tenant_id).execute()
     lead_ids = [r["id"] for r in (result.data or [])]
 
     scored = 0

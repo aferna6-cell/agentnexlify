@@ -466,17 +466,17 @@ async def update_lead_stage(
     # Verify lead belongs to tenant
     lead = (
         db.table("leads")
-        .select("id, lead_stage")
+        .select("id, status")
         .eq("id", lead_id)
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
     if not lead.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    old_stage = lead.data[0]["lead_stage"]
-    db.table("leads").update({"lead_stage": req.stage}).eq("id", lead_id).execute()
+    old_stage = lead.data[0]["status"]
+    db.table("leads").update({"status": req.stage}).eq("id", lead_id).execute()
 
     # Fire automation trigger
     if old_stage != req.stage:

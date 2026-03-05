@@ -111,13 +111,12 @@ async def twilio_missed_call(
 
     await send_sms(to=From, body=body)
 
-    # 4. Create lead
+    # 4. Create lead (live schema: client_id, status, no source/notes columns)
     lead_result = db.table("leads").insert({
-        "tenant_id": tenant_id,
+        "client_id": tenant_id,
         "phone": From,
-        "source": "missed_call",
-        "lead_stage": "new",
-        "notes": f"Missed call text-back sent (CallSid: {CallSid})",
+        "status": "new",
+        "conversation_summary": f"Missed call text-back sent (CallSid: {CallSid})",
     }).execute()
 
     if lead_result.data:
@@ -174,7 +173,7 @@ async def twilio_sms_reply(
     lead_result = (
         db.table("leads")
         .select("*")
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .eq("phone", From)
         .order("created_at", desc=True)
         .limit(1)
@@ -183,10 +182,10 @@ async def twilio_sms_reply(
     lead = lead_result.data[0] if lead_result.data else None
 
     if lead:
-        # 3. Update lead notes with the reply
-        existing_notes = lead.get("notes") or ""
+        # 3. Update lead conversation_summary with the reply
+        existing_notes = lead.get("conversation_summary") or ""
         updated_notes = f"{existing_notes}\nCustomer reply: {Body}".strip()
-        db.table("leads").update({"notes": updated_notes}).eq("id", lead["id"]).execute()
+        db.table("leads").update({"conversation_summary": updated_notes}).eq("id", lead["id"]).execute()
 
         log_activity(
             tenant_id=tenant_id,
