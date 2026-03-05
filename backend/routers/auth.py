@@ -6,11 +6,13 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from jose import JWTError, jwt
 
 from backend.config import settings
 from backend.models.database import get_supabase
+import stripe
+
 from backend.models.schemas import (
     DashboardResponse,
     FaqCreateRequest,
@@ -23,6 +25,7 @@ from backend.models.schemas import (
     WidgetConfigDetail,
     WidgetConfigUpdateRequest,
 )
+from backend.services.stripe_service import PLAN_LIMITS, PLAN_PRICES, get_or_create_customer
 
 logger = logging.getLogger(__name__)
 
@@ -421,3 +424,208 @@ async def delete_faq(
     db = get_supabase()
     # Soft delete — mark inactive
     db.table("faq_entries").update({"is_active": False}).eq("id", faq_id).eq("tenant_id", tenant_id).execute()
+
+
+# ── Conversations ────────────────────────────────────────────
+
+
+@router.get("/conversations/{tenant_id}")
+async def list_conversations(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    # Fetch recent chat messages grouped by session
+    result = (
+        db.table("chat_messages")
+        .select("session_id, role, content, created_at")
+        .eq("tenant_id", tenant_id)
+        .order("created_at", desc=True)
+        .limit(500)
+        .execute()
+    )
+
+    sessions: dict = {}
+    for msg in (result.data or []):
+        sid = msg["session_id"]
+        if sid not in sessions:
+            sessions[sid] = {
+                "session_id": sid,
+                "message_count": 0,
+                "last_message": "",
+                "last_message_at": msg["created_at"],
+                "preview": "",
+            }
+        sessions[sid]["message_count"] += 1
+        # First user message as preview
+        if msg["role"] == "user" and not sessions[sid]["preview"]:
+            sessions[sid]["preview"] = (msg["content"] or "")[:120]
+        # Last message content
+        if msg["created_at"] >= sessions[sid]["last_message_at"]:
+            sessions[sid]["last_message_at"] = msg["created_at"]
+            sessions[sid]["last_message"] = (msg["content"] or "")[:120]
+
+    # Try to attach lead names to sessions
+    lead_map = {}
+    try:
+        leads_result = (
+            db.table("leads")
+            .select("conversation_id, name, email")
+            .eq("client_id", tenant_id)
+            .execute()
+        )
+        for lead in (leads_result.data or []):
+            cid = lead.get("conversation_id")
+            if cid:
+                lead_map[cid] = lead.get("name") or lead.get("email") or ""
+    except Exception:
+        pass
+
+    conv_list = sorted(sessions.values(), key=lambda s: s["last_message_at"], reverse=True)
+    for c in conv_list:
+        c["lead_name"] = lead_map.get(c["session_id"], "")
+
+    return {"conversations": conv_list}
+
+
+@router.get("/conversations/{tenant_id}/{session_id}")
+async def get_conversation_messages(
+    tenant_id: str,
+    session_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("chat_messages")
+        .select("id, role, content, created_at")
+        .eq("tenant_id", tenant_id)
+        .eq("session_id", session_id)
+        .order("created_at", desc=False)
+        .execute()
+    )
+    return {"messages": result.data or []}
+
+
+# ── Tenant Settings ──────────────────────────────────────────
+
+
+@router.put("/settings/{tenant_id}")
+async def update_settings(
+    tenant_id: str,
+    request: Request,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Update tenant business info."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    body = await request.json()
+    allowed = {"business_name", "business_type", "city", "owner_name"}
+    updates = {k: v for k, v in body.items() if k in allowed and v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+
+    db = get_supabase()
+    result = db.table("tenants").update(updates).eq("id", tenant_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return result.data[0]
+
+
+@router.get("/tenant/{tenant_id}")
+async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("tenants")
+        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return result.data[0]
+
+
+# ── Billing (JWT-authenticated proxies) ──────────────────────
+
+
+@router.post("/billing/checkout")
+async def billing_checkout(
+    request: Request,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Create Stripe checkout session (JWT auth, no API secret needed)."""
+    body = await request.json()
+    tenant_id = claims["tenant_id"]
+    plan = body.get("plan")
+
+    if not plan or plan not in PLAN_PRICES:
+        raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
+
+    db = get_supabase()
+    result = db.table("tenants").select("*").eq("id", tenant_id).limit(1).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant = result.data[0]
+
+    customer = get_or_create_customer(
+        email=tenant.get("owner_email", ""),
+        tenant_id=tenant_id,
+        business_name=tenant.get("business_name"),
+    )
+
+    prices = PLAN_PRICES[plan]
+    line_items = []
+    if "setup" in prices:
+        line_items.append({"price": prices["setup"], "quantity": 1})
+    line_items.append({"price": prices["monthly"], "quantity": 1})
+
+    session_params: dict = {
+        "mode": "subscription",
+        "customer": customer.id,
+        "line_items": line_items,
+        "success_url": f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        "cancel_url": f"{settings.frontend_url}/billing/cancel",
+        "metadata": {"tenant_id": tenant_id, "plan": plan},
+        "subscription_data": {"metadata": {"tenant_id": tenant_id, "plan": plan}},
+    }
+
+    promo_code = body.get("promo_code")
+    if promo_code:
+        promos = stripe.PromotionCode.list(code=promo_code, active=True, limit=1)
+        if promos.data:
+            session_params["discounts"] = [{"promotion_code": promos.data[0].id}]
+        else:
+            raise HTTPException(status_code=400, detail="Invalid promo code")
+
+    session = stripe.checkout.Session.create(**session_params)
+    return {"checkout_url": session.url}
+
+
+@router.get("/billing/portal/{tenant_id}")
+async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    """Create Stripe customer portal session (JWT auth)."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = db.table("tenants").select("stripe_customer_id").eq("id", tenant_id).limit(1).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    customer_id = result.data[0].get("stripe_customer_id")
+    if not customer_id:
+        raise HTTPException(status_code=400, detail="No billing account. Upgrade to a paid plan first.")
+
+    session = stripe.billing_portal.Session.create(
+        customer=customer_id,
+        return_url=f"{settings.frontend_url}/billing",
+    )
+    return {"portal_url": session.url}

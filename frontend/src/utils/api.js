@@ -266,6 +266,36 @@ export function updateLeadStage(tenantId, token, leadId, stage) {
   });
 }
 
+// --- Conversations ---
+
+export function fetchConversations(tenantId, token) {
+  return request(`/api/v1/auth/conversations/${tenantId}`, { token });
+}
+
+export function fetchConversationMessages(tenantId, sessionId, token) {
+  return request(`/api/v1/auth/conversations/${tenantId}/${sessionId}`, { token });
+}
+
+// --- Tenant Settings ---
+
+export function fetchTenant(tenantId, token) {
+  return request(`/api/v1/auth/tenant/${tenantId}`, { token });
+}
+
+export function updateTenantSettings(tenantId, token, data) {
+  return request(`/api/v1/auth/settings/${tenantId}`, { method: "PUT", token, body: data });
+}
+
+// --- Billing (JWT-authenticated) ---
+
+export function billingCheckout(token, { plan, promo_code } = {}) {
+  return request("/api/v1/auth/billing/checkout", { method: "POST", token, body: { plan, promo_code } });
+}
+
+export function billingPortal(tenantId, token) {
+  return request(`/api/v1/auth/billing/portal/${tenantId}`, { token });
+}
+
 // --- Contact / Support ---
 
 export function submitContactForm(data) {

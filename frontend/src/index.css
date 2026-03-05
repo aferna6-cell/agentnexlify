@@ -2315,3 +2315,510 @@ body {
 }
 
 .today-appts-viewall:hover { background: var(--accent-dim); }
+
+/* ── Shared Page Styles ── */
+
+.empty-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-secondary:hover { background: var(--bg-card); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-danger {
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(255,68,68,0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-danger:hover { background: rgba(255,68,68,0.25); }
+
+.settings-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+.settings-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+.settings-card-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.settings-field {
+  margin-bottom: 1rem;
+}
+.settings-field label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+.settings-field input,
+.settings-field textarea,
+.settings-field select {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-family: var(--font);
+}
+.settings-field input:focus,
+.settings-field textarea:focus,
+.settings-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.settings-field-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* ── Conversations Page ── */
+
+.conversations-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+  height: calc(100vh - 160px);
+}
+
+.conv-sidebar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.conv-search {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: var(--font);
+}
+.conv-search:focus { outline: none; }
+
+.conv-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.conv-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.conv-item:hover { background: rgba(255,255,255,0.03); }
+.conv-item.active { background: var(--accent-dim); border-left: 3px solid var(--accent); }
+
+.conv-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+.conv-item-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+.conv-item-time { font-size: 0.7rem; color: var(--text-muted); }
+.conv-item-preview {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conv-item-count { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+.conv-messages {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.conv-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.conv-message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.conv-msg {
+  max-width: 75%;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.conv-msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+}
+.conv-msg.assistant {
+  align-self: flex-start;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.conv-msg-role {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.2rem;
+  opacity: 0.7;
+}
+.conv-msg-content { white-space: pre-wrap; word-break: break-word; }
+.conv-msg-time { font-size: 0.65rem; opacity: 0.6; margin-top: 0.25rem; }
+
+/* ── Widget Page ── */
+
+.widget-page-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.embed-code-block {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+.embed-code-block code {
+  font-size: 0.75rem;
+  color: var(--accent);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.widget-preview-card {
+  grid-column: 1 / -1;
+}
+
+.widget-preview {
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.widget-preview-header {
+  padding: 0.75rem 1rem;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.widget-preview-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 120px;
+}
+.widget-preview-msg {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  max-width: 80%;
+}
+.widget-preview-msg.ai {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  align-self: flex-start;
+}
+.widget-preview-msg.user {
+  background: var(--accent);
+  color: #fff;
+  align-self: flex-end;
+}
+
+/* ── FAQ Manager ── */
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.faq-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+.faq-item-q {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+.faq-item-a {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+.faq-item-cat {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  margin-bottom: 0.5rem;
+}
+.faq-delete-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.faq-delete-btn:hover { color: var(--red); border-color: var(--red); }
+.faq-delete-btn.confirming { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+
+/* ── Billing Page ── */
+
+.billing-current {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.billing-plan-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.billing-plan-status {
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+.billing-plan-status[data-status="active"] { color: var(--green); }
+.billing-plan-status[data-status="paused"] { color: var(--yellow); }
+.billing-plan-status[data-status="cancelled"] { color: var(--red); }
+
+.billing-usage-bar {
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.billing-usage-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.billing-usage-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.billing-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.billing-plan-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.billing-plan-card.popular {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-dim);
+}
+.billing-plan-card.current {
+  border-color: var(--green);
+}
+
+.billing-popular-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.75rem;
+  border-radius: 999px;
+}
+
+.billing-plan-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.billing-plan-card-price {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.billing-plan-card-price span {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.billing-plan-setup {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.billing-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  flex: 1;
+}
+.billing-plan-features li {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.25rem 0;
+}
+.billing-plan-features li::before {
+  content: "\2713 ";
+  color: var(--green);
+  font-weight: 700;
+  margin-right: 0.35rem;
+}
+
+.billing-plan-card button {
+  width: 100%;
+}
+
+/* ── Settings Page ── */
+
+.settings-page-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.settings-plan-badge {
+  display: inline-block;
+  background: var(--accent-dim);
+  color: var(--accent);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.settings-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.settings-link-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 1rem;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.settings-link-btn:hover { background: var(--bg-card); border-color: var(--accent); color: var(--accent); }
+
+.danger-zone {
+  border-color: rgba(255,68,68,0.25);
+}
+.danger-zone h3 { color: var(--red); }
+
+/* ── Responsive ── */
+
+@media (max-width: 768px) {
+  .conversations-layout { grid-template-columns: 1fr; height: auto; }
+  .conv-messages { min-height: 400px; }
+  .widget-page-grid { grid-template-columns: 1fr; }
+  .billing-current { grid-template-columns: 1fr; }
+  .billing-plans { grid-template-columns: 1fr; }
+  .settings-page-grid { grid-template-columns: 1fr; }
+}

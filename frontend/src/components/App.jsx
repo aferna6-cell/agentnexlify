@@ -4,20 +4,17 @@ import LoginPage from "./LoginPage";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
 import Dashboard from "../pages/Dashboard";
-import ComingSoon from "../pages/Dashboard/ComingSoon";
 import LeadsPage from "../pages/LeadsPage";
 import ClientList from "../pages/Dashboard/ClientList";
 import ClientProfile from "../pages/Dashboard/ClientProfile";
 import Calendar from "../pages/Calendar";
 import Availability from "../pages/Availability";
-
 import AutomationsPage from "../pages/Automations";
-
-function Conversations() { return <ComingSoon title="Conversations" />; }
-function Widget() { return <ComingSoon title="Widget" />; }
-function FaqManager() { return <ComingSoon title="FAQ Manager" />; }
-function Billing() { return <ComingSoon title="Billing" />; }
-function Settings() { return <ComingSoon title="Settings" />; }
+import ConversationsPage from "../pages/ConversationsPage";
+import WidgetPage from "../pages/WidgetPage";
+import FaqManagerPage from "../pages/FaqManagerPage";
+import BillingPage from "../pages/BillingPage";
+import SettingsPage from "../pages/SettingsPage";
 
 const pages = {
   dashboard: Dashboard,
@@ -26,12 +23,12 @@ const pages = {
   client_profile: ClientProfile,
   calendar: Calendar,
   availability: Availability,
-  conversations: Conversations,
+  conversations: ConversationsPage,
   automations: AutomationsPage,
-  widget: Widget,
-  faq: FaqManager,
-  billing: Billing,
-  settings: Settings,
+  widget: WidgetPage,
+  faq: FaqManagerPage,
+  billing: BillingPage,
+  settings: SettingsPage,
 };
 
 export default function App() {
