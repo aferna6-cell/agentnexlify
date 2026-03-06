@@ -154,7 +154,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "url": "https://agentnexlify.com",
   "logo": "https://agentnexlify.com/logo.png",
-  "description": "AI that helps run your business. Built for local businesses.",
+  "description": "AI-powered business automation platform.",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Clemson",
@@ -175,7 +175,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "AI that helps run your business. Built for local businesses.",
+  "description": "AI-powered business automation platform.",
   "url": "https://agentnexlify.com",
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
@@ -563,7 +563,7 @@ export default function Home() {
           <div className="lp-footer-inner">
             <div className="lp-footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="lp-footer-brand-logo" />
-              <p>AI that helps run your business. Built for local businesses.</p>
+              <p>AI-powered business automation platform.</p>
             </div>
             <div className="lp-footer-col">
               <h4>Product</h4>
