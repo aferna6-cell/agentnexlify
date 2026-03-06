@@ -303,6 +303,32 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ HOW IT WORKS ============ */}
+      <section className="section" id="how-it-works">
+        <div className="container">
+          <div className="lp-how-header">
+            <h2 className="section-title reveal">How It Works</h2>
+          </div>
+          <div className="lp-how-steps">
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">1</div>
+              <h3>Connect Your Business</h3>
+              <p>Sign up, tell us about your business, and configure your AI assistant with your FAQs, services, and greeting message.</p>
+            </div>
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">2</div>
+              <h3>AI Starts Working for You</h3>
+              <p>Embed one line of code on your website. Your AI assistant starts responding to visitors, capturing leads, and booking appointments instantly.</p>
+            </div>
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">3</div>
+              <h3>You Grow Your Business</h3>
+              <p>Leads flow into your dashboard scored and organized. Automated follow-ups keep customers engaged while you focus on what matters most.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ============ FEATURES ============ */}
       <section className="section" id="features" style={{ background: "var(--bg-secondary)" }}>
         <div className="container">
@@ -352,32 +378,6 @@ export default function Home() {
               </div>
               <h3>Email Sequences</h3>
               <p>Hands-free email campaigns that keep your leads warm.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ HOW IT WORKS ============ */}
-      <section className="section" id="how-it-works">
-        <div className="container">
-          <div className="lp-how-header">
-            <h2 className="section-title reveal">How It Works</h2>
-          </div>
-          <div className="lp-how-steps">
-            <div className="lp-how-step reveal">
-              <div className="lp-how-step-num">1</div>
-              <h3>Connect Your Business</h3>
-              <p>Sign up, tell us about your business, and configure your AI assistant with your FAQs, services, and greeting message.</p>
-            </div>
-            <div className="lp-how-step reveal">
-              <div className="lp-how-step-num">2</div>
-              <h3>AI Takes Over</h3>
-              <p>Embed one line of code on your website. Your AI assistant starts responding to visitors, capturing leads, and booking appointments instantly.</p>
-            </div>
-            <div className="lp-how-step reveal">
-              <div className="lp-how-step-num">3</div>
-              <h3>You Grow Your Business</h3>
-              <p>Leads flow into your dashboard scored and organized. Automated follow-ups keep customers engaged while you focus on what matters most.</p>
             </div>
           </div>
         </div>
