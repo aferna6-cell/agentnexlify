@@ -15,9 +15,12 @@ import WidgetPage from "../pages/WidgetPage";
 import FaqManagerPage from "../pages/FaqManagerPage";
 import BillingPage from "../pages/BillingPage";
 import SettingsPage from "../pages/SettingsPage";
+import IntegrationsPage from "../pages/IntegrationsPage";
+import AnalyticsPage from "../pages/AnalyticsPage";
 
 const pages = {
   dashboard: Dashboard,
+  analytics: AnalyticsPage,
   leads: LeadsPage,
   clients: ClientList,
   client_profile: ClientProfile,
@@ -28,6 +31,7 @@ const pages = {
   widget: WidgetPage,
   faq: FaqManagerPage,
   billing: BillingPage,
+  integrations: IntegrationsPage,
   settings: SettingsPage,
 };
 

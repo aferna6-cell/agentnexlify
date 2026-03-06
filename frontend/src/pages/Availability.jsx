@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchAvailability, updateAvailability } from "../utils/api";
+import { fetchAvailability, updateAvailability, fetchGoogleCalendarStatus } from "../utils/api";
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const DAY_LABELS = { monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday", saturday: "Saturday", sunday: "Sunday" };
@@ -20,6 +20,14 @@ export default function Availability({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [gcalConnected, setGcalConnected] = useState(false);
+
+  useEffect(() => {
+    if (!user?.tenantId) return;
+    fetchGoogleCalendarStatus(user.tenantId, token)
+      .then(s => setGcalConnected(s.connected))
+      .catch(() => {});
+  }, [user?.tenantId, token]);
 
   const loadConfig = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -126,6 +134,21 @@ export default function Availability({ onNavigate }) {
               <input type="number" className="avail-input" min={1} max={90} value={config.max_advance_days} onChange={e => setConfig(c => ({ ...c, max_advance_days: parseInt(e.target.value) || 30 }))} />
             </div>
           </div>
+        </div>
+
+        <div className="availability-section">
+          <h3>Google Calendar</h3>
+          {gcalConnected ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--green)" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", display: "inline-block" }} />
+              Connected — availability checks against your real calendar
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+              <span style={{ marginRight: 8 }}>Not connected.</span>
+              <button className="btn-secondary" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onNavigate("integrations")}>Connect Google Calendar</button>
+            </div>
+          )}
         </div>
 
         <div className="availability-actions">

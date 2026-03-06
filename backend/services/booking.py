@@ -140,6 +140,16 @@ def generate_available_slots(
         b_end = datetime.fromisoformat(appt["end_time"])
         booked_ranges.append((b_start, b_end))
 
+    # Fetch Google Calendar busy times (best-effort)
+    try:
+        from backend.services.google_calendar import get_busy_times, get_integration
+
+        if get_integration(tenant_id):
+            gcal_busy = get_busy_times(tenant_id, day_start_utc, day_end_utc)
+            booked_ranges.extend(gcal_busy)
+    except Exception:
+        logger.warning("Failed to fetch Google Calendar busy times for tenant %s", tenant_id, exc_info=True)
+
     # Filter out slots that overlap with booked appointments
     available = []
     for slot in slots:
@@ -189,6 +199,27 @@ def create_appointment(
             appointment["lead_id"] = lead_id
     except Exception:
         logger.warning("Failed to link appointment %s to lead", appointment["id"], exc_info=True)
+
+    # Sync to Google Calendar (best-effort)
+    try:
+        from backend.services.google_calendar import create_calendar_event, get_integration
+
+        if get_integration(tenant_id):
+            google_event_id = create_calendar_event(
+                tenant_id=tenant_id,
+                summary=f"Appointment with {customer_name}",
+                start_utc=start_time,
+                end_utc=end_time,
+                attendee_email=customer_email,
+                description=f"Customer: {customer_name}\nEmail: {customer_email}"
+                + (f"\nPhone: {customer_phone}" if customer_phone else "")
+                + (f"\nNotes: {notes}" if notes else ""),
+            )
+            if google_event_id:
+                db.table("appointments").update({"google_event_id": google_event_id}).eq("id", appointment["id"]).execute()
+                appointment["google_event_id"] = google_event_id
+    except Exception:
+        logger.warning("Failed to sync appointment %s to Google Calendar", appointment["id"], exc_info=True)
 
     return appointment
 
@@ -265,9 +296,50 @@ def update_appointment(tenant_id: str, appointment_id: str, data: dict) -> dict:
     )
     if not result.data:
         return {}
-    return result.data[0]
+
+    appointment = result.data[0]
+
+    # Sync changes to Google Calendar (best-effort)
+    google_event_id = appointment.get("google_event_id")
+    if google_event_id:
+        try:
+            from backend.services.google_calendar import update_calendar_event
+
+            gcal_updates = {}
+            if "start_time" in data:
+                gcal_updates["start_utc"] = data["start_time"]
+            if "end_time" in data:
+                gcal_updates["end_utc"] = data["end_time"]
+            if gcal_updates:
+                update_calendar_event(tenant_id, google_event_id, **gcal_updates)
+        except Exception:
+            logger.warning("Failed to sync appointment update %s to Google Calendar", appointment_id, exc_info=True)
+
+    return appointment
 
 
 def cancel_appointment(tenant_id: str, appointment_id: str) -> dict:
     """Soft-delete: set status to cancelled."""
-    return update_appointment(tenant_id, appointment_id, {"status": "cancelled"})
+    # Fetch appointment first to get google_event_id
+    db = get_supabase()
+    existing = (
+        db.table("appointments")
+        .select("google_event_id")
+        .eq("id", appointment_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+
+    result = update_appointment(tenant_id, appointment_id, {"status": "cancelled"})
+
+    # Delete from Google Calendar (best-effort)
+    if existing.data and existing.data[0].get("google_event_id"):
+        try:
+            from backend.services.google_calendar import delete_calendar_event
+
+            delete_calendar_event(tenant_id, existing.data[0]["google_event_id"])
+        except Exception:
+            logger.warning("Failed to delete Google Calendar event for appointment %s", appointment_id, exc_info=True)
+
+    return result

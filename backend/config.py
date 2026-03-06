@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     api_secret_key: str = secrets.token_urlsafe(32)
     sentry_dsn: str = ""
 
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

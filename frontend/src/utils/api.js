@@ -220,6 +220,20 @@ export function cancelAppointment(tenantId, token, appointmentId) {
   });
 }
 
+// --- Integrations (Google Calendar) ---
+
+export function fetchGoogleCalendarStatus(tenantId, token) {
+  return request(`/api/v1/integrations/google/status`, { token });
+}
+
+export function startGoogleCalendarAuth(tenantId, token) {
+  return request(`/api/v1/integrations/google/auth`, { token });
+}
+
+export function disconnectGoogleCalendar(tenantId, token) {
+  return request(`/api/v1/integrations/google`, { method: "DELETE", token });
+}
+
 // --- Automation Sequences ---
 
 export function fetchSequences(tenantId, token) {
@@ -300,6 +314,58 @@ export function billingPortal(tenantId, token) {
 
 export function submitContactForm(data) {
   return request("/api/v1/support/contact", { method: "POST", body: data });
+}
+
+// --- Analytics ---
+
+export function fetchAnalyticsOverview(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/overview?period=${period}`, { token });
+}
+
+export function fetchAnalyticsConversations(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/conversations?period=${period}`, { token });
+}
+
+export function fetchAnalyticsLeads(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/leads?period=${period}`, { token });
+}
+
+export function fetchAnalyticsResponseTimes(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/response-times?period=${period}`, { token });
+}
+
+export function fetchAnalyticsWidget(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/widget?period=${period}`, { token });
+}
+
+// --- Webhooks ---
+
+export function fetchWebhooks(tenantId, token) {
+  return request(`/api/v1/webhooks/${tenantId}`, { token });
+}
+
+export function createWebhook(tenantId, token, data) {
+  return request(`/api/v1/webhooks/${tenantId}`, { method: "POST", token, body: data });
+}
+
+export function updateWebhook(tenantId, token, webhookId, data) {
+  return request(`/api/v1/webhooks/${tenantId}/${webhookId}`, { method: "PUT", token, body: data });
+}
+
+export function toggleWebhook(tenantId, token, webhookId) {
+  return request(`/api/v1/webhooks/${tenantId}/${webhookId}/toggle`, { method: "PATCH", token });
+}
+
+export function deleteWebhook(tenantId, token, webhookId) {
+  return request(`/api/v1/webhooks/${tenantId}/${webhookId}`, { method: "DELETE", token });
+}
+
+export function fetchWebhookLogs(tenantId, token, limit = 20) {
+  return request(`/api/v1/webhooks/${tenantId}/logs/recent?limit=${limit}`, { token });
+}
+
+export function fetchWebhookEvents(tenantId, token) {
+  return request(`/api/v1/webhooks/${tenantId}/events`, { token });
 }
 
 export { ApiError };
