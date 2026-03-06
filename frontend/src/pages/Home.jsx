@@ -72,13 +72,13 @@ const faqData = [
     id: "faq-a7",
     question: "What if AI makes a mistake?",
     answer:
-      "You stay in control. Emails are drafted for your approval before sending. The AI qualifies leads \u2014 you decide how to close them. Nothing goes out without your say-so.",
+      "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising leads \u2014 you decide how to follow up. Nothing goes out without your approval.",
   },
   {
     id: "faq-a8",
     question: "How is this different from Zapier or ChatGPT?",
     answer:
-      "Those are tools. You still have to build, manage, and fix everything yourself. Agent NexLiFy is a service. We do the work. You get the results.",
+      "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service. We take care of the setup and management so you can focus on your business.",
   },
 ];
 
@@ -199,8 +199,8 @@ export default function Home() {
 
     { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Most partners start with Foundation or Growth and upgrade within a few months." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
-    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. The AI qualifies leads — you decide how to close them." } },
-    { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you manage yourself. Agent NexLiFy is a done-for-you service." } }
+    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising leads — you decide how to follow up." } },
+    { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service." } }
   ]
 }
         `}</script>
@@ -323,7 +323,7 @@ export default function Home() {
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
               <h3>You Grow Your Business</h3>
-              <p>Leads flow into your dashboard scored and organized. Automated follow-ups keep customers engaged while you focus on what matters most.</p>
+              <p>Leads flow into your dashboard scored and organized. Friendly follow-ups keep customers engaged while you focus on what you love.</p>
             </div>
           </div>
         </div>
@@ -342,21 +342,21 @@ export default function Home() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <h3>Lead Capture</h3>
-              <p>Never miss a lead. Your website works 24/7, even when you don&apos;t.</p>
+              <p>Stay on top of every lead. Your website welcomes visitors 24/7.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </div>
               <h3>Appointment Booking</h3>
-              <p>Book appointments while you sleep. No more back-and-forth.</p>
+              <p>Let customers book appointments 24/7. No more back-and-forth.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
               </div>
               <h3>Smart Follow-Ups</h3>
-              <p>Automatic follow-ups that turn &ldquo;maybe&rdquo; into &ldquo;yes.&rdquo;</p>
+              <p>Friendly follow-ups that keep conversations going.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
@@ -370,14 +370,14 @@ export default function Home() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
               <h3>Lead Pipeline</h3>
-              <p>Every lead scored and organized. Know who&apos;s ready to buy.</p>
+              <p>Every lead scored and organized. See who&apos;s most interested at a glance.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
               </div>
               <h3>Email Sequences</h3>
-              <p>Hands-free email campaigns that keep your leads warm.</p>
+              <p>Helpful email sequences that keep your leads engaged.</p>
             </div>
           </div>
         </div>
@@ -388,7 +388,7 @@ export default function Home() {
         <div className="container">
           <div className="lp-pricing-header">
             <div className="section-label reveal">Pricing</div>
-            <h2 className="section-title reveal">Simple pricing. Serious ROI.</h2>
+            <h2 className="section-title reveal">Simple pricing. Real results.</h2>
             <p className="section-subtitle reveal">
               Every plan includes hands-on setup, onboarding, and ongoing support from our team.
             </p>
@@ -421,7 +421,7 @@ export default function Home() {
             {/* Foundation */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Foundation</div>
-              <div className="lp-pricing-tagline">Stop losing leads to voicemail.</div>
+              <div className="lp-pricing-tagline">Be there for every lead, even after hours.</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$99</span>
                 <span className="lp-pricing-period">/month</span>
@@ -443,7 +443,7 @@ export default function Home() {
             {/* Growth — Popular */}
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">Growth</div>
-              <div className="lp-pricing-tagline">Your highest-ROI employee.</div>
+              <div className="lp-pricing-tagline">The helpful assistant that pays for itself.</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$249</span>
                 <span className="lp-pricing-period">/month</span>
@@ -466,7 +466,7 @@ export default function Home() {
             {/* Operations */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Operations</div>
-              <div className="lp-pricing-tagline">Cut admin work in half.</div>
+              <div className="lp-pricing-tagline">Save hours on admin every week.</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$499</span>
                 <span className="lp-pricing-period">/month</span>
@@ -539,7 +539,7 @@ export default function Home() {
       {/* ============ FINAL CTA ============ */}
       <section className="lp-cta-section" id="cta">
         <div className="container lp-cta-content">
-          <h2 className="section-title reveal">Ready to stop missing leads?</h2>
+          <h2 className="section-title reveal">Ready to grow your business?</h2>
           <div className="lp-cta-buttons reveal">
             <Link to="/signup" className="btn-primary">
               Get Started {"\u2192"}
@@ -557,7 +557,7 @@ export default function Home() {
           <div className="lp-footer-inner">
             <div className="lp-footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="lp-footer-brand-logo" />
-              <p>AI-powered business automation platform.</p>
+              <p>A friendly AI assistant for your business.</p>
             </div>
             <div className="lp-footer-col">
               <h4>Product</h4>
