@@ -645,6 +645,21 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ FINAL CTA ============ */}
+      <section className="lp-cta-section" id="cta">
+        <div className="container lp-cta-content">
+          <h2 className="section-title reveal">Ready to grow your business?</h2>
+          <div className="lp-cta-buttons reveal">
+            <Link to="/signup" className="btn-primary">
+              Get Started {"\u2192"}
+            </Link>
+            <Link to="/contact" className="btn-secondary">
+              Book a Demo
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ============ DEMO PREVIEW ============ */}
       <DemoPreview />
 
@@ -688,21 +703,6 @@ export default function Home() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============ FINAL CTA ============ */}
-      <section className="lp-cta-section" id="cta">
-        <div className="container lp-cta-content">
-          <h2 className="section-title reveal">Ready to grow your business?</h2>
-          <div className="lp-cta-buttons reveal">
-            <Link to="/signup" className="btn-primary">
-              Get Started {"\u2192"}
-            </Link>
-            <Link to="/contact" className="btn-secondary">
-              Book a Demo
-            </Link>
           </div>
         </div>
       </section>
