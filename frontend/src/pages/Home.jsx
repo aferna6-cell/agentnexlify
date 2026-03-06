@@ -376,6 +376,7 @@ export default function Home() {
           <div className={`lp-nav-links${menuOpen ? " open" : ""}`}>
             <a href="#how-it-works" onClick={closeMenu}>How It Works</a>
             <a href="#features" onClick={closeMenu}>Features</a>
+            <a href="#pricing" onClick={closeMenu}>Pricing</a>
             <a href="#faq" onClick={closeMenu}>FAQ</a>
           </div>
 
