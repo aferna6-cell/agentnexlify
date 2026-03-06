@@ -363,6 +363,32 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ HOW IT WORKS ============ */}
+      <section className="section" id="how-it-works">
+        <div className="container">
+          <div className="lp-how-header">
+            <h2 className="section-title reveal">How It Works</h2>
+          </div>
+          <div className="lp-how-steps">
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">1</div>
+              <h3>Connect</h3>
+              <p>Tell us about your business. We handle the rest.</p>
+            </div>
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">2</div>
+              <h3>Go Live</h3>
+              <p>Your AI assistant starts working in minutes.</p>
+            </div>
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">3</div>
+              <h3>Grow</h3>
+              <p>Watch leads, bookings, and follow-ups happen automatically.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ============ PRICING ============ */}
       <section className="section" id="pricing">
         <div className="container">
