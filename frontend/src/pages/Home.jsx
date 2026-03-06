@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
 import "../styles/home.css";
 
+const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
+
 /* Read email from JWT in localStorage (works outside AuthProvider) */
 function getUserEmail() {
   try {
@@ -154,7 +156,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "url": "https://agentnexlify.com",
   "logo": "https://agentnexlify.com/logo.png",
-  "description": "AI that runs your front desk. Built for local businesses.",
+  "description": "AI that helps run your business. Built for local businesses.",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Clemson",
@@ -175,7 +177,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "AI that runs your front desk. Built for local businesses.",
+  "description": "AI that helps run your business. Built for local businesses.",
   "url": "https://agentnexlify.com",
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
@@ -221,6 +223,8 @@ export default function Home() {
           </a>
 
           <div className={`lp-nav-links${menuOpen ? " open" : ""}`}>
+            <a href="#features" onClick={closeMenu}>Features</a>
+            <a href="#how-it-works" onClick={closeMenu}>How It Works</a>
             <a href="#pricing" onClick={closeMenu}>Pricing</a>
             <a href="#faq" onClick={closeMenu}>FAQ</a>
           </div>
@@ -255,8 +259,8 @@ export default function Home() {
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
               <h1 className="reveal">
-                AI That Runs Your{" "}
-                <span className="accent-gradient">Front Desk</span>
+                AI That Helps Run Your{" "}
+                <span className="accent-gradient">Business</span>
               </h1>
               <p className="lp-hero-sub reveal">
                 Capture leads, book appointments, and follow up with customers &mdash; automatically.
@@ -308,10 +312,71 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ TRUST BAR ============ */}
+      <section className="lp-trust">
+        <div className="container">
+          <p className="lp-trust-label reveal">Works with the tools you already use</p>
+          <div className="lp-trust-logos reveal">
+            <svg viewBox="0 0 24 24" aria-label="Gmail">
+              <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" />
+            </svg>
+            <svg viewBox="0 0 24 24" aria-label="Google Calendar">
+              <path d="M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H5.684v5.684h12.632zM5.684 18.316H0V5.684h5.684v12.632zM7.953 14.39l1.478-1.149c.543.49 1.142.735 1.797.735.654 0 1.108-.254 1.108-.815 0-.462-.336-.735-1.01-.998l-.736-.287c-1.087-.42-1.621-1.109-1.621-2.098 0-1.314 1.034-2.197 2.507-2.197.922 0 1.72.342 2.274.943l-1.264 1.155c-.385-.336-.77-.504-1.176-.504-.44 0-.748.222-.748.598 0 .368.253.586.849.81l.748.288c1.216.468 1.785 1.108 1.785 2.24 0 1.351-1.064 2.344-2.67 2.344-1.143 0-2.07-.434-2.72-1.264l.4-.8z" />
+            </svg>
+            <svg viewBox="0 0 24 24" aria-label="HubSpot">
+              <path d="M18.164 7.93V5.084a2.198 2.198 0 0 0 1.267-1.984v-.066a2.2 2.2 0 0 0-2.198-2.198h-.066a2.2 2.2 0 0 0-2.198 2.198v.066c0 .865.506 1.61 1.233 1.966v2.862a5.662 5.662 0 0 0-2.905 1.384l-7.666-5.97a2.39 2.39 0 0 0 .072-.563 2.413 2.413 0 1 0-2.413 2.413c.437 0 .842-.122 1.2-.325l7.544 5.876a5.668 5.668 0 0 0-.478 2.279 5.681 5.681 0 0 0 .565 2.47l-2.262 2.263a1.88 1.88 0 0 0-.573-.097 1.902 1.902 0 1 0 1.901 1.901c0-.2-.035-.39-.092-.572l2.235-2.235a5.686 5.686 0 0 0 3.45 1.17h.002a5.69 5.69 0 1 0 0-11.38 5.69 5.69 0 0 0-2.576.612l-.062.033zm.062 8.151h-.002a2.843 2.843 0 1 1 .002 0z" />
+            </svg>
+            <svg viewBox="0 0 24 24" aria-label="Salesforce">
+              <path d="M10.006 5.415a4.195 4.195 0 0 1 3.045-1.306c1.56 0 2.954.9 3.69 2.205a4.89 4.89 0 0 1 2.013-.432c2.735 0 4.952 2.23 4.952 4.98s-2.217 4.98-4.952 4.98a4.937 4.937 0 0 1-.765-.06 3.469 3.469 0 0 1-3.089 1.913 3.469 3.469 0 0 1-1.48-.332 4.14 4.14 0 0 1-3.783 2.47 4.14 4.14 0 0 1-3.682-2.25 3.596 3.596 0 0 1-.61.053c-1.987 0-3.598-1.62-3.598-3.618a3.61 3.61 0 0 1 1.487-2.918A4.39 4.39 0 0 1 3 9.09c0-2.442 1.976-4.42 4.414-4.42 1.466 0 2.632.604 3.592 1.745z" />
+            </svg>
+            <svg viewBox="0 0 24 24" aria-label="Slack">
+              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+            </svg>
+            <svg viewBox="0 0 24 24" aria-label="QuickBooks">
+              <path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm5.723 16.17h-1.807c0 1.268-1.027 2.297-2.294 2.297v-1.81c0-2.049-.006-4.098.003-6.147.003-.596-.003-1.057-.699-1.286-.938-.31-1.89.37-1.89 1.382.004 2.037.001 4.074.002 6.11v1.75h-1.81c0 1.268-1.026 2.297-2.293 2.297V7.833h1.81c0-1.27 1.026-2.297 2.293-2.297v1.81c0 2.048.006 4.097-.003 6.146-.003.596.003 1.058.699 1.287.938.309 1.89-.371 1.89-1.383-.004-2.037-.001-4.074-.002-6.11v-1.75h1.808c0-1.27 1.026-2.298 2.293-2.298V16.17z" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ HOW IT WORKS ============ */}
+      <section className="section" id="how-it-works">
+        <div className="container">
+          <div className="lp-how-header">
+            <div className="section-label reveal">How It Works</div>
+            <h2 className="section-title reveal">Up and running in minutes.</h2>
+          </div>
+          <div className="lp-how-steps">
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">1</div>
+              <h3>Connect Your Business</h3>
+              <p>
+                Set up your profile, services, and preferences in minutes. Works with the tools you already use.
+              </p>
+            </div>
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">2</div>
+              <h3>AI Takes Over</h3>
+              <p>
+                Your AI agent handles leads, follow-ups, bookings, and customer questions automatically.
+              </p>
+            </div>
+            <div className="lp-how-step reveal">
+              <div className="lp-how-step-num">3</div>
+              <h3>You Close Deals</h3>
+              <p>
+                Focus on the work that matters while AI handles the rest. Qualified leads land in your dashboard with scores and full history.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ============ FEATURES ============ */}
       <section className="section" id="features" style={{ background: "var(--bg-secondary)" }}>
         <div className="container">
           <div className="lp-features-header">
+            <div className="section-label reveal">Features</div>
             <h2 className="section-title reveal">Everything your front desk needs.</h2>
           </div>
           <div className="lp-features-grid">
@@ -356,6 +421,27 @@ export default function Home() {
               </div>
               <h3>Email Sequences</h3>
               <p>Hands-free email campaigns that keep your leads warm.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ DEMO ============ */}
+      <section className="section lp-demo" id="demo">
+        <div className="container">
+          <div className="lp-demo-inner">
+            <div className="section-label reveal">See It In Action</div>
+            <h2 className="section-title reveal">See it work on a real website.</h2>
+            <p className="section-subtitle reveal">
+              Watch how a local business uses Agent NexLiFy to book appointments and capture leads around the clock.
+            </p>
+            <div className="lp-demo-cta-block reveal">
+              <a href={CALENDLY_URL} className="btn-primary" target="_blank" rel="noopener noreferrer">
+                Book a Live Demo {"\u2192"}
+              </a>
+              <Link to="/free-widget" className="btn-secondary">
+                Or try the free version on your site {"\u2192"}
+              </Link>
             </div>
           </div>
         </div>
@@ -518,6 +604,9 @@ export default function Home() {
       <section className="lp-cta-section" id="cta">
         <div className="container lp-cta-content">
           <h2 className="section-title reveal">Ready to stop missing leads?</h2>
+          <p className="section-subtitle reveal">
+            Start automating your business today. No credit card required.
+          </p>
           <div className="lp-cta-buttons reveal">
             <Link to="/signup" className="btn-primary">
               Get Started {"\u2192"}
@@ -526,6 +615,7 @@ export default function Home() {
               Book a Demo
             </Link>
           </div>
+          <p className="lp-cta-note reveal">Free forever plan. No credit card. Cancel anytime.</p>
         </div>
       </section>
 
@@ -535,7 +625,7 @@ export default function Home() {
           <div className="lp-footer-inner">
             <div className="lp-footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="lp-footer-brand-logo" />
-              <p>AI that runs your front desk. Built for local businesses.</p>
+              <p>AI that helps run your business. Built for local businesses.</p>
             </div>
             <div className="lp-footer-col">
               <h4>Product</h4>
@@ -543,13 +633,15 @@ export default function Home() {
                 <li><a href="#features">Features</a></li>
                 <li><a href="#pricing">Pricing</a></li>
                 <li><a href="#faq">FAQ</a></li>
+                <li><Link to="/free-widget">Free AI Widget</Link></li>
               </ul>
             </div>
             <div className="lp-footer-col">
               <h4>Company</h4>
               <ul>
+                <li><a href="#how-it-works">How It Works</a></li>
                 <li><Link to="/contact">Contact</Link></li>
-                <li><Link to="/contact">Book a Demo</Link></li>
+                <li><a href={CALENDLY_URL} target="_blank" rel="noopener noreferrer">Book a Demo</a></li>
               </ul>
             </div>
             <div className="lp-footer-col">
