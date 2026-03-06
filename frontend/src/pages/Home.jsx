@@ -223,7 +223,8 @@ function DemoPreview() {
           </div>
         </div>
         <div className="demo-preview-cta reveal">
-          <h2 className="section-title">See it firsthand</h2>
+          <div className="section-label">Demo</div>
+          <h2 className="section-title">Try Our Demo</h2>
           <Link to="/contact" className="btn-primary">
             Book a Demo {"\u2192"}
           </Link>
@@ -460,7 +461,8 @@ export default function Home() {
       <section className="section" id="how-it-works">
         <div className="container">
           <div className="lp-how-header">
-            <h2 className="section-title reveal">How It Works</h2>
+            <div className="section-label reveal">How It Works</div>
+            <h2 className="section-title reveal">3 Easy Steps</h2>
           </div>
           <div className="lp-how-steps">
             <div className="lp-how-step reveal">
@@ -667,7 +669,8 @@ export default function Home() {
       <section className="section lp-faq" id="faq">
         <div className="container">
           <div className="lp-faq-header">
-            <h2 className="section-title reveal">FAQ</h2>
+            <div className="section-label reveal">FAQ</div>
+            <h2 className="section-title reveal">Frequently Asked Questions</h2>
           </div>
           <div className="lp-faq-list reveal" role="list">
             {faqData.map((item) => (

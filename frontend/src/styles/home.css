@@ -34,7 +34,7 @@
 }
 
 .landing-page .section {
-  padding: 100px 0;
+  padding: 64px 0;
 }
 
 .landing-page .section-label {
@@ -975,6 +975,7 @@
 .landing-page .lp-demo-preview {
   background: var(--bg-primary);
   overflow: hidden;
+  padding-top: 32px;
 }
 
 .demo-preview-wrap {
@@ -1611,7 +1612,7 @@
    FINAL CTA
    ============================================ */
 .landing-page .lp-cta-section {
-  padding: 100px 0;
+  padding: 48px 0;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -1754,7 +1755,7 @@
    ============================================ */
 @media (max-width: 768px) {
   .landing-page .section {
-    padding: 60px 0;
+    padding: 48px 0;
   }
 
   .landing-page .lp-hero {
@@ -1779,7 +1780,7 @@
   }
 
   .landing-page .lp-cta-section {
-    padding: 60px 0;
+    padding: 36px 0;
   }
 
   .landing-page .lp-cta-buttons {
@@ -1810,7 +1811,7 @@
 html { scroll-behavior: smooth; }
 
 .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-.section { padding: 100px 0; }
+.section { padding: 64px 0; }
 
 .section-label {
   font-size: 13px;
