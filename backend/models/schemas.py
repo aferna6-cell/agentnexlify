@@ -5,6 +5,22 @@ from typing import Any
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
+# --- Branding schema ---
+
+
+class BrandingConfig(BaseModel):
+    logo_url: str | None = None
+    primary_color: str | None = None
+    secondary_color: str | None = None
+    accent_color: str | None = None
+    font_family: str | None = None
+    widget_title: str | None = None
+    powered_by_text: str | None = None
+    powered_by_url: str | None = None
+    hide_powered_by: bool = False
+    custom_css: str | None = None
+
+
 # --- Request / Response schemas ---
 
 class ContactRequest(BaseModel):
@@ -120,6 +136,7 @@ class WidgetConfigDetail(BaseModel):
     primary_color: str = "#00BFFF"
     greeting_message: str = "Hi! How can I help you today?"
     position: str = "bottom-right"
+    branding: dict | None = None
 
 
 class DashboardResponse(BaseModel):
@@ -155,6 +172,7 @@ class WidgetConfigUpdateRequest(BaseModel):
     primary_color: str | None = None
     greeting_message: str | None = None
     position: str | None = None
+    branding: BrandingConfig | None = None
 
 
 class FaqEntryResponse(BaseModel):
@@ -249,6 +267,7 @@ class WidgetConfigResponse(BaseModel):
     allowed_domains: list[str] | None
     tenant_id: str | None = None
     booking_enabled: bool = False
+    branding: dict | None = None
 
 
 class WidgetLeadRequest(BaseModel):
@@ -515,7 +534,7 @@ class AutomationStepCreate(BaseModel):
     step_order: int
     delay_minutes: int = 0
     action_type: str = "email"
-    subject_template: str
+    subject_template: str = ""
     body_template: str
 
 
@@ -612,3 +631,56 @@ class WebhookLogResponse(BaseModel):
     response_body: str | None = None
     success: bool | None = None
     created_at: datetime
+
+
+# --- Team schemas ---
+
+
+class TeamInviteRequest(BaseModel):
+    email: str
+    role: str = "member"
+    name: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_invite_email(cls, v: str) -> str:
+        import re
+        if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
+            raise ValueError("Invalid email address")
+        return v.lower().strip()
+
+    @field_validator("role")
+    @classmethod
+    def validate_invite_role(cls, v: str) -> str:
+        if v not in ("admin", "member", "viewer"):
+            raise ValueError("role must be one of: admin, member, viewer")
+        return v
+
+
+class TeamMemberResponse(BaseModel):
+    id: str
+    email: str
+    name: str | None = None
+    role: str
+    invite_accepted: bool
+    last_login: datetime | None = None
+    created_at: datetime
+
+
+class AcceptInviteRequest(BaseModel):
+    token: str
+    name: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_accept_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class InviteValidationResponse(BaseModel):
+    email: str
+    business_name: str
+    role: str

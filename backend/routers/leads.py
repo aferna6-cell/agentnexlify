@@ -10,6 +10,7 @@ from backend.models.database import get_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
 from backend.routers.auth import _get_current_tenant
 from backend.services.lead_scoring import score_all_leads, score_lead
+from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,13 @@ async def update_lead(
     )
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
+
+    fire_event_background(tenant_id, "lead.updated", {
+        "lead_id": lead_id,
+        "updated_fields": list(updates.keys()),
+        **updates,
+    })
+
     return result.data[0]
 
 

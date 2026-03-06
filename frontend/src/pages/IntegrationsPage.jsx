@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import {
+  fetchWebhooks,
+  createWebhook,
+  updateWebhook,
+  toggleWebhook,
+  deleteWebhook,
+  fetchWebhookLogs,
+} from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const BASE =
@@ -33,31 +41,17 @@ async function disconnectGoogle(token) {
 /* ── Inline SVG: Google Calendar logo ── */
 function GoogleCalendarIcon({ size = 40 }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Background */}
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="8" y="8" width="32" height="32" rx="4" fill="#fff" />
-      {/* Top strip (blue) */}
       <rect x="8" y="8" width="32" height="8" rx="4" fill="#4285F4" />
       <rect x="8" y="12" width="32" height="4" fill="#4285F4" />
-      {/* Left border (green) */}
       <rect x="8" y="16" width="4" height="20" fill="#0F9D58" />
-      <rect x="8" y="36" width="4" height="4" rx="0" fill="#0F9D58" />
-      {/* Right border (yellow) */}
-      <rect x="36" y="16" width="4" height="20" fill="#F4B400" />
-      <rect x="36" y="36" width="4" height="4" rx="0" fill="#F4B400" />
-      {/* Bottom border (red) */}
-      <rect x="12" y="36" width="24" height="4" fill="#DB4437" />
-      {/* Bottom-left corner */}
       <rect x="8" y="36" width="4" height="4" fill="#0F9D58" />
-      {/* Bottom-right corner */}
+      <rect x="36" y="16" width="4" height="20" fill="#F4B400" />
+      <rect x="36" y="36" width="4" height="4" fill="#F4B400" />
+      <rect x="12" y="36" width="24" height="4" fill="#DB4437" />
+      <rect x="8" y="36" width="4" height="4" fill="#0F9D58" />
       <rect x="36" y="36" width="4" height="4" fill="#DB4437" />
-      {/* Grid lines */}
       <rect x="12" y="20" width="24" height="1" fill="#E0E0E0" />
       <rect x="12" y="25" width="24" height="1" fill="#E0E0E0" />
       <rect x="12" y="30" width="24" height="1" fill="#E0E0E0" />
@@ -67,184 +61,515 @@ function GoogleCalendarIcon({ size = 40 }) {
   );
 }
 
-export default function IntegrationsPage({ onNavigate }) {
-  const { user, token } = useAuth();
+const ALL_EVENTS = [
+  { value: "lead.created", label: "Lead Created", desc: "When a new lead is captured" },
+  { value: "lead.updated", label: "Lead Updated", desc: "When lead stage/score changes" },
+  { value: "appointment.booked", label: "Appointment Booked", desc: "When an appointment is created" },
+  { value: "appointment.cancelled", label: "Appointment Cancelled", desc: "When an appointment is cancelled" },
+  { value: "conversation.started", label: "Conversation Started", desc: "New chat session begins" },
+  { value: "conversation.message", label: "Conversation Message", desc: "Each new chat message" },
+  { value: "automation.email_sent", label: "Automation Email Sent", desc: "When automation sends an email" },
+];
 
-  const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState(null); // { connected, email, calendar_id, ... }
+const TEMPLATES = [
+  { title: "Send new leads to Google Sheets", desc: "Automatically add each captured lead as a new row in a Google Sheet." },
+  { title: "Create Slack notification on new lead", desc: "Post a message to a Slack channel when a new lead comes in." },
+  { title: "Add leads to Mailchimp", desc: "Subscribe new leads to your Mailchimp audience automatically." },
+  { title: "Create Trello card for new appointment", desc: "Add a card to your Trello board when a new appointment is booked." },
+];
+
+function StatusBadge({ active, failureCount }) {
+  if (!active && failureCount >= 10) {
+    return <span className="wh-badge wh-badge-error">Auto-disabled</span>;
+  }
+  if (!active) {
+    return <span className="wh-badge wh-badge-inactive">Inactive</span>;
+  }
+  return <span className="wh-badge wh-badge-active">Active</span>;
+}
+
+function truncateUrl(url, max = 50) {
+  if (!url) return "";
+  return url.length > max ? url.slice(0, max) + "..." : url;
+}
+
+function formatTime(ts) {
+  if (!ts) return "Never";
+  const d = new Date(ts);
+  return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/* ── Google Calendar Section ── */
+function GoogleCalendarSection({ token }) {
+  const { user } = useAuth();
+  const [status, setStatus] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [toast, setToast] = useState(null);
   const [error, setError] = useState(null);
 
-  /* ── Show success toast if redirected back with ?google=connected ── */
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("google") === "connected") {
-      setToast("Google Calendar connected successfully!");
-      // Clean up the URL without reloading
-      const url = new URL(window.location);
-      url.searchParams.delete("google");
-      window.history.replaceState({}, "", url.pathname + url.search);
-      // Auto-dismiss toast
-      const timer = setTimeout(() => setToast(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  /* ── Load connection status ── */
   const loadStatus = useCallback(async () => {
     if (!user?.tenantId) return;
-    setLoading(true);
-    setError(null);
     try {
       const data = await fetchGoogleStatus(token);
       setStatus(data);
     } catch (err) {
       console.error("Failed to load Google status", err);
-      setError("Failed to load integration status.");
-    } finally {
-      setLoading(false);
     }
   }, [user?.tenantId, token]);
 
-  useEffect(() => {
-    loadStatus();
-  }, [loadStatus]);
+  useEffect(() => { loadStatus(); }, [loadStatus]);
 
-  /* ── Connect handler ── */
   const handleConnect = async () => {
-    if (!user?.tenantId) return;
     setConnecting(true);
     try {
       const data = await startGoogleAuth(token);
-      if (data.auth_url) {
-        window.location.href = data.auth_url;
-      }
+      if (data.auth_url) window.location.href = data.auth_url;
     } catch (err) {
-      console.error("Failed to start Google auth", err);
-      setError("Failed to start Google authorization. Please try again.");
+      setError("Failed to start Google authorization.");
     } finally {
       setConnecting(false);
     }
   };
 
-  /* ── Disconnect handler ── */
   const handleDisconnect = async () => {
-    if (!user?.tenantId) return;
     setDisconnecting(true);
     try {
       await disconnectGoogle(token);
-      setToast("Google Calendar disconnected.");
-      setTimeout(() => setToast(null), 4000);
       await loadStatus();
     } catch (err) {
-      console.error("Failed to disconnect Google", err);
-      setError("Failed to disconnect. Please try again.");
+      setError("Failed to disconnect.");
     } finally {
       setDisconnecting(false);
     }
   };
 
-  if (loading) return <SkeletonLoader />;
-
   const connected = status?.connected;
 
   return (
-    <div className="fade-in">
-      {/* ── Toast ── */}
-      {toast && (
-        <div style={styles.toast}>
-          <span style={styles.toastIcon}>&#10003;</span>
-          {toast}
-          <button
-            onClick={() => setToast(null)}
-            style={styles.toastClose}
-            aria-label="Dismiss"
-          >
-            &times;
-          </button>
+    <div style={gcStyles.card}>
+      <div style={gcStyles.cardTop}>
+        <div style={gcStyles.iconWrap}><GoogleCalendarIcon size={40} /></div>
+        <div style={gcStyles.cardInfo}>
+          <div style={gcStyles.cardTitle}>
+            Google Calendar
+            {connected && <span style={gcStyles.connectedBadge}>Connected</span>}
+          </div>
+          <div style={gcStyles.cardDesc}>
+            Sync appointments to your Google Calendar and check availability against existing events
+          </div>
         </div>
-      )}
-
-      {/* ── Page Header ── */}
-      <div className="page-header">
-        <h1>Integrations</h1>
-        <p>Connect third-party services</p>
       </div>
-
-      {/* ── Error Banner ── */}
-      {error && (
-        <div className="error-banner" style={{ marginBottom: "1.25rem" }}>
-          {error}
+      {connected && status?.email && (
+        <div style={gcStyles.details}>
+          <div style={gcStyles.detailRow}>
+            <span style={gcStyles.detailLabel}>Account</span>
+            <span style={gcStyles.detailValue}>{status.email}</span>
+          </div>
         </div>
       )}
-
-      {/* ── Google Calendar Card ── */}
-      <div style={styles.card}>
-        <div style={styles.cardTop}>
-          <div style={styles.iconWrap}>
-            <GoogleCalendarIcon size={40} />
-          </div>
-          <div style={styles.cardInfo}>
-            <div style={styles.cardTitle}>
-              Google Calendar
-              {connected && (
-                <span style={styles.connectedBadge}>Connected</span>
-              )}
-            </div>
-            <div style={styles.cardDesc}>
-              Sync appointments to your Google Calendar and check availability
-              against existing events
-            </div>
-          </div>
-        </div>
-
-        {/* ── Connected Details ── */}
-        {connected && (status?.email || status?.calendar_name) && (
-          <div style={styles.details}>
-            {status.email && (
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Account</span>
-                <span style={styles.detailValue}>{status.email}</span>
-              </div>
-            )}
-            {status.calendar_id && (
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Calendar</span>
-                <span style={styles.detailValue}>{status.calendar_id}</span>
-              </div>
-            )}
-          </div>
+      {error && <div className="error-banner" style={{ marginTop: "0.75rem" }}>{error}</div>}
+      <div style={gcStyles.cardActions}>
+        {connected ? (
+          <button className="btn-danger" onClick={handleDisconnect} disabled={disconnecting}>
+            {disconnecting ? "Disconnecting..." : "Disconnect"}
+          </button>
+        ) : (
+          <button className="btn-primary" onClick={handleConnect} disabled={connecting}>
+            {connecting ? "Connecting..." : "Connect"}
+          </button>
         )}
-
-        {/* ── Actions ── */}
-        <div style={styles.cardActions}>
-          {connected ? (
-            <button
-              className="btn-danger"
-              onClick={handleDisconnect}
-              disabled={disconnecting}
-            >
-              {disconnecting ? "Disconnecting..." : "Disconnect"}
-            </button>
-          ) : (
-            <button
-              className="btn-primary"
-              onClick={handleConnect}
-              disabled={connecting}
-            >
-              {connecting ? "Connecting..." : "Connect"}
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
 }
 
-/* ── Inline Styles (dark theme) ── */
-const styles = {
+/* ── Main Page ── */
+export default function IntegrationsPage({ onNavigate }) {
+  const { user, token } = useAuth();
+  const [webhooks, setWebhooks] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [activeTab, setActiveTab] = useState("services");
+  const [form, setForm] = useState({ name: "", url: "", events: [], secret: "" });
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google") === "connected") {
+      setToast("Google Calendar connected successfully!");
+      const url = new URL(window.location);
+      url.searchParams.delete("google");
+      window.history.replaceState({}, "", url.pathname + url.search);
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const load = useCallback(async () => {
+    if (!user?.tenantId) return;
+    setLoading(true);
+    try {
+      const [wh, lg] = await Promise.all([
+        fetchWebhooks(user.tenantId, token),
+        fetchWebhookLogs(user.tenantId, token),
+      ]);
+      setWebhooks(wh || []);
+      setLogs(lg || []);
+    } catch (err) {
+      console.error("Failed to load webhooks", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.tenantId, token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleToggleEvent = (eventValue) => {
+    setForm((f) => ({
+      ...f,
+      events: f.events.includes(eventValue)
+        ? f.events.filter((e) => e !== eventValue)
+        : [...f.events, eventValue],
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.url.trim() || form.events.length === 0) return;
+    setSaving(true);
+    try {
+      if (editId) {
+        const updated = await updateWebhook(user.tenantId, token, editId, form);
+        setWebhooks((prev) => prev.map((w) => (w.id === editId ? updated : w)));
+      } else {
+        const created = await createWebhook(user.tenantId, token, form);
+        setWebhooks((prev) => [created, ...prev]);
+      }
+      resetForm();
+    } catch (err) {
+      console.error("Failed to save webhook", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEdit = (webhook) => {
+    setForm({
+      name: webhook.name,
+      url: webhook.url,
+      events: webhook.events || [],
+      secret: webhook.secret || "",
+    });
+    setEditId(webhook.id);
+    setShowForm(true);
+    setActiveTab("webhooks");
+  };
+
+  const handleToggle = async (id) => {
+    try {
+      const result = await toggleWebhook(user.tenantId, token, id);
+      setWebhooks((prev) =>
+        prev.map((w) => (w.id === id ? { ...w, is_active: result.is_active, failure_count: result.is_active ? 0 : w.failure_count } : w))
+      );
+    } catch (err) {
+      console.error("Failed to toggle webhook", err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (deleteConfirm !== id) {
+      setDeleteConfirm(id);
+      return;
+    }
+    try {
+      await deleteWebhook(user.tenantId, token, id);
+      setWebhooks((prev) => prev.filter((w) => w.id !== id));
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error("Failed to delete webhook", err);
+    }
+  };
+
+  const resetForm = () => {
+    setForm({ name: "", url: "", events: [], secret: "" });
+    setEditId(null);
+    setShowForm(false);
+  };
+
+  if (loading) return <SkeletonLoader />;
+
+  return (
+    <div className="fade-in">
+      {toast && (
+        <div style={gcStyles.toast}>
+          <span style={gcStyles.toastIcon}>&#10003;</span>
+          {toast}
+          <button onClick={() => setToast(null)} style={gcStyles.toastClose} aria-label="Dismiss">&times;</button>
+        </div>
+      )}
+
+      <div className="page-header">
+        <h1>Integrations</h1>
+        <p>Connect AgentNexLiFy to third-party services and webhooks</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="wh-tabs">
+        <button className={`wh-tab${activeTab === "services" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("services")}>
+          Connected Services
+        </button>
+        <button className={`wh-tab${activeTab === "webhooks" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("webhooks")}>
+          Webhooks
+        </button>
+        <button className={`wh-tab${activeTab === "logs" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("logs")}>
+          Recent Deliveries
+        </button>
+        <button className={`wh-tab${activeTab === "templates" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("templates")}>
+          Integration Guides
+        </button>
+      </div>
+
+      {/* Services Tab */}
+      {activeTab === "services" && (
+        <GoogleCalendarSection token={token} />
+      )}
+
+      {/* Webhooks Tab */}
+      {activeTab === "webhooks" && (
+        <>
+          <div style={{ marginBottom: "1rem" }}>
+            <button className="btn-primary" onClick={() => showForm ? resetForm() : setShowForm(true)}>
+              {showForm ? "Cancel" : "+ Add Webhook"}
+            </button>
+          </div>
+
+          {showForm && (
+            <div className="settings-card" style={{ marginBottom: "1.5rem" }}>
+              <h3>{editId ? "Edit Webhook" : "New Webhook"}</h3>
+              <div className="settings-field">
+                <label>Name</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="My Zapier Integration"
+                />
+              </div>
+              <div className="settings-field">
+                <label>Webhook URL</label>
+                <input
+                  value={form.url}
+                  onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+                  placeholder="https://hooks.zapier.com/hooks/catch/..."
+                />
+              </div>
+              <div className="settings-field">
+                <label>Events</label>
+                <div className="wh-events-grid">
+                  {ALL_EVENTS.map((evt) => (
+                    <label key={evt.value} className="wh-event-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={form.events.includes(evt.value)}
+                        onChange={() => handleToggleEvent(evt.value)}
+                      />
+                      <div>
+                        <div className="wh-event-label">{evt.label}</div>
+                        <div className="wh-event-desc">{evt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="settings-field">
+                <label>Secret (optional)</label>
+                <input
+                  value={form.secret}
+                  onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))}
+                  placeholder="Auto-generated if left blank"
+                  type="password"
+                />
+                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                  Used to sign payloads with HMAC-SHA256 (X-Webhook-Signature header)
+                </p>
+              </div>
+              <button
+                className="btn-primary"
+                onClick={handleSave}
+                disabled={saving || !form.name.trim() || !form.url.trim() || form.events.length === 0}
+              >
+                {saving ? "Saving..." : editId ? "Update Webhook" : "Create Webhook"}
+              </button>
+            </div>
+          )}
+
+          {webhooks.length === 0 && !showForm ? (
+            <div className="empty-card">
+              <p>No webhooks configured yet. Add a webhook to send data to Zapier, Make, or n8n when events happen.</p>
+            </div>
+          ) : (
+            <div className="wh-list">
+              {webhooks.map((wh) => (
+                <div key={wh.id} className="wh-item">
+                  <div className="wh-item-header">
+                    <div className="wh-item-title">
+                      <strong>{wh.name}</strong>
+                      <StatusBadge active={wh.is_active} failureCount={wh.failure_count} />
+                    </div>
+                    <div className="wh-item-actions">
+                      <button className="wh-btn-sm" onClick={() => handleEdit(wh)} title="Edit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button className="wh-btn-sm" onClick={() => handleToggle(wh.id)} title={wh.is_active ? "Disable" : "Enable"}>
+                        {wh.is_active ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        )}
+                      </button>
+                      <button
+                        className={`wh-btn-sm wh-btn-danger${deleteConfirm === wh.id ? " confirming" : ""}`}
+                        onClick={() => handleDelete(wh.id)}
+                        title="Delete"
+                      >
+                        {deleteConfirm === wh.id ? "OK?" : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6m5 0V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/></svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="wh-item-url">{truncateUrl(wh.url, 60)}</div>
+                  <div className="wh-item-meta">
+                    <div className="wh-item-events">
+                      {(wh.events || []).map((e) => (
+                        <span key={e} className="wh-event-tag">{e}</span>
+                      ))}
+                    </div>
+                    <div className="wh-item-triggered">
+                      Last triggered: {formatTime(wh.last_triggered_at)}
+                      {wh.failure_count > 0 && (
+                        <span className="wh-failure-count"> ({wh.failure_count} failures)</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Logs Tab */}
+      {activeTab === "logs" && (
+        <>
+          <div style={{ marginBottom: "1rem" }}>
+            <button className="btn-primary" onClick={load}>Refresh</button>
+          </div>
+          {logs.length === 0 ? (
+            <div className="empty-card">
+              <p>No webhook deliveries yet. Events will appear here once webhooks are triggered.</p>
+            </div>
+          ) : (
+            <div className="wh-logs-list">
+              {logs.map((log) => (
+                <div
+                  key={log.id}
+                  className={`wh-log-item${selectedLog === log.id ? " wh-log-expanded" : ""}`}
+                  onClick={() => setSelectedLog(selectedLog === log.id ? null : log.id)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="wh-log-header">
+                    <span className={`wh-log-status ${log.success ? "wh-log-ok" : "wh-log-fail"}`}>
+                      {log.response_status || "ERR"}
+                    </span>
+                    <span className="wh-event-tag">{log.event}</span>
+                    <span className="wh-log-time">{formatTime(log.created_at)}</span>
+                  </div>
+                  {selectedLog === log.id && (
+                    <div className="wh-log-detail">
+                      <div className="wh-log-section">
+                        <strong>Payload</strong>
+                        <pre>{JSON.stringify(log.payload, null, 2)}</pre>
+                      </div>
+                      <div className="wh-log-section">
+                        <strong>Response ({log.response_status || "N/A"})</strong>
+                        <pre>{log.response_body || "No response"}</pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Templates Tab */}
+      {activeTab === "templates" && (
+        <>
+          {/* Zapier Instructions */}
+          <div className="settings-card" style={{ marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <h3 style={{ margin: 0 }}>Connect with Zapier / Make / n8n</h3>
+            </div>
+            <ol style={{ color: "var(--text-secondary)", lineHeight: 1.8, paddingLeft: "1.25rem" }}>
+              <li>In your automation tool, create a new workflow and choose <strong>"Webhooks"</strong> as the trigger</li>
+              <li>Select <strong>"Catch Hook"</strong> (Zapier) or <strong>"Custom Webhook"</strong> (Make/n8n)</li>
+              <li>Copy the webhook URL provided by the tool</li>
+              <li>Come back here, go to the <strong>Webhooks</strong> tab, click <strong>"+ Add Webhook"</strong></li>
+              <li>Paste the URL and select which events to send</li>
+              <li>Go back to your automation tool and test the trigger &mdash; it should receive a sample payload</li>
+              <li>Add your action step (Google Sheets, Slack, Mailchimp, CRM, etc.)</li>
+            </ol>
+          </div>
+
+          {/* Template Ideas */}
+          <h3 style={{ marginBottom: "1rem" }}>Popular Integration Ideas</h3>
+          <div className="wh-templates-grid">
+            {TEMPLATES.map((tpl, i) => (
+              <div key={i} className="wh-template-card">
+                <h4>{tpl.title}</h4>
+                <p>{tpl.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Payload Reference */}
+          <div className="settings-card" style={{ marginTop: "1.5rem" }}>
+            <h3>Webhook Payload Format</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+              Every webhook delivery sends a JSON POST with this structure:
+            </p>
+            <pre className="wh-code-block">{`{
+  "event": "lead.created",
+  "timestamp": "2026-03-06T12:00:00Z",
+  "data": {
+    "lead_id": "uuid",
+    "name": "John Smith",
+    "email": "john@example.com",
+    "phone": "555-0100",
+    "source": "widget"
+  }
+}`}</pre>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.75rem" }}>
+              Payloads are signed with HMAC-SHA256 using your webhook secret. Verify the
+              <code style={{ color: "var(--accent)" }}> X-Webhook-Signature</code> header to authenticate deliveries.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Google Calendar inline styles (dark theme) ── */
+const gcStyles = {
   card: {
     background: "var(--bg-card)",
     border: "1px solid var(--border)",
@@ -267,10 +592,7 @@ const styles = {
     background: "rgba(255,255,255,0.06)",
     borderRadius: "var(--radius-sm)",
   },
-  cardInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
+  cardInfo: { flex: 1, minWidth: 0 },
   cardTitle: {
     fontSize: "1rem",
     fontWeight: 600,
@@ -301,9 +623,6 @@ const styles = {
     background: "var(--bg-secondary)",
     border: "1px solid var(--border)",
     borderRadius: "var(--radius-sm)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.5rem",
   },
   detailRow: {
     display: "flex",
@@ -343,10 +662,7 @@ const styles = {
     fontWeight: 500,
     animation: "fadeIn 0.3s ease forwards",
   },
-  toastIcon: {
-    fontSize: "1rem",
-    fontWeight: 700,
-  },
+  toastIcon: { fontSize: "1rem", fontWeight: 700 },
   toastClose: {
     marginLeft: "0.5rem",
     background: "none",

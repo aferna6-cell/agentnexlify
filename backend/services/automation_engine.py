@@ -6,7 +6,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from backend.models.database import get_supabase
-from backend.services.email_sender import render_template, send_email
+from backend.services.email_sender import render_sms_template, render_template, send_email
+from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
+from backend.services.twilio_service import send_sms
+from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
@@ -154,10 +157,10 @@ async def execute_step(execution_id: str) -> None:
         return
     lead = lead_result.data[0]
 
-    # Load tenant for business_name
+    # Load tenant for business_name and plan
     tenant_result = (
         db.table("tenants")
-        .select("id, business_name")
+        .select("id, business_name, plan")
         .eq("id", execution["tenant_id"])
         .limit(1)
         .execute()
@@ -168,46 +171,103 @@ async def execute_step(execution_id: str) -> None:
     context = {
         "name": lead.get("name") or "there",
         "email": lead.get("email") or "",
+        "phone": lead.get("phone") or "",
         "business_name": tenant.get("business_name") or "Our Team",
     }
 
-    # If lead has no email, skip this step
-    if not lead.get("email"):
+    action_type = step.get("action_type", "email")
+
+    if action_type == "sms":
+        # --- SMS path ---
+        if not lead.get("phone"):
+            db.table("automation_logs").insert({
+                "execution_id": execution_id,
+                "step_id": step["id"],
+                "action": "skipped",
+                "details": {"reason": "no_phone"},
+            }).execute()
+            _advance_execution(db, execution, step)
+            return
+
+        plan = tenant.get("plan", "free")
+        if not check_sms_rate_limit(execution["tenant_id"], plan):
+            db.table("automation_logs").insert({
+                "execution_id": execution_id,
+                "step_id": step["id"],
+                "action": "skipped",
+                "details": {"reason": "sms_rate_limit"},
+            }).execute()
+            _advance_execution(db, execution, step)
+            return
+
+        body = render_sms_template(step["body_template"], context)
+        sms_ok = await send_sms(to=lead["phone"], body=body)
+
+        action = "sms_sent" if sms_ok else "sms_failed"
         db.table("automation_logs").insert({
             "execution_id": execution_id,
             "step_id": step["id"],
-            "action": "skipped",
-            "details": {"reason": "no_email"},
+            "action": action,
+            "details": {"phone": lead["phone"]},
         }).execute()
-        _advance_execution(db, execution, step)
-        return
 
-    # Render templates
-    subject = render_template(step["subject_template"], context)
-    body = render_template(step["body_template"], context)
+        if sms_ok:
+            increment_sms_count(execution["tenant_id"])
+            fire_event_background(execution["tenant_id"], "automation.sms_sent", {
+                "lead_id": execution["lead_id"],
+                "lead_phone": lead["phone"],
+                "sequence_id": execution["sequence_id"],
+                "step_order": execution["current_step"],
+            })
+        else:
+            logger.warning(
+                "SMS failed for execution %s step %s",
+                execution_id, step["id"],
+            )
+    else:
+        # --- Email path (default) ---
+        if not lead.get("email"):
+            db.table("automation_logs").insert({
+                "execution_id": execution_id,
+                "step_id": step["id"],
+                "action": "skipped",
+                "details": {"reason": "no_email"},
+            }).execute()
+            _advance_execution(db, execution, step)
+            return
 
-    # Send email
-    result = await send_email(
-        to=lead["email"],
-        subject=subject,
-        body_html=body,
-        tenant_id=execution["tenant_id"],
-    )
+        subject = render_template(step["subject_template"], context)
+        body = render_template(step["body_template"], context)
 
-    # Log result
-    action = "email_sent" if result["success"] else "email_failed"
-    db.table("automation_logs").insert({
-        "execution_id": execution_id,
-        "step_id": step["id"],
-        "action": action,
-        "details": result,
-    }).execute()
-
-    if not result["success"]:
-        logger.warning(
-            "Email failed for execution %s step %s: %s",
-            execution_id, step["id"], result.get("detail"),
+        result = await send_email(
+            to=lead["email"],
+            subject=subject,
+            body_html=body,
+            tenant_id=execution["tenant_id"],
         )
+
+        action = "email_sent" if result["success"] else "email_failed"
+        db.table("automation_logs").insert({
+            "execution_id": execution_id,
+            "step_id": step["id"],
+            "action": action,
+            "details": result,
+        }).execute()
+
+        if result["success"]:
+            fire_event_background(execution["tenant_id"], "automation.email_sent", {
+                "lead_id": execution["lead_id"],
+                "lead_email": lead["email"],
+                "subject": subject,
+                "sequence_id": execution["sequence_id"],
+                "step_order": execution["current_step"],
+            })
+
+        if not result["success"]:
+            logger.warning(
+                "Email failed for execution %s step %s: %s",
+                execution_id, step["id"], result.get("detail"),
+            )
 
     _advance_execution(db, execution, step)
 

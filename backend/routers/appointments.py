@@ -27,6 +27,8 @@ from backend.services.booking import (
     upsert_business_hours,
 )
 
+from backend.services.webhook_dispatcher import fire_event_background
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/appointments", tags=["appointments"])
@@ -181,6 +183,14 @@ async def book_appointment(request: Request, tenant_id: str, req: BookAppointmen
         logger.exception("Failed to create appointment for tenant %s", tenant_id)
         raise HTTPException(status_code=500, detail="Failed to create appointment")
 
+    fire_event_background(tenant_id, "appointment.booked", {
+        "appointment_id": appointment["id"],
+        "customer_name": appointment["customer_name"],
+        "customer_email": appointment["customer_email"],
+        "start_time": appointment["start_time"],
+        "end_time": appointment["end_time"],
+    })
+
     return BookAppointmentResponse(
         id=appointment["id"],
         start_time=appointment["start_time"],
@@ -238,4 +248,9 @@ async def delete_appointment(
     result = cancel_appointment(tenant_id, appointment_id)
     if not result:
         raise HTTPException(status_code=404, detail="Appointment not found")
+
+    fire_event_background(tenant_id, "appointment.cancelled", {
+        "appointment_id": appointment_id,
+    })
+
     return {"status": "cancelled", "id": appointment_id}

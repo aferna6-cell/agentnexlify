@@ -24,9 +24,56 @@ from backend.models.schemas import (
 )
 from backend.services.activity import log_activity
 from backend.services.lead_scoring import score_lead_background
+from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
+
+# ── Branding plan restrictions ────────────────────────────────
+_BRANDING_PLAN_FIELDS: dict[str, set[str]] = {
+    "free": {"primary_color"},
+    "foundation": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url"},
+    "growth": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family"},
+    "operations": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family", "custom_css"},
+    "enterprise": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family", "custom_css"},
+}
+
+_DANGEROUS_CSS_RE = re.compile(
+    r"<script|javascript:|@import|expression\s*\(", re.IGNORECASE
+)
+_CSS_URL_RE = re.compile(r"url\s*\(", re.IGNORECASE)
+_FONT_URL_RE = re.compile(r"(src\s*:\s*url\s*\(|font-face)", re.IGNORECASE)
+
+
+def _sanitize_css(css: str | None) -> str | None:
+    """Strip dangerous patterns from custom CSS."""
+    if not css:
+        return css
+    css = _DANGEROUS_CSS_RE.sub("", css)
+    lines = css.split("\n")
+    cleaned = []
+    in_font_face = False
+    for line in lines:
+        if "@font-face" in line.lower():
+            in_font_face = True
+        if in_font_face and "}" in line:
+            in_font_face = False
+        if not in_font_face and _CSS_URL_RE.search(line) and not _FONT_URL_RE.search(line):
+            line = _CSS_URL_RE.sub("/* sanitized */", line)
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
+def _filter_branding_for_plan(branding: dict | None, plan: str) -> dict:
+    """Return only branding fields allowed for the given plan."""
+    if not branding:
+        return {}
+    allowed = _BRANDING_PLAN_FIELDS.get(plan, _BRANDING_PLAN_FIELDS["free"])
+    filtered = {k: v for k, v in branding.items() if k in allowed and v is not None}
+    if plan in ("free", "foundation"):
+        filtered.pop("hide_powered_by", None)
+    return filtered
+
 
 MODEL = "claude-sonnet-4-5-20250929"
 MAX_TOKENS = 500
@@ -311,6 +358,11 @@ def _capture_leads_from_session(
                         metadata={"source": "widget", "fields": list(updates.keys())},
                     )
                     logger.info("lead_capture: updated lead %s fields=%s", lead["id"], list(updates.keys()))
+                    fire_event_background(tenant_id, "lead.updated", {
+                        "lead_id": lead["id"],
+                        "updated_fields": list(updates.keys()),
+                        "source": "widget",
+                    })
                 return
 
         # Create new lead — live schema: client_id, status (not tenant_id, lead_stage)
@@ -352,6 +404,15 @@ def _capture_leads_from_session(
             )
             logger.info("lead_capture: SUCCESS lead_id=%s client_id=%s", lead_id, tenant_id)
 
+            # Fire webhook for new lead
+            fire_event_background(tenant_id, "lead.created", {
+                "lead_id": lead_id,
+                "name": combined.get("name"),
+                "email": combined.get("email"),
+                "phone": combined.get("phone"),
+                "source": "widget",
+            })
+
             # Fire automation trigger for new leads
             try:
                 from backend.services.automation_engine import trigger_sequence
@@ -359,6 +420,12 @@ def _capture_leads_from_session(
                 asyncio.create_task(trigger_sequence(tenant_id, lead_id, "new_lead"))
             except Exception:
                 logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
+
+            # SMS notification to owner
+            try:
+                _send_new_lead_sms_notification(tenant_id, lead_name, combined)
+            except Exception:
+                logger.warning("Failed to send SMS notification for lead %s", lead_id, exc_info=True)
 
             # Score the lead
             try:
@@ -370,6 +437,32 @@ def _capture_leads_from_session(
 
     except Exception:
         logger.error("lead_capture FAILED: session=%s tenant=%s", session_id, tenant_id, exc_info=True)
+
+
+def _send_new_lead_sms_notification(
+    tenant_id: str, lead_name: str, lead_info: dict[str, str]
+) -> None:
+    """Send SMS notification to tenant owner when a new lead is captured."""
+    import asyncio
+    db = get_supabase()
+    result = (
+        db.table("tenants")
+        .select("notification_phone, sms_notifications_enabled, business_name")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        return
+    tenant = result.data[0]
+    if not tenant.get("sms_notifications_enabled") or not tenant.get("notification_phone"):
+        return
+
+    contact = lead_info.get("email") or lead_info.get("phone") or "no contact info"
+    body = f"New lead for {tenant.get('business_name', 'your business')}: {lead_name} ({contact})"
+
+    from backend.services.twilio_service import send_sms
+    asyncio.create_task(send_sms(to=tenant["notification_phone"], body=body))
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +501,13 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 4. Get or create conversation
     conversation_id, is_new = _get_or_create_conversation(tenant["id"], req.session_id)
     logger.info("widget_chat: conversation=%s is_new=%s", conversation_id, is_new)
+
+    # Fire conversation.started webhook for new sessions
+    if is_new:
+        fire_event_background(tenant["id"], "conversation.started", {
+            "session_id": req.session_id,
+            "conversation_id": conversation_id,
+        })
 
     # Increment usage counter only for new conversations
     if is_new:
@@ -493,6 +593,13 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
     # 9. Save user + assistant messages to chat_messages table
     _save_chat_messages(tenant["id"], req.session_id, req.message, assistant_text)
+
+    # Fire conversation.message webhook
+    fire_event_background(tenant["id"], "conversation.message", {
+        "session_id": req.session_id,
+        "user_message": req.message,
+        "assistant_message": assistant_text[:500],
+    })
 
     # 10. Lead capture — runs in background so it doesn't slow the response.
     # Scans ALL messages in the session (not just the current one) for
