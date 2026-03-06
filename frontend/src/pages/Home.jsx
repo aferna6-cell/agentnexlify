@@ -372,18 +372,18 @@ export default function Home() {
           <div className="lp-how-steps">
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">1</div>
-              <h3>Connect</h3>
-              <p>Tell us about your business. We handle the rest.</p>
+              <h3>Connect Your Business</h3>
+              <p>Sign up, tell us about your business, and configure your AI assistant with your FAQs, services, and greeting message.</p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">2</div>
-              <h3>Go Live</h3>
-              <p>Your AI assistant starts working in minutes.</p>
+              <h3>AI Takes Over</h3>
+              <p>Embed one line of code on your website. Your AI assistant starts responding to visitors, capturing leads, and booking appointments instantly.</p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
-              <h3>Grow</h3>
-              <p>Watch leads, bookings, and follow-ups happen automatically.</p>
+              <h3>You Close Deals</h3>
+              <p>Leads flow into your dashboard scored and organized. Automated follow-ups keep them warm while you focus on closing.</p>
             </div>
           </div>
         </div>
