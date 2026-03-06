@@ -61,7 +61,7 @@ const faqData = [
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Absolutely. Most partners start with Foundation or Growth and upgrade within a few months once they see results. We migrate everything seamlessly \u2014 no downtime, no lost data.",
+      "Absolutely! We suggest starting with Foundation or Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page.",
   },
   {
     id: "faq-a6",
@@ -82,154 +82,146 @@ const faqData = [
   },
 ];
 
-/* ── Ambient pad via Web Audio API ── */
-function useAmbientAudio() {
-  const ctxRef = useRef(null);
-  const playingRef = useRef(false);
+/* ── Demo slideshow tabs ── */
+const demoTabs = ["Dashboard", "Widget Chat", "Clients", "Automations", "Calendar"];
 
-  const toggle = useCallback(() => {
-    if (playingRef.current) {
-      ctxRef.current?.close();
-      ctxRef.current = null;
-      playingRef.current = false;
-      return false;
-    }
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const dur = 5;
-    const notes = [220, 277.18, 329.63, 440];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, 0);
-      gain.gain.linearRampToValueAtTime(0.04, 1.5);
-      gain.gain.linearRampToValueAtTime(0.04, dur - 1.5);
-      gain.gain.linearRampToValueAtTime(0, dur);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(i * 0.3);
-      osc.stop(ctx.currentTime + dur + i * 0.3);
-    });
-    // loop
-    const loop = () => {
-      if (!playingRef.current) return;
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, 0);
-        gain.gain.linearRampToValueAtTime(0.04, 1.5);
-        gain.gain.linearRampToValueAtTime(0.04, dur - 1.5);
-        gain.gain.linearRampToValueAtTime(0, dur);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(i * 0.3);
-        osc.stop(ctx.currentTime + dur + i * 0.3);
-      });
-    };
-    const iv = setInterval(loop, dur * 1000);
-    ctxRef.current = ctx;
-    ctx._iv = iv;
-    const origClose = ctx.close.bind(ctx);
-    ctx.close = () => { clearInterval(iv); return origClose(); };
-    playingRef.current = true;
-    return true;
-  }, []);
+function DemoSlide({ tab }) {
+  if (tab === "Dashboard") return (
+    <div className="ds-dashboard">
+      <div className="ds-stats-row">
+        <div className="ds-stat-card"><span className="ds-stat-num">24</span><span className="ds-stat-lbl">Leads today</span></div>
+        <div className="ds-stat-card"><span className="ds-stat-num">8</span><span className="ds-stat-lbl">Appointments</span></div>
+        <div className="ds-stat-card accent"><span className="ds-stat-num">96%</span><span className="ds-stat-lbl">Response rate</span></div>
+      </div>
+      <div className="ds-cols">
+        <div className="ds-pipeline">
+          <div className="ds-panel-title">Lead Pipeline</div>
+          <div className="ds-lead"><span className="ds-dot green" /><span>Sarah Johnson</span><span className="ds-tag hot">Hot</span></div>
+          <div className="ds-lead"><span className="ds-dot blue" /><span>Mike Chen</span><span className="ds-tag warm">Warm</span></div>
+          <div className="ds-lead"><span className="ds-dot green" /><span>Emily Davis</span><span className="ds-tag new">New</span></div>
+        </div>
+        <div className="ds-activity">
+          <div className="ds-panel-title">Recent Activity</div>
+          <div className="ds-activity-item"><span className="ds-activity-dot" />New lead captured from website</div>
+          <div className="ds-activity-item"><span className="ds-activity-dot" />Follow-up sent to Sarah Johnson</div>
+          <div className="ds-activity-item"><span className="ds-activity-dot" />Appointment booked &mdash; Mike Chen</div>
+        </div>
+      </div>
+    </div>
+  );
 
-  useEffect(() => () => { ctxRef.current?.close(); }, []);
-  return toggle;
+  if (tab === "Widget Chat") return (
+    <div className="ds-chat">
+      <div className="ds-chat-window">
+        <div className="ds-chat-header"><span className="ds-chat-status" />AI Assistant &mdash; Online</div>
+        <div className="ds-chat-body">
+          <div className="ds-msg bot">Hi! How can I help you today?</div>
+          <div className="ds-msg user">I&apos;d like to schedule a consultation</div>
+          <div className="ds-msg bot">Of course! I&apos;d be happy to help. What day works best for you?</div>
+          <div className="ds-msg user">How about Thursday at 2pm?</div>
+          <div className="ds-msg bot">Thursday at 2:00 PM is available. I&apos;ve booked that for you. You&apos;ll get a confirmation email shortly!</div>
+        </div>
+        <div className="ds-chat-input"><span>Type a message...</span></div>
+      </div>
+    </div>
+  );
+
+  if (tab === "Clients") return (
+    <div className="ds-clients">
+      <div className="ds-panel-title">Clients &amp; Leads</div>
+      <div className="ds-table">
+        <div className="ds-table-head">
+          <span>Name</span><span>Score</span><span>Stage</span><span>Last Contact</span>
+        </div>
+        <div className="ds-table-row"><span>Sarah Johnson</span><span className="ds-score high">92</span><span className="ds-tag hot">Hot</span><span>2 hrs ago</span></div>
+        <div className="ds-table-row"><span>Mike Chen</span><span className="ds-score med">74</span><span className="ds-tag warm">Warm</span><span>1 day ago</span></div>
+        <div className="ds-table-row"><span>Emily Davis</span><span className="ds-score high">88</span><span className="ds-tag new">New</span><span>Just now</span></div>
+        <div className="ds-table-row"><span>James Wilson</span><span className="ds-score low">45</span><span className="ds-tag cold">Cold</span><span>5 days ago</span></div>
+        <div className="ds-table-row"><span>Lisa Park</span><span className="ds-score med">67</span><span className="ds-tag warm">Warm</span><span>3 hrs ago</span></div>
+      </div>
+    </div>
+  );
+
+  if (tab === "Automations") return (
+    <div className="ds-automations">
+      <div className="ds-panel-title">Email Sequence: New Lead Follow-Up</div>
+      <div className="ds-sequence">
+        <div className="ds-step active"><div className="ds-step-badge">1</div><div className="ds-step-info"><strong>Welcome Email</strong><span>Sent immediately</span></div><span className="ds-step-status sent">Sent</span></div>
+        <div className="ds-step-line" />
+        <div className="ds-step active"><div className="ds-step-badge">2</div><div className="ds-step-info"><strong>Case Study</strong><span>After 2 days</span></div><span className="ds-step-status sent">Sent</span></div>
+        <div className="ds-step-line" />
+        <div className="ds-step current"><div className="ds-step-badge pulse">3</div><div className="ds-step-info"><strong>Check-In</strong><span>After 5 days</span></div><span className="ds-step-status pending">Pending</span></div>
+        <div className="ds-step-line dim" />
+        <div className="ds-step dim"><div className="ds-step-badge">4</div><div className="ds-step-info"><strong>Special Offer</strong><span>After 10 days</span></div><span className="ds-step-status">Scheduled</span></div>
+      </div>
+    </div>
+  );
+
+  if (tab === "Calendar") return (
+    <div className="ds-calendar">
+      <div className="ds-panel-title">This Week &mdash; March 2026</div>
+      <div className="ds-cal-grid">
+        {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => (
+          <div className="ds-cal-col" key={day}>
+            <div className="ds-cal-day">{day}</div>
+            <div className="ds-cal-slots">
+              {day === "Mon" && <><div className="ds-cal-event blue">9:00 &mdash; Sarah J.</div><div className="ds-cal-event green">2:00 &mdash; Mike C.</div></>}
+              {day === "Tue" && <div className="ds-cal-event purple">10:30 &mdash; Emily D.</div>}
+              {day === "Wed" && <><div className="ds-cal-event blue">11:00 &mdash; James W.</div><div className="ds-cal-event green">3:30 &mdash; Lisa P.</div></>}
+              {day === "Thu" && <div className="ds-cal-event accent">2:00 &mdash; New Consult</div>}
+              {day === "Fri" && <div className="ds-cal-event blue">9:30 &mdash; Follow-up</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return null;
 }
 
 function DemoPreview() {
-  const [musicOn, setMusicOn] = useState(false);
-  const toggleAudio = useAmbientAudio();
+  const [active, setActive] = useState(0);
 
-  const handleMusic = () => {
-    const nowPlaying = toggleAudio();
-    setMusicOn(nowPlaying);
-  };
+  useEffect(() => {
+    const iv = setInterval(() => setActive((p) => (p + 1) % demoTabs.length), 5000);
+    return () => clearInterval(iv);
+  }, []);
 
   return (
     <section className="section lp-demo-preview" id="demo">
       <div className="container">
         <div className="demo-preview-wrap">
-          {/* Fake browser chrome */}
           <div className="demo-browser">
             <div className="demo-browser-bar">
-              <span className="demo-dot"></span>
-              <span className="demo-dot"></span>
-              <span className="demo-dot"></span>
-              <span className="demo-url">app.agentnexlify.com/dashboard</span>
+              <span className="demo-dot" /><span className="demo-dot" /><span className="demo-dot" />
+              <span className="demo-url">app.agentnexlify.com/{demoTabs[active].toLowerCase().replace(/ /g, "-")}</span>
             </div>
             <div className="demo-screen">
-              {/* Dashboard sidebar */}
               <div className="demo-sidebar">
                 <div className="demo-sidebar-logo">NexLiFy</div>
-                <div className="demo-sidebar-item active">Dashboard</div>
-                <div className="demo-sidebar-item">Leads</div>
-                <div className="demo-sidebar-item">Conversations</div>
-                <div className="demo-sidebar-item">Settings</div>
+                {demoTabs.map((t, i) => (
+                  <button key={t} className={`demo-sidebar-item${i === active ? " active" : ""}`} onClick={() => setActive(i)}>{t}</button>
+                ))}
               </div>
-              {/* Dashboard main */}
               <div className="demo-main">
-                <div className="demo-stats">
-                  <div className="demo-stat"><span className="demo-stat-num">24</span><span className="demo-stat-label">Leads today</span></div>
-                  <div className="demo-stat"><span className="demo-stat-num">8</span><span className="demo-stat-label">Appointments</span></div>
-                  <div className="demo-stat"><span className="demo-stat-num">96%</span><span className="demo-stat-label">Response rate</span></div>
-                </div>
-                {/* Pipeline */}
-                <div className="demo-pipeline">
-                  <div className="demo-pipeline-title">Lead Pipeline</div>
-                  <div className="demo-pipeline-rows">
-                    <div className="demo-lead-row">
-                      <span className="demo-lead-dot green"></span>
-                      <span>Sarah Johnson</span>
-                      <span className="demo-lead-tag">Hot</span>
+                <div className="ds-slide-wrap">
+                  {demoTabs.map((t, i) => (
+                    <div key={t} className={`ds-slide${i === active ? " ds-slide-active" : ""}`}>
+                      <DemoSlide tab={t} />
                     </div>
-                    <div className="demo-lead-row">
-                      <span className="demo-lead-dot blue"></span>
-                      <span>Mike Chen</span>
-                      <span className="demo-lead-tag warm">Warm</span>
-                    </div>
-                    {/* New lead animates in */}
-                    <div className="demo-lead-row demo-new-lead">
-                      <span className="demo-lead-dot green"></span>
-                      <span>Emily Davis</span>
-                      <span className="demo-lead-tag new">New</span>
-                    </div>
-                  </div>
-                </div>
-                {/* Notification */}
-                <div className="demo-notification">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
-                  <span>New lead: Emily Davis just started a conversation</span>
-                </div>
-              </div>
-              {/* Chat widget overlay */}
-              <div className="demo-widget-bubble">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#000" stroke="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              </div>
-              <div className="demo-widget-window">
-                <div className="demo-widget-header">AI Assistant</div>
-                <div className="demo-widget-messages">
-                  <div className="demo-wmsg bot">Hi! How can I help you today?</div>
-                  <div className="demo-wmsg user demo-wmsg-visitor">I&apos;d like to schedule a consultation</div>
-                  <div className="demo-wmsg bot demo-wmsg-ai">Of course! I&apos;d be happy to help. What day works best for you?</div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-          {/* Music toggle */}
-          <button className="demo-music-btn" onClick={handleMusic} aria-label={musicOn ? "Mute ambient music" : "Play ambient music"}>
-            {musicOn ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-            )}
-            <span>{musicOn ? "Mute" : "Play music"}</span>
-          </button>
+          {/* Slide indicator dots */}
+          <div className="demo-indicators">
+            {demoTabs.map((t, i) => (
+              <button key={t} className={`demo-ind${i === active ? " active" : ""}`} onClick={() => setActive(i)} aria-label={t} />
+            ))}
+          </div>
         </div>
-        {/* CTA */}
         <div className="demo-preview-cta reveal">
           <h2 className="section-title">See it firsthand</h2>
           <Link to="/contact" className="btn-primary">
@@ -356,7 +348,7 @@ export default function Home() {
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
 
-    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Most partners start with Foundation or Growth and upgrade within a few months." } },
+    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Foundation or Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
     { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising leads — you decide how to follow up." } },
     { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service." } }
@@ -377,6 +369,7 @@ export default function Home() {
             <a href="#how-it-works" onClick={closeMenu}>How It Works</a>
             <a href="#features" onClick={closeMenu}>Features</a>
             <a href="#pricing" onClick={closeMenu}>Pricing</a>
+            <a href="#demo" onClick={closeMenu}>Demo</a>
             <a href="#faq" onClick={closeMenu}>FAQ</a>
           </div>
 
