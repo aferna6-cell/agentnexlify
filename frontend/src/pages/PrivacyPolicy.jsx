@@ -207,6 +207,15 @@ export default function PrivacyPolicy() {
             <li>Row-level security in our database to isolate tenant data.</li>
           </ul>
           <p>
+            Your data is stored securely on Supabase, a SOC 2 Type 2 compliant cloud database platform
+            hosted on Amazon Web Services (AWS). All data is encrypted at rest and in transit. Supabase
+            does not sell, trade, or share your personal information with third parties. For more
+            information, see Supabase&rsquo;s privacy policy at{" "}
+            <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer">
+              supabase.com/privacy
+            </a>.
+          </p>
+          <p>
             No system is 100% secure. If we discover a data breach that affects your personal information,
             we will notify you promptly.
           </p>
