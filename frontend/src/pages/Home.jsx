@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
@@ -81,6 +81,165 @@ const faqData = [
       "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service. We take care of the setup and management so you can focus on your business.",
   },
 ];
+
+/* ── Ambient pad via Web Audio API ── */
+function useAmbientAudio() {
+  const ctxRef = useRef(null);
+  const playingRef = useRef(false);
+
+  const toggle = useCallback(() => {
+    if (playingRef.current) {
+      ctxRef.current?.close();
+      ctxRef.current = null;
+      playingRef.current = false;
+      return false;
+    }
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const dur = 5;
+    const notes = [220, 277.18, 329.63, 440];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, 0);
+      gain.gain.linearRampToValueAtTime(0.04, 1.5);
+      gain.gain.linearRampToValueAtTime(0.04, dur - 1.5);
+      gain.gain.linearRampToValueAtTime(0, dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(i * 0.3);
+      osc.stop(ctx.currentTime + dur + i * 0.3);
+    });
+    // loop
+    const loop = () => {
+      if (!playingRef.current) return;
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, 0);
+        gain.gain.linearRampToValueAtTime(0.04, 1.5);
+        gain.gain.linearRampToValueAtTime(0.04, dur - 1.5);
+        gain.gain.linearRampToValueAtTime(0, dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(i * 0.3);
+        osc.stop(ctx.currentTime + dur + i * 0.3);
+      });
+    };
+    const iv = setInterval(loop, dur * 1000);
+    ctxRef.current = ctx;
+    ctx._iv = iv;
+    const origClose = ctx.close.bind(ctx);
+    ctx.close = () => { clearInterval(iv); return origClose(); };
+    playingRef.current = true;
+    return true;
+  }, []);
+
+  useEffect(() => () => { ctxRef.current?.close(); }, []);
+  return toggle;
+}
+
+function DemoPreview() {
+  const [musicOn, setMusicOn] = useState(false);
+  const toggleAudio = useAmbientAudio();
+
+  const handleMusic = () => {
+    const nowPlaying = toggleAudio();
+    setMusicOn(nowPlaying);
+  };
+
+  return (
+    <section className="section lp-demo-preview" id="demo">
+      <div className="container">
+        <div className="demo-preview-wrap">
+          {/* Fake browser chrome */}
+          <div className="demo-browser">
+            <div className="demo-browser-bar">
+              <span className="demo-dot"></span>
+              <span className="demo-dot"></span>
+              <span className="demo-dot"></span>
+              <span className="demo-url">app.agentnexlify.com/dashboard</span>
+            </div>
+            <div className="demo-screen">
+              {/* Dashboard sidebar */}
+              <div className="demo-sidebar">
+                <div className="demo-sidebar-logo">NexLiFy</div>
+                <div className="demo-sidebar-item active">Dashboard</div>
+                <div className="demo-sidebar-item">Leads</div>
+                <div className="demo-sidebar-item">Conversations</div>
+                <div className="demo-sidebar-item">Settings</div>
+              </div>
+              {/* Dashboard main */}
+              <div className="demo-main">
+                <div className="demo-stats">
+                  <div className="demo-stat"><span className="demo-stat-num">24</span><span className="demo-stat-label">Leads today</span></div>
+                  <div className="demo-stat"><span className="demo-stat-num">8</span><span className="demo-stat-label">Appointments</span></div>
+                  <div className="demo-stat"><span className="demo-stat-num">96%</span><span className="demo-stat-label">Response rate</span></div>
+                </div>
+                {/* Pipeline */}
+                <div className="demo-pipeline">
+                  <div className="demo-pipeline-title">Lead Pipeline</div>
+                  <div className="demo-pipeline-rows">
+                    <div className="demo-lead-row">
+                      <span className="demo-lead-dot green"></span>
+                      <span>Sarah Johnson</span>
+                      <span className="demo-lead-tag">Hot</span>
+                    </div>
+                    <div className="demo-lead-row">
+                      <span className="demo-lead-dot blue"></span>
+                      <span>Mike Chen</span>
+                      <span className="demo-lead-tag warm">Warm</span>
+                    </div>
+                    {/* New lead animates in */}
+                    <div className="demo-lead-row demo-new-lead">
+                      <span className="demo-lead-dot green"></span>
+                      <span>Emily Davis</span>
+                      <span className="demo-lead-tag new">New</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Notification */}
+                <div className="demo-notification">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                  <span>New lead: Emily Davis just started a conversation</span>
+                </div>
+              </div>
+              {/* Chat widget overlay */}
+              <div className="demo-widget-bubble">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#000" stroke="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div className="demo-widget-window">
+                <div className="demo-widget-header">AI Assistant</div>
+                <div className="demo-widget-messages">
+                  <div className="demo-wmsg bot">Hi! How can I help you today?</div>
+                  <div className="demo-wmsg user demo-wmsg-visitor">I&apos;d like to schedule a consultation</div>
+                  <div className="demo-wmsg bot demo-wmsg-ai">Of course! I&apos;d be happy to help. What day works best for you?</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Music toggle */}
+          <button className="demo-music-btn" onClick={handleMusic} aria-label={musicOn ? "Mute ambient music" : "Play ambient music"}>
+            {musicOn ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+            )}
+            <span>{musicOn ? "Mute" : "Play music"}</span>
+          </button>
+        </div>
+        {/* CTA */}
+        <div className="demo-preview-cta reveal">
+          <h2 className="section-title">See it firsthand</h2>
+          <Link to="/contact" className="btn-primary">
+            Book a Demo {"\u2192"}
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
   const [navScrolled, setNavScrolled] = useState(false);
@@ -491,6 +650,9 @@ export default function Home() {
           </p>
         </div>
       </section>
+
+      {/* ============ DEMO PREVIEW ============ */}
+      <DemoPreview />
 
       {/* ============ FAQ ============ */}
       <section className="section lp-faq" id="faq">
