@@ -35,6 +35,10 @@ export function AuthProvider({ children }) {
       email: payload.email,
       plan: payload.plan || "starter",
       businessName: payload.business_name || "",
+      role: payload.role || "owner",
+      isTeamMember: payload.is_team_member || false,
+      name: payload.name || "",
+      userId: payload.user_id || null,
     });
   }, [token]);
 

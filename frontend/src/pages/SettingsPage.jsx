@@ -13,6 +13,8 @@ export default function SettingsPage({ onNavigate }) {
     business_type: "",
     city: "",
     owner_name: "",
+    notification_phone: "",
+    sms_notifications_enabled: false,
   });
   const [email, setEmail] = useState("");
 
@@ -26,6 +28,8 @@ export default function SettingsPage({ onNavigate }) {
         business_type: tenant.business_type || "",
         city: tenant.city || "",
         owner_name: tenant.owner_name || "",
+        notification_phone: tenant.notification_phone || "",
+        sms_notifications_enabled: tenant.sms_notifications_enabled || false,
       });
       setEmail(tenant.owner_email || "");
     } catch (err) {
@@ -107,6 +111,38 @@ export default function SettingsPage({ onNavigate }) {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* SMS Notifications */}
+        <div className="settings-card">
+          <h3>SMS Notifications</h3>
+          <p className="settings-card-desc">Get texted when new leads come in.</p>
+          <div className="settings-field">
+            <label>Phone Number</label>
+            <input
+              value={form.notification_phone}
+              onChange={handleChange("notification_phone")}
+              placeholder="+1 (555) 123-4567"
+            />
+          </div>
+          <div className="settings-field" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input
+              type="checkbox"
+              checked={form.sms_notifications_enabled}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, sms_notifications_enabled: e.target.checked }));
+                setSaved(false);
+              }}
+              id="sms-toggle"
+              style={{ width: "auto" }}
+            />
+            <label htmlFor="sms-toggle" style={{ margin: 0, cursor: "pointer" }}>
+              Enable SMS notifications for new leads
+            </label>
+          </div>
+          <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
+            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+          </button>
         </div>
 
         {/* Quick Links */}
