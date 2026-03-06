@@ -314,7 +314,7 @@ export default function Home() {
         <div className="container">
           <div className="lp-features-header">
             <div className="section-label reveal">Features</div>
-            <h2 className="section-title reveal">Everything your front desk needs.</h2>
+            <h2 className="section-title reveal">Everything your business needs.</h2>
           </div>
           <div className="lp-features-grid">
             <div className="lp-feature-card reveal">
