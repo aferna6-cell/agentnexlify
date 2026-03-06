@@ -147,6 +147,9 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         hotLeadsCount={dashData?.hot_leads_count ?? 0}
         emailsSentToday={seqStats?.emails_sent_today ?? 0}
       />
+      <div className="analytics-link" onClick={() => onNavigate("analytics")}>
+        View Analytics &rarr;
+      </div>
 
       <div className="dashboard-main-grid">
         <div className="dashboard-main-content">
