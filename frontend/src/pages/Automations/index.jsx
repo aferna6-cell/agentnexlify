@@ -204,7 +204,9 @@ export default function AutomationsPage({ onNavigate }) {
           padding: "60px 20px",
           color: "var(--text-secondary)",
         }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>⚡</div>
+          <div style={{ marginBottom: "16px" }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+          </div>
           <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>No sequences yet</h3>
           <p style={{ margin: "0 0 20px", fontSize: "14px" }}>
             Create your first automated email sequence or start with a template.

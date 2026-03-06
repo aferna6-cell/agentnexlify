@@ -5,7 +5,7 @@ const TEMPLATES = [
     description: "Automatically welcome new leads with a warm intro and 24h follow-up.",
     trigger: "new_lead",
     steps: 2,
-    icon: "👋",
+    icon: "W",
   },
   {
     id: "no_response",
@@ -13,7 +13,7 @@ const TEMPLATES = [
     description: "Re-engage leads who haven't responded within 24 hours.",
     trigger: "no_response_24h",
     steps: 1,
-    icon: "🔔",
+    icon: "N",
   },
   {
     id: "appointment",
@@ -21,7 +21,7 @@ const TEMPLATES = [
     description: "Confirm and remind leads when they move to the appointment stage.",
     trigger: "lead_stage_change",
     steps: 2,
-    icon: "📅",
+    icon: "A",
   },
 ];
 

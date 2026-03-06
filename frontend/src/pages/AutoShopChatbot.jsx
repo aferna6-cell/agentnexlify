@@ -16,19 +16,19 @@ const hero = {
 
 const features = [
   {
-    icon: "\uD83D\uDCF2",
+    icon: "Q",
     title: "Quote Requests 24/7",
     description:
       "Customers request quotes via SMS or your website any time \u2014 no hold music, no missed calls.",
   },
   {
-    icon: "\uD83D\uDE97",
+    icon: "V",
     title: "Smart Vehicle Intake",
     description:
       "Chatbot collects year, make, model, and issue before the first call. Advisors arrive prepared.",
   },
   {
-    icon: "\uD83D\uDD27",
+    icon: "U",
     title: "Automated Repair Updates",
     description:
       "Keep customers informed during service with automated status texts \u2014 fewer 'is my car ready?' calls.",

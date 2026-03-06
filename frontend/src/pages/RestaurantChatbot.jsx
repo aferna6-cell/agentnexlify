@@ -15,19 +15,19 @@ const hero = {
 
 const features = [
   {
-    icon: "🕐",
+    icon: "R",
     title: "24/7 Reservation Booking",
     description:
       "Customers book tables via your website or SMS any time — no staff needed.",
   },
   {
-    icon: "📱",
+    icon: "C",
     title: "Auto Confirmations & Reminders",
     description:
       "Automated confirmation texts reduce no-shows by 35% on average.",
   },
   {
-    icon: "💬",
+    icon: "M",
     title: "Menu & Hours on Autopilot",
     description:
       "Handle specials, hours, and common questions without tying up your staff.",

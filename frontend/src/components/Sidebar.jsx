@@ -1,3 +1,4 @@
+import React from "react";
 import { useAuth } from "../context/AuthContext";
 
 const planLabels = {
@@ -16,17 +17,21 @@ const planColors = {
   enterprise: { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
 };
 
+const Icon = ({ d, ...props }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d={d} /></svg>
+);
+
 const navItems = [
-  { key: "dashboard", icon: "\u{1F4CA}", label: "Dashboard" },
-  { key: "clients", icon: "\u{1F465}", label: "Clients" },
-  { key: "calendar", icon: "\u{1F4C5}", label: "Calendar" },
-  { key: "conversations", icon: "\u{1F4AC}", label: "Conversations" },
-  { key: "automations", icon: "\u26A1", label: "Automations" },
-  { key: "widget", icon: "\u{1F4BB}", label: "Widget" },
-  { key: "faq", icon: "\u2753", label: "FAQ Manager" },
-  { key: "billing", icon: "\u{1F4B3}", label: "Billing" },
-  { key: "settings", icon: "\u2699\uFE0F", label: "Settings" },
-  { key: "support", icon: "\uD83D\uDEDF", label: "Support" },
+  { key: "dashboard", icon: <Icon d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" />, label: "Dashboard" },
+  { key: "clients", icon: <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />, label: "Clients" },
+  { key: "calendar", icon: <Icon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18" />, label: "Calendar" },
+  { key: "conversations", icon: <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />, label: "Conversations" },
+  { key: "automations", icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />, label: "Automations" },
+  { key: "widget", icon: <Icon d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM7 15h0M2 10h20" />, label: "Widget" },
+  { key: "faq", icon: <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />, label: "FAQ Manager" },
+  { key: "billing", icon: <Icon d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM1 10h22" />, label: "Billing" },
+  { key: "settings", icon: <Icon d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />, label: "Settings" },
+  { key: "support", icon: <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" />, label: "Support" },
 ];
 
 export default function Sidebar({ currentPage, onNavigate, plan }) {

@@ -16,19 +16,19 @@ const hero = {
 
 const features = [
   {
-    icon: "\u23F0",
+    icon: "R",
     title: "48hr & 24hr Appointment Reminders",
     description:
       "Automated reminder texts before every appointment. Patients confirm or reschedule without calling.",
   },
   {
-    icon: "\uD83D\uDCCB",
+    icon: "I",
     title: "Online Intake Before the Visit",
     description:
       "New patient forms completed before they arrive \u2014 your front desk starts each appointment ready.",
   },
   {
-    icon: "\uD83D\uDCAC",
+    icon: "C",
     title: "Easy Rescheduling via Chat",
     description:
       "Patients reschedule through a simple SMS conversation instead of calling during office hours.",

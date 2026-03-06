@@ -1,3 +1,5 @@
+import React from "react";
+
 function formatTimeAgo(dateStr) {
   if (!dateStr) return "";
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -11,13 +13,17 @@ function formatTimeAgo(dateStr) {
   return `${days}d ago`;
 }
 
+const Ico = ({ d }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+);
+
 const TYPE_ICONS = {
-  new_lead: "\u{1F465}",
-  automation_trigger: "\u26A1",
-  conversation_summary: "\u{1F4AC}",
-  lead_scored: "\u{1F525}",
-  appointment: "\u{1F4C5}",
-  default: "\u{1F514}",
+  new_lead: <Ico d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />,
+  automation_trigger: <Ico d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
+  conversation_summary: <Ico d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+  lead_scored: <Ico d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26z" />,
+  appointment: <Ico d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18" />,
+  default: <Ico d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />,
 };
 
 export default function ActivityFeed({ activity }) {

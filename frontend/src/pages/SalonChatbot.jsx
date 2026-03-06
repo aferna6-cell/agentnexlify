@@ -16,19 +16,19 @@ const hero = {
 
 const features = [
   {
-    icon: "\uD83D\uDCC5",
+    icon: "B",
     title: "Self-Book Any Time",
     description:
       "Clients book appointments 24/7 through your website, Facebook, or SMS \u2014 without calling.",
   },
   {
-    icon: "\uD83D\uDD14",
+    icon: "R",
     title: "Automatic No-Show Reminders",
     description:
       "Reminder texts go out 48hrs and 24hrs before each appointment. No-shows drop 30% on average.",
   },
   {
-    icon: "\uD83D\uDD17",
+    icon: "S",
     title: "Works With Your Booking Software",
     description:
       "Integrates with Mindbody, Acuity, and Square \u2014 no switching, no re-entering data.",

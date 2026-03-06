@@ -16,19 +16,19 @@ const hero = {
 
 const features = [
   {
-    icon: "\uD83D\uDCC5",
+    icon: "S",
     title: "Appointment Scheduling via SMS & Web",
     description:
       "Patients schedule, confirm, and reschedule through chat \u2014 no phone tag.",
   },
   {
-    icon: "\uD83D\uDD14",
+    icon: "R",
     title: "Automated Reminders",
     description:
       "Reminder messages go out automatically before every appointment. No-shows drop significantly.",
   },
   {
-    icon: "\uD83D\uDCDD",
+    icon: "I",
     title: "New Patient Intake Before the Visit",
     description:
       "Collect patient information before they arrive so your team can focus on care, not paperwork.",
