@@ -382,8 +382,8 @@ export default function Home() {
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
-              <h3>You Close Deals</h3>
-              <p>Leads flow into your dashboard scored and organized. Automated follow-ups keep them warm while you focus on closing.</p>
+              <h3>You Grow Your Business</h3>
+              <p>Leads flow into your dashboard scored and organized. Automated follow-ups keep customers engaged while you focus on what matters most.</p>
             </div>
           </div>
         </div>
