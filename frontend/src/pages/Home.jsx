@@ -374,8 +374,8 @@ export default function Home() {
           </a>
 
           <div className={`lp-nav-links${menuOpen ? " open" : ""}`}>
+            <a href="#how-it-works" onClick={closeMenu}>How It Works</a>
             <a href="#features" onClick={closeMenu}>Features</a>
-            <a href="#pricing" onClick={closeMenu}>Pricing</a>
             <a href="#faq" onClick={closeMenu}>FAQ</a>
           </div>
 
@@ -724,8 +724,8 @@ export default function Home() {
             <div className="lp-footer-col">
               <h4>Product</h4>
               <ul>
+                <li><a href="#how-it-works">How It Works</a></li>
                 <li><a href="#features">Features</a></li>
-                <li><a href="#pricing">Pricing</a></li>
                 <li><a href="#faq">FAQ</a></li>
               </ul>
             </div>
