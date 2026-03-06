@@ -18,6 +18,8 @@ import Contact from "./pages/Contact";
 import IntercomAlternative from "./pages/IntercomAlternative";
 import LiveChatAlternative from "./pages/LiveChatAlternative";
 import TidioAlternative from "./pages/TidioAlternative";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
+import BusinessPage from "./pages/BusinessPage";
 import "./index.css";
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
@@ -90,6 +92,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           {/* Alias routes for /industries/:vertical and /compare/:competitor */}
           <Route path="/industries/:vertical" element={<IndustryRoute />} />
           <Route path="/compare/:competitor" element={<CompareRoute />} />
+          {/* Team invite accept page (public, no auth) */}
+          <Route path="/invite/:token" element={<AcceptInvitePage />} />
+          {/* Public business pages — no auth, standalone */}
+          <Route path="/biz/:slug" element={<BusinessPage />} />
           {/* Everything else falls to auth-gated dashboard */}
           <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
         </Routes>

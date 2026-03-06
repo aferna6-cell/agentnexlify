@@ -18,6 +18,7 @@ import SettingsPage from "../pages/SettingsPage";
 import IntegrationsPage from "../pages/IntegrationsPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import TeamPage from "../pages/TeamPage";
+import BusinessPageSettings from "../pages/BusinessPageSettings";
 
 const pages = {
   dashboard: Dashboard,
@@ -35,6 +36,7 @@ const pages = {
   billing: BillingPage,
   integrations: IntegrationsPage,
   settings: SettingsPage,
+  business_page: BusinessPageSettings,
 };
 
 export default function App() {

@@ -404,4 +404,18 @@ export function sendSms(token, { lead_id, phone, message }) {
   return request("/api/v1/sms/send", { method: "POST", token, body: { lead_id, phone, message } });
 }
 
+// --- Business Page ---
+
+export function fetchBusinessPagePublic(slug) {
+  return request(`/biz/${slug}`);
+}
+
+export function fetchBusinessPageSettings(tenantId, token) {
+  return request(`/api/v1/business-page/${tenantId}`, { token });
+}
+
+export function updateBusinessPageSettings(tenantId, token, data) {
+  return request(`/api/v1/business-page/${tenantId}`, { method: "PUT", token, body: data });
+}
+
 export { ApiError };
