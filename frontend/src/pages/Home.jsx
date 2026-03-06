@@ -58,12 +58,6 @@ const faqData = [
       "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more. If you use it, we can probably connect to it.",
   },
   {
-    id: "faq-a4",
-    question: "How long does setup take?",
-    answer:
-      "Fully live within 48 hours of our kickoff call. Complex custom workflows may take up to a week.",
-  },
-  {
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
@@ -202,7 +196,7 @@ export default function Home() {
     { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Foundation covers lead capture, reviews, and reminders. Growth adds follow-up sequences, FAQ bot, and CRM. Operations adds AI booking, invoicing, task automation, and lead scoring." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
-    { "@type": "Question", "name": "How long does setup take?", "acceptedAnswer": { "@type": "Answer", "text": "Fully live within 48 hours of our kickoff call." } },
+
     { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Most partners start with Foundation or Growth and upgrade within a few months." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
     { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. The AI qualifies leads — you decide how to close them." } },
