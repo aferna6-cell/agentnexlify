@@ -645,7 +645,6 @@
   border-radius: 12px;
   padding: 36px 28px 28px;
   transition: transform 0.3s, box-shadow 0.3s;
-  overflow: hidden;
 }
 
 .landing-page .lp-how-step:hover {
@@ -795,8 +794,10 @@
 .landing-page .lp-pricing-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 16px;
   align-items: start;
+  overflow: visible;
+  padding-top: 16px;
 }
 
 .landing-page .lp-pricing-card {
@@ -2204,4 +2205,96 @@ html { scroll-behavior: smooth; }
 }
 @media (max-width: 480px) {
   .footer-inner { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   "Start Here" badge on Free pricing card
+   ============================================ */
+.landing-page .lp-pricing-card.start-here {
+  border-color: #34d399;
+  box-shadow: 0 0 0 1px #34d399, 0 0 30px rgba(52, 211, 153, 0.08);
+  position: relative;
+}
+
+.landing-page .lp-pricing-card.start-here::before {
+  content: 'Start Here';
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 16px;
+  background: #34d399;
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* ============================================
+   Floating Free CTA
+   ============================================ */
+.lp-floating-cta {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(15, 18, 25, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 191, 255, 0.25);
+  border-radius: 100px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 191, 255, 0.08);
+  animation: floatingCtaIn 0.4s ease-out;
+}
+
+@keyframes floatingCtaIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.lp-floating-cta-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  animation: floatingCtaPulse 3s ease-in-out infinite;
+}
+
+@keyframes floatingCtaPulse {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50% { text-shadow: 0 0 8px rgba(0, 191, 255, 0.3); }
+}
+
+.lp-floating-cta-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  border-radius: 50%;
+  transition: color 0.2s;
+}
+
+.lp-floating-cta-close:hover {
+  color: var(--text-primary);
+}
+
+/* Hide floating CTA on mobile */
+@media (max-width: 768px) {
+  .lp-floating-cta { display: none; }
 }

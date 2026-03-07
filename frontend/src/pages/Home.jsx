@@ -43,7 +43,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Foundation covers lead capture, reviews, and reminders. Growth adds follow-up sequences, FAQ bot, and CRM. Operations adds AI booking, invoicing, task automation, and lead scoring.",
+      "Every plan builds on the previous tier. Free covers chat widget, lead capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
@@ -238,6 +238,10 @@ export default function Home() {
   const [navScrolled, setNavScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+  const [showFloatingCta, setShowFloatingCta] = useState(false);
+  const [floatingCtaDismissed, setFloatingCtaDismissed] = useState(
+    () => sessionStorage.getItem("anx_cta_dismissed") === "1"
+  );
   const faqRefs = useRef({});
   const isLoggedIn = getUserEmail() !== null;
 
@@ -274,8 +278,34 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (floatingCtaDismissed) return;
+    const showTimer = setTimeout(() => setShowFloatingCta(true), 3000);
+    const handleScroll = () => {
+      const pricing = document.getElementById("pricing");
+      if (pricing) {
+        const rect = pricing.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          setShowFloatingCta(false);
+        } else if (!floatingCtaDismissed) {
+          setShowFloatingCta(true);
+        }
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      clearTimeout(showTimer);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [floatingCtaDismissed]);
+
   const toggleMenu = useCallback(() => setMenuOpen((p) => !p), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const dismissFloatingCta = useCallback(() => {
+    setShowFloatingCta(false);
+    setFloatingCtaDismissed(true);
+    sessionStorage.setItem("anx_cta_dismissed", "1");
+  }, []);
   const handleFaqToggle = useCallback((id) => setOpenFaq((p) => (p === id ? null : id)), []);
 
   const getFaqMaxHeight = useCallback(
@@ -345,7 +375,7 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Foundation covers lead capture, reviews, and reminders. Growth adds follow-up sequences, FAQ bot, and CRM. Operations adds AI booking, invoicing, task automation, and lead scoring." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free covers chat widget, lead capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
 
@@ -550,7 +580,7 @@ export default function Home() {
           </div>
           <div className="lp-pricing-grid">
             {/* Free */}
-            <div className="lp-pricing-card reveal">
+            <div className="lp-pricing-card start-here reveal">
               <div className="lp-pricing-plan-name">Free</div>
               <div className="lp-pricing-tagline">See what AI can do for your business.</div>
               <div className="lp-pricing-amount">
@@ -581,14 +611,14 @@ export default function Home() {
                 <span className="lp-pricing-dollar">$99</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">$149 one-time setup</div>
+              <div className="lp-pricing-setup">No setup fees</div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>Unlimited conversations</li>
                 <li>Lead capture &amp; instant alerts</li>
-                <li>Automated review requests</li>
-                <li>Missed call text-back</li>
-                <li>Appointment reminders</li>
+                <li>Appointment booking &amp; calendar</li>
+                <li>SMS notifications</li>
+                <li>Analytics dashboard</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_7sYdRb4CedaQaxk2J14AU01">
                 Get Started {"\u2192"}
@@ -603,14 +633,14 @@ export default function Home() {
                 <span className="lp-pricing-dollar">$249</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">$399 one-time setup</div>
+              <div className="lp-pricing-setup">No setup fees</div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Foundation, plus:</div>
               <ul className="lp-pricing-features">
-                <li>Automated follow-up sequences</li>
+                <li>Automated email follow-ups</li>
                 <li>AI FAQ &amp; support bot</li>
-                <li>Quote &amp; estimate automation</li>
-                <li>CRM setup &amp; pipeline</li>
+                <li>CRM &amp; client management</li>
+                <li>Lead pipeline &amp; scoring</li>
                 <li>Priority support</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02">
@@ -626,14 +656,14 @@ export default function Home() {
                 <span className="lp-pricing-dollar">$499</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">$599 one-time setup</div>
+              <div className="lp-pricing-setup">No setup fees</div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Growth, plus:</div>
               <ul className="lp-pricing-features">
                 <li>AI appointment booking agent</li>
-                <li>Invoice &amp; payment follow-up</li>
-                <li>Internal task automation</li>
-                <li>AI lead scoring &amp; alerts</li>
+                <li>Team accounts &amp; roles</li>
+                <li>Webhook integrations</li>
+                <li>White-label branding</li>
                 <li>Dedicated account manager</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03">
@@ -758,6 +788,22 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* ============ FLOATING CTA ============ */}
+      {showFloatingCta && !floatingCtaDismissed && (
+        <div className="lp-floating-cta">
+          <Link to="/signup" className="lp-floating-cta-link">
+            Try our AI assistant free {"\u2192"}
+          </Link>
+          <button
+            className="lp-floating-cta-close"
+            onClick={dismissFloatingCta}
+            aria-label="Dismiss"
+          >
+            {"\u00D7"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
