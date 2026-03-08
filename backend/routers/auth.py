@@ -51,6 +51,10 @@ def _create_token(
     email: str,
     plan: str,
     business_name: str,
+    user_id: str | None = None,
+    role: str = "owner",
+    is_team_member: bool = False,
+    name: str | None = None,
 ) -> str:
     payload = {
         "tenant_id": tenant_id,
@@ -58,8 +62,14 @@ def _create_token(
         "email": email,
         "plan": plan,
         "business_name": business_name,
+        "role": role,
+        "is_team_member": is_team_member,
         "exp": datetime.now(timezone.utc) + timedelta(days=_JWT_EXPIRE_DAYS),
     }
+    if user_id:
+        payload["user_id"] = user_id
+    if name:
+        payload["name"] = name
     return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
 
 
@@ -75,6 +85,16 @@ def _get_current_tenant(authorization: str = Header(...)) -> dict:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
     return _decode_token(authorization.removeprefix("Bearer ").strip())
+
+
+def require_role(*allowed_roles):
+    """FastAPI dependency factory: restrict endpoint to specific roles."""
+    def checker(claims: dict = Depends(_get_current_tenant)):
+        role = claims.get("role", "owner")
+        if role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return claims
+    return checker
 
 
 # ── Endpoints ────────────────────────────────────────────────
@@ -132,38 +152,87 @@ async def register(req: RegisterRequest):
 @router.post("/login", response_model=LoginResponse)
 async def login(req: LoginRequest):
     db = get_supabase()
+    email = req.email.lower().strip()
 
+    # 1. Check tenants table (owner login)
     result = (
         db.table("tenants")
         .select("id, password_hash, business_name, plan")
-        .eq("owner_email", req.email.lower().strip())
+        .eq("owner_email", email)
         .limit(1)
         .execute()
     )
-    if not result.data:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if result.data:
+        tenant = result.data[0]
+        if not tenant.get("password_hash"):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        if not _verify_password(req.password, tenant["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    tenant = result.data[0]
-    if not tenant.get("password_hash"):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        tenant_id = str(tenant["id"])
+        token = _create_token(
+            tenant_id,
+            email,
+            tenant.get("plan", "free"),
+            tenant.get("business_name", ""),
+        )
+        return LoginResponse(
+            tenant_id=tenant_id,
+            token=token,
+            business_name=tenant.get("business_name", ""),
+            plan=tenant.get("plan", "free"),
+        )
 
-    if not _verify_password(req.password, tenant["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    tenant_id = str(tenant["id"])
-    token = _create_token(
-        tenant_id,
-        req.email,
-        tenant.get("plan", "free"),
-        tenant.get("business_name", ""),
+    # 2. Check team_members table (team member login)
+    tm_result = (
+        db.table("team_members")
+        .select("id, tenant_id, email, name, role, password_hash, invite_accepted")
+        .eq("email", email)
+        .eq("invite_accepted", True)
+        .limit(1)
+        .execute()
     )
+    if tm_result.data:
+        member = tm_result.data[0]
+        if not member.get("password_hash"):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        if not _verify_password(req.password, member["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    return LoginResponse(
-        tenant_id=tenant_id,
-        token=token,
-        business_name=tenant.get("business_name", ""),
-        plan=tenant.get("plan", "free"),
-    )
+        # Fetch tenant info
+        tenant_result = (
+            db.table("tenants")
+            .select("business_name, plan")
+            .eq("id", member["tenant_id"])
+            .limit(1)
+            .execute()
+        )
+        t = tenant_result.data[0] if tenant_result.data else {}
+        tenant_id = str(member["tenant_id"])
+
+        # Update last_login
+        db.table("team_members").update(
+            {"last_login": datetime.now(timezone.utc).isoformat()}
+        ).eq("id", member["id"]).execute()
+
+        token = _create_token(
+            tenant_id=tenant_id,
+            email=email,
+            plan=t.get("plan", "free"),
+            business_name=t.get("business_name", ""),
+            user_id=str(member["id"]),
+            role=member["role"],
+            is_team_member=True,
+            name=member.get("name"),
+        )
+        return LoginResponse(
+            tenant_id=tenant_id,
+            token=token,
+            business_name=t.get("business_name", ""),
+            plan=t.get("plan", "free"),
+        )
+
+    raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
 @router.get("/me", response_model=MeResponse)
@@ -214,7 +283,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Widget config — full details for onboarding
     widget_result = (
         db.table("widget_configs")
-        .select("api_key, bot_name, primary_color, greeting_message, position")
+        .select("api_key, bot_name, primary_color, greeting_message, position, branding")
         .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()
@@ -229,6 +298,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             primary_color=w.get("primary_color", "#00BFFF"),
             greeting_message=w.get("greeting_message", "Hi! How can I help you today?"),
             position=w.get("position", "bottom-right"),
+            branding=w.get("branding") or None,
         )
     else:
         # Auto-create widget_config if missing
@@ -336,7 +406,26 @@ async def update_widget_config(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_supabase()
-    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+
+    # Get tenant plan for branding filtering
+    tenant_result = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()
+    plan = tenant_result.data[0].get("plan", "free") if tenant_result.data else "free"
+
+    updates = {k: v for k, v in req.model_dump(exclude={"branding"}).items() if v is not None}
+
+    # Handle branding separately: sanitize CSS + strip plan-disallowed fields
+    if req.branding is not None:
+        from backend.routers.widget import _filter_branding_for_plan, _sanitize_css
+        branding_dict = req.branding.model_dump(exclude_none=True)
+        if "custom_css" in branding_dict:
+            branding_dict["custom_css"] = _sanitize_css(branding_dict["custom_css"])
+        branding_dict = _filter_branding_for_plan(branding_dict, plan)
+        # Merge with existing branding to avoid overwriting other fields
+        existing = db.table("widget_configs").select("branding").eq("tenant_id", tenant_id).limit(1).execute()
+        existing_branding = (existing.data[0].get("branding") or {}) if existing.data else {}
+        existing_branding.update(branding_dict)
+        updates["branding"] = existing_branding
+
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
@@ -355,6 +444,7 @@ async def update_widget_config(
         primary_color=w.get("primary_color", "#00BFFF"),
         greeting_message=w.get("greeting_message", ""),
         position=w.get("position", "bottom-right"),
+        branding=w.get("branding") or None,
     )
 
 
@@ -516,20 +606,25 @@ async def get_conversation_messages(
 async def update_settings(
     tenant_id: str,
     request: Request,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Update tenant business info."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     body = await request.json()
-    allowed = {"business_name", "business_type", "city", "owner_name"}
+    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled"}
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
 
     db = get_supabase()
-    result = db.table("tenants").update(updates).eq("id", tenant_id).execute()
+    logger.info("update_settings tenant_id=%s updates=%s", tenant_id, updates)
+    try:
+        result = db.table("tenants").update(updates).eq("id", tenant_id).execute()
+    except Exception as e:
+        logger.exception("update_settings failed for tenant_id=%s", tenant_id)
+        raise HTTPException(status_code=500, detail=str(e))
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     return result.data[0]
@@ -543,7 +638,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     db = get_supabase()
     result = (
         db.table("tenants")
-        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status")
+        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -559,7 +654,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
 @router.post("/billing/checkout")
 async def billing_checkout(
     request: Request,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner")),
 ):
     """Create Stripe checkout session (JWT auth, no API secret needed)."""
     body = await request.json()
@@ -610,7 +705,7 @@ async def billing_checkout(
 
 
 @router.get("/billing/portal/{tenant_id}")
-async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+async def billing_portal(tenant_id: str, claims: dict = Depends(require_role("owner"))):
     """Create Stripe customer portal session (JWT auth)."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")

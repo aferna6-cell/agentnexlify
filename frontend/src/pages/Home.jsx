@@ -43,7 +43,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free covers chat widget, lead capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding.",
+      "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
@@ -72,7 +72,7 @@ const faqData = [
     id: "faq-a7",
     question: "What if AI makes a mistake?",
     answer:
-      "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising leads \u2014 you decide how to follow up. Nothing goes out without your approval.",
+      "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers \u2014 you decide how to follow up. Nothing goes out without your approval.",
   },
   {
     id: "faq-a8",
@@ -375,13 +375,13 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free covers chat widget, lead capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
 
     { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Foundation or Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
-    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising leads — you decide how to follow up." } },
+    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers — you decide how to follow up." } },
     { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service." } }
   ]
 }
@@ -438,7 +438,7 @@ export default function Home() {
                 <span className="accent-gradient">Business</span>
               </h1>
               <p className="lp-hero-sub reveal">
-                Capture leads, book appointments, and follow up with customers &mdash; automatically.
+                Capture every customer, book appointments, and follow up &mdash; automatically.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
@@ -503,12 +503,12 @@ export default function Home() {
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">2</div>
               <h3>AI Starts Working for You</h3>
-              <p>Embed one line of code on your website. Your AI assistant starts responding to visitors, capturing leads, and booking appointments instantly.</p>
+              <p>Embed one line of code on your website. Your AI assistant starts responding to visitors, capturing customers, and booking appointments instantly.</p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
               <h3>You Grow Your Business</h3>
-              <p>Leads flow into your dashboard scored and organized. Friendly follow-ups keep customers engaged while you focus on what you love.</p>
+              <p>Customers flow into your dashboard scored and organized. Friendly follow-ups keep them engaged while you focus on what you love.</p>
             </div>
           </div>
         </div>
@@ -526,8 +526,8 @@ export default function Home() {
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
-              <h3>Lead Capture</h3>
-              <p>Stay on top of every lead. Your website welcomes visitors 24/7.</p>
+              <h3>Customer Capture</h3>
+              <p>Stay on top of every customer. Your website welcomes visitors 24/7.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
@@ -554,15 +554,15 @@ export default function Home() {
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
-              <h3>Lead Pipeline</h3>
-              <p>Every lead scored and organized. See who&apos;s most interested at a glance.</p>
+              <h3>Customer Pipeline</h3>
+              <p>Every customer scored and organized. See who&apos;s most interested at a glance.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
               </div>
               <h3>Email Sequences</h3>
-              <p>Helpful email sequences that keep your leads engaged.</p>
+              <p>Helpful email sequences that keep your customers engaged.</p>
             </div>
           </div>
         </div>
@@ -591,7 +591,7 @@ export default function Home() {
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>AI chat widget</li>
-                <li>Lead capture</li>
+                <li>Customer capture</li>
                 <li>Up to 50 conversations/month</li>
                 <li>Basic dashboard</li>
                 <li>Email notifications</li>
@@ -606,7 +606,7 @@ export default function Home() {
             {/* Foundation */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Foundation</div>
-              <div className="lp-pricing-tagline">Be there for every lead, even after hours.</div>
+              <div className="lp-pricing-tagline">Be there for every customer, even after hours.</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$99</span>
                 <span className="lp-pricing-period">/month</span>
@@ -615,7 +615,7 @@ export default function Home() {
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>Unlimited conversations</li>
-                <li>Lead capture &amp; instant alerts</li>
+                <li>Customer capture &amp; instant alerts</li>
                 <li>Appointment booking &amp; calendar</li>
                 <li>SMS notifications</li>
                 <li>Analytics dashboard</li>
@@ -640,7 +640,7 @@ export default function Home() {
                 <li>Automated email follow-ups</li>
                 <li>AI FAQ &amp; support bot</li>
                 <li>CRM &amp; client management</li>
-                <li>Lead pipeline &amp; scoring</li>
+                <li>Customer pipeline &amp; Lead Scoring</li>
                 <li>Priority support</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02">
