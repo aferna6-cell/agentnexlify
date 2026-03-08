@@ -43,7 +43,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding.",
+      "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Growth adds unlimited conversations, booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
@@ -356,16 +356,16 @@ export default function Home() {
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
     {
-      "@type": "Offer", "name": "Foundation", "price": "99", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Growth", "price": "199", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "199", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Growth", "price": "249", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "249", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Professional", "price": "399", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "399", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Operations", "price": "499", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "499", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Enterprise", "price": "799", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "799", "priceCurrency": "USD", "billingDuration": "P1M" }
     }
   ]
 }
@@ -375,7 +375,7 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Foundation adds unlimited conversations, booking, SMS, and analytics. Growth adds email follow-ups, CRM, and lead scoring. Operations adds team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Growth adds unlimited conversations, booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
 
@@ -603,15 +603,18 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Foundation */}
+            {/* Growth */}
             <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Foundation</div>
-              <div className="lp-pricing-tagline">Be there for every customer, even after hours.</div>
+              <div className="lp-pricing-plan-name">Growth</div>
+              <div className="lp-pricing-tagline">For growing businesses ready to scale.</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$99</span>
+                <span className="lp-pricing-dollar">$199</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">No setup fees</div>
+              <div className="lp-pricing-setup">
+                <span className="lp-pricing-setup-original">$299 one-time setup</span>
+                <span className="lp-pricing-waived-badge">Waived &mdash; Early Access</span>
+              </div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>Unlimited conversations</li>
@@ -625,17 +628,20 @@ export default function Home() {
               </StripeCta>
             </div>
 
-            {/* Growth — Popular */}
+            {/* Professional — Most Popular */}
             <div className="lp-pricing-card popular reveal">
-              <div className="lp-pricing-plan-name">Growth</div>
-              <div className="lp-pricing-tagline">The helpful assistant that pays for itself.</div>
+              <div className="lp-pricing-plan-name">Professional</div>
+              <div className="lp-pricing-tagline">The complete toolkit for serious businesses.</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$249</span>
+                <span className="lp-pricing-dollar">$399</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">No setup fees</div>
+              <div className="lp-pricing-setup">
+                <span className="lp-pricing-setup-original">$499 one-time setup</span>
+                <span className="lp-pricing-waived-badge">Waived &mdash; Early Access</span>
+              </div>
               <div className="lp-pricing-divider"></div>
-              <div className="lp-pricing-includes">Everything in Foundation, plus:</div>
+              <div className="lp-pricing-includes">Everything in Growth, plus:</div>
               <ul className="lp-pricing-features">
                 <li>Automated email follow-ups</li>
                 <li>AI FAQ &amp; support bot</li>
@@ -648,17 +654,20 @@ export default function Home() {
               </StripeCta>
             </div>
 
-            {/* Operations */}
+            {/* Enterprise */}
             <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Operations</div>
-              <div className="lp-pricing-tagline">Save hours on admin every week.</div>
+              <div className="lp-pricing-plan-name">Enterprise</div>
+              <div className="lp-pricing-tagline">White-glove service for maximum results.</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$499</span>
+                <span className="lp-pricing-dollar">$799</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">No setup fees</div>
+              <div className="lp-pricing-setup">
+                <span className="lp-pricing-setup-original">$999 one-time setup</span>
+                <span className="lp-pricing-waived-badge">Waived &mdash; Early Access</span>
+              </div>
               <div className="lp-pricing-divider"></div>
-              <div className="lp-pricing-includes">Everything in Growth, plus:</div>
+              <div className="lp-pricing-includes">Everything in Professional, plus:</div>
               <ul className="lp-pricing-features">
                 <li>AI appointment booking agent</li>
                 <li>Team accounts &amp; roles</li>
@@ -672,7 +681,7 @@ export default function Home() {
             </div>
           </div>
           <p className="lp-pricing-footer-note reveal">
-            All plans include done-for-you setup and onboarding. Cancel anytime.
+            Setup fees waived for our first customers. All plans include hands-on onboarding. Cancel anytime.
           </p>
         </div>
       </section>

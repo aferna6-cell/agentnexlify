@@ -241,7 +241,7 @@ async def execute_step(execution_id: str) -> None:
 
         # Branded email wrapping for Operations/Enterprise plans
         plan = tenant.get("plan", "free")
-        if plan in ("operations", "enterprise"):
+        if plan in ("professional", "enterprise"):
             try:
                 wc_result = (
                     db.table("widget_configs")

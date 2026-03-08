@@ -12,20 +12,15 @@ logger = logging.getLogger(__name__)
 _initialized = False
 
 PLAN_PRICES: dict[str, dict[str, str]] = {
-    "foundation": {
-        "setup": "price_foundation_setup",
-        "monthly": "price_foundation_monthly",
-    },
     "growth": {"monthly": "price_growth_monthly"},
-    "operations": {"monthly": "price_operations_monthly"},
+    "professional": {"monthly": "price_professional_monthly"},
     "enterprise": {"monthly": "price_enterprise_monthly"},
 }
 
 PLAN_LIMITS: dict[str, int] = {
     "free": 50,
-    "foundation": 500,
-    "growth": 2000,
-    "operations": 10000,
+    "growth": 500,
+    "professional": 2000,
     "enterprise": 100000,
 }
 

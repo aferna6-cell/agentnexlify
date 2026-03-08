@@ -32,9 +32,8 @@ router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
 # ── Branding plan restrictions ────────────────────────────────
 _BRANDING_PLAN_FIELDS: dict[str, set[str]] = {
     "free": {"primary_color"},
-    "foundation": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url"},
-    "growth": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family"},
-    "operations": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family", "custom_css"},
+    "growth": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url"},
+    "professional": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family"},
     "enterprise": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family", "custom_css"},
 }
 
@@ -70,7 +69,7 @@ def _filter_branding_for_plan(branding: dict | None, plan: str) -> dict:
         return {}
     allowed = _BRANDING_PLAN_FIELDS.get(plan, _BRANDING_PLAN_FIELDS["free"])
     filtered = {k: v for k, v in branding.items() if k in allowed and v is not None}
-    if plan in ("free", "foundation"):
+    if plan in ("free", "growth"):
         filtered.pop("hide_powered_by", None)
     return filtered
 
@@ -640,7 +639,7 @@ async def get_config(request: Request, api_key: str):
     raw_branding = widget.get("branding") or {}
     branding = _filter_branding_for_plan(raw_branding, plan)
     # Free/foundation: enforce powered-by defaults
-    if plan in ("free", "foundation") and not branding.get("powered_by_text"):
+    if plan in ("free", "growth") and not branding.get("powered_by_text"):
         branding.pop("powered_by_text", None)
         branding.pop("powered_by_url", None)
 

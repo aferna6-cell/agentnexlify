@@ -229,7 +229,7 @@ class ClientRow(BaseModel):
 
 class CreateCheckoutRequest(BaseModel):
     tenant_id: str
-    plan: str  # foundation|growth|operations|enterprise
+    plan: str  # growth|professional|enterprise
     promo_code: str | None = None
 
 
