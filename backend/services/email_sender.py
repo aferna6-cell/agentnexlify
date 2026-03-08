@@ -32,6 +32,60 @@ def render_template(template: str, context: dict[str, str]) -> str:
     return _TEMPLATE_VAR_RE.sub(_replace, template)
 
 
+def render_sms_template(template: str, context: dict[str, str]) -> str:
+    """Replace {{variable}} placeholders with plain-text context values (no HTML escaping)."""
+    def _replace(match: re.Match) -> str:
+        key = match.group(1)
+        return str(context.get(key, ""))
+    return _TEMPLATE_VAR_RE.sub(_replace, template)
+
+
+def build_branded_email_html(
+    body_html: str,
+    branding: dict | None,
+    business_name: str = "",
+) -> str:
+    """Wrap email body in branded HTML template with logo, colors, and footer."""
+    if not branding:
+        return body_html
+
+    primary = html.escape(branding.get("primary_color", "#00BFFF"))
+    logo_url = branding.get("logo_url", "")
+    powered_by = html.escape(branding.get("powered_by_text", ""))
+    powered_by_url = html.escape(branding.get("powered_by_url", ""))
+    biz = html.escape(business_name)
+
+    logo_block = ""
+    if logo_url:
+        safe_logo = html.escape(logo_url)
+        logo_block = (
+            f'<img src="{safe_logo}" alt="{biz}" '
+            f'style="max-height:48px;max-width:200px;margin-bottom:16px;" />'
+        )
+
+    footer_text = powered_by or f"Sent by {biz}"
+    footer_block = f"<p>{footer_text}</p>"
+    if powered_by_url:
+        footer_block = (
+            f'<p><a href="{powered_by_url}" style="color:{primary};text-decoration:none;">'
+            f'{footer_text}</a></p>'
+        )
+
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+        '<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:32px 0;">'
+        '<tr><td align="center">'
+        '<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;">'
+        f'<tr><td style="background:{primary};padding:24px;text-align:center;">'
+        f'{logo_block}<h2 style="color:#fff;margin:0;font-size:20px;">{biz}</h2></td></tr>'
+        f'<tr><td style="padding:32px 24px;">{body_html}</td></tr>'
+        f'<tr><td style="padding:16px 24px;border-top:1px solid #eee;text-align:center;font-size:12px;color:#999;">'
+        f'{footer_block}</td></tr>'
+        '</table></td></tr></table></body></html>'
+    )
+
+
 def _check_rate_limit(tenant_id: str) -> bool:
     """Return True if tenant is within daily send limit."""
     global _last_reset_date

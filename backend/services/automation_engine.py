@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from backend.models.database import get_supabase
-from backend.services.email_sender import render_sms_template, render_template, send_email
+from backend.services.email_sender import build_branded_email_html, render_sms_template, render_template, send_email
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
@@ -238,6 +238,23 @@ async def execute_step(execution_id: str) -> None:
 
         subject = render_template(step["subject_template"], context)
         body = render_template(step["body_template"], context)
+
+        # Branded email wrapping for Operations/Enterprise plans
+        plan = tenant.get("plan", "free")
+        if plan in ("operations", "enterprise"):
+            try:
+                wc_result = (
+                    db.table("widget_configs")
+                    .select("branding")
+                    .eq("tenant_id", execution["tenant_id"])
+                    .limit(1)
+                    .execute()
+                )
+                wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
+                if wc_branding:
+                    body = build_branded_email_html(body, wc_branding, tenant.get("business_name", ""))
+            except Exception:
+                logger.debug("Failed to load branding for email, sending plain", exc_info=True)
 
         result = await send_email(
             to=lead["email"],

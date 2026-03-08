@@ -635,6 +635,15 @@ async def get_config(request: Request, api_key: str):
     else:
         show_watermark = widget.get("show_watermark", True)
 
+    # Branding: filter by plan
+    plan = tenant.get("plan", "free")
+    raw_branding = widget.get("branding") or {}
+    branding = _filter_branding_for_plan(raw_branding, plan)
+    # Free/foundation: enforce powered-by defaults
+    if plan in ("free", "foundation") and not branding.get("powered_by_text"):
+        branding.pop("powered_by_text", None)
+        branding.pop("powered_by_url", None)
+
     return WidgetConfigResponse(
         bot_name=widget.get("bot_name", "AI Assistant"),
         primary_color=widget.get("primary_color", "#00BFFF"),
@@ -644,6 +653,7 @@ async def get_config(request: Request, api_key: str):
         allowed_domains=widget.get("allowed_domains"),
         tenant_id=widget.get("tenant_id"),
         booking_enabled=widget.get("booking_enabled", False),
+        branding=branding if branding else None,
     )
 
 
