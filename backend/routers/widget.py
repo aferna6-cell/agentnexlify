@@ -521,7 +521,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         if trial_started.tzinfo is None:
             trial_started = trial_started.replace(tzinfo=timezone.utc)
         elapsed_days = (datetime.now(timezone.utc) - trial_started).days
-        if elapsed_days >= 30:
+        if elapsed_days >= 14:
             return WidgetChatResponse(
                 response="Your free trial has expired. Upgrade your plan to continue using your AI assistant.",
                 session_id=req.session_id,
@@ -530,10 +530,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 trial_expired=True,
             )
 
-    # 3. Plan limit check
+    # 3. Plan limit check (free plan has unlimited conversations during trial)
     used = tenant.get("conversations_used_this_month", 0)
     limit = tenant.get("monthly_conversation_limit", 50)
-    if used >= limit:
+    if tenant.get("plan") != "free" and used >= limit:
         raise HTTPException(
             status_code=429,
             detail={

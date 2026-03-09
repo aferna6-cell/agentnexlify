@@ -43,7 +43,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Growth adds unlimited conversations, booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding.",
+      "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
@@ -375,7 +375,7 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free covers chat widget, customer capture, and FAQ. Growth adds unlimited conversations, booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
 
@@ -613,7 +613,8 @@ export default function Home() {
               <ul className="lp-pricing-features">
                 <li>AI chat widget</li>
                 <li>Customer capture</li>
-                <li>Up to 50 conversations/month</li>
+                <li>Unlimited conversations</li>
+                <li>14-day free trial</li>
                 <li>Basic dashboard</li>
                 <li>Email notifications</li>
                 <li>Widget customization</li>

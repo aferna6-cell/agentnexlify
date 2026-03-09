@@ -73,7 +73,7 @@ const data = {
       {
         question: "Is NexLiFy more affordable than LiveChat?",
         answer:
-          "Yes. LiveChat charges $29\u201369 per agent per month, and you need at least one human agent online at all times. NexLiFy starts free (50 conversations/month) and paid plans are flat-rate ($99\u2013$499/mo) with no per-agent fees. The AI handles conversations automatically \u2014 no staff scheduling required.",
+          "Yes. LiveChat charges $29\u201369 per agent per month, and you need at least one human agent online at all times. NexLiFy starts free with unlimited conversations during a 14-day trial, and paid plans are flat-rate ($199\u2013$799/mo) with no per-agent fees. The AI handles conversations automatically \u2014 no staff scheduling required.",
       },
     ],
   },

@@ -77,7 +77,7 @@ export default function FreeWidget() {
         "name": "Free",
         "price": "0",
         "priceCurrency": "USD",
-        "description": "50 conversations/month, AI-powered responses, lead capture, appointment booking, email notifications"
+        "description": "Unlimited conversations (14-day trial), AI-powered responses, lead capture, appointment booking, email notifications"
       },
       {
         "@type": "Offer",
@@ -194,7 +194,7 @@ export default function FreeWidget() {
             <Link to="/signup" className="btn-primary">Get My Free Chatbot {"\u2192"}</Link>
             <a href="/demo" className="btn-secondary">See It In Action {"\u2193"}</a>
           </div>
-          <p className="hero-note reveal" ref={revealRef}>50 conversations/month free forever {"\u2014"} upgrade anytime</p>
+          <p className="hero-note reveal" ref={revealRef}>Unlimited conversations with 14-day free trial {"\u2014"} upgrade anytime</p>
         </div>
       </section>
 
@@ -255,13 +255,13 @@ export default function FreeWidget() {
           <div className="included-header">
             <div className="section-label reveal" ref={revealRef}>What's Included Free</div>
             <h2 className="section-title reveal" ref={revealRef}>Everything you need to start capturing leads.</h2>
-            <p className="section-subtitle reveal" ref={revealRef}>No hidden fees. No trial that expires. These features are yours for free, forever.</p>
+            <p className="section-subtitle reveal" ref={revealRef}>No hidden fees. Unlimited access during your 14-day trial. Upgrade anytime to keep going.</p>
           </div>
           <div className="included-grid">
             <div className="included-card reveal" ref={revealRef}>
               <div className="included-icon" aria-hidden="true">&#128172;</div>
-              <h3>50 Conversations / Month</h3>
-              <p>Enough for most small businesses to capture every lead that visits their site after hours or during busy periods.</p>
+              <h3>Unlimited Conversations</h3>
+              <p>No conversation limits during your 14-day free trial. Capture every lead that visits your site after hours or during busy periods.</p>
             </div>
             <div className="included-card reveal" ref={revealRef}>
               <div className="included-icon" aria-hidden="true">&#129302;</div>

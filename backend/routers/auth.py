@@ -734,7 +734,7 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(require_role("ow
 
 # ── Free Trial ────────────────────────────────────────────────
 
-FREE_TRIAL_DAYS = 30
+FREE_TRIAL_DAYS = 14
 
 
 def _compute_trial_status(tenant: dict) -> dict:

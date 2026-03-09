@@ -72,7 +72,7 @@ const data = {
       {
         question: "Does NexLiFy have a free plan like Tidio?",
         answer:
-          "Yes. NexLiFy\u2019s free tier includes up to 50 conversations per month with full AI capabilities, missed call text-back, and SMS. No credit card required to start.",
+          "Yes. NexLiFy\u2019s free tier includes unlimited conversations during a 14-day trial with full AI capabilities, missed call text-back, and SMS. No credit card required to start.",
       },
     ],
   },
