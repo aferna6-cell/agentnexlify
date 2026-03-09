@@ -545,13 +545,6 @@ export default function Home() {
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              </div>
-              <h3>Customer Q&amp;A</h3>
-              <p>Instant answers to customer questions, day or night.</p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
               <h3>Customer Pipeline</h3>
@@ -563,6 +556,27 @@ export default function Home() {
               </div>
               <h3>Email Sequences</h3>
               <p>Helpful email sequences that keep your customers engaged.</p>
+            </div>
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </div>
+              <h3>Analytics &amp; Reporting</h3>
+              <p>Know what&apos;s working. Track leads, conversions, and engagement in real time.</p>
+            </div>
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </div>
+              <h3>Hosted Business Page</h3>
+              <p>A professional web presence for your business, ready in minutes.</p>
+            </div>
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <h3>Dedicated Support</h3>
+              <p>Real people ready to help you succeed.</p>
             </div>
           </div>
         </div>
@@ -686,6 +700,8 @@ export default function Home() {
                 <li>Team accounts &amp; roles</li>
                 <li>Webhook integrations</li>
                 <li>White-label branding &amp; custom CSS</li>
+                <li>White-glove business page design</li>
+                <li>Full analytics suite</li>
                 <li>Dedicated account manager</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03">
