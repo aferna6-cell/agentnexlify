@@ -1,6 +1,10 @@
 (function () {
   "use strict";
 
+  // --- Double-init guard ---
+  if (window.__agentNexlifyWidget) return;
+  window.__agentNexlifyWidget = true;
+
   // --- Configuration ---
   const scriptTag = document.currentScript;
   const API_KEY = scriptTag?.getAttribute("data-api-key") || "";
@@ -95,7 +99,7 @@
       #anx-bubble svg {
         width: 28px;
         height: 28px;
-        fill: #0a0a0f;
+        fill: #fff;
       }
 
       #anx-badge {
@@ -610,7 +614,7 @@
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div id="anx-powered">Powered by <a href="#">AgentNexLiFy</a></div>
+        <div id="anx-powered">Powered by <a href="https://agentnexlify.com" target="_blank" rel="noopener">AgentNexLiFy</a></div>
       </div>
     `;
 
@@ -695,6 +699,35 @@
     }
   }
 
+  function disableWidgetInput(reason) {
+    const input = document.getElementById("anx-input");
+    const sendBtn = document.getElementById("anx-send");
+    const inputArea = document.getElementById("anx-input-area");
+    if (input) {
+      input.disabled = true;
+      input.placeholder = reason;
+    }
+    if (sendBtn) sendBtn.disabled = true;
+
+    if (inputArea && !document.getElementById("anx-upgrade-bar")) {
+      const bar = document.createElement("div");
+      bar.id = "anx-upgrade-bar";
+      bar.style.cssText =
+        "padding:10px 16px;text-align:center;background:#1a1a25;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;";
+      const btn = document.createElement("a");
+      btn.href = API_BASE.replace(/\/api.*$/, "").replace(/:\d+$/, "") + "/pricing";
+      btn.target = "_blank";
+      btn.rel = "noopener";
+      btn.textContent = "Upgrade Now";
+      btn.style.cssText =
+        "display:inline-block;padding:8px 24px;background:" +
+        BRAND_COLOR +
+        ";color:#0a0a0f;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;";
+      bar.appendChild(btn);
+      inputArea.parentNode.insertBefore(bar, inputArea.nextSibling);
+    }
+  }
+
   function showTyping() {
     const container = document.getElementById("anx-messages");
     const div = document.createElement("div");
@@ -734,8 +767,6 @@
       win.classList.remove("open");
       bubble.classList.remove("hidden");
       localStorage.setItem(STATE_KEY, "closed");
-      // Reset session on close so next open starts fresh
-      resetSession();
     }
   }
 
@@ -766,6 +797,11 @@
       const data = await sendMessage(text);
       hideTyping();
       addMessage("assistant", data.response);
+
+      // Handle trial expiry
+      if (data.trial_expired) {
+        disableWidgetInput("Your free trial has expired.");
+      }
     } catch (e) {
       hideTyping();
       addMessage(

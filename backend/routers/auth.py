@@ -802,3 +802,113 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
         days_remaining=trial["trial_days_remaining"],
         is_expired=trial["trial_expired"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Activity feed
+# ---------------------------------------------------------------------------
+
+@router.get("/activity/{tenant_id}")
+async def get_activity(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    """Return recent activity for the dashboard feed."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    items: list[dict] = []
+
+    # 1. Try activity_log table first
+    try:
+        result = (
+            db.table("activity_log")
+            .select("id, activity_type, description, lead_id, metadata, created_at")
+            .eq("tenant_id", tenant_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        if result.data:
+            for row in result.data:
+                items.append({
+                    "id": row["id"],
+                    "type": row["activity_type"],
+                    "message": row["description"],
+                    "created_at": row["created_at"],
+                })
+    except Exception:
+        logger.debug("activity_log query failed, falling back to other tables", exc_info=True)
+
+    # 2. If activity_log is empty, synthesize from other tables
+    if not items:
+        # Recent leads
+        try:
+            leads_result = (
+                db.table("leads")
+                .select("id, name, email, created_at")
+                .eq("client_id", tenant_id)
+                .order("created_at", desc=True)
+                .limit(5)
+                .execute()
+            )
+            for row in (leads_result.data or []):
+                name = row.get("name") or row.get("email") or "Unknown"
+                items.append({
+                    "id": f"lead_{row['id']}",
+                    "type": "new_lead",
+                    "message": f"New lead captured: {name}",
+                    "created_at": row["created_at"],
+                })
+        except Exception:
+            logger.debug("leads fallback query failed", exc_info=True)
+
+        # Recent chat sessions (distinct sessions)
+        try:
+            chats_result = (
+                db.table("chat_messages")
+                .select("session_id, created_at")
+                .eq("tenant_id", tenant_id)
+                .eq("role", "user")
+                .order("created_at", desc=True)
+                .limit(20)
+                .execute()
+            )
+            seen_sessions: set[str] = set()
+            for row in (chats_result.data or []):
+                sid = row["session_id"]
+                if sid not in seen_sessions and len(seen_sessions) < 5:
+                    seen_sessions.add(sid)
+                    items.append({
+                        "id": f"chat_{sid}",
+                        "type": "conversation_summary",
+                        "message": f"New conversation: {sid[:12]}...",
+                        "created_at": row["created_at"],
+                    })
+        except Exception:
+            logger.debug("chat_messages fallback query failed", exc_info=True)
+
+        # Recent appointments
+        try:
+            appt_result = (
+                db.table("appointments")
+                .select("id, customer_name, start_time, created_at")
+                .eq("tenant_id", tenant_id)
+                .order("created_at", desc=True)
+                .limit(5)
+                .execute()
+            )
+            for row in (appt_result.data or []):
+                name = row.get("customer_name") or "Customer"
+                items.append({
+                    "id": f"appt_{row['id']}",
+                    "type": "appointment",
+                    "message": f"Appointment booked: {name}",
+                    "created_at": row["created_at"],
+                })
+        except Exception:
+            logger.debug("appointments fallback query failed", exc_info=True)
+
+        # Sort combined results by created_at descending
+        items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        items = items[:20]
+
+    return {"activity": items}

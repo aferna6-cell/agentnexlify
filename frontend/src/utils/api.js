@@ -68,7 +68,7 @@ export function fetchAutomations(tenantId, token) {
 }
 
 export function fetchActivity(tenantId, token) {
-  return request(`/api/v1/activity/${tenantId}`, { token });
+  return request(`/api/v1/auth/activity/${tenantId}`, { token });
 }
 
 export function fetchWidgetConfig(tenantId, token) {

@@ -1,6 +1,10 @@
 (function () {
   "use strict";
 
+  // --- Double-init guard ---
+  if (window.__agentNexlifyWidget) return;
+  window.__agentNexlifyWidget = true;
+
   // --- Configuration ---
   const scriptTag = document.currentScript;
   const API_KEY = scriptTag?.getAttribute("data-api-key") || "";
@@ -95,7 +99,7 @@
       #anx-bubble svg {
         width: 28px;
         height: 28px;
-        fill: #0a0a0f;
+        fill: #fff;
       }
 
       #anx-badge {
@@ -610,7 +614,7 @@
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div id="anx-powered">Powered by <a href="#">AgentNexLiFy</a></div>
+        <div id="anx-powered">Powered by <a href="https://agentnexlify.com" target="_blank" rel="noopener">AgentNexLiFy</a></div>
       </div>
     `;
 
@@ -705,7 +709,6 @@
     }
     if (sendBtn) sendBtn.disabled = true;
 
-    // Add upgrade button below input area
     if (inputArea && !document.getElementById("anx-upgrade-bar")) {
       const bar = document.createElement("div");
       bar.id = "anx-upgrade-bar";
@@ -764,8 +767,6 @@
       win.classList.remove("open");
       bubble.classList.remove("hidden");
       localStorage.setItem(STATE_KEY, "closed");
-      // Reset session on close so next open starts fresh
-      resetSession();
     }
   }
 
