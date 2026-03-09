@@ -6,17 +6,15 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
 
   const planLabels = {
     free: "Free",
-    foundation: "Foundation",
     growth: "Growth",
-    operations: "Operations",
+    professional: "Professional",
     enterprise: "Enterprise",
   };
 
   const planConvoLabels = {
     free: "50 conversations/mo",
-    foundation: "500 conversations/mo",
-    growth: "2,000 conversations/mo",
-    operations: "10,000 conversations/mo",
+    growth: "500 conversations/mo",
+    professional: "2,000 conversations/mo",
     enterprise: "Unlimited",
   };
 
@@ -35,7 +33,7 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
         <div className="stat-usage-text">
           {conversationsUsed} / {conversationsLimit} used
           {nearLimit && (
-            <button className="upgrade-cta-inline" onClick={() => trackEvent("begin_checkout", { event_label: "dashboard_usage_limit" })}>Upgrade</button>
+            <button className="upgrade-cta-inline" onClick={() => { trackEvent("begin_checkout", { event_label: "dashboard_usage_limit" }); onNavigate?.("billing"); }}>Upgrade</button>
           )}
         </div>
         {conversationsUsed === 0 && (
@@ -91,7 +89,7 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
         <div className="stat-plan-row">
           <span className="plan-badge">{planLabels[plan] || plan}</span>
           {plan !== "enterprise" && (
-            <button className="upgrade-btn" onClick={() => trackEvent("begin_checkout", { event_label: "dashboard_plan_status" })}>Upgrade</button>
+            <button className="upgrade-btn" onClick={() => { trackEvent("begin_checkout", { event_label: "dashboard_plan_status" }); onNavigate?.("billing"); }}>Upgrade</button>
           )}
         </div>
         <div className="stat-trend neutral">

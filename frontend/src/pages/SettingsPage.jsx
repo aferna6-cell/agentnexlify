@@ -51,7 +51,6 @@ export default function SettingsPage({ onNavigate }) {
   const handleSave = async () => {
     if (!user?.tenantId) return;
     setSaving(true);
-    console.log("[Settings] saving form:", form);
     try {
       await updateTenantSettings(user.tenantId, token, form);
       setSaved(true);

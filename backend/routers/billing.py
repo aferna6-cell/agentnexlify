@@ -54,7 +54,7 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
         business_name=tenant.get("business_name"),
     )
 
-    # Build line items — foundation has setup fee + monthly
+    # Build line items — plans may have setup fee + monthly
     prices = PLAN_PRICES[req.plan]
     line_items = []
     if "setup" in prices:
@@ -137,21 +137,19 @@ async def stripe_webhook(request: Request):
 
 AMOUNT_TO_PLAN: dict[int, str] = {
     # Monthly only
-    9900: "foundation",
-    24900: "growth",
-    49900: "operations",
-    99900: "enterprise",
+    19900: "growth",
+    39900: "professional",
+    79900: "enterprise",
     # Monthly + setup fee (first invoice)
-    24800: "foundation",   # $99 + $149 setup
-    64800: "growth",       # $249 + $399 setup
-    109800: "operations",  # $499 + $599 setup
+    49800: "growth",         # $199 + $299 setup
+    89800: "professional",   # $399 + $499 setup
+    179800: "enterprise",    # $799 + $999 setup
 }
 
 # Keywords to match in product/price descriptions
 PLAN_KEYWORDS: dict[str, str] = {
-    "foundation": "foundation",
     "growth": "growth",
-    "operations": "operations",
+    "professional": "professional",
     "enterprise": "enterprise",
 }
 

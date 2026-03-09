@@ -11,10 +11,11 @@ And messaging webhook (HTTP POST) to:
 
 import logging
 
-from fastapi import APIRouter, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.responses import PlainTextResponse
 
 from backend.models.database import get_supabase
+from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.twilio_service import (
     format_textback_message,
@@ -223,8 +224,10 @@ async def twilio_sms_reply(
 # ------------------------------------------------------------------
 
 @router.get("/automations/{tenant_id}")
-async def list_automations(tenant_id: str):
+async def list_automations(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """List all automations for a tenant."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
     db = get_supabase()
     result = (
         db.table("automations")
@@ -237,8 +240,10 @@ async def list_automations(tenant_id: str):
 
 
 @router.post("/automations/{tenant_id}/{automation_id}/toggle")
-async def toggle_automation(tenant_id: str, automation_id: str):
+async def toggle_automation(tenant_id: str, automation_id: str, claims: dict = Depends(_get_current_tenant)):
     """Enable or disable an automation."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
     db = get_supabase()
     result = (
         db.table("automations")
@@ -262,8 +267,10 @@ async def toggle_automation(tenant_id: str, automation_id: str):
 
 
 @router.put("/automations/{tenant_id}/{automation_id}/config")
-async def update_automation_config(tenant_id: str, automation_id: str, config: dict):
+async def update_automation_config(tenant_id: str, automation_id: str, config: dict, claims: dict = Depends(_get_current_tenant)):
     """Update an automation's config JSON."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
     db = get_supabase()
 
     # Verify ownership

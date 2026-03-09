@@ -3,17 +3,15 @@ import { useAuth } from "../context/AuthContext";
 
 const planLabels = {
   free: "Free",
-  foundation: "Foundation",
   growth: "Growth",
-  operations: "Operations",
+  professional: "Professional",
   enterprise: "Enterprise",
 };
 
 const planColors = {
   free: { color: "var(--green)", bg: "var(--green-dim)" },
-  foundation: { color: "var(--accent)", bg: "var(--accent-dim)" },
-  growth: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
-  operations: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
+  growth: { color: "var(--accent)", bg: "var(--accent-dim)" },
+  professional: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
   enterprise: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
 };
 

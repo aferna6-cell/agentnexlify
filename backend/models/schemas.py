@@ -291,7 +291,7 @@ class WidgetLeadRequest(BaseModel):
 
 
 class WidgetLeadResponse(BaseModel):
-    lead_id: str
+    lead_id: str | None = None
     updated_fields: list[str]
 
 

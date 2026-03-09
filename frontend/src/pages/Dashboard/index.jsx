@@ -166,6 +166,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
               apiKey={dashData?.widget_api_key}
               tenantId={user.tenantId}
               widgetConfig={dashData?.widget_config}
+              onNavigate={onNavigate}
             />
           </div>
         </div>

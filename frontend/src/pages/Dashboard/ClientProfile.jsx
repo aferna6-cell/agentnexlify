@@ -321,11 +321,11 @@ export default function ClientProfile({ onNavigate, pageData }) {
                 {saving ? "..." : "Add"}
               </button>
             </div>
-            {profile.client_notes.length === 0 && !profile.conversation_summary ? (
+            {(profile.client_notes || []).length === 0 && !profile.conversation_summary ? (
               <p style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>No notes yet.</p>
             ) : (
               <>
-                {profile.client_notes.map((n) => (
+                {(profile.client_notes || []).map((n) => (
                   <div key={n.id} className="note-item">
                     <div className="note-content">{n.content}</div>
                     <div className="note-time">{timeAgo(n.created_at)}</div>
@@ -344,10 +344,10 @@ export default function ClientProfile({ onNavigate, pageData }) {
           {/* Conversations */}
           <div className="sidebar-panel">
             <h4>Conversations</h4>
-            {profile.conversations.length === 0 ? (
+            {(profile.conversations || []).length === 0 ? (
               <p style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>No conversations.</p>
             ) : (
-              profile.conversations.map((c) => (
+              (profile.conversations || []).map((c) => (
                 <div key={c.id} className="conv-summary">
                   {c.message_count} message{c.message_count !== 1 ? "s" : ""}
                   {c.last_message_at ? ` - ${timeAgo(c.last_message_at)}` : ""}

@@ -38,7 +38,7 @@ function UpgradeBadge({ requiredPlan }) {
       padding: "2px 8px",
       borderRadius: "10px",
       background: requiredPlan === "enterprise" ? "rgba(245, 158, 11, 0.15)" : "rgba(139, 92, 246, 0.15)",
-      color: requiredPlan === "enterprise" ? "#d97706" : "#7c3aed",
+      color: requiredPlan === "enterprise" ? "var(--yellow)" : "var(--purple)",
       marginLeft: "0.5rem",
       verticalAlign: "middle",
     }}>
@@ -215,7 +215,7 @@ export default function BusinessPageSettings() {
               <div className="settings-field" style={{ marginTop: "1rem" }}>
                 <label>Page URL Slug</label>
                 <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  <span style={{ color: "#9ca3af", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
                     agentnexlify.com/biz/
                   </span>
                   <input
@@ -231,12 +231,12 @@ export default function BusinessPageSettings() {
               </div>
 
               {pageUrl && (
-                <div style={{ marginTop: "0.75rem", padding: "0.75rem", background: "#f0fdf4", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+                <div style={{ marginTop: "0.75rem", padding: "0.75rem", background: "var(--green-dim)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
                   <a
                     href={pageUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "#16a34a", fontWeight: 500, fontSize: "0.9rem", wordBreak: "break-all" }}
+                    style={{ color: "var(--green)", fontWeight: 500, fontSize: "0.9rem", wordBreak: "break-all" }}
                   >
                     {pageUrl}
                   </a>
@@ -357,9 +357,9 @@ export default function BusinessPageSettings() {
                         alignItems: "center",
                         gap: "8px",
                         padding: "0.5rem 0.75rem",
-                        border: form.bp_color_theme === t.value ? `2px solid ${t.preview}` : "1px solid #e5e7eb",
+                        border: form.bp_color_theme === t.value ? `2px solid ${t.preview}` : "1px solid var(--border)",
                         borderRadius: "8px",
-                        background: form.bp_color_theme === t.value ? `${t.preview}08` : "#fff",
+                        background: form.bp_color_theme === t.value ? `${t.preview}08` : "var(--bg-card)",
                         cursor: "pointer",
                         fontSize: "0.8rem",
                         fontFamily: "inherit",
@@ -482,7 +482,7 @@ export default function BusinessPageSettings() {
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "6px",
-                        background: "#f3f4f6",
+                        background: "var(--bg-secondary)",
                         padding: "0.4rem 0.75rem",
                         borderRadius: "20px",
                         fontSize: "0.85rem",
@@ -495,7 +495,7 @@ export default function BusinessPageSettings() {
                           background: "none",
                           border: "none",
                           cursor: "pointer",
-                          color: "#9ca3af",
+                          color: "var(--text-muted)",
                           fontSize: "1rem",
                           padding: 0,
                           lineHeight: 1,
@@ -528,12 +528,12 @@ export default function BusinessPageSettings() {
                         justifyContent: "space-between",
                         alignItems: "center",
                         padding: "0.6rem 0.75rem",
-                        background: "#f9fafb",
+                        background: "var(--bg-secondary)",
                         borderRadius: "8px",
                         gap: "0.5rem",
                       }}
                     >
-                      <span style={{ fontSize: "0.85rem", color: "#374151" }}>{label}</span>
+                      <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{label}</span>
                       <button
                         className="btn-secondary btn-sm"
                         onClick={() => copyToClipboard(text, label)}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function WidgetEmbed({ apiKey, tenantId, widgetConfig }) {
+export default function WidgetEmbed({ apiKey, tenantId, widgetConfig, onNavigate }) {
   const [copied, setCopied] = useState(false);
 
   const displayKey = apiKey || "your-api-key";
@@ -53,9 +53,9 @@ export default function WidgetEmbed({ apiKey, tenantId, widgetConfig }) {
         </button>
       </div>
 
-      <a href="#widget" className="widget-customize-link">
+      <button className="widget-customize-link" onClick={() => onNavigate?.("widget")} style={{ background: "none", border: "none", cursor: "pointer", font: "inherit", color: "inherit", padding: 0 }}>
         Customize Widget Appearance &rarr;
-      </a>
+      </button>
     </div>
   );
 }

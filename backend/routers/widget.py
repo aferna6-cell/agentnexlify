@@ -88,7 +88,7 @@ NAME_RE = re.compile(
 STANDALONE_NAME_RE = re.compile(
     r"^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){0,2})\.?$"
 )
-EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}(?![a-zA-Z])")
 PHONE_RE = re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
 
 
@@ -267,8 +267,9 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     elif STANDALONE_NAME_RE.match(text.strip()):
         # Catch bare name responses like "John Smith"
         info["name"] = STANDALONE_NAME_RE.match(text.strip()).group(1)
-    # Strip spaces from text before email search to handle "sara@ test.com"
-    email_match = EMAIL_RE.search(text.replace(" ", ""))
+    # Strip spaces around @ to handle "sara@ test.com" or "john @ gmail.com"
+    # but do NOT remove all spaces (that collapses other words into the email)
+    email_match = EMAIL_RE.search(re.sub(r"\s*@\s*", "@", text))
     if email_match:
         email = email_match.group(0).strip().lower()
         # Final validation: no spaces, has @ and at least one dot after @
@@ -280,7 +281,7 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     return info
 
 
-def _capture_leads_from_session(
+async def _capture_leads_from_session(
     tenant_id: str, session_id: str, conversation_id: str
 ) -> None:
     """Background task: scan all user messages in session for contact info,
@@ -415,14 +416,13 @@ def _capture_leads_from_session(
             # Fire automation trigger for new leads
             try:
                 from backend.services.automation_engine import trigger_sequence
-                import asyncio
-                asyncio.create_task(trigger_sequence(tenant_id, lead_id, "new_lead"))
+                await trigger_sequence(tenant_id, lead_id, "new_lead")
             except Exception:
                 logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
             # SMS notification to owner
             try:
-                _send_new_lead_sms_notification(tenant_id, lead_name, combined)
+                await _send_new_lead_sms_notification(tenant_id, lead_name, combined)
             except Exception:
                 logger.warning("Failed to send SMS notification for lead %s", lead_id, exc_info=True)
 
@@ -438,11 +438,10 @@ def _capture_leads_from_session(
         logger.error("lead_capture FAILED: session=%s tenant=%s", session_id, tenant_id, exc_info=True)
 
 
-def _send_new_lead_sms_notification(
+async def _send_new_lead_sms_notification(
     tenant_id: str, lead_name: str, lead_info: dict[str, str]
 ) -> None:
     """Send SMS notification to tenant owner when a new lead is captured."""
-    import asyncio
     logger.info(
         "sms_notification: starting for tenant=%s lead=%s info_keys=%s",
         tenant_id, lead_name, list(lead_info.keys()),
@@ -475,8 +474,8 @@ def _send_new_lead_sms_notification(
 
     try:
         from backend.services.twilio_service import send_sms
-        asyncio.create_task(send_sms(to=phone, body=body))
-        logger.info("sms_notification: task created successfully for tenant=%s", tenant_id)
+        await send_sms(to=phone, body=body)
+        logger.info("sms_notification: sent successfully for tenant=%s", tenant_id)
     except Exception:
         logger.error("sms_notification: FAILED to send for tenant=%s", tenant_id, exc_info=True)
 
@@ -673,7 +672,7 @@ async def get_config(request: Request, api_key: str):
     plan = tenant.get("plan", "free")
     raw_branding = widget.get("branding") or {}
     branding = _filter_branding_for_plan(raw_branding, plan)
-    # Free/foundation: enforce powered-by defaults
+    # Free/growth: enforce powered-by defaults
     if plan in ("free", "growth") and not branding.get("powered_by_text"):
         branding.pop("powered_by_text", None)
         branding.pop("powered_by_url", None)
@@ -759,14 +758,13 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     if lead_id and is_new:
         try:
             from backend.services.automation_engine import trigger_sequence
-            import asyncio
-            asyncio.create_task(trigger_sequence(tenant["id"], lead_id, "new_lead"))
+            await trigger_sequence(tenant["id"], lead_id, "new_lead")
         except Exception:
             logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
         # SMS notification to owner
         try:
-            _send_new_lead_sms_notification(tenant["id"], fields.get("name", "Unknown"), fields)
+            await _send_new_lead_sms_notification(tenant["id"], fields.get("name", "Unknown"), fields)
         except Exception:
             logger.warning("Failed to send SMS notification for lead %s", lead_id, exc_info=True)
 

@@ -16,7 +16,7 @@ const roleOptions = [
 
 const roleBadgeStyles = {
   owner: { color: "var(--yellow)", background: "var(--yellow-dim)" },
-  admin: { color: "var(--purple)", background: "rgba(139, 92, 246, 0.15)" },
+  admin: { color: "var(--purple)", background: "var(--purple-dim)" },
   member: { color: "var(--accent)", background: "var(--accent-dim)" },
   viewer: { color: "var(--text-secondary)", background: "var(--hover-overlay)" },
 };
@@ -35,14 +35,14 @@ export default function TeamPage() {
 
   const loadMembers = useCallback(async () => {
     try {
-      const data = await fetchTeamMembers(user.tenantId, token);
+      const data = await fetchTeamMembers(user?.tenantId, token);
       setMembers(data);
     } catch (err) {
       setError("Failed to load team members");
     } finally {
       setLoading(false);
     }
-  }, [user.tenantId, token]);
+  }, [user?.tenantId, token]);
 
   useEffect(() => {
     loadMembers();
@@ -104,7 +104,9 @@ export default function TeamPage() {
     }
   };
 
-  const isOwner = user.role === "owner";
+  const isOwner = user?.role === "owner";
+
+  if (!user) return null;
 
   return (
     <div className="team-page">

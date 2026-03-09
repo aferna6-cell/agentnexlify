@@ -22,7 +22,7 @@ const FONT_OPTIONS = [
 ];
 
 // Plan hierarchy for feature gating
-const PLAN_RANK = { free: 0, foundation: 1, growth: 2, operations: 3, enterprise: 4 };
+const PLAN_RANK = { free: 0, growth: 1, professional: 2, enterprise: 3 };
 
 function canAccess(userPlan, requiredPlan) {
   return (PLAN_RANK[userPlan] || 0) >= (PLAN_RANK[requiredPlan] || 0);
@@ -228,56 +228,56 @@ export default function WidgetPage() {
             />
           </div>
 
-          {/* Secondary + Accent colors — Foundation+ */}
+          {/* Secondary + Accent colors — Growth+ */}
           <div className="branding-color-group">
-            <div className={`settings-field ${!canAccess(plan, "foundation") ? "branding-disabled" : ""}`}>
-              <label>Secondary Color {!canAccess(plan, "foundation") && <UpgradeHint plan="Foundation" />}</label>
+            <div className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}>
+              <label>Secondary Color {!canAccess(plan, "growth") && <UpgradeHint plan="Growth" />}</label>
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <input
                   type="color"
                   value={branding.secondary_color || "#6b7280"}
                   onChange={handleBrandingChange("secondary_color")}
-                  disabled={!canAccess(plan, "foundation")}
+                  disabled={!canAccess(plan, "growth")}
                   style={{ width: 40, height: 32, border: "none", background: "none", cursor: "pointer" }}
                 />
                 <input
                   value={branding.secondary_color}
                   onChange={handleBrandingChange("secondary_color")}
                   placeholder="#6b7280"
-                  disabled={!canAccess(plan, "foundation")}
+                  disabled={!canAccess(plan, "growth")}
                   style={{ flex: 1 }}
                 />
               </div>
             </div>
-            <div className={`settings-field ${!canAccess(plan, "foundation") ? "branding-disabled" : ""}`}>
-              <label>Accent Color {!canAccess(plan, "foundation") && <UpgradeHint plan="Foundation" />}</label>
+            <div className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}>
+              <label>Accent Color {!canAccess(plan, "growth") && <UpgradeHint plan="Growth" />}</label>
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <input
                   type="color"
                   value={branding.accent_color || "#00BFFF"}
                   onChange={handleBrandingChange("accent_color")}
-                  disabled={!canAccess(plan, "foundation")}
+                  disabled={!canAccess(plan, "growth")}
                   style={{ width: 40, height: 32, border: "none", background: "none", cursor: "pointer" }}
                 />
                 <input
                   value={branding.accent_color}
                   onChange={handleBrandingChange("accent_color")}
                   placeholder="#00BFFF"
-                  disabled={!canAccess(plan, "foundation")}
+                  disabled={!canAccess(plan, "growth")}
                   style={{ flex: 1 }}
                 />
               </div>
             </div>
           </div>
 
-          {/* Widget title — Foundation+ */}
-          <div className={`settings-field ${!canAccess(plan, "foundation") ? "branding-disabled" : ""}`}>
-            <label>Widget Title {!canAccess(plan, "foundation") && <UpgradeHint plan="Foundation" />}</label>
+          {/* Widget title — Growth+ */}
+          <div className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}>
+            <label>Widget Title {!canAccess(plan, "growth") && <UpgradeHint plan="Growth" />}</label>
             <input
               value={branding.widget_title}
               onChange={handleBrandingChange("widget_title")}
               placeholder="My Company Chat"
-              disabled={!canAccess(plan, "foundation")}
+              disabled={!canAccess(plan, "growth")}
             />
           </div>
 
@@ -296,25 +296,25 @@ export default function WidgetPage() {
             </select>
           </div>
 
-          {/* Powered-by text — Foundation+ */}
-          <div className={`settings-field ${!canAccess(plan, "foundation") ? "branding-disabled" : ""}`}>
-            <label>Powered-by Text {!canAccess(plan, "foundation") && <UpgradeHint plan="Foundation" />}</label>
+          {/* Powered-by text — Growth+ */}
+          <div className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}>
+            <label>Powered-by Text {!canAccess(plan, "growth") && <UpgradeHint plan="Growth" />}</label>
             <input
               value={branding.powered_by_text}
               onChange={handleBrandingChange("powered_by_text")}
               placeholder="Powered by AgentNexLiFy"
-              disabled={!canAccess(plan, "foundation")}
+              disabled={!canAccess(plan, "growth")}
             />
           </div>
 
-          {/* Powered-by URL — Foundation+ */}
-          <div className={`settings-field ${!canAccess(plan, "foundation") ? "branding-disabled" : ""}`}>
-            <label>Powered-by URL {!canAccess(plan, "foundation") && <UpgradeHint plan="Foundation" />}</label>
+          {/* Powered-by URL — Growth+ */}
+          <div className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}>
+            <label>Powered-by URL {!canAccess(plan, "growth") && <UpgradeHint plan="Growth" />}</label>
             <input
               value={branding.powered_by_url}
               onChange={handleBrandingChange("powered_by_url")}
               placeholder="https://yourcompany.com"
-              disabled={!canAccess(plan, "foundation")}
+              disabled={!canAccess(plan, "growth")}
             />
           </div>
 
@@ -332,15 +332,15 @@ export default function WidgetPage() {
             </label>
           </div>
 
-          {/* Custom CSS — Operations+ */}
-          <div className={`settings-field ${!canAccess(plan, "operations") ? "branding-disabled" : ""}`}>
-            <label>Custom CSS {!canAccess(plan, "operations") && <UpgradeHint plan="Operations" />}</label>
+          {/* Custom CSS — Professional+ */}
+          <div className={`settings-field ${!canAccess(plan, "professional") ? "branding-disabled" : ""}`}>
+            <label>Custom CSS {!canAccess(plan, "professional") && <UpgradeHint plan="Professional" />}</label>
             <textarea
               value={branding.custom_css}
               onChange={handleBrandingChange("custom_css")}
               placeholder=".anx-header { border-radius: 0; }"
               rows={4}
-              disabled={!canAccess(plan, "operations")}
+              disabled={!canAccess(plan, "professional")}
               style={{ fontFamily: "'SF Mono', 'Fira Code', monospace", fontSize: "12px" }}
             />
           </div>

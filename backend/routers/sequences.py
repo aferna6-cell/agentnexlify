@@ -247,6 +247,7 @@ async def get_sequence_stats(tenant_id: str, claims: dict = Depends(_get_current
     logs = (
         db.table("automation_logs")
         .select("id", count="exact")
+        .eq("tenant_id", tenant_id)
         .eq("action", "email_sent")
         .gte("created_at", today)
         .execute()

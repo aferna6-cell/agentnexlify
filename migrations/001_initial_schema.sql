@@ -11,7 +11,7 @@ CREATE TABLE tenants (
     owner_email                  TEXT UNIQUE NOT NULL,
     phone                        TEXT,
     city                         TEXT,
-    plan                         TEXT DEFAULT 'free' CHECK (plan IN ('free','foundation','growth','operations','enterprise')),
+    plan                         TEXT DEFAULT 'free' CHECK (plan IN ('free','growth','professional','enterprise')),
     plan_status                  TEXT DEFAULT 'active' CHECK (plan_status IN ('active','paused','cancelled')),
     stripe_customer_id           TEXT,
     stripe_subscription_id       TEXT,

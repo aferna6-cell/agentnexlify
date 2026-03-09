@@ -20,6 +20,7 @@
   --yellow: #f5a623;
   --yellow-dim: rgba(245, 166, 35, 0.15);
   --purple: #8b5cf6;
+  --purple-dim: rgba(139, 92, 246, 0.15);
   --sidebar-width: 240px;
   --sidebar-collapsed: 64px;
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -49,6 +50,7 @@
   --yellow: #dd8800;
   --yellow-dim: rgba(221, 136, 0, 0.1);
   --purple: #7c3aed;
+  --purple-dim: rgba(124, 58, 237, 0.12);
   --hover-overlay: rgba(0, 0, 0, 0.04);
   --accent-contrast: #fff;
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
