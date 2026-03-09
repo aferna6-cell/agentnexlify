@@ -1,5 +1,6 @@
 """Team management endpoints — invite, list, update, remove members."""
 
+import html as html_lib
 import logging
 import secrets
 
@@ -20,6 +21,43 @@ from backend.services.email_sender import send_email
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/team", tags=["team"])
+
+INVITE_BASE_URL = "https://www.agentnexlify.com/invite"
+
+
+def _build_invite_email_html(business_name: str, role: str, invite_url: str) -> str:
+    """Build the invite email HTML with proper escaping."""
+    safe_biz = html_lib.escape(business_name)
+    safe_role = html_lib.escape(role)
+    safe_url = html_lib.escape(invite_url)
+    return f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px;">
+        <h2 style="color: #00bfff; margin: 0 0 16px;">You've been invited to {safe_biz}</h2>
+        <p style="color: #333; line-height: 1.6; margin: 0 0 8px;">
+            You've been invited to join <strong>{safe_biz}</strong> on AgentNexLiFy as a <strong>{safe_role}</strong>.
+        </p>
+        <p style="color: #333; line-height: 1.6; margin: 0 0 24px;">
+            Click the button below to set up your account and get started.
+        </p>
+        <p style="margin: 0 0 32px;">
+            <a href="{safe_url}"
+               style="display: inline-block; padding: 14px 28px; background: #00bfff; color: #000;
+                      text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px;">
+                Accept Invite
+            </a>
+        </p>
+        <p style="color: #666; font-size: 13px; margin: 0 0 8px;">
+            Or copy this link into your browser:
+        </p>
+        <p style="color: #00bfff; font-size: 13px; word-break: break-all; margin: 0 0 24px;">
+            {safe_url}
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="color: #999; font-size: 12px; margin: 0;">
+            If you didn't expect this invitation, you can safely ignore this email.
+        </p>
+    </div>
+    """
 
 
 def _require_owner_or_admin(claims: dict) -> dict:
@@ -84,27 +122,33 @@ async def invite_member(req: TeamInviteRequest, claims: dict = Depends(_get_curr
         business_name = tenant_result.data[0]["business_name"] if tenant_result.data else "Your team"
 
         # Send invite email
-        invite_url = f"https://app.agentnexlify.com/invite/{invite_token}"
-        body_html = f"""
-        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
-            <h2 style="color: #00bfff;">You're invited to {business_name}</h2>
-            <p>You've been invited to join <strong>{business_name}</strong> on AgentNexLiFy as a <strong>{req.role}</strong>.</p>
-            <p style="margin: 24px 0;">
-                <a href="{invite_url}"
-                   style="display: inline-block; padding: 12px 24px; background: #00bfff; color: #000; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                    Accept Invitation
-                </a>
-            </p>
-            <p style="color: #888; font-size: 13px;">If you didn't expect this invitation, you can ignore this email.</p>
-        </div>
-        """
-        email_result = await send_email(
-            to=req.email.lower().strip(),
-            subject=f"You're invited to join {business_name} on AgentNexLiFy",
-            body_html=body_html,
-            tenant_id=tenant_id,
+        invite_url = f"{INVITE_BASE_URL}/{invite_token}"
+        recipient = req.email.lower().strip()
+        subject = f"You've been invited to join {business_name} on AgentNexLiFy"
+        body_html = _build_invite_email_html(business_name, req.role, invite_url)
+
+        logger.info(
+            "Sending invite email to=%s tenant_id=%s business=%s invite_url=%s",
+            recipient, tenant_id, business_name, invite_url,
         )
-        logger.info("Invite email result for %s: %s", req.email, email_result)
+        try:
+            email_result = await send_email(
+                to=recipient,
+                subject=subject,
+                body_html=body_html,
+                tenant_id=tenant_id,
+            )
+        except Exception:
+            logger.exception("Invite email send raised exception for %s", recipient)
+            email_result = {"success": False, "detail": "send_email raised exception"}
+
+        if email_result.get("success"):
+            logger.info("Invite email sent successfully to=%s resend_id=%s", recipient, email_result.get("resend_id"))
+        else:
+            logger.error(
+                "Invite email FAILED to=%s tenant_id=%s detail=%s",
+                recipient, tenant_id, email_result.get("detail"),
+            )
 
         member = result.data[0]
         return TeamMemberResponse(
@@ -388,26 +432,32 @@ async def resend_invite(
     )
     business_name = tenant.data[0]["business_name"] if tenant.data else "Your team"
 
-    invite_url = f"https://app.agentnexlify.com/invite/{new_token}"
-    body_html = f"""
-    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
-        <h2 style="color: #00bfff;">You're invited to {business_name}</h2>
-        <p>You've been invited to join <strong>{business_name}</strong> on AgentNexLiFy as a <strong>{m['role']}</strong>.</p>
-        <p style="margin: 24px 0;">
-            <a href="{invite_url}"
-               style="display: inline-block; padding: 12px 24px; background: #00bfff; color: #000; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                Accept Invitation
-            </a>
-        </p>
-        <p style="color: #888; font-size: 13px;">If you didn't expect this invitation, you can ignore this email.</p>
-    </div>
-    """
-    email_result = await send_email(
-        to=m["email"],
-        subject=f"Reminder: You're invited to join {business_name} on AgentNexLiFy",
-        body_html=body_html,
-        tenant_id=tenant_id,
+    invite_url = f"{INVITE_BASE_URL}/{new_token}"
+    recipient = m["email"]
+    subject = f"Reminder: You've been invited to join {business_name} on AgentNexLiFy"
+    body_html = _build_invite_email_html(business_name, m["role"], invite_url)
+
+    logger.info(
+        "Re-sending invite email to=%s tenant_id=%s business=%s invite_url=%s",
+        recipient, tenant_id, business_name, invite_url,
     )
-    logger.info("Resend invite email result for %s: %s", m["email"], email_result)
+    try:
+        email_result = await send_email(
+            to=recipient,
+            subject=subject,
+            body_html=body_html,
+            tenant_id=tenant_id,
+        )
+    except Exception:
+        logger.exception("Resend invite email raised exception for %s", recipient)
+        email_result = {"success": False, "detail": "send_email raised exception"}
+
+    if email_result.get("success"):
+        logger.info("Resend invite email sent successfully to=%s resend_id=%s", recipient, email_result.get("resend_id"))
+    else:
+        logger.error(
+            "Resend invite email FAILED to=%s tenant_id=%s detail=%s",
+            recipient, tenant_id, email_result.get("detail"),
+        )
 
     return {"status": "resent"}
