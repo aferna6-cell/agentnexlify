@@ -22,6 +22,7 @@ import AcceptInvitePage from "./pages/AcceptInvitePage";
 import BusinessPage from "./pages/BusinessPage";
 import "./index.css";
 
+
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
 
 /* Renders Home and scrolls to a given anchor after mount */

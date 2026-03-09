@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const planLabels = {
@@ -13,8 +13,8 @@ const planColors = {
   free: { color: "var(--green)", bg: "var(--green-dim)" },
   foundation: { color: "var(--accent)", bg: "var(--accent-dim)" },
   growth: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
-  operations: { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
-  enterprise: { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+  operations: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
+  enterprise: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
 };
 
 const Icon = ({ d, ...props }) => (
@@ -22,10 +22,10 @@ const Icon = ({ d, ...props }) => (
 );
 
 const roleColors = {
-  owner: { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+  owner: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
   admin: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
   member: { color: "var(--accent)", bg: "var(--accent-dim)" },
-  viewer: { color: "var(--text-secondary)", bg: "rgba(148, 148, 168, 0.15)" },
+  viewer: { color: "var(--text-secondary)", bg: "var(--hover-overlay)" },
 };
 
 const allNavItems = [
@@ -45,10 +45,37 @@ const allNavItems = [
   { key: "support", icon: <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" />, label: "Support" },
 ];
 
+const SunIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="5" />
+    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+);
+
 export default function Sidebar({ currentPage, onNavigate, plan }) {
   const { user, logout } = useAuth();
   const activePlan = plan || user?.plan || "free";
   const userRole = user?.role || "owner";
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "dark";
+  });
+
+  useEffect(() => {
+    const appEl = document.querySelector(".app");
+    if (appEl) appEl.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   const navItems = allNavItems.filter(
     (item) => !item.roles || item.roles.includes(userRole)
@@ -72,6 +99,10 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
         ))}
       </nav>
       <div className="sidebar-footer">
+        <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+          <span className="nav-item-icon">{theme === "dark" ? <SunIcon /> : <MoonIcon />}</span>
+          <span className="nav-item-label">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+        </button>
         {user && (
           <div className="sidebar-user">
             <div className="sidebar-user-name">{user.name || user.businessName || user.email}</div>

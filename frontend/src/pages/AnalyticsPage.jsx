@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   fetchAnalyticsOverview,
@@ -38,16 +38,20 @@ function StatCard({ label, value, change, suffix = "" }) {
   );
 }
 
-const chartTheme = {
-  bg: "#16161f",
-  grid: "#222233",
-  text: "#9494a8",
-  accent: "#00bfff",
-  green: "#34d399",
-  purple: "#8b5cf6",
-  yellow: "#f5a623",
-  red: "#ff4444",
-};
+function getChartTheme() {
+  const s = getComputedStyle(document.documentElement);
+  const v = (name) => s.getPropertyValue(name).trim();
+  return {
+    bg: v("--bg-card"),
+    grid: v("--border"),
+    text: v("--text-secondary"),
+    accent: v("--accent"),
+    green: v("--green"),
+    purple: v("--purple") || "#8b5cf6",
+    yellow: v("--yellow"),
+    red: v("--red"),
+  };
+}
 
 function CustomTooltip({ active, payload, label, valueSuffix = "" }) {
   if (!active || !payload?.length) return null;
@@ -73,6 +77,20 @@ export default function AnalyticsPage() {
   const [responseTimes, setResponseTimes] = useState(null);
   const [widgetData, setWidgetData] = useState(null);
   const [error, setError] = useState(null);
+
+  const [currentTheme, setCurrentTheme] = useState(
+    () => document.querySelector(".app")?.getAttribute("data-theme") || "dark"
+  );
+  useEffect(() => {
+    const appEl = document.querySelector(".app");
+    if (!appEl) return;
+    const observer = new MutationObserver(() => {
+      setCurrentTheme(appEl.getAttribute("data-theme") || "dark");
+    });
+    observer.observe(appEl, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  const chartTheme = useMemo(() => getChartTheme(), [currentTheme]);
 
   const loadData = useCallback(async () => {
     if (!user?.tenantId) return;

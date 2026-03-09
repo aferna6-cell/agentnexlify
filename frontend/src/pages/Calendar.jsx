@@ -4,7 +4,7 @@ import { fetchAppointments, updateAppointment, cancelAppointment } from "../util
 
 const STATUS_COLORS = {
   confirmed: { bg: "var(--accent-dim)", border: "var(--accent)", text: "var(--accent)" },
-  cancelled: { bg: "rgba(255,255,255,0.03)", border: "var(--text-muted)", text: "var(--text-muted)" },
+  cancelled: { bg: "var(--hover-overlay)", border: "var(--text-muted)", text: "var(--text-muted)" },
   completed: { bg: "var(--green-dim)", border: "var(--green)", text: "var(--green)" },
   no_show: { bg: "var(--yellow-dim)", border: "var(--yellow)", text: "var(--yellow)" },
 };

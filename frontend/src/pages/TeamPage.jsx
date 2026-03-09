@@ -15,10 +15,10 @@ const roleOptions = [
 ];
 
 const roleBadgeStyles = {
-  owner: { color: "#f59e0b", background: "rgba(245, 158, 11, 0.15)" },
-  admin: { color: "#8b5cf6", background: "rgba(139, 92, 246, 0.15)" },
-  member: { color: "#00bfff", background: "rgba(0, 191, 255, 0.15)" },
-  viewer: { color: "#9494a8", background: "rgba(148, 148, 168, 0.15)" },
+  owner: { color: "var(--yellow)", background: "var(--yellow-dim)" },
+  admin: { color: "var(--purple)", background: "rgba(139, 92, 246, 0.15)" },
+  member: { color: "var(--accent)", background: "var(--accent-dim)" },
+  viewer: { color: "var(--text-secondary)", background: "var(--hover-overlay)" },
 };
 
 export default function TeamPage() {
