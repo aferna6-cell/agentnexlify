@@ -578,6 +578,13 @@ export default function Home() {
               <h3>Dedicated Support</h3>
               <p>Real people ready to help you succeed.</p>
             </div>
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              </div>
+              <h3>Custom Branding</h3>
+              <p>Make it yours. Customize colors, logos, and styling to match your brand.</p>
+            </div>
           </div>
         </div>
       </section>

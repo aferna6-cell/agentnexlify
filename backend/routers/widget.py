@@ -443,6 +443,10 @@ def _send_new_lead_sms_notification(
 ) -> None:
     """Send SMS notification to tenant owner when a new lead is captured."""
     import asyncio
+    logger.info(
+        "sms_notification: starting for tenant=%s lead=%s info_keys=%s",
+        tenant_id, lead_name, list(lead_info.keys()),
+    )
     db = get_supabase()
     result = (
         db.table("tenants")
@@ -452,16 +456,29 @@ def _send_new_lead_sms_notification(
         .execute()
     )
     if not result.data:
+        logger.warning("sms_notification: no tenant found for id=%s", tenant_id)
         return
     tenant = result.data[0]
-    if not tenant.get("sms_notifications_enabled") or not tenant.get("notification_phone"):
+    sms_enabled = tenant.get("sms_notifications_enabled")
+    phone = tenant.get("notification_phone")
+    logger.info(
+        "sms_notification: tenant=%s sms_enabled=%s phone=%s",
+        tenant_id, sms_enabled, phone,
+    )
+    if not sms_enabled or not phone:
+        logger.info("sms_notification: skipping — sms_enabled=%s phone=%s", sms_enabled, phone)
         return
 
     contact = lead_info.get("email") or lead_info.get("phone") or "no contact info"
     body = f"New lead for {tenant.get('business_name', 'your business')}: {lead_name} ({contact})"
+    logger.info("sms_notification: sending to=%s body_len=%d", phone, len(body))
 
-    from backend.services.twilio_service import send_sms
-    asyncio.create_task(send_sms(to=tenant["notification_phone"], body=body))
+    try:
+        from backend.services.twilio_service import send_sms
+        asyncio.create_task(send_sms(to=phone, body=body))
+        logger.info("sms_notification: task created successfully for tenant=%s", tenant_id)
+    except Exception:
+        logger.error("sms_notification: FAILED to send for tenant=%s", tenant_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -746,6 +763,12 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             asyncio.create_task(trigger_sequence(tenant["id"], lead_id, "new_lead"))
         except Exception:
             logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
+
+        # SMS notification to owner
+        try:
+            _send_new_lead_sms_notification(tenant["id"], fields.get("name", "Unknown"), fields)
+        except Exception:
+            logger.warning("Failed to send SMS notification for lead %s", lead_id, exc_info=True)
 
     return WidgetLeadResponse(
         lead_id=lead_id,

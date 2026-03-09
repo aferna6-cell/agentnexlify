@@ -106,6 +106,40 @@ TEMPLATES = {
             },
         ],
     },
+    "review_request": {
+        "name": "Review Request",
+        "trigger_event": "appointment_completed",
+        "trigger_config": {},
+        "steps": [
+            {
+                "step_order": 1,
+                "delay_minutes": 60,  # 1 hour
+                "subject_template": "How was your visit, {{name}}?",
+                "body_template": (
+                    "<h2>Hi {{name}},</h2>"
+                    "<p>Thank you for visiting {{business_name}}! "
+                    "We'd love to hear about your experience.</p>"
+                    "<p>If you have a moment, please leave us a quick review:</p>"
+                    "<p><a href=\"{{review_link}}\">{{review_link}}</a></p>"
+                    "<p>Your feedback helps us improve and helps others find us. Thank you!</p>"
+                    "<p>&mdash; The {{business_name}} Team</p>"
+                ),
+            },
+            {
+                "step_order": 2,
+                "delay_minutes": 4320,  # 3 days
+                "subject_template": "Quick reminder, {{name}}",
+                "body_template": (
+                    "<h2>Hi {{name}},</h2>"
+                    "<p>Just a friendly reminder &mdash; if you enjoyed your visit to "
+                    "{{business_name}}, we'd really appreciate a quick review:</p>"
+                    "<p><a href=\"{{review_link}}\">{{review_link}}</a></p>"
+                    "<p>Thank you for your support!</p>"
+                    "<p>&mdash; The {{business_name}} Team</p>"
+                ),
+            },
+        ],
+    },
 }
 
 

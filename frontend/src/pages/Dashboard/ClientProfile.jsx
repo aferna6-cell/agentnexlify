@@ -6,6 +6,7 @@ import {
   addClientNote,
   changeClientStage,
   updateClient,
+  sendSms,
 } from "../../utils/api";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
@@ -42,6 +43,11 @@ export default function ClientProfile({ onNavigate, pageData }) {
   const [hasMore, setHasMore] = useState(false);
   const [editing, setEditing] = useState(null);
   const [editValue, setEditValue] = useState("");
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [smsPhone, setSmsPhone] = useState("");
+  const [smsMessage, setSmsMessage] = useState("");
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsResult, setSmsResult] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.tenantId || !leadId) return;
@@ -129,6 +135,34 @@ export default function ClientProfile({ onNavigate, pageData }) {
   const startEdit = (field, currentValue) => {
     setEditing(field);
     setEditValue(currentValue || "");
+  };
+
+  const openSmsModal = () => {
+    setSmsPhone(profile?.phone || "");
+    setSmsMessage("");
+    setSmsResult(null);
+    setShowSmsModal(true);
+  };
+
+  const handleSendSms = async () => {
+    if (!smsPhone.trim() || !smsMessage.trim() || !user?.tenantId) return;
+    setSmsSending(true);
+    setSmsResult(null);
+    try {
+      await sendSms(token, { lead_id: leadId, phone: smsPhone, message: smsMessage });
+      setSmsResult("sent");
+      // Refresh timeline
+      const timelineRes = await fetchClientTimeline(user.tenantId, leadId, token);
+      setTimeline(timelineRes.timeline || []);
+      setHasMore(timelineRes.has_more || false);
+      setTimelineOffset(timelineRes.timeline?.length || 0);
+      setTimeout(() => setShowSmsModal(false), 1500);
+    } catch (err) {
+      console.error("Failed to send SMS", err);
+      setSmsResult("error");
+    } finally {
+      setSmsSending(false);
+    }
   };
 
   if (!leadId) {
@@ -236,6 +270,17 @@ export default function ClientProfile({ onNavigate, pageData }) {
                 )}
               </div>
             ))}
+            {profile.phone && (
+              <div className="sidebar-panel-row">
+                <button
+                  className="btn-sm"
+                  style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem" }}
+                  onClick={openSmsModal}
+                >
+                  Send SMS
+                </button>
+              </div>
+            )}
             {profile.areas_of_interest && (
               <div className="sidebar-panel-row">
                 <span className="sidebar-panel-label">Interest</span>
@@ -312,6 +357,84 @@ export default function ClientProfile({ onNavigate, pageData }) {
           </div>
         </div>
       </div>
+
+      {/* SMS Modal */}
+      {showSmsModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          }}
+          onClick={(e) => e.target === e.currentTarget && setShowSmsModal(false)}
+        >
+          <div style={{
+            background: "var(--bg-card)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", width: "440px", padding: "24px",
+            display: "flex", flexDirection: "column", gap: "16px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, color: "var(--text-primary)" }}>Send SMS</h3>
+              <button
+                onClick={() => setShowSmsModal(false)}
+                style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: "18px" }}
+              >&times;</button>
+            </div>
+            <div>
+              <label style={{ color: "var(--text-secondary)", fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>Phone</label>
+              <input
+                value={smsPhone}
+                onChange={(e) => setSmsPhone(e.target.value)}
+                style={{
+                  width: "100%", padding: "8px 10px", background: "var(--bg-primary)",
+                  border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+                  color: "var(--text-primary)", fontSize: "14px", boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ color: "var(--text-secondary)", fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>
+                Message ({1600 - smsMessage.length} chars remaining)
+              </label>
+              <textarea
+                value={smsMessage}
+                onChange={(e) => setSmsMessage(e.target.value.slice(0, 1600))}
+                maxLength={1600}
+                rows={5}
+                style={{
+                  width: "100%", padding: "8px 10px", background: "var(--bg-primary)",
+                  border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+                  color: "var(--text-primary)", fontSize: "14px", resize: "vertical",
+                  fontFamily: "inherit", boxSizing: "border-box",
+                }}
+                placeholder="Type your message..."
+              />
+            </div>
+            {smsResult === "sent" && (
+              <div style={{ color: "var(--green, #22c55e)", fontSize: "13px" }}>SMS sent successfully!</div>
+            )}
+            {smsResult === "error" && (
+              <div style={{ color: "var(--red, #ef4444)", fontSize: "13px" }}>Failed to send SMS. Please try again.</div>
+            )}
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowSmsModal(false)}
+                style={{
+                  padding: "8px 14px", background: "transparent", color: "var(--text-secondary)",
+                  border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                }}
+              >Cancel</button>
+              <button
+                onClick={handleSendSms}
+                disabled={smsSending || !smsPhone.trim() || !smsMessage.trim()}
+                className="btn-primary"
+                style={{ padding: "8px 16px", opacity: smsSending || !smsPhone.trim() || !smsMessage.trim() ? 0.5 : 1 }}
+              >
+                {smsSending ? "Sending..." : "Send SMS"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

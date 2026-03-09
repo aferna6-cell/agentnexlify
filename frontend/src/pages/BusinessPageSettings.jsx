@@ -5,6 +5,63 @@ import SkeletonLoader from "../components/SkeletonLoader";
 
 const SITE_URL = "https://agentnexlify.com";
 
+const PLAN_RANK = { free: 0, growth: 1, professional: 2, enterprise: 3 };
+function canAccess(userPlan, requiredPlan) {
+  return (PLAN_RANK[userPlan] || 0) >= (PLAN_RANK[requiredPlan] || 0);
+}
+
+const COLOR_THEMES = [
+  { value: "default", label: "Default (White/Blue)", preview: "#3b82f6" },
+  { value: "ocean", label: "Ocean", preview: "#0ea5e9" },
+  { value: "forest", label: "Forest", preview: "#16a34a" },
+  { value: "sunset", label: "Sunset", preview: "#f97316" },
+  { value: "slate", label: "Slate", preview: "#64748b" },
+  { value: "rose", label: "Rose", preview: "#f43f5e" },
+  { value: "amber", label: "Amber", preview: "#f59e0b" },
+  { value: "indigo", label: "Indigo", preview: "#6366f1" },
+  { value: "emerald", label: "Emerald", preview: "#10b981" },
+  { value: "charcoal", label: "Charcoal", preview: "#374151" },
+];
+
+const FONT_OPTIONS = [
+  "Inter", "Poppins", "Roboto", "Open Sans", "Lato",
+  "Montserrat", "Raleway", "Nunito", "Source Sans 3", "DM Sans",
+];
+
+function UpgradeBadge({ requiredPlan }) {
+  const label = requiredPlan === "enterprise" ? "Enterprise" : "Professional";
+  return (
+    <span style={{
+      display: "inline-block",
+      fontSize: "0.7rem",
+      fontWeight: 600,
+      padding: "2px 8px",
+      borderRadius: "10px",
+      background: requiredPlan === "enterprise" ? "rgba(245, 158, 11, 0.15)" : "rgba(139, 92, 246, 0.15)",
+      color: requiredPlan === "enterprise" ? "#d97706" : "#7c3aed",
+      marginLeft: "0.5rem",
+      verticalAlign: "middle",
+    }}>
+      Upgrade to {label}
+    </span>
+  );
+}
+
+function GatedField({ plan, requiredPlan, children, label }) {
+  const locked = !canAccess(plan, requiredPlan);
+  return (
+    <div className="settings-field" style={{ position: "relative", opacity: locked ? 0.55 : 1 }}>
+      <label>
+        {label}
+        {locked && <UpgradeBadge requiredPlan={requiredPlan} />}
+      </label>
+      <div style={{ pointerEvents: locked ? "none" : "auto" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function BusinessPageSettings() {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -12,6 +69,7 @@ export default function BusinessPageSettings() {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState("");
   const [newService, setNewService] = useState("");
+  const [plan, setPlan] = useState("free");
   const [form, setForm] = useState({
     business_slug: "",
     business_description: "",
@@ -24,6 +82,12 @@ export default function BusinessPageSettings() {
     business_cover_url: "",
     business_page_enabled: false,
     business_services: [],
+    bp_color_theme: "default",
+    bp_font_family: "",
+    bp_hide_powered_by: false,
+    bp_custom_css: "",
+    bp_meta_title: "",
+    bp_meta_description: "",
   });
 
   const load = useCallback(async () => {
@@ -31,6 +95,7 @@ export default function BusinessPageSettings() {
     setLoading(true);
     try {
       const data = await fetchBusinessPageSettings(user.tenantId, token);
+      setPlan(data.plan || user?.plan || "free");
       setForm({
         business_slug: data.business_slug || "",
         business_description: data.business_description || "",
@@ -43,6 +108,12 @@ export default function BusinessPageSettings() {
         business_cover_url: data.business_cover_url || "",
         business_page_enabled: data.business_page_enabled || false,
         business_services: data.business_services || [],
+        bp_color_theme: data.bp_color_theme || "default",
+        bp_font_family: data.bp_font_family || "",
+        bp_hide_powered_by: data.bp_hide_powered_by || false,
+        bp_custom_css: data.bp_custom_css || "",
+        bp_meta_title: data.bp_meta_title || "",
+        bp_meta_description: data.bp_meta_description || "",
       });
     } catch (err) {
       console.error("Failed to load business page settings", err);
@@ -84,10 +155,13 @@ export default function BusinessPageSettings() {
     setSaving(true);
     try {
       const payload = { ...form };
-      // Only send non-empty slug
       if (!payload.business_slug) delete payload.business_slug;
+      // Don't send empty tier strings
+      if (!payload.bp_font_family) delete payload.bp_font_family;
+      if (!payload.bp_custom_css) delete payload.bp_custom_css;
+      if (!payload.bp_meta_title) delete payload.bp_meta_title;
+      if (!payload.bp_meta_description) delete payload.bp_meta_description;
       const result = await updateBusinessPageSettings(user.tenantId, token, payload);
-      // Update slug from server (may have been auto-generated or sanitized)
       if (result.business_slug) {
         setForm((f) => ({ ...f, business_slug: result.business_slug }));
       }
@@ -265,6 +339,124 @@ export default function BusinessPageSettings() {
                   Wide image for the hero section. If empty, we'll use a nice gradient.
                 </span>
               </div>
+            </div>
+
+            {/* Appearance — Professional+ */}
+            <div className="settings-card">
+              <h3>Appearance</h3>
+              <p className="settings-card-desc">Customize the look of your public business page.</p>
+
+              <GatedField plan={plan} requiredPlan="professional" label="Color Theme">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "0.5rem" }}>
+                  {COLOR_THEMES.map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => { setForm((f) => ({ ...f, bp_color_theme: t.value })); setSaved(false); }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "0.5rem 0.75rem",
+                        border: form.bp_color_theme === t.value ? `2px solid ${t.preview}` : "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                        background: form.bp_color_theme === t.value ? `${t.preview}08` : "#fff",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <span style={{
+                        width: 16, height: 16, borderRadius: "50%",
+                        background: t.preview, flexShrink: 0,
+                      }} />
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </GatedField>
+
+              <GatedField plan={plan} requiredPlan="professional" label="Font Family">
+                <select
+                  value={form.bp_font_family}
+                  onChange={handleChange("bp_font_family")}
+                  style={{ width: "100%" }}
+                >
+                  <option value="">System default</option>
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                <span className="settings-field-hint">
+                  Applies a Google Font to your public page
+                </span>
+              </GatedField>
+            </div>
+
+            {/* SEO — Professional+ */}
+            <div className="settings-card">
+              <h3>SEO</h3>
+              <p className="settings-card-desc">Customize how your page appears in search results.</p>
+
+              <GatedField plan={plan} requiredPlan="professional" label="Meta Title">
+                <input
+                  value={form.bp_meta_title}
+                  onChange={handleChange("bp_meta_title")}
+                  placeholder="Custom page title for search engines"
+                />
+                <span className="settings-field-hint">
+                  Overrides the default "{'{business name} - {location}'}" title
+                </span>
+              </GatedField>
+
+              <GatedField plan={plan} requiredPlan="professional" label="Meta Description">
+                <textarea
+                  value={form.bp_meta_description}
+                  onChange={handleChange("bp_meta_description")}
+                  placeholder="Brief description for search engine results (150-160 chars ideal)"
+                  rows={2}
+                  style={{ width: "100%", resize: "vertical" }}
+                />
+              </GatedField>
+            </div>
+
+            {/* Branding — Professional+ */}
+            <div className="settings-card">
+              <h3>Branding</h3>
+
+              <GatedField plan={plan} requiredPlan="professional" label="Hide 'Powered by AgentNexLiFy'">
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.bp_hide_powered_by}
+                    onChange={() => { setForm((f) => ({ ...f, bp_hide_powered_by: !f.bp_hide_powered_by })); setSaved(false); }}
+                    id="bp-hide-powered"
+                    style={{ width: "auto" }}
+                    disabled={!canAccess(plan, "professional")}
+                  />
+                  <label htmlFor="bp-hide-powered" style={{ margin: 0, cursor: "pointer", fontSize: "0.9rem" }}>
+                    Remove branding footer from public page
+                  </label>
+                </div>
+              </GatedField>
+            </div>
+
+            {/* Custom CSS — Enterprise only */}
+            <div className="settings-card">
+              <h3>Advanced</h3>
+
+              <GatedField plan={plan} requiredPlan="enterprise" label="Custom CSS">
+                <textarea
+                  value={form.bp_custom_css}
+                  onChange={handleChange("bp_custom_css")}
+                  placeholder={`.bp-page { /* your custom styles */ }`}
+                  rows={6}
+                  style={{ width: "100%", resize: "vertical", fontFamily: "monospace", fontSize: "0.8rem" }}
+                  disabled={!canAccess(plan, "enterprise")}
+                />
+                <span className="settings-field-hint">
+                  Add custom CSS to fully control your page styling. Use .bp-* class selectors.
+                </span>
+              </GatedField>
             </div>
 
             {/* Services */}

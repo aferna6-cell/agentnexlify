@@ -1,6 +1,7 @@
 """Appointment booking endpoints — availability config, slot queries, booking."""
 
 
+import asyncio
 import logging
 from datetime import date as date_type
 
@@ -17,6 +18,7 @@ from backend.models.schemas import (
     BookAppointmentRequest,
     BookAppointmentResponse,
 )
+from backend.services.automation_engine import trigger_sequence
 from backend.services.booking import (
     cancel_appointment,
     create_appointment,
@@ -234,6 +236,16 @@ async def patch_appointment(
     updated = update_appointment(tenant_id, appointment_id, data)
     if not updated:
         raise HTTPException(status_code=404, detail="Appointment not found")
+
+    # Fire automation trigger when appointment is completed
+    if data.get("status") == "completed" and updated.get("lead_id"):
+        asyncio.create_task(
+            trigger_sequence(
+                tenant_id, updated["lead_id"], "appointment_completed",
+                {"appointment_id": appointment_id},
+            )
+        )
+
     return updated
 
 

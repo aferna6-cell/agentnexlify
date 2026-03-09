@@ -15,6 +15,7 @@ export default function SettingsPage({ onNavigate }) {
     owner_name: "",
     notification_phone: "",
     sms_notifications_enabled: false,
+    google_review_link: "",
   });
   const [email, setEmail] = useState("");
 
@@ -30,6 +31,7 @@ export default function SettingsPage({ onNavigate }) {
         owner_name: tenant.owner_name || "",
         notification_phone: tenant.notification_phone || "",
         sms_notifications_enabled: tenant.sms_notifications_enabled || false,
+        google_review_link: tenant.google_review_link || "",
       });
       setEmail(tenant.owner_email || "");
     } catch (err) {
@@ -140,6 +142,26 @@ export default function SettingsPage({ onNavigate }) {
             <label htmlFor="sms-toggle" style={{ margin: 0, cursor: "pointer" }}>
               Enable SMS notifications for new leads
             </label>
+          </div>
+          <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
+            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+          </button>
+        </div>
+
+        {/* Google Review Link */}
+        <div className="settings-card">
+          <h3>Google Review Link</h3>
+          <p className="settings-card-desc">Paste your Google review URL here. Used by the Review Request automation template.</p>
+          <div className="settings-field">
+            <label>Review URL</label>
+            <input
+              value={form.google_review_link}
+              onChange={handleChange("google_review_link")}
+              placeholder="https://g.page/r/your-business/review"
+            />
+            <span className="settings-field-hint">
+              Find this in Google Business Profile under "Ask for reviews"
+            </span>
           </div>
           <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
             {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}

@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 BATCH_LIMIT = 50
 
+VALID_TRIGGER_EVENTS = {"new_lead", "lead_stage_change", "no_response_24h", "appointment_completed"}
+
 
 async def trigger_sequence(
     tenant_id: str,
@@ -157,10 +159,10 @@ async def execute_step(execution_id: str) -> None:
         return
     lead = lead_result.data[0]
 
-    # Load tenant for business_name and plan
+    # Load tenant for business_name, plan, and google_review_link
     tenant_result = (
         db.table("tenants")
-        .select("id, business_name, plan")
+        .select("id, business_name, plan, google_review_link")
         .eq("id", execution["tenant_id"])
         .limit(1)
         .execute()
@@ -173,6 +175,7 @@ async def execute_step(execution_id: str) -> None:
         "email": lead.get("email") or "",
         "phone": lead.get("phone") or "",
         "business_name": tenant.get("business_name") or "Our Team",
+        "review_link": tenant.get("google_review_link") or "",
     }
 
     action_type = step.get("action_type", "email")
@@ -223,6 +226,71 @@ async def execute_step(execution_id: str) -> None:
             logger.warning(
                 "SMS failed for execution %s step %s",
                 execution_id, step["id"],
+            )
+    elif action_type == "ai_email":
+        # --- AI Email path ---
+        if not lead.get("email"):
+            db.table("automation_logs").insert({
+                "execution_id": execution_id,
+                "step_id": step["id"],
+                "action": "skipped",
+                "details": {"reason": "no_email"},
+            }).execute()
+            _advance_execution(db, execution, step)
+            return
+
+        ai_body = await _generate_ai_email(
+            db, execution["tenant_id"], execution["lead_id"],
+            tenant.get("business_name", ""), step.get("body_template"),
+        )
+
+        subject = render_template(step["subject_template"], context)
+
+        # Branded wrapping
+        plan = tenant.get("plan", "free")
+        if plan in ("professional", "enterprise"):
+            try:
+                wc_result = (
+                    db.table("widget_configs")
+                    .select("branding")
+                    .eq("tenant_id", execution["tenant_id"])
+                    .limit(1)
+                    .execute()
+                )
+                wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
+                if wc_branding:
+                    ai_body = build_branded_email_html(ai_body, wc_branding, tenant.get("business_name", ""))
+            except Exception:
+                logger.debug("Failed to load branding for AI email, sending plain", exc_info=True)
+
+        result = await send_email(
+            to=lead["email"],
+            subject=subject,
+            body_html=ai_body,
+            tenant_id=execution["tenant_id"],
+        )
+
+        action = "ai_email_sent" if result["success"] else "ai_email_failed"
+        db.table("automation_logs").insert({
+            "execution_id": execution_id,
+            "step_id": step["id"],
+            "action": action,
+            "details": {**result, "ai_generated_body": ai_body[:500]},
+        }).execute()
+
+        if result["success"]:
+            fire_event_background(execution["tenant_id"], "automation.email_sent", {
+                "lead_id": execution["lead_id"],
+                "lead_email": lead["email"],
+                "subject": subject,
+                "sequence_id": execution["sequence_id"],
+                "step_order": execution["current_step"],
+                "ai_generated": True,
+            })
+        else:
+            logger.warning(
+                "AI email failed for execution %s step %s: %s",
+                execution_id, step["id"], result.get("detail"),
             )
     else:
         # --- Email path (default) ---
@@ -287,6 +355,73 @@ async def execute_step(execution_id: str) -> None:
             )
 
     _advance_execution(db, execution, step)
+
+
+async def _generate_ai_email(
+    db, tenant_id: str, lead_id: str, business_name: str, body_template: str | None
+) -> str:
+    """Generate a personalized email body using Anthropic API."""
+    import anthropic
+    from backend.config import settings as app_settings
+
+    # Load recent conversation history for this lead
+    conv_result = (
+        db.table("chat_messages")
+        .select("role, content")
+        .eq("tenant_id", tenant_id)
+        .eq("lead_id", lead_id)
+        .order("created_at", desc=False)
+        .limit(20)
+        .execute()
+    )
+    conversation = conv_result.data or []
+    conv_text = "\n".join(
+        f"{m['role']}: {m['content']}" for m in conversation
+    ) if conversation else "No conversation history available."
+
+    # Load FAQ entries for context
+    faq_result = (
+        db.table("faq_entries")
+        .select("question, answer")
+        .eq("tenant_id", tenant_id)
+        .limit(20)
+        .execute()
+    )
+    faq_text = "\n".join(
+        f"Q: {f['question']}\nA: {f['answer']}" for f in (faq_result.data or [])
+    ) if faq_result.data else "No FAQ entries available."
+
+    system_prompt = (
+        f"You are a helpful assistant for {business_name}. "
+        "Based on this customer's conversation and our FAQ, draft a personalized follow-up email. "
+        "Keep it friendly, short (3-4 sentences), and helpful. "
+        "Return ONLY the email body HTML (no subject line). Use <p> tags for paragraphs."
+    )
+
+    user_content = f"Customer conversation:\n{conv_text}\n\nBusiness FAQ:\n{faq_text}"
+    if body_template and body_template.strip():
+        user_content += f"\n\nUse this as a guide/template to enhance:\n{body_template}"
+
+    try:
+        client = anthropic.Anthropic(api_key=app_settings.anthropic_api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=500,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_content}],
+        )
+        return response.content[0].text
+    except Exception:
+        logger.exception("AI email generation failed for tenant %s, lead %s", tenant_id, lead_id)
+        # Fallback: use the body_template if provided, else a generic message
+        if body_template and body_template.strip():
+            return body_template
+        return (
+            f"<p>Hi there,</p>"
+            f"<p>Thank you for connecting with {business_name}! "
+            f"We wanted to follow up and see if there's anything else we can help you with.</p>"
+            f"<p>Best regards,<br>The {business_name} Team</p>"
+        )
 
 
 def _advance_execution(db, execution: dict, current_step: dict) -> None:

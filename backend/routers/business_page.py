@@ -36,6 +36,13 @@ class BusinessPagePublic(BaseModel):
     widget_bot_name: str = "AI Assistant"
     widget_greeting: str | None = None
     widget_position: str = "bottom-right"
+    # Tier features
+    color_theme: str = "default"
+    font_family: str | None = None
+    hide_powered_by: bool = False
+    custom_css: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
 
 
 class BusinessPageUpdate(BaseModel):
@@ -50,6 +57,13 @@ class BusinessPageUpdate(BaseModel):
     business_cover_url: str | None = None
     business_page_enabled: bool | None = None
     business_services: list[str] | None = None
+    # Tier features
+    bp_color_theme: str | None = None
+    bp_font_family: str | None = None
+    bp_hide_powered_by: bool | None = None
+    bp_custom_css: str | None = None
+    bp_meta_title: str | None = None
+    bp_meta_description: str | None = None
 
 
 class BusinessPageSettings(BaseModel):
@@ -65,11 +79,57 @@ class BusinessPageSettings(BaseModel):
     business_page_enabled: bool = False
     business_services: list[str] | None = None
     business_name: str | None = None
+    # Tier features
+    bp_color_theme: str = "default"
+    bp_font_family: str | None = None
+    bp_hide_powered_by: bool = False
+    bp_custom_css: str | None = None
+    bp_meta_title: str | None = None
+    bp_meta_description: str | None = None
+    plan: str = "free"
 
 
 # -- Helpers ------------------------------------------------------------------
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+# Plan hierarchy for tier feature gating
+_PLAN_RANK = {"free": 0, "growth": 1, "professional": 2, "enterprise": 3}
+
+# Fields each plan unlocks (cumulative — higher plans include lower)
+_TIER_FIELDS: dict[str, set[str]] = {
+    "professional": {"bp_color_theme", "bp_font_family", "bp_hide_powered_by", "bp_meta_title", "bp_meta_description"},
+    "enterprise": {"bp_custom_css"},
+}
+
+# All tier-gated column names (union of above)
+_ALL_TIER_FIELDS = _TIER_FIELDS["professional"] | _TIER_FIELDS["enterprise"]
+
+VALID_COLOR_THEMES = {
+    "default", "ocean", "forest", "sunset", "slate",
+    "rose", "amber", "indigo", "emerald", "charcoal",
+}
+
+VALID_FONTS = {
+    "Inter", "Poppins", "Roboto", "Open Sans", "Lato",
+    "Montserrat", "Raleway", "Nunito", "Source Sans 3", "DM Sans",
+}
+
+
+def _allowed_tier_fields(plan: str) -> set[str]:
+    """Return the set of tier fields allowed for a given plan."""
+    rank = _PLAN_RANK.get(plan, 0)
+    allowed: set[str] = set()
+    for tier, fields in _TIER_FIELDS.items():
+        if rank >= _PLAN_RANK.get(tier, 999):
+            allowed |= fields
+    return allowed
+
+
+def _strip_disallowed_tier_fields(updates: dict, plan: str) -> dict:
+    """Remove tier-gated fields the tenant's plan doesn't allow."""
+    allowed = _allowed_tier_fields(plan)
+    return {k: v for k, v in updates.items() if k not in _ALL_TIER_FIELDS or k in allowed}
 
 
 def _slugify(text: str) -> str:
@@ -120,7 +180,9 @@ async def get_business_page(request: Request, slug: str):
             "id, business_name, business_description, business_phone, "
             "business_address, business_city, business_state, "
             "business_hours_display, business_logo_url, business_cover_url, "
-            "business_page_enabled, business_services"
+            "business_page_enabled, business_services, plan, "
+            "bp_color_theme, bp_font_family, bp_hide_powered_by, "
+            "bp_custom_css, bp_meta_title, bp_meta_description"
         )
         .eq("business_slug", slug)
         .limit(1)
@@ -143,6 +205,10 @@ async def get_business_page(request: Request, slug: str):
     )
     widget = widget_result.data[0] if widget_result.data else {}
 
+    # Only expose tier fields the plan actually allows
+    plan = tenant.get("plan", "free")
+    allowed = _allowed_tier_fields(plan)
+
     return BusinessPagePublic(
         business_name=tenant.get("business_name", ""),
         description=tenant.get("business_description"),
@@ -159,6 +225,12 @@ async def get_business_page(request: Request, slug: str):
         widget_bot_name=widget.get("bot_name", "AI Assistant"),
         widget_greeting=widget.get("greeting_message"),
         widget_position=widget.get("position", "bottom-right"),
+        color_theme=tenant.get("bp_color_theme", "default") if "bp_color_theme" in allowed else "default",
+        font_family=tenant.get("bp_font_family") if "bp_font_family" in allowed else None,
+        hide_powered_by=tenant.get("bp_hide_powered_by", False) if "bp_hide_powered_by" in allowed else False,
+        custom_css=tenant.get("bp_custom_css") if "bp_custom_css" in allowed else None,
+        meta_title=tenant.get("bp_meta_title") if "bp_meta_title" in allowed else None,
+        meta_description=tenant.get("bp_meta_description") if "bp_meta_description" in allowed else None,
     )
 
 
@@ -181,7 +253,9 @@ async def get_business_page_settings(
             "business_name, business_slug, business_description, business_phone, "
             "business_address, business_city, business_state, "
             "business_hours_display, business_logo_url, business_cover_url, "
-            "business_page_enabled, business_services"
+            "business_page_enabled, business_services, plan, "
+            "bp_color_theme, bp_font_family, bp_hide_powered_by, "
+            "bp_custom_css, bp_meta_title, bp_meta_description"
         )
         .eq("id", tenant_id)
         .limit(1)
@@ -204,6 +278,13 @@ async def get_business_page_settings(
         business_cover_url=t.get("business_cover_url"),
         business_page_enabled=t.get("business_page_enabled", False),
         business_services=t.get("business_services"),
+        bp_color_theme=t.get("bp_color_theme", "default"),
+        bp_font_family=t.get("bp_font_family"),
+        bp_hide_powered_by=t.get("bp_hide_powered_by", False),
+        bp_custom_css=t.get("bp_custom_css"),
+        bp_meta_title=t.get("bp_meta_title"),
+        bp_meta_description=t.get("bp_meta_description"),
+        plan=t.get("plan", "free"),
     )
 
 
@@ -218,6 +299,11 @@ async def update_business_page(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_supabase()
+
+    # Fetch tenant plan for tier enforcement
+    tenant_row = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()
+    plan = tenant_row.data[0].get("plan", "free") if tenant_row.data else "free"
+
     updates: dict = {}
 
     # Handle slug
@@ -226,7 +312,7 @@ async def update_business_page(
         slug = _ensure_unique_slug(db, slug, tenant_id)
         updates["business_slug"] = slug
 
-    # Handle other fields
+    # Handle content fields (all plans)
     field_map = {
         "business_description": req.business_description,
         "business_phone": req.business_phone,
@@ -242,6 +328,29 @@ async def update_business_page(
     for key, value in field_map.items():
         if value is not None:
             updates[key] = value
+
+    # Handle tier fields — validate values then strip disallowed
+    tier_fields = {
+        "bp_color_theme": req.bp_color_theme,
+        "bp_font_family": req.bp_font_family,
+        "bp_hide_powered_by": req.bp_hide_powered_by,
+        "bp_custom_css": req.bp_custom_css,
+        "bp_meta_title": req.bp_meta_title,
+        "bp_meta_description": req.bp_meta_description,
+    }
+    for key, value in tier_fields.items():
+        if value is not None:
+            updates[key] = value
+
+    # Validate color theme
+    if "bp_color_theme" in updates and updates["bp_color_theme"] not in VALID_COLOR_THEMES:
+        raise HTTPException(status_code=400, detail=f"Invalid color theme. Must be one of: {', '.join(sorted(VALID_COLOR_THEMES))}")
+    # Validate font
+    if "bp_font_family" in updates and updates["bp_font_family"] not in VALID_FONTS:
+        raise HTTPException(status_code=400, detail=f"Invalid font. Must be one of: {', '.join(sorted(VALID_FONTS))}")
+
+    # Enforce plan restrictions — silently strip fields the plan doesn't allow
+    updates = _strip_disallowed_tier_fields(updates, plan)
 
     # When enabling, auto-generate slug if none exists
     if req.business_page_enabled and "business_slug" not in updates:
@@ -279,4 +388,11 @@ async def update_business_page(
         business_cover_url=t.get("business_cover_url"),
         business_page_enabled=t.get("business_page_enabled", False),
         business_services=t.get("business_services"),
+        bp_color_theme=t.get("bp_color_theme", "default"),
+        bp_font_family=t.get("bp_font_family"),
+        bp_hide_powered_by=t.get("bp_hide_powered_by", False),
+        bp_custom_css=t.get("bp_custom_css"),
+        bp_meta_title=t.get("bp_meta_title"),
+        bp_meta_description=t.get("bp_meta_description"),
+        plan=plan,
     )

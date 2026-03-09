@@ -7,6 +7,19 @@ const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   "https://agentnexlify-production.up.railway.app";
 
+const COLOR_THEMES = {
+  default: { primary: "#3b82f6", bg: "#ffffff", text: "#1a1a1a", muted: "#6b7280", surface: "#f9fafb", border: "#f0f0f0" },
+  ocean:   { primary: "#0ea5e9", bg: "#f0f9ff", text: "#0c4a6e", muted: "#64748b", surface: "#e0f2fe", border: "#bae6fd" },
+  forest:  { primary: "#16a34a", bg: "#f0fdf4", text: "#14532d", muted: "#4b5563", surface: "#dcfce7", border: "#bbf7d0" },
+  sunset:  { primary: "#f97316", bg: "#fff7ed", text: "#431407", muted: "#78716c", surface: "#fed7aa", border: "#fdba74" },
+  slate:   { primary: "#64748b", bg: "#f8fafc", text: "#1e293b", muted: "#94a3b8", surface: "#f1f5f9", border: "#e2e8f0" },
+  rose:    { primary: "#f43f5e", bg: "#fff1f2", text: "#4c0519", muted: "#6b7280", surface: "#ffe4e6", border: "#fecdd3" },
+  amber:   { primary: "#f59e0b", bg: "#fffbeb", text: "#451a03", muted: "#78716c", surface: "#fef3c7", border: "#fde68a" },
+  indigo:  { primary: "#6366f1", bg: "#eef2ff", text: "#1e1b4b", muted: "#6b7280", surface: "#e0e7ff", border: "#c7d2fe" },
+  emerald: { primary: "#10b981", bg: "#ecfdf5", text: "#064e3b", muted: "#4b5563", surface: "#d1fae5", border: "#a7f3d0" },
+  charcoal:{ primary: "#6b7280", bg: "#1f2937", text: "#f9fafb", muted: "#9ca3af", surface: "#374151", border: "#4b5563" },
+};
+
 export default function BusinessPage() {
   const { slug } = useParams();
   const [biz, setBiz] = useState(null);
@@ -73,7 +86,9 @@ export default function BusinessPage() {
     );
   }
 
-  const accent = biz.widget_primary_color || "#00BFFF";
+  const theme = COLOR_THEMES[biz.color_theme] || COLOR_THEMES.default;
+  const accent = theme.primary;
+  const fontFamily = biz.font_family || null;
   const location = [biz.city, biz.state].filter(Boolean).join(", ");
   const logoLetter = (biz.business_name || "B").charAt(0).toUpperCase();
   const mapsQuery = [biz.address, biz.city, biz.state].filter(Boolean).join(", ");
@@ -108,31 +123,56 @@ export default function BusinessPage() {
   return (
     <>
       <Helmet>
-        <title>{biz.business_name}{location ? ` - ${location}` : ""}</title>
+        <title>{biz.meta_title || `${biz.business_name}${location ? ` - ${location}` : ""}`}</title>
         <meta
           name="description"
-          content={biz.description || `${biz.business_name}${location ? ` in ${location}` : ""}. Chat with us online.`}
+          content={biz.meta_description || biz.description || `${biz.business_name}${location ? ` in ${location}` : ""}. Chat with us online.`}
         />
-        <meta property="og:title" content={biz.business_name} />
+        <meta property="og:title" content={biz.meta_title || biz.business_name} />
         <meta
           property="og:description"
-          content={biz.description || `${biz.business_name}${location ? ` in ${location}` : ""}`}
+          content={biz.meta_description || biz.description || `${biz.business_name}${location ? ` in ${location}` : ""}`}
         />
         {biz.logo_url && <meta property="og:image" content={biz.logo_url} />}
         <meta property="og:type" content="website" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+        {fontFamily && (
+          <link
+            href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@400;500;600;700&display=swap`}
+            rel="stylesheet"
+          />
+        )}
       </Helmet>
 
       <style>{baseStyles}</style>
       <style>{`
+        .bp-page, .bp-loading, .bp-error {
+          background: ${theme.bg};
+          color: ${theme.text};
+          ${fontFamily ? `font-family: '${fontFamily}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;` : ""}
+        }
+        .bp-page *, .bp-loading *, .bp-error * {
+          ${fontFamily ? `font-family: inherit;` : ""}
+        }
+        .bp-header { background: ${theme.bg}; border-bottom-color: ${theme.border}; }
+        .bp-biz-name { color: ${theme.text}; }
+        .bp-meta-item { color: ${theme.muted}; }
+        .bp-description { color: ${theme.muted}; }
+        .bp-section-title { color: ${theme.text}; }
+        .bp-service-card { background: ${theme.surface}; border-left: 3px solid ${accent}; color: ${theme.text}; }
+        .bp-card { border-top-color: ${theme.border}; }
+        .bp-hours { color: ${theme.muted}; }
+        .bp-contact-item { background: ${theme.surface}; color: ${theme.text}; }
+        .bp-contact-item:hover { background: ${theme.border}; }
+        .bp-footer { border-top-color: ${theme.border}; }
         .bp-accent { color: ${accent}; }
         .bp-btn-accent { background: ${accent}; }
         .bp-btn-accent:hover { background: ${accent}dd; }
         .bp-avatar-fallback { background: ${accent}22; color: ${accent}; }
         .bp-hero-gradient { background: linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%); }
-        .bp-service-card { border-left: 3px solid ${accent}; }
         .bp-open-badge { background: #22c55e22; color: #16a34a; }
       `}</style>
+      {biz.custom_css && <style>{biz.custom_css}</style>}
 
       <div className="bp-page">
         {/* Header */}
@@ -226,11 +266,13 @@ export default function BusinessPage() {
         </div>
 
         {/* Footer */}
-        <footer className="bp-footer">
-          <a href="https://agentnexlify.com" target="_blank" rel="noopener noreferrer" className="bp-powered">
-            Powered by <strong>AgentNexLiFy</strong>
-          </a>
-        </footer>
+        {!biz.hide_powered_by && (
+          <footer className="bp-footer">
+            <a href="https://agentnexlify.com" target="_blank" rel="noopener noreferrer" className="bp-powered">
+              Powered by <strong>AgentNexLiFy</strong>
+            </a>
+          </footer>
+        )}
       </div>
     </>
   );

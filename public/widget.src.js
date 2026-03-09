@@ -59,6 +59,17 @@
     collectPhone: true,
     businessPhone: "",
     allowedDomains: null,
+    branding: {
+      logoUrl: null,
+      secondaryColor: null,
+      accentColor: null,
+      fontFamily: null,
+      widgetTitle: null,
+      poweredByText: null,
+      poweredByUrl: null,
+      hidePoweredBy: false,
+      customCss: null,
+    },
   };
 
   // =========================================================================
@@ -169,11 +180,16 @@
   function buildCSS(pc, pos) {
     var isLeft = pos === "bottom-left";
     var side = isLeft ? "left" : "right";
+    var sc = CONFIG.branding.secondaryColor || pc;
+    var ac = CONFIG.branding.accentColor || pc;
+    var ff = CONFIG.branding.fontFamily
+      ? "'" + CONFIG.branding.fontFamily + "',-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif"
+      : '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif';
 
     return [
       // Reset
       "*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;",
-      'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;}',
+      "font-family:" + ff + ";}",
 
       // Floating button
       ".anx-btn{",
@@ -476,6 +492,23 @@
     if (cfg.allowed_domains) {
       CONFIG.allowedDomains = cfg.allowed_domains;
     }
+    // Merge branding
+    if (cfg.branding) {
+      var b = cfg.branding;
+      if (b.logo_url) CONFIG.branding.logoUrl = b.logo_url;
+      if (b.secondary_color) CONFIG.branding.secondaryColor = b.secondary_color;
+      if (b.accent_color) CONFIG.branding.accentColor = b.accent_color;
+      if (b.font_family) CONFIG.branding.fontFamily = b.font_family;
+      if (b.widget_title) CONFIG.branding.widgetTitle = b.widget_title;
+      if (b.powered_by_text) CONFIG.branding.poweredByText = b.powered_by_text;
+      if (b.powered_by_url) CONFIG.branding.poweredByUrl = b.powered_by_url;
+      if (b.hide_powered_by) CONFIG.branding.hidePoweredBy = true;
+      if (b.custom_css) CONFIG.branding.customCss = b.custom_css;
+      // Branding primary_color overrides top-level primary_color
+      if (b.primary_color && !scriptTag.hasAttribute("data-color")) {
+        CONFIG.primaryColor = b.primary_color;
+      }
+    }
   };
 
   // =========================================================================
@@ -501,10 +534,26 @@
     document.body.appendChild(host);
     this.shadow = host.attachShadow({ mode: "closed" });
 
+    // Inject Google Font if custom font is set
+    if (CONFIG.branding.fontFamily) {
+      var fontLink = document.createElement("link");
+      fontLink.rel = "stylesheet";
+      fontLink.href = "https://fonts.googleapis.com/css2?family=" +
+        encodeURIComponent(CONFIG.branding.fontFamily) + ":wght@400;500;600;700&display=swap";
+      this.shadow.appendChild(fontLink);
+    }
+
     // Inject CSS
     var style = document.createElement("style");
     style.textContent = buildCSS(CONFIG.primaryColor, CONFIG.position);
     this.shadow.appendChild(style);
+
+    // Inject custom CSS if provided
+    if (CONFIG.branding.customCss) {
+      var customStyle = document.createElement("style");
+      customStyle.textContent = CONFIG.branding.customCss;
+      this.shadow.appendChild(customStyle);
+    }
 
     this.buildButton();
     this.buildPanel();
@@ -565,16 +614,26 @@
     var header = document.createElement("div");
     header.className = "anx-header";
 
-    var logo = document.createElement("div");
-    logo.className = "anx-logo";
-    logo.textContent = CONFIG.botName.charAt(0).toUpperCase();
+    var logo;
+    if (CONFIG.branding.logoUrl) {
+      logo = document.createElement("img");
+      logo.className = "anx-logo";
+      logo.src = CONFIG.branding.logoUrl;
+      logo.alt = CONFIG.botName;
+      logo.style.objectFit = "cover";
+    } else {
+      logo = document.createElement("div");
+      logo.className = "anx-logo";
+      logo.textContent = CONFIG.botName.charAt(0).toUpperCase();
+    }
 
     var info = document.createElement("div");
     info.className = "anx-header-info";
 
+    var displayTitle = CONFIG.branding.widgetTitle || CONFIG.botName;
     var name = document.createElement("div");
     name.className = "anx-header-name";
-    name.textContent = CONFIG.botName;
+    name.textContent = displayTitle;
 
     var status = document.createElement("div");
     status.className = "anx-header-status";
@@ -640,15 +699,16 @@
     inputArea.appendChild(input);
     inputArea.appendChild(sendBtn);
 
-    // --- Watermark ---
+    // --- Watermark / Powered-by ---
+    var showPoweredBy = CONFIG.showWatermark && !CONFIG.branding.hidePoweredBy;
     var watermark = document.createElement("div");
     watermark.className = "anx-watermark";
-    if (CONFIG.showWatermark) {
+    if (showPoweredBy) {
       var wLink = document.createElement("a");
-      wLink.href = "https://agentnexlify.com";
+      wLink.href = CONFIG.branding.poweredByUrl || "https://agentnexlify.com";
       wLink.target = "_blank";
       wLink.rel = "noopener noreferrer";
-      wLink.textContent = "Powered by AgentNexLiFy";
+      wLink.textContent = CONFIG.branding.poweredByText || "Powered by AgentNexLiFy";
       watermark.appendChild(wLink);
     }
 
@@ -656,7 +716,7 @@
     panel.appendChild(header);
     panel.appendChild(messages);
     panel.appendChild(inputArea);
-    if (CONFIG.showWatermark) {
+    if (showPoweredBy) {
       panel.appendChild(watermark);
     }
 
