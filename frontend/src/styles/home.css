@@ -2317,7 +2317,36 @@ html { scroll-behavior: smooth; }
   color: var(--text-primary);
 }
 
-/* Hide floating CTA on mobile */
+/* Mobile floating CTA — smaller & offset from chat widget bubble */
 @media (max-width: 768px) {
-  .lp-floating-cta { display: none; }
+  .lp-floating-cta {
+    bottom: 12px;
+    padding: 8px 14px;
+    gap: 6px;
+    max-width: 200px;
+    background: rgba(15, 18, 25, 0.85);
+    /* Offset left so it doesn't overlap the bottom-right chat widget */
+    left: auto;
+    right: 80px;
+    transform: none;
+  }
+  @keyframes floatingCtaIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .lp-floating-cta-link {
+    font-size: 12px;
+  }
+  .lp-floating-cta-link .floating-cta-full { display: none; }
+  .lp-floating-cta-link .floating-cta-short { display: inline; }
+  .lp-floating-cta-close {
+    width: 16px;
+    height: 16px;
+    font-size: 13px;
+  }
+}
+
+/* Desktop: show full text, hide short text */
+@media (min-width: 769px) {
+  .lp-floating-cta-link .floating-cta-short { display: none; }
 }

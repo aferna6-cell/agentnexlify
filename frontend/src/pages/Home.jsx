@@ -582,7 +582,7 @@ export default function Home() {
             {/* Free */}
             <div className="lp-pricing-card start-here reveal">
               <div className="lp-pricing-plan-name">Free</div>
-              <div className="lp-pricing-tagline">See what AI can do for your business.</div>
+              <div className="lp-pricing-tagline">See what AI can do for your business</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$0</span>
                 <span className="lp-pricing-period">/month</span>
@@ -597,6 +597,9 @@ export default function Home() {
                 <li>Email notifications</li>
                 <li>Widget customization</li>
                 <li>FAQ knowledge base</li>
+                <li>Basic hosted business page</li>
+                <li>Dashboard analytics</li>
+                <li>Community support</li>
               </ul>
               <Link to="/signup" className="pricing-cta">
                 Get Started {"\u2192"}
@@ -606,22 +609,28 @@ export default function Home() {
             {/* Growth */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Growth</div>
-              <div className="lp-pricing-tagline">For growing businesses ready to scale.</div>
+              <div className="lp-pricing-tagline">The essentials to capture and convert every customer</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$199</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$299 one-time setup</span>
-                <span className="lp-pricing-waived-badge">Waived &mdash; Early Access</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived &mdash; Only 10 Spots Remaining</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
-                <li>Unlimited conversations</li>
-                <li>Customer capture &amp; instant alerts</li>
-                <li>Appointment booking &amp; calendar</li>
-                <li>SMS notifications</li>
-                <li>Analytics dashboard</li>
+                <li>AI chat widget</li>
+                <li>Email &amp; form lead capture</li>
+                <li>Auto follow-up email &amp; SMS</li>
+                <li>CRM contact management</li>
+                <li>Basic reporting dashboard</li>
+                <li>Appointment booking</li>
+                <li>2 automation sequences</li>
+                <li>Up to 500 conversations/month</li>
+                <li>Hosted business page</li>
+                <li>Basic analytics &amp; reporting</li>
+                <li>Email support</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_7sYdRb4CedaQaxk2J14AU01">
                 Get Started {"\u2192"}
@@ -631,23 +640,26 @@ export default function Home() {
             {/* Professional — Most Popular */}
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">Professional</div>
-              <div className="lp-pricing-tagline">The complete toolkit for serious businesses.</div>
+              <div className="lp-pricing-tagline">The complete toolkit to run and grow your business</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$399</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$499 one-time setup</span>
-                <span className="lp-pricing-waived-badge">Waived &mdash; Early Access</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived &mdash; Only 10 Spots Remaining</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Growth, plus:</div>
               <ul className="lp-pricing-features">
-                <li>Automated email follow-ups</li>
-                <li>AI FAQ &amp; support bot</li>
-                <li>CRM &amp; client management</li>
-                <li>Customer pipeline &amp; Lead Scoring</li>
-                <li>Priority support</li>
+                <li>Up to 6 automation sequences</li>
+                <li>Lead nurturing sequences</li>
+                <li>CRM pipeline automation</li>
+                <li>AI-powered email responses</li>
+                <li>Review request automation</li>
+                <li>Custom business page styling</li>
+                <li>Advanced analytics &amp; insights</li>
+                <li>Priority email &amp; chat support</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02">
                 Get Started {"\u2192"}
@@ -657,22 +669,23 @@ export default function Home() {
             {/* Enterprise */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Enterprise</div>
-              <div className="lp-pricing-tagline">White-glove service for maximum results.</div>
+              <div className="lp-pricing-tagline">White-glove service with dedicated support</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$799</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$999 one-time setup</span>
-                <span className="lp-pricing-waived-badge">Waived &mdash; Early Access</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived &mdash; Only 10 Spots Remaining</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Professional, plus:</div>
               <ul className="lp-pricing-features">
+                <li>Unlimited automation sequences</li>
                 <li>AI appointment booking agent</li>
                 <li>Team accounts &amp; roles</li>
                 <li>Webhook integrations</li>
-                <li>White-label branding</li>
+                <li>White-label branding &amp; custom CSS</li>
                 <li>Dedicated account manager</li>
               </ul>
               <StripeCta href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03">
@@ -802,7 +815,8 @@ export default function Home() {
       {showFloatingCta && !floatingCtaDismissed && (
         <div className="lp-floating-cta">
           <Link to="/signup" className="lp-floating-cta-link">
-            Try our AI assistant free {"\u2192"}
+            <span className="floating-cta-full">Try our AI assistant free {"\u2192"}</span>
+            <span className="floating-cta-short">Try Free {"\u2192"}</span>
           </Link>
           <button
             className="lp-floating-cta-close"
