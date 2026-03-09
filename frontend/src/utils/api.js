@@ -310,6 +310,10 @@ export function billingPortal(tenantId, token) {
   return request(`/api/v1/auth/billing/portal/${tenantId}`, { token });
 }
 
+export function fetchTrialStatus(tenantId, token) {
+  return request(`/api/v1/auth/trial-status/${tenantId}`, { token });
+}
+
 // --- Team ---
 
 export function inviteTeamMember(tenantId, token, { email, role, name }) {

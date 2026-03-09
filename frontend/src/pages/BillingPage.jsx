@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard, billingCheckout, billingPortal } from "../utils/api";
+import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const PLANS = [
@@ -41,13 +41,18 @@ export default function BillingPage() {
   const [dashData, setDashData] = useState(null);
   const [upgrading, setUpgrading] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [trialData, setTrialData] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
     try {
-      const data = await fetchDashboard(user.tenantId, token);
+      const [data, trial] = await Promise.all([
+        fetchDashboard(user.tenantId, token),
+        fetchTrialStatus(user.tenantId, token).catch(() => null),
+      ]);
       setDashData(data);
+      setTrialData(trial);
     } catch (err) {
       console.error("Failed to load billing data", err);
     } finally {
@@ -101,6 +106,53 @@ export default function BillingPage() {
         <h1>Billing</h1>
         <p>Manage your subscription and usage</p>
       </div>
+
+      {/* Trial Status */}
+      {trialData && trialData.plan === "free" && trialData.days_remaining !== null && (
+        <div
+          style={{
+            padding: "16px 20px",
+            marginBottom: "1.5rem",
+            borderRadius: "12px",
+            background: trialData.is_expired
+              ? "linear-gradient(135deg, #dc2626, #b91c1c)"
+              : trialData.days_remaining <= 7
+                ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                : "linear-gradient(135deg, #3b82f6, #2563eb)",
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, fontSize: "1rem" }}>
+              {trialData.is_expired
+                ? "Free Trial Expired"
+                : `Free Trial: ${trialData.days_remaining} day${trialData.days_remaining !== 1 ? "s" : ""} remaining`}
+            </div>
+            <div style={{ fontSize: "0.8rem", opacity: 0.85, marginTop: "4px" }}>
+              {trialData.is_expired
+                ? "Your AI assistant is paused. Upgrade to restore service."
+                : trialData.trial_expires
+                  ? `Expires ${new Date(trialData.trial_expires).toLocaleDateString()}`
+                  : ""}
+            </div>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={() => handleUpgrade("growth")}
+            disabled={upgrading === "growth"}
+            style={{
+              background: "#fff",
+              color: trialData.is_expired ? "#dc2626" : "#1e40af",
+              fontWeight: 600,
+            }}
+          >
+            {upgrading === "growth" ? "Redirecting..." : "Upgrade Now"}
+          </button>
+        </div>
+      )}
 
       {/* Current Plan & Usage */}
       <div className="billing-current">

@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { fetchTrialStatus } from "../utils/api";
 import LoginPage from "./LoginPage";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
@@ -39,12 +40,73 @@ const pages = {
   business_page: BusinessPageSettings,
 };
 
+function TrialBanner({ trialData, onNavigate }) {
+  if (!trialData || trialData.plan !== "free" || trialData.days_remaining === null) return null;
+
+  const expired = trialData.is_expired;
+  const days = trialData.days_remaining;
+
+  return (
+    <div
+      style={{
+        padding: "10px 20px",
+        background: expired ? "#dc2626" : days <= 7 ? "#f59e0b" : "#3b82f6",
+        color: expired ? "#fff" : days <= 7 ? "#0a0a0f" : "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        fontSize: "0.85rem",
+        fontWeight: 500,
+        flexShrink: 0,
+      }}
+    >
+      <span>
+        {expired
+          ? "Your free trial has expired. Upgrade to keep your AI assistant running."
+          : `Free trial: ${days} day${days !== 1 ? "s" : ""} remaining. Upgrade anytime for unlimited access.`}
+      </span>
+      <button
+        onClick={() => onNavigate("billing")}
+        style={{
+          background: expired ? "#fff" : "rgba(255,255,255,0.2)",
+          color: expired ? "#dc2626" : "inherit",
+          border: "none",
+          padding: "6px 16px",
+          borderRadius: "6px",
+          cursor: "pointer",
+          fontWeight: 600,
+          fontSize: "0.8rem",
+          whiteSpace: "nowrap",
+          marginLeft: "12px",
+        }}
+      >
+        Upgrade Now &rarr;
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePlan, setActivePlan] = useState(null);
+  const [trialData, setTrialData] = useState(null);
+
+  useEffect(() => {
+    if (!user?.tenantId || !token) return;
+    fetchTrialStatus(user.tenantId, token)
+      .then(setTrialData)
+      .catch(() => {});
+  }, [user?.tenantId, token]);
+
+  // Refresh trial data when plan changes
+  useEffect(() => {
+    if (activePlan && activePlan !== "free") {
+      setTrialData(null);
+    }
+  }, [activePlan]);
 
   const handleNavigate = useCallback(
     (page, data = null) => {
@@ -66,17 +128,20 @@ export default function App() {
   return (
     <div className="app">
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} plan={activePlan} />
-      <main className="content">
-        {loading ? (
-          <SkeletonLoader />
-        ) : (
-          <PageComponent
-            onNavigate={handleNavigate}
-            onPlanLoaded={setActivePlan}
-            pageData={pageData}
-          />
-        )}
-      </main>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+        <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
+        <main className="content">
+          {loading ? (
+            <SkeletonLoader />
+          ) : (
+            <PageComponent
+              onNavigate={handleNavigate}
+              onPlanLoaded={setActivePlan}
+              pageData={pageData}
+            />
+          )}
+        </main>
+      </div>
     </div>
   );
 }

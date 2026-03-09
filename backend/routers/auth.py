@@ -22,6 +22,7 @@ from backend.models.schemas import (
     MeResponse,
     RegisterRequest,
     RegisterResponse,
+    TrialStatusResponse,
     WidgetConfigDetail,
     WidgetConfigUpdateRequest,
 )
@@ -124,6 +125,7 @@ async def register(req: RegisterRequest):
         "password_hash": _hash_password(req.password),
         "city": req.city,
         "plan": "free",
+        "free_trial_started_at": datetime.now(timezone.utc).isoformat(),
     }
     result = db.table("tenants").insert(tenant_data).execute()
     if not result.data:
@@ -270,7 +272,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Tenant row
     tenant_result = (
         db.table("tenants")
-        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit")
+        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit, free_trial_started_at")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -376,6 +378,8 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     except Exception:
         logger.debug("chat_messages count failed for tenant %s", tenant_id)
 
+    trial = _compute_trial_status(t)
+
     response = DashboardResponse(
         business_name=t.get("business_name", ""),
         plan=t.get("plan", "free"),
@@ -388,6 +392,8 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         faq_count=faq_count,
         has_conversations=conversations_used > 0,
         hot_leads_count=hot_leads_count,
+        trial_days_remaining=trial["trial_days_remaining"],
+        trial_expired=trial["trial_expired"],
     )
     logger.info("Dashboard response for %s: %s", tenant_id, response.model_dump())
     return response
@@ -613,7 +619,7 @@ async def update_settings(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     body = await request.json()
-    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled"}
+    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled", "google_review_link"}
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
@@ -638,7 +644,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     db = get_supabase()
     result = (
         db.table("tenants")
-        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled")
+        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -724,3 +730,75 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(require_role("ow
         return_url=f"{settings.frontend_url}/billing",
     )
     return {"portal_url": session.url}
+
+
+# ── Free Trial ────────────────────────────────────────────────
+
+FREE_TRIAL_DAYS = 30
+
+
+def _compute_trial_status(tenant: dict) -> dict:
+    """Compute trial status for a tenant. Returns dict with trial fields."""
+    plan = tenant.get("plan", "free")
+    if plan != "free":
+        return {"trial_days_remaining": None, "trial_expired": False}
+
+    trial_started = tenant.get("free_trial_started_at")
+    if not trial_started:
+        # Legacy tenant without trial start — not expired (grandfather)
+        return {"trial_days_remaining": None, "trial_expired": False}
+
+    from datetime import datetime, timezone
+    if isinstance(trial_started, str):
+        # Parse ISO format
+        trial_started = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
+    if trial_started.tzinfo is None:
+        trial_started = trial_started.replace(tzinfo=timezone.utc)
+
+    now = datetime.now(timezone.utc)
+    elapsed = (now - trial_started).days
+    remaining = max(0, FREE_TRIAL_DAYS - elapsed)
+    expired = remaining <= 0
+
+    return {"trial_days_remaining": remaining, "trial_expired": expired}
+
+
+@router.get("/trial-status/{tenant_id}", response_model=TrialStatusResponse)
+async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("tenants")
+        .select("plan, free_trial_started_at, created_at")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant = result.data[0]
+    trial = _compute_trial_status(tenant)
+    trial_started = tenant.get("free_trial_started_at")
+
+    # Compute expiry date
+    trial_expires = None
+    if trial_started:
+        from datetime import datetime, timezone, timedelta
+        if isinstance(trial_started, str):
+            ts = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
+        else:
+            ts = trial_started
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        trial_expires = (ts + timedelta(days=FREE_TRIAL_DAYS)).isoformat()
+
+    return TrialStatusResponse(
+        plan=tenant.get("plan", "free"),
+        trial_started=trial_started if isinstance(trial_started, str) else (trial_started.isoformat() if trial_started else None),
+        trial_expires=trial_expires,
+        days_remaining=trial["trial_days_remaining"],
+        is_expired=trial["trial_expired"],
+    )

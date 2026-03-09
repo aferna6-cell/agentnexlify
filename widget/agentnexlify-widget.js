@@ -695,6 +695,36 @@
     }
   }
 
+  function disableWidgetInput(reason) {
+    const input = document.getElementById("anx-input");
+    const sendBtn = document.getElementById("anx-send");
+    const inputArea = document.getElementById("anx-input-area");
+    if (input) {
+      input.disabled = true;
+      input.placeholder = reason;
+    }
+    if (sendBtn) sendBtn.disabled = true;
+
+    // Add upgrade button below input area
+    if (inputArea && !document.getElementById("anx-upgrade-bar")) {
+      const bar = document.createElement("div");
+      bar.id = "anx-upgrade-bar";
+      bar.style.cssText =
+        "padding:10px 16px;text-align:center;background:#1a1a25;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;";
+      const btn = document.createElement("a");
+      btn.href = API_BASE.replace(/\/api.*$/, "").replace(/:\d+$/, "") + "/pricing";
+      btn.target = "_blank";
+      btn.rel = "noopener";
+      btn.textContent = "Upgrade Now";
+      btn.style.cssText =
+        "display:inline-block;padding:8px 24px;background:" +
+        BRAND_COLOR +
+        ";color:#0a0a0f;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;";
+      bar.appendChild(btn);
+      inputArea.parentNode.insertBefore(bar, inputArea.nextSibling);
+    }
+  }
+
   function showTyping() {
     const container = document.getElementById("anx-messages");
     const div = document.createElement("div");
@@ -766,6 +796,11 @@
       const data = await sendMessage(text);
       hideTyping();
       addMessage("assistant", data.response);
+
+      // Handle trial expiry
+      if (data.trial_expired) {
+        disableWidgetInput("Your free trial has expired.");
+      }
     } catch (e) {
       hideTyping();
       addMessage(

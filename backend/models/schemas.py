@@ -151,6 +151,16 @@ class DashboardResponse(BaseModel):
     faq_count: int = 0
     has_conversations: bool = False
     hot_leads_count: int = 0
+    trial_days_remaining: int | None = None
+    trial_expired: bool = False
+
+
+class TrialStatusResponse(BaseModel):
+    plan: str
+    trial_started: str | None = None
+    trial_expires: str | None = None
+    days_remaining: int | None = None
+    is_expired: bool = False
 
 
 class LeadScoreResponse(BaseModel):
@@ -256,6 +266,7 @@ class WidgetChatResponse(BaseModel):
     session_id: str
     lead_captured: bool
     show_watermark: bool
+    trial_expired: bool = False
 
 
 class WidgetConfigResponse(BaseModel):
@@ -527,7 +538,7 @@ class CrmDashboardWidgets(BaseModel):
 
 # --- Automation Sequence schemas ---
 
-VALID_TRIGGER_EVENTS = {"new_lead", "lead_stage_change", "no_response_24h"}
+VALID_TRIGGER_EVENTS = {"new_lead", "lead_stage_change", "no_response_24h", "appointment_completed"}
 
 
 class AutomationStepCreate(BaseModel):
