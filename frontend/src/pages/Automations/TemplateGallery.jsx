@@ -23,12 +23,21 @@ const TEMPLATES = [
     steps: 2,
     icon: "A",
   },
+  {
+    id: "review_request",
+    name: "Review Request",
+    description: "Ask for a Google review after an appointment is completed. Sends initial request after 1 hour and a reminder after 3 days.",
+    trigger: "appointment_completed",
+    steps: 2,
+    icon: "R",
+  },
 ];
 
 const triggerLabels = {
   new_lead: "New Lead",
   no_response_24h: "No Response",
   lead_stage_change: "Stage Change",
+  appointment_completed: "Appointment Completed",
 };
 
 const cardStyle = {
@@ -45,7 +54,7 @@ const cardStyle = {
 const btnStyle = {
   padding: "8px 16px",
   background: "var(--accent)",
-  color: "#000",
+  color: "var(--accent-contrast)",
   border: "none",
   borderRadius: "var(--radius-sm)",
   cursor: "pointer",

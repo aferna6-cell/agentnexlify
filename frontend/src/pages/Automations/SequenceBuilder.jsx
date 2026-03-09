@@ -4,6 +4,7 @@ const TRIGGER_OPTIONS = [
   { value: "new_lead", label: "New Lead Created" },
   { value: "lead_stage_change", label: "Lead Stage Changes" },
   { value: "no_response_24h", label: "No Response (24 hours)" },
+  { value: "appointment_completed", label: "Appointment Completed" },
 ];
 
 const DELAY_UNITS = [
@@ -12,7 +13,7 @@ const DELAY_UNITS = [
   { value: 1440, label: "days" },
 ];
 
-const TEMPLATE_VARS = ["{{name}}", "{{business_name}}", "{{email}}"];
+const TEMPLATE_VARS = ["{{name}}", "{{business_name}}", "{{email}}", "{{phone}}", "{{review_link}}"];
 
 const overlayStyle = {
   position: "fixed",
@@ -79,7 +80,7 @@ const stepCardStyle = {
 const btnPrimary = {
   padding: "10px 20px",
   background: "var(--accent)",
-  color: "#000",
+  color: "var(--accent-contrast)",
   border: "none",
   borderRadius: "var(--radius-sm)",
   cursor: "pointer",
@@ -292,15 +293,45 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
                   <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>then send</span>
                 </div>
 
-                {/* Subject */}
-                <input
-                  id={`step-${idx}-subject_template`}
-                  style={inputStyle}
-                  value={step.subject_template}
-                  onChange={(e) => updateStep(idx, "subject_template", e.target.value)}
-                  onFocus={() => setFocusedField(`step-${idx}-subject_template`)}
-                  placeholder="Email subject..."
-                />
+                {/* Action Type */}
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <span style={{ color: "var(--text-secondary)", fontSize: "13px", whiteSpace: "nowrap" }}>Type</span>
+                  <select
+                    style={{ ...selectStyle, width: "140px" }}
+                    value={step.action_type}
+                    onChange={(e) => updateStep(idx, "action_type", e.target.value)}
+                  >
+                    <option value="email">Email</option>
+                    <option value="sms">SMS</option>
+                    <option value="ai_email">AI Email</option>
+                  </select>
+                </div>
+
+                {step.action_type === "ai_email" && (
+                  <div style={{
+                    padding: "10px 12px",
+                    background: "rgba(99, 102, 241, 0.1)",
+                    border: "1px solid rgba(99, 102, 241, 0.25)",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "12px",
+                    color: "var(--text-secondary)",
+                    lineHeight: 1.5,
+                  }}>
+                    AI will generate a personalized email based on the customer's conversation and your FAQ entries.
+                  </div>
+                )}
+
+                {/* Subject (email/ai_email only) */}
+                {step.action_type !== "sms" && (
+                  <input
+                    id={`step-${idx}-subject_template`}
+                    style={inputStyle}
+                    value={step.subject_template}
+                    onChange={(e) => updateStep(idx, "subject_template", e.target.value)}
+                    onFocus={() => setFocusedField(`step-${idx}-subject_template`)}
+                    placeholder="Email subject..."
+                  />
+                )}
 
                 {/* Body */}
                 <textarea
@@ -309,7 +340,13 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
                   value={step.body_template}
                   onChange={(e) => updateStep(idx, "body_template", e.target.value)}
                   onFocus={() => setFocusedField(`step-${idx}-body_template`)}
-                  placeholder="Email body (HTML supported)..."
+                  placeholder={
+                    step.action_type === "sms"
+                      ? "SMS message (1600 char max)..."
+                      : step.action_type === "ai_email"
+                        ? "Leave blank for AI-generated content, or provide a template for AI to enhance..."
+                        : "Email body (HTML supported)..."
+                  }
                 />
               </div>
             ))}

@@ -17,12 +17,14 @@ const triggerLabels = {
   new_lead: "New Lead",
   lead_stage_change: "Stage Change",
   no_response_24h: "No Response",
+  appointment_completed: "Appt Completed",
 };
 
 const triggerColors = {
   new_lead: "var(--green)",
   lead_stage_change: "var(--accent)",
   no_response_24h: "var(--yellow)",
+  appointment_completed: "var(--purple)",
 };
 
 export default function AutomationsPage({ onNavigate }) {
@@ -168,7 +170,7 @@ export default function AutomationsPage({ onNavigate }) {
         <button onClick={handleCreate} style={{
           padding: "10px 20px",
           background: "var(--accent)",
-          color: "#000",
+          color: "var(--accent-contrast)",
           border: "none",
           borderRadius: "var(--radius-sm)",
           cursor: "pointer",

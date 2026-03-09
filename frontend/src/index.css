@@ -32,7 +32,7 @@
 
 .app[data-theme="light"] {
   --bg-primary: #f5f5f7;
-  --bg-secondary: #ffffff;
+  --bg-secondary: #f8f8fa;
   --bg-card: #ffffff;
   --accent: #0088cc;
   --accent-dim: rgba(0, 136, 204, 0.1);
@@ -51,7 +51,39 @@
   --purple: #7c3aed;
   --hover-overlay: rgba(0, 0, 0, 0.04);
   --accent-contrast: #fff;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Light mode: card shadows for depth */
+.app[data-theme="light"] .stat-card,
+.app[data-theme="light"] .activity-feed,
+.app[data-theme="light"] .pipeline-column,
+.app[data-theme="light"] .lead-card,
+.app[data-theme="light"] .today-appts-card,
+.app[data-theme="light"] .analytics-chart-card,
+.app[data-theme="light"] .analytics-stat-card,
+.app[data-theme="light"] .settings-card,
+.app[data-theme="light"] .faq-item,
+.app[data-theme="light"] .integration-card,
+.app[data-theme="light"] .wh-item,
+.app[data-theme="light"] .billing-plan-card,
+.app[data-theme="light"] .onboarding-checklist,
+.app[data-theme="light"] .widget-embed-section,
+.app[data-theme="light"] .conv-sidebar,
+.app[data-theme="light"] .conv-messages,
+.app[data-theme="light"] .modal-content,
+.app[data-theme="light"] .drawer,
+.app[data-theme="light"] .login-card,
+.app[data-theme="light"] .invite-card,
+.app[data-theme="light"] .quick-action-card,
+.app[data-theme="light"] .crm-widget-card,
+.app[data-theme="light"] .sidebar-panel,
+.app[data-theme="light"] .timeline-section,
+.app[data-theme="light"] .empty-card,
+.app[data-theme="light"] .wh-template-card,
+.app[data-theme="light"] .wh-log-item,
+.app[data-theme="light"] .team-invite-modal {
+  box-shadow: var(--shadow-card);
 }
 
 html, body, #root { height: 100%; }
@@ -98,7 +130,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ── Layout ── */
-.app { display: flex; height: 100vh; overflow: hidden; }
+.app { display: flex; height: 100vh; overflow: hidden; color: var(--text-primary); background: var(--bg-primary); }
 
 .sidebar {
   width: var(--sidebar-width);
@@ -890,7 +922,7 @@ body {
 }
 
 .onboarding-step.active {
-  background: rgba(0, 191, 255, 0.03);
+  background: var(--accent-dim);
 }
 
 /* ── Onboarding Step Body ── */
@@ -2040,7 +2072,7 @@ body {
   border-left: 1px solid var(--border);
 }
 
-.calendar-day-col.today { background: rgba(0, 191, 255, 0.03); }
+.calendar-day-col.today { background: var(--accent-dim); }
 
 .calendar-hour-cell {
   height: 64px;
