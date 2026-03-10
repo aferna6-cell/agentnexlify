@@ -366,17 +366,42 @@ async def _generate_ai_email(
     import anthropic
     from backend.config import settings as app_settings
 
-    # Load recent conversation history for this lead
-    conv_result = (
-        db.table("chat_messages")
-        .select("role, content")
-        .eq("tenant_id", tenant_id)
-        .eq("lead_id", lead_id)
-        .order("created_at", desc=False)
-        .limit(20)
-        .execute()
-    )
-    conversation = conv_result.data or []
+    # Load recent conversation history for this lead.
+    # Path: leads.conversation_id → conversations.session_id → chat_messages
+    conversation = []
+    try:
+        lead_row = (
+            db.table("leads")
+            .select("conversation_id")
+            .eq("id", lead_id)
+            .limit(1)
+            .execute()
+        )
+        conv_id = (lead_row.data[0].get("conversation_id") if lead_row.data else None)
+        session_id = None
+        if conv_id:
+            conv_row = (
+                db.table("conversations")
+                .select("session_id")
+                .eq("id", conv_id)
+                .limit(1)
+                .execute()
+            )
+            session_id = (conv_row.data[0].get("session_id") if conv_row.data else None)
+        if session_id:
+            msg_result = (
+                db.table("chat_messages")
+                .select("role, content")
+                .eq("tenant_id", tenant_id)
+                .eq("session_id", session_id)
+                .order("created_at", desc=False)
+                .limit(20)
+                .execute()
+            )
+            conversation = msg_result.data or []
+    except Exception:
+        logger.warning("Failed to load conversation context for lead %s", lead_id, exc_info=True)
+
     conv_text = "\n".join(
         f"{m['role']}: {m['content']}" for m in conversation
     ) if conversation else "No conversation history available."

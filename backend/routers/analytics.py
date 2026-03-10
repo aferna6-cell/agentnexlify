@@ -18,6 +18,9 @@ router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 _cache: dict[str, tuple[float, dict]] = {}
 _CACHE_TTL = 300  # 5 minutes
 
+# Safety cap for unbounded queries — prevents timeouts on large tenants
+_QUERY_LIMIT = 10000
+
 
 def _check_tenant(claims: dict, tenant_id: str) -> None:
     if claims["tenant_id"] != tenant_id:
@@ -92,6 +95,8 @@ async def get_overview(
             .select("session_id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
+            .lt("created_at", now_iso)
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         curr_sessions = set(r["session_id"] for r in (curr_convos.data or []))
@@ -114,6 +119,7 @@ async def get_overview(
             .eq("tenant_id", tenant_id)
             .gte("created_at", prev_start)
             .lt("created_at", start)
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         prev_sessions = set(r["session_id"] for r in (prev_convos.data or []))
@@ -128,6 +134,8 @@ async def get_overview(
             .select("id")
             .eq("client_id", tenant_id)
             .gte("created_at", start)
+            .lt("created_at", now_iso)
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         total_leads = len(curr_leads.data or [])
@@ -142,6 +150,7 @@ async def get_overview(
             .eq("client_id", tenant_id)
             .gte("created_at", prev_start)
             .lt("created_at", start)
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         prev_leads = len(prev_leads_res.data or [])
@@ -159,7 +168,9 @@ async def get_overview(
             .select("id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
+            .lt("created_at", now_iso)
             .neq("status", "cancelled")
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         total_appointments = len(curr_appts.data or [])
@@ -174,6 +185,7 @@ async def get_overview(
             .gte("created_at", prev_start)
             .lt("created_at", start)
             .neq("status", "cancelled")
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         prev_appointments = len(prev_appts.data or [])
@@ -188,6 +200,7 @@ async def get_overview(
             .eq("execution_id.tenant_id", tenant_id)
             .eq("action", "email_sent")
             .gte("created_at", start)
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         total_emails = len(curr_emails.data or [])
@@ -200,6 +213,7 @@ async def get_overview(
                 .eq("tenant_id", tenant_id)
                 .eq("activity_type", "email_sent")
                 .gte("created_at", start)
+                .limit(_QUERY_LIMIT)
                 .execute()
             )
             total_emails = len(email_acts.data or [])
@@ -245,6 +259,7 @@ async def get_conversations_trend(
         return cached
 
     days = _period_to_days(period)
+    now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     db = get_supabase()
 
@@ -254,7 +269,9 @@ async def get_conversations_trend(
             .select("session_id, created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
+            .lt("created_at", now_iso)
             .order("created_at")
+            .limit(_QUERY_LIMIT)
             .execute()
         )
 
@@ -298,6 +315,7 @@ async def get_leads_analytics(
         return cached
 
     days = _period_to_days(period)
+    now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     db = get_supabase()
 
@@ -308,6 +326,8 @@ async def get_leads_analytics(
             .select("id, status, lead_score, created_at")
             .eq("client_id", tenant_id)
             .gte("created_at", start)
+            .lt("created_at", now_iso)
+            .limit(_QUERY_LIMIT)
             .execute()
         )
         leads = leads_res.data or []
@@ -318,14 +338,12 @@ async def get_leads_analytics(
     # Daily count
     daily: dict[str, int] = defaultdict(int)
     stage_breakdown: dict[str, int] = defaultdict(int)
-    source_breakdown: dict[str, int] = defaultdict(int)
     scores = []
 
     for lead in leads:
         date_str = lead["created_at"][:10]
         daily[date_str] += 1
         stage_breakdown[lead.get("status") or "new"] += 1
-        source_breakdown[lead.get("source") or "widget"] += 1
         if lead.get("lead_score") is not None:
             scores.append(lead["lead_score"])
 
@@ -340,7 +358,7 @@ async def get_leads_analytics(
     result = {
         "daily": daily_data,
         "by_stage": dict(stage_breakdown),
-        "by_source": dict(source_breakdown),
+        "by_source": {"widget": len(leads)},
         "avg_lead_score": avg_score,
         "total": len(leads),
     }
@@ -368,6 +386,7 @@ async def get_response_times(
         return cached
 
     days = _period_to_days(period)
+    now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     db = get_supabase()
 
@@ -377,7 +396,9 @@ async def get_response_times(
             .select("session_id, role, created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
+            .lt("created_at", now_iso)
             .order("created_at")
+            .limit(_QUERY_LIMIT)
             .execute()
         )
 
@@ -456,6 +477,7 @@ async def get_widget_analytics(
         return cached
 
     days = _period_to_days(period)
+    now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     db = get_supabase()
 
@@ -466,7 +488,9 @@ async def get_widget_analytics(
             .select("session_id, created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
+            .lt("created_at", now_iso)
             .order("created_at")
+            .limit(_QUERY_LIMIT)
             .execute()
         )
 
