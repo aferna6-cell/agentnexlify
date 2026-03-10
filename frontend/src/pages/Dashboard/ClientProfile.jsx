@@ -92,7 +92,7 @@ export default function ClientProfile({ onNavigate, pageData }) {
     setSaving(true);
     try {
       const note = await addClientNote(user.tenantId, leadId, token, noteText.trim());
-      setProfile((p) => (p ? { ...p, client_notes: [note, ...p.client_notes] } : p));
+      setProfile((p) => (p ? { ...p, client_notes: [note, ...(p.client_notes || [])] } : p));
       setNoteText("");
       // Refresh timeline
       const timelineRes = await fetchClientTimeline(user.tenantId, leadId, token);

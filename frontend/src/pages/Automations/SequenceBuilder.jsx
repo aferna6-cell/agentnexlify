@@ -310,8 +310,8 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
                 {step.action_type === "ai_email" && (
                   <div style={{
                     padding: "10px 12px",
-                    background: "rgba(99, 102, 241, 0.1)",
-                    border: "1px solid rgba(99, 102, 241, 0.25)",
+                    background: "var(--purple-dim, rgba(99, 102, 241, 0.1))",
+                    border: "1px solid var(--border)",
                     borderRadius: "var(--radius-sm)",
                     fontSize: "12px",
                     color: "var(--text-secondary)",

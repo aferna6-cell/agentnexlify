@@ -1,8 +1,10 @@
 """Automation engine — triggers, processes, and executes email sequences."""
 
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from typing import Any
 
 from backend.models.database import get_supabase
@@ -403,12 +405,18 @@ async def _generate_ai_email(
         user_content += f"\n\nUse this as a guide/template to enhance:\n{body_template}"
 
     try:
+        # Run sync Anthropic call in thread pool to avoid blocking the event loop
         client = anthropic.Anthropic(api_key=app_settings.anthropic_api_key)
-        response = client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=500,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_content}],
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            partial(
+                client.messages.create,
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=500,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_content}],
+            ),
         )
         return response.content[0].text
     except Exception:

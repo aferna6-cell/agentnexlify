@@ -92,7 +92,7 @@ export default function TemplateGallery({ onUseTemplate, loading }) {
               <span style={{
                 padding: "2px 8px",
                 background: "var(--purple)",
-                color: "#fff",
+                color: "var(--text-on-accent, #fff)",
                 borderRadius: "var(--radius-sm)",
                 fontSize: "11px",
                 fontWeight: 600,

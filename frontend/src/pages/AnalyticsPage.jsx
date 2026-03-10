@@ -8,7 +8,7 @@ import {
   fetchAnalyticsWidget,
 } from "../utils/api";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Area, AreaChart,
 } from "recharts";
 import SkeletonLoader from "../components/SkeletonLoader";
@@ -259,7 +259,7 @@ export default function AnalyticsPage() {
                   fill={chartTheme.accent}
                 >
                   {stageData.map((entry, i) => (
-                    <rect key={i} fill={stageColors[entry.stage] || chartTheme.accent} />
+                    <Cell key={i} fill={stageColors[entry.stage] || chartTheme.accent} />
                   ))}
                 </Bar>
               </BarChart>

@@ -61,14 +61,14 @@ def _build_invite_email_html(business_name: str, role: str, invite_url: str) -> 
 
 
 def _require_owner_or_admin(claims: dict) -> dict:
-    role = claims.get("role", "owner")
-    if role not in ("owner", "admin"):
+    role = claims.get("role")
+    if not role or role not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     return claims
 
 
 def _require_owner(claims: dict) -> dict:
-    role = claims.get("role", "owner")
+    role = claims.get("role")
     if role != "owner":
         raise HTTPException(status_code=403, detail="Only owners can perform this action")
     return claims

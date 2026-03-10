@@ -305,7 +305,7 @@ async def get_leads_analytics(
     try:
         leads_res = (
             db.table("leads")
-            .select("id, status, lead_score, source, created_at")
+            .select("id, status, lead_score, created_at")
             .eq("client_id", tenant_id)
             .gte("created_at", start)
             .execute()
