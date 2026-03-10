@@ -530,17 +530,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 trial_expired=True,
             )
 
-    # 3. Plan limit check (free plan has unlimited conversations during trial)
-    used = tenant.get("conversations_used_this_month", 0)
-    limit = tenant.get("monthly_conversation_limit", 50)
-    if tenant.get("plan") != "free" and used >= limit:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "error": "limit_reached",
-                "upgrade_url": "/pricing",
-            },
-        )
+    # 3. All plans now have unlimited conversations (limit check removed).
 
     # 4. Get or create conversation
     conversation_id, is_new = _get_or_create_conversation(tenant["id"], req.session_id)

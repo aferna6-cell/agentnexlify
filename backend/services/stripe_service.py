@@ -18,10 +18,8 @@ PLAN_PRICES: dict[str, dict[str, str]] = {
 }
 
 PLAN_LIMITS: dict[str, int] = {
-    "free": 999999,
-    "growth": 500,
-    "professional": 2000,
-    "enterprise": 100000,
+    # All plans now have unlimited conversations.
+    # Kept as a reference map only — not enforced.
 }
 
 

@@ -26,7 +26,7 @@ from backend.models.schemas import (
     WidgetConfigDetail,
     WidgetConfigUpdateRequest,
 )
-from backend.services.stripe_service import PLAN_LIMITS, PLAN_PRICES, get_or_create_customer
+from backend.services.stripe_service import PLAN_PRICES, get_or_create_customer
 
 logger = logging.getLogger(__name__)
 
@@ -385,7 +385,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         plan=t.get("plan", "free"),
         plan_status=t.get("plan_status", "active"),
         conversations_used_this_month=conversations_used,
-        monthly_conversation_limit=t.get("monthly_conversation_limit", 50),
+        monthly_conversation_limit=None,
         widget_api_key=api_key,
         leads_count=leads_count,
         widget_config=widget_config,

@@ -1,22 +1,13 @@
 import { trackEvent } from "../../utils/analytics";
 
-export default function OverviewCards({ conversationsUsed, conversationsLimit, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0, emailsSentToday = 0 }) {
-  const isFreePlan = plan === "free";
-  const convPct = !isFreePlan && conversationsLimit > 0 ? Math.round((conversationsUsed / conversationsLimit) * 100) : 0;
-  const nearLimit = !isFreePlan && convPct >= 80;
-
+export default function OverviewCards({ conversationsUsed, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0, emailsSentToday = 0 }) {
   const planLabels = {
     free: "Free",
     growth: "Growth",
     professional: "Professional",
     enterprise: "Enterprise",
-  };
-
-  const planConvoLabels = {
-    free: "Unlimited (14-day trial)",
-    growth: "500 conversations/mo",
-    professional: "2,000 conversations/mo",
-    enterprise: "Unlimited",
+    foundation: "Growth",
+    operations: "Professional",
   };
 
   return (
@@ -25,24 +16,7 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
       <div className="stat-card">
         <div className="stat-label">Conversations This Month</div>
         <div className="stat-value">{conversationsUsed}</div>
-        {isFreePlan ? (
-          <div className="stat-usage-text">Unlimited during trial</div>
-        ) : (
-          <>
-            <div className="stat-usage-bar">
-              <div
-                className={`stat-usage-fill${nearLimit ? " near-limit" : ""}`}
-                style={{ width: `${Math.min(convPct, 100)}%` }}
-              />
-            </div>
-            <div className="stat-usage-text">
-              {conversationsUsed} / {conversationsLimit} used
-              {nearLimit && (
-                <button className="upgrade-cta-inline" onClick={() => { trackEvent("begin_checkout", { event_label: "dashboard_usage_limit" }); onNavigate?.("billing"); }}>Upgrade</button>
-              )}
-            </div>
-          </>
-        )}
+        <div className="stat-usage-text">Unlimited</div>
         {conversationsUsed === 0 && (
           <div className="stat-empty-hint">
             Set up your widget to start capturing conversations
@@ -100,7 +74,7 @@ export default function OverviewCards({ conversationsUsed, conversationsLimit, l
           )}
         </div>
         <div className="stat-trend neutral">
-          {planConvoLabels[plan] || ""}
+          Unlimited conversations
         </div>
       </div>
     </div>

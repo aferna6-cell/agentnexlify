@@ -97,9 +97,6 @@ export default function BillingPage() {
   const currentPlan = dashData?.plan || user?.plan || "free";
   const planStatus = dashData?.plan_status || "active";
   const used = dashData?.conversations_used_this_month ?? 0;
-  const isFreePlan = currentPlan === "free";
-  const limit = isFreePlan ? null : (dashData?.monthly_conversation_limit ?? 50);
-  const usagePercent = limit && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
 
   return (
     <div className="fade-in">
@@ -176,20 +173,9 @@ export default function BillingPage() {
         </div>
         <div className="settings-card">
           <h3>Usage This Month</h3>
-          {isFreePlan ? (
-            <div className="billing-usage-text">
-              {used} conversations (Unlimited)
-            </div>
-          ) : (
-            <>
-              <div className="billing-usage-bar">
-                <div className="billing-usage-fill" style={{ width: `${usagePercent}%` }} />
-              </div>
-              <div className="billing-usage-text">
-                {used} / {limit} conversations ({usagePercent}%)
-              </div>
-            </>
-          )}
+          <div className="billing-usage-text">
+            {used} conversations
+          </div>
         </div>
       </div>
 

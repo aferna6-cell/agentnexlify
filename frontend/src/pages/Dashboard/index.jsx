@@ -139,7 +139,6 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
 
       <OverviewCards
         conversationsUsed={dashData?.conversations_used_this_month ?? 0}
-        conversationsLimit={dashData?.monthly_conversation_limit ?? 50}
         leadCount={dashData?.leads_count ?? leads.length}
         automationCount={seqStats?.active_sequences ?? enabledAutomations.length}
         plan={dashData?.plan ?? user.plan}

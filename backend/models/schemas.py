@@ -144,7 +144,7 @@ class DashboardResponse(BaseModel):
     plan: str
     plan_status: str
     conversations_used_this_month: int
-    monthly_conversation_limit: int
+    monthly_conversation_limit: int | None = None
     widget_api_key: str | None = None
     leads_count: int
     widget_config: WidgetConfigDetail | None = None

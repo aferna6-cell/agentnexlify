@@ -10,7 +10,6 @@ from backend.config import settings
 from backend.models.database import get_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
 from backend.services.stripe_service import (
-    PLAN_LIMITS,
     PLAN_PRICES,
     get_or_create_customer,
 )
@@ -159,7 +158,7 @@ def _resolve_plan(session: dict) -> str | None:
     metadata = session.get("metadata", {})
     plan = metadata.get("plan")
     logger.info("_resolve_plan: metadata.plan=%s", plan)
-    if plan and plan in PLAN_LIMITS:
+    if plan and plan in {"free", "growth", "professional", "enterprise"}:
         return plan
 
     # Try amount_total (in cents)
@@ -263,7 +262,6 @@ def _handle_checkout_completed(db, session: dict) -> None:
         "plan_status": "active",
         "stripe_customer_id": session.get("customer"),
         "stripe_subscription_id": session.get("subscription"),
-        "monthly_conversation_limit": PLAN_LIMITS.get(plan, 50),
     }
     logger.info("checkout.session.completed: updating tenant %s with %s", tenant_id, update_data)
 
@@ -305,7 +303,6 @@ def _handle_subscription_updated(db, subscription: dict) -> None:
     update_data: dict = {"plan_status": subscription.get("status", "active")}
     if plan:
         update_data["plan"] = plan
-        update_data["monthly_conversation_limit"] = PLAN_LIMITS.get(plan, 50)
 
     db.table("tenants").update(update_data).eq("id", tenant_id).execute()
     logger.info("Tenant %s subscription updated (plan=%s)", tenant_id, plan)
@@ -320,7 +317,6 @@ def _handle_subscription_deleted(db, subscription: dict) -> None:
     db.table("tenants").update({
         "plan": "free",
         "plan_status": "cancelled",
-        "monthly_conversation_limit": PLAN_LIMITS["free"],
     }).eq("id", tenant_id).execute()
 
     logger.info("Tenant %s subscription cancelled, reverted to free", tenant_id)

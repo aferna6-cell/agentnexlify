@@ -6,6 +6,8 @@ const planLabels = {
   growth: "Growth",
   professional: "Professional",
   enterprise: "Enterprise",
+  foundation: "Growth",
+  operations: "Professional",
 };
 
 const planColors = {
@@ -13,6 +15,8 @@ const planColors = {
   growth: { color: "var(--accent)", bg: "var(--accent-dim)" },
   professional: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
   enterprise: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
+  foundation: { color: "var(--accent)", bg: "var(--accent-dim)" },
+  operations: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
 };
 
 const Icon = ({ d, ...props }) => (
