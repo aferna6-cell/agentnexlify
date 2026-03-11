@@ -67,7 +67,7 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
-# CHECK 3: Bare except blocks
+# CHECK 3: Bare except blocks and dangerous BaseException catches
 echo -n "Checking for silent exception swallowing... "
 BARE_FOUND=""
 for file in $STAGED_FILES; do
@@ -83,6 +83,27 @@ done
 if [ -n "$BARE_FOUND" ]; then
     echo -e "${YELLOW}WARNING${NC}"
     echo -e "  Bare except blocks hide real errors:${BARE_FOUND}"
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# CHECK 3b: except BaseException (prevents graceful shutdown)
+echo -n "Checking for BaseException catches... "
+BASE_FOUND=""
+for file in $STAGED_FILES; do
+    if [[ "$file" == *.py ]]; then
+        if [ -f "$file" ]; then
+            MATCH=$(grep -n "except BaseException" "$file" 2>/dev/null | grep -v "^[0-9]*:[[:space:]]*#" || true)
+            if [ -n "$MATCH" ]; then
+                BASE_FOUND="$BASE_FOUND\n  $file:$MATCH"
+            fi
+        fi
+    fi
+done
+if [ -n "$BASE_FOUND" ]; then
+    echo -e "${YELLOW}WARNING${NC}"
+    echo -e "  except BaseException catches SystemExit/KeyboardInterrupt — use except Exception:${BASE_FOUND}"
     WARNINGS=$((WARNINGS + 1))
 else
     echo -e "${GREEN}OK${NC}"

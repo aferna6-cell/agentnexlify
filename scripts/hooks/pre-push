@@ -55,8 +55,9 @@ fi
 # CHECK 4: Schema consistency — leads table should use client_id and status
 echo -n "Checking for known schema mismatches... "
 MISMATCHES=0
-# Check if leads queries incorrectly use lead_stage (should be status)
-if grep -rn "lead_stage" backend/ --include="*.py" 2>/dev/null | grep -v "#" | grep -v "trigger_event" | grep -q .; then
+# Check if leads queries incorrectly use lead_stage as a DB column (should be status)
+# Exclude: event names, function names, comments, docstrings, constants
+if grep -rn "lead_stage" backend/ --include="*.py" 2>/dev/null | grep -v "#" | grep -v "trigger_event" | grep -v "lead_stage_change" | grep -v "VALID_TRIGGER_EVENTS" | grep -v "def .*lead_stage" | grep -v "not lead_stage" | grep -q .; then
     echo ""
     echo -e "  ${YELLOW}WARNING: Found lead_stage references (should be status for leads table)${NC}"
     MISMATCHES=$((MISMATCHES + 1))
