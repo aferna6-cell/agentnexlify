@@ -33,12 +33,15 @@ async def send_sms_endpoint(
     claims: dict = Depends(_get_current_tenant),
 ):
     tenant_id = claims["tenant_id"]
-    plan = claims.get("plan", "free")
+
+    db = get_supabase()
+
+    # Fetch live plan from DB (not JWT) for accurate rate limiting
+    tenant_result = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()
+    plan = tenant_result.data[0]["plan"] if tenant_result.data else "free"
 
     if not check_sms_rate_limit(tenant_id, plan):
         raise HTTPException(status_code=429, detail="Daily SMS limit reached")
-
-    db = get_supabase()
 
     # Verify lead belongs to tenant
     lead_result = (

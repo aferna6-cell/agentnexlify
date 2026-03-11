@@ -34,8 +34,9 @@ export default function TeamPage() {
   const [success, setSuccess] = useState("");
 
   const loadMembers = useCallback(async () => {
+    if (!user?.tenantId) return;
     try {
-      const data = await fetchTeamMembers(user?.tenantId, token);
+      const data = await fetchTeamMembers(user.tenantId, token);
       setMembers(data);
     } catch (err) {
       setError("Failed to load team members");
