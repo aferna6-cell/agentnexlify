@@ -123,7 +123,7 @@ async def stripe_webhook(request: Request):
         elif event_type == "customer.subscription.deleted":
             _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_failed":
-            _handle_payment_failed(db, data)
+            await _handle_payment_failed(db, data)
         else:
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:
@@ -322,14 +322,14 @@ def _handle_subscription_deleted(db, subscription: dict) -> None:
     logger.info("Tenant %s subscription cancelled, reverted to free", tenant_id)
 
 
-def _handle_payment_failed(db, invoice: dict) -> None:
+async def _handle_payment_failed(db, invoice: dict) -> None:
     customer_id = invoice.get("customer")
     if not customer_id:
         return
 
     result = (
         db.table("tenants")
-        .select("id")
+        .select("id, owner_email, business_name")
         .eq("stripe_customer_id", customer_id)
         .limit(1)
         .execute()
@@ -338,11 +338,32 @@ def _handle_payment_failed(db, invoice: dict) -> None:
         logger.warning("payment_failed for unknown customer %s", customer_id)
         return
 
-    tenant_id = result.data[0]["id"]
+    tenant = result.data[0]
+    tenant_id = tenant["id"]
     db.table("tenants").update({"plan_status": "paused"}).eq("id", tenant_id).execute()
 
     logger.info("Tenant %s payment failed, plan paused", tenant_id)
-    # TODO: Send payment failure email via notifications service
+
+    # Send payment failure notification email
+    owner_email = tenant.get("owner_email")
+    if owner_email:
+        try:
+            from backend.services.email_sender import send_email
+            business_name = tenant.get("business_name", "your business")
+            await send_email(
+                to=owner_email,
+                subject="Payment failed — your AgentNexLiFy subscription is paused",
+                body_html=(
+                    f"<h2>Hi,</h2>"
+                    f"<p>We were unable to process the payment for <strong>{business_name}</strong>'s subscription.</p>"
+                    f"<p>Your account has been temporarily paused. To restore service, please update your payment method in the billing portal.</p>"
+                    f"<p>If you need help, reply to this email.</p>"
+                    f"<p>— The AgentNexLiFy Team</p>"
+                ),
+                tenant_id=tenant_id,
+            )
+        except Exception:
+            logger.warning("Failed to send payment failure email to %s", owner_email, exc_info=True)
 
 
 # ---------------------------------------------------------------------------

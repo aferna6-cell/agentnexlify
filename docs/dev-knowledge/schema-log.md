@@ -95,4 +95,30 @@ The `automation_logs` table has NO `tenant_id` column. Code that queries `automa
 
 **Action needed:** A reconciliation migration (014+) should document these changes. The code is correct for the live DB; only the migration files are stale.
 
+## Live Schema Audit — 2026-03-11
+
+Verified live Supabase schema against CLAUDE.md and code. Key findings:
+
+### tenants.business_type — default/CHECK mismatch
+- Default: `'general'::text`
+- CHECK constraint: `business_type = ANY (ARRAY['plumbing', 'dental', 'realestate', 'legal', 'fitness', 'restaurant', 'salon', 'auto_shop', 'medical', 'other'])`
+- `'general'` is NOT in the CHECK constraint list. Should be `'other'`.
+- **Risk:** Low — signup form always sets a value from the dropdown. Would fail only if someone bypasses the form.
+- **Fix:** Change default to `'other'` in a future migration.
+
+### tenants.monthly_conversation_limit — still has default 50
+- Migration 013 was supposed to clear limits, but the column default is still `50`.
+- Code doesn't enforce the limit (removed in the billing fix commit), so this is harmless.
+- **Risk:** Low — only affects initial row creation, and the code ignores this column.
+
+### clients table — legacy table
+- `clients` table exists with 2 rows. Has `agent_name`, `service_area`, `bot_name`, `widget_api_key`, etc.
+- This appears to be the original V1 schema before `tenants` was introduced.
+- `conversations` table still has FK to `clients.id` (legacy).
+- `leads` table FK `client_id` references `tenants.id` (NOT `clients.id`) per the code.
+- **Risk:** Confusion. The `clients` table should be deprecated/removed in a future cleanup.
+
+### All other tables — confirmed matching
+Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, chat_messages, conversations, appointments, business_hours, automation_sequences, automation_steps, automation_executions, automations, faq_entries, activity_log, client_notes, integrations, team_members, webhooks, webhook_logs, automation_logs.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
