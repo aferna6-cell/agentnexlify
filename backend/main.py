@@ -25,6 +25,10 @@ logging.root.handlers = [_handler]
 logging.root.setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Suppress noisy httpx request logs — Railway misparses them as errors
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 # --- Sentry (optional) ---
 if settings.sentry_dsn:
     import sentry_sdk
@@ -210,6 +214,7 @@ app.mount("/widget", StaticFiles(directory="widget"), name="widget")
 
 
 # --- Health check ---
+@app.get("/health")
 @app.get("/api/health")
 async def health():
     uptime = round(time.time() - _startup_time, 1) if _startup_time else 0.0
