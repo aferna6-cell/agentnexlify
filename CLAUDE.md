@@ -151,13 +151,37 @@ This repo has a team of specialized agents in `.claude/agents/`. For complex tas
 
 Agents communicate via `.claude/agent-comms/`. When chaining agents, read prior output and pass context in the delegation prompt.
 
+## Workflow Commands
+
+High-level commands that orchestrate the full agent pipeline:
+
+| Command | What It Does |
+|---------|-------------|
+| `/new-feature` | Schema → Backend → Frontend → QA → Commit (chains all relevant agents) |
+| `/fix-bug` | Check known patterns → Diagnose → Fix → Verify → Document → Commit |
+| `/deploy` | QA + DevOps in parallel → Fix blockers → Final gate |
+| `/refactor` | Analyze → Plan → Execute incrementally → Verify → Commit |
+| `/checkpoint` | Save current session state to disk (survives compaction) |
+| `/recover` | Restore context after compaction or session restart |
+
+## Context Management
+
+Long sessions lose context when compaction happens. To prevent this:
+
+1. **Run `/checkpoint` before big tasks** — saves state to disk
+2. **Run `/checkpoint` when context feels heavy** — saves state before auto-compaction triggers
+3. **If context was lost, run `/recover`** — reads checkpoint + agent outputs + git state
+4. **Delegate heavy work to agents** — they use their own context windows, keeping yours clean
+5. **Use `/compact` manually at natural breakpoints** with specific instructions: `/compact preserve the feature we're building and the agent outputs`
+6. **Run `/clear` between unrelated tasks** — don't let old context pollute new work
+
 ## Automation
 
 This repo has automated safety checks:
 - **Pre-commit hook** — blocks commits containing secrets, dangerous imports, or bare except blocks
 - **Pre-push hook** — runs frontend build check and schema consistency check before pushing
 - **GitHub Actions** — daily health check, PR validation, auto bug logging on fix commits, daily AI auto-improve
-- **Claude Code hooks** — pre-edit warns on sensitive files, post-edit scans for dangerous patterns
+- **Claude Code hooks** — pre-edit warns on sensitive files, post-edit scans for dangerous patterns, notification on agent completion, auto-checkpoint before compaction
 
 See docs/ai-development.md for full details.
 

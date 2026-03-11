@@ -10,6 +10,16 @@
       {
         "matcher": "Edit|Write",
         "hooks": [{"type": "command", "command": "bash scripts/claude-hooks/post-edit-check.sh"}]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [{"type": "command", "command": "bash scripts/claude-hooks/notify-complete.sh"}]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "bash scripts/claude-hooks/pre-compact-save.sh"}]
       }
     ]
   }
