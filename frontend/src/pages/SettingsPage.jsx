@@ -18,6 +18,7 @@ export default function SettingsPage({ onNavigate }) {
     google_review_link: "",
   });
   const [email, setEmail] = useState("");
+  const [livePlan, setLivePlan] = useState(user?.plan || "free");
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -34,6 +35,7 @@ export default function SettingsPage({ onNavigate }) {
         google_review_link: tenant.google_review_link || "",
       });
       setEmail(tenant.owner_email || "");
+      if (tenant.plan) setLivePlan(tenant.plan);
     } catch (err) {
       console.error("Failed to load settings", err);
     } finally {
@@ -107,7 +109,7 @@ export default function SettingsPage({ onNavigate }) {
           <div className="settings-field">
             <label>Plan</label>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <span className="settings-plan-badge">{(user?.plan || "free").charAt(0).toUpperCase() + (user?.plan || "free").slice(1)}</span>
+              <span className="settings-plan-badge">{livePlan.charAt(0).toUpperCase() + livePlan.slice(1)}</span>
               <button className="btn-secondary btn-sm" onClick={() => onNavigate?.("billing")}>
                 Manage Plan
               </button>

@@ -74,7 +74,7 @@ def _filter_branding_for_plan(branding: dict | None, plan: str) -> dict:
     return filtered
 
 
-MODEL = "claude-sonnet-4-5-20250929"
+MODEL = "claude-sonnet-4-5-20250514"
 MAX_TOKENS = 500
 TEMPERATURE = 0.7
 
@@ -547,8 +547,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     if is_new:
         try:
             db = get_supabase()
+            current_used = tenant.get("conversations_used_this_month", 0) or 0
             db.table("tenants").update(
-                {"conversations_used_this_month": used + 1}
+                {"conversations_used_this_month": current_used + 1}
             ).eq("id", tenant["id"]).execute()
         except Exception:
             logger.warning("Failed to increment usage counter for tenant %s", tenant["id"], exc_info=True)
@@ -688,6 +689,7 @@ async def get_config(request: Request, api_key: str):
         tenant_id=widget.get("tenant_id"),
         booking_enabled=widget.get("booking_enabled", False),
         branding=branding if branding else None,
+        agent_name=tenant.get("business_name"),
     )
 
 

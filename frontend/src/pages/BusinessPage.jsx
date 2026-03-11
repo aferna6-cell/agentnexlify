@@ -50,11 +50,14 @@ export default function BusinessPage() {
     return () => {
       const el = document.getElementById("anx-biz-widget");
       if (el) el.remove();
-      // Clean up widget DOM
+      // Clean up widget DOM (match current widget IDs)
+      const container = document.getElementById("anx-container");
+      if (container) container.remove();
       const host = document.getElementById("nexlify-chat-widget");
       if (host) host.remove();
       const anxHost = document.getElementById("anx-chat-widget");
       if (anxHost) anxHost.remove();
+      window.__agentNexlifyWidget = false;
       window.__nexlifyWidgetLoaded = false;
       window.__anxWidgetLoaded = false;
     };

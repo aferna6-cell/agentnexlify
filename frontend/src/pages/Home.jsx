@@ -61,7 +61,7 @@ const faqData = [
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Absolutely! We suggest starting with Foundation or Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page.",
+      "Absolutely! Start with our free plan or Growth and upgrade as your business scales. You can change your plan anytime from the Billing page.",
   },
   {
     id: "faq-a6",

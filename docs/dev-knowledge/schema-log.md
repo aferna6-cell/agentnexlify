@@ -65,4 +65,34 @@ Data migration: renames plans 'foundation'→'growth', 'operations'→'professio
 | Plan names | Only free, growth, professional, enterprise are valid (migration 013). |
 | conversations_used_this_month | Cleared by migration 013 — all plans now unlimited. |
 
+## Schema Drift (Discovered 2026-03-11 Pre-Demo Audit)
+
+The following changes exist in the live Supabase database but have NO corresponding migration file:
+
+### leads table — major drift from migration 001
+| Change | Migration Says | Live DB Has |
+|--------|---------------|-------------|
+| FK column renamed | `tenant_id` | `client_id` |
+| Status column renamed | `lead_stage` | `status` |
+| New column | — | `lead_type TEXT` |
+| New column | — | `lead_temperature TEXT` (CHECK: hot/warm/cold) |
+| New column | — | `areas_of_interest TEXT` |
+| New column | — | `must_haves TEXT` |
+| New column | — | `pre_approved BOOLEAN` |
+| New column | — | `conversation_summary TEXT` |
+| New column | — | `next_steps TEXT` |
+| New column | — | `appointment_date TIMESTAMPTZ` |
+| New column | — | `updated_at TIMESTAMPTZ` |
+
+### tenants table — 2 untracked columns
+| Change | Migration Says | Live DB Has |
+|--------|---------------|-------------|
+| New column | — | `notification_phone TEXT` |
+| New column | — | `sms_notifications_enabled BOOLEAN DEFAULT false` |
+
+### automation_logs table — no tenant_id
+The `automation_logs` table has NO `tenant_id` column. Code that queries `automation_logs.tenant_id` directly will fail. Must join through `automation_executions` instead.
+
+**Action needed:** A reconciliation migration (014+) should document these changes. The code is correct for the live DB; only the migration files are stale.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

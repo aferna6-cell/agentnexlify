@@ -242,16 +242,26 @@ async def get_sequence_stats(tenant_id: str, claims: dict = Depends(_get_current
         .execute()
     )
 
-    # Emails sent today
+    # Emails sent today — join through automation_executions (automation_logs has no tenant_id)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00+00:00")
-    logs = (
-        db.table("automation_logs")
-        .select("id", count="exact")
+    tenant_executions = (
+        db.table("automation_executions")
+        .select("id")
         .eq("tenant_id", tenant_id)
-        .eq("action", "email_sent")
-        .gte("created_at", today)
         .execute()
     )
+    tenant_exec_ids = [e["id"] for e in (tenant_executions.data or [])]
+    if tenant_exec_ids:
+        logs = (
+            db.table("automation_logs")
+            .select("id", count="exact")
+            .in_("execution_id", tenant_exec_ids)
+            .eq("action", "email_sent")
+            .gte("created_at", today)
+            .execute()
+        )
+    else:
+        logs = type("FakeResult", (), {"count": 0})()
 
     # Total active executions
     active_execs = (

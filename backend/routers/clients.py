@@ -303,7 +303,7 @@ async def get_client_profile(
                     "message_count": 0,
                 })
         except Exception:
-            pass
+            logger.warning("Failed to fetch conversations for lead profile", exc_info=True)
 
     # Recent activity
     activity = []

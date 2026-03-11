@@ -96,4 +96,49 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Conversation counter never increments — undefined variable `used`
+**Date:** 2026-03
+**Symptom:** `conversations_used_this_month` stays at 0 for all tenants.
+**Root Cause:** `widget.py:551` referenced variable `used` which was never defined. NameError caught by `except Exception` block silently.
+**Fix:** Changed to `tenant.get("conversations_used_this_month", 0)`.
+**Prevention:** Avoid variable references without assignment. Silent except blocks hide these bugs.
+
+---
+
+### Sequence stats endpoint queries nonexistent column
+**Date:** 2026-03
+**Symptom:** "Emails sent today" metric always shows 0 or errors silently.
+**Root Cause:** `sequences.py:250` queried `automation_logs.tenant_id` but automation_logs has no `tenant_id` column.
+**Fix:** Query through `automation_executions` (which does have `tenant_id`) then filter logs by execution IDs.
+**Prevention:** Always verify column existence before writing queries (use schema-guard skill).
+
+---
+
+### Widget model ID mismatch
+**Date:** 2026-03
+**Symptom:** All AI chat responses return generic fallback instead of real AI.
+**Root Cause:** `widget.py` MODEL constant set to `claude-sonnet-4-5-20250929` which may not be accessible. CLAUDE.md specifies `claude-sonnet-4-5-20250514`.
+**Fix:** Updated MODEL to `claude-sonnet-4-5-20250514`.
+**Prevention:** Keep model constants in sync with CLAUDE.md documentation.
+
+---
+
+### Widget config missing agent_name — generic "Agent" in header
+**Date:** 2026-03
+**Symptom:** Widget header shows "Agent" instead of the business name.
+**Root Cause:** `WidgetConfigResponse` model didn't include `agent_name` field, and the config endpoint didn't return it.
+**Fix:** Added `agent_name` field to model, populated from `tenant.business_name` in endpoint.
+**Prevention:** When widget JS expects a field from the config endpoint, ensure it's in the response model.
+
+---
+
+### Widget test page missing data-api-base
+**Date:** 2026-03
+**Symptom:** Widget test page loads but API calls 404.
+**Root Cause:** `widget-test.html` had `data-api-key` but no `data-api-base`. Widget inferred backend URL from script src (Vercel), not Railway.
+**Fix:** Added `data-api-base="https://agentnexlify-production.up.railway.app"`.
+**Prevention:** Always include `data-api-base` in widget embed code pointing to Railway backend.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

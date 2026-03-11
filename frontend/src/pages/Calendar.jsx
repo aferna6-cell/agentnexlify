@@ -141,6 +141,17 @@ export default function Calendar({ onNavigate }) {
 
       {loading ? (
         <div className="calendar-loading">Loading appointments...</div>
+      ) : !loading && appointments.length === 0 ? (
+        <div className="empty-card" style={{ textAlign: "center", padding: "3rem 2rem" }}>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📅</div>
+          <h3 style={{ margin: "0 0 0.5rem", color: "var(--text-primary)" }}>No appointments yet</h3>
+          <p style={{ color: "var(--text-muted)", marginBottom: "1rem" }}>
+            When customers book through your widget, appointments will appear here.
+          </p>
+          <button className="btn-primary" onClick={() => onNavigate("availability")}>
+            Set up availability
+          </button>
+        </div>
       ) : view === "week" ? (
         <div className="calendar-week">
           <div className="calendar-week-header">

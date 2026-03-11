@@ -34,7 +34,8 @@ function UpgradeHint({ plan }) {
 
 export default function WidgetPage() {
   const { user, token } = useAuth();
-  const plan = user?.plan || "free";
+  const [livePlan, setLivePlan] = useState(user?.plan || "free");
+  const plan = livePlan;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -63,6 +64,7 @@ export default function WidgetPage() {
     setLoading(true);
     try {
       const dash = await fetchDashboard(user.tenantId, token);
+      if (dash.plan) setLivePlan(dash.plan);
       setApiKey(dash.widget_api_key || "");
       if (dash.widget_config) {
         setForm({

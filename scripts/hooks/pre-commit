@@ -52,7 +52,7 @@ FUTURE_FOUND=""
 for file in $STAGED_FILES; do
     if [[ "$file" == *routers*.py || "$file" == *router*.py ]]; then
         if [ -f "$file" ]; then
-            MATCH=$(grep -n "from __future__ import annotations" "$file" 2>/dev/null || true)
+            MATCH=$(grep -n "from __future__ import annotations" "$file" 2>/dev/null | grep -v "^[0-9]*:[[:space:]]*#" || true)
             if [ -n "$MATCH" ]; then
                 FUTURE_FOUND="$FUTURE_FOUND\n  $file:$MATCH"
             fi

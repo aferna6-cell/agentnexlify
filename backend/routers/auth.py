@@ -575,7 +575,7 @@ async def list_conversations(tenant_id: str, claims: dict = Depends(_get_current
             if cid:
                 lead_map[cid] = lead.get("name") or lead.get("email") or ""
     except Exception:
-        pass
+        logger.warning("Failed to map lead names to conversations", exc_info=True)
 
     conv_list = sorted(sessions.values(), key=lambda s: s["last_message_at"], reverse=True)
     for c in conv_list:

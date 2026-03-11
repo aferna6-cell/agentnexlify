@@ -279,6 +279,7 @@ class WidgetConfigResponse(BaseModel):
     tenant_id: str | None = None
     booking_enabled: bool = False
     branding: dict | None = None
+    agent_name: str | None = None
 
 
 class WidgetLeadRequest(BaseModel):
