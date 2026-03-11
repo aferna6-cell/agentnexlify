@@ -218,10 +218,11 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
             <label style={labelStyle}>Target Stage</label>
             <select style={selectStyle} value={targetStage} onChange={(e) => setTargetStage(e.target.value)}>
               <option value="">Select stage...</option>
+              <option value="new">New</option>
               <option value="contacted">Contacted</option>
-              <option value="qualified">Qualified</option>
-              <option value="appointment">Appointment</option>
+              <option value="appointment_booked">Appointment Booked</option>
               <option value="closed">Closed</option>
+              <option value="lost">Lost</option>
             </select>
           </div>
         )}

@@ -7,36 +7,11 @@ import {
   toggleWebhook,
   deleteWebhook,
   fetchWebhookLogs,
+  fetchGoogleCalendarStatus,
+  startGoogleCalendarAuth,
+  disconnectGoogleCalendar,
 } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
-
-const BASE =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://agentnexlify-production.up.railway.app";
-
-async function fetchGoogleStatus(token) {
-  const res = await fetch(`${BASE}/api/v1/integrations/google/status`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to fetch Google status");
-  return res.json();
-}
-
-async function startGoogleAuth(token) {
-  const res = await fetch(`${BASE}/api/v1/integrations/google/auth`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to start Google auth");
-  return res.json();
-}
-
-async function disconnectGoogle(token) {
-  const res = await fetch(`${BASE}/api/v1/integrations/google`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to disconnect Google");
-}
 
 /* ── Inline SVG: Google Calendar logo ── */
 function GoogleCalendarIcon({ size = 40 }) {
@@ -110,7 +85,7 @@ function GoogleCalendarSection({ token }) {
   const loadStatus = useCallback(async () => {
     if (!user?.tenantId) return;
     try {
-      const data = await fetchGoogleStatus(token);
+      const data = await fetchGoogleCalendarStatus(user.tenantId, token);
       setStatus(data);
     } catch (err) {
       console.error("Failed to load Google status", err);
@@ -122,7 +97,7 @@ function GoogleCalendarSection({ token }) {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const data = await startGoogleAuth(token);
+      const data = await startGoogleCalendarAuth(user.tenantId, token);
       if (data.auth_url) window.location.href = data.auth_url;
     } catch (err) {
       setError("Failed to start Google authorization.");
@@ -134,7 +109,7 @@ function GoogleCalendarSection({ token }) {
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
-      await disconnectGoogle(token);
+      await disconnectGoogleCalendar(user.tenantId, token);
       await loadStatus();
     } catch (err) {
       setError("Failed to disconnect.");
