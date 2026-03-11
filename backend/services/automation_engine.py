@@ -309,7 +309,7 @@ async def execute_step(execution_id: str) -> None:
         subject = render_template(step["subject_template"], context)
         body = render_template(step["body_template"], context)
 
-        # Branded email wrapping for Operations/Enterprise plans
+        # Branded email wrapping for Professional/Enterprise plans
         plan = tenant.get("plan", "free")
         if plan in ("professional", "enterprise"):
             try:
@@ -432,12 +432,11 @@ async def _generate_ai_email(
     try:
         # Run sync Anthropic call in thread pool to avoid blocking the event loop
         client = anthropic.Anthropic(api_key=app_settings.anthropic_api_key)
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
+        response = await asyncio.get_running_loop().run_in_executor(
             None,
             partial(
                 client.messages.create,
-                model="claude-sonnet-4-5-20250929",
+                model="claude-sonnet-4-5-20250514",
                 max_tokens=500,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_content}],

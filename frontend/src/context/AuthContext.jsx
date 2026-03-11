@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
     setUser({
       tenantId,
       email: payload.email,
-      plan: payload.plan || "starter",
+      plan: payload.plan || "free",
       businessName: payload.business_name || "",
       role: payload.role || "owner",
       isTeamMember: payload.is_team_member || false,

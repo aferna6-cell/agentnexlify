@@ -171,4 +171,24 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### AI email automation using wrong model ID
+**Date:** 2026-03-11
+**Symptom:** AI-generated follow-up emails may fail or use an unavailable model.
+**Root Cause:** `automation_engine.py:440` had `model="claude-sonnet-4-5-20250929"` — same wrong model ID as the earlier widget fix. The correct model is `claude-sonnet-4-5-20250514`.
+**Fix:** Updated model ID to `claude-sonnet-4-5-20250514`.
+**Files:** `backend/services/automation_engine.py`
+**Prevention:** Keep model IDs centralized (widget.py MODEL constant) and check all usages when updating.
+
+---
+
+### Invalid plan fallback in AuthContext
+**Date:** 2026-03-11
+**Symptom:** Users without a plan in JWT claims get assigned plan `"starter"` which is not a valid plan name (valid: free, growth, professional, enterprise).
+**Root Cause:** `AuthContext.jsx:36` had `plan: payload.plan || "starter"` — `"starter"` was never a valid plan name.
+**Fix:** Changed fallback to `"free"`.
+**Files:** `frontend/src/context/AuthContext.jsx`
+**Prevention:** Only use canonical plan names from CLAUDE.md.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
