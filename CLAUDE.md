@@ -161,6 +161,20 @@ This repo has automated safety checks:
 
 See docs/ai-development.md for full details.
 
+## Daily Routine (Automated)
+
+Morning and evening routines run automatically via Windows Task Scheduler using `claude -p` (headless mode).
+
+| Time | Script | What It Does |
+|------|--------|-------------|
+| 8 AM weekdays | `scripts/daily/morning-auto.sh` | Health check, activity analysis, task generation, safe doc fixes, daily log |
+| 8 PM weekdays | `scripts/daily/evening-auto.sh` | Commit review, knowledge base updates, task backlog update, tomorrow prep |
+
+Both routines can ONLY write to `docs/` — they cannot modify application code, run package managers, delete files, or push to remote. Interactive versions available via `/morning` and `/evening` commands.
+
+Setup: `powershell -ExecutionPolicy Bypass -File scripts\daily\setup-scheduler.ps1`
+Details: See docs/scheduled-routines.md
+
 ## Workflows
 
 ### Adding a New API Endpoint
