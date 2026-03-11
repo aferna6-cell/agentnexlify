@@ -2,10 +2,9 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
-from backend.config import settings
 from backend.models.database import get_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
 from backend.routers.auth import _get_current_tenant

@@ -7,7 +7,6 @@
 import logging
 import re
 from typing import Any
-from uuid import uuid4
 
 import anthropic
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request

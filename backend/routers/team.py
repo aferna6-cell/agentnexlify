@@ -4,10 +4,8 @@ import html as html_lib
 import logging
 import secrets
 
-import bcrypt
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.config import settings
 from backend.models.database import get_supabase
 from backend.models.schemas import (
     AcceptInviteRequest,
@@ -15,7 +13,7 @@ from backend.models.schemas import (
     TeamInviteRequest,
     TeamMemberResponse,
 )
-from backend.routers.auth import _create_token, _get_current_tenant, _hash_password, _verify_password
+from backend.routers.auth import _create_token, _get_current_tenant, _hash_password
 from backend.services.email_sender import send_email
 
 logger = logging.getLogger(__name__)
