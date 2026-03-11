@@ -125,6 +125,7 @@ async def get_overview(
         prev_sessions = set(r["session_id"] for r in (prev_convos.data or []))
         prev_conversations = len(prev_sessions)
     except Exception:
+        logger.warning("Failed to fetch previous period conversations for %s", tenant_id, exc_info=True)
         prev_conversations = 0
 
     # Current period leads (leads use client_id, not tenant_id)
@@ -140,6 +141,7 @@ async def get_overview(
         )
         total_leads = len(curr_leads.data or [])
     except Exception:
+        logger.warning("Failed to fetch current period leads for %s", tenant_id, exc_info=True)
         total_leads = 0
 
     # Previous period leads
@@ -155,6 +157,7 @@ async def get_overview(
         )
         prev_leads = len(prev_leads_res.data or [])
     except Exception:
+        logger.warning("Failed to fetch previous period leads for %s", tenant_id, exc_info=True)
         prev_leads = 0
 
     # Conversion rate
@@ -190,6 +193,7 @@ async def get_overview(
         )
         prev_appointments = len(prev_appts.data or [])
     except Exception:
+        logger.warning("Failed to fetch previous period appointments for %s", tenant_id, exc_info=True)
         prev_appointments = 0
 
     # Emails sent (from automation_logs via automation_executions)
@@ -218,6 +222,7 @@ async def get_overview(
             )
             total_emails = len(email_acts.data or [])
         except Exception:
+            logger.warning("Failed to fetch email count from any source for %s", tenant_id, exc_info=True)
             total_emails = 0
 
     result = {
@@ -538,6 +543,7 @@ async def get_widget_analytics(
         )
         widget_loads = (tenant_res.data[0]["conversations_used_this_month"] or 0) if tenant_res.data else 0
     except Exception:
+        logger.warning("Failed to fetch widget loads for %s", tenant_id, exc_info=True)
         widget_loads = 0
 
     engagement_rate = round((conversations_started / widget_loads * 100), 1) if widget_loads > 0 else 0

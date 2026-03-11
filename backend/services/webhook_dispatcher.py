@@ -148,7 +148,7 @@ async def _deliver(
                 "last_triggered_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", webhook_id).execute()
         except Exception:
-            pass
+            logger.warning("Failed to reset failure count for webhook %s", webhook_id, exc_info=True)
     else:
         # Increment failure count
         try:

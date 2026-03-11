@@ -405,7 +405,7 @@ async def _capture_leads_from_session(
                     lead_id=lead_id,
                     metadata={"source": "widget", "fields": list(lead_fields.keys())},
                 )
-            except BaseException:
+            except Exception:
                 logger.warning("lead_capture: log_activity failed", exc_info=True)
 
             # Fire webhook for new lead
@@ -417,7 +417,7 @@ async def _capture_leads_from_session(
                     "phone": combined.get("phone"),
                     "source": "widget",
                 })
-            except BaseException:
+            except Exception:
                 logger.warning("lead_capture: fire_event_background failed", exc_info=True)
 
             # Fire automation trigger for new leads
@@ -426,25 +426,25 @@ async def _capture_leads_from_session(
                 from backend.services.automation_engine import trigger_sequence
                 await trigger_sequence(tenant_id, lead_id, "new_lead")
                 logger.info("lead_capture: trigger_sequence completed for lead %s", lead_id)
-            except BaseException:
+            except Exception:
                 logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
             # SMS notification to owner
             logger.info("SMS_TRIGGER: about to call SMS notification for lead %s email=%s", lead_id, combined.get("email"))
             try:
                 await _send_new_lead_sms_notification(tenant_id, lead_name, combined)
-            except BaseException:
+            except Exception:
                 logger.error("SMS_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
 
             # Score the lead
             try:
                 score_lead_background(lead_id)
-            except BaseException:
-                pass
+            except Exception:
+                logger.warning("Failed to score lead %s in background", lead_id, exc_info=True)
         else:
             logger.warning("lead_capture: INSERT returned no data — result=%s", result)
 
-    except BaseException:
+    except Exception:
         logger.error("lead_capture FAILED: session=%s tenant=%s", session_id, tenant_id, exc_info=True)
 
 
@@ -764,14 +764,14 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             from backend.services.automation_engine import trigger_sequence
             await trigger_sequence(tenant["id"], lead_id, "new_lead")
             logger.info("SMS_TRIGGER[/lead]: trigger_sequence completed for lead %s", lead_id)
-        except BaseException:
+        except Exception:
             logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
         # SMS notification to owner
         logger.info("SMS_TRIGGER[/lead]: about to call SMS notification for lead %s email=%s", lead_id, fields.get("email"))
         try:
             await _send_new_lead_sms_notification(tenant["id"], fields.get("name", "Unknown"), fields)
-        except BaseException:
+        except Exception:
             logger.error("SMS_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
 
     return WidgetLeadResponse(

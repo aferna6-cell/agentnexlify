@@ -78,7 +78,7 @@ TEMPLATES = {
     "appointment": {
         "name": "Appointment Booked Series",
         "trigger_event": "lead_stage_change",
-        "trigger_config": {"target_stage": "appointment"},
+        "trigger_config": {"target_stage": "appointment_booked"},
         "steps": [
             {
                 "step_order": 1,

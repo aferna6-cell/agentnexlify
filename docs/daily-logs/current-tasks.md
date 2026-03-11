@@ -2,33 +2,33 @@
 
 Updated by the automated morning/evening routines and interactive sessions.
 
-## Tomorrow's Top 3 Priorities
+## Top Priorities
 
-1. Run first automated morning routine to validate the system works
-2. Review existing bare except blocks in backend code — add proper logging
-3. Check for any undocumented schema changes or bug fixes
+1. Fix remaining TODO in billing.py (payment failure email notification)
+2. Review schema-log.md against live database for accuracy
+3. Consider adding integration tests for critical API endpoints
 
 ## Active Tasks
 
-### Priority 1 — Critical
-- [ ] Audit all backend router files for proper error handling (no bare excepts)
-- [ ] Verify all leads queries use `client_id` (not `tenant_id`) and `status` (not `lead_stage`)
-
-### Priority 2 — Documentation
-- [ ] Enrich auto-logged bug pattern entries with root cause and prevention details
-- [ ] Review schema-log.md against live database for accuracy
-
-### Priority 3 — Code Quality
-- [ ] Address TODO/FIXME comments in backend code
+### Priority 1 — Code Quality
+- [ ] Address TODO in `backend/routers/billing.py:345` (payment failure email)
 - [ ] Review and improve error messages in API responses
 
-### Priority 4 — Improvements
+### Priority 2 — Documentation
+- [ ] Review schema-log.md against live database for accuracy
+
+### Priority 3 — Improvements
 - [ ] Consider adding integration tests for critical API endpoints
 - [ ] Evaluate adding rate limiting to public API endpoints
 
 ## Completed (Recent)
 
-_Tasks will be moved here by the evening routine with completion dates._
+- [x] Audit all backend router files for proper error handling — fixed 10 BaseException catches, 7 silent except blocks (2026-03-11)
+- [x] Verify leads queries use correct column names — confirmed safe, documented in architecture-decisions.md (2026-03-11)
+- [x] Fix appointment automation template target_stage mismatch (2026-03-11)
+- [x] Trim CLAUDE.md from 234→157 lines (2026-03-11)
+- [x] Add /health route and suppress httpx log noise on Railway (2026-03-11)
+- [x] Add workflow commands, notification hooks, context management (2026-03-11)
 
 ---
 

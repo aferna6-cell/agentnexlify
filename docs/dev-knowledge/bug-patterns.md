@@ -141,4 +141,34 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Appointment automation template never triggers
+**Date:** 2026-03-11
+**Symptom:** "Appointment Booked Series" automation sequence never fires when a lead's status changes to `appointment_booked`.
+**Root Cause:** Template in `sequences.py` used `{"target_stage": "appointment"}` but the valid stage value is `"appointment_booked"`. The automation engine compares `target_stage` against the new stage and they never match.
+**Fix:** Changed `target_stage` from `"appointment"` to `"appointment_booked"` in `backend/routers/sequences.py:81`.
+**Files:** `backend/routers/sequences.py`
+**Prevention:** Always validate trigger_config values against `VALID_LEAD_STAGES` in `backend/models/schemas.py`. Consider adding validation in the template creation code.
+
+---
+
+### BaseException catches preventing graceful shutdown
+**Date:** 2026-03-11
+**Symptom:** Worker processes don't shut down cleanly; `except BaseException:` catches `KeyboardInterrupt`, `SystemExit`, and `asyncio.CancelledError`.
+**Root Cause:** 10 `except BaseException:` blocks in `widget.py` were catching ALL exceptions including signals meant for process control. One was `except BaseException: pass` — completely silent.
+**Fix:** Changed all to `except Exception:`. Added logging to the previously silent `score_lead_background` catch.
+**Files:** `backend/routers/widget.py`
+**Prevention:** Never use `except BaseException:` unless explicitly handling shutdown signals. The pre-commit hook should flag this pattern.
+
+---
+
+### Silent analytics fallbacks hiding database errors
+**Date:** 2026-03-11
+**Symptom:** Dashboard analytics show 0 for conversations, leads, appointments, or emails with no error indication.
+**Root Cause:** 6 `except Exception:` blocks in `analytics.py` silently defaulted values to 0 without any logging. Database connection failures or schema mismatches would make the dashboard show zeros.
+**Fix:** Added `logger.warning(...)` to all 6 fallback blocks in `analytics.py`.
+**Files:** `backend/routers/analytics.py`
+**Prevention:** Every except block that returns a default value must log a warning. Silent fallbacks mask real problems.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

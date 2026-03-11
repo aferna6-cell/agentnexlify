@@ -48,4 +48,19 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Exception handling strategy
+**Date:** 2026-03-11
+**Decision:** Every `except` block must either (1) log the exception, (2) re-raise it, or (3) have a comment explaining why silence is intentional. Never use `except BaseException:` — always use `except Exception:` to allow `KeyboardInterrupt`, `SystemExit`, and `asyncio.CancelledError` to propagate for clean shutdown.
+**Why:** 10 `except BaseException:` blocks in widget.py were preventing graceful Uvicorn shutdown. One was `except BaseException: pass` that silently swallowed lead scoring failures. Silent except blocks in analytics.py hid database errors.
+**Enforcement:** Pre-commit hook checks for bare excepts. The QA agent audits for this pattern.
+
+---
+
+### lead_stage_change is an event name, not a column name
+**Date:** 2026-03-11
+**Decision:** Keep `lead_stage_change` as the automation trigger event name, even though the actual column is `status` (not `lead_stage`). The trigger event is a business concept stored in `automation_sequences.trigger_event` TEXT column.
+**Why:** Renaming to `lead_status_change` would break existing data in production. The name is well-understood and only used as a string constant, never as a DB column filter.
+
+---
+
 _Add new decisions when significant architectural choices are made._

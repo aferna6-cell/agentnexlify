@@ -35,24 +35,12 @@ Dashboard (React/Vite) → FastAPI /api/* → Supabase
 Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant from day one.
 
 ## Key Directories
-- `backend/` — FastAPI service. Main app in `backend/main.py`
-- `backend/routers/` — API endpoints (16 router files: analytics, appointments, auth, automations, billing, business_page, clients, integrations, leads, sequences, sms, stripe_webhooks, support, team, webhooks, widget)
-- `backend/services/` — Business logic (automation, email, SMS, scoring, booking, conversation)
-- `frontend/` — React/Vite app (dashboard + public pages)
-- `frontend/src/pages/` — React page components
-- `frontend/src/utils/api.js` — All API call functions
-- `widget/` — Production widget bundle (embeddable JS)
-- `frontend/public/widget/` — Widget mirror (must match widget/)
+- `backend/` — FastAPI service (`main.py`, `routers/` with 16 files, `services/` for business logic)
+- `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
+- `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
 - `migrations/` — SQL migration files (001–013)
-- `ai/` — Autonomous development runtime (skill engine, memory, auto-improve)
-- `skills/` — Generated skills workspace
-- `.codex/skills/` — Repository-native skills (schema-guard, surface-selector, widget-integrity, runtime-constraints)
-- `demo-platform/` — Separate demo/sales app (isolated from production)
-- `landing-page-v2/`, `public/` — Older frontend lines (do not touch unless explicitly requested)
-- `_archive/` — Retired code (reference only)
-- `prospects/` — Prospecting/import utilities (not runtime code)
-- `docs/` — Documentation and AI development system docs
-- `docs/dev-knowledge/` — Persistent knowledge base (bug patterns, schema log, architecture decisions)
+- `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
+- `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
 ## Common Commands
 - Frontend dev: `cd frontend && npm run dev`
@@ -112,44 +100,13 @@ Before writing any database query, verify the column exists. When creating a mig
 - Plan/subscription data must come from live API calls, never stale JWT claims
 - Empty states should be helpful with CTAs, not just "0" or "No data"
 
-## What NOT to Touch
-- .env files — never commit, never log values
-- Stripe webhook secret — only set via Railway env vars
-- API_SECRET_KEY — must be persistent on Railway, not regenerated per deploy
-- Database schema — only modify via numbered migration files in migrations/
+## Skills & Agents
 
-## Skills
+Skills in `.claude/skills/`: **schema-guard**, **debug-api**, **feature-build**, **widget-test**, **team-orchestration**. Also `.codex/skills/` for repo-native skills.
 
-Claude Code has project-specific skills in .claude/skills/. Use them:
-- **schema-guard** — before any database work
-- **debug-api** — when diagnosing API errors
-- **feature-build** — when building new features
-- **widget-test** — when testing or modifying the chat widget
-- **team-orchestration** — when delegating complex tasks to the agent team
+Agents in `.claude/agents/`: **schema-guardian**, **backend-dev**, **frontend-dev**, **widget-specialist**, **qa-tester**, **devops**. Use `/delegate` to plan delegation. Agents communicate via `.claude/agent-comms/`.
 
-Repository-native skills also exist in .codex/skills/ (surface-selector, schema-guard, widget-integrity, runtime-constraints).
-
-## Agent Team
-
-This repo has a team of specialized agents in `.claude/agents/`. For complex tasks, use the team-orchestration skill or `/delegate` command to plan delegation.
-
-| Agent | Purpose |
-|-------|---------|
-| schema-guardian | Database schema validation and migration design |
-| backend-dev | FastAPI endpoints, Pydantic models, backend logic |
-| frontend-dev | React/Vite dashboard pages and components |
-| widget-specialist | Embeddable chat widget, CORS, embedding |
-| qa-tester | Testing, validation, bug detection |
-| devops | Deployment, CI/CD, infrastructure |
-
-### Delegation Rules
-1. **Database work** → Always run schema-guardian BEFORE backend-dev
-2. **After any code changes** → Run qa-tester to validate
-3. **Full-stack features** → schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester
-4. **Before deploy** → Run qa-tester + devops in parallel
-5. **Simple tasks** → Just do them directly, don't over-delegate
-
-Agents communicate via `.claude/agent-comms/`. When chaining agents, read prior output and pass context in the delegation prompt.
+**Delegation order:** schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester. Before deploy: qa-tester + devops in parallel.
 
 ## Workflow Commands
 
@@ -185,50 +142,16 @@ This repo has automated safety checks:
 
 See docs/ai-development.md for full details.
 
-## Daily Routine (Automated)
+## Daily Routine
 
-Morning and evening routines run automatically via Windows Task Scheduler using `claude -p` (headless mode).
-
-| Time | Script | What It Does |
-|------|--------|-------------|
-| 8 AM weekdays | `scripts/daily/morning-auto.sh` | Health check, activity analysis, task generation, safe doc fixes, daily log |
-| 8 PM weekdays | `scripts/daily/evening-auto.sh` | Commit review, knowledge base updates, task backlog update, tomorrow prep |
-
-Both routines can ONLY write to `docs/` — they cannot modify application code, run package managers, delete files, or push to remote. Interactive versions available via `/morning` and `/evening` commands.
-
-Setup: `powershell -ExecutionPolicy Bypass -File scripts\daily\setup-scheduler.ps1`
-Details: See docs/scheduled-routines.md
+Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 PM evening (`scripts/daily/evening-auto.sh`). Both write to `docs/` only. Interactive: `/morning`, `/evening`. Details: `docs/scheduled-routines.md`.
 
 ## Workflows
 
-### Adding a New API Endpoint
-1. Check if a similar endpoint exists in backend/routers/
-2. Verify all referenced DB columns exist (use schema-guard skill)
-3. Create Pydantic model for request/response
-4. Add route in appropriate router file
-5. Register router in main.py if new file
-6. Test with curl or the frontend
+**New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
+**New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
+**Database migration:** Next numbered file in `migrations/` (after 013) → test in Supabase SQL editor → run on prod → update Pydantic models
 
-### Adding a New Dashboard Page
-1. Create page in frontend/src/pages/
-2. Match existing dark theme and component patterns
-3. Use live API data, never JWT claims for display
-4. Include helpful empty states
-5. Add navigation link in sidebar component
+## Knowledge Base
 
-### Database Migration
-1. Create numbered SQL file in migrations/ (next number after 013)
-2. Test in Supabase SQL editor on a test project first
-3. Run on production Supabase
-4. Update any Pydantic models that reference changed columns
-5. Update this CLAUDE.md if table structure changes
-
-## Memory
-
-Development knowledge lives in docs/dev-knowledge/:
-- bug-patterns.md — recurring bugs and their fixes
-- schema-log.md — schema change history
-- architecture-decisions.md — why things are the way they are
-
-After fixing a non-trivial bug, append it to bug-patterns.md.
-After any schema change, append it to schema-log.md.
+`docs/dev-knowledge/`: bug-patterns.md, schema-log.md, architecture-decisions.md. Always update after fixing bugs or changing schema.
