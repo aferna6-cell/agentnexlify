@@ -8,3 +8,9 @@ build/
 .DS_Store
 node_modules/
 *.log
+
+# Agent communication files (ephemeral, per-session)
+.claude/agent-comms/*.md
+.claude/agent-comms/*.json
+!.claude/agent-comms/.gitkeep
+!.claude/agent-comms/README.md

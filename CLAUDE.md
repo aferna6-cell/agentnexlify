@@ -125,8 +125,31 @@ Claude Code has project-specific skills in .claude/skills/. Use them:
 - **debug-api** — when diagnosing API errors
 - **feature-build** — when building new features
 - **widget-test** — when testing or modifying the chat widget
+- **team-orchestration** — when delegating complex tasks to the agent team
 
 Repository-native skills also exist in .codex/skills/ (surface-selector, schema-guard, widget-integrity, runtime-constraints).
+
+## Agent Team
+
+This repo has a team of specialized agents in `.claude/agents/`. For complex tasks, use the team-orchestration skill or `/delegate` command to plan delegation.
+
+| Agent | Purpose |
+|-------|---------|
+| schema-guardian | Database schema validation and migration design |
+| backend-dev | FastAPI endpoints, Pydantic models, backend logic |
+| frontend-dev | React/Vite dashboard pages and components |
+| widget-specialist | Embeddable chat widget, CORS, embedding |
+| qa-tester | Testing, validation, bug detection |
+| devops | Deployment, CI/CD, infrastructure |
+
+### Delegation Rules
+1. **Database work** → Always run schema-guardian BEFORE backend-dev
+2. **After any code changes** → Run qa-tester to validate
+3. **Full-stack features** → schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester
+4. **Before deploy** → Run qa-tester + devops in parallel
+5. **Simple tasks** → Just do them directly, don't over-delegate
+
+Agents communicate via `.claude/agent-comms/`. When chaining agents, read prior output and pass context in the delegation prompt.
 
 ## Automation
 
