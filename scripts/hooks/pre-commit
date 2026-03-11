@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# AgentNexLiFy pre-commit hook
+# Blocks commits that contain known dangerous patterns
+# Install: bash scripts/install-hooks.sh
+
+set -e
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+ERRORS=0
+WARNINGS=0
+
+echo "Running AgentNexLiFy pre-commit checks..."
+echo ""
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+    echo -e "${GREEN}No staged files to check.${NC}"
+    exit 0
+fi
+
+# CHECK 1: Hardcoded secrets
+echo -n "Checking for hardcoded secrets... "
+SECRET_PATTERNS="sk_live_|sk_test_|ANTHROPIC_API_KEY.*=.*sk-ant|supabase.*eyJ|password.*=.*['\"][^'\"]{20}"
+SECRETS_FOUND=""
+for file in $STAGED_FILES; do
+    if [[ "$file" == *.py || "$file" == *.ts || "$file" == *.tsx || "$file" == *.js || "$file" == *.jsx ]]; then
+        if [ -f "$file" ]; then
+            MATCH=$(grep -nE "$SECRET_PATTERNS" "$file" 2>/dev/null || true)
+            if [ -n "$MATCH" ]; then
+                SECRETS_FOUND="$SECRETS_FOUND\n  $file: $MATCH"
+            fi
+        fi
+    fi
+done
+if [ -n "$SECRETS_FOUND" ]; then
+    echo -e "${RED}BLOCKED${NC}"
+    echo -e "  Possible secrets detected:${SECRETS_FOUND}"
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# CHECK 2: from __future__ import annotations in router files
+echo -n "Checking for dangerous __future__ imports... "
+FUTURE_FOUND=""
+for file in $STAGED_FILES; do
+    if [[ "$file" == *routers*.py || "$file" == *router*.py ]]; then
+        if [ -f "$file" ]; then
+            MATCH=$(grep -n "from __future__ import annotations" "$file" 2>/dev/null || true)
+            if [ -n "$MATCH" ]; then
+                FUTURE_FOUND="$FUTURE_FOUND\n  $file:$MATCH"
+            fi
+        fi
+    fi
+done
+if [ -n "$FUTURE_FOUND" ]; then
+    echo -e "${RED}BLOCKED${NC}"
+    echo -e "  This WILL break all FastAPI request parsing:${FUTURE_FOUND}"
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# CHECK 3: Bare except blocks
+echo -n "Checking for silent exception swallowing... "
+BARE_FOUND=""
+for file in $STAGED_FILES; do
+    if [[ "$file" == *.py ]]; then
+        if [ -f "$file" ]; then
+            MATCH=$(grep -n "except.*:.*pass\|except:$" "$file" 2>/dev/null || true)
+            if [ -n "$MATCH" ]; then
+                BARE_FOUND="$BARE_FOUND\n  $file:$MATCH"
+            fi
+        fi
+    fi
+done
+if [ -n "$BARE_FOUND" ]; then
+    echo -e "${YELLOW}WARNING${NC}"
+    echo -e "  Bare except blocks hide real errors:${BARE_FOUND}"
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# CHECK 4: .env files being committed
+echo -n "Checking for .env files... "
+ENV_FILES=""
+for file in $STAGED_FILES; do
+    if [[ "$file" == .env* || "$file" == */.env* ]]; then
+        ENV_FILES="$ENV_FILES $file"
+    fi
+done
+if [ -n "$ENV_FILES" ]; then
+    echo -e "${RED}BLOCKED${NC}"
+    echo "  Never commit .env files:$ENV_FILES"
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# CHECK 5: Migration file numbering
+echo -n "Checking migration numbering... "
+STAGED_MIGRATIONS=""
+for file in $STAGED_FILES; do
+    if [[ "$file" == migrations/*.sql ]]; then
+        STAGED_MIGRATIONS="$STAGED_MIGRATIONS $file"
+    fi
+done
+if [ -n "$STAGED_MIGRATIONS" ]; then
+    DUPE_NUMS=$(ls migrations/*.sql 2>/dev/null | sed 's/.*\///' | grep -oP '^\d+' | sort | uniq -d)
+    if [ -n "$DUPE_NUMS" ]; then
+        echo -e "${YELLOW}WARNING${NC}"
+        echo "  Duplicate migration numbers found: $DUPE_NUMS"
+        WARNINGS=$((WARNINGS + 1))
+    else
+        echo -e "${GREEN}OK${NC}"
+    fi
+else
+    echo -e "${GREEN}OK (no migrations staged)${NC}"
+fi
+
+echo ""
+
+if [ $ERRORS -gt 0 ]; then
+    echo -e "${RED}COMMIT BLOCKED: $ERRORS critical issue(s) found.${NC}"
+    echo "Fix the issues above before committing."
+    echo "To bypass in an emergency: git commit --no-verify"
+    exit 1
+elif [ $WARNINGS -gt 0 ]; then
+    echo -e "${YELLOW}$WARNINGS warning(s) found. Committing anyway.${NC}"
+    echo "Consider fixing these before pushing."
+fi

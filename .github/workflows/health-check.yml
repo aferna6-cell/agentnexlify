@@ -1,0 +1,119 @@
+name: Daily Health Check
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run health checks
+        run: |
+          echo "# Health Check — $(date -u '+%Y-%m-%d %H:%M UTC')" > health-report.md
+          echo "" >> health-report.md
+
+          echo "## Dangerous Imports" >> health-report.md
+          if grep -r "from __future__ import annotations" backend/routers/ 2>/dev/null; then
+            echo "CRITICAL: from __future__ import annotations in router files!" >> health-report.md
+          else
+            echo "PASS" >> health-report.md
+          fi
+          echo "" >> health-report.md
+
+          echo "## Silent Error Handling" >> health-report.md
+          BARE=$(grep -rn "except.*:.*pass" backend/ --include="*.py" 2>/dev/null || true)
+          if [ -n "$BARE" ]; then
+            echo "WARNING: Bare except blocks found:" >> health-report.md
+            echo '```' >> health-report.md
+            echo "$BARE" >> health-report.md
+            echo '```' >> health-report.md
+          else
+            echo "PASS" >> health-report.md
+          fi
+          echo "" >> health-report.md
+
+          echo "## Hardcoded Secrets" >> health-report.md
+          SECRETS=$(grep -rn "sk_live_\|sk_test_\|supabase.*eyJ\|ANTHROPIC_API_KEY.*=.*sk-" backend/ frontend/src/ --include="*.py" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null || true)
+          if [ -n "$SECRETS" ]; then
+            echo "CRITICAL: Possible hardcoded secrets!" >> health-report.md
+          else
+            echo "PASS" >> health-report.md
+          fi
+          echo "" >> health-report.md
+
+          echo "## Gitignore" >> health-report.md
+          if grep -q "\.env" .gitignore 2>/dev/null; then
+            echo "PASS" >> health-report.md
+          else
+            echo "CRITICAL: .env not in .gitignore!" >> health-report.md
+          fi
+          echo "" >> health-report.md
+
+          echo "## Schema — Leads Table" >> health-report.md
+          # In this repo, leads uses client_id (not tenant_id) and status (not lead_stage)
+          LEAD_STAGE=$(grep -rn "lead_stage" backend/ --include="*.py" 2>/dev/null | grep -v "#" || true)
+          if [ -n "$LEAD_STAGE" ]; then
+            echo "WARNING: lead_stage references found (should be status for leads table):" >> health-report.md
+            echo '```' >> health-report.md
+            echo "$LEAD_STAGE" >> health-report.md
+            echo '```' >> health-report.md
+          else
+            echo "PASS" >> health-report.md
+          fi
+          echo "" >> health-report.md
+
+          echo "## Widget File Sync" >> health-report.md
+          if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then
+            if diff -q "widget/agentnexlify-widget.js" "frontend/public/widget/agentnexlify-widget.js" > /dev/null 2>&1; then
+              echo "PASS" >> health-report.md
+            else
+              echo "WARNING: Widget files are out of sync!" >> health-report.md
+            fi
+          else
+            echo "INFO: Widget files not found for comparison" >> health-report.md
+          fi
+          echo "" >> health-report.md
+
+          echo "## Migration Numbering" >> health-report.md
+          DUPES=$(ls migrations/*.sql 2>/dev/null | sed 's/.*\///' | grep -oP '^\d+' | sort | uniq -d || true)
+          if [ -n "$DUPES" ]; then
+            echo "WARNING: Duplicate migration numbers: $DUPES" >> health-report.md
+          else
+            echo "PASS" >> health-report.md
+          fi
+
+          cat health-report.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: health-report
+          path: health-report.md
+
+      - name: Create issue if critical
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('health-report.md', 'utf8');
+            if (report.includes('CRITICAL')) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Health Check Failed — ' + new Date().toISOString().split('T')[0],
+                body: report,
+                labels: ['automated', 'health-check']
+              });
+            }

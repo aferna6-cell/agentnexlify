@@ -1,0 +1,71 @@
+name: Auto Log Bug Fix
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  check-for-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if commit is a bug fix
+        id: check
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+          if echo "$COMMIT_MSG" | grep -iqE "^fix|bug.?fix|hotfix|patch:|fixes #"; then
+            echo "is_fix=true" >> $GITHUB_OUTPUT
+            echo "This looks like a bug fix commit."
+          else
+            echo "is_fix=false" >> $GITHUB_OUTPUT
+            echo "Not a bug fix commit. Skipping."
+          fi
+
+      - name: Log fix details
+        if: steps.check.outputs.is_fix == 'true'
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_HASH=$(git log -1 --pretty=%H)
+          COMMIT_SHORT=$(git log -1 --pretty=%h)
+          FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ', ' | sed 's/,$//')
+          DATE=$(date -u '+%Y-%m-%d')
+          AUTHOR=$(git log -1 --pretty=%an)
+
+          # Ensure directory exists
+          mkdir -p docs/dev-knowledge
+
+          # Create file if it doesn't exist
+          if [ ! -f "docs/dev-knowledge/bug-patterns.md" ]; then
+            echo "# Bug Patterns — AgentNexLiFy" > docs/dev-knowledge/bug-patterns.md
+            echo "" >> docs/dev-knowledge/bug-patterns.md
+          fi
+
+          # Append to bug patterns file
+          cat >> docs/dev-knowledge/bug-patterns.md << EOF
+
+---
+
+### $COMMIT_MSG
+**Date:** $DATE
+**Commit:** $COMMIT_SHORT
+**Author:** $AUTHOR
+**Files Changed:** $FILES_CHANGED
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+EOF
+
+          echo "Bug fix logged to docs/dev-knowledge/bug-patterns.md"
+
+      - name: Commit updated bug log
+        if: steps.check.outputs.is_fix == 'true'
+        run: |
+          git config user.name "AgentNexLiFy Bot"
+          git config user.email "bot@agentnexlify.com"
+          git add docs/dev-knowledge/bug-patterns.md
+          git diff --cached --quiet || git commit -m "docs: auto-log bug fix from $(git log -1 --pretty=%h HEAD~1)"
+          git push

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hook": "scripts/claude-hooks/pre-edit-check.sh"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hook": "scripts/claude-hooks/post-edit-check.sh"
+      }
+    ]
+  }
+}

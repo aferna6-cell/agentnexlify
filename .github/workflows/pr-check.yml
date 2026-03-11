@@ -1,0 +1,86 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Check for dangerous patterns
+        run: |
+          ERRORS=0
+
+          # __future__ annotations in routers
+          if grep -r "from __future__ import annotations" backend/routers/ 2>/dev/null; then
+            echo "::error::from __future__ import annotations found in router files — this breaks FastAPI"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Hardcoded secrets
+          if grep -rn "sk_live_\|sk_test_\|sk-ant-" backend/ frontend/src/ --include="*.py" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null; then
+            echo "::error::Possible hardcoded secrets detected"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # .env files in PR
+          if git diff --name-only origin/main...HEAD 2>/dev/null | grep -q "\.env"; then
+            echo "::error::.env file in PR — never commit env files"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Bare except blocks (warning only)
+          BARE=$(grep -rn "except.*:.*pass" backend/ --include="*.py" 2>/dev/null || true)
+          if [ -n "$BARE" ]; then
+            echo "::warning::Bare except blocks found — these hide real errors"
+            echo "$BARE"
+          fi
+
+          # Schema: lead_stage usage (should be status)
+          if grep -rn "lead_stage" backend/ --include="*.py" 2>/dev/null | grep -v "#"; then
+            echo "::warning::Found lead_stage references — leads table uses 'status' not 'lead_stage'"
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "$ERRORS critical issue(s) found. Fix before merging."
+            exit 1
+          fi
+
+      - name: Frontend build check
+        run: |
+          cd frontend
+          npm install --silent
+          npm run build
+
+      - name: Check migration numbering
+        run: |
+          CHANGED_MIGRATIONS=$(git diff --name-only origin/main...HEAD -- migrations/ 2>/dev/null || true)
+          if [ -n "$CHANGED_MIGRATIONS" ]; then
+            echo "New/changed migrations:"
+            echo "$CHANGED_MIGRATIONS"
+            DUPES=$(ls migrations/*.sql 2>/dev/null | sed 's/.*\///' | grep -oP '^\d+' | sort | uniq -d)
+            if [ -n "$DUPES" ]; then
+              echo "::error::Duplicate migration numbers: $DUPES"
+              exit 1
+            fi
+          fi
+
+      - name: Widget sync check
+        run: |
+          if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then
+            if ! diff -q "widget/agentnexlify-widget.js" "frontend/public/widget/agentnexlify-widget.js" > /dev/null 2>&1; then
+              echo "::warning::Widget files are out of sync — widget/ and frontend/public/widget/ must be identical"
+            fi
+          fi

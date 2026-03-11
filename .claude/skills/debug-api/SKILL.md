@@ -1,0 +1,42 @@
+---
+name: debug-api
+description: "Use this skill when diagnosing any API error — 422s, 500s, CORS failures, silent data loss, or webhook issues."
+---
+
+# Debug API
+
+## When to Use
+- Any 4xx or 5xx error from the FastAPI backend
+- Widget not saving data
+- Stripe webhooks not updating the database
+- CORS errors in browser console
+
+## Diagnostic Workflow
+
+### Step 1: Identify the Error Class
+
+| Symptom | Likely Cause | Start Here |
+|---------|-------------|------------|
+| 422 Unprocessable Entity | Pydantic model mismatch OR `from __future__ import annotations` | Check the route's request model |
+| 500 Internal Server Error | Unhandled exception | Check Railway logs |
+| CORS error in browser | Origin not in allowed list | Check main.py CORS config |
+| Data silently not saved | Schema mismatch or swallowed exception | Use schema-guard skill |
+| Webhook fires but DB unchanged | No error logging in handler | Add try/except with logging |
+
+### Step 2: Check for Known Killers
+
+- NEVER have `from __future__ import annotations` in a file with FastAPI routes
+- Look for bare `except: pass` patterns that hide errors
+- Check if display data comes from stale JWT claims instead of live API
+- Verify leads queries use `client_id` (not `tenant_id`) and `status` (not `lead_stage`)
+
+### Step 3: Trace the Full Request Path
+1. Frontend — exact fetch call and payload shape (check frontend/src/utils/api.js)
+2. CORS — is the origin allowed? (check backend/main.py)
+3. Route — URL and method correct? (check backend/routers/)
+4. Pydantic model — request body matches model?
+5. Database query — column names match schema?
+6. Response — response model correct?
+
+### Step 4: Document the Fix
+Append to docs/dev-knowledge/bug-patterns.md with symptom, root cause, fix, and files changed.
