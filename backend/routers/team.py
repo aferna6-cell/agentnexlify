@@ -160,9 +160,9 @@ async def invite_member(req: TeamInviteRequest, claims: dict = Depends(_get_curr
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("invite_member failed for tenant_id=%s email=%s", tenant_id, req.email)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to send invite")
 
 
 # ── GET /invite/{token} — public, no auth ──────────────────
@@ -310,9 +310,9 @@ async def list_members(tenant_id: str, claims: dict = Depends(_get_current_tenan
         return members
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("list_members failed for tenant_id=%s", tenant_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to list team members")
 
 
 # ── PUT /members/{tenant_id}/{member_id} ───────────────────

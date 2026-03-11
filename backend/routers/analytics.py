@@ -178,6 +178,7 @@ async def get_overview(
         )
         total_appointments = len(curr_appts.data or [])
     except Exception:
+        logger.warning("Failed to fetch current period appointments for %s", tenant_id, exc_info=True)
         total_appointments = 0
 
     try:

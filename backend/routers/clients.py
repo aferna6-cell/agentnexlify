@@ -47,6 +47,10 @@ async def get_clients(
     """Client list with search, stage filter, and sorting."""
     _check_tenant(claims, tenant_id)
 
+    _ALLOWED_SORT = {"created_at", "name", "email", "status", "lead_score", "updated_at"}
+    if sort not in _ALLOWED_SORT:
+        sort = "created_at"
+
     db = get_supabase()
     query = db.table("leads").select("*").eq("client_id", tenant_id)
 
@@ -54,9 +58,11 @@ async def get_clients(
         query = query.eq("status", stage)
 
     if search:
-        query = query.or_(
-            f"name.ilike.%{search}%,email.ilike.%{search}%,phone.ilike.%{search}%"
-        )
+        safe_search = search.replace(",", "").replace(".", "").strip()
+        if safe_search:
+            query = query.or_(
+                f"name.ilike.%{safe_search}%,email.ilike.%{safe_search}%,phone.ilike.%{safe_search}%"
+            )
 
     desc = order.lower() == "desc"
     query = query.order(sort, desc=desc)

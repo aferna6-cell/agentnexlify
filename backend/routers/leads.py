@@ -29,6 +29,10 @@ async def get_leads(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    _ALLOWED_SORT = {"lead_score", "created_at", "name", "email", "status", "updated_at"}
+    if sort not in _ALLOWED_SORT:
+        sort = "lead_score"
+
     db = get_supabase()
     try:
         query = db.table("leads").select("*").eq("client_id", tenant_id)
@@ -37,9 +41,11 @@ async def get_leads(
             query = query.eq("status", stage)
 
         if search:
-            query = query.or_(
-                f"name.ilike.%{search}%,email.ilike.%{search}%,phone.ilike.%{search}%"
-            )
+            safe_search = search.replace(",", "").replace(".", "").strip()
+            if safe_search:
+                query = query.or_(
+                    f"name.ilike.%{safe_search}%,email.ilike.%{safe_search}%,phone.ilike.%{safe_search}%"
+                )
 
         desc = order.lower() == "desc"
         query = query.order(sort, desc=desc)

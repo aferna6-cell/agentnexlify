@@ -628,9 +628,9 @@ async def update_settings(
     logger.info("update_settings tenant_id=%s updates=%s", tenant_id, updates)
     try:
         result = db.table("tenants").update(updates).eq("id", tenant_id).execute()
-    except Exception as e:
+    except Exception:
         logger.exception("update_settings failed for tenant_id=%s", tenant_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to update settings")
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     return result.data[0]
