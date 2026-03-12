@@ -794,6 +794,88 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(require_role("ow
     return {"portal_url": session.url}
 
 
+@router.post("/billing/change-plan")
+async def billing_change_plan(
+    request: Request,
+    claims: dict = Depends(require_role("owner")),
+):
+    """Change subscription plan (upgrade/downgrade) with proration."""
+    body = await request.json()
+    new_plan = body.get("plan")
+    tenant_id = claims["tenant_id"]
+
+    if not new_plan or new_plan not in PLAN_PRICES:
+        raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
+
+    db = get_supabase()
+    result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant = result.data[0]
+    customer_id = tenant.get("stripe_customer_id")
+    if not customer_id:
+        raise HTTPException(status_code=400, detail="No billing account. Subscribe first.")
+
+    current_plan = tenant.get("plan", "free")
+    if current_plan == new_plan:
+        raise HTTPException(status_code=400, detail="Already on this plan")
+
+    # Find active subscription
+    subs = stripe.Subscription.list(customer=customer_id, status="active", limit=1)
+    if not subs.data:
+        raise HTTPException(status_code=400, detail="No active subscription found. Use checkout to subscribe.")
+
+    subscription = subs.data[0]
+    sub_item_id = subscription["items"]["data"][0]["id"]
+    new_price_id = PLAN_PRICES[new_plan]["monthly"]
+
+    # Modify subscription with proration
+    updated = stripe.Subscription.modify(
+        subscription.id,
+        items=[{"id": sub_item_id, "price": new_price_id}],
+        proration_behavior="create_prorations",
+        metadata={"tenant_id": tenant_id, "plan": new_plan},
+    )
+
+    # Update tenant plan immediately (webhook will also fire)
+    db.table("tenants").update({"plan": new_plan}).eq("id", tenant_id).execute()
+
+    logger.info("Plan changed for tenant %s: %s -> %s", tenant_id, current_plan, new_plan)
+    return {"status": "changed", "old_plan": current_plan, "new_plan": new_plan}
+
+
+@router.post("/billing/cancel")
+async def billing_cancel(
+    claims: dict = Depends(require_role("owner")),
+):
+    """Cancel subscription at end of billing period."""
+    tenant_id = claims["tenant_id"]
+
+    db = get_supabase()
+    result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant = result.data[0]
+    customer_id = tenant.get("stripe_customer_id")
+    if not customer_id:
+        raise HTTPException(status_code=400, detail="No billing account")
+
+    if tenant.get("plan") == "free":
+        raise HTTPException(status_code=400, detail="Already on free plan")
+
+    subs = stripe.Subscription.list(customer=customer_id, status="active", limit=1)
+    if not subs.data:
+        raise HTTPException(status_code=400, detail="No active subscription")
+
+    # Cancel at period end (don't immediately revoke access)
+    stripe.Subscription.modify(subs.data[0].id, cancel_at_period_end=True)
+
+    logger.info("Subscription cancellation scheduled for tenant %s", tenant_id)
+    return {"status": "cancellation_scheduled", "current_period_end": subs.data[0].current_period_end}
+
+
 # ── Free Trial ────────────────────────────────────────────────
 
 FREE_TRIAL_DAYS = 14

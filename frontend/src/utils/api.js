@@ -570,6 +570,16 @@ export function repurposeContent(tenantId, token, contentId) {
   return request(`/api/v1/content/${tenantId}/${contentId}/repurpose`, { method: "POST", token });
 }
 
+// --- Billing Management ---
+
+export function changePlan(token, plan) {
+  return request("/api/v1/auth/billing/change-plan", { method: "POST", token, body: { plan } });
+}
+
+export function cancelSubscription(token) {
+  return request("/api/v1/auth/billing/cancel", { method: "POST", token });
+}
+
 // --- AI Feedback ---
 
 export function fetchAiFeedback(tenantId, token) {

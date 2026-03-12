@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus } from "../utils/api";
+import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, changePlan, cancelSubscription } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const PLANS = [
@@ -42,6 +42,9 @@ export default function BillingPage() {
   const [upgrading, setUpgrading] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [trialData, setTrialData] = useState(null);
+  const [changingPlan, setChangingPlan] = useState(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelStatus, setCancelStatus] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -89,6 +92,35 @@ export default function BillingPage() {
       alert(err.message || "Failed to open billing portal");
     } finally {
       setPortalLoading(false);
+    }
+  };
+
+  const handleChangePlan = async (planKey) => {
+    if (planKey === currentPlan) return;
+    setChangingPlan(planKey);
+    try {
+      await changePlan(token, planKey);
+      await load();
+    } catch (err) {
+      alert(err.body?.detail || err.message || "Failed to change plan");
+    } finally {
+      setChangingPlan(null);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirmCancel) {
+      setConfirmCancel(true);
+      return;
+    }
+    setConfirmCancel(false);
+    setCancelStatus("cancelling");
+    try {
+      const res = await cancelSubscription(token);
+      setCancelStatus("scheduled");
+    } catch (err) {
+      setCancelStatus(null);
+      alert(err.body?.detail || err.message || "Failed to cancel");
     }
   };
 
@@ -161,14 +193,28 @@ export default function BillingPage() {
             {planStatus === "active" ? "Active" : planStatus === "paused" ? "Payment Issue" : planStatus}
           </div>
           {currentPlan !== "free" && (
-            <button
-              className="btn-secondary"
-              onClick={handleManageBilling}
-              disabled={portalLoading}
-              style={{ marginTop: "1rem" }}
-            >
-              {portalLoading ? "Loading..." : "Manage Billing"}
-            </button>
+            <div style={{ display: "flex", gap: 8, marginTop: "1rem", flexWrap: "wrap" }}>
+              <button
+                className="btn-secondary"
+                onClick={handleManageBilling}
+                disabled={portalLoading}
+              >
+                {portalLoading ? "Loading..." : "Manage Billing"}
+              </button>
+              <button
+                className="btn-danger"
+                onClick={handleCancel}
+                disabled={cancelStatus === "cancelling"}
+                style={{ fontSize: "0.85rem" }}
+              >
+                {confirmCancel ? "Confirm Cancel" : cancelStatus === "scheduled" ? "Cancellation Scheduled" : "Cancel Subscription"}
+              </button>
+            </div>
+          )}
+          {cancelStatus === "scheduled" && (
+            <div style={{ marginTop: 8, fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              Your subscription will remain active until the end of the current billing period.
+            </div>
           )}
         </div>
         <div className="settings-card">
@@ -200,14 +246,28 @@ export default function BillingPage() {
               {isCurrent ? (
                 <button className="btn-secondary" disabled>Current Plan</button>
               ) : plan.key === "free" ? (
-                <button className="btn-secondary" disabled>Free Tier</button>
-              ) : (
+                currentPlan !== "free" ? (
+                  <button className="btn-secondary" onClick={() => { setConfirmCancel(false); handleCancel(); }} disabled={cancelStatus === "cancelling"}>
+                    {cancelStatus === "cancelling" ? "Cancelling..." : "Downgrade"}
+                  </button>
+                ) : (
+                  <button className="btn-secondary" disabled>Free Tier</button>
+                )
+              ) : currentPlan === "free" ? (
                 <button
                   className="btn-primary"
                   onClick={() => handleUpgrade(plan.key)}
                   disabled={upgrading === plan.key}
                 >
                   {upgrading === plan.key ? "Redirecting..." : "Upgrade"}
+                </button>
+              ) : (
+                <button
+                  className="btn-primary"
+                  onClick={() => handleChangePlan(plan.key)}
+                  disabled={changingPlan === plan.key}
+                >
+                  {changingPlan === plan.key ? "Switching..." : "Switch Plan"}
                 </button>
               )}
             </div>
