@@ -251,6 +251,7 @@ def _save_chat_messages(
 
 def _build_system_prompt(
     tenant: dict, faq_entries: list[dict], business_hours: dict | None = None,
+    corrections: list[dict] | None = None,
 ) -> str:
     business_name = tenant.get("business_name", "our company")
     business_type = tenant.get("business_type", "")
@@ -268,6 +269,12 @@ def _build_system_prompt(
     if business_hours:
         hours_block = _format_hours_block(business_hours)
 
+    corrections_block = ""
+    if corrections:
+        lines = [f"- {c['correction']}" for c in corrections if c.get("correction")]
+        if lines:
+            corrections_block = "\n\nBusiness owner corrections (follow these closely):\n" + "\n".join(lines)
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
@@ -281,6 +288,7 @@ def _build_system_prompt(
         f"- ALWAYS respond in the same language the visitor uses. If they write in Spanish, reply in Spanish. If they write in French, reply in French. Match their language exactly."
         f"{hours_block}"
         f"{faq_block}"
+        f"{corrections_block}"
     )
 
 
@@ -794,7 +802,24 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("business_hours query failed for tenant %s", tenant["id"], exc_info=True)
 
-    system_prompt = _build_system_prompt(tenant, faq_data, bh_data)
+    # Load AI corrections from owner feedback
+    corrections = []
+    try:
+        fb_result = (
+            db.table("ai_feedback")
+            .select("correction")
+            .eq("tenant_id", tenant["id"])
+            .eq("rating", "thumbs_down")
+            .not_.is_("correction", "null")
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        corrections = fb_result.data or []
+    except Exception:
+        logger.warning("ai_feedback query failed for tenant %s", tenant["id"], exc_info=True)
+
+    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections)
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
@@ -1306,3 +1331,79 @@ async def track_email_open(
         pass  # Tracking failures should never affect the user
     from starlette.responses import Response
     return Response(content=_TRACKING_PIXEL, media_type="image/gif")
+
+
+# ── AI Feedback ──────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel
+
+
+class AIFeedbackRequest(BaseModel):
+    api_key: str
+    session_id: str
+    message_index: int
+    rating: str  # "thumbs_up" or "thumbs_down"
+    correction: str | None = None
+
+
+@router.post("/feedback")
+@limiter.limit("30/minute")
+async def submit_ai_feedback(request: Request, req: AIFeedbackRequest):
+    """Submit thumbs up/down feedback on an AI response from the widget."""
+    if req.rating not in ("thumbs_up", "thumbs_down"):
+        raise HTTPException(status_code=400, detail="Rating must be thumbs_up or thumbs_down")
+
+    widget = _get_widget_config(req.api_key)
+    tenant_id = widget["tenant_id"]
+
+    db = get_supabase()
+    db.table("ai_feedback").insert({
+        "tenant_id": tenant_id,
+        "session_id": req.session_id,
+        "message_index": req.message_index,
+        "rating": req.rating,
+        "correction": req.correction if req.correction and req.correction.strip() else None,
+    }).execute()
+
+    return {"status": "ok"}
+
+
+# Dashboard-authenticated feedback management
+
+from backend.routers.auth import _get_current_tenant as _auth_get_tenant
+
+
+@router.get("/feedback/{tenant_id}")
+async def get_ai_feedback(
+    tenant_id: str,
+    claims: dict = Depends(_auth_get_tenant),
+):
+    """Get AI feedback for a tenant (dashboard use)."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("ai_feedback")
+        .select("*")
+        .eq("tenant_id", tenant_id)
+        .order("created_at", desc=True)
+        .limit(100)
+        .execute()
+    )
+    return {"feedback": result.data or []}
+
+
+@router.delete("/feedback/{tenant_id}/{feedback_id}")
+async def delete_ai_feedback(
+    tenant_id: str,
+    feedback_id: str,
+    claims: dict = Depends(_auth_get_tenant),
+):
+    """Delete a feedback entry."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    db.table("ai_feedback").delete().eq("id", feedback_id).eq("tenant_id", tenant_id).execute()
+    return {"status": "deleted"}

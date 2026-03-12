@@ -570,4 +570,14 @@ export function repurposeContent(tenantId, token, contentId) {
   return request(`/api/v1/content/${tenantId}/${contentId}/repurpose`, { method: "POST", token });
 }
 
+// --- AI Feedback ---
+
+export function fetchAiFeedback(tenantId, token) {
+  return request(`/api/v1/widget/feedback/${tenantId}`, { token });
+}
+
+export function deleteAiFeedback(tenantId, token, feedbackId) {
+  return request(`/api/v1/widget/feedback/${tenantId}/${feedbackId}`, { method: "DELETE", token });
+}
+
 export { ApiError };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTenant, updateTenantSettings } from "../utils/api";
+import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
@@ -20,6 +20,7 @@ export default function SettingsPage({ onNavigate }) {
   });
   const [email, setEmail] = useState("");
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
+  const [feedback, setFeedback] = useState([]);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -46,6 +47,23 @@ export default function SettingsPage({ onNavigate }) {
   }, [user?.tenantId, token]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (user?.tenantId && token) {
+      fetchAiFeedback(user.tenantId, token)
+        .then((data) => setFeedback(data.feedback || []))
+        .catch((err) => console.warn("AI feedback fetch failed:", err.message));
+    }
+  }, [user?.tenantId, token]);
+
+  const handleDeleteFeedback = async (id) => {
+    try {
+      await deleteAiFeedback(user.tenantId, token, id);
+      setFeedback((prev) => prev.filter((f) => f.id !== id));
+    } catch (err) {
+      console.warn("Delete feedback failed:", err.message);
+    }
+  };
 
   const handleChange = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -255,6 +273,43 @@ export default function SettingsPage({ onNavigate }) {
             <button className="settings-link-btn" onClick={() => onNavigate?.("faq")}>FAQ Manager</button>
             <button className="settings-link-btn" onClick={() => onNavigate?.("availability")}>Calendar Availability</button>
           </div>
+        </div>
+
+        {/* AI Feedback */}
+        <div className="settings-card">
+          <h3>AI Response Feedback</h3>
+          <p className="settings-card-desc">
+            Visitor ratings on your AI assistant's responses. Corrections from thumbs-down feedback are automatically used to improve future responses.
+          </p>
+          {feedback.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No feedback yet. Visitors can rate AI responses with thumbs up/down in the chat widget.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+              {feedback.slice(0, 20).map((fb) => (
+                <div key={fb.id} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                  padding: "8px 12px", borderRadius: 8, fontSize: "0.85rem",
+                  background: fb.rating === "thumbs_up" ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+                  border: `1px solid ${fb.rating === "thumbs_up" ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                }}>
+                  <div>
+                    <span style={{ marginRight: 8 }}>{fb.rating === "thumbs_up" ? "\u{1F44D}" : "\u{1F44E}"}</span>
+                    {fb.correction ? (
+                      <span>{fb.correction}</span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>{fb.rating === "thumbs_up" ? "Positive rating" : "Negative rating (no correction)"}</span>
+                    )}
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4 }}>
+                      {new Date(fb.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </div>
+                  </div>
+                  <button onClick={() => handleDeleteFeedback(fb.id)} style={{
+                    background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem",
+                  }}>dismiss</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Danger Zone */}

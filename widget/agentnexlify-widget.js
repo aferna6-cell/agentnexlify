@@ -702,6 +702,7 @@
   let isLoading = false;
   let hasAutoOpened = false;
   let unreadCount = 0;
+  let msgCounter = 0;
   let botName = "Aria";
   let agentName = "Agent";
   let widgetIsOnline = true;
@@ -738,6 +739,24 @@
   async function fetchHistory() {
     // History is loaded from localStorage session; no dedicated history endpoint
     return [];
+  }
+
+  async function sendFeedback(messageIndex, rating) {
+    if (!API_KEY || !API_BASE) return;
+    try {
+      await fetch(`${API_BASE}/api/v1/widget/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: API_KEY,
+          session_id: getSessionId(),
+          message_index: messageIndex,
+          rating: rating,
+        }),
+      });
+    } catch (e) {
+      // Feedback is best-effort, don't interrupt the user
+    }
   }
 
   async function sendMessage(text) {
@@ -813,6 +832,34 @@
       }
     } else {
       div.textContent = text;
+    }
+
+    // Feedback buttons on assistant messages
+    const currentIndex = msgCounter++;
+    if (role === "assistant" && text) {
+      const fbRow = document.createElement("div");
+      fbRow.className = "anx-feedback-row";
+      fbRow.style.cssText = "display:flex;gap:4px;margin-top:4px;";
+
+      const makeBtn = (label, rating) => {
+        const btn = document.createElement("button");
+        btn.textContent = label;
+        btn.className = "anx-fb-btn";
+        btn.style.cssText = "background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;opacity:0.5;transition:opacity 0.2s;";
+        btn.onmouseenter = () => { btn.style.opacity = "1"; };
+        btn.onmouseleave = () => { if (!btn.dataset.selected) btn.style.opacity = "0.5"; };
+        btn.onclick = () => {
+          fbRow.querySelectorAll(".anx-fb-btn").forEach(b => { b.dataset.selected = ""; b.style.opacity = "0.5"; });
+          btn.dataset.selected = "1";
+          btn.style.opacity = "1";
+          sendFeedback(currentIndex, rating);
+        };
+        return btn;
+      };
+
+      fbRow.appendChild(makeBtn("\u{1F44D}", "thumbs_up"));
+      fbRow.appendChild(makeBtn("\u{1F44E}", "thumbs_down"));
+      div.appendChild(fbRow);
     }
 
     container.appendChild(div);
