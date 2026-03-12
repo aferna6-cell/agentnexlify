@@ -21,8 +21,8 @@ _These make the product sticky — once they use these, they won't leave._
 - [x] **Appointment reminders** — done 2026-03-12. Background function `send_appointment_reminders()` runs every 60s in the automation loop. Sends email + SMS at 24h and 1h before appointments. Dedup via notes field tags. No new migration needed.
 - [x] **Business hours awareness in AI** — done 2026-03-12. Injected business hours + current open/closed status into chat system prompt. AI now knows schedule and can tell visitors when the business is open/closed.
 - [x] **Multi-language support** — done 2026-03-12. Added instruction to system prompt: "ALWAYS respond in the same language the visitor uses." Claude handles detection natively — no separate detection library needed.
-- [ ] **Widget offline message** — When the business is "offline" (if they want to control when the widget is active), show a contact form instead of live chat. Add an online/offline toggle to widget config and a fallback form in the widget JS.
-- [ ] **Dashboard notifications center** — In-app notification bell showing: new leads, new conversations, appointments today, system alerts. Currently the dashboard is passive — you have to go looking. (Carried from previous backlog.)
+- [x] **Widget offline message** — done 2026-03-12. Migration 015 adds is_online/offline_message to widget_configs. Backend: toggle endpoint + offline contact form submission. Widget JS: detects offline status, shows contact form. Frontend: online/offline toggle on WidgetPage.
+- [x] **Dashboard notifications center** — done 2026-03-12. Backend: GET /api/v1/notifications/{tenant_id} aggregates leads/conversations/appointments/activity. Frontend: NotificationBell component with dropdown, badge count, 60s polling.
 
 ## Features — Tier 3: "This makes me look professional"
 _These differentiate from competitors and justify higher-tier pricing._

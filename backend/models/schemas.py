@@ -137,6 +137,8 @@ class WidgetConfigDetail(BaseModel):
     greeting_message: str = "Hi! How can I help you today?"
     position: str = "bottom-right"
     branding: dict | None = None
+    is_online: bool = True
+    offline_message: str | None = None
 
 
 class DashboardResponse(BaseModel):
@@ -280,6 +282,8 @@ class WidgetConfigResponse(BaseModel):
     booking_enabled: bool = False
     branding: dict | None = None
     agent_name: str | None = None
+    is_online: bool = True
+    offline_message: str | None = None
 
 
 class WidgetLeadRequest(BaseModel):
@@ -294,6 +298,18 @@ class WidgetLeadRequest(BaseModel):
 class WidgetLeadResponse(BaseModel):
     lead_id: str | None = None
     updated_fields: list[str]
+
+
+class OnlineStatusRequest(BaseModel):
+    is_online: bool
+
+
+class WidgetOfflineContactRequest(BaseModel):
+    api_key: str
+    name: str
+    email: str
+    phone: str | None = None
+    message: str
 
 
 # --- Database row models ---
@@ -750,3 +766,21 @@ class InviteValidationResponse(BaseModel):
     email: str
     business_name: str
     role: str
+
+
+# --- Notification schemas ---
+
+
+class NotificationItem(BaseModel):
+    type: str  # "new_lead", "new_conversation", "appointment", "activity"
+    title: str
+    description: str
+    created_at: str | None = None
+
+
+class NotificationsResponse(BaseModel):
+    new_leads_count: int = 0
+    new_conversations_count: int = 0
+    todays_appointments_count: int = 0
+    total_unread: int = 0
+    recent_items: list[NotificationItem] = Field(default_factory=list)

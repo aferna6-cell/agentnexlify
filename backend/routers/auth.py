@@ -288,7 +288,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Widget config — full details for onboarding
     widget_result = (
         db.table("widget_configs")
-        .select("api_key, bot_name, primary_color, greeting_message, position, branding")
+        .select("api_key, bot_name, primary_color, greeting_message, position, branding, is_online, offline_message")
         .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()
@@ -304,6 +304,8 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             greeting_message=w.get("greeting_message", "Hi! How can I help you today?"),
             position=w.get("position", "bottom-right"),
             branding=w.get("branding") or None,
+            is_online=w.get("is_online", True),
+            offline_message=w.get("offline_message"),
         )
     else:
         # Auto-create widget_config if missing

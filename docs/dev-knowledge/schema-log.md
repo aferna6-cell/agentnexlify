@@ -55,6 +55,9 @@ Data migration: renames plans 'foundation'→'growth', 'operations'→'professio
 ### 014 — Email Templates
 Adds `email_templates` table for reusable email template library. Columns: id (UUID PK), tenant_id (FK→tenants), name (TEXT), category (TEXT DEFAULT 'custom'), subject_template (TEXT), body_template (TEXT), is_shared (BOOLEAN), created_at, updated_at. Index on tenant_id. RLS enabled.
 
+### 015 — Widget Offline Mode
+Adds `is_online` (BOOLEAN NOT NULL DEFAULT TRUE) and `offline_message` (TEXT DEFAULT 'We are currently offline...') to `widget_configs`. Allows businesses to toggle between live chat and offline contact form mode. Both columns use `IF NOT EXISTS` for safety.
+
 ## Known Schema Gotchas
 
 | Issue | Detail |

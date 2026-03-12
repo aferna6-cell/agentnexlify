@@ -476,4 +476,20 @@ export function updateBusinessPageSettings(tenantId, token, data) {
   return request(`/api/v1/business-page/${tenantId}`, { method: "PUT", token, body: data });
 }
 
+// --- Notifications ---
+
+export function fetchNotifications(tenantId, token) {
+  return request(`/api/v1/notifications/${tenantId}`, { token });
+}
+
+// --- Widget Online/Offline ---
+
+export function toggleWidgetOnlineStatus(tenantId, token, isOnline) {
+  return request(`/api/v1/widget/config/${tenantId}/online-status`, {
+    method: "PUT",
+    token,
+    body: { is_online: isOnline },
+  });
+}
+
 export { ApiError };

@@ -15,11 +15,13 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.models.schemas import (
+    OnlineStatusRequest,
     WidgetChatRequest,
     WidgetChatResponse,
     WidgetConfigResponse,
     WidgetLeadRequest,
     WidgetLeadResponse,
+    WidgetOfflineContactRequest,
 )
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
@@ -833,6 +835,8 @@ async def get_config(request: Request, api_key: str):
         booking_enabled=widget.get("booking_enabled", False),
         branding=branding if branding else None,
         agent_name=tenant.get("business_name"),
+        is_online=widget.get("is_online", True),
+        offline_message=widget.get("offline_message"),
     )
 
 
@@ -927,3 +931,144 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
         lead_id=lead_id,
         updated_fields=list(fields.keys()),
     )
+
+
+@router.put("/config/{tenant_id}/online-status")
+async def toggle_online_status(tenant_id: str, body: OnlineStatusRequest):
+    """Toggle widget online/offline status."""
+    try:
+        db = get_supabase()
+        result = (
+            db.table("widget_configs")
+            .update({"is_online": body.is_online})
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Widget config not found")
+        logger.info(
+            "toggle_online_status: tenant=%s is_online=%s",
+            tenant_id, body.is_online,
+        )
+        return {"is_online": body.is_online}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "toggle_online_status FAILED: tenant=%s error=%s",
+            tenant_id, e, exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Failed to update online status")
+
+
+@router.post("/offline-contact")
+@limiter.limit("30/minute")
+async def submit_offline_contact(request: Request, body: WidgetOfflineContactRequest):
+    """Submit contact form when widget is in offline mode. Creates a lead."""
+    try:
+        # 1. Validate api_key and get widget config / tenant
+        widget = _get_widget_config(body.api_key)
+        tenant_id = widget["tenant_id"]
+        logger.info(
+            "offline_contact: tenant=%s name=%s email=%s",
+            tenant_id, body.name, body.email,
+        )
+
+        db = get_supabase()
+
+        # 2. Dedup by email + client_id (leads table uses client_id)
+        lead_id = None
+        try:
+            existing = (
+                db.table("leads")
+                .select("id")
+                .eq("client_id", tenant_id)
+                .eq("email", body.email)
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                lead_id = existing.data[0]["id"]
+                # Update existing lead with any new info
+                updates: dict[str, Any] = {}
+                if body.name:
+                    updates["name"] = body.name
+                if body.phone:
+                    updates["phone"] = body.phone
+                if updates:
+                    db.table("leads").update(updates).eq("id", lead_id).execute()
+                logger.info("offline_contact: updated existing lead %s", lead_id)
+        except Exception as dedup_err:
+            logger.error(
+                "offline_contact: dedup check failed: %s", dedup_err, exc_info=True,
+            )
+
+        # 3. Create new lead if no existing one found
+        if not lead_id:
+            lead_fields: dict[str, Any] = {
+                "client_id": tenant_id,
+                "name": body.name,
+                "email": body.email,
+                "status": "new",
+                "source": "widget_offline",
+            }
+            if body.phone:
+                lead_fields["phone"] = body.phone
+            try:
+                result = db.table("leads").insert(lead_fields).execute()
+                if result.data:
+                    lead_id = result.data[0]["id"]
+                    logger.info("offline_contact: created new lead %s", lead_id)
+                else:
+                    logger.warning("offline_contact: INSERT returned no data")
+            except Exception as insert_err:
+                logger.error(
+                    "offline_contact: lead INSERT failed: %s", insert_err, exc_info=True,
+                )
+
+        # 4. Log the message in activity_log
+        if lead_id:
+            try:
+                log_activity(
+                    tenant_id=tenant_id,
+                    activity_type="offline_message",
+                    description=body.message,
+                    lead_id=lead_id,
+                    metadata={"source": "widget_offline", "email": body.email},
+                )
+            except Exception:
+                logger.warning(
+                    "offline_contact: log_activity failed for lead %s",
+                    lead_id, exc_info=True,
+                )
+
+            # Fire webhook for new offline contact
+            try:
+                fire_event_background(tenant_id, "lead.created", {
+                    "lead_id": lead_id,
+                    "name": body.name,
+                    "email": body.email,
+                    "phone": body.phone,
+                    "source": "widget_offline",
+                })
+            except Exception:
+                logger.warning(
+                    "offline_contact: fire_event_background failed", exc_info=True,
+                )
+
+            # Score the lead
+            try:
+                score_lead_background(lead_id)
+            except Exception:
+                logger.warning(
+                    "offline_contact: score_lead_background failed for lead %s",
+                    lead_id, exc_info=True,
+                )
+
+        return {"success": True, "message": "Thank you! We'll get back to you soon."}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("offline_contact FAILED: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit contact form")

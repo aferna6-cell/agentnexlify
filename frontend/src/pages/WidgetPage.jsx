@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard, updateWidgetConfig } from "../utils/api";
+import { fetchDashboard, updateWidgetConfig, toggleWidgetOnlineStatus } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const POSITIONS = [
@@ -47,6 +47,8 @@ export default function WidgetPage() {
     greeting_message: "",
     position: "bottom-right",
   });
+  const [isOnline, setIsOnline] = useState(true);
+  const [togglingOnline, setTogglingOnline] = useState(false);
   const [branding, setBranding] = useState({
     logo_url: "",
     secondary_color: "",
@@ -73,6 +75,7 @@ export default function WidgetPage() {
           greeting_message: dash.widget_config.greeting_message || "",
           position: dash.widget_config.position || "bottom-right",
         });
+        setIsOnline(dash.widget_config.is_online !== false);
         if (dash.widget_config.branding) {
           const b = dash.widget_config.branding;
           setBranding({
@@ -133,6 +136,19 @@ export default function WidgetPage() {
     }
   };
 
+  const handleToggleOnline = async () => {
+    if (!user?.tenantId) return;
+    setTogglingOnline(true);
+    try {
+      await toggleWidgetOnlineStatus(user.tenantId, token, !isOnline);
+      setIsOnline(!isOnline);
+    } catch (err) {
+      console.error("Failed to toggle online status", err);
+    } finally {
+      setTogglingOnline(false);
+    }
+  };
+
   const apiBase = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
   const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${apiKey}" data-api-base="${apiBase}"></script>`;
 
@@ -169,6 +185,48 @@ export default function WidgetPage() {
           <button className="btn-primary" onClick={handleCopy} style={{ marginTop: "0.75rem" }}>
             {copied ? "Copied!" : "Copy Embed Code"}
           </button>
+        </div>
+
+        {/* Online / Offline Toggle */}
+        <div className="settings-card">
+          <h3>Widget Status</h3>
+          <p className="settings-card-desc">
+            When offline, visitors see a contact form instead of live chat.
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "0.75rem 0" }}>
+            <button
+              className={isOnline ? "btn-primary" : "btn-secondary"}
+              onClick={handleToggleOnline}
+              disabled={togglingOnline}
+              style={{ minWidth: 120 }}
+            >
+              {togglingOnline ? "Switching..." : isOnline ? "Online" : "Offline"}
+            </button>
+            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+              {isOnline
+                ? "Widget is live — visitors can chat with your AI assistant."
+                : "Widget is offline — visitors will see a contact form."}
+            </span>
+          </div>
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "6px 12px",
+            borderRadius: "6px",
+            fontSize: "0.8rem",
+            fontWeight: 500,
+            background: isOnline ? "var(--green-dim)" : "rgba(239, 68, 68, 0.12)",
+            color: isOnline ? "var(--green)" : "#ef4444",
+          }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: isOnline ? "var(--green)" : "#ef4444",
+            }} />
+            {isOnline ? "Live Chat Active" : "Offline Mode"}
+          </div>
         </div>
 
         {/* Customization */}

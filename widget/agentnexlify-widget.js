@@ -576,6 +576,39 @@
         margin-top: 8px;
       }
       .anx-confirm-back:hover { background: rgba(255,255,255,0.1); }
+
+      /* Offline contact form */
+      #anx-offline-form {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .anx-offline-msg {
+        text-align: center;
+        font-size: 13px;
+        color: rgba(255,255,255,0.5);
+        padding: 4px 0;
+        line-height: 1.5;
+      }
+      .anx-offline-success {
+        text-align: center;
+        padding: 24px 16px;
+      }
+      .anx-offline-success-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: ${BRAND_COLOR};
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 12px;
+        font-size: 24px;
+        color: #0a0a0f;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -629,6 +662,8 @@
   let unreadCount = 0;
   let botName = "Aria";
   let agentName = "Agent";
+  let widgetIsOnline = true;
+  let offlineMessage = "We are currently offline. Leave your details and we\u2019ll get back to you soon!";
 
   // Booking state
   let tenantId = "";
@@ -651,6 +686,8 @@
       agentName = data.agent_name || "Agent";
       tenantId = data.tenant_id || "";
       bookingEnabled = data.booking_enabled || false;
+      widgetIsOnline = data.is_online !== false;
+      if (data.offline_message) offlineMessage = data.offline_message;
     } catch (e) {
       console.warn("AgentNexLiFy: Failed to fetch config", e);
     }
@@ -1045,6 +1082,103 @@
     return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   }
 
+  // --- Offline Mode ---
+  function showOfflineForm() {
+    const messages = document.getElementById("anx-messages");
+    const inputArea = document.getElementById("anx-input-area");
+    const booking = document.getElementById("anx-booking");
+    if (messages) messages.style.display = "none";
+    if (inputArea) inputArea.style.display = "none";
+    if (booking) booking.style.display = "none";
+
+    // Create offline form container
+    let form = document.getElementById("anx-offline-form");
+    if (!form) {
+      form = document.createElement("div");
+      form.id = "anx-offline-form";
+      const win = document.getElementById("anx-window");
+      const powered = document.getElementById("anx-powered");
+      win.insertBefore(form, powered);
+    }
+
+    form.innerHTML = `
+      <div class="anx-offline-msg">${offlineMessage}</div>
+      <div class="anx-form-group">
+        <label class="anx-form-label">Name *</label>
+        <input class="anx-form-input" id="anx-offline-name" placeholder="Your name" required>
+      </div>
+      <div class="anx-form-group">
+        <label class="anx-form-label">Email *</label>
+        <input class="anx-form-input" id="anx-offline-email" type="email" placeholder="your@email.com" required>
+      </div>
+      <div class="anx-form-group">
+        <label class="anx-form-label">Phone</label>
+        <input class="anx-form-input" id="anx-offline-phone" type="tel" placeholder="(optional)">
+      </div>
+      <div class="anx-form-group">
+        <label class="anx-form-label">Message *</label>
+        <textarea class="anx-form-input" id="anx-offline-message" placeholder="How can we help you?" rows="3" style="resize:none;"></textarea>
+      </div>
+      <button class="anx-book-submit" id="anx-offline-submit">Send Message</button>
+      <div id="anx-offline-error" style="color:#ff4444;font-size:12px;text-align:center;display:none;"></div>
+    `;
+    form.style.display = "flex";
+
+    document.getElementById("anx-offline-submit").addEventListener("click", submitOfflineForm);
+  }
+
+  async function submitOfflineForm() {
+    const name = document.getElementById("anx-offline-name").value.trim();
+    const email = document.getElementById("anx-offline-email").value.trim();
+    const phone = document.getElementById("anx-offline-phone").value.trim();
+    const message = document.getElementById("anx-offline-message").value.trim();
+    const errEl = document.getElementById("anx-offline-error");
+    const btn = document.getElementById("anx-offline-submit");
+
+    if (!name || !email || !message) {
+      errEl.textContent = "Name, email, and message are required.";
+      errEl.style.display = "block";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    errEl.style.display = "none";
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/v1/widget/offline-contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: API_KEY,
+          name,
+          email,
+          phone: phone || null,
+          message,
+        }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      // Show success
+      const form = document.getElementById("anx-offline-form");
+      form.innerHTML = `
+        <div class="anx-offline-success">
+          <div class="anx-offline-success-icon">&#10003;</div>
+          <div class="anx-confirm-title">Message Sent!</div>
+          <div class="anx-confirm-detail" style="margin-top:8px;">Thank you, ${name}. We'll get back to you soon.</div>
+          <button class="anx-confirm-back" id="anx-offline-reset" style="margin-top:16px;">Send Another Message</button>
+        </div>
+      `;
+      document.getElementById("anx-offline-reset").addEventListener("click", showOfflineForm);
+    } catch (e) {
+      console.error("AgentNexLiFy: Offline form submit failed", e);
+      errEl.textContent = "Something went wrong. Please try again.";
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Send Message";
+    }
+  }
+
   // --- Initialization ---
   async function init() {
     if (!API_KEY) {
@@ -1057,6 +1191,24 @@
 
     await fetchConfig();
     updateHeader();
+
+    // Offline mode — show contact form instead of chat
+    if (!widgetIsOnline) {
+      const statusEl = document.querySelector("#anx-header-text p");
+      if (statusEl) statusEl.innerHTML = '<span class="anx-header-status" style="background:#ef4444;"></span>Currently offline';
+      showOfflineForm();
+      // Still wire up open/close
+      document.getElementById("anx-bubble").addEventListener("click", () => toggleWindow(true));
+      document.getElementById("anx-minimize").addEventListener("click", () => toggleWindow(false));
+      document.getElementById("anx-close").addEventListener("click", () => toggleWindow(false));
+      // Auto-open after 5s
+      const savedState = localStorage.getItem(STATE_KEY);
+      if (savedState === "open") toggleWindow(true);
+      else if (savedState !== "closed") {
+        setTimeout(() => { if (!isOpen && !hasAutoOpened) { hasAutoOpened = true; toggleWindow(true); } }, 5000);
+      }
+      return; // Skip chat setup
+    }
 
     // Show booking button if enabled
     if (bookingEnabled && tenantId) {

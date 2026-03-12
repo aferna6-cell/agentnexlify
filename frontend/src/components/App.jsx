@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api";
 import LoginPage from "./LoginPage";
+import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
 
@@ -132,6 +133,15 @@ export default function App() {
       <Sidebar currentPage={currentPage} onNavigate={handleNavigate} plan={activePlan} />
       <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
         <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
+        <div style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          padding: "8px 24px 0",
+          flexShrink: 0,
+        }}>
+          <NotificationBell onNavigate={handleNavigate} />
+        </div>
         <main className="content">
           {loading ? (
             <SkeletonLoader />

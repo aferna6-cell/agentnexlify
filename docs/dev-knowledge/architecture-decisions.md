@@ -84,4 +84,18 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Widget offline mode: config-driven with contact form fallback
+**Date:** 2026-03-12
+**Decision:** Widget offline mode is controlled by an `is_online` boolean in `widget_configs`. When offline, the widget JS hides the chat input and shows a contact form (name, email, phone, message). Submissions create a lead via `POST /api/v1/widget/offline-contact`. The toggle is in the WidgetPage settings UI.
+**Why:** Small businesses need control over when their widget is active. After hours or during vacations, a contact form captures leads without the AI generating responses. The toggle is instant (no page reload), and the widget checks status on load via the existing config endpoint.
+
+---
+
+### Dashboard notifications: query-time aggregation, no notifications table
+**Date:** 2026-03-12
+**Decision:** The notifications center aggregates data at query time from `leads`, `chat_messages`, `appointments`, and `activity_log` — there is no dedicated `notifications` table. The bell polls every 60s and shows new leads (24h), conversations, today's appointments, and recent activity.
+**Why:** A separate notifications table would need triggers/workers to populate. Query-time aggregation is simpler and always reflects the latest state. For the current scale (small businesses with <100 leads/day), the queries are fast enough. If perf becomes an issue, we can add materialized views or a notifications table later.
+
+---
+
 _Add new decisions when significant architectural choices are made._
