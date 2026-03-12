@@ -276,10 +276,39 @@ async def get_sequence_stats(tenant_id: str, claims: dict = Depends(_get_current
         .execute()
     )
 
+    # Email opens today
+    try:
+        opens = (
+            db.table("email_events")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("event_type", "open")
+            .gte("created_at", today)
+            .execute()
+        )
+        opens_today = opens.count or 0
+    except Exception:
+        opens_today = 0  # Table may not exist yet
+
+    # Total opens (all time)
+    try:
+        total_opens = (
+            db.table("email_events")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("event_type", "open")
+            .execute()
+        )
+        total_open_count = total_opens.count or 0
+    except Exception:
+        total_open_count = 0
+
     return {
         "active_sequences": active_seqs.count or 0,
         "emails_sent_today": logs.count or 0,
         "active_executions": active_execs.count or 0,
+        "opens_today": opens_today,
+        "total_opens": total_open_count,
     }
 
 

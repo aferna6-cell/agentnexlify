@@ -133,12 +133,26 @@ def _append_unsubscribe_footer(body_html: str, unsubscribe_url: str) -> str:
     return body_html + footer
 
 
+def _build_tracking_pixel(tenant_id: str, lead_id: str = "", execution_id: str = "") -> str:
+    """Build a 1x1 tracking pixel <img> tag for email open tracking."""
+    base = settings.frontend_url.rstrip("/")
+    params = f"tid={tenant_id}"
+    if lead_id:
+        params += f"&lid={lead_id}"
+    if execution_id:
+        params += f"&eid={execution_id}"
+    url = f"{base}/api/v1/widget/track/open?{params}"
+    return f'<img src="{html.escape(url)}" width="1" height="1" style="display:none;" alt="" />'
+
+
 async def send_email(
     to: str,
     subject: str,
     body_html: str,
     tenant_id: str,
     unsubscribe_url: str = "",
+    lead_id: str = "",
+    execution_id: str = "",
 ) -> dict[str, Any]:
     """Send an email via Resend. Returns result dict with 'success' and 'detail'."""
     if not settings.resend_api_key:
@@ -152,6 +166,15 @@ async def send_email(
     final_html = body_html
     if unsubscribe_url:
         final_html = _append_unsubscribe_footer(body_html, unsubscribe_url)
+
+    # Inject tracking pixel for open tracking
+    pixel = _build_tracking_pixel(tenant_id, lead_id, execution_id)
+    for tag in ("</body>", "</html>"):
+        if tag in final_html:
+            final_html = final_html.replace(tag, pixel + tag, 1)
+            break
+    else:
+        final_html += pixel
 
     try:
         resend.api_key = settings.resend_api_key

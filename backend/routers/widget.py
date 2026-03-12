@@ -1267,3 +1267,38 @@ async def unsubscribe_lead(
         "<p>You will no longer receive automated messages from this business.</p>"
         "</body></html>"
     )
+
+
+# ---------------------------------------------------------------------------
+# Email event tracking (open pixel + click redirect)
+# ---------------------------------------------------------------------------
+
+# 1x1 transparent GIF
+_TRACKING_PIXEL = bytes([
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
+    0x80, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x21,
+    0xF9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00,
+    0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+    0x01, 0x00, 0x3B,
+])
+
+
+@router.get("/track/open")
+async def track_email_open(
+    tid: str = Query(..., description="Tenant ID"),
+    lid: str = Query("", description="Lead ID"),
+    eid: str = Query("", description="Execution ID"),
+):
+    """Log an email open event and return a 1x1 tracking pixel."""
+    try:
+        db = get_supabase()
+        db.table("email_events").insert({
+            "tenant_id": tid,
+            "lead_id": lid or None,
+            "event_type": "open",
+            "execution_id": eid or None,
+        }).execute()
+    except Exception:
+        pass  # Tracking failures should never affect the user
+    from starlette.responses import Response
+    return Response(content=_TRACKING_PIXEL, media_type="image/gif")

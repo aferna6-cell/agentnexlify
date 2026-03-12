@@ -9,6 +9,7 @@ import {
   fetchSequenceDetail,
   createFromTemplate,
   sendCampaign,
+  fetchSequenceStats,
 } from "../../utils/api";
 import SequenceBuilder from "./SequenceBuilder";
 import SequenceDetail from "./SequenceDetail";
@@ -48,6 +49,7 @@ export default function AutomationsPage({ onNavigate }) {
   });
   const [campaignResult, setCampaignResult] = useState(null);
   const [campaignSending, setCampaignSending] = useState(false);
+  const [stats, setStats] = useState(null);
 
   const loadSequences = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -63,7 +65,10 @@ export default function AutomationsPage({ onNavigate }) {
 
   useEffect(() => {
     loadSequences();
-  }, [loadSequences]);
+    if (user?.tenantId) {
+      fetchSequenceStats(user.tenantId, token).then(setStats).catch(() => {});
+    }
+  }, [loadSequences, user?.tenantId, token]);
 
   const handleCreate = () => {
     setEditingSeq(null);
@@ -156,6 +161,27 @@ export default function AutomationsPage({ onNavigate }) {
         <h1>Automations</h1>
         <p>Create automated email sequences to follow up with leads</p>
       </div>
+
+      {/* Outreach stats */}
+      {stats && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
+          {[
+            { label: "Active Sequences", value: stats.active_sequences, color: "var(--green)" },
+            { label: "Emails Sent Today", value: stats.emails_sent_today, color: "var(--accent)" },
+            { label: "Opens Today", value: stats.opens_today, color: "var(--yellow, #f59e0b)" },
+            { label: "Total Opens", value: stats.total_opens, color: "var(--purple, #8b5cf6)" },
+            { label: "Active Leads", value: stats.active_executions, color: "var(--text-secondary)" },
+          ].map((s, i) => (
+            <div key={i} style={{
+              background: "var(--bg-secondary)", borderRadius: "var(--radius-sm)",
+              padding: "14px 16px", border: "1px solid var(--border)",
+            }}>
+              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: s.color }}>{s.value ?? 0}</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div style={{

@@ -286,6 +286,8 @@ async def execute_step(execution_id: str) -> None:
             body_html=ai_body,
             tenant_id=execution["tenant_id"],
             unsubscribe_url=unsub_url,
+            lead_id=lead["id"],
+            execution_id=execution_id,
         )
 
         action = "ai_email_sent" if result["success"] else "ai_email_failed"
@@ -349,6 +351,8 @@ async def execute_step(execution_id: str) -> None:
             body_html=body,
             tenant_id=execution["tenant_id"],
             unsubscribe_url=unsub_url,
+            lead_id=lead["id"],
+            execution_id=execution_id,
         )
 
         action = "email_sent" if result["success"] else "email_failed"

@@ -38,7 +38,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 - `backend/` — FastAPI service (`main.py`, `routers/` with 20 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–021)
+- `migrations/` — SQL migration files (001–022)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 

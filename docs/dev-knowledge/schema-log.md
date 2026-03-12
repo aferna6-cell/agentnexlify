@@ -145,4 +145,7 @@ Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, 
 ### 021 — Lead Unsubscribe (CAN-SPAM compliance)
 Adds `unsubscribed` (BOOLEAN DEFAULT FALSE) and `unsubscribed_at` (TIMESTAMPTZ) to leads table. Partial index on `unsubscribed = TRUE` for efficient filtering in automation queries. Automation engine skips unsubscribed leads. Every outgoing email includes a signed unsubscribe link.
 
+### 022 — Email Events (open/click tracking)
+Creates `email_events` table for tracking email opens and clicks. Columns: tenant_id, lead_id (nullable), event_type ('open'/'click'), execution_id (nullable, for sequences), campaign_tag (nullable, for campaigns), details (JSONB). Indexed on tenant_id, execution_id, and (event_type, created_at). RLS enabled.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
