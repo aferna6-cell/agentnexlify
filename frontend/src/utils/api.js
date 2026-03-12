@@ -245,6 +245,14 @@ export function cancelAppointment(tenantId, token, appointmentId) {
   });
 }
 
+export function setAppointmentRecurrence(tenantId, token, appointmentId, rule, endDate) {
+  return request(`/api/v1/appointments/${tenantId}/${appointmentId}/recur`, {
+    method: "POST",
+    token,
+    body: { rule, end_date: endDate },
+  });
+}
+
 // --- Integrations (Google Calendar) ---
 
 export function fetchGoogleCalendarStatus(tenantId, token) {

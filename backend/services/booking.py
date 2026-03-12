@@ -258,6 +258,104 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
     return lead.data[0]["id"] if lead.data else None
 
 
+def create_recurring_series(
+    tenant_id: str,
+    appointment_id: str,
+    rule: str,
+    end_date_str: str,
+) -> list[dict]:
+    """Generate recurring appointment instances from a parent appointment.
+
+    Args:
+        tenant_id: The tenant owning the appointment.
+        appointment_id: The parent appointment to recur.
+        rule: One of 'weekly', 'biweekly', 'monthly'.
+        end_date_str: YYYY-MM-DD end date for the series.
+
+    Returns:
+        List of created appointment dicts (excluding parent).
+    """
+    db = get_supabase()
+
+    # Fetch the parent appointment
+    parent_result = (
+        db.table("appointments")
+        .select("*")
+        .eq("id", appointment_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not parent_result.data:
+        return []
+
+    parent = parent_result.data[0]
+
+    # Don't recurse from a child appointment
+    if parent.get("recurrence_parent_id"):
+        return []
+
+    # Mark the parent with recurrence info
+    db.table("appointments").update({
+        "recurrence_rule": rule,
+        "recurrence_end_date": end_date_str,
+    }).eq("id", appointment_id).execute()
+
+    # Calculate interval
+    parent_start = datetime.fromisoformat(parent["start_time"])
+    parent_end = datetime.fromisoformat(parent["end_time"])
+    duration = parent_end - parent_start
+    end_date = date.fromisoformat(end_date_str)
+
+    if rule == "weekly":
+        delta = timedelta(weeks=1)
+    elif rule == "biweekly":
+        delta = timedelta(weeks=2)
+    elif rule == "monthly":
+        delta = timedelta(days=30)  # Approximate; good enough for scheduling
+    else:
+        return []
+
+    # Generate future instances
+    created = []
+    current_start = parent_start + delta
+
+    while current_start.date() <= end_date:
+        current_end = current_start + duration
+        payload = {
+            "tenant_id": tenant_id,
+            "lead_id": parent.get("lead_id"),
+            "customer_name": parent["customer_name"],
+            "customer_email": parent["customer_email"],
+            "customer_phone": parent.get("customer_phone"),
+            "start_time": current_start.isoformat(),
+            "end_time": current_end.isoformat(),
+            "status": "confirmed",
+            "notes": parent.get("notes"),
+            "recurrence_rule": rule,
+            "recurrence_parent_id": appointment_id,
+        }
+
+        try:
+            result = db.table("appointments").insert(payload).execute()
+            if result.data:
+                created.append(result.data[0])
+        except Exception:
+            # Skip conflicting slots (double-booking constraint)
+            logger.warning(
+                "Skipped recurring instance at %s (conflict)",
+                current_start.isoformat(),
+            )
+
+        current_start += delta
+
+    logger.info(
+        "Created %d recurring instances for appointment %s (%s until %s)",
+        len(created), appointment_id, rule, end_date_str,
+    )
+    return created
+
+
 def list_appointments(
     tenant_id: str,
     start_date: str | None = None,

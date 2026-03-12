@@ -497,6 +497,9 @@ class AppointmentOut(BaseModel):
     notes: str | None = None
     google_event_id: str | None = None
     created_at: str | None = None
+    recurrence_rule: str | None = None
+    recurrence_parent_id: str | None = None
+    recurrence_end_date: str | None = None
 
 
 class AppointmentListResponse(BaseModel):
@@ -515,6 +518,18 @@ class AppointmentUpdateRequest(BaseModel):
     def validate_appt_status(cls, v: str | None) -> str | None:
         if v is not None and v not in {"confirmed", "cancelled", "completed", "no_show"}:
             raise ValueError("status must be one of: confirmed, cancelled, completed, no_show")
+        return v
+
+
+class RecurrenceRequest(BaseModel):
+    rule: str  # weekly, biweekly, monthly
+    end_date: str  # YYYY-MM-DD — when the series ends
+
+    @field_validator("rule")
+    @classmethod
+    def validate_rule(cls, v: str) -> str:
+        if v not in {"weekly", "biweekly", "monthly"}:
+            raise ValueError("rule must be one of: weekly, biweekly, monthly")
         return v
 
 

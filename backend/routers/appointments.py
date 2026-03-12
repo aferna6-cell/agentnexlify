@@ -17,11 +17,13 @@ from backend.models.schemas import (
     AvailableSlotsResponse,
     BookAppointmentRequest,
     BookAppointmentResponse,
+    RecurrenceRequest,
 )
 from backend.services.automation_engine import trigger_sequence
 from backend.services.booking import (
     cancel_appointment,
     create_appointment,
+    create_recurring_series,
     generate_available_slots,
     get_business_hours,
     list_appointments,
@@ -249,6 +251,24 @@ async def patch_appointment(
         )
 
     return updated
+
+
+@router.post("/{tenant_id}/{appointment_id}/recur")
+async def set_recurrence(
+    tenant_id: str,
+    appointment_id: str,
+    req: RecurrenceRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Set up recurring schedule for an appointment. Generates future instances."""
+    _verify_tenant(claims, tenant_id)
+    created = create_recurring_series(tenant_id, appointment_id, req.rule, req.end_date)
+    return {
+        "parent_id": appointment_id,
+        "rule": req.rule,
+        "end_date": req.end_date,
+        "instances_created": len(created),
+    }
 
 
 @router.delete("/{tenant_id}/{appointment_id}")

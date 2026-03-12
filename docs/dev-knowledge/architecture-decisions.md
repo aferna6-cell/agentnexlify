@@ -105,6 +105,13 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Recurring appointments: parent-child model
+**Date:** 2026-03-12
+**Decision:** Recurring appointments use a parent-child model. The original appointment becomes the "parent" with `recurrence_rule` and `recurrence_end_date` set. Future instances are generated immediately as separate appointment rows with `recurrence_parent_id` pointing to the parent. Each instance is independently editable (can be cancelled, rescheduled, completed individually).
+**Why:** Generating all instances upfront (vs. lazy generation) keeps the calendar view simple — no special rendering logic needed, all appointments exist as normal rows. Independent instances mean cancelling one occurrence doesn't affect the series. The DB double-booking EXCLUDE constraint naturally prevents conflicts. CASCADE delete on `recurrence_parent_id` means deleting the parent cleans up all instances.
+
+---
+
 ### All-in-one platform, not separate products
 **Decision:** Reputation management, outreach, content, SEO, and job board are built as modules within AgentNexLiFy, not as separate products.
 **Why:** Same customer base. One sale, one login, one subscription. Reduces churn because the platform becomes the business's operational backbone. Compound workflows create deep moats — a customer won't leave if their reviews, outreach, content, SEO, and hiring all live here.

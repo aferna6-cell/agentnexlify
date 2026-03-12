@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchAppointments, updateAppointment, cancelAppointment } from "../utils/api";
+import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence } from "../utils/api";
 
 const STATUS_COLORS = {
   confirmed: { bg: "var(--accent-dim)", border: "var(--accent)", text: "var(--accent)" },
@@ -53,6 +53,9 @@ export default function Calendar({ onNavigate }) {
   const [editNotes, setEditNotes] = useState("");
   const [error, setError] = useState(null);
   const [bizTz, setBizTz] = useState(null);
+  const [recurRule, setRecurRule] = useState("");
+  const [recurEndDate, setRecurEndDate] = useState("");
+  const [recurSaving, setRecurSaving] = useState(false);
 
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -83,7 +86,25 @@ export default function Calendar({ onNavigate }) {
     setSelectedAppt(appt);
     setEditStatus(appt.status);
     setEditNotes(appt.notes || "");
+    setRecurRule(appt.recurrence_rule || "");
+    setRecurEndDate(appt.recurrence_end_date || "");
+    setRecurSaving(false);
     setError(null);
+  };
+
+  const handleSetRecurrence = async () => {
+    if (!selectedAppt || !recurRule || !recurEndDate) return;
+    setRecurSaving(true);
+    try {
+      const res = await setAppointmentRecurrence(user.tenantId, token, selectedAppt.id, recurRule, recurEndDate);
+      setError(null);
+      setSelectedAppt(null);
+      loadAppointments();
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to create recurring series.");
+    } finally {
+      setRecurSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -194,7 +215,10 @@ export default function Calendar({ onNavigate }) {
                       <div key={a.id} className="calendar-appt-block" style={{
                         ...pos, background: colors.bg, borderLeft: `3px solid ${colors.border}`, color: colors.text,
                       }} onClick={() => openEdit(a)} title={`${a.customer_name} - ${a.status}`}>
-                        <div className="calendar-appt-name">{a.customer_name}</div>
+                        <div className="calendar-appt-name">
+                          {a.recurrence_rule && <span title="Recurring" style={{ marginRight: 4 }}>&#x21bb;</span>}
+                          {a.customer_name}
+                        </div>
                         <div className="calendar-appt-time">{formatTime(a.start_time, bizTz)}</div>
                       </div>
                     );
@@ -223,7 +247,10 @@ export default function Calendar({ onNavigate }) {
                         <div key={a.id} className="calendar-day-appt-card" style={{
                           background: colors.bg, borderLeft: `3px solid ${colors.border}`,
                         }} onClick={() => openEdit(a)}>
-                          <div style={{ color: colors.text, fontWeight: 600 }}>{a.customer_name}</div>
+                          <div style={{ color: colors.text, fontWeight: 600 }}>
+                            {a.recurrence_rule && <span title="Recurring" style={{ marginRight: 4 }}>&#x21bb;</span>}
+                            {a.customer_name}
+                          </div>
                           <div style={{ color: "var(--text-secondary)", fontSize: "12px" }}>
                             {formatTime(a.start_time, bizTz)} - {formatTime(a.end_time, bizTz)}
                           </div>
@@ -264,6 +291,39 @@ export default function Calendar({ onNavigate }) {
               <label>Notes</label>
               <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} className="modal-textarea" rows={3} />
             </div>
+            {/* Recurrence section — only for parent/non-child confirmed appointments */}
+            {selectedAppt.status === "confirmed" && !selectedAppt.recurrence_parent_id && (
+              <div className="modal-field" style={{ borderTop: "1px solid var(--border-color)", paddingTop: 12, marginTop: 8 }}>
+                <label>{selectedAppt.recurrence_rule ? "Recurring" : "Make Recurring"}</label>
+                {selectedAppt.recurrence_rule ? (
+                  <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+                    &#x21bb; {selectedAppt.recurrence_rule} until {selectedAppt.recurrence_end_date}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <select value={recurRule} onChange={e => setRecurRule(e.target.value)} className="modal-select" style={{ flex: 1, minWidth: 100 }}>
+                      <option value="">-- Select --</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Biweekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                    <input type="date" value={recurEndDate} onChange={e => setRecurEndDate(e.target.value)}
+                      min={formatDate(addDays(new Date(), 7))}
+                      style={{ flex: 1, minWidth: 130, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+                    <button className="btn-primary" onClick={handleSetRecurrence} disabled={!recurRule || !recurEndDate || recurSaving}
+                      style={{ whiteSpace: "nowrap" }}>
+                      {recurSaving ? "Creating..." : "Create Series"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {selectedAppt.recurrence_parent_id && (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: 8 }}>
+                &#x21bb; Part of a recurring series
+              </div>
+            )}
+
             <div className="modal-actions">
               <button className="btn-primary" onClick={handleSave}>Save</button>
               <button className="btn-danger" onClick={handleCancel}>Cancel Appointment</button>

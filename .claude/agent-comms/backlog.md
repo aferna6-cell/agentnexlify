@@ -28,7 +28,7 @@ _These make the product sticky — once they use these, they won't leave._
 _These differentiate from competitors and justify higher-tier pricing._
 
 - [x] **Review/rating request** — Already complete. Template in sequences.py with appointment_completed trigger. Resolves {{review_link}} from tenant.google_review_link. Configurable in Settings. In TemplateGallery.
-- [ ] **Recurring appointment support** — For businesses with regular clients (hair salon, cleaning service, tutoring) — let them set up recurring bookings. Extend the appointments system with recurrence rules (weekly/biweekly/monthly).
+- [x] **Recurring appointment support** — done 2026-03-12. Migration 017 adds recurrence columns. Backend: POST /{tenant_id}/{appointment_id}/recur generates series. Frontend: Calendar edit modal with "Make Recurring" UI (weekly/biweekly/monthly + end date).
 - [x] **Auto-tagging leads** — done 2026-03-12. Migration 016 adds tags TEXT[] to leads. Claude extracts tags from conversations during lead capture. Tags shown in LeadsPage table and LeadDetailDrawer.
 - [ ] **Conversation tagging** — Tag/label conversations for organization. Add a tags field to conversations and filter UI. (Carried from previous backlog.)
 - [ ] **Lead merge** — Combine duplicate leads into one record. Detect potential duplicates by email/phone and offer a merge UI. (Carried from previous backlog.)
