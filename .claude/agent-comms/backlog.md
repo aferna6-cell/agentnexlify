@@ -32,7 +32,7 @@ _These differentiate from competitors and justify higher-tier pricing._
 - [x] **Auto-tagging leads** — done 2026-03-12. Migration 016 adds tags TEXT[] to leads. Claude extracts tags from conversations during lead capture. Tags shown in LeadsPage table and LeadDetailDrawer.
 - [x] **Conversation tagging** — done 2026-03-12. Migration 018 adds tags TEXT[] to conversations. Backend: PUT tags endpoint. Frontend: tag pills on sidebar, filter dropdown, inline add/remove.
 - [x] **Lead merge** — done 2026-03-12. Backend: GET /duplicates finds matches by email/phone, POST /merge does keep-and-absorb merge. Frontend: "Find Duplicates" button on LeadsPage with merge modal.
-- [ ] **Widget file/image upload** — Let visitors send screenshots or documents in chat. Requires file upload endpoint + S3/Supabase storage. (Carried from previous backlog.)
+- [x] **Widget file/image upload** — done 2026-03-12. Backend: POST /api/v1/widget/upload with multipart form, validates type/size, stores in Supabase Storage chat-attachments bucket. Widget JS: paperclip button, inline image preview, file download links. Both widget copies synced.
 
 ## Features — Tier 4: "I want the full platform"
 _Operations-tier features that justify the premium plan._

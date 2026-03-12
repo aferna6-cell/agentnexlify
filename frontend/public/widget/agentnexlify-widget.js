@@ -362,6 +362,44 @@
         fill: #0a0a0f;
       }
 
+      #anx-attach {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+      }
+      #anx-attach:hover { opacity: 0.8; }
+      #anx-attach svg { width: 18px; height: 18px; fill: #e0e0e5; }
+      #anx-file-input { display: none; }
+
+      .anx-msg img.anx-attachment {
+        max-width: 200px;
+        max-height: 160px;
+        border-radius: 8px;
+        margin-top: 4px;
+        cursor: pointer;
+      }
+      .anx-msg .anx-file-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 6px;
+        color: ${BRAND_COLOR};
+        text-decoration: none;
+        font-size: 12px;
+        margin-top: 4px;
+      }
+
       #anx-powered {
         text-align: center;
         padding: 6px;
@@ -642,6 +680,10 @@
         <div id="anx-booking"></div>
         <div id="anx-messages"></div>
         <div id="anx-input-area">
+          <button id="anx-attach" title="Attach file">
+            <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <input type="file" id="anx-file-input" accept="image/*,.pdf,.doc,.docx" />
           <textarea id="anx-input" placeholder="Type a message..." rows="1"></textarea>
           <button id="anx-send" title="Send">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -718,12 +760,61 @@
     return resp.json();
   }
 
+  // --- File upload ---
+  async function uploadFile(file) {
+    if (!API_KEY || !API_BASE) {
+      throw new Error("Widget not configured");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("File too large (max 5 MB)");
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    const sid = getSessionId();
+    const resp = await fetch(
+      `${API_BASE}/api/v1/widget/upload?api_key=${encodeURIComponent(API_KEY)}&session_id=${encodeURIComponent(sid)}`,
+      { method: "POST", body: formData }
+    );
+    if (!resp.ok) {
+      const err = await resp.text().catch(() => "");
+      throw new Error(`Upload failed: ${err}`);
+    }
+    return resp.json();
+  }
+
   // --- DOM helpers ---
-  function addMessage(role, text) {
+  function addMessage(role, text, attachment) {
     const container = document.getElementById("anx-messages");
     const div = document.createElement("div");
     div.className = `anx-msg ${role}`;
-    div.textContent = text;
+
+    if (attachment) {
+      if (attachment.content_type && attachment.content_type.startsWith("image/")) {
+        const img = document.createElement("img");
+        img.src = attachment.url;
+        img.alt = attachment.filename || "Image";
+        img.className = "anx-attachment";
+        img.onclick = () => window.open(attachment.url, "_blank");
+        div.appendChild(img);
+      } else {
+        const link = document.createElement("a");
+        link.href = attachment.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.className = "anx-file-link";
+        link.textContent = attachment.filename || "File";
+        div.appendChild(link);
+      }
+      if (text) {
+        const p = document.createElement("div");
+        p.textContent = text;
+        p.style.marginTop = "4px";
+        div.appendChild(p);
+      }
+    } else {
+      div.textContent = text;
+    }
+
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 
@@ -846,6 +937,53 @@
         "Sorry, I'm having trouble connecting. Please try again in a moment!"
       );
       console.error("AgentNexLiFy: Send failed", e);
+    } finally {
+      isLoading = false;
+      document.getElementById("anx-send").disabled = false;
+    }
+  }
+
+  // --- File upload handler ---
+  async function handleFileUpload() {
+    const fileInput = document.getElementById("anx-file-input");
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    fileInput.value = ""; // Reset so same file can be selected again
+
+    if (file.size > 5 * 1024 * 1024) {
+      addMessage("assistant", "File is too large. Please send files under 5 MB.");
+      return;
+    }
+
+    // Show uploading state
+    addMessage("user", `Uploading ${file.name}...`);
+    const msgs = document.getElementById("anx-messages");
+    const uploadingMsg = msgs.lastChild;
+
+    try {
+      const result = await uploadFile(file);
+
+      // Replace uploading message with actual attachment
+      msgs.removeChild(uploadingMsg);
+      addMessage("user", "", result);
+
+      // Send a chat message referencing the attachment so the AI knows about it
+      isLoading = true;
+      document.getElementById("anx-send").disabled = true;
+      showTyping();
+
+      const data = await sendMessage(`[Attached file: ${result.filename}] ${result.url}`);
+      hideTyping();
+      addMessage("assistant", data.response);
+
+      if (data.trial_expired) {
+        disableWidgetInput("Your free trial has expired.");
+      }
+    } catch (e) {
+      if (uploadingMsg.parentNode) msgs.removeChild(uploadingMsg);
+      hideTyping();
+      addMessage("assistant", "Sorry, I couldn't upload that file. Please try again.");
+      console.error("AgentNexLiFy: File upload failed", e);
     } finally {
       isLoading = false;
       document.getElementById("anx-send").disabled = false;
@@ -1240,6 +1378,14 @@
     document
       .getElementById("anx-send")
       .addEventListener("click", handleSend);
+
+    // File attachment
+    document
+      .getElementById("anx-attach")
+      .addEventListener("click", () => document.getElementById("anx-file-input").click());
+    document
+      .getElementById("anx-file-input")
+      .addEventListener("change", handleFileUpload);
 
     const input = document.getElementById("anx-input");
     input.addEventListener("keydown", (e) => {

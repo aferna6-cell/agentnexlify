@@ -1,5 +1,2 @@
-"""Supabase client — re-exports from backend.models.database."""
-
-from backend.models.database import get_supabase
-
-__all__ = ["get_supabase"]
+# DEAD CODE — This file is unused. Everything imports from backend.models.database directly.
+# Safe to delete.

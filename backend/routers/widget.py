@@ -10,7 +10,8 @@ import re
 from typing import Any
 
 import anthropic
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Request
+import uuid
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Query, Request, UploadFile
 
 from backend.config import settings
 from backend.limiter import limiter
@@ -166,7 +167,7 @@ def _get_or_create_conversation(
         if result.data:
             return result.data[0]["id"], False
     except Exception:
-        logger.debug("conversations lookup failed for session %s", session_id)
+        logger.warning("conversations lookup failed for session %s", session_id, exc_info=True)
 
     # Try to create one
     try:
@@ -178,7 +179,7 @@ def _get_or_create_conversation(
         if new_conv.data:
             return new_conv.data[0]["id"], True
     except Exception:
-        logger.debug("conversations insert failed for session %s", session_id)
+        logger.warning("conversations insert failed for session %s", session_id, exc_info=True)
 
     # Fallback: use session_id as a stable conversation identifier.
     # This lets chat_messages still accumulate history by session_id.
@@ -390,8 +391,12 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
         if isinstance(tags, list):
             # Sanitize: only strings, max 40 chars, max 5 tags
             return [str(t)[:40] for t in tags if isinstance(t, str)][:5]
+    except json.JSONDecodeError:
+        logger.warning("tag_extraction: Claude returned non-JSON response")
+    except anthropic.APIError as e:
+        logger.error("tag_extraction: Claude API error — %s", e)
     except Exception:
-        logger.warning("tag_extraction: failed to extract tags", exc_info=True)
+        logger.warning("tag_extraction: unexpected failure", exc_info=True)
     return []
 
 
@@ -1157,3 +1162,65 @@ async def submit_offline_contact(request: Request, body: WidgetOfflineContactReq
     except Exception as e:
         logger.error("offline_contact FAILED: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to submit contact form")
+
+
+# --- File Upload ---
+
+_MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+_ALLOWED_TYPES = {
+    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+@router.post("/upload")
+@limiter.limit("10/minute")
+async def upload_file(
+    request: Request,
+    file: UploadFile,
+    api_key: str = Query(...),
+    session_id: str = Query(...),
+):
+    """Upload a file from the chat widget. Returns a public URL.
+
+    Files are stored in Supabase Storage under chat-attachments/{tenant_id}/{session_id}/.
+    Max 5 MB. Allowed: images, PDF, Word docs.
+    """
+    # Validate API key
+    db = get_supabase()
+    wc = db.table("widget_configs").select("tenant_id").eq("api_key", api_key).limit(1).execute()
+    if not wc.data:
+        raise HTTPException(status_code=404, detail="Widget not found")
+    tenant_id = wc.data[0]["tenant_id"]
+
+    # Validate file type
+    content_type = file.content_type or ""
+    if content_type not in _ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail=f"File type not allowed: {content_type}")
+
+    # Read file with size check
+    data = await file.read()
+    if len(data) > _MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
+
+    # Generate unique path
+    ext = (file.filename or "file").rsplit(".", 1)[-1][:10]
+    unique_name = f"{uuid.uuid4().hex[:12]}.{ext}"
+    path = f"{tenant_id}/{session_id}/{unique_name}"
+
+    try:
+        db.storage.from_("chat-attachments").upload(
+            path,
+            data,
+            file_options={"content-type": content_type},
+        )
+    except Exception:
+        logger.exception("File upload failed for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Upload failed")
+
+    # Build public URL
+    public_url = f"{settings.supabase_url}/storage/v1/object/public/chat-attachments/{path}"
+
+    return {"url": public_url, "filename": file.filename, "content_type": content_type}

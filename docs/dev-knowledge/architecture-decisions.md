@@ -147,4 +147,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Widget file upload: Supabase Storage, no new migration
+**Date:** 2026-03-12
+**Decision:** Widget file uploads use Supabase Storage (bucket: `chat-attachments`) instead of a database table. Files stored at `{tenant_id}/{session_id}/{uuid}.{ext}`. Public URLs returned directly from Supabase. Allowed types: images, PDF, Word docs. Max 5 MB. No new migration needed since Supabase Storage is configured separately from PostgreSQL tables.
+**Why:** File storage in a database BLOB column is wasteful and slow. Supabase Storage provides CDN-backed public URLs, handles large files efficiently, and scopes by path prefix for easy cleanup. The widget JS shows images inline and other files as download links.
+
+---
+
 _Add new decisions when significant architectural choices are made._

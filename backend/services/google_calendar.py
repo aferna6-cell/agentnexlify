@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from backend.config import settings
 from backend.models.database import get_supabase
@@ -221,6 +222,18 @@ def create_calendar_event(
             tenant_id,
         )
         return event.get("id")
+    except HttpError as e:
+        if e.resp.status in (401, 403):
+            logger.error(
+                "Google Calendar auth error for tenant %s (HTTP %s) — token may need refresh",
+                tenant_id, e.resp.status,
+            )
+        else:
+            logger.warning(
+                "Google Calendar API error for tenant %s: %s",
+                tenant_id, e,
+            )
+        return None
     except Exception:
         logger.warning(
             "Failed to create Google Calendar event for tenant %s",
