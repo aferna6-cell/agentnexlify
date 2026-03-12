@@ -287,12 +287,12 @@ class WidgetConfigResponse(BaseModel):
 
 
 class WidgetLeadRequest(BaseModel):
-    api_key: str
-    session_id: str
-    name: str | None = None
-    email: str | None = None
-    phone: str | None = None
-    service: str | None = None
+    api_key: str = Field(..., max_length=100)
+    session_id: str = Field(..., max_length=100)
+    name: str | None = Field(None, max_length=200)
+    email: str | None = Field(None, max_length=320)
+    phone: str | None = Field(None, max_length=30)
+    service: str | None = Field(None, max_length=500)
 
 
 class WidgetLeadResponse(BaseModel):
@@ -305,11 +305,11 @@ class OnlineStatusRequest(BaseModel):
 
 
 class WidgetOfflineContactRequest(BaseModel):
-    api_key: str
-    name: str
-    email: str
-    phone: str | None = None
-    message: str
+    api_key: str = Field(..., max_length=100)
+    name: str = Field(..., max_length=200)
+    email: str = Field(..., max_length=320)
+    phone: str | None = Field(None, max_length=30)
+    message: str = Field(..., max_length=5000)
 
 
 # --- Database row models ---

@@ -1235,9 +1235,11 @@ async def upload_file(
 # ---------------------------------------------------------------------------
 
 @router.get("/unsubscribe", response_class=HTMLResponse)
+@limiter.limit("30/minute")
 async def unsubscribe_lead(
-    lid: str = Query(..., description="Lead ID"),
-    sig: str = Query(..., description="Signature"),
+    request: Request,
+    lid: str = Query(..., description="Lead ID", max_length=50),
+    sig: str = Query(..., description="Signature", max_length=200),
 ):
     """Public endpoint clicked from email unsubscribe links."""
     expected = _make_unsub_sig(lid)
@@ -1284,10 +1286,12 @@ _TRACKING_PIXEL = bytes([
 
 
 @router.get("/track/open")
+@limiter.limit("300/minute")
 async def track_email_open(
-    tid: str = Query(..., description="Tenant ID"),
-    lid: str = Query("", description="Lead ID"),
-    eid: str = Query("", description="Execution ID"),
+    request: Request,
+    tid: str = Query(..., description="Tenant ID", max_length=50),
+    lid: str = Query("", description="Lead ID", max_length=50),
+    eid: str = Query("", description="Execution ID", max_length=50),
 ):
     """Log an email open event and return a 1x1 tracking pixel."""
     try:

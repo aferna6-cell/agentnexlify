@@ -24,6 +24,7 @@ const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
 const TeamPage = lazy(() => import("../pages/TeamPage"));
 const BusinessPageSettings = lazy(() => import("../pages/BusinessPageSettings"));
 const ReviewsPage = lazy(() => import("../pages/ReviewsPage"));
+const ContentStudioPage = lazy(() => import("../pages/ContentStudioPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -43,6 +44,7 @@ const pages = {
   settings: SettingsPage,
   business_page: BusinessPageSettings,
   reviews: ReviewsPage,
+  content_studio: ContentStudioPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {

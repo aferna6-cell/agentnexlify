@@ -40,6 +40,7 @@ const allNavItems = [
   { key: "widget", icon: <Icon d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM7 15h0M2 10h20" />, label: "Widget" },
   { key: "faq", icon: <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />, label: "FAQ Manager" },
   { key: "reviews", icon: <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />, label: "Reviews" },
+  { key: "content_studio", icon: <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />, label: "Content Studio" },
   { key: "team", icon: <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" />, label: "Team", roles: ["owner", "admin"] },
   { key: "billing", icon: <Icon d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM1 10h22" />, label: "Billing", roles: ["owner"] },
   { key: "business_page", icon: <Icon d="M3 3h18v18H3zM3 9h18M9 21V9" />, label: "Business Page", roles: ["owner", "admin"] },

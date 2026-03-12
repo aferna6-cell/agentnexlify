@@ -168,4 +168,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Content Studio: source content → AI repurpose → platform posts
+**Date:** 2026-03-12
+**Decision:** Content Studio uses a `content_items` table to store source content. Each item has a `source_type` (text/description/file), the raw `source_content`, and a `platform_versions` JSONB field that holds generated per-platform versions keyed by platform name. Status flows: draft → generated → scheduled → published. The AI repurposer (task 2) will populate `platform_versions` from the source content.
+**Why:** Storing source and generated versions in the same row keeps them linked. JSONB for platform_versions is flexible — new platforms can be added without schema changes. The draft→generated→published flow gives tenants control over what goes out.
+
+---
+
 _Add new decisions when significant architectural choices are made._
