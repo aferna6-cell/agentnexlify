@@ -52,6 +52,11 @@ export default function ContentStudioPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [viewMode, setViewMode] = useState("list"); // "list" or "calendar"
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
 
   // Create form state
   const [sourceType, setSourceType] = useState("text");
@@ -188,6 +193,22 @@ export default function ContentStudioPage() {
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSchedule = async (contentId, date) => {
+    try {
+      await updateContentItem(user.tenantId, token, contentId, {
+        scheduled_for: date,
+        status: date ? "scheduled" : "generated",
+      });
+      const updated = await fetchContentItem(user.tenantId, token, contentId);
+      setSelectedItem(updated);
+      load();
+    } catch {
+      // keep state
+    }
+  };
+
   const currentSourceType = SOURCE_TYPES.find((t) => t.key === sourceType) || SOURCE_TYPES[0];
 
   const PLATFORM_LABELS = {
@@ -199,10 +220,26 @@ export default function ContentStudioPage() {
     twitter: "Twitter/X",
   };
 
-  // --- Stat cards ---
+  // --- Filtering and stat cards ---
+  const filteredItems = searchQuery.trim()
+    ? items.filter((i) => i.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : items;
   const draftCount = items.filter((i) => i.status === "draft").length;
   const generatedCount = items.filter((i) => i.status === "generated").length;
   const publishedCount = items.filter((i) => i.status === "published").length;
+  const scheduledCount = items.filter((i) => i.status === "scheduled").length;
+
+  // --- Calendar helpers ---
+  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfWeek = (year, month) => new Date(year, month, 1).getDay();
+  const calendarDays = getDaysInMonth(calendarMonth.year, calendarMonth.month);
+  const calendarStartDay = getFirstDayOfWeek(calendarMonth.year, calendarMonth.month);
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  const getItemsForDate = (day) => {
+    const dateStr = `${calendarMonth.year}-${String(calendarMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return items.filter((i) => i.scheduled_for === dateStr);
+  };
 
   return (
     <div style={{ padding: "24px 32px", maxWidth: 1100 }}>
@@ -234,11 +271,12 @@ export default function ContentStudioPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 24 }}>
         {[
           { label: "Total Items", value: total, color: "var(--accent)" },
           { label: "Drafts", value: draftCount, color: "var(--text-secondary)" },
           { label: "Generated", value: generatedCount, color: "var(--purple)" },
+          { label: "Scheduled", value: scheduledCount, color: "var(--warning, #f59e0b)" },
           { label: "Published", value: publishedCount, color: "var(--green)" },
         ].map((s) => (
           <div key={s.label} style={{
@@ -273,12 +311,133 @@ export default function ContentStudioPage() {
           <option value="scheduled">Scheduled</option>
           <option value="published">Published</option>
         </select>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search content..."
+          style={{
+            padding: "8px 14px",
+            borderRadius: 8,
+            border: "1px solid var(--border-color)",
+            background: "var(--card-bg)",
+            color: "var(--text-primary)",
+            fontSize: "0.85rem",
+            flex: 1,
+            maxWidth: 300,
+          }}
+        />
+        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+          {["list", "calendar"].map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 8,
+                border: viewMode === mode ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                background: viewMode === mode ? "var(--accent-dim)" : "var(--card-bg)",
+                color: viewMode === mode ? "var(--accent)" : "var(--text-secondary)",
+                cursor: "pointer",
+                fontWeight: viewMode === mode ? 600 : 400,
+                fontSize: "0.8rem",
+                textTransform: "capitalize",
+              }}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Calendar view */}
+      {viewMode === "calendar" && !loading && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <button
+              onClick={() => setCalendarMonth((m) => {
+                const d = new Date(m.year, m.month - 1, 1);
+                return { year: d.getFullYear(), month: d.getMonth() };
+              })}
+              style={{ background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 14px", color: "var(--text-secondary)", cursor: "pointer" }}
+            >
+              &larr;
+            </button>
+            <h3 style={{ margin: 0, color: "var(--text-primary)", fontSize: "1rem" }}>
+              {monthNames[calendarMonth.month]} {calendarMonth.year}
+            </h3>
+            <button
+              onClick={() => setCalendarMonth((m) => {
+                const d = new Date(m.year, m.month + 1, 1);
+                return { year: d.getFullYear(), month: d.getMonth() };
+              })}
+              style={{ background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 14px", color: "var(--text-secondary)", cursor: "pointer" }}
+            >
+              &rarr;
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+              <div key={d} style={{ textAlign: "center", fontSize: "0.7rem", color: "var(--text-muted)", padding: "6px 0", fontWeight: 600 }}>{d}</div>
+            ))}
+            {Array.from({ length: calendarStartDay }, (_, i) => (
+              <div key={`empty-${i}`} style={{ minHeight: 70 }} />
+            ))}
+            {Array.from({ length: calendarDays }, (_, i) => {
+              const day = i + 1;
+              const dayItems = getItemsForDate(day);
+              const isToday = (() => {
+                const now = new Date();
+                return now.getFullYear() === calendarMonth.year && now.getMonth() === calendarMonth.month && now.getDate() === day;
+              })();
+              return (
+                <div
+                  key={day}
+                  style={{
+                    minHeight: 70,
+                    background: isToday ? "var(--accent-dim)" : "var(--card-bg)",
+                    border: isToday ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                    borderRadius: 6,
+                    padding: "4px 6px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", fontWeight: 600, color: isToday ? "var(--accent)" : "var(--text-secondary)", marginBottom: 2 }}>
+                    {day}
+                  </div>
+                  {dayItems.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedItem(item)}
+                      style={{
+                        fontSize: "0.65rem",
+                        padding: "2px 4px",
+                        borderRadius: 3,
+                        background: "var(--accent)",
+                        color: "#fff",
+                        marginBottom: 2,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        fontWeight: 500,
+                      }}
+                      title={item.title}
+                    >
+                      {item.title}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Content list */}
-      {loading ? (
+      {viewMode === "list" && loading ? (
         <div style={{ textAlign: "center", padding: 60, color: "var(--text-secondary)" }}>Loading...</div>
-      ) : items.length === 0 ? (
+      ) : viewMode === "list" && filteredItems.length === 0 && items.length === 0 ? (
         <div style={{
           textAlign: "center",
           padding: "60px 20px",
@@ -307,9 +466,9 @@ export default function ContentStudioPage() {
             + Add Content
           </button>
         </div>
-      ) : (
+      ) : viewMode === "list" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <div
               key={item.id}
               onClick={() => setSelectedItem(item)}
@@ -360,7 +519,7 @@ export default function ContentStudioPage() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Detail panel */}
       {selectedItem && (
@@ -554,6 +713,41 @@ export default function ContentStudioPage() {
               <span style={{ color: "#f87171", fontSize: "0.85rem" }}>{generateError}</span>
             )}
           </div>
+          {/* Schedule date picker */}
+          {selectedItem.platform_versions && Object.keys(selectedItem.platform_versions).length > 0 && (
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Schedule for:</label>
+              <input
+                type="date"
+                value={selectedItem.scheduled_for || ""}
+                onChange={(e) => handleSchedule(selectedItem.id, e.target.value || null)}
+                style={{
+                  padding: "7px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border-color)",
+                  background: "var(--card-bg)",
+                  color: "var(--text-primary)",
+                  fontSize: "0.85rem",
+                }}
+              />
+              {selectedItem.scheduled_for && (
+                <button
+                  onClick={() => handleSchedule(selectedItem.id, null)}
+                  style={{
+                    background: "var(--hover-overlay)",
+                    border: "1px solid var(--border-color)",
+                    color: "var(--text-secondary)",
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  Unschedule
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

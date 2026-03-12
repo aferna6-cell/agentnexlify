@@ -31,6 +31,7 @@ class ContentUpdate(BaseModel):
     platform_versions: dict | None = None
     status: str | None = None
     tags: list[str] | None = None
+    scheduled_for: str | None = None  # ISO date string (YYYY-MM-DD) or null to unschedule
 
 
 # --- Helpers ---

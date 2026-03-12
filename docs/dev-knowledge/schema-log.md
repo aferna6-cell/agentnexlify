@@ -171,5 +171,6 @@ Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, 
 - `conversations`: `tags`
 - `tenants`: `review_request_config`
 - New tables: `email_templates`, `reviews`, `email_events`, `content_items`
+- `content_items`: `scheduled_for` (DATE, added in migration 025)
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
