@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-11T14:03:12+00:00",
+  "skills": [
+    {
+      "skill_name": "agentnexlify-runtime-constraints",
+      "description": "Account for AgentNexLiFy runtime and deployment constraints. Use when editing background jobs, automation execution, rate limiting, caches, webhook delivery, SMS or email quotas, Docker/runtime config, or any logic that assumes a single process or durable in-memory state.",
+      "tags": [
+        "agentnexlify-runtime-constraints",
+        "account",
+        "agentnexlify",
+        "runtime",
+        "deployment",
+        "constraints",
+        "editing",
+        "background",
+        "jobs",
+        "automation",
+        "execution",
+        "rate"
+      ],
+      "path": ".codex/skills/agentnexlify-runtime-constraints/SKILL.md",
+      "created_by": "repository",
+      "created_at": "2026-03-11T13:26:43+00:00",
+      "last_used": "2026-03-11T14:03:13+00:00",
+      "source": "repository"
+    },
+    {
+      "skill_name": "agentnexlify-schema-guard",
+      "description": "Protect live schema and API conventions in AgentNexLiFy. Use when editing backend routes, services, migrations, Supabase queries, auth, analytics, leads, appointments, widget chat, or any code that reads or writes tenant, lead, conversation, billing, or automation data.",
+      "tags": [
+        "agentnexlify-schema-guard",
+        "protect",
+        "live",
+        "schema",
+        "api",
+        "conventions",
+        "agentnexlify",
+        "editing",
+        "backend",
+        "routes",
+        "services",
+        "migrations"
+      ],
+      "path": ".codex/skills/agentnexlify-schema-guard/SKILL.md",
+      "created_by": "repository",
+      "created_at": "2026-03-11T13:26:43+00:00",
+      "last_used": null,
+      "source": "repository"
+    },
+    {
+      "skill_name": "agentnexlify-surface-selector",
+      "description": "Choose the correct AgentNexLiFy surface before editing. Use when a task touches this repository and you need to decide whether the work belongs in backend/, frontend/, widget/, demo-platform/, landing-page-v2/, public/, migrations/, prospects/, or _archive/. Also use when a request spans multiple surfaces and you need to map the dependency boundaries first.",
+      "tags": [
+        "agentnexlify-surface-selector",
+        "choose",
+        "correct",
+        "agentnexlify",
+        "surface",
+        "before",
+        "editing",
+        "task",
+        "touches",
+        "repository",
+        "you",
+        "need"
+      ],
+      "path": ".codex/skills/agentnexlify-surface-selector/SKILL.md",
+      "created_by": "repository",
+      "created_at": "2026-03-11T13:26:43+00:00",
+      "last_used": "2026-03-11T14:03:13+00:00",
+      "source": "repository"
+    },
+    {
+      "skill_name": "agentnexlify-widget-integrity",
+      "description": "Preserve the current production widget contract in AgentNexLiFy. Use when editing widget JavaScript, widget embed snippets, widget API endpoints, business-page widget loading, widget config fields, or any code/docs that could drift between the live widget and older widget generations in this repository.",
+      "tags": [
+        "agentnexlify-widget-integrity",
+        "preserve",
+        "current",
+        "production",
+        "widget",
+        "contract",
+        "agentnexlify",
+        "editing",
+        "javascript",
+        "embed",
+        "snippets",
+        "api"
+      ],
+      "path": ".codex/skills/agentnexlify-widget-integrity/SKILL.md",
+      "created_by": "repository",
+      "created_at": "2026-03-11T13:26:43+00:00",
+      "last_used": null,
+      "source": "repository"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "patterns": [
+    {
+      "pattern": "task touched: docs",
+      "category": "architecture",
+      "count": 3,
+      "examples": [
+        "Bootstrap autonomous AI development system"
+      ],
+      "first_seen": "2026-03-11T14:01:32+00:00",
+      "last_seen": "2026-03-11T14:03:12+00:00"
+    },
+    {
+      "pattern": "docs",
+      "category": "architecture",
+      "count": 1,
+      "examples": [
+        "Bootstrap autonomous AI development system"
+      ],
+      "first_seen": "2026-03-11T14:03:12+00:00",
+      "last_seen": "2026-03-11T14:03:12+00:00"
+    },
+    {
+      "pattern": "task touched: .github, AGENTS.md, ai, docs, skills",
+      "category": "architecture",
+      "count": 1,
+      "examples": [
+        "Implement self-improving autonomous development system"
+      ],
+      "first_seen": "2026-03-11T14:03:13+00:00",
+      "last_seen": "2026-03-11T14:03:13+00:00"
+    }
+  ]
+}

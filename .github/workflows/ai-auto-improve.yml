@@ -1,0 +1,59 @@
+name: AI Auto Improve
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      open_pr:
+        description: "Open a pull request if the run changes files"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  auto-improve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run autonomous improvement pass
+        run: |
+          python -m ai.auto_improve \
+            --create-skills \
+            --write-report docs/ai-auto-improve-report.md \
+            --refresh-docs \
+            --task-description "Scheduled daily autonomous improvement run"
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-auto-improve-report
+          path: docs/ai-auto-improve-report.md
+          if-no-files-found: ignore
+
+      - name: Create pull request
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.open_pr) || vars.AI_AUTO_IMPROVE_OPEN_PR == 'true' }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: codex/ai-auto-improve
+          commit-message: "chore(ai): update autonomous improvement outputs"
+          title: "chore(ai): automated repo improvement pass"
+          body: |
+            Automated daily improvement run.
+
+            This PR may contain:
+            - refreshed AI improvement report
+            - updated skill registry
+            - newly generated reusable skills
+            - documentation refreshes
