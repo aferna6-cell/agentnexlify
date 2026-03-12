@@ -193,6 +193,28 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
 
           <ScoreBreakdown breakdown={breakdown} />
 
+          {/* Auto-tags */}
+          {lead.tags && lead.tags.length > 0 && (
+            <div className="intel-section">
+              <div className="intel-title">Tags</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {lead.tags.map((tag, i) => (
+                  <span key={i} style={{
+                    display: "inline-block",
+                    padding: "4px 10px",
+                    borderRadius: 14,
+                    fontSize: "0.78rem",
+                    background: "var(--accent-dim, rgba(0,191,255,0.15))",
+                    color: "var(--accent, #00BFFF)",
+                    border: "1px solid var(--accent-dim, rgba(0,191,255,0.25))",
+                  }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Editable fields */}
           <div className="intel-section">
             <div className="intel-title">Contact Info</div>

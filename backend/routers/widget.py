@@ -4,6 +4,7 @@
 # It breaks FastAPI's parameter introspection — Pydantic body models and
 # BackgroundTasks get treated as query params, causing 422 errors.
 
+import json
 import logging
 import re
 from typing import Any
@@ -348,6 +349,52 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     return info
 
 
+def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]:
+    """Use Claude to extract auto-tags from conversation messages.
+
+    Returns a list of short tags like "interested in: kitchen remodel",
+    "budget: high", "timeline: urgent", "service: plumbing".
+    """
+    if not messages or len(messages) < 2:
+        return []
+
+    # Build a compact transcript (limit to last 20 messages to save tokens)
+    transcript_lines = []
+    for msg in messages[-20:]:
+        role = "Visitor" if msg["role"] == "user" else "Agent"
+        transcript_lines.append(f"{role}: {msg['content']}")
+    transcript = "\n".join(transcript_lines)
+
+    try:
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        resp = client.messages.create(
+            model="claude-sonnet-4-5-20250514",
+            max_tokens=200,
+            temperature=0,
+            system=(
+                "Extract business-relevant tags from this chat conversation between a visitor and a business AI assistant. "
+                "Return ONLY a JSON array of short tag strings. Tags should capture: "
+                "service interests (e.g. 'interested in: kitchen remodel'), "
+                "budget level (e.g. 'budget: high'), "
+                "timeline urgency (e.g. 'timeline: urgent', 'timeline: 3 months'), "
+                "and any other business-relevant signals (e.g. 'returning customer', 'referred by friend'). "
+                "If no meaningful tags can be extracted, return []. Max 5 tags. Keep each tag under 40 chars."
+            ),
+            messages=[{"role": "user", "content": transcript}],
+        )
+        raw = resp.content[0].text.strip()
+        # Handle cases where Claude wraps in markdown code block
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        tags = json.loads(raw)
+        if isinstance(tags, list):
+            # Sanitize: only strings, max 40 chars, max 5 tags
+            return [str(t)[:40] for t in tags if isinstance(t, str)][:5]
+    except Exception:
+        logger.warning("tag_extraction: failed to extract tags", exc_info=True)
+    return []
+
+
 async def _capture_leads_from_session(
     tenant_id: str, session_id: str, conversation_id: str
 ) -> None:
@@ -430,6 +477,14 @@ async def _capture_leads_from_session(
                         "updated_fields": list(updates.keys()),
                         "source": "widget",
                     })
+                # Auto-tag existing lead from conversation
+                try:
+                    tags = _extract_tags_from_conversation(messages)
+                    if tags:
+                        db.table("leads").update({"tags": tags}).eq("id", lead["id"]).execute()
+                        logger.info("lead_capture: tagged existing lead %s with %s", lead["id"], tags)
+                except Exception:
+                    logger.warning("lead_capture: tag extraction failed for lead %s", lead["id"], exc_info=True)
                 return
 
         # Create new lead — live schema: client_id, status (not tenant_id, lead_stage)
@@ -508,6 +563,15 @@ async def _capture_leads_from_session(
                 await _send_new_lead_email_notification(tenant_id, lead_name, combined)
             except Exception:
                 logger.error("EMAIL_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
+
+            # Auto-tag the new lead from conversation
+            try:
+                tags = _extract_tags_from_conversation(messages)
+                if tags:
+                    db.table("leads").update({"tags": tags}).eq("id", lead_id).execute()
+                    logger.info("lead_capture: tagged new lead %s with %s", lead_id, tags)
+            except Exception:
+                logger.warning("lead_capture: tag extraction failed for new lead %s", lead_id, exc_info=True)
 
             # Score the lead
             try:

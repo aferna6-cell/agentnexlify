@@ -30,7 +30,7 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
     { key: "phone", label: "Phone" },
     { key: "status", label: "Stage" },
     { key: "lead_score", label: "Score" },
-    { key: "lead_temperature", label: "Temp" },
+    { key: "tags", label: "Tags", sortable: false },
     { key: "created_at", label: "Created" },
   ];
 
@@ -42,8 +42,9 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
             {columns.map((col) => (
               <th
                 key={col.key}
-                onClick={() => onSort(col.key)}
+                onClick={col.sortable !== false ? () => onSort(col.key) : undefined}
                 className={sortField === col.key ? "sorted" : ""}
+                style={col.sortable === false ? { cursor: "default" } : undefined}
               >
                 {col.label}
                 {sortField === col.key && (
@@ -65,7 +66,31 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
                   {lead.lead_score ?? "N/A"} &middot; {scoreLabel(lead.lead_score)}
                 </span>
               </td>
-              <td>{lead.lead_temperature || "-"}</td>
+              <td>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {(lead.tags || []).slice(0, 3).map((tag, ti) => (
+                    <span key={ti} style={{
+                      display: "inline-block",
+                      padding: "2px 8px",
+                      borderRadius: 12,
+                      fontSize: "0.7rem",
+                      background: "var(--accent-dim, rgba(0,191,255,0.15))",
+                      color: "var(--accent, #00BFFF)",
+                      whiteSpace: "nowrap",
+                      maxWidth: 140,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {tag}
+                    </span>
+                  ))}
+                  {(lead.tags || []).length > 3 && (
+                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                      +{lead.tags.length - 3}
+                    </span>
+                  )}
+                </div>
+              </td>
               <td>{formatDate(lead.created_at)}</td>
             </tr>
           ))}

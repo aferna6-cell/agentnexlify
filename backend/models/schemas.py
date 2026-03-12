@@ -337,6 +337,7 @@ class LeadRow(BaseModel):
     next_steps: str | None = None
     status: str = "new"
     appointment_date: datetime | None = None
+    tags: list[str] = Field(default_factory=list)
 
 
 # Live schema CHECK constraint: new, contacted, appointment_booked, closed, lost
@@ -354,6 +355,7 @@ class LeadUpdateRequest(BaseModel):
     timeline: str | None = None
     budget: str | None = None
     next_steps: str | None = None
+    tags: list[str] | None = None
 
     @field_validator("status")
     @classmethod
@@ -526,6 +528,7 @@ class ClientListItem(BaseModel):
     lead_temperature: str | None = None
     created_at: datetime
     last_activity: datetime | None = None
+    tags: list[str] = Field(default_factory=list)
 
 
 class ClientProfile(BaseModel):
@@ -543,6 +546,7 @@ class ClientProfile(BaseModel):
     conversation_summary: str | None = None
     next_steps: str | None = None
     created_at: datetime
+    tags: list[str] = Field(default_factory=list)
     client_notes: list[NoteResponse] = Field(default_factory=list)
     conversations: list[dict[str, Any]] = Field(default_factory=list)
     recent_activity: list[ActivityItem] = Field(default_factory=list)

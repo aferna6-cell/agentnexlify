@@ -58,6 +58,9 @@ Adds `email_templates` table for reusable email template library. Columns: id (U
 ### 015 — Widget Offline Mode
 Adds `is_online` (BOOLEAN NOT NULL DEFAULT TRUE) and `offline_message` (TEXT DEFAULT 'We are currently offline...') to `widget_configs`. Allows businesses to toggle between live chat and offline contact form mode. Both columns use `IF NOT EXISTS` for safety.
 
+### 016 — Lead Tags
+Adds `tags` (TEXT[] DEFAULT '{}') to `leads` table. GIN index on tags for efficient array queries. Tags are auto-extracted from conversations by Claude during lead capture (e.g., "interested in: kitchen remodel", "budget: high", "timeline: urgent").
+
 ## Known Schema Gotchas
 
 | Issue | Detail |

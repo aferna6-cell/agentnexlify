@@ -27,9 +27,9 @@ _These make the product sticky — once they use these, they won't leave._
 ## Features — Tier 3: "This makes me look professional"
 _These differentiate from competitors and justify higher-tier pricing._
 
-- [ ] **Review/rating request** — After a completed appointment, auto-send a request for a Google/Yelp review. Every small business wants more reviews. Google review link already exists in tenant settings — build an automation template that sends the link after appointment_completed.
+- [x] **Review/rating request** — Already complete. Template in sequences.py with appointment_completed trigger. Resolves {{review_link}} from tenant.google_review_link. Configurable in Settings. In TemplateGallery.
 - [ ] **Recurring appointment support** — For businesses with regular clients (hair salon, cleaning service, tutoring) — let them set up recurring bookings. Extend the appointments system with recurrence rules (weekly/biweekly/monthly).
-- [ ] **Auto-tagging leads** — Based on conversation content, auto-tag leads (e.g., "interested in: kitchen remodel", "budget: high", "timeline: urgent"). Ask Claude to extract tags during lead capture and store them on the lead record.
+- [x] **Auto-tagging leads** — done 2026-03-12. Migration 016 adds tags TEXT[] to leads. Claude extracts tags from conversations during lead capture. Tags shown in LeadsPage table and LeadDetailDrawer.
 - [ ] **Conversation tagging** — Tag/label conversations for organization. Add a tags field to conversations and filter UI. (Carried from previous backlog.)
 - [ ] **Lead merge** — Combine duplicate leads into one record. Detect potential duplicates by email/phone and offer a merge UI. (Carried from previous backlog.)
 - [ ] **Widget file/image upload** — Let visitors send screenshots or documents in chat. Requires file upload endpoint + S3/Supabase storage. (Carried from previous backlog.)

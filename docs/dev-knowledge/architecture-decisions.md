@@ -98,4 +98,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Lead auto-tagging: AI extraction during lead capture
+**Date:** 2026-03-12
+**Decision:** Auto-tags are extracted from conversation transcripts using a Claude API call during `_capture_leads_from_session()`. Tags are stored as a `TEXT[]` column on the leads table with a GIN index. Extraction runs in the background task (not in the chat response path) so it doesn't affect latency. Max 5 tags per lead, max 40 chars each.
+**Why:** Tags like "interested in: kitchen remodel" or "budget: high" give business owners instant context without reading the full conversation. Using Claude for extraction (rather than keyword matching) captures nuanced intent. Running in the background task means zero latency impact on the chat widget. TEXT[] with GIN index enables efficient PostgreSQL array queries for future tag-based filtering.
+
+---
+
 _Add new decisions when significant architectural choices are made._
