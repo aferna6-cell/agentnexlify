@@ -147,6 +147,20 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Unsubscribe: HMAC-signed links, no login required
+**Date:** 2026-03-12
+**Decision:** Unsubscribe links use HMAC-SHA256 signatures (`lead_id` + `api_secret_key`) rather than requiring authentication. The endpoint is public (GET request, returns HTML confirmation). Every automated email includes both a visible unsubscribe link in the footer and a `List-Unsubscribe` header for email clients.
+**Why:** CAN-SPAM requires a one-click unsubscribe mechanism. Recipients won't have accounts to log in. HMAC signatures prevent abuse (can't enumerate lead IDs). The `api_secret_key` is per-deployment, so URLs from one deployment don't work on another.
+
+---
+
+### Lead re-engagement campaigns: one-time blast, not sequences
+**Date:** 2026-03-12
+**Decision:** Campaign blasts are a separate endpoint (`POST /campaigns/send`) from trigger-based sequences. Campaigns query leads with filters (status, score, date range), exclude unsubscribed leads, and send immediately. Max 500 leads per blast to prevent abuse.
+**Why:** Sequences are trigger-based (event → delayed steps). Campaigns are action-based (select segment → send now). Different UX, different backend logic. Campaigns reuse `send_email()` and `send_sms()` but don't create executions or logs in the automation tables.
+
+---
+
 ### Widget file upload: Supabase Storage, no new migration
 **Date:** 2026-03-12
 **Decision:** Widget file uploads use Supabase Storage (bucket: `chat-attachments`) instead of a database table. Files stored at `{tenant_id}/{session_id}/{uuid}.{ext}`. Public URLs returned directly from Supabase. Allowed types: images, PDF, Word docs. Max 5 MB. No new migration needed since Supabase Storage is configured separately from PostgreSQL tables.

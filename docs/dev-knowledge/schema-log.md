@@ -142,4 +142,7 @@ Verified live Supabase schema against CLAUDE.md and code. Key findings:
 ### All other tables — confirmed matching
 Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, chat_messages, conversations, appointments, business_hours, automation_sequences, automation_steps, automation_executions, automations, faq_entries, activity_log, client_notes, integrations, team_members, webhooks, webhook_logs, automation_logs.
 
+### 021 — Lead Unsubscribe (CAN-SPAM compliance)
+Adds `unsubscribed` (BOOLEAN DEFAULT FALSE) and `unsubscribed_at` (TIMESTAMPTZ) to leads table. Partial index on `unsubscribed = TRUE` for efficient filtering in automation queries. Automation engine skips unsubscribed leads. Every outgoing email includes a signed unsubscribe link.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

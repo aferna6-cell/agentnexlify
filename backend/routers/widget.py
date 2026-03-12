@@ -4,18 +4,22 @@
 # It breaks FastAPI's parameter introspection — Pydantic body models and
 # BackgroundTasks get treated as query params, causing 422 errors.
 
+import hmac
 import json
 import logging
 import re
+from datetime import datetime, timezone
 from typing import Any
 
 import anthropic
 import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Query, Request, UploadFile
+from fastapi.responses import HTMLResponse
 
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
+from backend.services.email_sender import _make_unsub_sig
 from backend.models.schemas import (
     OnlineStatusRequest,
     WidgetChatRequest,
@@ -1224,3 +1228,42 @@ async def upload_file(
     public_url = f"{settings.supabase_url}/storage/v1/object/public/chat-attachments/{path}"
 
     return {"url": public_url, "filename": file.filename, "content_type": content_type}
+
+
+# ---------------------------------------------------------------------------
+# Unsubscribe (CAN-SPAM compliance)
+# ---------------------------------------------------------------------------
+
+@router.get("/unsubscribe", response_class=HTMLResponse)
+async def unsubscribe_lead(
+    lid: str = Query(..., description="Lead ID"),
+    sig: str = Query(..., description="Signature"),
+):
+    """Public endpoint clicked from email unsubscribe links."""
+    expected = _make_unsub_sig(lid)
+    if not hmac.compare_digest(sig, expected):
+        return HTMLResponse(
+            "<html><body><h2>Invalid unsubscribe link.</h2></body></html>",
+            status_code=400,
+        )
+
+    db = get_supabase()
+    result = db.table("leads").select("id, unsubscribed").eq("id", lid).limit(1).execute()
+    if not result.data:
+        return HTMLResponse(
+            "<html><body><h2>Lead not found.</h2></body></html>",
+            status_code=404,
+        )
+
+    if not result.data[0].get("unsubscribed"):
+        db.table("leads").update({
+            "unsubscribed": True,
+            "unsubscribed_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", lid).execute()
+
+    return HTMLResponse(
+        "<html><body style='font-family:Arial,sans-serif;text-align:center;padding:60px;'>"
+        "<h2>You've been unsubscribed.</h2>"
+        "<p>You will no longer receive automated messages from this business.</p>"
+        "</body></html>"
+    )

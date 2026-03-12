@@ -523,4 +523,13 @@ export function toggleWidgetOnlineStatus(tenantId, token, isOnline) {
   });
 }
 
+// --- Campaign blast ---
+export function sendCampaign(tenantId, token, { subject, body_html, channel, filters }) {
+  return _req(`/api/v1/sequences/${tenantId}/campaigns/send`, {
+    method: "POST",
+    token,
+    body: { subject, body_html, channel, filters },
+  });
+}
+
 export { ApiError };

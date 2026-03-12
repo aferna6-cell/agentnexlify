@@ -1,6 +1,8 @@
 """Email sending service using Resend API with template rendering and rate limiting."""
 
 
+import hashlib
+import hmac as _hmac
 import html
 import logging
 import re
@@ -86,6 +88,22 @@ def build_branded_email_html(
     )
 
 
+def _make_unsub_sig(lead_id: str) -> str:
+    """HMAC-SHA256 signature for unsubscribe links to prevent abuse."""
+    return _hmac.new(
+        settings.api_secret_key.encode(),
+        lead_id.encode(),
+        hashlib.sha256,
+    ).hexdigest()[:16]
+
+
+def build_unsubscribe_url(lead_id: str) -> str:
+    """Build a signed unsubscribe URL for a lead."""
+    sig = _make_unsub_sig(lead_id)
+    base = settings.frontend_url.rstrip("/")
+    return f"{base}/api/v1/widget/unsubscribe?lid={lead_id}&sig={sig}"
+
+
 def _check_rate_limit(tenant_id: str) -> bool:
     """Return True if tenant is within daily send limit."""
     global _last_reset_date
@@ -100,11 +118,27 @@ def _increment_send_count(tenant_id: str) -> None:
     _daily_sends[tenant_id] = _daily_sends.get(tenant_id, 0) + 1
 
 
+def _append_unsubscribe_footer(body_html: str, unsubscribe_url: str) -> str:
+    """Append an unsubscribe link to the bottom of the email body (CAN-SPAM)."""
+    footer = (
+        '<div style="margin-top:24px;padding-top:12px;border-top:1px solid #eee;'
+        'font-size:11px;color:#999;text-align:center;">'
+        f'<a href="{html.escape(unsubscribe_url)}" style="color:#999;">Unsubscribe</a>'
+        '</div>'
+    )
+    # Insert before closing </body> or </html> if present, otherwise append
+    for tag in ("</body>", "</html>"):
+        if tag in body_html:
+            return body_html.replace(tag, footer + tag, 1)
+    return body_html + footer
+
+
 async def send_email(
     to: str,
     subject: str,
     body_html: str,
     tenant_id: str,
+    unsubscribe_url: str = "",
 ) -> dict[str, Any]:
     """Send an email via Resend. Returns result dict with 'success' and 'detail'."""
     if not settings.resend_api_key:
@@ -115,14 +149,21 @@ async def send_email(
         logger.warning("Daily email limit reached for tenant %s", tenant_id)
         return {"success": False, "detail": "daily_limit_reached"}
 
+    final_html = body_html
+    if unsubscribe_url:
+        final_html = _append_unsubscribe_footer(body_html, unsubscribe_url)
+
     try:
         resend.api_key = settings.resend_api_key
-        result = resend.Emails.send({
+        send_params: dict[str, Any] = {
             "from": FROM_ADDRESS,
             "to": [to],
             "subject": subject,
-            "html": body_html,
-        })
+            "html": final_html,
+        }
+        if unsubscribe_url:
+            send_params["headers"] = {"List-Unsubscribe": f"<{unsubscribe_url}>"}
+        result = resend.Emails.send(send_params)
         _increment_send_count(tenant_id)
         logger.info("Email sent to %s for tenant %s", to, tenant_id)
         return {"success": True, "detail": "sent", "resend_id": result.get("id", "")}

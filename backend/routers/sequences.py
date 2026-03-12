@@ -1,4 +1,4 @@
-"""Automation sequences API — CRUD for email follow-up sequences."""
+"""Automation sequences API — CRUD for email follow-up sequences and campaigns."""
 
 
 import asyncio
@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from backend.models.database import get_supabase
 from backend.models.schemas import (
@@ -16,6 +17,9 @@ from backend.models.schemas import (
 )
 from backend.routers.auth import _get_current_tenant
 from backend.services.automation_engine import trigger_sequence
+from backend.services.email_sender import build_unsubscribe_url, send_email
+from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
+from backend.services.twilio_service import send_sms
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/sequences", tags=["sequences"])
@@ -533,3 +537,97 @@ async def update_lead_stage(
         )
 
     return {"lead_id": lead_id, "old_stage": old_stage, "new_stage": req.stage}
+
+
+# ---------------------------------------------------------------------------
+# One-time campaign blast (lead re-engagement)
+# ---------------------------------------------------------------------------
+
+class CampaignRequest(BaseModel):
+    subject: str = Field(..., max_length=200)
+    body_html: str = Field(..., max_length=10000)
+    channel: str = Field(default="email", pattern="^(email|sms)$")
+    filters: dict = Field(default_factory=dict)
+
+
+@router.post("/{tenant_id}/campaigns/send")
+async def send_campaign(
+    tenant_id: str,
+    req: CampaignRequest,
+    tenant: dict = Depends(_get_current_tenant),
+):
+    """Send a one-time email/SMS blast to a filtered segment of leads.
+
+    Filters (all optional):
+    - status: lead status string (e.g. "new", "contacted")
+    - tags: list of tags (leads must have at least one)
+    - min_score: minimum lead score
+    - created_after: ISO date string
+    - created_before: ISO date string
+    """
+    db = get_supabase()
+
+    # Build filtered query — leads table uses client_id, NOT tenant_id
+    query = db.table("leads").select("id, name, email, phone, unsubscribed").eq("client_id", tenant_id)
+
+    filters = req.filters
+    if filters.get("status"):
+        query = query.eq("status", filters["status"])
+    if filters.get("min_score"):
+        query = query.gte("lead_score", filters["min_score"])
+    if filters.get("created_after"):
+        query = query.gte("created_at", filters["created_after"])
+    if filters.get("created_before"):
+        query = query.lte("created_at", filters["created_before"])
+
+    result = query.limit(500).execute()
+    leads = result.data or []
+
+    # Filter by tags in Python (Supabase client doesn't support array overlap easily)
+    if filters.get("tags"):
+        required_tags = set(filters["tags"])
+        leads = [l for l in leads if set(l.get("tags") or []) & required_tags]
+
+    # Remove unsubscribed leads (CAN-SPAM)
+    leads = [l for l in leads if not l.get("unsubscribed")]
+
+    sent = 0
+    skipped = 0
+
+    for lead in leads:
+        if req.channel == "email":
+            if not lead.get("email"):
+                skipped += 1
+                continue
+            unsub_url = build_unsubscribe_url(lead["id"])
+            email_result = await send_email(
+                to=lead["email"],
+                subject=req.subject,
+                body_html=req.body_html,
+                tenant_id=tenant_id,
+                unsubscribe_url=unsub_url,
+            )
+            if email_result.get("success"):
+                sent += 1
+            else:
+                skipped += 1
+        elif req.channel == "sms":
+            if not lead.get("phone"):
+                skipped += 1
+                continue
+            plan = tenant.get("plan", "free")
+            if not check_sms_rate_limit(tenant_id, plan):
+                skipped += 1
+                continue
+            sms_ok = await send_sms(to=lead["phone"], body=req.body_html)
+            if sms_ok:
+                sent += 1
+                increment_sms_count(tenant_id)
+            else:
+                skipped += 1
+
+    return {
+        "total_leads": len(leads),
+        "sent": sent,
+        "skipped": skipped,
+    }

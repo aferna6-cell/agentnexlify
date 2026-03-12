@@ -8,7 +8,7 @@ from functools import partial
 from typing import Any
 
 from backend.models.database import get_supabase
-from backend.services.email_sender import build_branded_email_html, render_sms_template, render_template, send_email
+from backend.services.email_sender import build_branded_email_html, build_unsubscribe_url, render_sms_template, render_template, send_email
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
@@ -149,7 +149,7 @@ async def execute_step(execution_id: str) -> None:
     # Load lead
     lead_result = (
         db.table("leads")
-        .select("id, name, email, phone")
+        .select("id, name, email, phone, unsubscribed")
         .eq("id", execution["lead_id"])
         .limit(1)
         .execute()
@@ -160,6 +160,20 @@ async def execute_step(execution_id: str) -> None:
         }).eq("id", execution_id).execute()
         return
     lead = lead_result.data[0]
+
+    # CAN-SPAM: skip unsubscribed leads
+    if lead.get("unsubscribed"):
+        db.table("automation_logs").insert({
+            "execution_id": execution_id,
+            "step_id": step["id"] if steps_result.data else None,
+            "action": "skipped",
+            "details": {"reason": "unsubscribed"},
+        }).execute()
+        db.table("automation_executions").update({
+            "status": "completed",
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", execution_id).execute()
+        return
 
     # Load tenant for business_name, plan, and google_review_link
     tenant_result = (
@@ -265,11 +279,13 @@ async def execute_step(execution_id: str) -> None:
             except Exception:
                 logger.debug("Failed to load branding for AI email, sending plain", exc_info=True)
 
+        unsub_url = build_unsubscribe_url(lead["id"])
         result = await send_email(
             to=lead["email"],
             subject=subject,
             body_html=ai_body,
             tenant_id=execution["tenant_id"],
+            unsubscribe_url=unsub_url,
         )
 
         action = "ai_email_sent" if result["success"] else "ai_email_failed"
@@ -326,11 +342,13 @@ async def execute_step(execution_id: str) -> None:
             except Exception:
                 logger.debug("Failed to load branding for email, sending plain", exc_info=True)
 
+        unsub_url = build_unsubscribe_url(lead["id"])
         result = await send_email(
             to=lead["email"],
             subject=subject,
             body_html=body,
             tenant_id=execution["tenant_id"],
+            unsubscribe_url=unsub_url,
         )
 
         action = "email_sent" if result["success"] else "email_failed"
@@ -723,8 +741,19 @@ async def send_pending_review_requests() -> int:
         customer_name = appt.get("customer_name") or "there"
         method = config.get("method", "email")
 
+        # CAN-SPAM: skip if lead has unsubscribed
+        lead_id = appt.get("lead_id")
+        if lead_id:
+            try:
+                lr = db.table("leads").select("unsubscribed").eq("id", lead_id).limit(1).execute()
+                if lr.data and lr.data[0].get("unsubscribed"):
+                    continue
+            except Exception:
+                pass  # If we can't check, proceed (fail-open for review requests)
+
         # Send email review request
         if method in ("email", "both") and appt.get("customer_email"):
+            unsub_url = build_unsubscribe_url(lead_id) if lead_id else ""
             subject = f"How was your experience with {business_name}?"
             body = (
                 f"<h2>Hi {customer_name},</h2>"
@@ -743,6 +772,7 @@ async def send_pending_review_requests() -> int:
                     subject=subject,
                     body_html=body,
                     tenant_id=tenant_id,
+                    unsubscribe_url=unsub_url,
                 )
                 if result.get("success"):
                     sent += 1

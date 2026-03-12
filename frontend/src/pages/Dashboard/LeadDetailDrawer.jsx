@@ -215,6 +215,26 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
             </div>
           )}
 
+          {/* Unsubscribe status */}
+          {lead.unsubscribed && (
+            <div className="intel-section">
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 8,
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                background: "rgba(239,68,68,0.15)",
+                color: "#ef4444",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}>
+                Unsubscribed{lead.unsubscribed_at ? ` on ${new Date(lead.unsubscribed_at).toLocaleDateString()}` : ""}
+              </div>
+            </div>
+          )}
+
           {/* Editable fields */}
           <div className="intel-section">
             <div className="intel-title">Contact Info</div>

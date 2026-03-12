@@ -57,12 +57,12 @@ _Aggregate reviews, AI-draft responses, auto-request reviews. Same dashboard, ne
 ## Features — Module: Smart Outreach
 _AI-powered follow-up sequences and lead nurturing from the dashboard._
 
-- [ ] **Outreach sequence builder** — Dashboard page where tenant creates email/SMS sequences triggered by lead events. Example: "When a new lead is captured → wait 1 hour → send welcome email → wait 2 days → send follow-up → wait 5 days → send offer." Visual builder or simple step list.
-- [ ] **AI email writer** — When creating a sequence step, the tenant describes what they want ("follow up about their kitchen remodel quote") and AI drafts the email. Tenant can edit.
-- [ ] **Sequence execution engine** — Backend service that processes scheduled sequence steps. Checks for due steps every few minutes (cron job or Supabase scheduled function). Sends via Resend (email) or Twilio (SMS). Logs delivery status.
-- [ ] **Lead re-engagement campaigns** — Ability to select a group of leads (by stage, date range, or tag) and send a one-time blast email/SMS. AI drafts the message based on the segment.
+- [x] **Outreach sequence builder** — Already built as Automations page + SequenceBuilder component. Supports trigger-based email/SMS sequences with step editor, template picker, and variable insertion.
+- [x] **AI email writer** — Already built as `ai_email` action type in automation_engine.py. Claude generates personalized emails from conversation context + FAQ entries.
+- [x] **Sequence execution engine** — Already built as `process_pending_steps()` in automation_engine.py. Processes due steps every 60s, supports email/ai_email/sms action types, logs delivery status.
+- [x] **Lead re-engagement campaigns** — done 2026-03-12. Backend: POST /campaigns/send with filters (status, score, date range). Frontend: "Send Campaign" modal on Automations page with channel/subject/body/filters. Excludes unsubscribed leads. Max 500 per blast.
 - [ ] **Outreach analytics** — Open rates, reply rates, click rates (for emails with links). Show which sequences perform best. Dashboard widget.
-- [ ] **Unsubscribe handling** — Every outreach email must include an unsubscribe link. Track unsubscribes. Never send to unsubscribed leads. This is legally required (CAN-SPAM).
+- [x] **Unsubscribe handling** — done 2026-03-12. Migration 021 adds unsubscribed/unsubscribed_at to leads. HMAC-signed unsubscribe links in every automated email. Public unsubscribe endpoint returns HTML confirmation. Automation engine skips unsubscribed leads. List-Unsubscribe header included. Frontend shows unsubscribe badge on lead detail.
 
 ## Features — Module: Content Studio
 _Turn one piece of content into posts for every platform._

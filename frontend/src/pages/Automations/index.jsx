@@ -8,6 +8,7 @@ import {
   toggleSequence,
   fetchSequenceDetail,
   createFromTemplate,
+  sendCampaign,
 } from "../../utils/api";
 import SequenceBuilder from "./SequenceBuilder";
 import SequenceDetail from "./SequenceDetail";
@@ -37,6 +38,16 @@ export default function AutomationsPage({ onNavigate }) {
   const [detailData, setDetailData] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showCampaign, setShowCampaign] = useState(false);
+  const [campaignForm, setCampaignForm] = useState({
+    subject: "",
+    body_html: "",
+    channel: "email",
+    status: "",
+    min_score: "",
+  });
+  const [campaignResult, setCampaignResult] = useState(null);
+  const [campaignSending, setCampaignSending] = useState(false);
 
   const loadSequences = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -189,6 +200,17 @@ export default function AutomationsPage({ onNavigate }) {
           fontSize: "14px",
         }}>
           {showTemplates ? "Hide Templates" : "Use Template"}
+        </button>
+        <button onClick={() => { setShowCampaign(true); setCampaignResult(null); }} style={{
+          padding: "10px 20px",
+          background: "transparent",
+          color: "var(--text-secondary)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-sm)",
+          cursor: "pointer",
+          fontSize: "14px",
+        }}>
+          Send Campaign
         </button>
       </div>
 
@@ -352,6 +374,129 @@ export default function AutomationsPage({ onNavigate }) {
           detail={detailData}
           onClose={() => setDetailData(null)}
         />
+      )}
+
+      {/* Campaign modal */}
+      {showCampaign && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+        }} onClick={() => setShowCampaign(false)}>
+          <div style={{
+            background: "var(--bg-secondary)", borderRadius: "var(--radius-lg)",
+            padding: 28, width: "100%", maxWidth: 520, maxHeight: "85vh", overflowY: "auto",
+          }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ marginBottom: 20, fontSize: "1.2rem" }}>Send Campaign</h2>
+
+            {campaignResult && (
+              <div style={{
+                padding: "12px 16px", borderRadius: "var(--radius-sm)", marginBottom: 16,
+                background: "var(--green-dim)", color: "var(--green)", fontSize: 13,
+              }}>
+                Sent to {campaignResult.sent} leads ({campaignResult.skipped} skipped).
+                Unsubscribed leads are automatically excluded.
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Channel</label>
+                <select value={campaignForm.channel}
+                  onChange={e => setCampaignForm(f => ({ ...f, channel: e.target.value }))}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                >
+                  <option value="email">Email</option>
+                  <option value="sms">SMS</option>
+                </select>
+              </div>
+
+              {campaignForm.channel === "email" && (
+                <div>
+                  <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Subject</label>
+                  <input value={campaignForm.subject}
+                    onChange={e => setCampaignForm(f => ({ ...f, subject: e.target.value }))}
+                    placeholder="Campaign subject line"
+                    style={{ width: "100%", padding: "8px 12px", background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                  {campaignForm.channel === "email" ? "Body (HTML)" : "Message"}
+                </label>
+                <textarea value={campaignForm.body_html}
+                  onChange={e => setCampaignForm(f => ({ ...f, body_html: e.target.value }))}
+                  placeholder={campaignForm.channel === "email" ? "<p>Hi {{name}},</p><p>Your message here...</p>" : "Hi {{name}}, your message here..."}
+                  rows={5}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontFamily: "monospace", fontSize: 13, resize: "vertical" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Filter by Status</label>
+                  <select value={campaignForm.status}
+                    onChange={e => setCampaignForm(f => ({ ...f, status: e.target.value }))}
+                    style={{ width: "100%", padding: "8px 12px", background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                  >
+                    <option value="">All</option>
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="appointment_booked">Appointment Booked</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Min Lead Score</label>
+                  <input type="number" value={campaignForm.min_score}
+                    onChange={e => setCampaignForm(f => ({ ...f, min_score: e.target.value }))}
+                    placeholder="0"
+                    style={{ width: "100%", padding: "8px 12px", background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginTop: 20, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowCampaign(false)} style={{
+                padding: "8px 18px", background: "transparent", color: "var(--text-secondary)",
+                border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", cursor: "pointer",
+              }}>Cancel</button>
+              <button
+                disabled={campaignSending || !campaignForm.body_html.trim() || (campaignForm.channel === "email" && !campaignForm.subject.trim())}
+                onClick={async () => {
+                  setCampaignSending(true);
+                  setCampaignResult(null);
+                  try {
+                    const filters = {};
+                    if (campaignForm.status) filters.status = campaignForm.status;
+                    if (campaignForm.min_score) filters.min_score = parseInt(campaignForm.min_score, 10);
+                    const result = await sendCampaign(user.tenantId, token, {
+                      subject: campaignForm.subject,
+                      body_html: campaignForm.body_html,
+                      channel: campaignForm.channel,
+                      filters,
+                    });
+                    setCampaignResult(result);
+                  } catch (err) {
+                    setError(err.message);
+                  } finally {
+                    setCampaignSending(false);
+                  }
+                }}
+                style={{
+                  padding: "8px 18px", background: "var(--accent)", color: "var(--accent-contrast)",
+                  border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer", fontWeight: 600,
+                  opacity: campaignSending ? 0.6 : 1,
+                }}
+              >
+                {campaignSending ? "Sending..." : "Send Campaign"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
