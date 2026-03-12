@@ -251,4 +251,14 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Migrations 014-023 not applied to live Supabase — dashboard crash + automation errors
+**Date:** 2026-03-12
+**Symptom:** Dashboard endpoint returns 500 (`column widget_configs.is_online does not exist`). Automation engine spams errors (`column appointments.updated_at does not exist`). Widget chat itself was unaffected.
+**Root Cause:** 10 migration files (014-023) existed in the repo but were never applied to the live Supabase database. Code referenced columns/tables that didn't exist. Missing: `widget_configs.is_online`, `widget_configs.offline_message`, `appointments.updated_at`, `appointments.review_request_sent_at`, `appointments.recurrence_*`, `leads.tags`, `leads.unsubscribed`, `conversations.tags`, and 4 entire tables (`email_templates`, `reviews`, `email_events`, `content_items`).
+**Fix:** Applied all 10 migrations to Supabase. Created migration 024 for `appointments.updated_at` (referenced in code but not in any migration file).
+**Files:** migrations/024_appointments_updated_at.sql, docs/dev-knowledge/bug-patterns.md
+**Prevention:** After creating a migration file, ALWAYS apply it to the live database. Add a post-migration checklist: (1) write SQL file, (2) test in Supabase SQL editor, (3) run on prod, (4) verify with schema query. Consider adding a migration tracking table.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

@@ -151,4 +151,23 @@ Creates `email_events` table for tracking email opens and clicks. Columns: tenan
 ### 023 — Content Items (Content Studio)
 Creates `content_items` table for storing source content that gets repurposed into platform-specific posts. Columns: tenant_id (FK→tenants), title (TEXT), source_type (TEXT: 'text'/'description'/'file'), source_content (TEXT), platform_versions (JSONB, keyed by platform), status (TEXT: 'draft'/'generated'/'scheduled'/'published'), tags (TEXT[]), created_at, updated_at. Indexed on tenant_id and (tenant_id, status). RLS enabled.
 
+### 024 — Appointments updated_at
+Adds `updated_at` (TIMESTAMPTZ DEFAULT NOW()) to `appointments`. Used by `automation_engine.send_pending_review_requests()` to determine when an appointment was marked completed and whether enough delay has passed to send a review request. Created during schema drift remediation — this column was referenced in code but had no migration file.
+
+## Schema Drift Remediation — 2026-03-12
+
+**Problem:** Migrations 014-023 existed as SQL files but were never applied to the live Supabase database. The code referenced columns and tables that didn't exist, causing:
+- Dashboard crash: `column widget_configs.is_online does not exist`
+- Automation engine crash: `column appointments.updated_at does not exist`
+
+**Fix:** Applied all 10 missing migrations to the live database via Supabase SQL editor. Created migration 024 for `appointments.updated_at` (referenced in code but not in any migration file).
+
+**Tables/columns added:**
+- `widget_configs`: `is_online`, `offline_message`
+- `leads`: `tags`, `unsubscribed`, `unsubscribed_at`
+- `appointments`: `recurrence_rule`, `recurrence_parent_id`, `recurrence_end_date`, `review_request_sent_at`, `updated_at`
+- `conversations`: `tags`
+- `tenants`: `review_request_config`
+- New tables: `email_templates`, `reviews`, `email_events`, `content_items`
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

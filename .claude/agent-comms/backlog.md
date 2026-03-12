@@ -67,7 +67,7 @@ _AI-powered follow-up sequences and lead nurturing from the dashboard._
 ## Features — Module: Content Studio
 _Turn one piece of content into posts for every platform._
 
-- [ ] **Content input page** — Dashboard page where tenant pastes a blog post, writes a description of a recent job/project, or uploads a text file. This is the "source content."
+- [x] **Content input page** — done 2026-03-12. Migration 023 creates content_items table. Backend CRUD in backend/routers/content.py. Frontend ContentStudioPage with create modal (text/description/file upload), list view, detail panel. Sidebar link + lazy-loaded routing.
 - [ ] **AI content repurposer** — Takes the source content and generates platform-specific versions: LinkedIn post (professional tone, 150-300 words), Facebook post (casual, with emoji), Instagram caption (short, hashtags), Google Business Profile update (local SEO optimized), email newsletter snippet, Twitter/X thread (short punchy posts). Each version follows platform best practices for length, tone, and formatting.
 - [ ] **Content preview and edit** — Show all generated versions side by side. Tenant can edit any of them before publishing.
 - [ ] **Content calendar** — Simple calendar view showing scheduled posts. Tenant can schedule content for future dates.
