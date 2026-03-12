@@ -68,7 +68,7 @@ _These differentiate from competitors and justify higher-tier pricing._
 _Operations-tier features that justify the premium plan._
 
 - [ ] **Zapier integration polish** — Ensure the webhook payloads include all useful fields (lead name, email, phone, conversation summary, appointment details). Document the webhook schema. Build 2-3 example Zaps (lead → Google Sheet, appointment → Google Calendar, new conversation → Slack notification).
-- [ ] **Team permissions enforcement** — Team roles (owner/admin/member/viewer) exist in the DB and sidebar, but role-based access isn't fully enforced on backend endpoints. Add middleware that checks role before allowing writes to settings, billing, team management.
+- [x] **Team permissions enforcement** — done 2026-03-12. Applied require_role("owner", "admin") to all write endpoints in webhooks.py (create/update/delete/toggle/test), sequences.py (create/update/delete/toggle/template/campaign), and automations.py (toggle/config). Members and viewers can read but not modify. Settings and billing were already protected.
 - [ ] **Lead assignment** — Assign leads to specific team members. Notify them. Track who's working which lead. Add assigned_to column to leads, filter views per agent.
 - [ ] **Conversation AI tuning** — Let the business owner rate AI responses (thumbs up/down) and provide corrections. Store ratings, use feedback to refine system prompts per tenant over time.
 - [ ] **Bulk SMS campaigns** — Let business owners send a text to all their leads or a filtered segment ("all leads from last 30 days who haven't booked"). Requires careful Twilio compliance (opt-in, STOP handling).

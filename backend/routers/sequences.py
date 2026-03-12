@@ -15,7 +15,7 @@ from backend.models.schemas import (
     SequenceCreateRequest,
     SequenceUpdateRequest,
 )
-from backend.routers.auth import _get_current_tenant
+from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.automation_engine import trigger_sequence
 from backend.services.email_sender import build_unsubscribe_url, send_email
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
@@ -198,7 +198,7 @@ async def list_sequences(tenant_id: str, claims: dict = Depends(_get_current_ten
 async def create_sequence(
     tenant_id: str,
     req: SequenceCreateRequest,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Create a new sequence with steps."""
     _verify_tenant(tenant_id, claims)
@@ -386,7 +386,7 @@ async def update_sequence(
     tenant_id: str,
     seq_id: str,
     req: SequenceUpdateRequest,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Update sequence and optionally replace steps."""
     _verify_tenant(tenant_id, claims)
@@ -438,7 +438,7 @@ async def update_sequence(
 
 @router.delete("/{tenant_id}/{seq_id}")
 async def delete_sequence(
-    tenant_id: str, seq_id: str, claims: dict = Depends(_get_current_tenant)
+    tenant_id: str, seq_id: str, claims: dict = Depends(require_role("owner", "admin"))
 ):
     """Delete a sequence (cascade deletes steps/executions/logs)."""
     _verify_tenant(tenant_id, claims)
@@ -460,7 +460,7 @@ async def delete_sequence(
 
 @router.post("/{tenant_id}/{seq_id}/toggle")
 async def toggle_sequence(
-    tenant_id: str, seq_id: str, claims: dict = Depends(_get_current_tenant)
+    tenant_id: str, seq_id: str, claims: dict = Depends(require_role("owner", "admin"))
 ):
     """Toggle sequence active/inactive."""
     _verify_tenant(tenant_id, claims)
@@ -490,7 +490,7 @@ async def toggle_sequence(
 async def create_from_template(
     tenant_id: str,
     template_id: str = Body(..., embed=True),
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Create a sequence from a pre-built template."""
     _verify_tenant(tenant_id, claims)
@@ -583,7 +583,7 @@ class CampaignRequest(BaseModel):
 async def send_campaign(
     tenant_id: str,
     req: CampaignRequest,
-    tenant: dict = Depends(_get_current_tenant),
+    tenant: dict = Depends(require_role("owner", "admin")),
 ):
     """Send a one-time email/SMS blast to a filtered segment of leads.
 

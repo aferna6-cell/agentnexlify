@@ -20,7 +20,7 @@ from backend.models.schemas import (
     WebhookUpdateRequest,
     WebhookLogResponse,
 )
-from backend.routers.auth import _get_current_tenant
+from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.webhook_dispatcher import SUPPORTED_EVENTS
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ async def list_webhooks(tenant_id: str, claims: dict = Depends(_get_current_tena
 async def create_webhook(
     tenant_id: str,
     req: WebhookCreateRequest,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     _verify_tenant(claims, tenant_id)
 
@@ -95,7 +95,7 @@ async def update_webhook(
     tenant_id: str,
     webhook_id: str,
     req: WebhookUpdateRequest,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     _verify_tenant(claims, tenant_id)
 
@@ -130,7 +130,7 @@ async def update_webhook(
 async def toggle_webhook(
     tenant_id: str,
     webhook_id: str,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     _verify_tenant(claims, tenant_id)
     db = get_supabase()
@@ -167,7 +167,7 @@ async def toggle_webhook(
 async def delete_webhook(
     tenant_id: str,
     webhook_id: str,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     _verify_tenant(claims, tenant_id)
     db = get_supabase()
@@ -277,7 +277,7 @@ async def test_webhook(
     request: Request,
     tenant_id: str,
     webhook_id: str,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Send a sample event to a webhook URL to verify it is working."""
     _verify_tenant(claims, tenant_id)

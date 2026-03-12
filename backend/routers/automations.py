@@ -19,7 +19,7 @@ from fastapi.responses import PlainTextResponse
 
 from backend.config import settings
 from backend.models.database import get_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.activity import log_activity
 from backend.services.twilio_service import (
     format_textback_message,
@@ -328,7 +328,7 @@ async def list_automations(tenant_id: str, claims: dict = Depends(_get_current_t
 
 
 @router.post("/automations/{tenant_id}/{automation_id}/toggle")
-async def toggle_automation(tenant_id: str, automation_id: str, claims: dict = Depends(_get_current_tenant)):
+async def toggle_automation(tenant_id: str, automation_id: str, claims: dict = Depends(require_role("owner", "admin"))):
     """Enable or disable an automation."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Tenant mismatch")
@@ -355,7 +355,7 @@ async def toggle_automation(tenant_id: str, automation_id: str, claims: dict = D
 
 
 @router.put("/automations/{tenant_id}/{automation_id}/config")
-async def update_automation_config(tenant_id: str, automation_id: str, config: dict, claims: dict = Depends(_get_current_tenant)):
+async def update_automation_config(tenant_id: str, automation_id: str, config: dict, claims: dict = Depends(require_role("owner", "admin"))):
     """Update an automation's config JSON."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Tenant mismatch")

@@ -192,6 +192,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Why:** 6 separate calls would be 6x the latency and cost. Claude handles multi-output well with delimiter-based parsing. Fallback parsing (positional split) handles cases where the model doesn't follow delimiter format exactly.
 **Implication:** Response parsing must be robust — primary parser checks for `===PLATFORM===` delimiters, fallback splits by the delimiter and assigns positionally. Platform specs are defined as a dict constant for easy extension.
 
+### Team role enforcement — dependency-based, not middleware
+**Decision:** Use FastAPI's `require_role()` dependency factory rather than global middleware for role-based access control.
+**Why:** Dependency-based enforcement is explicit per-endpoint, allowing different role requirements per route. Middleware would require pattern-matching on URLs which is fragile. The `require_role()` function wraps `_get_current_tenant()`, so it's a drop-in replacement.
+**Implication:** When adding new write endpoints, always use `require_role("owner", "admin")` instead of `_get_current_tenant()`. Read endpoints can remain with `_get_current_tenant()` since all roles should be able to view data. The role hierarchy is: owner > admin > member > viewer.
+
 ---
 
 _Add new decisions when significant architectural choices are made._
