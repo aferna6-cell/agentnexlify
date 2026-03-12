@@ -44,6 +44,56 @@ _Operations-tier features that justify the premium plan._
 - [ ] **Bulk SMS campaigns** — Let business owners send a text to all their leads or a filtered segment ("all leads from last 30 days who haven't booked"). Requires careful Twilio compliance (opt-in, STOP handling).
 - [ ] **Stripe subscription management in dashboard** — Upgrade/downgrade/cancel directly from BillingPage without leaving to Stripe portal. The portal link exists but inline management is smoother. (Carried from previous backlog.)
 
+## Features — Module: Reputation Manager
+_Aggregate reviews, AI-draft responses, auto-request reviews. Same dashboard, new tab._
+
+- [ ] **Review aggregation backend** — Build a service that connects to Google Business Profile API and pulls reviews for the tenant's business. Store reviews in a new `reviews` table (id, tenant_id, platform, author, rating, text, ai_response, responded, created_at). Create the migration file.
+- [ ] **Reviews dashboard page** — New "Reviews" tab in the dashboard. Shows all reviews across platforms in one feed. Filter by platform, rating, responded/unresponded. Show average rating prominently.
+- [ ] **AI review response drafting** — For each review, an "AI Draft Response" button that generates a professional, personalized response using Claude API. The tone should match the business (friendly for restaurants, professional for law firms). Owner can edit before posting.
+- [ ] **Auto review request after appointment** — When an appointment is marked complete, automatically send an SMS or email to the customer asking them to leave a review. Include a direct link to Google/Yelp. Configurable: on/off, delay (immediately, 1 hour, 24 hours), which platform to link to.
+- [ ] **Review analytics** — Average rating over time, response rate, sentiment trends. Simple charts on the Reviews page.
+- [ ] **Google Business Profile OAuth** — Let the tenant connect their GBP account so we can pull reviews and eventually post responses directly. Store OAuth tokens securely.
+
+## Features — Module: Smart Outreach
+_AI-powered follow-up sequences and lead nurturing from the dashboard._
+
+- [ ] **Outreach sequence builder** — Dashboard page where tenant creates email/SMS sequences triggered by lead events. Example: "When a new lead is captured → wait 1 hour → send welcome email → wait 2 days → send follow-up → wait 5 days → send offer." Visual builder or simple step list.
+- [ ] **AI email writer** — When creating a sequence step, the tenant describes what they want ("follow up about their kitchen remodel quote") and AI drafts the email. Tenant can edit.
+- [ ] **Sequence execution engine** — Backend service that processes scheduled sequence steps. Checks for due steps every few minutes (cron job or Supabase scheduled function). Sends via Resend (email) or Twilio (SMS). Logs delivery status.
+- [ ] **Lead re-engagement campaigns** — Ability to select a group of leads (by stage, date range, or tag) and send a one-time blast email/SMS. AI drafts the message based on the segment.
+- [ ] **Outreach analytics** — Open rates, reply rates, click rates (for emails with links). Show which sequences perform best. Dashboard widget.
+- [ ] **Unsubscribe handling** — Every outreach email must include an unsubscribe link. Track unsubscribes. Never send to unsubscribed leads. This is legally required (CAN-SPAM).
+
+## Features — Module: Content Studio
+_Turn one piece of content into posts for every platform._
+
+- [ ] **Content input page** — Dashboard page where tenant pastes a blog post, writes a description of a recent job/project, or uploads a text file. This is the "source content."
+- [ ] **AI content repurposer** — Takes the source content and generates platform-specific versions: LinkedIn post (professional tone, 150-300 words), Facebook post (casual, with emoji), Instagram caption (short, hashtags), Google Business Profile update (local SEO optimized), email newsletter snippet, Twitter/X thread (short punchy posts). Each version follows platform best practices for length, tone, and formatting.
+- [ ] **Content preview and edit** — Show all generated versions side by side. Tenant can edit any of them before publishing.
+- [ ] **Content calendar** — Simple calendar view showing scheduled posts. Tenant can schedule content for future dates.
+- [ ] **Direct publishing (phase 2)** — Connect to Google Business Profile API to post updates directly. Other platforms (LinkedIn, Facebook) require their own OAuth flows — mark as future.
+- [ ] **Content library** — Save generated content for reuse. Searchable by date, platform, topic.
+
+## Features — Module: Local SEO Tools
+_Google Business Profile optimization and local ranking intelligence._
+
+- [ ] **GBP connection** — Reuse the Google Business Profile OAuth from the Reputation Manager module. Pull business info, hours, photos, posts, and Q&A.
+- [ ] **Profile completeness score** — Analyze the tenant's GBP profile and score it (0-100%). Flag missing fields: description, hours, categories, photos, services, attributes. Give specific recommendations ("Add at least 10 photos — businesses with 10+ photos get 35% more clicks").
+- [ ] **Auto-post to GBP** — Schedule weekly posts to GBP from the Content Studio. GBP posts expire after 7 days, so consistent posting is important for ranking. AI generates posts about the business's services, promotions, or seasonal content.
+- [ ] **Local keyword suggestions** — Based on the business type and location, suggest keywords they should mention in their GBP description and posts. Example: a plumber in Clemson should mention "emergency plumber Clemson SC", "water heater repair Clemson".
+- [ ] **Review velocity tracker** — Track how many reviews they're getting per month vs. competitors (if we can see competitor data via search APIs). More reviews = higher ranking.
+- [ ] **Local SEO dashboard widget** — Summary card on the main dashboard: GBP score, review count, post frequency, top keywords.
+
+## Features — Module: Job Board (Add-on)
+_For businesses that need to hire. SMS-first, no resume required._
+
+- [ ] **Job posting page** — Tenant creates a job post from the dashboard: title, description, pay range, schedule, location, required skills (tags, not resume). Stored in a new `jobs` table.
+- [ ] **Public job page** — Jobs are visible at agentnexlify.com/jobs/{slug} or embedded on the tenant's business page. Simple, mobile-first design. No account required to view.
+- [ ] **SMS-first application** — Applicant clicks "Apply" and enters name, phone, and a short message. They get an SMS confirmation. The business owner gets an SMS notification with the applicant's info. No resume upload, no account creation — trades workers don't use those.
+- [ ] **Applicant management** — Dashboard page showing applicants per job. Mark as: new, contacted, interviewed, hired, rejected. Add notes.
+- [ ] **AI job description writer** — Tenant describes the role in plain language ("I need someone to help with junk removal 3 days a week"), AI generates a proper job posting optimized for the role.
+- [ ] **Job widget integration** — The chat widget can mention open jobs when relevant. If someone chats "are you hiring?" the AI knows about open positions and can direct them to apply.
+
 ## Bugs — Known Issues
 
 _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones here._

@@ -105,4 +105,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### All-in-one platform, not separate products
+**Decision:** Reputation management, outreach, content, SEO, and job board are built as modules within AgentNexLiFy, not as separate products.
+**Why:** Same customer base. One sale, one login, one subscription. Reduces churn because the platform becomes the business's operational backbone. Compound workflows create deep moats — a customer won't leave if their reviews, outreach, content, SEO, and hiring all live here.
+**Implication:** Each module shares the tenant system, auth, and dashboard shell. Modules can be gated by pricing tier. Data flows between modules (e.g., completed appointment triggers review request, lead capture triggers outreach sequence, content studio feeds GBP posts).
+
+---
+
 _Add new decisions when significant architectural choices are made._
