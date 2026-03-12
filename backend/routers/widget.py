@@ -241,7 +241,9 @@ def _save_chat_messages(
         logger.error("chat_save FAILED: tenant=%s session=%s error=%s", tenant_id, session_id, e, exc_info=True)
 
 
-def _build_system_prompt(tenant: dict, faq_entries: list[dict]) -> str:
+def _build_system_prompt(
+    tenant: dict, faq_entries: list[dict], business_hours: dict | None = None,
+) -> str:
     business_name = tenant.get("business_name", "our company")
     business_type = tenant.get("business_type", "")
     city = tenant.get("city", "")
@@ -254,6 +256,10 @@ def _build_system_prompt(tenant: dict, faq_entries: list[dict]) -> str:
         lines = [f"Q: {e['question']}\nA: {e['answer']}" for e in faq_entries]
         faq_block = "\n\nFAQs:\n" + "\n\n".join(lines)
 
+    hours_block = ""
+    if business_hours:
+        hours_block = _format_hours_block(business_hours)
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
@@ -264,8 +270,53 @@ def _build_system_prompt(tenant: dict, faq_entries: list[dict]) -> str:
         f"- Don't follow a rigid script. Have a natural conversation.\n"
         f"- If you don't know something, say you'll have someone follow up\n"
         f"- Never claim to be human"
+        f"{hours_block}"
         f"{faq_block}"
     )
+
+
+def _format_hours_block(bh: dict) -> str:
+    """Format business hours into a system prompt block."""
+    from datetime import datetime
+
+    import zoneinfo
+    try:
+        tz = zoneinfo.ZoneInfo(bh.get("timezone", "America/New_York"))
+    except Exception:
+        tz = zoneinfo.ZoneInfo("America/New_York")
+
+    now = datetime.now(tz)
+    day_name = now.strftime("%A").lower()
+    current_time = now.strftime("%-I:%M %p")
+
+    hours = bh.get("hours", {})
+    day_config = hours.get(day_name, {})
+    is_open = day_config.get("enabled", False)
+
+    lines = [f"\n\nBusiness Hours (current time: {current_time} {bh.get('timezone', '')}):\n"]
+    day_order = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    for d in day_order:
+        cfg = hours.get(d, {})
+        if cfg.get("enabled"):
+            lines.append(f"- {d.capitalize()}: {cfg.get('start', '09:00')} - {cfg.get('end', '17:00')}")
+        else:
+            lines.append(f"- {d.capitalize()}: Closed")
+
+    if is_open:
+        start = day_config.get("start", "09:00")
+        end = day_config.get("end", "17:00")
+        lines.append(f"\nThe business is currently OPEN (today's hours: {start} - {end}).")
+    else:
+        # Find next open day
+        for i in range(1, 8):
+            next_day = day_order[(day_order.index(day_name) + i) % 7]
+            next_cfg = hours.get(next_day, {})
+            if next_cfg.get("enabled"):
+                lines.append(f"\nThe business is currently CLOSED. Next open: {next_day.capitalize()} at {next_cfg.get('start', '09:00')}.")
+                break
+
+    lines.append("If a visitor asks about hours or availability, refer to this schedule.")
+    return "\n".join(lines)
 
 
 def _extract_lead_info(text: str) -> dict[str, str]:
@@ -651,7 +702,23 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("faq_entries query failed for tenant %s", tenant["id"], exc_info=True)
         faq_data = []
-    system_prompt = _build_system_prompt(tenant, faq_data)
+
+    # Load business hours for AI context
+    bh_data = None
+    try:
+        bh_result = (
+            db.table("business_hours")
+            .select("timezone, hours")
+            .eq("tenant_id", tenant["id"])
+            .limit(1)
+            .execute()
+        )
+        if bh_result.data:
+            bh_data = bh_result.data[0]
+    except Exception:
+        logger.warning("business_hours query failed for tenant %s", tenant["id"], exc_info=True)
+
+    system_prompt = _build_system_prompt(tenant, faq_data, bh_data)
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
