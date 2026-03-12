@@ -119,6 +119,13 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### AgentNexLiFy as complete business operating system
+**Decision:** Phone answering, missed call text-back, contractor bids, client portal, review responding, and business autopilot are all built as integrated modules, not separate products.
+**Why:** Every module shares the same customer data. A missed call becomes a text conversation becomes a lead becomes an appointment becomes a service record becomes a review request. The data flows in a circle. This is impossible if they're separate products. The more modules a customer uses, the more their business depends on the platform — churn approaches zero.
+**Implication:** All modules share: tenant system, auth, leads table, appointments table, conversation engine (widget + SMS + voice all use the same AI backend). The chat/AI engine becomes a universal interface — customers interact via widget, SMS, or phone and it all funnels into the same dashboard. New channel type field on conversations: 'widget' | 'sms' | 'voice'.
+
+---
+
 ### All-in-one platform, not separate products
 **Decision:** Reputation management, outreach, content, SEO, and job board are built as modules within AgentNexLiFy, not as separate products.
 **Why:** Same customer base. One sale, one login, one subscription. Reduces churn because the platform becomes the business's operational backbone. Compound workflows create deep moats — a customer won't leave if their reviews, outreach, content, SEO, and hiring all live here.
