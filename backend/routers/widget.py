@@ -22,6 +22,7 @@ from backend.models.schemas import (
     WidgetLeadResponse,
 )
 from backend.services.activity import log_activity
+from backend.services.email_sender import send_email
 from backend.services.lead_scoring import score_lead_background
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -448,6 +449,12 @@ async def _capture_leads_from_session(
             except Exception:
                 logger.error("SMS_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
 
+            # Email notification to owner
+            try:
+                await _send_new_lead_email_notification(tenant_id, lead_name, combined)
+            except Exception:
+                logger.error("EMAIL_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
+
             # Score the lead
             try:
                 score_lead_background(lead_id)
@@ -501,6 +508,62 @@ async def _send_new_lead_sms_notification(
         logger.info("sms_notification: sent successfully for tenant=%s", tenant_id)
     except Exception:
         logger.error("sms_notification: FAILED to send for tenant=%s", tenant_id, exc_info=True)
+
+
+async def _send_new_lead_email_notification(
+    tenant_id: str, lead_name: str, lead_info: dict[str, str]
+) -> None:
+    """Send email notification to tenant owner when a new lead is captured."""
+    import html as html_mod
+
+    db = get_supabase()
+    result = (
+        db.table("tenants")
+        .select("owner_email, business_name")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        return
+    tenant = result.data[0]
+    owner_email = tenant.get("owner_email")
+    if not owner_email:
+        return
+
+    raw_business_name = tenant.get("business_name", "your business")
+    business_name = html_mod.escape(raw_business_name)
+    safe_name = html_mod.escape(lead_name)
+    safe_email = html_mod.escape(lead_info.get("email", "not provided"))
+    safe_phone = html_mod.escape(lead_info.get("phone", "not provided"))
+
+    body_html = (
+        f"<h2>New lead for {business_name}</h2>"
+        f"<p>A new lead was just captured from your chat widget:</p>"
+        f"<table style='border-collapse:collapse;margin:16px 0;'>"
+        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Name</td>"
+        f"<td style='padding:4px 0;'>{safe_name}</td></tr>"
+        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Email</td>"
+        f"<td style='padding:4px 0;'>{safe_email}</td></tr>"
+        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Phone</td>"
+        f"<td style='padding:4px 0;'>{safe_phone}</td></tr>"
+        f"</table>"
+        f"<p>Log in to your dashboard to view and follow up with this lead.</p>"
+        f"<p>— The AgentNexLiFy Team</p>"
+    )
+
+    try:
+        await send_email(
+            to=owner_email,
+            subject=f"New lead for {raw_business_name}: {lead_name}",
+            body_html=body_html,
+            tenant_id=tenant_id,
+        )
+    except Exception:
+        logger.error(
+            "email_notification: FAILED for tenant=%s lead=%s",
+            tenant_id, lead_name, exc_info=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -785,6 +848,12 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             await _send_new_lead_sms_notification(tenant["id"], fields.get("name", "Unknown"), fields)
         except Exception:
             logger.error("SMS_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
+
+        # Email notification to owner
+        try:
+            await _send_new_lead_email_notification(tenant["id"], fields.get("name", "Unknown"), fields)
+        except Exception:
+            logger.error("EMAIL_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
 
     return WidgetLeadResponse(
         lead_id=lead_id,

@@ -9,7 +9,7 @@ _Last updated: 2026-03-12_
 ## Features — Tier 1: "I need this to pay you money"
 _These are the features a customer needs before they'll upgrade from free._
 
-- [ ] **Email notifications for new leads** — When a lead is captured, email the business owner immediately. They shouldn't have to check the dashboard to know someone reached out. The webhook + email infrastructure exists — just wire lead.created to owner notification.
+- [x] **Email notifications for new leads** — done 2026-03-12. Added `_send_new_lead_email_notification()` in widget.py, wired into both auto-capture and manual submit paths.
 - [ ] **Conversation export** — Let them download or print conversation transcripts. Some will want this for records. Add export button to ConversationsPage.
 - [ ] **Lead import via CSV** — Upload leads in bulk. Every business switching from spreadsheets needs this. (Carried from previous backlog.)
 - [ ] **Email template editor** — Visual editor for automation email steps. Currently templates are raw text. Business owners need a drag-and-drop or rich-text editor. (Carried from previous backlog.)
