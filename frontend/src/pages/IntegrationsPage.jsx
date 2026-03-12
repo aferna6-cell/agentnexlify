@@ -7,6 +7,7 @@ import {
   toggleWebhook,
   deleteWebhook,
   fetchWebhookLogs,
+  testWebhook,
   fetchGoogleCalendarStatus,
   startGoogleCalendarAuth,
   disconnectGoogleCalendar,
@@ -172,6 +173,8 @@ export default function IntegrationsPage({ onNavigate }) {
   const [activeTab, setActiveTab] = useState("services");
   const [form, setForm] = useState({ name: "", url: "", events: [], secret: "" });
   const [toast, setToast] = useState(null);
+  const [testingId, setTestingId] = useState(null);
+  const [testResult, setTestResult] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -273,6 +276,19 @@ export default function IntegrationsPage({ onNavigate }) {
     setForm({ name: "", url: "", events: [], secret: "" });
     setEditId(null);
     setShowForm(false);
+  };
+
+  const handleTest = async (webhookId) => {
+    setTestingId(webhookId);
+    setTestResult(null);
+    try {
+      const res = await testWebhook(user.tenantId, token, webhookId);
+      setTestResult({ webhookId, success: res.success, statusCode: res.status_code, event: res.event });
+    } catch (err) {
+      setTestResult({ webhookId, success: false, statusCode: null, event: null });
+    } finally {
+      setTestingId(null);
+    }
   };
 
   if (loading) return <SkeletonLoader />;
@@ -395,6 +411,15 @@ export default function IntegrationsPage({ onNavigate }) {
                       <StatusBadge active={wh.is_active} failureCount={wh.failure_count} />
                     </div>
                     <div className="wh-item-actions">
+                      <button
+                        className="wh-btn-sm"
+                        onClick={() => handleTest(wh.id)}
+                        disabled={testingId === wh.id}
+                        title="Send test event"
+                        style={{ fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.3px", padding: "0.3rem 0.5rem" }}
+                      >
+                        {testingId === wh.id ? "..." : "Test"}
+                      </button>
                       <button className="wh-btn-sm" onClick={() => handleEdit(wh)} title="Edit">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
@@ -430,6 +455,42 @@ export default function IntegrationsPage({ onNavigate }) {
                       )}
                     </div>
                   </div>
+                  {testResult && testResult.webhookId === wh.id && (
+                    <div style={{
+                      marginTop: "0.5rem",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "0.8rem",
+                      fontWeight: 500,
+                      background: testResult.success ? "var(--green-dim)" : "var(--red-dim)",
+                      color: testResult.success ? "var(--green)" : "var(--red)",
+                      border: `1px solid ${testResult.success ? "var(--green)" : "var(--red)"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}>
+                      <span>
+                        {testResult.success
+                          ? `Delivered${testResult.statusCode ? ` (${testResult.statusCode})` : ""}${testResult.event ? ` - ${testResult.event}` : ""}`
+                          : `Failed${testResult.statusCode ? ` (HTTP ${testResult.statusCode})` : " - could not reach URL"}`
+                        }
+                      </span>
+                      <button
+                        onClick={() => setTestResult(null)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "inherit",
+                          cursor: "pointer",
+                          fontSize: "1rem",
+                          lineHeight: 1,
+                          padding: 0,
+                          opacity: 0.7,
+                        }}
+                        aria-label="Dismiss"
+                      >&times;</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

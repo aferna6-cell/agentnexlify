@@ -659,6 +659,13 @@ class WebhookLogResponse(BaseModel):
     created_at: datetime
 
 
+class WebhookTestResponse(BaseModel):
+    success: bool
+    status_code: int | None = None
+    response_body: str | None = None
+    event: str
+
+
 # --- Team schemas ---
 
 

@@ -402,6 +402,13 @@ export function fetchWebhookEvents(tenantId, token) {
   return request(`/api/v1/webhooks/${tenantId}/events`, { token });
 }
 
+export function testWebhook(tenantId, token, webhookId) {
+  return request(`/api/v1/webhooks/${tenantId}/${webhookId}/test`, {
+    method: "POST",
+    token,
+  });
+}
+
 // --- SMS ---
 
 export function sendSms(token, { lead_id, phone, message }) {

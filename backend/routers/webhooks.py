@@ -1,15 +1,22 @@
 """Webhook management endpoints — CRUD for webhook configurations and delivery logs."""
 
+import hashlib
+import hmac
+import json
 import logging
 import secrets
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.models.schemas import (
     WebhookCreateRequest,
     WebhookListResponse,
     WebhookResponse,
+    WebhookTestResponse,
     WebhookUpdateRequest,
     WebhookLogResponse,
 )
@@ -212,3 +219,146 @@ async def list_events(tenant_id: str, claims: dict = Depends(_get_current_tenant
     """Return all supported webhook events."""
     _verify_tenant(claims, tenant_id)
     return {"events": sorted(SUPPORTED_EVENTS)}
+
+
+def _build_sample_payload(event: str) -> dict:
+    """Generate realistic sample data for a given webhook event type."""
+    now = datetime.now(timezone.utc)
+    tomorrow = now + timedelta(days=1)
+    tomorrow_end = tomorrow + timedelta(hours=1)
+
+    samples = {
+        "lead.created": {
+            "lead_id": "test-uuid",
+            "name": "Test Lead",
+            "email": "test@example.com",
+            "phone": "+1 555-0100",
+            "source": "widget",
+        },
+        "lead.updated": {
+            "lead_id": "test-uuid",
+            "updated_fields": ["status"],
+            "source": "widget",
+        },
+        "appointment.booked": {
+            "appointment_id": "test-uuid",
+            "customer_name": "Test Customer",
+            "customer_email": "test@example.com",
+            "start_time": tomorrow.isoformat(),
+            "end_time": tomorrow_end.isoformat(),
+        },
+        "appointment.cancelled": {
+            "appointment_id": "test-uuid",
+        },
+        "conversation.started": {
+            "session_id": "test-session",
+            "lead_name": "Test Visitor",
+        },
+        "conversation.message": {
+            "session_id": "test-session",
+            "role": "user",
+            "content": "Hello, I need help!",
+        },
+        "automation.email_sent": {
+            "lead_id": "test-uuid",
+            "sequence_name": "Test Sequence",
+            "step": 1,
+        },
+    }
+    return samples.get(event, {"message": "Test event", "event_type": event})
+
+
+@router.post(
+    "/{tenant_id}/{webhook_id}/test",
+    response_model=WebhookTestResponse,
+)
+@limiter.limit("10/minute")
+async def test_webhook(
+    request: Request,
+    tenant_id: str,
+    webhook_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Send a sample event to a webhook URL to verify it is working."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+
+    # Fetch webhook and verify ownership
+    try:
+        result = (
+            db.table("webhooks")
+            .select("id, url, events, secret")
+            .eq("id", webhook_id)
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch webhook %s for tenant %s", webhook_id, tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch webhook")
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Webhook not found")
+
+    webhook = result.data[0]
+
+    # Pick event type: first from webhook's events list, or default
+    events_list = webhook.get("events") or []
+    event = events_list[0] if events_list else "lead.created"
+
+    # Build the envelope
+    sample_data = _build_sample_payload(event)
+    payload = {
+        "event": event,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "data": sample_data,
+        "test": True,
+    }
+
+    payload_bytes = json.dumps(payload, default=str).encode()
+
+    # Sign with HMAC-SHA256 if webhook has a secret
+    headers = {"Content-Type": "application/json"}
+    secret = webhook.get("secret")
+    if secret:
+        signature = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
+        headers["X-Webhook-Signature"] = signature
+
+    # Deliver
+    success = False
+    status_code = None
+    response_body = None
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(webhook["url"], content=payload_bytes, headers=headers)
+            status_code = resp.status_code
+            response_body = resp.text[:2000]
+            success = 200 <= resp.status_code < 300
+    except httpx.TimeoutException:
+        response_body = "Timeout after 10 seconds"
+        logger.warning("Webhook test timed out for webhook %s", webhook_id)
+    except Exception as exc:
+        response_body = str(exc)[:2000]
+        logger.warning("Webhook test delivery failed for webhook %s: %s", webhook_id, exc)
+
+    # Log result in webhook_logs
+    try:
+        db.table("webhook_logs").insert({
+            "webhook_id": webhook_id,
+            "event": event,
+            "payload": payload,
+            "response_status": status_code,
+            "response_body": response_body,
+            "success": success,
+        }).execute()
+    except Exception:
+        logger.exception("Failed to log webhook test result for webhook %s", webhook_id)
+
+    return WebhookTestResponse(
+        success=success,
+        status_code=status_code,
+        response_body=response_body,
+        event=event,
+    )
