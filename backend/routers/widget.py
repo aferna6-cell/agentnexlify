@@ -10,7 +10,7 @@ import re
 from typing import Any
 
 import anthropic
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Request
 
 from backend.config import settings
 from backend.limiter import limiter
@@ -997,9 +997,30 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     )
 
 
+def _get_jwt_claims(authorization: str = Header(...)) -> dict:
+    """Extract and verify JWT claims. Returns claims dict."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+    from jose import JWTError, jwt as jose_jwt
+    try:
+        return jose_jwt.decode(
+            authorization.removeprefix("Bearer ").strip(),
+            settings.api_secret_key,
+            algorithms=["HS256"],
+        )
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
 @router.put("/config/{tenant_id}/online-status")
-async def toggle_online_status(tenant_id: str, body: OnlineStatusRequest):
-    """Toggle widget online/offline status."""
+async def toggle_online_status(
+    tenant_id: str,
+    body: OnlineStatusRequest,
+    claims: dict = Depends(_get_jwt_claims),
+):
+    """Toggle widget online/offline status. Dashboard-only (JWT required)."""
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     try:
         db = get_supabase()
         result = (

@@ -259,7 +259,7 @@ class PortalResponse(BaseModel):
 class WidgetChatRequest(BaseModel):
     api_key: str
     session_id: str
-    message: str
+    message: str = Field(..., max_length=10000)
     visitor_info: dict[str, Any] | None = None
 
 
