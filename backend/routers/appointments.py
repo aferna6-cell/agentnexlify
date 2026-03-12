@@ -217,7 +217,9 @@ async def get_appointments(
     """List appointments with optional filters."""
     _verify_tenant(claims, tenant_id)
     appointments = list_appointments(tenant_id, start_date, end_date, status)
-    return AppointmentListResponse(appointments=appointments)
+    config = get_business_hours(tenant_id)
+    tz = config["timezone"] if config else "America/New_York"
+    return AppointmentListResponse(appointments=appointments, timezone=tz)
 
 
 @router.patch("/{tenant_id}/{appointment_id}")

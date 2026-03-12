@@ -3,24 +3,47 @@
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{"type": "command", "command": "bash scripts/claude-hooks/pre-edit-check.sh"}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/pre-edit-check.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{"type": "command", "command": "bash scripts/claude-hooks/post-edit-check.sh"}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/post-edit-check.sh"
+          }
+        ]
       },
       {
         "matcher": "Agent|Task",
-        "hooks": [{"type": "command", "command": "bash scripts/claude-hooks/notify-complete.sh"}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/notify-complete.sh"
+          }
+        ]
       }
     ],
     "PreCompact": [
       {
         "matcher": "",
-        "hooks": [{"type": "command", "command": "bash scripts/claude-hooks/pre-compact-save.sh"}]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/pre-compact-save.sh"
+          }
+        ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
   }
 }

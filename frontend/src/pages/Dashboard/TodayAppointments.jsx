@@ -1,24 +1,27 @@
 import { useState, useEffect } from "react";
 import { fetchAppointments } from "../../utils/api";
 
-function formatTime(isoStr) {
+function formatTime(isoStr, tz) {
   try {
-    return new Date(isoStr).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const opts = { hour: "numeric", minute: "2-digit" };
+    if (tz) opts.timeZone = tz;
+    return new Date(isoStr).toLocaleTimeString([], opts);
   } catch {
-    return "";
+    return new Date(isoStr).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
 }
 
 export default function TodayAppointments({ tenantId, token, onNavigate }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bizTz, setBizTz] = useState(null);
 
   useEffect(() => {
     if (!tenantId || !token) return;
     const today = new Date().toISOString().split("T")[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
     fetchAppointments(tenantId, token, { startDate: today, endDate: tomorrow, status: "confirmed" })
-      .then(res => setAppointments(res.appointments || []))
+      .then(res => { setAppointments(res.appointments || []); if (res.timezone) setBizTz(res.timezone); })
       .catch(() => setAppointments([]))
       .finally(() => setLoading(false));
   }, [tenantId, token]);
@@ -39,7 +42,7 @@ export default function TodayAppointments({ tenantId, token, onNavigate }) {
         <div className="today-appts-list">
           {upcoming.map(a => (
             <div key={a.id} className="today-appt-item">
-              <div className="today-appt-time">{formatTime(a.start_time)}</div>
+              <div className="today-appt-time">{formatTime(a.start_time, bizTz)}</div>
               <div className="today-appt-info">
                 <div className="today-appt-name">{a.customer_name}</div>
                 <div className="today-appt-email">{a.customer_email}</div>

@@ -52,6 +52,7 @@ export default function Calendar({ onNavigate }) {
   const [editStatus, setEditStatus] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [error, setError] = useState(null);
+  const [bizTz, setBizTz] = useState(null);
 
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -64,6 +65,7 @@ export default function Calendar({ onNavigate }) {
       const endDate = view === "week" ? formatDate(addDays(weekStart, 7)) : formatDate(addDays(currentDate, 1));
       const res = await fetchAppointments(user.tenantId, token, { startDate, endDate });
       setAppointments(res.appointments || []);
+      if (res.timezone) setBizTz(res.timezone);
     } catch {
       setAppointments([]);
     } finally {
@@ -193,7 +195,7 @@ export default function Calendar({ onNavigate }) {
                         ...pos, background: colors.bg, borderLeft: `3px solid ${colors.border}`, color: colors.text,
                       }} onClick={() => openEdit(a)} title={`${a.customer_name} - ${a.status}`}>
                         <div className="calendar-appt-name">{a.customer_name}</div>
-                        <div className="calendar-appt-time">{formatTime(a.start_time)}</div>
+                        <div className="calendar-appt-time">{formatTime(a.start_time, bizTz)}</div>
                       </div>
                     );
                   })}
@@ -223,7 +225,7 @@ export default function Calendar({ onNavigate }) {
                         }} onClick={() => openEdit(a)}>
                           <div style={{ color: colors.text, fontWeight: 600 }}>{a.customer_name}</div>
                           <div style={{ color: "var(--text-secondary)", fontSize: "12px" }}>
-                            {formatTime(a.start_time)} - {formatTime(a.end_time)}
+                            {formatTime(a.start_time, bizTz)} - {formatTime(a.end_time, bizTz)}
                           </div>
                           {a.customer_email && <div style={{ color: "var(--text-muted)", fontSize: "11px" }}>{a.customer_email}</div>}
                         </div>
@@ -247,7 +249,7 @@ export default function Calendar({ onNavigate }) {
             </div>
             <div className="modal-field">
               <label>Time</label>
-              <div>{formatTime(selectedAppt.start_time)} - {formatTime(selectedAppt.end_time)}</div>
+              <div>{formatTime(selectedAppt.start_time, bizTz)} - {formatTime(selectedAppt.end_time, bizTz)}</div>
             </div>
             <div className="modal-field">
               <label>Status</label>

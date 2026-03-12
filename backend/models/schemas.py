@@ -483,6 +483,7 @@ class AppointmentOut(BaseModel):
 
 class AppointmentListResponse(BaseModel):
     appointments: list[AppointmentOut]
+    timezone: str = "America/New_York"
 
 
 class AppointmentUpdateRequest(BaseModel):

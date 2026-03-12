@@ -14,6 +14,8 @@ node_modules/
 .claude/agent-comms/*.json
 !.claude/agent-comms/.gitkeep
 !.claude/agent-comms/README.md
+!.claude/agent-comms/backlog.md
+!.claude/agent-comms/loop-prompt.md
 
 # Auto-generated execution logs from scheduled routines
 docs/daily-logs/auto-morning-*.log

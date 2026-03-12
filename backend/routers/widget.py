@@ -88,7 +88,13 @@ STANDALONE_NAME_RE = re.compile(
     r"^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){0,2})\.?$"
 )
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}(?![a-zA-Z])")
-PHONE_RE = re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
+PHONE_RE = re.compile(
+    r"(?:\+\d{1,3}[-.\s]?)?"       # optional country code: +1, +44, +91
+    r"\(?\d{2,4}\)?"               # area/city code (2-4 digits, optional parens)
+    r"[-.\s]?\d{2,4}"              # number group 2
+    r"[-.\s]?\d{2,4}"              # number group 3
+    r"(?:[-.\s]?\d{1,4})?"         # optional group 4 (longer intl numbers)
+)
 
 
 # ---------------------------------------------------------------------------
@@ -280,7 +286,10 @@ def _extract_lead_info(text: str) -> dict[str, str]:
             info["email"] = email
     phone_match = PHONE_RE.search(text)
     if phone_match:
-        info["phone"] = phone_match.group(0).strip()
+        raw = phone_match.group(0).strip()
+        digits = re.sub(r"\D", "", raw)
+        if 7 <= len(digits) <= 15:
+            info["phone"] = raw
     return info
 
 
