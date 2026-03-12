@@ -1,6 +1,5 @@
 """Email templates API — reusable template library for automation sequences."""
 
-import html
 import logging
 from datetime import datetime, timezone
 

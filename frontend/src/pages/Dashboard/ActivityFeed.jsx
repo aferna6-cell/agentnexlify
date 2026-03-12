@@ -1,5 +1,3 @@
-import React from "react";
-
 function formatTimeAgo(dateStr) {
   if (!dateStr) return "";
   const diff = Date.now() - new Date(dateStr).getTime();

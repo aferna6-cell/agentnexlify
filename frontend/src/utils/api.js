@@ -59,10 +59,6 @@ export async function deleteLead(tenantId, token, leadId) {
   }
 }
 
-export function fetchLeadSummary(tenantId, token) {
-  return request(`/api/v1/leads/${tenantId}/summary`, { token });
-}
-
 export function fetchAutomations(tenantId, token) {
   return request(`/api/v1/automations/${tenantId}`, { token });
 }
@@ -128,10 +124,6 @@ export async function deleteFaqEntry(tenantId, token, faqId) {
 
 export function fetchLeadScore(tenantId, leadId, token) {
   return request(`/api/v1/leads/${tenantId}/${leadId}/score`, { token });
-}
-
-export function rescoreAllLeads(tenantId, token) {
-  return request(`/api/v1/leads/${tenantId}/score-all`, { method: "POST", token });
 }
 
 export async function importLeadsCSV(tenantId, token, file) {
@@ -362,18 +354,6 @@ export function deleteEmailTemplate(tenantId, token, templateId) {
   return request(`/api/v1/email-templates/${tenantId}/${templateId}`, { method: "DELETE", token });
 }
 
-export function previewEmailTemplate(tenantId, token, data) {
-  return request(`/api/v1/email-templates/${tenantId}/preview`, { method: "POST", token, body: data });
-}
-
-export function updateLeadStage(tenantId, token, leadId, stage) {
-  return request(`/api/v1/leads/${tenantId}/${leadId}/stage`, {
-    method: "PATCH",
-    token,
-    body: { stage },
-  });
-}
-
 // --- Conversations ---
 
 export function fetchConversations(tenantId, token) {
@@ -498,10 +478,6 @@ export function deleteWebhook(tenantId, token, webhookId) {
 
 export function fetchWebhookLogs(tenantId, token, limit = 20) {
   return request(`/api/v1/webhooks/${tenantId}/logs/recent?limit=${limit}`, { token });
-}
-
-export function fetchWebhookEvents(tenantId, token) {
-  return request(`/api/v1/webhooks/${tenantId}/events`, { token });
 }
 
 export function testWebhook(tenantId, token, webhookId) {
