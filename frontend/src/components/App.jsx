@@ -23,6 +23,7 @@ const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
 const TeamPage = lazy(() => import("../pages/TeamPage"));
 const BusinessPageSettings = lazy(() => import("../pages/BusinessPageSettings"));
+const ReviewsPage = lazy(() => import("../pages/ReviewsPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -41,6 +42,7 @@ const pages = {
   integrations: IntegrationsPage,
   settings: SettingsPage,
   business_page: BusinessPageSettings,
+  reviews: ReviewsPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {
