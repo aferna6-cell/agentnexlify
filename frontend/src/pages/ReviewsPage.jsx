@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchReviews, createReview, updateReview, deleteReview, generateAIDraft } from "../utils/api";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 
 const PLATFORMS = ["google", "yelp", "facebook"];
 
@@ -41,6 +42,7 @@ export default function ReviewsPage() {
   const [draftTone, setDraftTone] = useState("professional");
   const [error, setError] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [newReview, setNewReview] = useState({ platform: "google", author_name: "", rating: 5, review_text: "" });
 
   const load = useCallback(async () => {
@@ -62,6 +64,39 @@ export default function ReviewsPage() {
   }, [user?.tenantId, token, platformFilter, ratingFilter, respondedFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Analytics: rating distribution bar chart data
+  const ratingDistribution = useMemo(() => {
+    const counts = [0, 0, 0, 0, 0];
+    for (const r of reviews) counts[r.rating - 1]++;
+    return [1, 2, 3, 4, 5].map((star) => ({
+      rating: `${star}`,
+      count: counts[star - 1],
+      fill: star >= 4 ? "#4ade80" : star === 3 ? "#facc15" : "#f87171",
+    }));
+  }, [reviews]);
+
+  // Analytics: monthly average rating trend
+  const monthlyTrend = useMemo(() => {
+    const buckets = {};
+    for (const r of reviews) {
+      const d = r.review_date ? new Date(r.review_date) : null;
+      if (!d) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!buckets[key]) buckets[key] = { sum: 0, count: 0, responded: 0 };
+      buckets[key].sum += r.rating;
+      buckets[key].count++;
+      if (r.responded) buckets[key].responded++;
+    }
+    return Object.entries(buckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, data]) => ({
+        month,
+        avg: Math.round((data.sum / data.count) * 10) / 10,
+        responseRate: Math.round((data.responded / data.count) * 100),
+      }));
+  }, [reviews]);
 
   const openReview = (review) => {
     setSelectedReview(review);
@@ -146,6 +181,56 @@ export default function ReviewsPage() {
           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Need Response</div>
         </div>
       </div>
+
+      {/* Analytics toggle + charts */}
+      {reviews.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <button
+            className={showAnalytics ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            style={{ marginBottom: showAnalytics ? 12 : 0 }}
+          >
+            {showAnalytics ? "Hide Analytics" : "Show Analytics"}
+          </button>
+          {showAnalytics && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {/* Rating distribution */}
+              <div style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+                <h4 style={{ margin: "0 0 12px", color: "var(--text-primary)", fontSize: "0.9rem" }}>Rating Distribution</h4>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={ratingDistribution} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="rating" tick={{ fill: "var(--text-muted)", fontSize: 12 }} tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fill: "var(--text-muted)", fontSize: 12 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 6, color: "var(--text-primary)" }} />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Monthly trend */}
+              <div style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+                <h4 style={{ margin: "0 0 12px", color: "var(--text-primary)", fontSize: "0.9rem" }}>Monthly Avg Rating & Response Rate</h4>
+                {monthlyTrend.length > 1 ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={monthlyTrend} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                      <XAxis dataKey="month" tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} />
+                      <YAxis yAxisId="rating" domain={[0, 5]} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 6, color: "var(--text-primary)" }} />
+                      <Line yAxisId="rating" type="monotone" dataKey="avg" stroke="#4ade80" strokeWidth={2} name="Avg Rating" dot={{ r: 3 }} />
+                      <Line yAxisId="pct" type="monotone" dataKey="responseRate" stroke="#818cf8" strokeWidth={2} name="Response %" dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                    Need reviews from 2+ months to show trends
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Toolbar */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>

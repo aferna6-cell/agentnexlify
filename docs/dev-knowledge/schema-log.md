@@ -67,6 +67,12 @@ Adds `recurrence_rule` (TEXT, nullable — 'weekly'/'biweekly'/'monthly'), `recu
 ### 018 — Conversation Tags
 Adds `tags` (TEXT[] DEFAULT '{}') to `conversations` table. GIN index on tags. Allows business owners to label conversations (e.g., "sales", "support", "complaint"). Tags managed via PUT endpoint, displayed in ConversationsPage sidebar with filter dropdown.
 
+### 019 — Reviews Table (Reputation Manager)
+Creates `reviews` table: id (UUID PK), tenant_id (FK→tenants), platform (TEXT, default 'google'), author_name (TEXT), rating (INT, CHECK 1-5), review_text (TEXT), review_date (TIMESTAMPTZ), ai_draft_response (TEXT), owner_response (TEXT), responded (BOOLEAN, default false), external_review_id (TEXT for dedup), created_at, updated_at. Indexes on tenant_id, (tenant_id, platform), (tenant_id, rating). RLS enabled.
+
+### 020 — Review Request Config
+Adds `review_request_config` (JSONB, default `{"enabled": false, "delay_hours": 24, "method": "email"}`) to `tenants`. Adds `review_request_sent_at` (TIMESTAMPTZ) to `appointments` for tracking which completed appointments have had review requests sent.
+
 ## Known Schema Gotchas
 
 | Issue | Detail |

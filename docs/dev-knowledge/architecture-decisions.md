@@ -133,4 +133,18 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Reputation Manager: manual-first, API-later
+**Date:** 2026-03-12
+**Decision:** Reviews are initially added manually (dashboard form) or via future API integrations. The reviews table has `external_review_id` and `platform` fields to support dedup when API integration (Google Business Profile OAuth) is added later. AI draft responses use Claude with business context (name, type) and configurable tone.
+**Why:** Google Business Profile OAuth requires app verification which takes weeks. Manual entry provides immediate value — business owners can manage their reviews now while we work on the API integration. The schema is designed for both paths.
+
+---
+
+### Auto review requests: background scan, not event-driven
+**Date:** 2026-03-12
+**Decision:** Review requests after appointment completion use the same periodic background scan pattern as appointment reminders. `send_pending_review_requests()` runs in the 60s automation loop, checks completed appointments where `review_request_sent_at` is null, respects the configured delay, and sends email/SMS with the tenant's google_review_link.
+**Why:** Event-driven scheduling (e.g., scheduling a delayed task when status changes to "completed") adds complexity and requires a task queue or scheduler. The periodic scan pattern is already proven for appointment reminders, handles retries naturally, and works across multiple Uvicorn workers without coordination.
+
+---
+
 _Add new decisions when significant architectural choices are made._

@@ -645,3 +645,134 @@ async def send_appointment_reminders() -> int:
                 logger.exception("Failed to mark reminder sent for appointment %s", appt["id"])
 
     return sent
+
+
+async def send_pending_review_requests() -> int:
+    """Check for completed appointments that need review requests sent.
+
+    Queries appointments with status='completed' where review_request_sent_at
+    is null and the tenant has review requests enabled. Respects the configured
+    delay (hours since completion). Sends via email, SMS, or both.
+
+    Returns count of review requests sent.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    sent = 0
+
+    try:
+        # Get completed appointments that haven't had review requests sent
+        appts = (
+            db.table("appointments")
+            .select("id, tenant_id, customer_name, customer_email, customer_phone, updated_at, lead_id")
+            .eq("status", "completed")
+            .is_("review_request_sent_at", "null")
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_pending_review_requests: failed to query appointments")
+        return 0
+
+    # Group by tenant to avoid repeated tenant lookups
+    tenant_cache: dict[str, dict] = {}
+
+    for appt in appts.data or []:
+        tenant_id = appt["tenant_id"]
+
+        # Load tenant config (cached per tenant)
+        if tenant_id not in tenant_cache:
+            try:
+                t = (
+                    db.table("tenants")
+                    .select("business_name, google_review_link, review_request_config, plan")
+                    .eq("id", tenant_id)
+                    .limit(1)
+                    .execute()
+                )
+                tenant_cache[tenant_id] = t.data[0] if t.data else None
+            except Exception:
+                logger.exception("send_pending_review_requests: failed to load tenant %s", tenant_id)
+                tenant_cache[tenant_id] = None
+
+        tenant = tenant_cache.get(tenant_id)
+        if not tenant:
+            continue
+
+        config = tenant.get("review_request_config") or {}
+        if not config.get("enabled"):
+            continue
+
+        review_link = tenant.get("google_review_link") or ""
+        if not review_link:
+            continue
+
+        # Check delay
+        delay_hours = config.get("delay_hours", 24)
+        try:
+            completed_at = datetime.fromisoformat(
+                appt["updated_at"].replace("Z", "+00:00")
+            )
+        except Exception:
+            continue
+
+        if (now - completed_at).total_seconds() < delay_hours * 3600:
+            continue
+
+        business_name = tenant.get("business_name") or "Our Team"
+        customer_name = appt.get("customer_name") or "there"
+        method = config.get("method", "email")
+
+        # Send email review request
+        if method in ("email", "both") and appt.get("customer_email"):
+            subject = f"How was your experience with {business_name}?"
+            body = (
+                f"<h2>Hi {customer_name},</h2>"
+                f"<p>Thank you for your recent visit with <strong>{business_name}</strong>! "
+                f"We hope everything went well.</p>"
+                f"<p>We'd really appreciate it if you could take a moment to share your experience:</p>"
+                f'<p style="text-align:center;margin:20px 0;">'
+                f'<a href="{review_link}" style="background:#4f46e5;color:#fff;padding:12px 24px;'
+                f'border-radius:6px;text-decoration:none;font-weight:600;">Leave a Review</a></p>'
+                f"<p>Your feedback helps us improve and helps others find us. Thank you!</p>"
+                f"<p>Best,<br>The {business_name} Team</p>"
+            )
+            try:
+                result = await send_email(
+                    to=appt["customer_email"],
+                    subject=subject,
+                    body_html=body,
+                    tenant_id=tenant_id,
+                )
+                if result.get("success"):
+                    sent += 1
+                    logger.info("Sent review request email for appointment %s", appt["id"])
+            except Exception:
+                logger.exception("Failed to send review request email for appointment %s", appt["id"])
+
+        # Send SMS review request
+        if method in ("sms", "both") and appt.get("customer_phone"):
+            sms_body = (
+                f"Hi {customer_name}, thanks for visiting {business_name}! "
+                f"We'd love your feedback. Leave a review here: {review_link}"
+            )
+            try:
+                plan = tenant.get("plan", "free")
+                if check_sms_rate_limit(tenant_id, plan):
+                    sms_ok = await send_sms(to=appt["customer_phone"], body=sms_body)
+                    if sms_ok:
+                        increment_sms_count(tenant_id)
+                        sent += 1
+                        logger.info("Sent review request SMS for appointment %s", appt["id"])
+            except Exception:
+                logger.exception("Failed to send review request SMS for appointment %s", appt["id"])
+
+        # Mark as sent regardless of success to avoid retry loops
+        try:
+            db.table("appointments").update({
+                "review_request_sent_at": now.isoformat(),
+            }).eq("id", appt["id"]).execute()
+        except Exception:
+            logger.exception("Failed to mark review request sent for appointment %s", appt["id"])
+
+    return sent

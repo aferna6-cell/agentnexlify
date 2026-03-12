@@ -16,6 +16,7 @@ export default function SettingsPage({ onNavigate }) {
     notification_phone: "",
     sms_notifications_enabled: false,
     google_review_link: "",
+    review_request_config: { enabled: false, delay_hours: 24, method: "email" },
   });
   const [email, setEmail] = useState("");
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
@@ -33,6 +34,7 @@ export default function SettingsPage({ onNavigate }) {
         notification_phone: tenant.notification_phone || "",
         sms_notifications_enabled: tenant.sms_notifications_enabled || false,
         google_review_link: tenant.google_review_link || "",
+        review_request_config: tenant.review_request_config || { enabled: false, delay_hours: 24, method: "email" },
       });
       setEmail(tenant.owner_email || "");
       if (tenant.plan) setLivePlan(tenant.plan);
@@ -164,6 +166,82 @@ export default function SettingsPage({ onNavigate }) {
               Find this in Google Business Profile under "Ask for reviews"
             </span>
           </div>
+          <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
+            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+          </button>
+        </div>
+
+        {/* Auto Review Requests */}
+        <div className="settings-card">
+          <h3>Auto Review Requests</h3>
+          <p className="settings-card-desc">
+            Automatically ask customers for a review after their appointment is completed.
+            {!form.google_review_link && (
+              <span style={{ color: "var(--yellow, #facc15)", display: "block", marginTop: 4 }}>
+                Set your Google Review Link above first.
+              </span>
+            )}
+          </p>
+          <div className="settings-field" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input
+              type="checkbox"
+              checked={form.review_request_config.enabled}
+              onChange={(e) => {
+                setForm((f) => ({
+                  ...f,
+                  review_request_config: { ...f.review_request_config, enabled: e.target.checked },
+                }));
+                setSaved(false);
+              }}
+              id="review-req-toggle"
+              style={{ width: "auto" }}
+              disabled={!form.google_review_link}
+            />
+            <label htmlFor="review-req-toggle" style={{ margin: 0, cursor: "pointer" }}>
+              Enable automatic review requests
+            </label>
+          </div>
+          {form.review_request_config.enabled && (
+            <>
+              <div className="settings-field">
+                <label>Send After</label>
+                <select
+                  value={form.review_request_config.delay_hours}
+                  onChange={(e) => {
+                    setForm((f) => ({
+                      ...f,
+                      review_request_config: { ...f.review_request_config, delay_hours: parseInt(e.target.value) },
+                    }));
+                    setSaved(false);
+                  }}
+                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                >
+                  <option value={0}>Immediately</option>
+                  <option value={1}>1 hour</option>
+                  <option value={24}>24 hours</option>
+                  <option value={48}>48 hours</option>
+                </select>
+              </div>
+              <div className="settings-field">
+                <label>Send Via</label>
+                <select
+                  value={form.review_request_config.method}
+                  onChange={(e) => {
+                    setForm((f) => ({
+                      ...f,
+                      review_request_config: { ...f.review_request_config, method: e.target.value },
+                    }));
+                    setSaved(false);
+                  }}
+                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                >
+                  <option value="email">Email</option>
+                  <option value="sms">SMS</option>
+                  <option value="both">Email + SMS</option>
+                </select>
+              </div>
+            </>
+          )}
           <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
             {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
           </button>

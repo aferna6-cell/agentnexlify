@@ -38,7 +38,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 - `backend/` — FastAPI service (`main.py`, `routers/` with 20 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–017)
+- `migrations/` — SQL migration files (001–020)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
@@ -73,6 +73,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | webhooks | Outbound webhook defs | tenant_id, name, url, events, is_active |
 | webhook_logs | Webhook audit trail | webhook_id, event, payload, success |
 | email_templates | Reusable email template library | tenant_id, name, category, subject_template, body_template, is_shared |
+| reviews | Reputation manager | tenant_id, platform, author_name, rating, review_text, ai_draft_response, owner_response, responded |
 | support_messages | Contact form submissions | name, email, message |
 
 > Always verify against live schema — this table may be outdated.
@@ -153,7 +154,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 017) → test in Supabase SQL editor → run on prod → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 020) → test in Supabase SQL editor → run on prod → update Pydantic models
 
 ## Knowledge Base
 

@@ -47,7 +47,7 @@ _startup_time: float = 0.0
 
 async def _automation_loop():
     """Background loop that processes pending automation steps every 60 seconds."""
-    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders
+    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders, send_pending_review_requests
     while True:
         try:
             processed = await process_pending_steps()
@@ -69,6 +69,13 @@ async def _automation_loop():
                 logger.info("Automation loop: sent %d appointment reminders", reminders)
         except Exception:
             logger.exception("Automation loop: send_appointment_reminders failed")
+
+        try:
+            review_reqs = await send_pending_review_requests()
+            if review_reqs:
+                logger.info("Automation loop: sent %d review requests", review_reqs)
+        except Exception:
+            logger.exception("Automation loop: send_pending_review_requests failed")
 
         await asyncio.sleep(60)
 

@@ -47,11 +47,11 @@ _Operations-tier features that justify the premium plan._
 ## Features — Module: Reputation Manager
 _Aggregate reviews, AI-draft responses, auto-request reviews. Same dashboard, new tab._
 
-- [ ] **Review aggregation backend** — Build a service that connects to Google Business Profile API and pulls reviews for the tenant's business. Store reviews in a new `reviews` table (id, tenant_id, platform, author, rating, text, ai_response, responded, created_at). Create the migration file.
-- [ ] **Reviews dashboard page** — New "Reviews" tab in the dashboard. Shows all reviews across platforms in one feed. Filter by platform, rating, responded/unresponded. Show average rating prominently.
-- [ ] **AI review response drafting** — For each review, an "AI Draft Response" button that generates a professional, personalized response using Claude API. The tone should match the business (friendly for restaurants, professional for law firms). Owner can edit before posting.
-- [ ] **Auto review request after appointment** — When an appointment is marked complete, automatically send an SMS or email to the customer asking them to leave a review. Include a direct link to Google/Yelp. Configurable: on/off, delay (immediately, 1 hour, 24 hours), which platform to link to.
-- [ ] **Review analytics** — Average rating over time, response rate, sentiment trends. Simple charts on the Reviews page.
+- [x] **Review aggregation backend** — done 2026-03-12. Migration 019 creates reviews table. CRUD endpoints in backend/routers/reviews.py with filters, dedup by external_review_id.
+- [x] **Reviews dashboard page** — done 2026-03-12. ReviewsPage.jsx with stats cards (avg rating, total, responded, unresponded), platform/rating/status filters, review list with detail modal.
+- [x] **AI review response drafting** — done 2026-03-12. POST /{tenant_id}/{review_id}/ai-draft endpoint. Claude generates tone-matched responses (professional/friendly/casual). Owner edits in modal before saving.
+- [x] **Auto review request after appointment** — done 2026-03-12. Migration 020 adds review_request_config (JSONB) to tenants + review_request_sent_at to appointments. Background scan in automation loop sends email/SMS after configurable delay. Settings UI on SettingsPage.
+- [x] **Review analytics** — done 2026-03-12. Rating distribution bar chart + monthly avg rating/response rate trend line chart using Recharts. Toggleable analytics panel on ReviewsPage.
 - [ ] **Google Business Profile OAuth** — Let the tenant connect their GBP account so we can pull reviews and eventually post responses directly. Store OAuth tokens securely.
 
 ## Features — Module: Smart Outreach
