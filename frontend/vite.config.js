@@ -12,4 +12,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate heavy vendor libs into their own cacheable chunks
+          recharts: ["recharts"],
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+        },
+      },
+    },
+  },
 });

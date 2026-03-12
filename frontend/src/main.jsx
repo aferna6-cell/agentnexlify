@@ -1,29 +1,45 @@
-import React, { useEffect } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./context/AuthContext";
 import App from "./components/App";
-import DentalChatbot from "./pages/DentalChatbot";
-import AutoShopChatbot from "./pages/AutoShopChatbot";
-import SalonChatbot from "./pages/SalonChatbot";
-import MedicalOfficeChatbot from "./pages/MedicalOfficeChatbot";
-import RestaurantChatbot from "./pages/RestaurantChatbot";
 import Home from "./pages/Home";
-import FreeWidget from "./pages/FreeWidget";
 import SignupPage from "./pages/SignupPage";
-import TermsOfService from "./pages/TermsOfService";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Contact from "./pages/Contact";
-import IntercomAlternative from "./pages/IntercomAlternative";
-import LiveChatAlternative from "./pages/LiveChatAlternative";
-import TidioAlternative from "./pages/TidioAlternative";
-import AcceptInvitePage from "./pages/AcceptInvitePage";
-import BusinessPage from "./pages/BusinessPage";
 import "./index.css";
+
+// Lazy-load secondary public pages — not needed on initial landing
+const FreeWidget = lazy(() => import("./pages/FreeWidget"));
+const DentalChatbot = lazy(() => import("./pages/DentalChatbot"));
+const AutoShopChatbot = lazy(() => import("./pages/AutoShopChatbot"));
+const SalonChatbot = lazy(() => import("./pages/SalonChatbot"));
+const MedicalOfficeChatbot = lazy(() => import("./pages/MedicalOfficeChatbot"));
+const RestaurantChatbot = lazy(() => import("./pages/RestaurantChatbot"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Contact = lazy(() => import("./pages/Contact"));
+const IntercomAlternative = lazy(() => import("./pages/IntercomAlternative"));
+const LiveChatAlternative = lazy(() => import("./pages/LiveChatAlternative"));
+const TidioAlternative = lazy(() => import("./pages/TidioAlternative"));
+const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
+const BusinessPage = lazy(() => import("./pages/BusinessPage"));
 
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
+
+/* Minimal loading spinner for lazy-loaded public pages */
+function PageLoader() {
+  return (
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+      <div style={{
+        width: 36, height: 36, border: "3px solid rgba(255,255,255,0.1)",
+        borderTopColor: "#6366f1", borderRadius: "50%",
+        animation: "spin 0.8s linear infinite",
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 /* Renders Home and scrolls to a given anchor after mount */
 function HomeSection({ anchor }) {
@@ -68,38 +84,40 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <HelmetProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/free-widget" element={<FreeWidget />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/contact" element={<Contact />} />
-          {/* Vertical chatbot pages (canonical URLs) */}
-          <Route path="/dental-chatbot" element={<DentalChatbot />} />
-          <Route path="/auto-shop-chatbot" element={<AutoShopChatbot />} />
-          <Route path="/salon-booking-chatbot" element={<SalonChatbot />} />
-          <Route path="/medical-office-chatbot" element={<MedicalOfficeChatbot />} />
-          <Route path="/restaurant-chatbot" element={<RestaurantChatbot />} />
-          {/* Comparison pages (canonical URLs) */}
-          <Route path="/intercom-alternative" element={<IntercomAlternative />} />
-          <Route path="/livechat-alternative" element={<LiveChatAlternative />} />
-          <Route path="/tidio-alternative" element={<TidioAlternative />} />
-          {/* Marketing paths — scroll to Home anchor sections */}
-          <Route path="/pricing" element={<HomeSection anchor="pricing" />} />
-          <Route path="/features" element={<HomeSection anchor="features" />} />
-          <Route path="/about" element={<HomeSection anchor="about-us" />} />
-          <Route path="/demo" element={<RedirectExternal url={CALENDLY_URL} />} />
-          {/* Alias routes for /industries/:vertical and /compare/:competitor */}
-          <Route path="/industries/:vertical" element={<IndustryRoute />} />
-          <Route path="/compare/:competitor" element={<CompareRoute />} />
-          {/* Team invite accept page (public, no auth) */}
-          <Route path="/invite/:token" element={<AcceptInvitePage />} />
-          {/* Public business pages — no auth, standalone */}
-          <Route path="/biz/:slug" element={<BusinessPage />} />
-          {/* Everything else falls to auth-gated dashboard */}
-          <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/free-widget" element={<FreeWidget />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/contact" element={<Contact />} />
+            {/* Vertical chatbot pages (canonical URLs) */}
+            <Route path="/dental-chatbot" element={<DentalChatbot />} />
+            <Route path="/auto-shop-chatbot" element={<AutoShopChatbot />} />
+            <Route path="/salon-booking-chatbot" element={<SalonChatbot />} />
+            <Route path="/medical-office-chatbot" element={<MedicalOfficeChatbot />} />
+            <Route path="/restaurant-chatbot" element={<RestaurantChatbot />} />
+            {/* Comparison pages (canonical URLs) */}
+            <Route path="/intercom-alternative" element={<IntercomAlternative />} />
+            <Route path="/livechat-alternative" element={<LiveChatAlternative />} />
+            <Route path="/tidio-alternative" element={<TidioAlternative />} />
+            {/* Marketing paths — scroll to Home anchor sections */}
+            <Route path="/pricing" element={<HomeSection anchor="pricing" />} />
+            <Route path="/features" element={<HomeSection anchor="features" />} />
+            <Route path="/about" element={<HomeSection anchor="about-us" />} />
+            <Route path="/demo" element={<RedirectExternal url={CALENDLY_URL} />} />
+            {/* Alias routes for /industries/:vertical and /compare/:competitor */}
+            <Route path="/industries/:vertical" element={<IndustryRoute />} />
+            <Route path="/compare/:competitor" element={<CompareRoute />} />
+            {/* Team invite accept page (public, no auth) */}
+            <Route path="/invite/:token" element={<AcceptInvitePage />} />
+            {/* Public business pages — no auth, standalone */}
+            <Route path="/biz/:slug" element={<BusinessPage />} />
+            {/* Everything else falls to auth-gated dashboard */}
+            <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </HelmetProvider>
   </React.StrictMode>

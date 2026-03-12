@@ -1,25 +1,27 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api";
 import LoginPage from "./LoginPage";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
-import Dashboard from "../pages/Dashboard";
-import LeadsPage from "../pages/LeadsPage";
-import ClientList from "../pages/Dashboard/ClientList";
-import ClientProfile from "../pages/Dashboard/ClientProfile";
-import Calendar from "../pages/Calendar";
-import Availability from "../pages/Availability";
-import AutomationsPage from "../pages/Automations";
-import ConversationsPage from "../pages/ConversationsPage";
-import WidgetPage from "../pages/WidgetPage";
-import FaqManagerPage from "../pages/FaqManagerPage";
-import BillingPage from "../pages/BillingPage";
-import SettingsPage from "../pages/SettingsPage";
-import IntegrationsPage from "../pages/IntegrationsPage";
-import AnalyticsPage from "../pages/AnalyticsPage";
-import TeamPage from "../pages/TeamPage";
-import BusinessPageSettings from "../pages/BusinessPageSettings";
+
+// Lazy-load all dashboard pages — each becomes its own chunk
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const LeadsPage = lazy(() => import("../pages/LeadsPage"));
+const ClientList = lazy(() => import("../pages/Dashboard/ClientList"));
+const ClientProfile = lazy(() => import("../pages/Dashboard/ClientProfile"));
+const Calendar = lazy(() => import("../pages/Calendar"));
+const Availability = lazy(() => import("../pages/Availability"));
+const AutomationsPage = lazy(() => import("../pages/Automations"));
+const ConversationsPage = lazy(() => import("../pages/ConversationsPage"));
+const WidgetPage = lazy(() => import("../pages/WidgetPage"));
+const FaqManagerPage = lazy(() => import("../pages/FaqManagerPage"));
+const BillingPage = lazy(() => import("../pages/BillingPage"));
+const SettingsPage = lazy(() => import("../pages/SettingsPage"));
+const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
+const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
+const TeamPage = lazy(() => import("../pages/TeamPage"));
+const BusinessPageSettings = lazy(() => import("../pages/BusinessPageSettings"));
 
 const pages = {
   dashboard: Dashboard,
@@ -134,11 +136,13 @@ export default function App() {
           {loading ? (
             <SkeletonLoader />
           ) : (
-            <PageComponent
-              onNavigate={handleNavigate}
-              onPlanLoaded={setActivePlan}
-              pageData={pageData}
-            />
+            <Suspense fallback={<SkeletonLoader />}>
+              <PageComponent
+                onNavigate={handleNavigate}
+                onPlanLoaded={setActivePlan}
+                pageData={pageData}
+              />
+            </Suspense>
           )}
         </main>
       </div>
