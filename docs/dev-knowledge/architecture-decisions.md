@@ -175,4 +175,18 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Cloudflare /crawl for website scraping
+**Decision:** Use Cloudflare's Browser Rendering /crawl endpoint to automatically scrape customer websites on signup.
+**Why:** Launched March 10, 2026. One API call crawls an entire site and returns content as Markdown. Free tier: 5 jobs/day, 100 pages/job. No browser management, no Puppeteer, no infrastructure. Perfect for our use case — we need to crawl one site per signup, extract business info, and feed it to the AI.
+**Implication:** Requires a Cloudflare account with Browser Rendering enabled. API token stored as env var. Crawls are async (POST to start, GET to poll). Results cached in website_content table. Content fed to AI knowledge base via Claude API summarization.
+
+---
+
+### Restaurant ordering as vertical feature
+**Decision:** Build full restaurant order-taking as a first-class feature, not an afterthought.
+**Why:** Restaurants are one of our primary target verticals. Order-taking through the chat widget is a massive differentiator — most chatbot platforms can answer questions but can't take orders. This turns the widget from a lead capture tool into a revenue-generating tool for the restaurant.
+**Implication:** Menu management, order processing, and order notifications are restaurant-specific features gated behind business type selection. The menu can be auto-imported from the website crawl, reducing setup friction. Orders flow through the same dashboard as leads and conversations.
+
+---
+
 _Add new decisions when significant architectural choices are made._

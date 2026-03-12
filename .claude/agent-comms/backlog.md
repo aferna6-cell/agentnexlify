@@ -6,6 +6,36 @@ _Last updated: 2026-03-12_
 
 ---
 
+## Features — Tier 0: Game Changers (build these FIRST)
+
+### Auto-Scrape Customer Website on Signup
+
+_When a business signs up and provides their website URL, we immediately crawl their site and feed the content to their AI agent. The chatbot knows their business from minute one — no manual FAQ entry needed._
+
+- [ ] **Cloudflare /crawl API integration** — Create src/lib/cloudflare/ (or equivalent in current backend structure). Build a wrapper around Cloudflare's Browser Rendering /crawl endpoint (https://api.cloudflare.com/client/v4/accounts/{account_id}/browser-rendering/crawl). Two-step async flow: POST to start crawl → poll GET with job_id for results. Request content as Markdown format. Store CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN as environment variables on Railway.
+- [ ] **Website URL field on signup/settings** — Add a "Website URL" field to the signup form and the settings page. Optional but prominently placed. When provided, trigger the crawl automatically.
+- [ ] **Crawl pipeline** — When a tenant provides their URL: (1) Call Cloudflare /crawl with their URL, limit to 20 pages, return as Markdown. (2) When results come back, extract the useful content: business name, services/menu, hours, location, about page, contact info, pricing, FAQs. (3) Store the raw crawl results in a new `website_content` table (id, tenant_id, url, pages_json, extracted_text, crawled_at). (4) Create migration for this table.
+- [ ] **AI knowledge base auto-population** — Take the extracted website content and automatically populate the tenant's AI knowledge base / FAQ manager. Claude API summarizes the crawled pages into structured business info: services offered, hours, location, pricing, policies, FAQs. This gets injected into the chat widget's system prompt so the AI knows the business immediately.
+- [ ] **Crawl status UI** — On the dashboard settings page, show crawl status: "Scanning your website..." → "Found 15 pages" → "AI knowledge base updated with your business info." If crawl fails, show "Couldn't reach your website — you can add info manually."
+- [ ] **Re-crawl button** — Let the tenant trigger a re-crawl anytime from settings (in case they updated their website). Also consider auto-re-crawl monthly.
+- [ ] **Fallback for no website** — If the tenant has no website (or crawl fails), prompt them to fill in business info manually via the existing FAQ manager. The hosted business page at agentnexlify.com/biz/{slug} IS their website — crawl that if they set one up.
+
+### Restaurant Order Taking
+
+_The chat widget can take food orders for restaurants — browse the menu, build an order, collect delivery/pickup info, and send the order to the business owner._
+
+- [ ] **Menu management page** — New "Menu" tab in the dashboard for restaurant tenants. Add menu items with: name, description, price, category (appetizers, entrees, desserts, drinks), modifiers/options (size, toppings, sides), availability (in stock / out of stock), image URL (optional). Store in a new `menu_items` table (id, tenant_id, name, description, price, category, modifiers_json, available, image_url, sort_order, created_at). Create migration.
+- [ ] **Menu auto-import from website crawl** — When the crawl pipeline detects a restaurant website with a menu page, use Claude API to extract menu items (name, description, price, category) from the crawled content. Auto-populate the menu_items table. The owner can edit/correct from the dashboard.
+- [ ] **Order-taking chat flow** — Enhance the chat widget AI to handle ordering conversations. When a customer says "I want to order food" or "Can I see the menu?", the AI: (1) Presents the menu organized by category. (2) Takes the customer's order item by item, handling modifiers ("What size?", "Any toppings?"). (3) Confirms the full order with itemized prices and total. (4) Asks: pickup or delivery? (5) Collects customer name, phone, and delivery address if applicable. (6) Sends order confirmation.
+- [ ] **Orders table + management** — New `orders` table (id, tenant_id, lead_id, items_json, subtotal, tax, total, order_type (pickup/delivery), delivery_address, status (new/confirmed/preparing/ready/delivered/cancelled), notes, created_at). Create migration.
+- [ ] **Orders dashboard page** — New "Orders" tab for restaurant tenants. Shows incoming orders in real-time (or near real-time). Each order card: customer name, items, total, pickup/delivery, time placed. Owner can update status: confirm → preparing → ready. SMS notification to customer when status changes.
+- [ ] **Order notification to owner** — When a new order comes in via chat: SMS the owner immediately with order summary. Email backup with full details. Push notification in dashboard.
+- [ ] **Menu in widget** — The chat widget can display the menu in a structured format (not just text). Consider a mini menu card UI within the chat for browsing. At minimum, the AI lists items clearly with prices.
+- [ ] **Order confirmation to customer** — After order is placed, send SMS confirmation to the customer with: order summary, estimated time, and the business's phone number. Requires customer's phone number (captured during order flow).
+- [ ] **Business type detection** — During signup or settings, let the tenant select their business type (restaurant, service business, retail, etc.). If "restaurant" is selected, show the Menu and Orders tabs. If not, hide them. This keeps the dashboard clean for non-restaurant businesses.
+
+---
+
 ## Features — Tier 1: "I need this to pay you money"
 _These are the features a customer needs before they'll upgrade from free._
 
