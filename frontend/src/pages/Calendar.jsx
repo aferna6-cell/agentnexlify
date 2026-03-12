@@ -51,6 +51,7 @@ export default function Calendar({ onNavigate }) {
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [editStatus, setEditStatus] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [error, setError] = useState(null);
 
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -80,6 +81,7 @@ export default function Calendar({ onNavigate }) {
     setSelectedAppt(appt);
     setEditStatus(appt.status);
     setEditNotes(appt.notes || "");
+    setError(null);
   };
 
   const handleSave = async () => {
@@ -90,18 +92,24 @@ export default function Calendar({ onNavigate }) {
     if (Object.keys(updates).length === 0) { setSelectedAppt(null); return; }
     try {
       await updateAppointment(user.tenantId, token, selectedAppt.id, updates);
+      setError(null);
       setSelectedAppt(null);
       loadAppointments();
-    } catch { /* keep modal open */ }
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to save appointment changes.");
+    }
   };
 
   const handleCancel = async () => {
     if (!selectedAppt) return;
     try {
       await cancelAppointment(user.tenantId, token, selectedAppt.id);
+      setError(null);
       setSelectedAppt(null);
       loadAppointments();
-    } catch { /* keep modal open */ }
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to cancel appointment.");
+    }
   };
 
   const getApptPosition = (appt) => {
@@ -232,6 +240,7 @@ export default function Calendar({ onNavigate }) {
         <div className="modal-overlay" onClick={() => setSelectedAppt(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h3>Edit Appointment</h3>
+            {error && <div className="error-banner" style={{ marginBottom: "0.75rem" }}>{error}</div>}
             <div className="modal-field">
               <label>Customer</label>
               <div>{selectedAppt.customer_name} ({selectedAppt.customer_email})</div>

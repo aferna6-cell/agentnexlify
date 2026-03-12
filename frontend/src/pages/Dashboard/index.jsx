@@ -87,26 +87,38 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
     );
     try {
       await updateLead(user.tenantId, token, leadId, { status: newStage });
-    } catch {
+    } catch (err) {
       setLeads(prev); // Revert on failure
+      setError(err.body?.detail || err.message || "Failed to update lead stage.");
+      setTimeout(() => setError(null), 5000);
     }
   }, [leads, user?.tenantId, token]);
 
   const handleLeadSave = useCallback(async (leadId, updates) => {
-    const updated = await updateLead(user.tenantId, token, leadId, updates);
-    setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, ...updated } : l)));
-    setSelectedLead((cur) => (cur?.id === leadId ? { ...cur, ...updated } : cur));
+    try {
+      const updated = await updateLead(user.tenantId, token, leadId, updates);
+      setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, ...updated } : l)));
+      setSelectedLead((cur) => (cur?.id === leadId ? { ...cur, ...updated } : cur));
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to save lead.");
+      setTimeout(() => setError(null), 5000);
+    }
   }, [user?.tenantId, token]);
 
   const handleLeadDelete = useCallback(async (leadId) => {
-    await deleteLead(user.tenantId, token, leadId);
-    setLeads((cur) => cur.filter((l) => l.id !== leadId));
-    setSelectedLead(null);
+    try {
+      await deleteLead(user.tenantId, token, leadId);
+      setLeads((cur) => cur.filter((l) => l.id !== leadId));
+      setSelectedLead(null);
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to delete lead.");
+      setTimeout(() => setError(null), 5000);
+    }
   }, [user?.tenantId, token]);
 
   if (loading) return <SkeletonLoader />;
 
-  if (error) {
+  if (error && !dashData) {
     return (
       <div className="fade-in">
         <div className="page-header">
@@ -121,6 +133,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
 
   return (
     <div className="fade-in">
+      {error && dashData && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
       <div className="page-header">
         <h1>Dashboard</h1>
         <p>Welcome back{dashData?.business_name ? `, ${dashData.business_name}` : user.businessName ? `, ${user.businessName}` : ""}</p>

@@ -106,7 +106,11 @@ def _get_widget_config(api_key: str) -> dict[str, Any]:
 
 def _get_tenant(tenant_id: str) -> dict[str, Any]:
     db = get_supabase()
-    result = db.table("tenants").select("*").eq("id", tenant_id).limit(1).execute()
+    result = db.table("tenants").select(
+        "id, business_name, business_type, city, plan, plan_status, "
+        "free_trial_started_at, conversations_used_this_month, "
+        "sms_notifications_enabled, notification_phone"
+    ).eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     return result.data[0]

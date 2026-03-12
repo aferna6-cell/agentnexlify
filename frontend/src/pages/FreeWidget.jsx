@@ -81,29 +81,29 @@ export default function FreeWidget() {
       },
       {
         "@type": "Offer",
-        "name": "Foundation",
-        "price": "99",
+        "name": "Growth",
+        "price": "199",
         "priceCurrency": "USD",
         "priceSpecification": {
           "@type": "UnitPriceSpecification",
-          "price": "99",
+          "price": "199",
           "priceCurrency": "USD",
           "billingDuration": "P1M"
         },
-        "description": "500 conversations/month, no watermark, basic automations, FAQ training"
+        "description": "Unlimited conversations, no watermark, basic automations, FAQ training"
       },
       {
         "@type": "Offer",
-        "name": "Growth",
-        "price": "249",
+        "name": "Professional",
+        "price": "399",
         "priceCurrency": "USD",
         "priceSpecification": {
           "@type": "UnitPriceSpecification",
-          "price": "249",
+          "price": "399",
           "priceCurrency": "USD",
           "billingDuration": "P1M"
         },
-        "description": "2,000 conversations/month, no watermark, full automations, FAQ training, priority support"
+        "description": "Unlimited conversations, no watermark, full automations, FAQ training, priority support"
       }
     ]
   });
@@ -286,7 +286,7 @@ export default function FreeWidget() {
             <div className="included-card reveal" ref={revealRef}>
               <div className="included-icon" aria-hidden="true">&#127775;</div>
               <h3>"Powered by AgentNexLiFy" Badge</h3>
-              <p>Free plan includes a small watermark badge. Upgrade to Foundation or higher to remove it.</p>
+              <p>Free plan includes a small watermark badge. Upgrade to Growth or higher to remove it.</p>
             </div>
           </div>
         </div>
@@ -306,16 +306,16 @@ export default function FreeWidget() {
                 <tr>
                   <th></th>
                   <th className="highlight">Free Plan<span className="price-tag">$0/mo</span></th>
-                  <th>Foundation<span className="price-tag">$99/mo</span></th>
-                  <th>Growth<span className="price-tag">$249/mo</span></th>
+                  <th>Growth<span className="price-tag">$199/mo</span></th>
+                  <th>Professional<span className="price-tag">$399/mo</span></th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>Monthly conversations</td>
-                  <td className="highlight"><strong>50</strong></td>
-                  <td><strong>500</strong></td>
-                  <td><strong>2,000</strong></td>
+                  <td className="highlight"><strong>Unlimited</strong></td>
+                  <td><strong>Unlimited</strong></td>
+                  <td><strong>Unlimited</strong></td>
                 </tr>
                 <tr>
                   <td>Watermark</td>
@@ -368,7 +368,7 @@ export default function FreeWidget() {
           <div className="footer-inner">
             <div className="footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="footer-brand-logo" />
-              <p>AI-powered operations for businesses.</p>
+              <p>AI-powered automation for businesses.</p>
               <Link to="/signup" className="btn-primary" style={{ marginTop: "16px", fontSize: "14px", padding: "12px 24px" }}>Get Free Chatbot {"\u2192"}</Link>
             </div>
             <div className="footer-col">

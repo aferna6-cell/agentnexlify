@@ -270,7 +270,7 @@ export default function ComparisonPage({ meta, hero, comparison, reasons, crossL
           <div className="footer-inner">
             <div className="footer-brand">
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="footer-brand-logo" />
-              <p>AI-powered operations for businesses.</p>
+              <p>AI-powered automation for businesses.</p>
               <Link to="/signup" className="btn-primary" style={{ marginTop: "16px", fontSize: "14px", padding: "12px 24px" }}>
                 Start Free {"\u2192"}
               </Link>

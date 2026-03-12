@@ -42,7 +42,7 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
         )
 
     db = get_supabase()
-    result = db.table("tenants").select("*").eq("id", req.tenant_id).limit(1).execute()
+    result = db.table("tenants").select("id, owner_email, business_name").eq("id", req.tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     tenant = result.data[0]

@@ -601,8 +601,8 @@ class WebhookCreateRequest(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
-        if not v.startswith(("https://", "http://")):
-            raise ValueError("URL must start with https:// or http://")
+        if not v.startswith("https://"):
+            raise ValueError("Webhook URL must use HTTPS")
         return v
 
 
@@ -616,8 +616,8 @@ class WebhookUpdateRequest(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_update_url(cls, v: str | None) -> str | None:
-        if v is not None and not v.startswith(("https://", "http://")):
-            raise ValueError("URL must start with https:// or http://")
+        if v is not None and not v.startswith("https://"):
+            raise ValueError("Webhook URL must use HTTPS")
         return v
 
 
@@ -628,6 +628,19 @@ class WebhookResponse(BaseModel):
     url: str
     events: list[str]
     secret: str | None = None
+    is_active: bool = True
+    last_triggered_at: datetime | None = None
+    failure_count: int = 0
+    created_at: datetime
+
+
+class WebhookListResponse(BaseModel):
+    """Webhook response without secret — used for list/get endpoints."""
+    id: str
+    tenant_id: str
+    name: str
+    url: str
+    events: list[str]
     is_active: bool = True
     last_triggered_at: datetime | None = None
     failure_count: int = 0

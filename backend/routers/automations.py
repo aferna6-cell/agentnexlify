@@ -9,11 +9,15 @@ And messaging webhook (HTTP POST) to:
 """
 
 
+import base64
+import hashlib
+import hmac
 import logging
 
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
+from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
@@ -34,6 +38,86 @@ DEFAULT_TEXTBACK_TEMPLATE = (
 
 
 # ------------------------------------------------------------------
+# Twilio Signature Validation
+# ------------------------------------------------------------------
+
+def _compute_twilio_signature(auth_token: str, url: str, params: dict[str, str]) -> str:
+    """Compute the expected Twilio request signature.
+
+    Algorithm (from Twilio docs):
+    1. Take the full URL of the webhook endpoint.
+    2. Sort the POST parameters alphabetically by key.
+    3. Append each key-value pair to the URL (no separators).
+    4. HMAC-SHA1 the result using the auth token as the key.
+    5. Base64-encode the hash.
+    """
+    # Build the data string: URL + sorted key-value pairs concatenated
+    data = url
+    for key in sorted(params.keys()):
+        data += key + params[key]
+
+    # HMAC-SHA1
+    mac = hmac.new(
+        auth_token.encode("utf-8"),
+        data.encode("utf-8"),
+        hashlib.sha1,
+    )
+    return base64.b64encode(mac.digest()).decode("utf-8")
+
+
+async def verify_twilio_request(request: Request) -> None:
+    """FastAPI dependency that validates the X-Twilio-Signature header.
+
+    Raises HTTPException(403) if the signature is invalid. If Twilio is not
+    configured (no auth token), validation is skipped to allow local
+    development without Twilio credentials.
+    """
+    auth_token = settings.twilio_auth_token
+    if not auth_token:
+        logger.warning(
+            "Twilio auth token not configured — skipping webhook signature "
+            "validation (acceptable for local dev only)"
+        )
+        return
+
+    signature = request.headers.get("X-Twilio-Signature", "")
+    if not signature:
+        logger.warning(
+            "Twilio webhook request missing X-Twilio-Signature header "
+            "(path=%s, client=%s)",
+            request.url.path,
+            request.client.host if request.client else "unknown",
+        )
+        raise HTTPException(status_code=403, detail="Missing Twilio signature")
+
+    # Reconstruct the full URL that Twilio used to compute the signature.
+    # Behind a reverse proxy (Railway/ngrok), the request URL may use http
+    # while Twilio sent to https.  We use the X-Forwarded-Proto and Host
+    # headers to rebuild the original URL Twilio signed against.
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", request.url.scheme)
+    host = request.headers.get("Host", request.url.netloc)
+    url = f"{forwarded_proto}://{host}{request.url.path}"
+
+    # Parse the form body — Twilio sends application/x-www-form-urlencoded
+    form_data = await request.form()
+    params = {key: str(form_data[key]) for key in form_data}
+
+    expected = _compute_twilio_signature(auth_token, url, params)
+
+    if not hmac.compare_digest(expected, signature):
+        logger.warning(
+            "Twilio webhook signature mismatch (path=%s, client=%s, "
+            "url_used=%s)",
+            request.url.path,
+            request.client.host if request.client else "unknown",
+            url,
+        )
+        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
+
+    logger.debug("Twilio webhook signature validated (path=%s)", request.url.path)
+
+
+# ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
 
@@ -47,7 +131,7 @@ def _lookup_tenant_by_twilio_number(phone: str) -> dict | None:
     db = get_supabase()
     result = (
         db.table("tenants")
-        .select("*")
+        .select("id, business_name, phone, notification_phone, sms_notifications_enabled")
         .eq("phone", phone)
         .limit(1)
         .execute()
@@ -75,10 +159,12 @@ def _get_automation(tenant_id: str, automation_type: str) -> dict | None:
 
 @router.post("/twilio/missed-call", response_class=PlainTextResponse)
 async def twilio_missed_call(
+    request: Request,
     CallSid: str = Form(...),
     To: str = Form(...),
     From: str = Form(...),
     CallStatus: str = Form("no-answer"),
+    _sig: None = Depends(verify_twilio_request),
 ):
     """Twilio calls this when a call is not answered.
 
@@ -149,9 +235,11 @@ async def twilio_missed_call(
 
 @router.post("/twilio/sms-reply", response_class=PlainTextResponse)
 async def twilio_sms_reply(
+    request: Request,
     From: str = Form(...),
     To: str = Form(...),
     Body: str = Form(""),
+    _sig: None = Depends(verify_twilio_request),
 ):
     """Twilio calls this when a customer replies to an automated SMS.
 

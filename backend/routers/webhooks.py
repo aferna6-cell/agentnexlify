@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.models.database import get_supabase
 from backend.models.schemas import (
     WebhookCreateRequest,
+    WebhookListResponse,
     WebhookResponse,
     WebhookUpdateRequest,
     WebhookLogResponse,
@@ -25,18 +26,18 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
-@router.get("/{tenant_id}", response_model=list[WebhookResponse])
+@router.get("/{tenant_id}", response_model=list[WebhookListResponse])
 async def list_webhooks(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     _verify_tenant(claims, tenant_id)
     db = get_supabase()
     result = (
         db.table("webhooks")
-        .select("*")
+        .select("id, tenant_id, name, url, events, is_active, last_triggered_at, failure_count, created_at")
         .eq("tenant_id", tenant_id)
         .order("created_at", desc=True)
         .execute()
     )
-    return [WebhookResponse(**row) for row in (result.data or [])]
+    return [WebhookListResponse(**row) for row in (result.data or [])]
 
 
 @router.post("/{tenant_id}", response_model=WebhookResponse, status_code=201)
@@ -82,7 +83,7 @@ async def create_webhook(
     return WebhookResponse(**result.data[0])
 
 
-@router.put("/{tenant_id}/{webhook_id}", response_model=WebhookResponse)
+@router.put("/{tenant_id}/{webhook_id}", response_model=WebhookListResponse)
 async def update_webhook(
     tenant_id: str,
     webhook_id: str,
@@ -115,7 +116,7 @@ async def update_webhook(
     if not result.data:
         raise HTTPException(status_code=404, detail="Webhook not found")
 
-    return WebhookResponse(**result.data[0])
+    return WebhookListResponse(**result.data[0])
 
 
 @router.patch("/{tenant_id}/{webhook_id}/toggle")

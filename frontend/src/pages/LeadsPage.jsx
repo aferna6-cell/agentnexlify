@@ -88,6 +88,7 @@ export default function LeadsPage() {
   const [sortField, setSortField] = useState("lead_score");
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedLead, setSelectedLead] = useState(null);
+  const [error, setError] = useState(null);
   const debounceRef = useRef(null);
 
   const loadLeads = useCallback(async (params = {}) => {
@@ -137,21 +138,33 @@ export default function LeadsPage() {
     );
     try {
       await updateLead(user.tenantId, token, leadId, { status: newStage });
-    } catch {
+      setError(null);
+    } catch (err) {
       setLeads(prev);
+      setError(err.body?.detail || err.message || "Failed to update lead stage.");
     }
   }, [leads, user?.tenantId, token]);
 
   const handleLeadSave = useCallback(async (leadId, updates) => {
-    const updated = await updateLead(user.tenantId, token, leadId, updates);
-    setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, ...updated } : l)));
-    setSelectedLead((cur) => (cur?.id === leadId ? { ...cur, ...updated } : cur));
+    try {
+      const updated = await updateLead(user.tenantId, token, leadId, updates);
+      setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, ...updated } : l)));
+      setSelectedLead((cur) => (cur?.id === leadId ? { ...cur, ...updated } : cur));
+      setError(null);
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to save lead.");
+    }
   }, [user?.tenantId, token]);
 
   const handleLeadDelete = useCallback(async (leadId) => {
-    await deleteLead(user.tenantId, token, leadId);
-    setLeads((cur) => cur.filter((l) => l.id !== leadId));
-    setSelectedLead(null);
+    try {
+      await deleteLead(user.tenantId, token, leadId);
+      setLeads((cur) => cur.filter((l) => l.id !== leadId));
+      setSelectedLead(null);
+      setError(null);
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to delete lead.");
+    }
   }, [user?.tenantId, token]);
 
   const handleExportCSV = () => {
@@ -215,6 +228,8 @@ export default function LeadsPage() {
           Export CSV
         </button>
       </div>
+
+      {error && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
 
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>Loading...</div>

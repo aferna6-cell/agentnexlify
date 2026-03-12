@@ -20,6 +20,7 @@ export default function Availability({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
   const [gcalConnected, setGcalConnected] = useState(false);
 
   useEffect(() => {
@@ -66,12 +67,15 @@ export default function Availability({ onNavigate }) {
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
+    setError(null);
     try {
       const res = await updateAvailability(user.tenantId, token, config);
       setConfig(res);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch { /* show nothing extra */ }
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to save availability settings.");
+    }
     finally { setSaving(false); }
   };
 
@@ -150,6 +154,8 @@ export default function Availability({ onNavigate }) {
             </div>
           )}
         </div>
+
+        {error && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
 
         <div className="availability-actions">
           <button className="btn-primary" onClick={handleSave} disabled={saving}>

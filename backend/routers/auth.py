@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from jose import JWTError, jwt
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 import stripe
 
@@ -102,7 +103,8 @@ def require_role(*allowed_roles):
 
 
 @router.post("/register", response_model=RegisterResponse)
-async def register(req: RegisterRequest):
+@limiter.limit("5/minute")
+async def register(request: Request, req: RegisterRequest):
     db = get_supabase()
 
     # Check duplicate email
@@ -152,7 +154,8 @@ async def register(req: RegisterRequest):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(req: LoginRequest):
+@limiter.limit("10/minute")
+async def login(request: Request, req: LoginRequest):
     db = get_supabase()
     email = req.email.lower().strip()
 
@@ -671,7 +674,7 @@ async def billing_checkout(
         raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
 
     db = get_supabase()
-    result = db.table("tenants").select("*").eq("id", tenant_id).limit(1).execute()
+    result = db.table("tenants").select("id, owner_email, business_name").eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     tenant = result.data[0]
