@@ -7,9 +7,13 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
+from pydantic import BaseModel
+
 from backend.models.database import get_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
 from backend.routers.auth import _get_current_tenant
+from backend.services.activity import log_activity
+from backend.services.email_sender import send_email
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -166,6 +170,85 @@ async def delete_lead(
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
     return Response(status_code=204)
+
+
+class QuickEmailRequest(BaseModel):
+    subject: str
+    message: str
+
+
+@router.post("/{tenant_id}/{lead_id}/email")
+async def send_lead_email(
+    tenant_id: str,
+    lead_id: str,
+    req: QuickEmailRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Send a quick follow-up email to a lead."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    lead_result = (
+        db.table("leads")
+        .select("id, email, name")
+        .eq("id", lead_id)
+        .eq("client_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not lead_result.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    lead = lead_result.data[0]
+    if not lead.get("email"):
+        raise HTTPException(status_code=400, detail="Lead has no email address")
+
+    import html as html_mod
+    safe_message = html_mod.escape(req.message).replace("\n", "<br>")
+
+    # Get business name for email context
+    tenant_result = (
+        db.table("tenants")
+        .select("business_name")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    business_name = tenant_result.data[0]["business_name"] if tenant_result.data else "Our Team"
+
+    body_html = (
+        f"<p>{safe_message}</p>"
+        f"<p style='margin-top:16px;color:#666;font-size:0.9em;'>— {html_mod.escape(business_name)}</p>"
+    )
+
+    result = await send_email(
+        to=lead["email"],
+        subject=req.subject,
+        body_html=body_html,
+        tenant_id=tenant_id,
+    )
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("detail", "Failed to send email"))
+
+    # Log activity
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="email_sent",
+        description=f"Follow-up email sent to {lead.get('name', lead['email'])}: {req.subject}",
+        lead_id=lead_id,
+    )
+
+    # Auto-update lead status from "new" to "contacted"
+    try:
+        current = db.table("leads").select("status").eq("id", lead_id).limit(1).execute()
+        if current.data and current.data[0].get("status") == "new":
+            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).execute()
+    except Exception:
+        logger.warning("Failed to auto-update lead status after email", exc_info=True)
+
+    return {"success": True, "detail": "Email sent"}
 
 
 # CSV column name → DB column name mapping

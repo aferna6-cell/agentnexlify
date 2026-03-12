@@ -17,7 +17,7 @@ _These are the features a customer needs before they'll upgrade from free._
 ## Features — Tier 2: "This would make my life easier"
 _These make the product sticky — once they use these, they won't leave._
 
-- [ ] **Quick reply / follow-up from dashboard** — When viewing a lead in ClientProfile, let the owner send a quick email or SMS follow-up directly. SMS sending exists (sendSms) but isn't integrated into the lead detail view. Add inline compose.
+- [x] **Quick reply / follow-up from dashboard** — done 2026-03-12. Backend: POST /api/v1/leads/{tenant_id}/{lead_id}/email. Frontend: inline email compose in LeadDetailDrawer with subject/message fields. Auto-updates lead status from "new" to "contacted".
 - [ ] **Appointment reminders** — Auto-send SMS or email reminders to customers before their appointment (24h and 1h before). Automation sequences exist — create a pre-built "appointment reminder" automation that triggers on appointment_booked with timed steps.
 - [x] **Business hours awareness in AI** — done 2026-03-12. Injected business hours + current open/closed status into chat system prompt. AI now knows schedule and can tell visitors when the business is open/closed.
 - [ ] **Multi-language support** — Detect the customer's language and respond in it. Huge for service businesses in diverse areas. Add language detection in the widget chat endpoint and instruct Claude to respond in the detected language.

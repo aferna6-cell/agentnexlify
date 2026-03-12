@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore } from "../../utils/api";
+import { fetchLeadScore, sendLeadEmail } from "../../utils/api";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },
@@ -87,6 +87,11 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null);
 
   useEffect(() => {
     setForm({
@@ -101,6 +106,10 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     });
     setConfirmDelete(false);
     setBreakdown(null);
+    setShowEmail(false);
+    setEmailSubject("");
+    setEmailBody("");
+    setEmailStatus(null);
     if (user?.tenantId && lead.id && token) {
       fetchLeadScore(user.tenantId, lead.id, token)
         .then((data) => setBreakdown(data.breakdown))
@@ -135,6 +144,26 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
       return;
     }
     if (onDelete) await onDelete(lead.id);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailSubject.trim() || !emailBody.trim()) return;
+    setSendingEmail(true);
+    setEmailStatus(null);
+    try {
+      await sendLeadEmail(user.tenantId, token, lead.id, {
+        subject: emailSubject,
+        message: emailBody,
+      });
+      setEmailStatus("sent");
+      setEmailSubject("");
+      setEmailBody("");
+      setShowEmail(false);
+    } catch (err) {
+      setEmailStatus(err.body?.detail || err.message || "Failed to send");
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   return (
@@ -180,6 +209,44 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               <input className="drawer-input" type="tel" value={form.phone} onChange={handleChange("phone")} placeholder="(555) 123-4567" />
             </div>
           </div>
+
+          {/* Quick Email */}
+          {form.email && (
+            <div className="intel-section">
+              <div className="intel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                Quick Follow-up
+                {!showEmail && (
+                  <button className="btn-sm" onClick={() => setShowEmail(true)}>Send Email</button>
+                )}
+              </div>
+              {emailStatus === "sent" && (
+                <div style={{ color: "var(--green, #22c55e)", fontSize: "0.85rem", marginBottom: 8 }}>Email sent successfully</div>
+              )}
+              {emailStatus && emailStatus !== "sent" && (
+                <div style={{ color: "var(--red, #ef4444)", fontSize: "0.85rem", marginBottom: 8 }}>{emailStatus}</div>
+              )}
+              {showEmail && (
+                <>
+                  <div className="drawer-field">
+                    <label className="drawer-label">Subject</label>
+                    <input className="drawer-input" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} placeholder="Follow-up on your inquiry" />
+                  </div>
+                  <div className="drawer-field">
+                    <label className="drawer-label">Message</label>
+                    <textarea className="drawer-textarea" value={emailBody} onChange={(e) => setEmailBody(e.target.value)} placeholder="Write your message..." rows={4} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <button className="btn-sm" onClick={handleSendEmail} disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}>
+                      {sendingEmail ? "Sending..." : "Send"}
+                    </button>
+                    <button className="btn-sm" onClick={() => setShowEmail(false)} style={{ background: "var(--bg-darker, #1a1a2e)" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="intel-section">
             <div className="intel-title">Details</div>

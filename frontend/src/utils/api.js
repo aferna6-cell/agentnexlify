@@ -151,6 +151,14 @@ export async function importLeadsCSV(tenantId, token, file) {
   return res.json();
 }
 
+export function sendLeadEmail(tenantId, token, leadId, data) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}/email`, {
+    method: "POST",
+    token,
+    body: data,
+  });
+}
+
 // --- CRM / Clients ---
 
 export function fetchClients(tenantId, token, { search, stage, sort, order } = {}) {
