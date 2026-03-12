@@ -82,7 +82,7 @@ def _filter_branding_for_plan(branding: dict | None, plan: str) -> dict:
     return filtered
 
 
-MODEL = "claude-sonnet-4-5-20250514"
+MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 500
 TEMPERATURE = 0.7
 
@@ -373,7 +373,7 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
     try:
         client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
         resp = client.messages.create(
-            model="claude-sonnet-4-5-20250514",
+            model=MODEL,
             max_tokens=200,
             temperature=0,
             system=(

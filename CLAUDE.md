@@ -16,7 +16,7 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 - Backend: FastAPI, Python 3.11, Pydantic, Supabase Python client
 - Frontend: React, Vite, Tailwind-style CSS, Recharts
 - Database: Supabase (PostgreSQL with RLS)
-- AI: Anthropic Claude API (claude-sonnet-4-5-20250514)
+- AI: Anthropic Claude API (claude-sonnet-4-6)
 - Email: Resend (noreply@agentnexlify.com)
 - SMS: Twilio
 - Payments: Stripe

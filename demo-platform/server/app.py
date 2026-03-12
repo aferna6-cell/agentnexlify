@@ -77,7 +77,7 @@ async def chat(req: ChatRequest):
         ]
 
         response = client.messages.create(
-            model="claude-sonnet-4-5-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=1024,
             system=req.system or "",
             messages=messages,
