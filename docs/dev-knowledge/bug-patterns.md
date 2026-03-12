@@ -251,13 +251,23 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
-### Migrations 014-023 not applied to live Supabase — dashboard crash + automation errors
+### Dashboard crash — migrations not applied to live database
 **Date:** 2026-03-12
-**Symptom:** Dashboard endpoint returns 500 (`column widget_configs.is_online does not exist`). Automation engine spams errors (`column appointments.updated_at does not exist`). Widget chat itself was unaffected.
-**Root Cause:** 10 migration files (014-023) existed in the repo but were never applied to the live Supabase database. Code referenced columns/tables that didn't exist. Missing: `widget_configs.is_online`, `widget_configs.offline_message`, `appointments.updated_at`, `appointments.review_request_sent_at`, `appointments.recurrence_*`, `leads.tags`, `leads.unsubscribed`, `conversations.tags`, and 4 entire tables (`email_templates`, `reviews`, `email_events`, `content_items`).
-**Fix:** Applied all 10 migrations to Supabase. Created migration 024 for `appointments.updated_at` (referenced in code but not in any migration file).
-**Files:** migrations/024_appointments_updated_at.sql, docs/dev-knowledge/bug-patterns.md
-**Prevention:** After creating a migration file, ALWAYS apply it to the live database. Add a post-migration checklist: (1) write SQL file, (2) test in Supabase SQL editor, (3) run on prod, (4) verify with schema query. Consider adding a migration tracking table.
+**Symptom:** Dashboard crashes on load. Error: "column widget_configs.is_online does not exist"
+**Root Cause:** Migrations 014-023 existed as SQL files in the repo but were never run against the live Supabase database. The code referenced columns that didn't exist yet.
+**Files Changed:** Applied migrations 014-024 to live Supabase
+**Fix:** Ran all missing migrations in order. Created migration 024 for appointments.updated_at.
+**Prevention:** After creating any migration file, it MUST be run on live Supabase immediately. The continuous loop must NEVER create migrations without flagging them for manual execution. Add a check: if new migration files exist that aren't in schema-log.md as "applied", flag it as a P0 task.
+
+---
+
+### Chat widget returning "having trouble" — invalid Claude model ID
+**Date:** 2026-03-12
+**Symptom:** Widget loads but AI responds with "I'm sorry, I'm having trouble right now." No useful error shown to developer.
+**Root Cause:** Model ID was set to "claude-sonnet-4-5-20250514" which returns 404 from the Anthropic API — that model doesn't exist. The continuous loop likely updated the model ID incorrectly during an optimization cycle.
+**Files Changed:** widget.py, automation_engine.py, reviews.py, demo app — all 4 files that reference the Claude model
+**Fix:** Changed model ID to "claude-sonnet-4-6" in all files.
+**Prevention:** NEVER change Claude model IDs without verifying the model exists. Valid model IDs as of March 2026: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001. The continuous loop must add model ID changes to the business logic gate — verify the API accepts the model before committing.
 
 ---
 

@@ -73,6 +73,20 @@ Creates `reviews` table: id (UUID PK), tenant_id (FK→tenants), platform (TEXT,
 ### 020 — Review Request Config
 Adds `review_request_config` (JSONB, default `{"enabled": false, "delay_hours": 24, "method": "email"}`) to `tenants`. Adds `review_request_sent_at` (TIMESTAMPTZ) to `appointments` for tracking which completed appointments have had review requests sent.
 
+### 021 — Lead Unsubscribe (CAN-SPAM compliance)
+Adds `unsubscribed` (BOOLEAN DEFAULT FALSE) and `unsubscribed_at` (TIMESTAMPTZ) to leads table. Partial index on `unsubscribed = TRUE` for efficient filtering in automation queries. Automation engine skips unsubscribed leads. Every outgoing email includes a signed unsubscribe link.
+
+### 022 — Email Events (open/click tracking)
+Creates `email_events` table for tracking email opens and clicks. Columns: tenant_id, lead_id (nullable), event_type ('open'/'click'), execution_id (nullable, for sequences), campaign_tag (nullable, for campaigns), details (JSONB). Indexed on tenant_id, execution_id, and (event_type, created_at). RLS enabled.
+
+### 023 — Content Items (Content Studio)
+Creates `content_items` table for storing source content that gets repurposed into platform-specific posts. Columns: tenant_id (FK→tenants), title (TEXT), source_type (TEXT: 'text'/'description'/'file'), source_content (TEXT), platform_versions (JSONB, keyed by platform), status (TEXT: 'draft'/'generated'/'scheduled'/'published'), tags (TEXT[]), created_at, updated_at. Indexed on tenant_id and (tenant_id, status). RLS enabled.
+
+### 024 — Appointments updated_at
+Adds `updated_at` (TIMESTAMPTZ DEFAULT NOW()) to `appointments`. Used by `automation_engine.send_pending_review_requests()` to determine when an appointment was marked completed and whether enough delay has passed to send a review request. Created during schema drift remediation — this column was referenced in code but had no migration file.
+
+**All migrations 014-024 applied to live Supabase on 2026-03-12.**
+
 ## Known Schema Gotchas
 
 | Issue | Detail |
@@ -141,18 +155,6 @@ Verified live Supabase schema against CLAUDE.md and code. Key findings:
 
 ### All other tables — confirmed matching
 Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, chat_messages, conversations, appointments, business_hours, automation_sequences, automation_steps, automation_executions, automations, faq_entries, activity_log, client_notes, integrations, team_members, webhooks, webhook_logs, automation_logs.
-
-### 021 — Lead Unsubscribe (CAN-SPAM compliance)
-Adds `unsubscribed` (BOOLEAN DEFAULT FALSE) and `unsubscribed_at` (TIMESTAMPTZ) to leads table. Partial index on `unsubscribed = TRUE` for efficient filtering in automation queries. Automation engine skips unsubscribed leads. Every outgoing email includes a signed unsubscribe link.
-
-### 022 — Email Events (open/click tracking)
-Creates `email_events` table for tracking email opens and clicks. Columns: tenant_id, lead_id (nullable), event_type ('open'/'click'), execution_id (nullable, for sequences), campaign_tag (nullable, for campaigns), details (JSONB). Indexed on tenant_id, execution_id, and (event_type, created_at). RLS enabled.
-
-### 023 — Content Items (Content Studio)
-Creates `content_items` table for storing source content that gets repurposed into platform-specific posts. Columns: tenant_id (FK→tenants), title (TEXT), source_type (TEXT: 'text'/'description'/'file'), source_content (TEXT), platform_versions (JSONB, keyed by platform), status (TEXT: 'draft'/'generated'/'scheduled'/'published'), tags (TEXT[]), created_at, updated_at. Indexed on tenant_id and (tenant_id, status). RLS enabled.
-
-### 024 — Appointments updated_at
-Adds `updated_at` (TIMESTAMPTZ DEFAULT NOW()) to `appointments`. Used by `automation_engine.send_pending_review_requests()` to determine when an appointment was marked completed and whether enough delay has passed to send a review request. Created during schema drift remediation — this column was referenced in code but had no migration file.
 
 ## Schema Drift Remediation — 2026-03-12
 

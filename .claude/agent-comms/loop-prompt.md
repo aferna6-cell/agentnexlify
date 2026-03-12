@@ -245,8 +245,17 @@ If you created a new migration file:
 - It must be additive only (no DROP, no ALTER that removes columns)
 - Number must be sequential (check existing files)
 - Log it in `docs/dev-knowledge/schema-log.md`
+- **Migration execution check:** Add a prominent note in the commit message: "⚠️ NEW MIGRATION — must be run on live Supabase manually." Never assume migrations auto-apply. Migration SQL files do NOT auto-execute — they must be manually run in the Supabase SQL editor.
 
-### Gate 6: No Silent Behavior Changes
+### Gate 6: Model ID Verification
+
+If you changed any Anthropic/Claude model ID string in any file:
+- Verify it's a real model by checking `docs/dev-knowledge/bug-patterns.md` for the list of valid models.
+- Valid model IDs (March 2026): `claude-sonnet-4-6`, `claude-opus-4-6`, `claude-haiku-4-5-20251001`.
+- NEVER use a model ID you haven't verified. A wrong model ID causes 404 errors that silently break chat.
+- This gate exists because a previous cycle set the model to `claude-sonnet-4-5-20250514` which doesn't exist, breaking all AI chat for users.
+
+### Gate 7: No Silent Behavior Changes
 
 The most dangerous type of bug is one where the code still runs but does something different than before. Check:
 
@@ -260,7 +269,7 @@ If you changed behavior and you're not 100% certain it's correct, **revert it**.
 
 ### Pass/Fail
 
-After all gates:
+After all 7 gates:
 - All passed → Proceed to commit
 - Any failed → Revert the failing changes, note them in the loop log as "reverted — needs human review", proceed to commit only the safe changes
 - If ALL changes fail the gates → Skip the commit entirely, log what was attempted and why it was reverted, move to the next cycle
@@ -389,7 +398,7 @@ Pick ONE of these cleanup actions per cycle (rotate through them):
 - If you wrote new tests, verify they pass
 
 ### STEP 5: BUSINESS LOGIC GATE
-- Pass all 6 gates before committing
+- Pass all 7 gates before committing
 - Revert anything that fails
 
 ### STEP 6: DOCUMENT

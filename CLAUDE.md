@@ -12,6 +12,12 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 - NEVER commit .env files or log secret values
 - Database schema changes ONLY via numbered migration files in migrations/
 
+### Claude API Model IDs
+Valid model IDs (March 2026): claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001. NEVER use a model ID not on this list. If Anthropic releases new models, update this list AFTER verifying the ID works.
+
+### Migration Discipline
+Migration SQL files do NOT auto-apply. After creating a migration, it must be manually run in the Supabase SQL editor. Always flag new migrations in commit messages.
+
 ## Tech Stack
 - Backend: FastAPI, Python 3.11, Pydantic, Supabase Python client
 - Frontend: React, Vite, Tailwind-style CSS, Recharts
