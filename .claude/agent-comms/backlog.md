@@ -5,7 +5,7 @@ Add tasks anytime — the loop picks them up on the next cycle.
 
 ## Features (build these)
 
-- [ ] Hosted business page — public page at /biz/{slug} showing business info, widget, booking
+- [x] Hosted business page — public page at /biz/{slug} showing business info, widget, booking — already built (migrations 009-010, backend, frontend, settings) verified 2026-03-12
 - [ ] Stripe subscription management in dashboard — upgrade/downgrade/cancel
 - [x] Webhook test endpoint — let users send a test event to verify their webhook URL — done 2026-03-12
 - [ ] Email template editor — visual editor for automation email steps
@@ -25,9 +25,9 @@ Add tasks anytime — the loop picks them up on the next cycle.
 - [x] Test signup flow with duplicate email — done 2026-03-12
 - [x] Test chat endpoint with empty message body — covered in lead extraction tests 2026-03-12
 - [x] Test lead capture with partial info (name but no email) — done 2026-03-12
-- [ ] Test appointment booking with overlapping time slots
-- [ ] Test webhook delivery and retry logic
-- [ ] Test Stripe webhook signature verification
+- [x] Test appointment booking with overlapping time slots — done 2026-03-12 (12 tests: slot gen, overlap detection, lead linkage, appointment creation)
+- [x] Test webhook delivery and retry logic — done 2026-03-12 (18 tests: HMAC signing, daily limits, fire_event, delivery + retry)
+- [x] Test Stripe webhook signature verification — done 2026-03-12 (7 tests: sig validation, event routing, error handling)
 - [ ] Test widget CORS from external domain
 - [ ] Test automation sequence execution order
 
