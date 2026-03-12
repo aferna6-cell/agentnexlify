@@ -35,10 +35,10 @@ Dashboard (React/Vite) → FastAPI /api/* → Supabase
 Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant from day one.
 
 ## Key Directories
-- `backend/` — FastAPI service (`main.py`, `routers/` with 16 files, `services/` for business logic)
+- `backend/` — FastAPI service (`main.py`, `routers/` with 20 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–013)
+- `migrations/` — SQL migration files (001–017)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
@@ -55,11 +55,11 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
 | tenants | Core accounts/billing | id, business_name, owner_email, plan, plan_status, stripe_customer_id, password_hash, owner_name, business_slug |
-| widget_configs | Chat widget customization | tenant_id, api_key, bot_name, primary_color, greeting_message, position, branding (JSONB), booking_enabled |
-| leads | Lead records | client_id (FK→tenants), name, email, phone, status, lead_score, lead_temperature, service_interest |
+| widget_configs | Chat widget customization | tenant_id, api_key, bot_name, primary_color, greeting_message, position, branding (JSONB), booking_enabled, is_online |
+| leads | Lead records | client_id (FK→tenants), name, email, phone, status, lead_score, lead_temperature, service_interest, tags (TEXT[]) |
 | chat_messages | Canonical message store | tenant_id, session_id, role, content, created_at |
 | conversations | Chat conversation container (legacy) | tenant_id, session_id, messages (JSONB), lead_id |
-| appointments | Booked slots | tenant_id, lead_id, customer_name, start_time, end_time, status, google_event_id |
+| appointments | Booked slots | tenant_id, lead_id, customer_name, start_time, end_time, status, google_event_id, recurrence_rule, recurrence_parent_id |
 | business_hours | Availability config | tenant_id, timezone, hours (JSONB), slot_duration_minutes |
 | automation_sequences | Multi-step email series | tenant_id, name, trigger_event, is_active |
 | automation_steps | Steps in a sequence | sequence_id, step_order, delay_minutes, action_type |
@@ -72,6 +72,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | team_members | Multi-user support | tenant_id, email, name, role, password_hash |
 | webhooks | Outbound webhook defs | tenant_id, name, url, events, is_active |
 | webhook_logs | Webhook audit trail | webhook_id, event, payload, success |
+| email_templates | Reusable email template library | tenant_id, name, category, subject_template, body_template, is_shared |
 | support_messages | Contact form submissions | name, email, message |
 
 > Always verify against live schema — this table may be outdated.
@@ -152,7 +153,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 013) → test in Supabase SQL editor → run on prod → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 017) → test in Supabase SQL editor → run on prod → update Pydantic models
 
 ## Knowledge Base
 
