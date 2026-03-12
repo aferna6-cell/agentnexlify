@@ -134,6 +134,23 @@ export function rescoreAllLeads(tenantId, token) {
   return request(`/api/v1/leads/${tenantId}/score-all`, { method: "POST", token });
 }
 
+export async function importLeadsCSV(tenantId, token, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/v1/leads/${tenantId}/import`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, err);
+  }
+  return res.json();
+}
+
 // --- CRM / Clients ---
 
 export function fetchClients(tenantId, token, { search, stage, sort, order } = {}) {

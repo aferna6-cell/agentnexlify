@@ -11,7 +11,7 @@ _These are the features a customer needs before they'll upgrade from free._
 
 - [x] **Email notifications for new leads** — done 2026-03-12. Added `_send_new_lead_email_notification()` in widget.py, wired into both auto-capture and manual submit paths.
 - [x] **Conversation export** — done 2026-03-12. Added "Export Transcript" button to ConversationsPage that downloads conversation as .txt file.
-- [ ] **Lead import via CSV** — Upload leads in bulk. Every business switching from spreadsheets needs this. (Carried from previous backlog.)
+- [x] **Lead import via CSV** — done 2026-03-12. Backend: POST /api/v1/leads/{tenant_id}/import with UploadFile. Frontend: Import CSV button on LeadsPage with result banner. Dedup by email, max 500 rows, fires webhooks.
 - [ ] **Email template editor** — Visual editor for automation email steps. Currently templates are raw text. Business owners need a drag-and-drop or rich-text editor. (Carried from previous backlog.)
 
 ## Features — Tier 2: "This would make my life easier"

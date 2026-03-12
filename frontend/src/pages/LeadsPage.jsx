@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchLeads, updateLead, deleteLead } from "../utils/api";
+import { fetchLeads, updateLead, deleteLead, importLeadsCSV } from "../utils/api";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
 import LeadDetailDrawer from "./Dashboard/LeadDetailDrawer";
 
@@ -89,6 +89,9 @@ export default function LeadsPage() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedLead, setSelectedLead] = useState(null);
   const [error, setError] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = useRef(null);
   const debounceRef = useRef(null);
 
   const loadLeads = useCallback(async (params = {}) => {
@@ -185,6 +188,24 @@ export default function LeadsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImportCSV = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImporting(true);
+    setImportResult(null);
+    setError(null);
+    try {
+      const result = await importLeadsCSV(user.tenantId, token, file);
+      setImportResult(result);
+      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder });
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -227,9 +248,30 @@ export default function LeadsPage() {
         <button className="leads-export-btn" onClick={handleExportCSV}>
           Export CSV
         </button>
+        <button
+          className="leads-export-btn"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing}
+        >
+          {importing ? "Importing..." : "Import CSV"}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          style={{ display: "none" }}
+          onChange={handleImportCSV}
+        />
       </div>
 
       {error && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
+      {importResult && (
+        <div style={{ marginBottom: "1rem", padding: "0.75rem 1rem", background: "var(--bg-card)", borderRadius: 8, border: "1px solid var(--border)", fontSize: "0.9rem" }}>
+          Imported: {importResult.created} created, {importResult.updated} updated
+          {importResult.total_errors > 0 && `, ${importResult.total_errors} error${importResult.total_errors !== 1 ? "s" : ""}`}
+          <button onClick={() => setImportResult(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>dismiss</button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>Loading...</div>
