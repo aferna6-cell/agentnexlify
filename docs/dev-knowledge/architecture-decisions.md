@@ -63,4 +63,25 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Email templates: stored per-tenant with starter gallery
+**Date:** 2026-03-12
+**Decision:** Email templates are stored in a per-tenant `email_templates` table, with a set of built-in starter templates served from Python constants (not DB). The SequenceBuilder loads both and presents them in a unified picker.
+**Why:** Business owners need reusable templates but shouldn't be forced to create from scratch. Starter templates provide instant value without DB seeding. Per-tenant storage allows customization while starter templates are always available.
+
+---
+
+### Appointment reminders: background loop, not sequence-based
+**Date:** 2026-03-12
+**Decision:** Appointment reminders use a dedicated `send_appointment_reminders()` function in the automation loop, not the sequence/execution system. Reminders are tracked via tags in the appointment's `notes` field.
+**Why:** Sequence-based reminders trigger relative to enrollment time, but reminders need to fire relative to appointment start time. A dedicated function queries appointments in specific time windows (24h and 1h before) and sends directly. Using notes tags for dedup avoids a new DB table while being reliable.
+
+---
+
+### Multi-language: prompt-based, not detection-based
+**Date:** 2026-03-12
+**Decision:** Multi-language support is implemented by instructing Claude to match the visitor's language in the system prompt, rather than running language detection on the input.
+**Why:** Claude inherently understands the language being used and can respond in kind. Adding a separate detection step (langdetect, etc.) adds complexity and latency for no benefit since Claude handles it natively.
+
+---
+
 _Add new decisions when significant architectural choices are made._

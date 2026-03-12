@@ -52,6 +52,9 @@ Adds `free_trial_started_at` (TIMESTAMPTZ) to tenants. Backfills existing free p
 ### 013 — Fix Plan Names & Unlimited Conversations
 Data migration: renames plans 'foundation'→'growth', 'operations'→'professional'. Clears monthly_conversation_limit (all plans now unlimited). Updates CHECK constraint to only allow: free, growth, professional, enterprise.
 
+### 014 — Email Templates
+Adds `email_templates` table for reusable email template library. Columns: id (UUID PK), tenant_id (FK→tenants), name (TEXT), category (TEXT DEFAULT 'custom'), subject_template (TEXT), body_template (TEXT), is_shared (BOOLEAN), created_at, updated_at. Index on tenant_id. RLS enabled.
+
 ## Known Schema Gotchas
 
 | Issue | Detail |

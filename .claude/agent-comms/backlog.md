@@ -12,15 +12,15 @@ _These are the features a customer needs before they'll upgrade from free._
 - [x] **Email notifications for new leads** — done 2026-03-12. Added `_send_new_lead_email_notification()` in widget.py, wired into both auto-capture and manual submit paths.
 - [x] **Conversation export** — done 2026-03-12. Added "Export Transcript" button to ConversationsPage that downloads conversation as .txt file.
 - [x] **Lead import via CSV** — done 2026-03-12. Backend: POST /api/v1/leads/{tenant_id}/import with UploadFile. Frontend: Import CSV button on LeadsPage with result banner. Dedup by email, max 500 rows, fires webhooks.
-- [ ] **Email template editor** — Visual editor for automation email steps. Currently templates are raw text. Business owners need a drag-and-drop or rich-text editor. (Carried from previous backlog.)
+- [x] **Email template editor** — done 2026-03-12. Reusable template library (backend CRUD + migration 014) with 6 starter templates. SequenceBuilder enhanced with template picker, formatting toolbar, variable insertion, and live HTML preview panel. Templates can be saved from steps and reused across sequences.
 
 ## Features — Tier 2: "This would make my life easier"
 _These make the product sticky — once they use these, they won't leave._
 
 - [x] **Quick reply / follow-up from dashboard** — done 2026-03-12. Backend: POST /api/v1/leads/{tenant_id}/{lead_id}/email. Frontend: inline email compose in LeadDetailDrawer with subject/message fields. Auto-updates lead status from "new" to "contacted".
-- [ ] **Appointment reminders** — Auto-send SMS or email reminders to customers before their appointment (24h and 1h before). Automation sequences exist — create a pre-built "appointment reminder" automation that triggers on appointment_booked with timed steps.
+- [x] **Appointment reminders** — done 2026-03-12. Background function `send_appointment_reminders()` runs every 60s in the automation loop. Sends email + SMS at 24h and 1h before appointments. Dedup via notes field tags. No new migration needed.
 - [x] **Business hours awareness in AI** — done 2026-03-12. Injected business hours + current open/closed status into chat system prompt. AI now knows schedule and can tell visitors when the business is open/closed.
-- [ ] **Multi-language support** — Detect the customer's language and respond in it. Huge for service businesses in diverse areas. Add language detection in the widget chat endpoint and instruct Claude to respond in the detected language.
+- [x] **Multi-language support** — done 2026-03-12. Added instruction to system prompt: "ALWAYS respond in the same language the visitor uses." Claude handles detection natively — no separate detection library needed.
 - [ ] **Widget offline message** — When the business is "offline" (if they want to control when the widget is active), show a contact form instead of live chat. Add an online/offline toggle to widget config and a fallback form in the widget JS.
 - [ ] **Dashboard notifications center** — In-app notification bell showing: new leads, new conversations, appointments today, system alerts. Currently the dashboard is passive — you have to go looking. (Carried from previous backlog.)
 

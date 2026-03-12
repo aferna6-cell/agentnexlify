@@ -494,3 +494,154 @@ async def check_no_response_leads() -> int:
     """
     logger.debug("check_no_response_leads: skipped (disabled — conversations schema mismatch)")
     return 0
+
+
+async def send_appointment_reminders() -> int:
+    """Check for upcoming appointments and send email/SMS reminders.
+
+    Sends reminders at two windows:
+    - 24 hours before (23h-25h window)
+    - 1 hour before (30m-90m window)
+
+    Uses a simple approach: query appointments in each window that haven't
+    had a reminder sent yet (tracked via notes field with reminder tags).
+    Returns count of reminders sent.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    sent = 0
+
+    reminder_windows = [
+        {"label": "24h", "min_hours": 23, "max_hours": 25},
+        {"label": "1h", "min_hours": 0.5, "max_hours": 1.5},
+    ]
+
+    for window in reminder_windows:
+        window_start = now + timedelta(hours=window["min_hours"])
+        window_end = now + timedelta(hours=window["max_hours"])
+
+        try:
+            appointments = (
+                db.table("appointments")
+                .select("id, tenant_id, customer_name, customer_email, customer_phone, start_time, end_time, notes, status")
+                .gte("start_time", window_start.isoformat())
+                .lte("start_time", window_end.isoformat())
+                .eq("status", "booked")
+                .execute()
+            )
+        except Exception:
+            logger.exception("send_appointment_reminders: failed to query appointments for %s window", window["label"])
+            continue
+
+        for appt in appointments.data or []:
+            reminder_tag = f"reminder_{window['label']}_sent"
+            notes = appt.get("notes") or ""
+            if reminder_tag in notes:
+                continue
+
+            tenant_id = appt["tenant_id"]
+
+            try:
+                tenant = db.table("tenants").select("business_name, owner_email, plan").eq("id", tenant_id).limit(1).execute()
+                if not tenant.data:
+                    continue
+                tenant_data = tenant.data[0]
+                business_name = tenant_data.get("business_name") or "Our Team"
+            except Exception:
+                logger.exception("send_appointment_reminders: failed to load tenant %s", tenant_id)
+                continue
+
+            # Format the appointment time nicely
+            try:
+                start_dt = datetime.fromisoformat(appt["start_time"].replace("Z", "+00:00"))
+                time_str = start_dt.strftime("%B %d at %I:%M %p")
+            except Exception:
+                time_str = appt["start_time"]
+
+            customer_name = appt.get("customer_name") or "there"
+            customer_email = appt.get("customer_email")
+
+            # Send email reminder
+            if customer_email:
+                subject_map = {
+                    "24h": f"Reminder: Your appointment with {business_name} tomorrow",
+                    "1h": f"Your appointment with {business_name} is in 1 hour",
+                }
+                body_map = {
+                    "24h": (
+                        f"<h2>Hi {customer_name},</h2>"
+                        f"<p>This is a friendly reminder that you have an appointment "
+                        f"with <strong>{business_name}</strong> scheduled for <strong>{time_str}</strong>.</p>"
+                        f"<p>If you need to reschedule or cancel, please reply to this email "
+                        f"or contact us directly.</p>"
+                        f"<p>We look forward to seeing you!</p>"
+                        f"<p>Best,<br>The {business_name} Team</p>"
+                    ),
+                    "1h": (
+                        f"<h2>Hi {customer_name},</h2>"
+                        f"<p>Just a quick reminder &mdash; your appointment with "
+                        f"<strong>{business_name}</strong> is coming up in about 1 hour "
+                        f"(<strong>{time_str}</strong>).</p>"
+                        f"<p>See you soon!</p>"
+                        f"<p>Best,<br>The {business_name} Team</p>"
+                    ),
+                }
+
+                try:
+                    await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        partial(
+                            send_email,
+                            to=customer_email,
+                            subject=subject_map[window["label"]],
+                            body_html=body_map[window["label"]],
+                            tenant_id=tenant_id,
+                        ),
+                    )
+                    sent += 1
+                    logger.info(
+                        "Sent %s reminder for appointment %s to %s",
+                        window["label"], appt["id"], customer_email,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to send %s reminder for appointment %s",
+                        window["label"], appt["id"],
+                    )
+
+            # Send SMS reminder if phone available
+            customer_phone = appt.get("customer_phone")
+            if customer_phone:
+                sms_map = {
+                    "24h": (
+                        f"Hi {customer_name}, reminder: you have an appointment "
+                        f"with {business_name} tomorrow ({time_str}). "
+                        f"Reply to reschedule."
+                    ),
+                    "1h": (
+                        f"Hi {customer_name}, your appointment with "
+                        f"{business_name} is in 1 hour ({time_str}). See you soon!"
+                    ),
+                }
+                try:
+                    if check_sms_rate_limit(tenant_id, tenant_data.get("plan", "free")):
+                        await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            partial(send_sms, to=customer_phone, body=sms_map[window["label"]]),
+                        )
+                        increment_sms_count(tenant_id)
+                        sent += 1
+                except Exception:
+                    logger.exception(
+                        "Failed to send SMS %s reminder for appointment %s",
+                        window["label"], appt["id"],
+                    )
+
+            # Mark reminder as sent in notes
+            updated_notes = f"{notes}\n{reminder_tag}".strip() if notes else reminder_tag
+            try:
+                db.table("appointments").update({"notes": updated_notes}).eq("id", appt["id"]).execute()
+            except Exception:
+                logger.exception("Failed to mark reminder sent for appointment %s", appt["id"])
+
+    return sent

@@ -16,7 +16,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import analytics, appointments, auth, automations, billing, business_page, clients, integrations, leads, sequences, sms, stripe_webhooks, support, team, webhooks, widget
+from backend.routers import analytics, appointments, auth, automations, billing, business_page, clients, email_templates, integrations, leads, sequences, sms, stripe_webhooks, support, team, webhooks, widget
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -47,7 +47,7 @@ _startup_time: float = 0.0
 
 async def _automation_loop():
     """Background loop that processes pending automation steps every 60 seconds."""
-    from backend.services.automation_engine import check_no_response_leads, process_pending_steps
+    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders
     while True:
         try:
             processed = await process_pending_steps()
@@ -62,6 +62,13 @@ async def _automation_loop():
                 logger.info("Automation loop: triggered %d no-response sequences", triggered)
         except Exception:
             logger.exception("Automation loop: check_no_response_leads failed")
+
+        try:
+            reminders = await send_appointment_reminders()
+            if reminders:
+                logger.info("Automation loop: sent %d appointment reminders", reminders)
+        except Exception:
+            logger.exception("Automation loop: send_appointment_reminders failed")
 
         await asyncio.sleep(60)
 
@@ -196,6 +203,7 @@ app.include_router(auth.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
 app.include_router(clients.router)
+app.include_router(email_templates.router)
 app.include_router(leads.router)
 app.include_router(stripe_webhooks.router)
 app.include_router(sequences.router)

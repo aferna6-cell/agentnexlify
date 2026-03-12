@@ -269,7 +269,8 @@ def _build_system_prompt(
         f"- NEVER re-ask for info already in the conversation. If they said their name, use it. If they gave email, move on.\n"
         f"- Don't follow a rigid script. Have a natural conversation.\n"
         f"- If you don't know something, say you'll have someone follow up\n"
-        f"- Never claim to be human"
+        f"- Never claim to be human\n"
+        f"- ALWAYS respond in the same language the visitor uses. If they write in Spanish, reply in Spanish. If they write in French, reply in French. Match their language exactly."
         f"{hours_block}"
         f"{faq_block}"
     )
