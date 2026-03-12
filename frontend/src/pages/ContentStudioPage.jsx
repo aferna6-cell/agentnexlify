@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchContentItems, createContentItem, deleteContentItem, repurposeContent, fetchContentItem } from "../utils/api";
+import { fetchContentItems, createContentItem, deleteContentItem, repurposeContent, fetchContentItem, updateContentItem } from "../utils/api";
 
 const SOURCE_TYPES = [
   { key: "text", label: "Blog Post / Article", placeholder: "Paste your blog post, article, or any long-form content here..." },
@@ -132,6 +132,9 @@ export default function ContentStudioPage() {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState(null);
   const [copiedPlatform, setCopiedPlatform] = useState(null);
+  const [editingPlatform, setEditingPlatform] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const handleRepurpose = async (contentId) => {
     setGenerating(true);
@@ -164,6 +167,24 @@ export default function ContentStudioPage() {
       document.body.removeChild(ta);
       setCopiedPlatform(platform);
       setTimeout(() => setCopiedPlatform(null), 2000);
+    }
+  };
+
+  const handleEditSave = async (platform) => {
+    if (!selectedItem) return;
+    setSaving(true);
+    try {
+      const updatedVersions = { ...selectedItem.platform_versions, [platform]: editText };
+      await updateContentItem(user.tenantId, token, selectedItem.id, {
+        platform_versions: updatedVersions,
+      });
+      setSelectedItem({ ...selectedItem, platform_versions: updatedVersions });
+      setEditingPlatform(null);
+      setEditText("");
+    } catch {
+      // keep editing open on failure
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -389,7 +410,7 @@ export default function ContentStudioPage() {
                 <div key={platform} style={{
                   marginBottom: 12,
                   background: "var(--bg-primary)",
-                  border: "1px solid var(--border-color)",
+                  border: editingPlatform === platform ? "2px solid var(--accent)" : "1px solid var(--border-color)",
                   borderRadius: 8,
                   padding: 12,
                 }}>
@@ -407,26 +428,102 @@ export default function ContentStudioPage() {
                     }}>
                       {PLATFORM_LABELS[platform] || platform}
                     </span>
-                    <button
-                      onClick={() => handleCopy(platform, text)}
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {editingPlatform === platform ? (
+                        <>
+                          <button
+                            onClick={() => handleEditSave(platform)}
+                            disabled={saving}
+                            style={{
+                              background: "var(--green)",
+                              border: "none",
+                              color: "#fff",
+                              padding: "3px 10px",
+                              borderRadius: 6,
+                              fontSize: "0.7rem",
+                              cursor: saving ? "default" : "pointer",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {saving ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            onClick={() => { setEditingPlatform(null); setEditText(""); }}
+                            style={{
+                              background: "var(--hover-overlay)",
+                              border: "1px solid var(--border-color)",
+                              color: "var(--text-secondary)",
+                              padding: "3px 10px",
+                              borderRadius: 6,
+                              fontSize: "0.7rem",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => { setEditingPlatform(platform); setEditText(text); }}
+                            style={{
+                              background: "var(--hover-overlay)",
+                              border: "1px solid var(--border-color)",
+                              color: "var(--text-secondary)",
+                              padding: "3px 10px",
+                              borderRadius: 6,
+                              fontSize: "0.7rem",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleCopy(platform, text)}
+                            style={{
+                              background: copiedPlatform === platform ? "var(--green)" : "var(--hover-overlay)",
+                              border: "1px solid var(--border-color)",
+                              color: copiedPlatform === platform ? "#fff" : "var(--text-secondary)",
+                              padding: "3px 10px",
+                              borderRadius: 6,
+                              fontSize: "0.7rem",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {copiedPlatform === platform ? "Copied!" : "Copy"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {editingPlatform === platform ? (
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={8}
                       style={{
-                        background: copiedPlatform === platform ? "var(--green)" : "var(--hover-overlay)",
-                        border: "1px solid var(--border-color)",
-                        color: copiedPlatform === platform ? "#fff" : "var(--text-secondary)",
-                        padding: "3px 10px",
+                        width: "100%",
+                        padding: "10px 12px",
                         borderRadius: 6,
-                        fontSize: "0.7rem",
-                        cursor: "pointer",
-                        fontWeight: 500,
-                        transition: "all 0.15s",
+                        border: "1px solid var(--border-color)",
+                        background: "var(--card-bg)",
+                        color: "var(--text-primary)",
+                        fontSize: "0.85rem",
+                        resize: "vertical",
+                        fontFamily: "inherit",
+                        lineHeight: 1.6,
+                        boxSizing: "border-box",
                       }}
-                    >
-                      {copiedPlatform === platform ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                    {text}
-                  </div>
+                    />
+                  ) : (
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                      {text}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

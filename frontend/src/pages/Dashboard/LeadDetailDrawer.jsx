@@ -113,7 +113,7 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     if (user?.tenantId && lead.id && token) {
       fetchLeadScore(user.tenantId, lead.id, token)
         .then((data) => setBreakdown(data.breakdown))
-        .catch(() => {});
+        .catch((err) => console.warn("Lead score fetch failed:", err.message));
     }
   }, [lead, user?.tenantId, token]);
 

@@ -66,7 +66,7 @@ export default function AutomationsPage({ onNavigate }) {
   useEffect(() => {
     loadSequences();
     if (user?.tenantId) {
-      fetchSequenceStats(user.tenantId, token).then(setStats).catch(() => {});
+      fetchSequenceStats(user.tenantId, token).then(setStats).catch((err) => console.warn("Sequence stats failed:", err.message));
     }
   }, [loadSequences, user?.tenantId, token]);
 

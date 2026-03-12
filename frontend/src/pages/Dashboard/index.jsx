@@ -75,7 +75,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
     if (user?.tenantId) {
       fetchDashboard(user.tenantId, token)
         .then((data) => setDashData(data))
-        .catch(() => {});
+        .catch((err) => console.warn("Dashboard refresh failed:", err.message));
     }
   }, [user?.tenantId, token]);
 
