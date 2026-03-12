@@ -557,4 +557,8 @@ export function deleteContentItem(tenantId, token, contentId) {
   return request(`/api/v1/content/${tenantId}/${contentId}`, { method: "DELETE", token });
 }
 
+export function repurposeContent(tenantId, token, contentId) {
+  return request(`/api/v1/content/${tenantId}/${contentId}/repurpose`, { method: "POST", token });
+}
+
 export { ApiError };

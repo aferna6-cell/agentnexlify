@@ -187,6 +187,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Why:** Restaurants are one of our primary target verticals. Order-taking through the chat widget is a massive differentiator — most chatbot platforms can answer questions but can't take orders. This turns the widget from a lead capture tool into a revenue-generating tool for the restaurant.
 **Implication:** Menu management, order processing, and order notifications are restaurant-specific features gated behind business type selection. The menu can be auto-imported from the website crawl, reducing setup friction. Orders flow through the same dashboard as leads and conversations.
 
+### Content repurposer — single Claude call for all platforms
+**Decision:** Generate all 6 platform versions (LinkedIn, Facebook, Instagram, GBP, email, Twitter/X) in a single Claude API call rather than 6 separate calls.
+**Why:** 6 separate calls would be 6x the latency and cost. Claude handles multi-output well with delimiter-based parsing. Fallback parsing (positional split) handles cases where the model doesn't follow delimiter format exactly.
+**Implication:** Response parsing must be robust — primary parser checks for `===PLATFORM===` delimiters, fallback splits by the delimiter and assigns positionally. Platform specs are defined as a dict constant for easy extension.
+
 ---
 
 _Add new decisions when significant architectural choices are made._

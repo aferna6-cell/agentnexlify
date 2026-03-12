@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchContentItems, createContentItem, deleteContentItem } from "../utils/api";
+import { fetchContentItems, createContentItem, deleteContentItem, repurposeContent, fetchContentItem } from "../utils/api";
 
 const SOURCE_TYPES = [
   { key: "text", label: "Blog Post / Article", placeholder: "Paste your blog post, article, or any long-form content here..." },
@@ -129,7 +129,54 @@ export default function ContentStudioPage() {
     reader.readAsText(file);
   };
 
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState(null);
+  const [copiedPlatform, setCopiedPlatform] = useState(null);
+
+  const handleRepurpose = async (contentId) => {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const res = await repurposeContent(user.tenantId, token, contentId);
+      // Refresh the selected item with generated versions
+      const updated = await fetchContentItem(user.tenantId, token, contentId);
+      setSelectedItem(updated);
+      load();
+    } catch (e) {
+      setGenerateError(e.message || "AI generation failed");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCopy = async (platform, text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedPlatform(platform);
+      setTimeout(() => setCopiedPlatform(null), 2000);
+    } catch {
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopiedPlatform(platform);
+      setTimeout(() => setCopiedPlatform(null), 2000);
+    }
+  };
+
   const currentSourceType = SOURCE_TYPES.find((t) => t.key === sourceType) || SOURCE_TYPES[0];
+
+  const PLATFORM_LABELS = {
+    linkedin: "LinkedIn",
+    facebook: "Facebook",
+    instagram: "Instagram",
+    gbp: "Google Business Profile",
+    email: "Email Newsletter",
+    twitter: "Twitter/X",
+  };
 
   // --- Stat cards ---
   const draftCount = items.filter((i) => i.status === "draft").length;
@@ -347,33 +394,69 @@ export default function ContentStudioPage() {
                   padding: 12,
                 }}>
                   <div style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    color: "var(--accent)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     marginBottom: 6,
                   }}>
-                    {platform}
+                    <span style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      color: "var(--accent)",
+                    }}>
+                      {PLATFORM_LABELS[platform] || platform}
+                    </span>
+                    <button
+                      onClick={() => handleCopy(platform, text)}
+                      style={{
+                        background: copiedPlatform === platform ? "var(--green)" : "var(--hover-overlay)",
+                        border: "1px solid var(--border-color)",
+                        color: copiedPlatform === platform ? "#fff" : "var(--text-secondary)",
+                        padding: "3px 10px",
+                        borderRadius: 6,
+                        fontSize: "0.7rem",
+                        cursor: "pointer",
+                        fontWeight: 500,
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {copiedPlatform === platform ? "Copied!" : "Copy"}
+                    </button>
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
                     {text}
                   </div>
                 </div>
               ))}
             </div>
           )}
-          {selectedItem.status === "draft" && (
-            <div style={{
-              marginTop: 16,
-              padding: "12px 16px",
-              background: "var(--accent-dim)",
-              borderRadius: 8,
-              color: "var(--accent)",
-              fontSize: "0.85rem",
-            }}>
-              This content is ready to be repurposed. AI content generation is coming soon.
-            </div>
-          )}
+          {/* Generate / Regenerate button */}
+          <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
+            <button
+              onClick={() => handleRepurpose(selectedItem.id)}
+              disabled={generating}
+              style={{
+                background: generating ? "var(--text-muted)" : "var(--accent)",
+                color: "#fff",
+                border: "none",
+                padding: "10px 20px",
+                borderRadius: 8,
+                fontWeight: 600,
+                cursor: generating ? "default" : "pointer",
+                fontSize: "0.85rem",
+              }}
+            >
+              {generating
+                ? "Generating..."
+                : selectedItem.platform_versions && Object.keys(selectedItem.platform_versions).length > 0
+                  ? "Regenerate All Versions"
+                  : "Generate AI Versions"}
+            </button>
+            {generateError && (
+              <span style={{ color: "#f87171", fontSize: "0.85rem" }}>{generateError}</span>
+            )}
+          </div>
         </div>
       )}
 
