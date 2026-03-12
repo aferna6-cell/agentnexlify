@@ -29,6 +29,7 @@ async def get_leads(
     search: str | None = Query(None),
     sort: str = Query("lead_score"),
     order: str = Query("desc"),
+    assigned_to: str | None = Query(None),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get all leads for a tenant, with optional filtering/sorting."""
@@ -45,6 +46,12 @@ async def get_leads(
 
         if stage:
             query = query.eq("status", stage)
+
+        if assigned_to:
+            if assigned_to == "unassigned":
+                query = query.is_("assigned_to", "null")
+            else:
+                query = query.eq("assigned_to", assigned_to)
 
         if search:
             safe_search = search.replace(",", "").replace(".", "").strip()
@@ -522,3 +529,56 @@ async def import_leads_csv(
         "errors": errors[:20],
         "total_errors": len(errors),
     }
+
+
+class AssignLeadRequest(BaseModel):
+    assigned_to: str | None = None  # team_member UUID or null to unassign
+
+
+@router.put("/{tenant_id}/{lead_id}/assign")
+async def assign_lead(
+    tenant_id: str,
+    lead_id: str,
+    req: AssignLeadRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Assign or unassign a lead to a team member."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Verify team member exists if assigning
+    if req.assigned_to:
+        member = (
+            db.table("team_members")
+            .select("id, name, email")
+            .eq("id", req.assigned_to)
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not member.data:
+            raise HTTPException(status_code=404, detail="Team member not found")
+
+    result = (
+        db.table("leads")
+        .update({"assigned_to": req.assigned_to})
+        .eq("id", lead_id)
+        .eq("client_id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Log the assignment
+    member_name = member.data[0]["name"] if req.assigned_to and member.data else "nobody"
+    try:
+        log_activity(
+            db, tenant_id, lead_id, "assignment",
+            f"Lead assigned to {member_name}",
+        )
+    except Exception:
+        logger.warning("Failed to log assignment activity", exc_info=True)
+
+    return result.data[0]

@@ -28,12 +28,13 @@ async function request(path, { method = "GET", body, token } = {}) {
 
 // --- Dashboard API ---
 
-export function fetchLeads(tenantId, token, { stage, search, sort, order } = {}) {
+export function fetchLeads(tenantId, token, { stage, search, sort, order, assigned_to } = {}) {
   const params = new URLSearchParams();
   if (stage) params.set("stage", stage);
   if (search) params.set("search", search);
   if (sort) params.set("sort", sort);
   if (order) params.set("order", order);
+  if (assigned_to) params.set("assigned_to", assigned_to);
   const qs = params.toString();
   return request(`/api/v1/leads/${tenantId}${qs ? `?${qs}` : ""}`, { token });
 }
@@ -148,6 +149,14 @@ export function sendLeadEmail(tenantId, token, leadId, data) {
     method: "POST",
     token,
     body: data,
+  });
+}
+
+export function assignLead(tenantId, token, leadId, assignedTo) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}/assign`, {
+    method: "PUT",
+    token,
+    body: { assigned_to: assignedTo },
   });
 }
 

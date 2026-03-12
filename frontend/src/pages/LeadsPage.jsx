@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads } from "../utils/api";
+import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads, fetchTeamMembers } from "../utils/api";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
 import LeadDetailDrawer from "./Dashboard/LeadDetailDrawer";
 
@@ -118,6 +118,8 @@ export default function LeadsPage() {
   const [importResult, setImportResult] = useState(null);
   const [duplicates, setDuplicates] = useState(null);
   const [merging, setMerging] = useState(false);
+  const [assignedFilter, setAssignedFilter] = useState("");
+  const [teamMembers, setTeamMembers] = useState([]);
   const fileInputRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -135,8 +137,16 @@ export default function LeadsPage() {
   }, [user?.tenantId, token]);
 
   useEffect(() => {
-    loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder });
-  }, [loadLeads, stageFilter, sortField, sortOrder]);
+    if (user?.tenantId && token) {
+      fetchTeamMembers(user.tenantId, token)
+        .then((data) => setTeamMembers(data.members || []))
+        .catch((err) => console.warn("Team fetch failed:", err.message));
+    }
+  }, [user?.tenantId, token]);
+
+  useEffect(() => {
+    loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined });
+  }, [loadLeads, stageFilter, sortField, sortOrder, assignedFilter]);
 
   // Debounced search
   useEffect(() => {
@@ -147,6 +157,7 @@ export default function LeadsPage() {
         search: search || undefined,
         sort: sortField,
         order: sortOrder,
+        assigned_to: assignedFilter || undefined,
       });
     }, 300);
     return () => clearTimeout(debounceRef.current);
@@ -225,7 +236,7 @@ export default function LeadsPage() {
     try {
       const result = await importLeadsCSV(user.tenantId, token, file);
       setImportResult(result);
-      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder });
+      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined });
     } catch (err) {
       setError(err.body?.detail || err.message || "Import failed");
     } finally {
@@ -247,7 +258,7 @@ export default function LeadsPage() {
     try {
       await mergeLeads(user.tenantId, token, keepId, mergeId);
       setDuplicates((prev) => prev.filter((d) => !d.leads.some((l) => l.id === mergeId)));
-      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder });
+      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined });
       setError(null);
     } catch (err) {
       setError(err.body?.detail || err.message || "Merge failed");
@@ -279,6 +290,16 @@ export default function LeadsPage() {
           <option value="">All Stages</option>
           {STAGES.map((s) => (
             <option key={s.key} value={s.key}>{s.label}</option>
+          ))}
+        </select>
+        <select
+          className="leads-filter"
+          value={assignedFilter}
+          onChange={(e) => setAssignedFilter(e.target.value)}
+        >
+          <option value="">All Assignees</option>
+          {teamMembers.map((m) => (
+            <option key={m.id} value={m.id}>{m.name || m.email}</option>
           ))}
         </select>
         <div className="leads-view-toggle">

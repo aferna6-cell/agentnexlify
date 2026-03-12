@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore, sendLeadEmail } from "../../utils/api";
+import { fetchLeadScore, sendLeadEmail, assignLead, fetchTeamMembers } from "../../utils/api";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },
@@ -92,6 +92,16 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   const [emailBody, setEmailBody] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [assignedTo, setAssignedTo] = useState(lead.assigned_to || "");
+
+  useEffect(() => {
+    if (user?.tenantId && token) {
+      fetchTeamMembers(user.tenantId, token)
+        .then((data) => setTeamMembers(data.members || []))
+        .catch((err) => console.warn("Team members fetch failed:", err.message));
+    }
+  }, [user?.tenantId, token]);
 
   useEffect(() => {
     setForm({
@@ -106,6 +116,7 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     });
     setConfirmDelete(false);
     setBreakdown(null);
+    setAssignedTo(lead.assigned_to || "");
     setShowEmail(false);
     setEmailSubject("");
     setEmailBody("");
@@ -144,6 +155,16 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
       return;
     }
     if (onDelete) await onDelete(lead.id);
+  };
+
+  const handleAssign = async (memberId) => {
+    setAssignedTo(memberId);
+    try {
+      await assignLead(user.tenantId, token, lead.id, memberId || null);
+    } catch (err) {
+      setAssignedTo(lead.assigned_to || "");
+      console.warn("Assign failed:", err.message);
+    }
   };
 
   const handleSendEmail = async () => {
@@ -297,6 +318,15 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               <select className="drawer-select" value={form.status} onChange={handleChange("status")}>
                 {STAGE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="drawer-field">
+              <label className="drawer-label">Assigned To</label>
+              <select className="drawer-select" value={assignedTo} onChange={(e) => handleAssign(e.target.value)}>
+                <option value="">Unassigned</option>
+                {teamMembers.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name || m.email}</option>
                 ))}
               </select>
             </div>
