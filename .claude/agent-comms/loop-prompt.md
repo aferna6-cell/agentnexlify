@@ -283,7 +283,7 @@ After all gates:
 - NEVER modify existing migration files — only create new numbered ones
 - NEVER change database schema without a migration file
 - NEVER remove features that work
-- NEVER push to remote — only commit locally
+- Push after every commit to keep GitHub in sync. This triggers auto-deploy on Vercel and Railway.
 - When unsure, skip and note for human review
 
 ### Business Logic — The Sacred Cow
@@ -416,6 +416,7 @@ Backlog:
 - [what was completed/added]
 
 Cycle [N]"
+git push
 ```
 
 ### STEP 8: CHECKPOINT

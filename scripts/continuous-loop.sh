@@ -125,7 +125,7 @@ while true; do
 ${RESUME_CTX}You are in the continuous development loop. Read .claude/agent-comms/loop-prompt.md for your full instructions. Read .claude/agent-comms/backlog.md for the work queue. Begin with STEP 1.
 " \
     --allowedTools "Read" "Write" "Edit" "MultiEdit" "Glob" "Grep" "LS" \
-    "Bash(git log*)" "Bash(git add*)" "Bash(git commit*)" "Bash(git pull*)" "Bash(git diff*)" "Bash(git status*)" "Bash(git stash*)" "Bash(git checkout -- *)" \
+    "Bash(git log*)" "Bash(git add*)" "Bash(git commit*)" "Bash(git push*)" "Bash(git pull*)" "Bash(git diff*)" "Bash(git status*)" "Bash(git stash*)" "Bash(git checkout -- *)" \
     "Bash(grep*)" "Bash(find*)" "Bash(wc*)" "Bash(cat*)" "Bash(ls*)" "Bash(head*)" "Bash(tail*)" "Bash(sort*)" "Bash(date*)" "Bash(echo*)" "Bash(chmod*)" "Bash(mkdir*)" "Bash(cp*)" "Bash(mv*)" \
     "Bash(npm run*)" "Bash(npm test*)" "Bash(npx*)" \
     "Bash(python -c*)" "Bash(python -m*)" "Bash(pytest*)" \
