@@ -19,6 +19,8 @@ Level 3: TEST COVERAGE — Write tests for untested code paths
          ↓ (only when test coverage is solid)
 Level 4: CUSTOMER SIMULATION — Role-play as different business types using the product, find gaps, add them to the backlog
          ↓ (only when simulation reveals no new gaps)
+Level 4.5: RESEARCH & INNOVATE — Research what competitors offer, what customers in similar SaaS products expect, and what emerging technologies could benefit the product. When you find a valuable feature or improvement that isn't in the backlog, add it with a [RESEARCHED] tag and a one-line justification for why it matters.
+         ↓ (only when research reveals no new opportunities)
 Level 5: CONTENT — Generate marketing copy, docs, help articles, onboarding emails from the backlog
          ↓ (only when no content is queued)
 Level 6: OPTIMIZATION — Code quality, performance, refactoring
@@ -29,6 +31,23 @@ Level 7: SYSTEM EVOLUTION — Improve agents, skills, commands, hooks, CLAUDE.md
 **This means:** If there's a feature in the backlog, build it. Don't write tests for old code when new features are waiting. Don't optimize imports when there's a bug to fix. Don't generate help articles when a customer simulation found a gap that needs a feature.
 
 After completing a task at any level, check if a higher level now has work (a feature you just built needs tests → that's level 3, but if building it revealed a bug → that's level 2, which is higher priority).
+
+### Research Sources
+
+When researching new features, think like a product manager:
+
+1. **What do competitors offer?** Think about products like Intercom, Drift, Tidio, LiveChat, Crisp, Freshchat. What do they have that we don't? Which of those features would matter most to a small business owner (not enterprise)?
+
+2. **What do small business owners complain about?** Think about the common pain points: missed calls after hours, no-shows for appointments, leads going cold because follow-up was too slow, not knowing which marketing channel drives leads.
+
+3. **What would make this product 10x more valuable?** Not incremental improvements — what would make a business owner say "I can't run my business without this"? Examples: automatic follow-up sequences, AI that learns the business's tone over time, integration with Google Business Profile, automatic review responses.
+
+4. **What's technically feasible with our stack?** We have FastAPI, React, Supabase, Claude API, Twilio, Stripe. What can we build with these that would be hard for a business owner to set up themselves?
+
+When you discover a feature worth building:
+- Add it to backlog.md under the appropriate tier
+- Tag it [RESEARCHED] with a one-line justification
+- Example: `- [ ] [RESEARCHED] Google Business Profile integration — 90% of local businesses use GBP; syncing hours/reviews would save them from updating two places`
 
 ## THE BACKLOG — YOUR WORK QUEUE
 
@@ -323,6 +342,47 @@ Write to `.claude/agent-comms/loop-plan.md`:
 - Clean up as you go
 - Capture knowledge from what you learned
 
+### 3b: REFACTOR & CLEAN (mandatory every cycle)
+
+After completing your planned tasks, spend the remainder of the cycle cleaning the codebase. This is not optional — every cycle must leave the repo cleaner.
+
+Pick ONE of these cleanup actions per cycle (rotate through them):
+
+**Cycle mod 5 = 0: Dead Code Sweep**
+- Scan for unused imports across all Python and JS/TS files
+- Scan for functions/components that are defined but never called
+- Scan for files that nothing imports
+- Remove what's dead. If unsure, leave it and add a TODO with context.
+
+**Cycle mod 5 = 1: Error Handling Hardening**
+- Find the 3 worst error handling patterns in the codebase (bare excepts, missing try/catch on API calls, errors that return 500 instead of useful messages)
+- Fix them properly: add logging, return meaningful error responses, handle specific exception types
+
+**Cycle mod 5 = 2: Consistency Pass**
+- Pick one area (API response formats, component structure, naming conventions, file organization)
+- Make it consistent across the codebase
+- Example: if some endpoints return {data: ...} and others return raw arrays, standardize them all
+
+**Cycle mod 5 = 3: Documentation Debt**
+- Find functions or endpoints with no docstrings/comments that are complex enough to need them
+- Add clear, concise documentation
+- Update CLAUDE.md if any documented information is stale
+- Update the knowledge base files if any entries are incomplete
+
+**Cycle mod 5 = 4: Performance & Security Scan**
+- Look for N+1 query patterns (querying in a loop instead of batch)
+- Look for missing input validation on API endpoints
+- Look for missing rate limiting on public endpoints
+- Look for unnecessary data being sent to the frontend (sending full records when only names are needed)
+- Fix the top 1-2 issues found
+
+**Rules for refactoring:**
+- Never refactor business logic — only structure, quality, and patterns
+- If a refactor touches more than 5 files, it's too big for one cycle — break it up
+- Always verify builds pass after refactoring
+- If a refactor reveals a bug, fix the bug AND document it in bug-patterns.md
+- The goal is incremental improvement every cycle, not periodic big rewrites
+
 ### STEP 4: TEST
 - Verify builds pass
 - Run existing tests if they exist
@@ -368,6 +428,6 @@ Write `.claude/agent-comms/checkpoint.md` with current state for session recover
 ### STEP 9: NEXT CYCLE
 Check backlog for new work. Check hierarchy level. Go to STEP 1.
 
-Announce: "Cycle [N] complete. [Level]: [what]. Knowledge: [what]. Next: [what]. Starting cycle [N+1]."
+Announce: "Cycle [N] complete. Built: [what]. Researched: [any new backlog items discovered]. Cleaned: [what refactoring was done]. Knowledge: [what was documented]. Starting cycle [N+1]."
 
 **The loop never ends.**
