@@ -279,12 +279,29 @@ async def delete_appointment(
 ):
     """Cancel an appointment (soft delete)."""
     _verify_tenant(claims, tenant_id)
+
+    # Fetch appointment details before cancelling (for webhook payload)
+    db = get_supabase()
+    appt_result = (
+        db.table("appointments")
+        .select("customer_name, customer_email, start_time, end_time")
+        .eq("id", appointment_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    appt_data = appt_result.data[0] if appt_result.data else {}
+
     result = cancel_appointment(tenant_id, appointment_id)
     if not result:
         raise HTTPException(status_code=404, detail="Appointment not found")
 
     fire_event_background(tenant_id, "appointment.cancelled", {
         "appointment_id": appointment_id,
+        "customer_name": appt_data.get("customer_name"),
+        "customer_email": appt_data.get("customer_email"),
+        "start_time": appt_data.get("start_time"),
+        "end_time": appt_data.get("end_time"),
     })
 
     return {"status": "cancelled", "id": appointment_id}

@@ -22,6 +22,7 @@ SUPPORTED_EVENTS = {
     "conversation.started",
     "conversation.message",
     "automation.email_sent",
+    "automation.sms_sent",
 }
 
 _TIMEOUT = 10.0

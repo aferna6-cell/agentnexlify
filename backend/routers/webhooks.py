@@ -221,6 +221,36 @@ async def list_events(tenant_id: str, claims: dict = Depends(_get_current_tenant
     return {"events": sorted(SUPPORTED_EVENTS)}
 
 
+@router.get("/schema/events")
+async def webhook_events_schema():
+    """Public endpoint: returns all webhook events with sample payloads for Zapier/integration setup."""
+    now = datetime.now(timezone.utc)
+    tomorrow = now + timedelta(days=1)
+    tomorrow_end = tomorrow + timedelta(hours=1)
+
+    schema = {}
+    for event in sorted(SUPPORTED_EVENTS):
+        sample = _build_sample_payload(event)
+        schema[event] = {
+            "description": {
+                "lead.created": "Fired when a new lead is captured (from widget, CSV import, or offline form)",
+                "lead.updated": "Fired when a lead's details or stage change",
+                "appointment.booked": "Fired when a new appointment is booked",
+                "appointment.cancelled": "Fired when an appointment is cancelled",
+                "conversation.started": "Fired when a new chat conversation begins",
+                "conversation.message": "Fired on each message exchange in a conversation",
+                "automation.email_sent": "Fired when an automated email is sent via a sequence",
+                "automation.sms_sent": "Fired when an automated SMS is sent via a sequence",
+            }.get(event, event),
+            "sample_payload": {
+                "event": event,
+                "timestamp": now.isoformat(),
+                "data": sample,
+            },
+        }
+    return {"events": schema}
+
+
 def _build_sample_payload(event: str) -> dict:
     """Generate realistic sample data for a given webhook event type."""
     now = datetime.now(timezone.utc)
@@ -237,7 +267,8 @@ def _build_sample_payload(event: str) -> dict:
         },
         "lead.updated": {
             "lead_id": "test-uuid",
-            "updated_fields": ["status"],
+            "updated_fields": ["status", "name"],
+            "status": "contacted",
             "source": "widget",
         },
         "appointment.booked": {
@@ -249,20 +280,32 @@ def _build_sample_payload(event: str) -> dict:
         },
         "appointment.cancelled": {
             "appointment_id": "test-uuid",
+            "customer_name": "Test Customer",
+            "customer_email": "test@example.com",
+            "start_time": tomorrow.isoformat(),
+            "end_time": tomorrow_end.isoformat(),
         },
         "conversation.started": {
             "session_id": "test-session",
-            "lead_name": "Test Visitor",
+            "conversation_id": "test-conv-uuid",
         },
         "conversation.message": {
             "session_id": "test-session",
-            "role": "user",
-            "content": "Hello, I need help!",
+            "user_message": "Hello, I need help!",
+            "assistant_message": "Hi! I'd be happy to help. What can I assist you with today?",
         },
         "automation.email_sent": {
             "lead_id": "test-uuid",
-            "sequence_name": "Test Sequence",
-            "step": 1,
+            "lead_email": "test@example.com",
+            "subject": "Following up on your inquiry",
+            "sequence_id": "test-seq-uuid",
+            "step_order": 1,
+        },
+        "automation.sms_sent": {
+            "lead_id": "test-uuid",
+            "lead_phone": "+1 555-0100",
+            "sequence_id": "test-seq-uuid",
+            "step_order": 1,
         },
     }
     return samples.get(event, {"message": "Test event", "event_type": event})
