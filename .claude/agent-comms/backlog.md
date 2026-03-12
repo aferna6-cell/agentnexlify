@@ -10,7 +10,7 @@ _Last updated: 2026-03-12_
 _These are the features a customer needs before they'll upgrade from free._
 
 - [x] **Email notifications for new leads** — done 2026-03-12. Added `_send_new_lead_email_notification()` in widget.py, wired into both auto-capture and manual submit paths.
-- [ ] **Conversation export** — Let them download or print conversation transcripts. Some will want this for records. Add export button to ConversationsPage.
+- [x] **Conversation export** — done 2026-03-12. Added "Export Transcript" button to ConversationsPage that downloads conversation as .txt file.
 - [ ] **Lead import via CSV** — Upload leads in bulk. Every business switching from spreadsheets needs this. (Carried from previous backlog.)
 - [ ] **Email template editor** — Visual editor for automation email steps. Currently templates are raw text. Business owners need a drag-and-drop or rich-text editor. (Carried from previous backlog.)
 

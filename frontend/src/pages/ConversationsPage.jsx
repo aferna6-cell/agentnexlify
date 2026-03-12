@@ -53,6 +53,30 @@ export default function ConversationsPage() {
     }
   };
 
+  const exportConversation = () => {
+    if (!messages.length) return;
+    const conv = conversations.find((c) => c.session_id === selected);
+    const name = conv?.lead_name || "Visitor";
+    const lines = [
+      `Conversation with ${name}`,
+      `Session: ${selected}`,
+      `Messages: ${messages.length}`,
+      "",
+      ...messages.map((m) => {
+        const role = m.role === "user" ? "Visitor" : "AI";
+        const time = m.created_at ? new Date(m.created_at).toLocaleString() : "";
+        return `[${time}] ${role}:\n${m.content}\n`;
+      }),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `conversation-${name.replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return <SkeletonLoader />;
 
   const filtered = search
@@ -113,6 +137,11 @@ export default function ConversationsPage() {
               <div className="conv-empty-state">Loading...</div>
             ) : (
               <div className="conv-message-list">
+                {messages.length > 0 && (
+                  <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 0 0.5rem" }}>
+                    <button className="btn-sm" onClick={exportConversation}>Export Transcript</button>
+                  </div>
+                )}
                 {messages.map((m) => (
                   <div key={m.id} className={`conv-msg ${m.role}`}>
                     <div className="conv-msg-role">{m.role === "user" ? "Visitor" : "AI"}</div>
