@@ -191,4 +191,64 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### International phone numbers not captured by widget
+**Date:** 2026-03-12
+**Symptom:** Widget chat captures US phone numbers (555-123-4567) but silently drops international formats (+44 20 1234 5678, +91 98765 43210).
+**Root Cause:** `PHONE_RE` in `widget.py:91` only matched US 10-digit pattern with optional `+1`. Country codes beyond +1 and non-3-3-4 digit groupings were ignored.
+**Fix:** Updated regex to support country codes +1 through +999, variable digit groupings (2-4 digits per group), and added E.164 validation (7-15 total digits) to prevent false positives.
+**Files:** `backend/routers/widget.py`
+**Prevention:** Test phone extraction with international formats when modifying the regex. Minimum 7 digits prevents matching random numbers.
+
+---
+
+### Appointment times displayed in wrong timezone
+**Date:** 2026-03-12
+**Symptom:** Calendar and dashboard show appointment times in the browser's local timezone instead of the business's configured timezone. A 2 PM PST appointment shows as 5 PM for an EST user.
+**Root Cause:** `Calendar.jsx` had a `formatTime(isoStr, tz)` function that accepted a timezone parameter, but it was never passed — all calls were `formatTime(a.start_time)` without the tz argument. `TodayAppointments.jsx` didn't support tz at all. The API didn't return the business timezone with appointments.
+**Fix:** Added `timezone` field to `AppointmentListResponse` (populated from `business_hours` table). Both Calendar.jsx and TodayAppointments.jsx now extract and pass the timezone to all `formatTime()` calls.
+**Files:** `backend/models/schemas.py`, `backend/routers/appointments.py`, `frontend/src/pages/Calendar.jsx`, `frontend/src/pages/Dashboard/TodayAppointments.jsx`
+**Prevention:** When displaying user-facing times, always use the business timezone from the API, never browser-local time.
+
+---
+
+### Twilio webhook signature not validated — spoofing risk
+**Date:** 2026-03-12
+**Symptom:** Any HTTP client could POST to the Twilio webhook endpoint and trigger SMS-related logic without authentication.
+**Root Cause:** The SMS/Twilio endpoint accepted all incoming requests without verifying the `X-Twilio-Signature` HMAC-SHA1 header.
+**Fix:** Added Twilio signature validation using HMAC-SHA1 verification against the configured auth token.
+**Files:** Backend Twilio/SMS endpoints
+**Prevention:** All inbound webhook endpoints must validate signatures from the sending service.
+
+---
+
+### SMS rate limit used stale JWT plan instead of live DB
+**Date:** 2026-03-11
+**Symptom:** Users who upgraded their plan still hit the old plan's SMS rate limit until they re-logged in.
+**Root Cause:** SMS endpoint read the plan from JWT claims (which don't refresh on upgrade) instead of querying the database for the current plan.
+**Fix:** Changed SMS endpoint to fetch plan from the tenants table directly.
+**Files:** Backend SMS endpoint
+**Prevention:** Never use JWT claims for data that can change (plans, limits). Always fetch live from DB. Same pattern as the dashboard plan display bug.
+
+---
+
+### Sequence builder offered invalid target stages
+**Date:** 2026-03-11
+**Symptom:** Automation sequences created via the SequenceBuilder UI could set target stages like "qualified" or "appointment" that don't exist in the system, causing sequences to never trigger.
+**Root Cause:** SequenceBuilder stage dropdown had hardcoded values that didn't match the actual valid stages (new, contacted, appointment_booked, closed, lost).
+**Fix:** Updated stage options to match `VALID_LEAD_STAGES` from the schema.
+**Files:** Frontend SequenceBuilder component
+**Prevention:** Stage options should be derived from the backend's `VALID_LEAD_STAGES` constant, not hardcoded in the frontend.
+
+---
+
+### Google Calendar API calls duplicated in IntegrationsPage
+**Date:** 2026-03-11
+**Symptom:** IntegrationsPage had inline fetch calls to Google Calendar endpoints with hardcoded BASE URLs and duplicated error handling, creating maintenance burden and inconsistency.
+**Root Cause:** Google Calendar integration was added before the centralized `api.js` utility existed, so the page made raw fetch calls.
+**Fix:** Replaced inline fetch calls with centralized `api.js` functions.
+**Files:** `frontend/src/pages/IntegrationsPage.jsx`, `frontend/src/utils/api.js`
+**Prevention:** All API calls should go through `api.js` — never inline fetch with hardcoded URLs.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
