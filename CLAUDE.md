@@ -120,6 +120,8 @@ High-level commands that orchestrate the full agent pipeline:
 | `/refactor` | Analyze → Plan → Execute incrementally → Verify → Commit |
 | `/checkpoint` | Save current session state to disk (survives compaction) |
 | `/recover` | Restore context after compaction or session restart |
+| `/summary` | Generate a comprehensive change summary with metrics and health check |
+| `/script` | Generate a client-ready demo script based on what's actually built |
 
 ## Context Management
 
