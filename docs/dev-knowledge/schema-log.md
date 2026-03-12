@@ -64,6 +64,9 @@ Adds `tags` (TEXT[] DEFAULT '{}') to `leads` table. GIN index on tags for effici
 ### 017 — Recurring Appointments
 Adds `recurrence_rule` (TEXT, nullable — 'weekly'/'biweekly'/'monthly'), `recurrence_parent_id` (UUID FK→appointments.id ON DELETE CASCADE), and `recurrence_end_date` (DATE, nullable) to `appointments`. Index on recurrence_parent_id for querying series instances. Parent appointment holds rule + end_date; child instances link back via recurrence_parent_id.
 
+### 018 — Conversation Tags
+Adds `tags` (TEXT[] DEFAULT '{}') to `conversations` table. GIN index on tags. Allows business owners to label conversations (e.g., "sales", "support", "complaint"). Tags managed via PUT endpoint, displayed in ConversationsPage sidebar with filter dropdown.
+
 ## Known Schema Gotchas
 
 | Issue | Detail |

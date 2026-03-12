@@ -251,6 +251,136 @@ async def send_lead_email(
     return {"success": True, "detail": "Email sent"}
 
 
+@router.get("/{tenant_id}/duplicates")
+async def find_duplicate_leads(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+    """Find potential duplicate leads by email or phone."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("leads")
+        .select("id, name, email, phone, status, lead_score, created_at")
+        .eq("client_id", tenant_id)
+        .execute()
+    )
+    leads = result.data or []
+
+    # Group by email and phone
+    email_groups: dict[str, list] = {}
+    phone_groups: dict[str, list] = {}
+    for lead in leads:
+        email = (lead.get("email") or "").strip().lower()
+        phone = (lead.get("phone") or "").strip()
+        if email:
+            email_groups.setdefault(email, []).append(lead)
+        if phone:
+            phone_groups.setdefault(phone, []).append(lead)
+
+    # Find groups with 2+ leads (true duplicates)
+    duplicate_sets = []
+    seen_ids = set()
+    for key, group in {**email_groups, **phone_groups}.items():
+        if len(group) < 2:
+            continue
+        ids = tuple(sorted(l["id"] for l in group))
+        if ids in seen_ids:
+            continue
+        seen_ids.add(ids)
+        duplicate_sets.append({
+            "match_field": "email" if "@" in key else "phone",
+            "match_value": key,
+            "leads": group,
+        })
+
+    return {"duplicates": duplicate_sets}
+
+
+class MergeLeadsRequest(BaseModel):
+    keep_id: str
+    merge_id: str
+
+
+@router.post("/{tenant_id}/merge")
+async def merge_leads(
+    tenant_id: str,
+    req: MergeLeadsRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Merge two leads into one. Keeps keep_id, deletes merge_id.
+    Fills in missing fields from merge_id into keep_id.
+    Reassigns appointments and activity_log from merge_id.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Fetch both leads
+    keep_result = db.table("leads").select("*").eq("id", req.keep_id).eq("client_id", tenant_id).limit(1).execute()
+    merge_result = db.table("leads").select("*").eq("id", req.merge_id).eq("client_id", tenant_id).limit(1).execute()
+
+    if not keep_result.data:
+        raise HTTPException(status_code=404, detail="Primary lead not found")
+    if not merge_result.data:
+        raise HTTPException(status_code=404, detail="Merge lead not found")
+
+    keep = keep_result.data[0]
+    merge = merge_result.data[0]
+
+    # Fill in missing fields from merge into keep
+    fillable = ["name", "email", "phone", "lead_type", "areas_of_interest",
+                 "timeline", "budget", "conversation_summary", "next_steps"]
+    updates = {}
+    for field in fillable:
+        if not keep.get(field) and merge.get(field):
+            updates[field] = merge[field]
+
+    # Merge tags (union)
+    keep_tags = keep.get("tags") or []
+    merge_tags = merge.get("tags") or []
+    combined_tags = list(dict.fromkeys(keep_tags + merge_tags))  # Preserve order, dedup
+    if combined_tags != keep_tags:
+        updates["tags"] = combined_tags
+
+    # Keep the higher lead score
+    if (merge.get("lead_score") or 0) > (keep.get("lead_score") or 0):
+        updates["lead_score"] = merge["lead_score"]
+
+    if updates:
+        db.table("leads").update(updates).eq("id", req.keep_id).execute()
+
+    # Reassign appointments from merge to keep
+    try:
+        db.table("appointments").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+    except Exception:
+        logger.warning("Failed to reassign appointments during merge", exc_info=True)
+
+    # Reassign activity log entries
+    try:
+        db.table("activity_log").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+    except Exception:
+        logger.warning("Failed to reassign activity_log during merge", exc_info=True)
+
+    # Reassign client notes
+    try:
+        db.table("client_notes").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+    except Exception:
+        logger.warning("Failed to reassign client_notes during merge", exc_info=True)
+
+    # Delete the merged lead
+    db.table("leads").delete().eq("id", req.merge_id).eq("client_id", tenant_id).execute()
+
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="lead_merged",
+        description=f"Merged lead {merge.get('name', merge.get('email', req.merge_id))} into {keep.get('name', keep.get('email', req.keep_id))}",
+        lead_id=req.keep_id,
+    )
+
+    return {"success": True, "kept_id": req.keep_id, "merged_id": req.merge_id, "fields_updated": list(updates.keys())}
+
+
 # CSV column name → DB column name mapping
 _CSV_FIELD_MAP = {
     "name": "name",

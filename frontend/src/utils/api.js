@@ -159,6 +159,18 @@ export function sendLeadEmail(tenantId, token, leadId, data) {
   });
 }
 
+export function findDuplicateLeads(tenantId, token) {
+  return request(`/api/v1/leads/${tenantId}/duplicates`, { token });
+}
+
+export function mergeLeads(tenantId, token, keepId, mergeId) {
+  return request(`/api/v1/leads/${tenantId}/merge`, {
+    method: "POST",
+    token,
+    body: { keep_id: keepId, merge_id: mergeId },
+  });
+}
+
 // --- CRM / Clients ---
 
 export function fetchClients(tenantId, token, { search, stage, sort, order } = {}) {
@@ -343,6 +355,14 @@ export function fetchConversations(tenantId, token) {
 
 export function fetchConversationMessages(tenantId, sessionId, token) {
   return request(`/api/v1/auth/conversations/${tenantId}/${sessionId}`, { token });
+}
+
+export function updateConversationTags(tenantId, sessionId, token, tags) {
+  return request(`/api/v1/auth/conversations/${tenantId}/${sessionId}/tags`, {
+    method: "PUT",
+    token,
+    body: { tags },
+  });
 }
 
 // --- Tenant Settings ---

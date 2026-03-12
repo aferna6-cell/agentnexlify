@@ -582,9 +582,26 @@ async def list_conversations(tenant_id: str, claims: dict = Depends(_get_current
     except Exception:
         logger.warning("Failed to map lead names to conversations", exc_info=True)
 
+    # Fetch tags from conversations table
+    tags_map = {}
+    try:
+        conv_result = (
+            db.table("conversations")
+            .select("session_id, tags")
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+        for conv in (conv_result.data or []):
+            sid = conv.get("session_id")
+            if sid and conv.get("tags"):
+                tags_map[sid] = conv["tags"]
+    except Exception:
+        logger.warning("Failed to fetch conversation tags", exc_info=True)
+
     conv_list = sorted(sessions.values(), key=lambda s: s["last_message_at"], reverse=True)
     for c in conv_list:
         c["lead_name"] = lead_map.get(c["session_id"], "")
+        c["tags"] = tags_map.get(c["session_id"], [])
 
     return {"conversations": conv_list}
 
@@ -608,6 +625,46 @@ async def get_conversation_messages(
         .execute()
     )
     return {"messages": result.data or []}
+
+
+@router.put("/conversations/{tenant_id}/{session_id}/tags")
+async def update_conversation_tags(
+    tenant_id: str,
+    session_id: str,
+    req: dict,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Update tags on a conversation. Body: {"tags": ["tag1", "tag2"]}"""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    tags = req.get("tags", [])
+    if not isinstance(tags, list):
+        raise HTTPException(status_code=400, detail="tags must be a list")
+    # Sanitize: strings only, max 30 chars, max 10 tags
+    tags = [str(t)[:30] for t in tags if isinstance(t, str)][:10]
+
+    db = get_supabase()
+
+    # Upsert into conversations table (may not have a row yet for this session)
+    existing = (
+        db.table("conversations")
+        .select("id")
+        .eq("tenant_id", tenant_id)
+        .eq("session_id", session_id)
+        .limit(1)
+        .execute()
+    )
+    if existing.data:
+        db.table("conversations").update({"tags": tags}).eq("id", existing.data[0]["id"]).execute()
+    else:
+        db.table("conversations").insert({
+            "tenant_id": tenant_id,
+            "session_id": session_id,
+            "tags": tags,
+        }).execute()
+
+    return {"session_id": session_id, "tags": tags}
 
 
 # ── Tenant Settings ──────────────────────────────────────────

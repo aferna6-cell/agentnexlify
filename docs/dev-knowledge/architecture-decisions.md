@@ -112,6 +112,13 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Lead merge: keep-and-absorb pattern
+**Date:** 2026-03-12
+**Decision:** Lead merge uses a "keep-and-absorb" pattern: one lead is kept (primary), the other is absorbed (fills in missing fields, unions tags, keeps higher score) and then deleted. Related records (appointments, activity_log, client_notes) are reassigned to the kept lead via UPDATE. Duplicates detected by exact email or phone match.
+**Why:** Simple and reversible (activity log records the merge). Reassigning related records preserves history. Filling missing fields means no data is lost. Union of tags captures all context from both leads.
+
+---
+
 ### All-in-one platform, not separate products
 **Decision:** Reputation management, outreach, content, SEO, and job board are built as modules within AgentNexLiFy, not as separate products.
 **Why:** Same customer base. One sale, one login, one subscription. Reduces churn because the platform becomes the business's operational backbone. Compound workflows create deep moats — a customer won't leave if their reviews, outreach, content, SEO, and hiring all live here.

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchLeads, updateLead, deleteLead, importLeadsCSV } from "../utils/api";
+import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads } from "../utils/api";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
 import LeadDetailDrawer from "./Dashboard/LeadDetailDrawer";
 
@@ -116,6 +116,8 @@ export default function LeadsPage() {
   const [error, setError] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [duplicates, setDuplicates] = useState(null);
+  const [merging, setMerging] = useState(false);
   const fileInputRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -231,6 +233,29 @@ export default function LeadsPage() {
     }
   };
 
+  const handleFindDuplicates = async () => {
+    try {
+      const res = await findDuplicateLeads(user.tenantId, token);
+      setDuplicates(res.duplicates || []);
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to find duplicates");
+    }
+  };
+
+  const handleMerge = async (keepId, mergeId) => {
+    setMerging(true);
+    try {
+      await mergeLeads(user.tenantId, token, keepId, mergeId);
+      setDuplicates((prev) => prev.filter((d) => !d.leads.some((l) => l.id === mergeId)));
+      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder });
+      setError(null);
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Merge failed");
+    } finally {
+      setMerging(false);
+    }
+  };
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -287,6 +312,9 @@ export default function LeadsPage() {
           style={{ display: "none" }}
           onChange={handleImportCSV}
         />
+        <button className="leads-export-btn" onClick={handleFindDuplicates}>
+          Find Duplicates
+        </button>
       </div>
 
       {error && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
@@ -323,6 +351,50 @@ export default function LeadsPage() {
           onSave={handleLeadSave}
           onDelete={handleLeadDelete}
         />
+      )}
+
+      {duplicates !== null && (
+        <div className="modal-overlay" onClick={() => setDuplicates(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600, maxHeight: "80vh", overflow: "auto" }}>
+            <h3>Duplicate Leads</h3>
+            {duplicates.length === 0 ? (
+              <p style={{ color: "var(--text-muted)" }}>No duplicates found.</p>
+            ) : (
+              duplicates.map((dup, i) => (
+                <div key={i} style={{ marginBottom: 16, padding: 12, background: "var(--bg-secondary)", borderRadius: 8, border: "1px solid var(--border-color)" }}>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 8 }}>
+                    Match: {dup.match_field} = {dup.match_value}
+                  </div>
+                  {dup.leads.map((lead) => (
+                    <div key={lead.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--border-color)" }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{lead.name || "No name"}</div>
+                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{lead.email || ""} {lead.phone || ""}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Score: {lead.lead_score ?? "N/A"} | {lead.status}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {dup.leads.filter((l) => l.id !== lead.id).map((other) => (
+                          <button
+                            key={other.id}
+                            className="btn-sm"
+                            disabled={merging}
+                            onClick={() => handleMerge(lead.id, other.id)}
+                            title={`Keep this, merge ${other.name || other.email || "other"} into it`}
+                          >
+                            Keep this
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setDuplicates(null)}>Close</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
