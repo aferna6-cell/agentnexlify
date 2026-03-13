@@ -200,4 +200,9 @@ Creates `orders` table for restaurant order management. Columns: tenant_id (FK�
 
 **Operational note:** Migrations 029-030 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
 
+### 031 — Job Board (Jobs + Applications)
+Creates `jobs` table (tenant_id FK→tenants, title TEXT, description TEXT, pay_range TEXT, schedule TEXT, location TEXT, skills TEXT[], is_active BOOLEAN DEFAULT true, created_at, updated_at). Creates `job_applications` table (job_id FK→jobs, tenant_id FK→tenants, applicant_name TEXT, applicant_phone TEXT, message TEXT, status TEXT DEFAULT 'new': new/contacted/interviewed/hired/rejected, notes TEXT, created_at). Indexed on jobs(tenant_id, is_active), job_applications(job_id, status), job_applications(tenant_id, created_at DESC). RLS enabled on both tables.
+
+**Operational note:** Migration 031 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

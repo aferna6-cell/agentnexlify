@@ -117,10 +117,10 @@ _Google Business Profile optimization and local ranking intelligence._
 ## Features — Module: Job Board (Add-on)
 _For businesses that need to hire. SMS-first, no resume required._
 
-- [ ] **Job posting page** — Tenant creates a job post from the dashboard: title, description, pay range, schedule, location, required skills (tags, not resume). Stored in a new `jobs` table.
-- [ ] **Public job page** — Jobs are visible at agentnexlify.com/jobs/{slug} or embedded on the tenant's business page. Simple, mobile-first design. No account required to view.
-- [ ] **SMS-first application** — Applicant clicks "Apply" and enters name, phone, and a short message. They get an SMS confirmation. The business owner gets an SMS notification with the applicant's info. No resume upload, no account creation — trades workers don't use those.
-- [ ] **Applicant management** — Dashboard page showing applicants per job. Mark as: new, contacted, interviewed, hired, rejected. Add notes.
+- [x] **Job posting page** — done 2026-03-13. Migration 031 creates jobs + job_applications tables. Backend CRUD in backend/routers/jobs.py with auth. Frontend JobsPage with create/edit modal, job list with status toggle, application management. Sidebar "Job Board" tab for owner/admin.
+- [x] **Public job page** — done 2026-03-13. GET /api/v1/jobs/public/{tenant_id}/listings returns active jobs with business info. No auth required.
+- [x] **SMS-first application** — done 2026-03-13. POST /api/v1/jobs/public/{tenant_id}/{job_id}/apply accepts name + phone + message. SMS confirmation to applicant. SMS notification to owner. No resume, no account needed.
+- [x] **Applicant management** — done 2026-03-13. JobsPage shows applications per job with status management (new/contacted/interviewed/hired/rejected). Notes field. Status update endpoint.
 - [ ] **AI job description writer** — Tenant describes the role in plain language ("I need someone to help with junk removal 3 days a week"), AI generates a proper job posting optimized for the role.
 - [ ] **Job widget integration** — The chat widget can mention open jobs when relevant. If someone chats "are you hiring?" the AI knows about open positions and can direct them to apply.
 

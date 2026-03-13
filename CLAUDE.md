@@ -41,10 +41,10 @@ Dashboard (React/Vite) → FastAPI /api/* → Supabase
 Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant from day one.
 
 ## Key Directories
-- `backend/` — FastAPI service (`main.py`, `routers/` with 20 files, `services/` for business logic)
+- `backend/` — FastAPI service (`main.py`, `routers/` with 25 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–028)
+- `migrations/` — SQL migration files (001–031)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
@@ -82,6 +82,13 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | reviews | Reputation manager | tenant_id, platform, author_name, rating, review_text, ai_draft_response, owner_response, responded |
 | support_messages | Contact form submissions | name, email, message |
 | website_content | Crawled website data for AI | tenant_id, url, pages_json (JSONB), extracted_text, crawl_status, pages_found, crawled_at |
+| content_items | Content Studio | tenant_id, title, source_text, platform_versions (JSONB), status, scheduled_for |
+| email_events | Email open tracking | tenant_id, lead_id, event_type, execution_id |
+| ai_feedback | Chat AI response ratings | tenant_id, session_id, message_index, rating, correction |
+| menu_items | Restaurant menu | tenant_id, name, description, price, category, available, sort_order |
+| orders | Restaurant orders | tenant_id, session_id, customer_name, items_json, total, order_type, status |
+| jobs | Job board postings | tenant_id, title, description, pay_range, schedule, location, skills, is_active |
+| job_applications | Job applicants | job_id, tenant_id, applicant_name, applicant_phone, message, status |
 
 > Always verify against live schema — this table may be outdated.
 
@@ -161,7 +168,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 028) → test in Supabase SQL editor → run on prod → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 031) → test in Supabase SQL editor → run on prod → update Pydantic models
 
 ## Knowledge Base
 

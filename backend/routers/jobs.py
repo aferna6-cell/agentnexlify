@@ -1,0 +1,329 @@
+"""Job board endpoints — CRUD for jobs + public listings + SMS-first applications."""
+
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field
+
+from backend.config import settings
+from backend.models.database import get_supabase
+from backend.routers.auth import _get_current_tenant, require_role
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
+
+
+# --- Models ---
+
+class JobCreate(BaseModel):
+    title: str = Field(..., max_length=200)
+    description: str | None = Field(None, max_length=5000)
+    pay_range: str | None = Field(None, max_length=100)
+    schedule: str | None = Field(None, max_length=200)
+    location: str | None = Field(None, max_length=200)
+    skills: list[str] = Field(default_factory=list)
+
+
+class JobUpdate(BaseModel):
+    title: str | None = Field(None, max_length=200)
+    description: str | None = Field(None, max_length=5000)
+    pay_range: str | None = Field(None, max_length=100)
+    schedule: str | None = Field(None, max_length=200)
+    location: str | None = Field(None, max_length=200)
+    skills: list[str] | None = None
+    is_active: bool | None = None
+
+
+class JobApplicationCreate(BaseModel):
+    applicant_name: str = Field(..., max_length=200)
+    applicant_phone: str = Field(..., max_length=30)
+    message: str | None = Field(None, max_length=2000)
+
+
+class ApplicationStatusUpdate(BaseModel):
+    status: str = Field(..., pattern="^(new|contacted|interviewed|hired|rejected)$")
+    notes: str | None = Field(None, max_length=2000)
+
+
+# --- Helpers ---
+
+def _verify_tenant(claims: dict, tenant_id: str) -> None:
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+
+# --- Dashboard endpoints (JWT-auth) ---
+
+@router.get("/{tenant_id}")
+async def list_jobs(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    active_only: bool = Query(False),
+):
+    """List all jobs for a tenant."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    query = (
+        db.table("jobs")
+        .select("*")
+        .eq("tenant_id", tenant_id)
+        .order("created_at", desc=True)
+    )
+    if active_only:
+        query = query.eq("is_active", True)
+
+    result = query.execute()
+    return {"jobs": result.data or [], "count": len(result.data or [])}
+
+
+@router.post("/{tenant_id}")
+async def create_job(
+    tenant_id: str,
+    req: JobCreate,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Create a new job posting."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    data = {
+        "tenant_id": tenant_id,
+        "title": req.title,
+        "description": req.description,
+        "pay_range": req.pay_range,
+        "schedule": req.schedule,
+        "location": req.location,
+        "skills": req.skills,
+    }
+    result = db.table("jobs").insert(data).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create job")
+    return result.data[0]
+
+
+@router.put("/{tenant_id}/{job_id}")
+async def update_job(
+    tenant_id: str,
+    job_id: str,
+    req: JobUpdate,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Update a job posting."""
+    _verify_tenant(claims, tenant_id)
+
+    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    db = get_supabase()
+    result = (
+        db.table("jobs")
+        .update(updates)
+        .eq("id", job_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return result.data[0]
+
+
+@router.delete("/{tenant_id}/{job_id}")
+async def delete_job(
+    tenant_id: str,
+    job_id: str,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Delete a job posting."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    result = (
+        db.table("jobs")
+        .delete()
+        .eq("id", job_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    return {"deleted": True}
+
+
+# --- Applications management (JWT-auth) ---
+
+@router.get("/{tenant_id}/{job_id}/applications")
+async def list_applications(
+    tenant_id: str,
+    job_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    status: str | None = Query(None),
+):
+    """List applications for a specific job."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    query = (
+        db.table("job_applications")
+        .select("*")
+        .eq("job_id", job_id)
+        .eq("tenant_id", tenant_id)
+        .order("created_at", desc=True)
+    )
+    if status:
+        query = query.eq("status", status)
+
+    result = query.execute()
+    return {"applications": result.data or [], "count": len(result.data or [])}
+
+
+@router.put("/{tenant_id}/applications/{app_id}/status")
+async def update_application_status(
+    tenant_id: str,
+    app_id: str,
+    req: ApplicationStatusUpdate,
+    claims: dict = Depends(require_role("owner", "admin", "member")),
+):
+    """Update an application's status."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    updates = {"status": req.status}
+    if req.notes is not None:
+        updates["notes"] = req.notes
+
+    result = (
+        db.table("job_applications")
+        .update(updates)
+        .eq("id", app_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return result.data[0]
+
+
+# --- Public endpoints (no auth) ---
+
+@router.get("/public/{tenant_id}/listings")
+async def public_job_listings(tenant_id: str):
+    """Public endpoint — returns active job listings for a tenant."""
+    db = get_supabase()
+
+    # Get tenant info for display
+    tenant_result = (
+        db.table("tenants")
+        .select("business_name, business_phone, city")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not tenant_result.data:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    tenant = tenant_result.data[0]
+
+    # Get active jobs
+    jobs_result = (
+        db.table("jobs")
+        .select("id, title, description, pay_range, schedule, location, skills, created_at")
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", True)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return {
+        "business_name": tenant.get("business_name", ""),
+        "business_phone": tenant.get("business_phone", ""),
+        "city": tenant.get("city", ""),
+        "jobs": jobs_result.data or [],
+    }
+
+
+@router.post("/public/{tenant_id}/{job_id}/apply")
+async def public_apply(
+    tenant_id: str,
+    job_id: str,
+    req: JobApplicationCreate,
+):
+    """Public endpoint — submit a job application (SMS-first, no resume)."""
+    db = get_supabase()
+
+    # Verify job exists and is active
+    job_result = (
+        db.table("jobs")
+        .select("id, title, tenant_id")
+        .eq("id", job_id)
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", True)
+        .limit(1)
+        .execute()
+    )
+    if not job_result.data:
+        raise HTTPException(status_code=404, detail="Job not found or no longer active")
+
+    job = job_result.data[0]
+
+    # Create application
+    app_data = {
+        "job_id": job_id,
+        "tenant_id": tenant_id,
+        "applicant_name": req.applicant_name,
+        "applicant_phone": req.applicant_phone,
+        "message": req.message,
+        "status": "new",
+    }
+    result = db.table("job_applications").insert(app_data).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to submit application")
+
+    # Send SMS notification to business owner
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("business_phone, business_name")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if tenant_result.data:
+            owner_phone = tenant_result.data[0].get("business_phone")
+            biz_name = tenant_result.data[0].get("business_name", "your business")
+            if owner_phone:
+                from backend.services.twilio_service import send_sms
+                sms_body = (
+                    f"New applicant for {job['title']}!\n"
+                    f"Name: {req.applicant_name}\n"
+                    f"Phone: {req.applicant_phone}\n"
+                    f"Check your dashboard to review."
+                )
+                await send_sms(to=owner_phone, body=sms_body)
+    except Exception:
+        logger.warning("Failed to send application notification SMS", exc_info=True)
+
+    # Send SMS confirmation to applicant
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("business_name, business_phone")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if tenant_result.data:
+            biz_name = tenant_result.data[0].get("business_name", "the business")
+            biz_phone = tenant_result.data[0].get("business_phone", "")
+            from backend.services.twilio_service import send_sms
+            confirm_body = (
+                f"Thanks for applying to {job['title']} at {biz_name}! "
+                f"We've received your application and will be in touch."
+            )
+            if biz_phone:
+                confirm_body += f"\nQuestions? Call {biz_phone}"
+            await send_sms(to=req.applicant_phone, body=confirm_body)
+    except Exception:
+        logger.warning("Failed to send application confirmation SMS", exc_info=True)
+
+    return {"success": True, "application_id": result.data[0]["id"]}
