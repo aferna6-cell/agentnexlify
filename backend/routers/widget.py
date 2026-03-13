@@ -1192,6 +1192,25 @@ async def get_config(request: Request, api_key: str):
         branding.pop("powered_by_text", None)
         branding.pop("powered_by_url", None)
 
+    # Load menu items for restaurant tenants
+    menu_items = None
+    if tenant.get("business_type", "").lower() == "restaurant":
+        try:
+            db = get_supabase()
+            menu_result = (
+                db.table("menu_items")
+                .select("name, description, price, category, available")
+                .eq("tenant_id", tenant["id"])
+                .eq("available", True)
+                .order("category")
+                .order("sort_order")
+                .execute()
+            )
+            if menu_result.data:
+                menu_items = menu_result.data
+        except Exception:
+            logger.warning("menu_items config load failed for tenant %s", tenant["id"])
+
     return WidgetConfigResponse(
         bot_name=widget.get("bot_name", "AI Assistant"),
         primary_color=widget.get("primary_color", "#00BFFF"),
@@ -1205,6 +1224,7 @@ async def get_config(request: Request, api_key: str):
         agent_name=tenant.get("business_name"),
         is_online=widget.get("is_online", True),
         offline_message=widget.get("offline_message"),
+        menu_items=menu_items,
     )
 
 

@@ -400,6 +400,57 @@
         margin-top: 4px;
       }
 
+      #anx-menu-panel {
+        max-height: 320px;
+        overflow-y: auto;
+        background: rgba(0,0,0,0.15);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding: 12px;
+      }
+      .anx-menu-cat {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: ${BRAND_COLOR};
+        margin: 10px 0 6px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+      .anx-menu-cat:first-child { margin-top: 0; }
+      .anx-menu-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 6px 0;
+        gap: 8px;
+      }
+      .anx-menu-item-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: #e0e0e5;
+      }
+      .anx-menu-item-desc {
+        font-size: 11px;
+        color: rgba(255,255,255,0.4);
+        margin-top: 2px;
+      }
+      .anx-menu-item-price {
+        font-size: 13px;
+        font-weight: 600;
+        color: ${BRAND_COLOR};
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .anx-menu-order-hint {
+        text-align: center;
+        font-size: 11px;
+        color: rgba(255,255,255,0.35);
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      }
+
       #anx-powered {
         text-align: center;
         padding: 6px;
@@ -672,11 +723,13 @@
             </div>
           </div>
           <div id="anx-header-actions">
+            <button id="anx-menu-btn" title="View Menu" style="display:none;">&#127860;</button>
             <button id="anx-booking-btn" title="Book Appointment">&#128197;</button>
             <button id="anx-minimize" title="Minimize">&#8722;</button>
             <button id="anx-close" title="Close">&times;</button>
           </div>
         </div>
+        <div id="anx-menu-panel" style="display:none;"></div>
         <div id="anx-booking"></div>
         <div id="anx-messages"></div>
         <div id="anx-input-area">
@@ -708,6 +761,9 @@
   let widgetIsOnline = true;
   let offlineMessage = "We are currently offline. Leave your details and we\u2019ll get back to you soon!";
 
+  // Menu state
+  let menuItems = null; // Array of {name, description, price, category} or null
+
   // Booking state
   let tenantId = "";
   let bookingEnabled = false;
@@ -731,6 +787,9 @@
       bookingEnabled = data.booking_enabled || false;
       widgetIsOnline = data.is_online !== false;
       if (data.offline_message) offlineMessage = data.offline_message;
+      if (data.menu_items && data.menu_items.length > 0) {
+        menuItems = data.menu_items;
+      }
     } catch (e) {
       console.warn("AgentNexLiFy: Failed to fetch config", e);
     }
@@ -799,6 +858,58 @@
       throw new Error(`Upload failed: ${err}`);
     }
     return resp.json();
+  }
+
+  // --- Menu panel ---
+  function toggleMenuPanel() {
+    const panel = document.getElementById("anx-menu-panel");
+    if (!panel) return;
+    if (panel.style.display === "none") {
+      renderMenuPanel();
+      panel.style.display = "block";
+      // Hide booking panel if open
+      const bookingPanel = document.getElementById("anx-booking");
+      if (bookingPanel) bookingPanel.style.display = "none";
+    } else {
+      panel.style.display = "none";
+    }
+  }
+
+  function renderMenuPanel() {
+    const panel = document.getElementById("anx-menu-panel");
+    if (!panel || !menuItems) return;
+
+    // Group by category
+    const categories = {};
+    for (const item of menuItems) {
+      const cat = item.category || "Menu";
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(item);
+    }
+
+    let html = "";
+    for (const [cat, items] of Object.entries(categories)) {
+      html += `<div class="anx-menu-cat">${_esc(cat)}</div>`;
+      for (const item of items) {
+        const price = "$" + parseFloat(item.price || 0).toFixed(2);
+        html += `<div class="anx-menu-item">`;
+        html += `<div><div class="anx-menu-item-name">${_esc(item.name)}</div>`;
+        if (item.description) {
+          html += `<div class="anx-menu-item-desc">${_esc(item.description)}</div>`;
+        }
+        html += `</div>`;
+        html += `<div class="anx-menu-item-price">${price}</div>`;
+        html += `</div>`;
+      }
+    }
+    html += `<div class="anx-menu-order-hint">Just tell me what you'd like to order!</div>`;
+    panel.innerHTML = html;
+  }
+
+  function _esc(s) {
+    const d = document.createElement("div");
+    d.textContent = s || "";
+    return d.innerHTML;
   }
 
   // --- DOM helpers ---
@@ -1393,6 +1504,15 @@
         setTimeout(() => { if (!isOpen && !hasAutoOpened) { hasAutoOpened = true; toggleWindow(true); } }, 5000);
       }
       return; // Skip chat setup
+    }
+
+    // Show menu button if menu items available
+    if (menuItems && menuItems.length > 0) {
+      const menuBtn = document.getElementById("anx-menu-btn");
+      if (menuBtn) {
+        menuBtn.style.display = "flex";
+        menuBtn.addEventListener("click", toggleMenuPanel);
+      }
     }
 
     // Show booking button if enabled
