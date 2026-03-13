@@ -627,4 +627,25 @@ export function importMenuFromWebsite(tenantId, token) {
   return request(`/api/v1/menu/${tenantId}/import-from-website`, { method: "POST", token });
 }
 
+// --- Orders ---
+
+export function fetchOrders(tenantId, token, { status } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  const qs = params.toString() ? `?${params}` : "";
+  return request(`/api/v1/orders/${tenantId}${qs}`, { token });
+}
+
+export function fetchOrderStats(tenantId, token) {
+  return request(`/api/v1/orders/${tenantId}/stats`, { token });
+}
+
+export function updateOrderStatus(tenantId, token, orderId, status) {
+  return request(`/api/v1/orders/${tenantId}/${orderId}/status`, {
+    method: "PUT",
+    token,
+    body: { status },
+  });
+}
+
 export { ApiError };

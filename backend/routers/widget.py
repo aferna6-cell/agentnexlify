@@ -83,7 +83,7 @@ def _filter_branding_for_plan(branding: dict | None, plan: str) -> dict:
 
 
 MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 500
+MAX_TOKENS = 700
 TEMPERATURE = 0.7
 
 # Lead extraction patterns
@@ -316,6 +316,14 @@ def _build_system_prompt(
             + "\n- If delivery, ask for their delivery address."
             + "\n- After confirming, say the order has been placed and they'll receive a confirmation."
             + "\n- Items marked [OUT OF STOCK] are unavailable — let the customer know and suggest alternatives."
+            + "\n\nIMPORTANT — When the order is FULLY confirmed (customer agreed to the order summary),"
+            + " append this EXACT block at the very end of your response (after your normal message):"
+            + '\n<!--ORDER_JSON:{"items":[{"name":"Item Name","price":9.99,"quantity":1}],'
+            + '"subtotal":9.99,"tax":0.80,"total":10.79,"order_type":"pickup",'
+            + '"customer_name":"Name","customer_phone":"555-1234",'
+            + '"delivery_address":"","notes":""}-->'
+            + "\n- Fill in the real values from the conversation. Calculate tax at 8%."
+            + "\n- Only output this ONCE when the order is confirmed, never before."
         )
 
     return (
@@ -747,6 +755,190 @@ async def _send_new_lead_email_notification(
 
 
 # ---------------------------------------------------------------------------
+# Order extraction + notifications (restaurant ordering via chat)
+# ---------------------------------------------------------------------------
+
+ORDER_JSON_RE = re.compile(r"<!--ORDER_JSON:(.*?)-->", re.DOTALL)
+
+
+def _extract_order_from_response(response_text: str) -> dict | None:
+    """Extract structured order JSON from AI response, if present."""
+    match = ORDER_JSON_RE.search(response_text)
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(1).strip())
+    except (json.JSONDecodeError, ValueError):
+        logger.warning("order_extract: found ORDER_JSON marker but JSON parse failed")
+        return None
+
+
+def _strip_order_json_from_response(response_text: str) -> str:
+    """Remove the ORDER_JSON marker from the response shown to the user."""
+    return ORDER_JSON_RE.sub("", response_text).rstrip()
+
+
+async def _process_order_from_chat(
+    tenant_id: str, session_id: str, order_data: dict,
+) -> None:
+    """Create an order record and send notifications to owner + customer."""
+    import html as html_mod
+
+    db = get_supabase()
+
+    # Build order record
+    items = order_data.get("items", [])
+    record = {
+        "tenant_id": tenant_id,
+        "session_id": session_id,
+        "customer_name": order_data.get("customer_name"),
+        "customer_phone": order_data.get("customer_phone"),
+        "customer_email": order_data.get("customer_email"),
+        "items_json": items,
+        "subtotal": float(order_data.get("subtotal", 0)),
+        "tax": float(order_data.get("tax", 0)),
+        "total": float(order_data.get("total", 0)),
+        "order_type": order_data.get("order_type", "pickup"),
+        "delivery_address": order_data.get("delivery_address") or None,
+        "notes": order_data.get("notes") or None,
+        "status": "new",
+    }
+
+    try:
+        result = db.table("orders").insert(record).execute()
+        if not result.data:
+            logger.error("order_create: insert returned no data for tenant=%s", tenant_id)
+            return
+        order = result.data[0]
+        logger.info("order_create: order %s created for tenant=%s", order["id"], tenant_id)
+    except Exception:
+        logger.exception("order_create: failed for tenant=%s", tenant_id)
+        return
+
+    # Fetch tenant info for notifications
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("owner_email, business_name, business_phone")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not tenant_result.data:
+            return
+        tenant = tenant_result.data[0]
+    except Exception:
+        logger.exception("order_notify: failed to fetch tenant %s", tenant_id)
+        return
+
+    business_name = tenant.get("business_name", "Your Business")
+    customer_name = record["customer_name"] or "Customer"
+    items_summary = ", ".join(
+        f"{i.get('name', 'item')} x{i.get('quantity', 1)}"
+        for i in items[:5]
+    )
+    if len(items) > 5:
+        items_summary += f" +{len(items) - 5} more"
+    total_str = f"${record['total']:.2f}"
+
+    # --- SMS notification to owner ---
+    owner_phone = tenant.get("business_phone")
+    if owner_phone:
+        sms_body = (
+            f"New {record['order_type']} order from {customer_name}!\n"
+            f"Items: {items_summary}\n"
+            f"Total: {total_str}\n"
+            f"Check your dashboard to confirm."
+        )
+        try:
+            from backend.services.twilio_service import send_sms
+            await send_sms(to=owner_phone, body=sms_body)
+            logger.info("order_notify: SMS sent to owner for tenant=%s", tenant_id)
+        except Exception:
+            logger.error("order_notify: owner SMS failed for tenant=%s", tenant_id, exc_info=True)
+
+    # --- Email notification to owner ---
+    owner_email = tenant.get("owner_email")
+    if owner_email:
+        safe_biz = html_mod.escape(business_name)
+        safe_name = html_mod.escape(customer_name)
+        safe_phone = html_mod.escape(record.get("customer_phone") or "Not provided")
+        safe_type = html_mod.escape(record["order_type"].capitalize())
+
+        items_rows = ""
+        for i in items:
+            iname = html_mod.escape(i.get("name", "Item"))
+            qty = i.get("quantity", 1)
+            iprice = f"${float(i.get('price', 0)):.2f}"
+            items_rows += (
+                f"<tr><td style='padding:4px 12px 4px 0;'>{iname}</td>"
+                f"<td style='padding:4px 8px;text-align:center;'>{qty}</td>"
+                f"<td style='padding:4px 0;text-align:right;'>{iprice}</td></tr>"
+            )
+
+        body_html = (
+            f"<h2>New Order for {safe_biz}</h2>"
+            f"<p>A new <strong>{safe_type}</strong> order was just placed via your chat widget:</p>"
+            f"<p><strong>Customer:</strong> {safe_name}<br>"
+            f"<strong>Phone:</strong> {safe_phone}</p>"
+            f"<table style='border-collapse:collapse;margin:16px 0;width:100%;'>"
+            f"<tr style='border-bottom:1px solid #ddd;'>"
+            f"<th style='text-align:left;padding:4px 12px 4px 0;'>Item</th>"
+            f"<th style='text-align:center;padding:4px 8px;'>Qty</th>"
+            f"<th style='text-align:right;padding:4px 0;'>Price</th></tr>"
+            f"{items_rows}"
+            f"<tr style='border-top:2px solid #333;'>"
+            f"<td colspan='2' style='padding:8px 12px 4px 0;font-weight:bold;'>Total</td>"
+            f"<td style='padding:8px 0 4px;text-align:right;font-weight:bold;'>{total_str}</td></tr>"
+            f"</table>"
+        )
+        if record["delivery_address"]:
+            safe_addr = html_mod.escape(record["delivery_address"])
+            body_html += f"<p><strong>Delivery address:</strong> {safe_addr}</p>"
+        if record["notes"]:
+            safe_notes = html_mod.escape(record["notes"])
+            body_html += f"<p><strong>Notes:</strong> {safe_notes}</p>"
+        body_html += "<p>Log in to your dashboard to confirm this order.</p>"
+
+        try:
+            await send_email(
+                to=owner_email,
+                subject=f"New order for {business_name}: {customer_name} ({total_str})",
+                body_html=body_html,
+                tenant_id=tenant_id,
+            )
+            logger.info("order_notify: email sent to owner for tenant=%s", tenant_id)
+        except Exception:
+            logger.error("order_notify: owner email failed for tenant=%s", tenant_id, exc_info=True)
+
+    # --- SMS confirmation to customer ---
+    customer_phone = record.get("customer_phone")
+    if customer_phone:
+        confirm_body = (
+            f"Your {record['order_type']} order from {business_name} has been received!\n"
+            f"Items: {items_summary}\n"
+            f"Total: {total_str}\n"
+        )
+        if owner_phone:
+            confirm_body += f"Questions? Call us at {owner_phone}"
+        try:
+            from backend.services.twilio_service import send_sms
+            await send_sms(to=customer_phone, body=confirm_body)
+            logger.info("order_notify: confirmation SMS sent to customer for tenant=%s", tenant_id)
+        except Exception:
+            logger.error("order_notify: customer SMS failed for tenant=%s", tenant_id, exc_info=True)
+
+    # Fire webhook for new order
+    fire_event_background(tenant_id, "order.created", {
+        "order_id": order["id"],
+        "customer_name": customer_name,
+        "total": record["total"],
+        "order_type": record["order_type"],
+        "items_count": len(items),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -939,7 +1131,15 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             "Please try again in a moment or contact us directly."
         )
 
-    # 9. Save user + assistant messages to chat_messages table
+    # 9. Extract order from AI response (restaurant ordering flow)
+    order_data = _extract_order_from_response(assistant_text)
+    if order_data:
+        assistant_text = _strip_order_json_from_response(assistant_text)
+        background_tasks.add_task(
+            _process_order_from_chat, tenant["id"], req.session_id, order_data,
+        )
+
+    # 10. Save user + assistant messages to chat_messages table
     _save_chat_messages(tenant["id"], req.session_id, req.message, assistant_text)
 
     # Fire conversation.message webhook
@@ -949,14 +1149,14 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         "assistant_message": assistant_text[:500],
     })
 
-    # 10. Lead capture — runs in background so it doesn't slow the response.
+    # 11. Lead capture — runs in background so it doesn't slow the response.
     # Scans ALL messages in the session (not just the current one) for
     # email, phone, and name.  Deduplicates by email + tenant_id.
     background_tasks.add_task(
         _capture_leads_from_session, tenant["id"], req.session_id, conversation_id,
     )
 
-    # 11. Watermark logic
+    # 12. Watermark logic
     if tenant.get("plan") == "free":
         show_watermark = True
     else:
@@ -1064,7 +1264,7 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             UUID(conversation_id)
             lead_fields["conversation_id"] = conversation_id
         except (ValueError, AttributeError):
-            pass
+            logger.debug("lead_submit: conversation_id %r is not a UUID, omitting", conversation_id)
         result = db.table("leads").insert(lead_fields).execute()
         if result.data:
             lead_id = result.data[0]["id"]

@@ -56,6 +56,14 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Frontend async error handling must be visible
+**Date:** 2026-03-12
+**Decision:** Promise chains in dashboard/frontend code must either surface the error to the user, log it with context, or include a short comment explaining why silence is intentional. Empty `.catch(() => {})` and silent `.catch(() => null)` blocks are treated as drift unless explicitly justified.
+**Why:** Multiple March 12 UI changes were cleanup passes for hidden failures in save/delete/refresh flows. Silent promise catches make production issues invisible to both operators and users, which slows down debugging and makes health checks look cleaner than reality.
+**Enforcement:** `scripts/daily/health-check.sh` now reports `silent_frontend_catch_count`, and daily routines should flag increases.
+
+---
+
 ### lead_stage_change is an event name, not a column name
 **Date:** 2026-03-11
 **Decision:** Keep `lead_stage_change` as the automation trigger event name, even though the actual column is `status` (not `lead_stage`). The trigger event is a business concept stored in `automation_sequences.trigger_event` TEXT column.
@@ -201,6 +209,13 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** Use Cloudflare Browser Rendering `/crawl` API for website scanning. The crawl executes synchronously in the POST endpoint (up to 120s timeout), storing results in `website_content` table. Crawled content is injected into the AI system prompt (truncated to 8KB).
 **Why:** Async polling adds complexity for v1. The Cloudflare API handles JavaScript rendering, which is needed for modern websites. The 120s httpx timeout covers most sites. Storing raw pages as JSONB allows re-processing later without re-crawling.
 **Implication:** The crawl endpoint will block for up to 2 minutes on slow sites. The frontend shows "Scanning..." state during this time. If Cloudflare credentials aren't configured, the crawl fails gracefully with a helpful message pointing users to manual FAQ entry. Website content is cached in DB — not re-fetched on every chat message.
+
+---
+
+### Order extraction from chat — HTML comment marker pattern
+**Decision:** When the AI confirms a restaurant order, it appends a hidden `<!--ORDER_JSON:{...}-->` marker to its response. The backend extracts this JSON, strips the marker from the user-visible text, and processes the order as a background task (DB insert + SMS/email notifications to owner + SMS confirmation to customer).
+**Why:** Tool-use would require changing the entire chat API structure. Post-hoc regex scanning of natural language is fragile. The HTML comment marker is invisible in the widget (even if rendered raw), reliably parseable, and the AI follows the format consistently. Order creation + notifications run as background tasks so chat response isn't delayed.
+**Implication:** MAX_TOKENS increased to 700 to accommodate the JSON block. If the AI doesn't output the marker (malformed, truncated), the order is lost — but the conversation still records what was discussed so the owner can manually create it. The `order.created` webhook event is fired for Zapier integrations.
 
 ---
 

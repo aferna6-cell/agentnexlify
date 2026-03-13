@@ -150,8 +150,8 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
         try:
             body = await request.body()
             logger.error("Request body was: %s", body[:2000])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Could not read request body for debugging: %s", e)
     return JSONResponse(
         status_code=422,
         content={"detail": exc.errors()},
@@ -177,8 +177,8 @@ async def log_requests(request: Request, call_next):
 
             payload = jwt.get_unverified_claims(auth_header[7:])
             tenant_id = payload.get("tenant_id")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("JWT decode for logging failed: %s", e)
 
     start = time.time()
     response = await call_next(request)
