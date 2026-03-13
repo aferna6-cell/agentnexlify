@@ -25,6 +25,29 @@ def _cf_headers() -> dict[str, str]:
     }
 
 
+def _is_safe_url(url: str) -> bool:
+    """Block internal/private URLs to prevent SSRF."""
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    hostname = parsed.hostname or ""
+    if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1", ""):
+        return False
+    # Block private IP ranges
+    try:
+        import ipaddress
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            return False
+    except ValueError:
+        pass  # hostname is a domain name, not an IP — that's fine
+    # Block common internal hostnames
+    if hostname.endswith((".local", ".internal", ".lan")):
+        return False
+    return True
+
+
 async def start_crawl(tenant_id: str, url: str) -> dict:
     """Start a website crawl for a tenant. Returns the crawl record."""
     db = get_supabase()
@@ -32,6 +55,10 @@ async def start_crawl(tenant_id: str, url: str) -> dict:
     # Normalize URL
     if not url.startswith(("http://", "https://")):
         url = f"https://{url}"
+
+    # SSRF protection
+    if not _is_safe_url(url):
+        raise ValueError("Invalid or unsafe URL. Please provide a public website URL.")
 
     # Create or update crawl record
     existing = (

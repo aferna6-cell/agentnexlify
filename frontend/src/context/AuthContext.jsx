@@ -35,6 +35,7 @@ export function AuthProvider({ children }) {
       email: payload.email,
       plan: payload.plan || "free",
       businessName: payload.business_name || "",
+      businessType: payload.business_type || "",
       role: payload.role || "owner",
       isTeamMember: payload.is_team_member || false,
       name: payload.name || "",

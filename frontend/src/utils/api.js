@@ -600,4 +600,27 @@ export function getCrawlStatus(tenantId, token) {
   return request(`/api/v1/crawl/${tenantId}/status`, { token });
 }
 
+// --- Menu ---
+
+export function fetchMenuItems(tenantId, token, category) {
+  const params = category ? `?category=${encodeURIComponent(category)}` : "";
+  return request(`/api/v1/menu/${tenantId}${params}`, { token });
+}
+
+export function createMenuItem(tenantId, token, data) {
+  return request(`/api/v1/menu/${tenantId}`, { method: "POST", token, body: data });
+}
+
+export function updateMenuItem(tenantId, token, itemId, data) {
+  return request(`/api/v1/menu/${tenantId}/${itemId}`, { method: "PUT", token, body: data });
+}
+
+export function deleteMenuItem(tenantId, token, itemId) {
+  return request(`/api/v1/menu/${tenantId}/${itemId}`, { method: "DELETE", token });
+}
+
+export function toggleMenuItemAvailability(tenantId, token, itemId) {
+  return request(`/api/v1/menu/${tenantId}/${itemId}/toggle`, { method: "PUT", token });
+}
+
 export { ApiError };

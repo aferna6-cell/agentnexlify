@@ -57,6 +57,7 @@ def _create_token(
     role: str = "owner",
     is_team_member: bool = False,
     name: str | None = None,
+    business_type: str | None = None,
 ) -> str:
     payload = {
         "tenant_id": tenant_id,
@@ -72,6 +73,8 @@ def _create_token(
         payload["user_id"] = user_id
     if name:
         payload["name"] = name
+    if business_type:
+        payload["business_type"] = business_type
     return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
 
 
@@ -148,7 +151,7 @@ async def register(request: Request, req: RegisterRequest):
         "show_watermark": True,
     }).execute()
 
-    token = _create_token(tenant_id, req.email, "free", req.business_name)
+    token = _create_token(tenant_id, req.email, "free", req.business_name, business_type=req.industry)
 
     return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
 
@@ -162,7 +165,7 @@ async def login(request: Request, req: LoginRequest):
     # 1. Check tenants table (owner login)
     result = (
         db.table("tenants")
-        .select("id, password_hash, business_name, plan")
+        .select("id, password_hash, business_name, plan, business_type")
         .eq("owner_email", email)
         .limit(1)
         .execute()
@@ -180,6 +183,7 @@ async def login(request: Request, req: LoginRequest):
             email,
             tenant.get("plan", "free"),
             tenant.get("business_name", ""),
+            business_type=tenant.get("business_type"),
         )
         return LoginResponse(
             tenant_id=tenant_id,
@@ -207,7 +211,7 @@ async def login(request: Request, req: LoginRequest):
         # Fetch tenant info
         tenant_result = (
             db.table("tenants")
-            .select("business_name, plan")
+            .select("business_name, plan, business_type")
             .eq("id", member["tenant_id"])
             .limit(1)
             .execute()
@@ -229,6 +233,7 @@ async def login(request: Request, req: LoginRequest):
             role=member["role"],
             is_team_member=True,
             name=member.get("name"),
+            business_type=t.get("business_type"),
         )
         return LoginResponse(
             tenant_id=tenant_id,
@@ -246,7 +251,7 @@ async def me(claims: dict = Depends(_get_current_tenant)):
 
     result = (
         db.table("tenants")
-        .select("id, owner_email, business_name, plan, city, owner_name")
+        .select("id, owner_email, business_name, plan, city, owner_name, business_type")
         .eq("id", claims["tenant_id"])
         .limit(1)
         .execute()
@@ -262,6 +267,7 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         plan=t.get("plan", "free"),
         city=t.get("city"),
         owner_name=t.get("owner_name"),
+        business_type=t.get("business_type"),
     )
 
 
@@ -706,7 +712,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     db = get_supabase()
     result = (
         db.table("tenants")
-        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url")
+        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled")
         .eq("id", tenant_id)
         .limit(1)
         .execute()

@@ -87,6 +87,20 @@ Adds `updated_at` (TIMESTAMPTZ DEFAULT NOW()) to `appointments`. Used by `automa
 
 **All migrations 014-024 applied to live Supabase on 2026-03-12.**
 
+### 025 — Content scheduling date
+Adds `scheduled_for` (DATE) to `content_items` and an index on `(tenant_id, scheduled_for)` for non-null rows. This powers the Content Studio calendar view and scheduled-post filtering.
+
+### 026 — Lead assignment
+Adds nullable `assigned_to` (UUID FK → `team_members.id`, `ON DELETE SET NULL`) to `leads`, plus an index on `(client_id, assigned_to)` for assigned rows. This supports team lead ownership without breaking unassigned leads.
+
+### 027 — AI feedback
+Creates `ai_feedback` for per-message thumbs up/down ratings and optional corrections. Columns: `tenant_id`, `session_id`, `message_index`, `rating`, `correction`, `created_at`. Indexed by tenant/date and tenant/session. Used to inject owner corrections back into the widget system prompt.
+
+### 028 — Website crawl cache
+Adds `tenants.website_url` and creates `website_content` for cached crawl results (`pages_json`, `extracted_text`, `crawl_status`, `error_message`, `pages_found`, `crawled_at`). This supports Cloudflare-powered website scanning and prompt enrichment without re-crawling on every chat request.
+
+**Operational note:** Migrations 025-028 were added on 2026-03-12. Migration files do not auto-apply; confirm they were run in the Supabase SQL editor before relying on these schema changes in production.
+
 ## Known Schema Gotchas
 
 | Issue | Detail |
@@ -176,5 +190,6 @@ Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, 
 - New table: `ai_feedback` (id, tenant_id, session_id, message_index, rating, correction, created_at) — migration 027
 - `tenants`: `website_url` (TEXT, added in migration 028)
 - New table: `website_content` (id, tenant_id, url, pages_json JSONB, extracted_text TEXT, crawl_status TEXT, error_message TEXT, pages_found INT, crawled_at TIMESTAMPTZ) — migration 028
+- New table: `menu_items` (id UUID, tenant_id UUID FK, name TEXT, description TEXT, price NUMERIC(10,2), category TEXT, modifiers_json JSONB, available BOOLEAN, image_url TEXT, sort_order INT, created_at TIMESTAMPTZ) — migration 029. Index on (tenant_id, category).
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

@@ -24,6 +24,8 @@ export default function SettingsPage({ onNavigate }) {
   const [feedback, setFeedback] = useState([]);
   const [crawlStatus, setCrawlStatus] = useState(null);
   const [crawling, setCrawling] = useState(false);
+  const [businessSlug, setBusinessSlug] = useState(null);
+  const [businessPageEnabled, setBusinessPageEnabled] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -42,6 +44,8 @@ export default function SettingsPage({ onNavigate }) {
         website_url: tenant.website_url || "",
       });
       setEmail(tenant.owner_email || "");
+      setBusinessSlug(tenant.business_slug || null);
+      setBusinessPageEnabled(!!tenant.business_page_enabled);
       if (tenant.plan) setLivePlan(tenant.plan);
     } catch (err) {
       console.error("Failed to load settings", err);
@@ -70,11 +74,15 @@ export default function SettingsPage({ onNavigate }) {
   }, [user?.tenantId, token]);
 
   const handleScanWebsite = async () => {
-    if (!user?.tenantId || !form.website_url) return;
+    if (!user?.tenantId) return;
+    // Need either a website URL or an active business page
+    if (!form.website_url && !(businessSlug && businessPageEnabled)) return;
     setCrawling(true);
     try {
-      // Save website_url first if changed
-      await updateTenantSettings(user.tenantId, token, { website_url: form.website_url });
+      // Save website_url first if provided
+      if (form.website_url) {
+        await updateTenantSettings(user.tenantId, token, { website_url: form.website_url });
+      }
       const result = await startWebsiteCrawl(user.tenantId, token);
       setCrawlStatus(result);
     } catch (err) {
@@ -131,7 +139,27 @@ export default function SettingsPage({ onNavigate }) {
           </div>
           <div className="settings-field">
             <label>Business Type</label>
-            <input value={form.business_type} onChange={handleChange("business_type")} placeholder="e.g. Real Estate" />
+            <select
+              value={form.business_type}
+              onChange={handleChange("business_type")}
+              style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+            >
+              <option value="">Select type...</option>
+              <option value="restaurant">Restaurant / Food Service</option>
+              <option value="home_services">Home Services (Plumbing, HVAC, etc.)</option>
+              <option value="real_estate">Real Estate</option>
+              <option value="health_wellness">Health & Wellness</option>
+              <option value="legal">Legal Services</option>
+              <option value="retail">Retail / E-commerce</option>
+              <option value="automotive">Automotive</option>
+              <option value="beauty">Beauty / Salon / Spa</option>
+              <option value="fitness">Fitness / Gym</option>
+              <option value="construction">Construction / Contractor</option>
+              <option value="cleaning">Cleaning Services</option>
+              <option value="landscaping">Landscaping / Lawn Care</option>
+              <option value="professional">Professional Services</option>
+              <option value="other">Other</option>
+            </select>
           </div>
           <div className="settings-field">
             <label>City</label>
@@ -164,9 +192,9 @@ export default function SettingsPage({ onNavigate }) {
             <button
               className="btn-primary"
               onClick={handleScanWebsite}
-              disabled={crawling || !form.website_url}
+              disabled={crawling || (!form.website_url && !(businessSlug && businessPageEnabled))}
             >
-              {crawling ? "Scanning..." : "Scan Website"}
+              {crawling ? "Scanning..." : form.website_url ? "Scan Website" : "Scan Business Page"}
             </button>
             <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}>
               {saving ? "Saving..." : saved ? "Saved!" : "Save URL"}
@@ -206,6 +234,31 @@ export default function SettingsPage({ onNavigate }) {
                   Last scanned: {new Date(crawlStatus.crawled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </div>
               )}
+            </div>
+          )}
+          {/* Fallback: no website URL and no successful crawl */}
+          {!form.website_url && (!crawlStatus || crawlStatus.crawl_status === "none" || crawlStatus.crawl_status === "failed") && (
+            <div style={{
+              marginTop: "0.75rem",
+              padding: "10px 14px",
+              borderRadius: 8,
+              fontSize: "0.85rem",
+              background: "rgba(250,204,21,0.08)",
+              border: "1px solid rgba(250,204,21,0.2)",
+            }}>
+              <strong>No website?</strong> You can still train your AI assistant:
+              <ul style={{ margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.6 }}>
+                <li>
+                  <button className="settings-link-btn" onClick={() => onNavigate?.("faq")} style={{ fontSize: "0.85rem", padding: 0, textDecoration: "underline" }}>
+                    Add FAQs manually
+                  </button> — teach your AI about your services, pricing, and policies.
+                </li>
+                <li>
+                  <button className="settings-link-btn" onClick={() => onNavigate?.("business-page")} style={{ fontSize: "0.85rem", padding: 0, textDecoration: "underline" }}>
+                    Set up your Business Page
+                  </button> — we'll auto-scan it to train your AI.
+                </li>
+              </ul>
             </div>
           )}
         </div>

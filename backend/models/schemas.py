@@ -129,6 +129,7 @@ class MeResponse(BaseModel):
     plan: str
     city: str | None = None
     owner_name: str | None = None
+    business_type: str | None = None
 
 
 class WidgetConfigDetail(BaseModel):

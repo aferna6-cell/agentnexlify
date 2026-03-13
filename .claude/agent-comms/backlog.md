@@ -18,13 +18,13 @@ _When a business signs up and provides their website URL, we immediately crawl t
 - [x] **AI knowledge base auto-population** — done 2026-03-12. Crawled website content auto-injected into chat widget system prompt (truncated to 8KB). AI knows the business immediately from website content.
 - [x] **Crawl status UI** — done 2026-03-12. Settings page shows crawl status: scanning/completed/failed with page count and error messages. Color-coded status indicators.
 - [x] **Re-crawl button** — done 2026-03-12. "Scan Website" button on Settings page triggers re-crawl. Overwrites previous crawl record.
-- [ ] **Fallback for no website** — If the tenant has no website (or crawl fails), prompt them to fill in business info manually via the existing FAQ manager. The hosted business page at agentnexlify.com/biz/{slug} IS their website — crawl that if they set one up.
+- [x] **Fallback for no website** — done 2026-03-13. Settings page shows guidance to FAQ manager + business page when no website URL. Crawl endpoint auto-falls back to hosted business page URL if available. SSRF protection added.
 
 ### Restaurant Order Taking
 
 _The chat widget can take food orders for restaurants — browse the menu, build an order, collect delivery/pickup info, and send the order to the business owner._
 
-- [ ] **Menu management page** — New "Menu" tab in the dashboard for restaurant tenants. Add menu items with: name, description, price, category (appetizers, entrees, desserts, drinks), modifiers/options (size, toppings, sides), availability (in stock / out of stock), image URL (optional). Store in a new `menu_items` table (id, tenant_id, name, description, price, category, modifiers_json, available, image_url, sort_order, created_at). Create migration.
+- [x] **Menu management page** — done 2026-03-13. Migration 029 creates menu_items table. Backend CRUD in backend/routers/menu.py with auth. Frontend MenuPage with category grouping, add/edit modal, toggle availability. Sidebar shows Menu tab only for restaurant business types.
 - [ ] **Menu auto-import from website crawl** — When the crawl pipeline detects a restaurant website with a menu page, use Claude API to extract menu items (name, description, price, category) from the crawled content. Auto-populate the menu_items table. The owner can edit/correct from the dashboard.
 - [ ] **Order-taking chat flow** — Enhance the chat widget AI to handle ordering conversations. When a customer says "I want to order food" or "Can I see the menu?", the AI: (1) Presents the menu organized by category. (2) Takes the customer's order item by item, handling modifiers ("What size?", "Any toppings?"). (3) Confirms the full order with itemized prices and total. (4) Asks: pickup or delivery? (5) Collects customer name, phone, and delivery address if applicable. (6) Sends order confirmation.
 - [ ] **Orders table + management** — New `orders` table (id, tenant_id, lead_id, items_json, subtotal, tax, total, order_type (pickup/delivery), delivery_address, status (new/confirmed/preparing/ready/delivered/cancelled), notes, created_at). Create migration.
@@ -32,7 +32,7 @@ _The chat widget can take food orders for restaurants — browse the menu, build
 - [ ] **Order notification to owner** — When a new order comes in via chat: SMS the owner immediately with order summary. Email backup with full details. Push notification in dashboard.
 - [ ] **Menu in widget** — The chat widget can display the menu in a structured format (not just text). Consider a mini menu card UI within the chat for browsing. At minimum, the AI lists items clearly with prices.
 - [ ] **Order confirmation to customer** — After order is placed, send SMS confirmation to the customer with: order summary, estimated time, and the business's phone number. Requires customer's phone number (captured during order flow).
-- [ ] **Business type detection** — During signup or settings, let the tenant select their business type (restaurant, service business, retail, etc.). If "restaurant" is selected, show the Menu and Orders tabs. If not, hide them. This keeps the dashboard clean for non-restaurant businesses.
+- [x] **Business type detection** — done 2026-03-13. Business type added to JWT claims + MeResponse. Settings page dropdown with 14 business type options. Sidebar filters nav items by businessType (Menu tab only for restaurant). No migration needed — business_type column already exists.
 
 ---
 
