@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback } from "../utils/api";
+import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
@@ -17,10 +17,13 @@ export default function SettingsPage({ onNavigate }) {
     sms_notifications_enabled: false,
     google_review_link: "",
     review_request_config: { enabled: false, delay_hours: 24, method: "email" },
+    website_url: "",
   });
   const [email, setEmail] = useState("");
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
   const [feedback, setFeedback] = useState([]);
+  const [crawlStatus, setCrawlStatus] = useState(null);
+  const [crawling, setCrawling] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -36,6 +39,7 @@ export default function SettingsPage({ onNavigate }) {
         sms_notifications_enabled: tenant.sms_notifications_enabled || false,
         google_review_link: tenant.google_review_link || "",
         review_request_config: tenant.review_request_config || { enabled: false, delay_hours: 24, method: "email" },
+        website_url: tenant.website_url || "",
       });
       setEmail(tenant.owner_email || "");
       if (tenant.plan) setLivePlan(tenant.plan);
@@ -55,6 +59,30 @@ export default function SettingsPage({ onNavigate }) {
         .catch((err) => console.warn("AI feedback fetch failed:", err.message));
     }
   }, [user?.tenantId, token]);
+
+  // Load crawl status
+  useEffect(() => {
+    if (user?.tenantId && token) {
+      getCrawlStatus(user.tenantId, token)
+        .then((data) => setCrawlStatus(data))
+        .catch((err) => console.warn("Crawl status fetch failed:", err.message));
+    }
+  }, [user?.tenantId, token]);
+
+  const handleScanWebsite = async () => {
+    if (!user?.tenantId || !form.website_url) return;
+    setCrawling(true);
+    try {
+      // Save website_url first if changed
+      await updateTenantSettings(user.tenantId, token, { website_url: form.website_url });
+      const result = await startWebsiteCrawl(user.tenantId, token);
+      setCrawlStatus(result);
+    } catch (err) {
+      setCrawlStatus({ crawl_status: "failed", error_message: err.message });
+    } finally {
+      setCrawling(false);
+    }
+  };
 
   const handleDeleteFeedback = async (id) => {
     try {
@@ -116,6 +144,70 @@ export default function SettingsPage({ onNavigate }) {
           <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
             {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
           </button>
+        </div>
+
+        {/* Website Scanning */}
+        <div className="settings-card">
+          <h3>Website AI Scanner</h3>
+          <p className="settings-card-desc">
+            Add your website URL and we'll scan it to automatically train your AI assistant about your business.
+          </p>
+          <div className="settings-field">
+            <label>Website URL</label>
+            <input
+              value={form.website_url}
+              onChange={handleChange("website_url")}
+              placeholder="https://yourbusiness.com"
+            />
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.75rem" }}>
+            <button
+              className="btn-primary"
+              onClick={handleScanWebsite}
+              disabled={crawling || !form.website_url}
+            >
+              {crawling ? "Scanning..." : "Scan Website"}
+            </button>
+            <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}>
+              {saving ? "Saving..." : saved ? "Saved!" : "Save URL"}
+            </button>
+          </div>
+          {crawlStatus && crawlStatus.crawl_status !== "none" && (
+            <div style={{
+              marginTop: "0.75rem",
+              padding: "10px 14px",
+              borderRadius: 8,
+              fontSize: "0.85rem",
+              background: crawlStatus.crawl_status === "completed" ? "rgba(34,197,94,0.08)" :
+                          crawlStatus.crawl_status === "failed" ? "rgba(239,68,68,0.08)" :
+                          "rgba(59,130,246,0.08)",
+              border: `1px solid ${
+                crawlStatus.crawl_status === "completed" ? "rgba(34,197,94,0.2)" :
+                crawlStatus.crawl_status === "failed" ? "rgba(239,68,68,0.2)" :
+                "rgba(59,130,246,0.2)"
+              }`,
+            }}>
+              {crawlStatus.crawl_status === "completed" && (
+                <span>AI knowledge base updated with content from {crawlStatus.pages_found} page{crawlStatus.pages_found !== 1 ? "s" : ""}. Your AI assistant now knows your business!</span>
+              )}
+              {crawlStatus.crawl_status === "crawling" && (
+                <span>Scanning your website... This may take a minute.</span>
+              )}
+              {crawlStatus.crawl_status === "pending" && (
+                <span>Scan queued. Starting shortly...</span>
+              )}
+              {crawlStatus.crawl_status === "failed" && (
+                <span style={{ color: "var(--red, #ef4444)" }}>
+                  {crawlStatus.error_message || "Scan failed. Please check the URL and try again."}
+                </span>
+              )}
+              {crawlStatus.crawled_at && (
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4 }}>
+                  Last scanned: {new Date(crawlStatus.crawled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Account */}

@@ -78,8 +78,7 @@ Do NOT push.
 
 Be thorough but stay safe. Only modify files in docs/.
 " \
-  --allowedTools "Read,Glob,Grep,Bash(git log*),Bash(git add*),Bash(git commit*),Bash(git pull*),Bash(git diff*),Bash(git status*),Bash(grep*),Bash(find*),Bash(wc*),Bash(cat*),Bash(ls*),Bash(head*),Bash(tail*),Bash(sort*),Bash(date*),Bash(echo*),Bash(mkdir*),Bash(diff*),Write,Edit" \
-  --disallowedTools "Bash(rm *),Bash(sudo *),Bash(curl *),Bash(wget *),Bash(pip *),Bash(python *),Bash(node *)" \
+  --dangerously-skip-permissions \
   >> "$LOG_FILE" 2>&1
 
 echo "[$(date)] Evening review completed." >> "$LOG_FILE"

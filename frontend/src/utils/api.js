@@ -590,4 +590,14 @@ export function deleteAiFeedback(tenantId, token, feedbackId) {
   return request(`/api/v1/widget/feedback/${tenantId}/${feedbackId}`, { method: "DELETE", token });
 }
 
+// --- Website Crawl ---
+
+export function startWebsiteCrawl(tenantId, token) {
+  return request(`/api/v1/crawl/${tenantId}/start`, { method: "POST", token });
+}
+
+export function getCrawlStatus(tenantId, token) {
+  return request(`/api/v1/crawl/${tenantId}/status`, { token });
+}
+
 export { ApiError };

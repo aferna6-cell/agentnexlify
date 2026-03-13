@@ -197,6 +197,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Why:** Dependency-based enforcement is explicit per-endpoint, allowing different role requirements per route. Middleware would require pattern-matching on URLs which is fragile. The `require_role()` function wraps `_get_current_tenant()`, so it's a drop-in replacement.
 **Implication:** When adding new write endpoints, always use `require_role("owner", "admin")` instead of `_get_current_tenant()`. Read endpoints can remain with `_get_current_tenant()` since all roles should be able to view data. The role hierarchy is: owner > admin > member > viewer.
 
+### Website crawl pipeline — Cloudflare Browser Rendering + sync execution
+**Decision:** Use Cloudflare Browser Rendering `/crawl` API for website scanning. The crawl executes synchronously in the POST endpoint (up to 120s timeout), storing results in `website_content` table. Crawled content is injected into the AI system prompt (truncated to 8KB).
+**Why:** Async polling adds complexity for v1. The Cloudflare API handles JavaScript rendering, which is needed for modern websites. The 120s httpx timeout covers most sites. Storing raw pages as JSONB allows re-processing later without re-crawling.
+**Implication:** The crawl endpoint will block for up to 2 minutes on slow sites. The frontend shows "Scanning..." state during this time. If Cloudflare credentials aren't configured, the crawl fails gracefully with a helpful message pointing users to manual FAQ entry. Website content is cached in DB — not re-fetched on every chat message.
+
 ---
 
 _Add new decisions when significant architectural choices are made._

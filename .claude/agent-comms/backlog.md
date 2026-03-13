@@ -12,12 +12,12 @@ _Last updated: 2026-03-12_
 
 _When a business signs up and provides their website URL, we immediately crawl their site and feed the content to their AI agent. The chatbot knows their business from minute one — no manual FAQ entry needed._
 
-- [ ] **Cloudflare /crawl API integration** — Create src/lib/cloudflare/ (or equivalent in current backend structure). Build a wrapper around Cloudflare's Browser Rendering /crawl endpoint (https://api.cloudflare.com/client/v4/accounts/{account_id}/browser-rendering/crawl). Two-step async flow: POST to start crawl → poll GET with job_id for results. Request content as Markdown format. Store CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN as environment variables on Railway.
-- [ ] **Website URL field on signup/settings** — Add a "Website URL" field to the signup form and the settings page. Optional but prominently placed. When provided, trigger the crawl automatically.
-- [ ] **Crawl pipeline** — When a tenant provides their URL: (1) Call Cloudflare /crawl with their URL, limit to 20 pages, return as Markdown. (2) When results come back, extract the useful content: business name, services/menu, hours, location, about page, contact info, pricing, FAQs. (3) Store the raw crawl results in a new `website_content` table (id, tenant_id, url, pages_json, extracted_text, crawled_at). (4) Create migration for this table.
-- [ ] **AI knowledge base auto-population** — Take the extracted website content and automatically populate the tenant's AI knowledge base / FAQ manager. Claude API summarizes the crawled pages into structured business info: services offered, hours, location, pricing, policies, FAQs. This gets injected into the chat widget's system prompt so the AI knows the business immediately.
-- [ ] **Crawl status UI** — On the dashboard settings page, show crawl status: "Scanning your website..." → "Found 15 pages" → "AI knowledge base updated with your business info." If crawl fails, show "Couldn't reach your website — you can add info manually."
-- [ ] **Re-crawl button** — Let the tenant trigger a re-crawl anytime from settings (in case they updated their website). Also consider auto-re-crawl monthly.
+- [x] **Cloudflare /crawl API integration** — done 2026-03-12. Backend service `website_crawler.py` wrapping Cloudflare Browser Rendering /crawl API. Config vars for CLOUDFLARE_ACCOUNT_ID/TOKEN.
+- [x] **Website URL field on signup/settings** — done 2026-03-12. Migration 028 adds website_url to tenants. Settings page has Website URL field. Backend allows website_url in settings update.
+- [x] **Crawl pipeline** — done 2026-03-12. Cloudflare crawl with 20-page limit, markdown format. Stores raw pages as JSONB + extracted_text in website_content table. Migration 028.
+- [x] **AI knowledge base auto-population** — done 2026-03-12. Crawled website content auto-injected into chat widget system prompt (truncated to 8KB). AI knows the business immediately from website content.
+- [x] **Crawl status UI** — done 2026-03-12. Settings page shows crawl status: scanning/completed/failed with page count and error messages. Color-coded status indicators.
+- [x] **Re-crawl button** — done 2026-03-12. "Scan Website" button on Settings page triggers re-crawl. Overwrites previous crawl record.
 - [ ] **Fallback for no website** — If the tenant has no website (or crawl fails), prompt them to fill in business info manually via the existing FAQ manager. The hosted business page at agentnexlify.com/biz/{slug} IS their website — crawl that if they set one up.
 
 ### Restaurant Order Taking

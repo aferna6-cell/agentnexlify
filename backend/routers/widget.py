@@ -252,6 +252,7 @@ def _save_chat_messages(
 def _build_system_prompt(
     tenant: dict, faq_entries: list[dict], business_hours: dict | None = None,
     corrections: list[dict] | None = None,
+    website_content: str | None = None,
 ) -> str:
     business_name = tenant.get("business_name", "our company")
     business_type = tenant.get("business_type", "")
@@ -275,11 +276,19 @@ def _build_system_prompt(
         if lines:
             corrections_block = "\n\nBusiness owner corrections (follow these closely):\n" + "\n".join(lines)
 
+    website_block = ""
+    if website_content:
+        # Truncate to keep system prompt reasonable (~8KB max for website content)
+        content = website_content[:8000]
+        if len(website_content) > 8000:
+            content += "\n[Content truncated]"
+        website_block = f"\n\nBusiness website content (use this to answer questions about the business):\n{content}"
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
         f"- Be helpful, friendly, and concise (2-3 sentences max)\n"
-        f"- Answer questions about the business using the FAQs below\n"
+        f"- Answer questions about the business using the FAQs and website content below\n"
         f"- During conversation, naturally collect name, email, and phone — but ONLY what's missing\n"
         f"- NEVER re-ask for info already in the conversation. If they said their name, use it. If they gave email, move on.\n"
         f"- Don't follow a rigid script. Have a natural conversation.\n"
@@ -288,6 +297,7 @@ def _build_system_prompt(
         f"- ALWAYS respond in the same language the visitor uses. If they write in Spanish, reply in Spanish. If they write in French, reply in French. Match their language exactly."
         f"{hours_block}"
         f"{faq_block}"
+        f"{website_block}"
         f"{corrections_block}"
     )
 
@@ -819,7 +829,15 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("ai_feedback query failed for tenant %s", tenant["id"], exc_info=True)
 
-    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections)
+    # Load crawled website content for AI knowledge
+    website_content = None
+    try:
+        from backend.services.website_crawler import get_crawled_content
+        website_content = get_crawled_content(tenant["id"])
+    except Exception:
+        logger.warning("website_content load failed for tenant %s", tenant["id"], exc_info=True)
+
+    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections, website_content)
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):

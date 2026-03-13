@@ -174,5 +174,7 @@ Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, 
 - `content_items`: `scheduled_for` (DATE, added in migration 025)
 - `leads`: `assigned_to` (UUID FK→team_members, ON DELETE SET NULL, added in migration 026)
 - New table: `ai_feedback` (id, tenant_id, session_id, message_index, rating, correction, created_at) — migration 027
+- `tenants`: `website_url` (TEXT, added in migration 028)
+- New table: `website_content` (id, tenant_id, url, pages_json JSONB, extracted_text TEXT, crawl_status TEXT, error_message TEXT, pages_found INT, crawled_at TIMESTAMPTZ) — migration 028
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
