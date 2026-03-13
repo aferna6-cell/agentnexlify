@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
-import { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemAvailability } from "../utils/api";
+import { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemAvailability, importMenuFromWebsite } from "../utils/api";
 
 export default function MenuPage() {
   const { user, token } = useAuth();
@@ -11,6 +11,8 @@ export default function MenuPage() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [filterCategory, setFilterCategory] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   const [form, setForm] = useState({
     name: "", description: "", price: "", category: "", available: true, image_url: "", sort_order: 0,
   });
@@ -95,6 +97,21 @@ export default function MenuPage() {
     }
   };
 
+  const handleImportFromWebsite = async () => {
+    if (!user?.tenantId) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await importMenuFromWebsite(user.tenantId, token);
+      setImportResult(result);
+      if (result.imported > 0) load();
+    } catch (err) {
+      setImportResult({ imported: 0, message: err.message || "Import failed." });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) return <SkeletonLoader />;
 
   const filtered = filterCategory
@@ -127,9 +144,29 @@ export default function MenuPage() {
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
+          <button
+            className="btn-primary"
+            onClick={handleImportFromWebsite}
+            disabled={importing}
+            style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+          >
+            {importing ? "Importing..." : "Import from Website"}
+          </button>
           <button className="btn-primary" onClick={openCreate}>+ Add Item</button>
         </div>
       </div>
+
+      {importResult && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: "0.85rem",
+          background: importResult.imported > 0 ? "rgba(34,197,94,0.08)" : "rgba(250,204,21,0.08)",
+          border: `1px solid ${importResult.imported > 0 ? "rgba(34,197,94,0.2)" : "rgba(250,204,21,0.2)"}`,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <span>{importResult.message}</span>
+          <button onClick={() => setImportResult(null)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>dismiss</button>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>

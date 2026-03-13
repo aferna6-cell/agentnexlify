@@ -192,4 +192,12 @@ Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, 
 - New table: `website_content` (id, tenant_id, url, pages_json JSONB, extracted_text TEXT, crawl_status TEXT, error_message TEXT, pages_found INT, crawled_at TIMESTAMPTZ) — migration 028
 - New table: `menu_items` (id UUID, tenant_id UUID FK, name TEXT, description TEXT, price NUMERIC(10,2), category TEXT, modifiers_json JSONB, available BOOLEAN, image_url TEXT, sort_order INT, created_at TIMESTAMPTZ) — migration 029. Index on (tenant_id, category).
 
+### 029 — Menu Items (Restaurant)
+Creates `menu_items` table for restaurant menu management. Columns: tenant_id (FK→tenants), name (TEXT), description (TEXT), price (NUMERIC(10,2)), category (TEXT), modifiers_json (JSONB), available (BOOLEAN DEFAULT true), image_url (TEXT), sort_order (INT DEFAULT 0), created_at (TIMESTAMPTZ). Indexed on (tenant_id, category). RLS enabled.
+
+### 030 — Orders (Restaurant)
+Creates `orders` table for restaurant order management. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL, nullable), session_id (TEXT), customer_name/phone/email (TEXT), items_json (JSONB NOT NULL), subtotal/tax/total (NUMERIC(10,2)), order_type (TEXT: 'pickup'/'delivery'), delivery_address (TEXT), status (TEXT DEFAULT 'new': new/confirmed/preparing/ready/delivered/cancelled), notes (TEXT), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status) and (tenant_id, created_at DESC). RLS enabled.
+
+**Operational note:** Migrations 029-030 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

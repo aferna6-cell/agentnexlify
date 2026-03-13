@@ -253,6 +253,7 @@ def _build_system_prompt(
     tenant: dict, faq_entries: list[dict], business_hours: dict | None = None,
     corrections: list[dict] | None = None,
     website_content: str | None = None,
+    menu_items: list[dict] | None = None,
 ) -> str:
     business_name = tenant.get("business_name", "our company")
     business_type = tenant.get("business_type", "")
@@ -284,6 +285,39 @@ def _build_system_prompt(
             content += "\n[Content truncated]"
         website_block = f"\n\nBusiness website content (use this to answer questions about the business):\n{content}"
 
+    menu_block = ""
+    if menu_items:
+        # Group by category
+        categories = {}
+        for item in menu_items:
+            cat = item.get("category", "Other")
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append(item)
+
+        lines = []
+        for cat, items in categories.items():
+            lines.append(f"\n{cat}:")
+            for item in items:
+                price = f"${float(item['price']):.2f}"
+                desc = f" — {item['description']}" if item.get("description") else ""
+                avail = "" if item.get("available", True) else " [OUT OF STOCK]"
+                lines.append(f"  - {item['name']} {price}{desc}{avail}")
+
+        menu_block = (
+            "\n\nRESTAURANT MENU (use this to help customers order):"
+            + "\n".join(lines)
+            + "\n\nORDERING INSTRUCTIONS:"
+            + "\n- When a customer wants to order food, present the menu organized by category."
+            + "\n- Take their order item by item. Ask about modifiers if applicable."
+            + "\n- Confirm the full order with itemized prices and total."
+            + "\n- Ask: pickup or delivery?"
+            + "\n- Collect customer name and phone number."
+            + "\n- If delivery, ask for their delivery address."
+            + "\n- After confirming, say the order has been placed and they'll receive a confirmation."
+            + "\n- Items marked [OUT OF STOCK] are unavailable — let the customer know and suggest alternatives."
+        )
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
@@ -298,6 +332,7 @@ def _build_system_prompt(
         f"{hours_block}"
         f"{faq_block}"
         f"{website_block}"
+        f"{menu_block}"
         f"{corrections_block}"
     )
 
@@ -837,7 +872,24 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("website_content load failed for tenant %s", tenant["id"], exc_info=True)
 
-    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections, website_content)
+    # Load menu items for restaurant tenants
+    menu_items = None
+    if tenant.get("business_type", "").lower() == "restaurant":
+        try:
+            menu_result = (
+                db.table("menu_items")
+                .select("name, description, price, category, available")
+                .eq("tenant_id", tenant["id"])
+                .order("category")
+                .order("sort_order")
+                .execute()
+            )
+            if menu_result.data:
+                menu_items = menu_result.data
+        except Exception:
+            logger.warning("menu_items query failed for tenant %s", tenant["id"], exc_info=True)
+
+    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections, website_content, menu_items)
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):

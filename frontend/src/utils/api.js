@@ -623,4 +623,8 @@ export function toggleMenuItemAvailability(tenantId, token, itemId) {
   return request(`/api/v1/menu/${tenantId}/${itemId}/toggle`, { method: "PUT", token });
 }
 
+export function importMenuFromWebsite(tenantId, token) {
+  return request(`/api/v1/menu/${tenantId}/import-from-website`, { method: "POST", token });
+}
+
 export { ApiError };

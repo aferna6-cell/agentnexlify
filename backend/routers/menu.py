@@ -1,10 +1,13 @@
 """Menu management endpoints for restaurant tenants."""
 
+import json
 import logging
 
+import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
@@ -201,3 +204,112 @@ async def toggle_availability(
         .execute()
     )
     return result.data[0]
+
+
+@router.post("/{tenant_id}/import-from-website")
+async def import_menu_from_website(
+    tenant_id: str,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Extract menu items from crawled website content using Claude AI."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+
+    # Get crawled website content
+    crawl_result = (
+        db.table("website_content")
+        .select("extracted_text")
+        .eq("tenant_id", tenant_id)
+        .eq("crawl_status", "completed")
+        .order("crawled_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if not crawl_result.data or not crawl_result.data[0].get("extracted_text"):
+        raise HTTPException(
+            status_code=400,
+            detail="No website content available. Scan your website first in Settings.",
+        )
+
+    website_text = crawl_result.data[0]["extracted_text"]
+    # Truncate to keep within token limits
+    if len(website_text) > 15000:
+        website_text = website_text[:15000]
+
+    # Use Claude to extract menu items
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=4000,
+            messages=[{
+                "role": "user",
+                "content": f"""Extract menu items from this restaurant website content. Return ONLY a JSON array of menu items. Each item should have: name (string), description (string or null), price (number), category (string like "Appetizers", "Entrees", "Desserts", "Drinks", etc.).
+
+If you cannot find any menu items, return an empty array [].
+
+Website content:
+{website_text}
+
+Return ONLY valid JSON, no markdown, no explanation. Example:
+[{{"name": "Margherita Pizza", "description": "Fresh mozzarella, basil, tomato sauce", "price": 14.99, "category": "Pizza"}}]""",
+            }],
+        )
+
+        # Parse the response
+        text = response.content[0].text.strip()
+        # Handle markdown code blocks
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            text = text.strip()
+
+        items = json.loads(text)
+        if not isinstance(items, list):
+            raise ValueError("Expected JSON array")
+
+    except (json.JSONDecodeError, ValueError, IndexError) as e:
+        logger.warning("Menu extraction parse failed: %s", e)
+        raise HTTPException(
+            status_code=422,
+            detail="Could not extract menu items from the website. Try adding items manually.",
+        )
+    except anthropic.APIError as e:
+        logger.warning("Claude API error during menu extraction: %s", e)
+        raise HTTPException(
+            status_code=502,
+            detail="AI service temporarily unavailable. Please try again.",
+        )
+
+    if not items:
+        return {"imported": 0, "items": [], "message": "No menu items found on the website."}
+
+    # Insert extracted items
+    inserted = []
+    for idx, item in enumerate(items[:100]):  # max 100 items
+        if not item.get("name") or not isinstance(item.get("price"), (int, float)):
+            continue
+        data = {
+            "tenant_id": tenant_id,
+            "name": str(item["name"])[:200],
+            "description": str(item.get("description") or "")[:1000] or None,
+            "price": round(float(item["price"]), 2),
+            "category": str(item.get("category") or "uncategorized")[:100],
+            "modifiers_json": [],
+            "available": True,
+            "sort_order": idx,
+        }
+        try:
+            result = db.table("menu_items").insert(data).execute()
+            if result.data:
+                inserted.append(result.data[0])
+        except Exception:
+            logger.warning("Failed to insert menu item: %s", item.get("name"))
+
+    return {
+        "imported": len(inserted),
+        "items": inserted,
+        "message": f"Imported {len(inserted)} menu items from your website.",
+    }
