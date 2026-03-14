@@ -73,7 +73,7 @@ def _pct_change(current: float, previous: float) -> float:
 @router.get("/{tenant_id}/overview")
 async def get_overview(
     tenant_id: str,
-    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     _check_tenant(claims, tenant_id)
@@ -254,7 +254,7 @@ async def get_overview(
 @router.get("/{tenant_id}/conversations")
 async def get_conversations_trend(
     tenant_id: str,
-    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     _check_tenant(claims, tenant_id)
@@ -310,7 +310,7 @@ async def get_conversations_trend(
 @router.get("/{tenant_id}/leads")
 async def get_leads_analytics(
     tenant_id: str,
-    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     _check_tenant(claims, tenant_id)
@@ -381,7 +381,7 @@ async def get_leads_analytics(
 @router.get("/{tenant_id}/response-times")
 async def get_response_times(
     tenant_id: str,
-    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     _check_tenant(claims, tenant_id)
@@ -472,7 +472,7 @@ async def get_response_times(
 @router.get("/{tenant_id}/widget")
 async def get_widget_analytics(
     tenant_id: str,
-    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     _check_tenant(claims, tenant_id)

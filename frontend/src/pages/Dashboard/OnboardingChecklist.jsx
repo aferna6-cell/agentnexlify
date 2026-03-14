@@ -113,6 +113,7 @@ export default function OnboardingChecklist({
   const [customColor, setCustomColor] = useState("");
   const [position, setPosition] = useState("bottom-right");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [faqError, setFaqError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [platform, setPlatform] = useState("HTML");
@@ -139,7 +140,10 @@ export default function OnboardingChecklist({
     if (activeStep === "agent" && tenantId && token) {
       fetchFaqEntries(tenantId, token)
         .then(setFaqEntries)
-        .catch(() => {});
+        .catch((err) => {
+          console.warn("Failed to load FAQ entries:", err.message || err);
+          setFaqError("Could not load FAQ entries. Try again later.");
+        });
     }
   }, [activeStep, tenantId, token]);
 
@@ -168,13 +172,15 @@ export default function OnboardingChecklist({
 
   const handleSaveAgent = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       await updateWidgetConfig(tenantId, token, {
         greeting_message: greeting,
       });
       onStepComplete?.();
     } catch (e) {
-      console.error("Failed to save greeting:", e);
+      console.warn("Failed to save greeting:", e.message || e);
+      setSaveError(e.body?.detail || e.message || "Failed to save greeting. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -207,12 +213,14 @@ export default function OnboardingChecklist({
       setFaqEntries((prev) => prev.filter((f) => f.id !== faqId));
       onStepComplete?.();
     } catch (e) {
-      console.error("Failed to delete FAQ:", e);
+      console.warn("Failed to delete FAQ:", e.message || e);
+      setFaqError(e.body?.detail || e.message || "Failed to delete FAQ entry. Please try again.");
     }
   };
 
   const handleSaveAppearance = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       const color = customColor.match(/^#[0-9a-fA-F]{6}$/)
         ? customColor
@@ -225,7 +233,8 @@ export default function OnboardingChecklist({
       setCustomColor("");
       onStepComplete?.();
     } catch (e) {
-      console.error("Failed to save appearance:", e);
+      console.warn("Failed to save appearance:", e.message || e);
+      setSaveError(e.body?.detail || e.message || "Failed to save appearance. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -306,6 +315,9 @@ export default function OnboardingChecklist({
             >
               {saving ? "Saving..." : "Save Greeting"}
             </button>
+            {saveError && (
+              <div className="onboarding-error">{saveError}</div>
+            )}
 
             <div className="onboarding-faq-section">
               <label className="onboarding-field-label">
@@ -426,6 +438,9 @@ export default function OnboardingChecklist({
             >
               {saving ? "Saving..." : "Save Appearance"}
             </button>
+            {saveError && (
+              <div className="onboarding-error">{saveError}</div>
+            )}
           </div>
         );
 

@@ -45,10 +45,12 @@ export default function BillingPage() {
   const [changingPlan, setChangingPlan] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelStatus, setCancelStatus] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const [data, trial] = await Promise.all([
         fetchDashboard(user.tenantId, token),
@@ -57,7 +59,8 @@ export default function BillingPage() {
       setDashData(data);
       setTrialData(trial);
     } catch (err) {
-      console.error("Failed to load billing data", err);
+      console.warn("Failed to load billing data:", err.message || err);
+      setLoadError(err.message || "Failed to load billing data. Please refresh the page.");
     } finally {
       setLoading(false);
     }
@@ -125,6 +128,19 @@ export default function BillingPage() {
   };
 
   if (loading) return <SkeletonLoader />;
+
+  if (loadError) {
+    return (
+      <div className="fade-in">
+        <div className="page-header">
+          <h1>Billing</h1>
+          <p>Manage your subscription and usage</p>
+        </div>
+        <div className="error-banner" style={{ marginBottom: "1rem" }}>{loadError}</div>
+        <button className="btn-primary" onClick={load}>Retry</button>
+      </div>
+    );
+  }
 
   const currentPlan = dashData?.plan || user?.plan || "free";
   const planStatus = dashData?.plan_status || "active";

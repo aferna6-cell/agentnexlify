@@ -111,7 +111,9 @@ export default function App() {
     if (!user?.tenantId || !token) return;
     fetchTrialStatus(user.tenantId, token)
       .then(setTrialData)
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to fetch trial status:", err.message || err);
+      });
   }, [user?.tenantId, token]);
 
   // Refresh trial data when plan changes

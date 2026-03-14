@@ -27,7 +27,10 @@ export default function Availability({ onNavigate }) {
     if (!user?.tenantId) return;
     fetchGoogleCalendarStatus(user.tenantId, token)
       .then(s => setGcalConnected(s.connected))
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to check Google Calendar status:", err.message || err);
+        // Non-critical: gcalConnected defaults to false, UI will show "Not connected"
+      });
   }, [user?.tenantId, token]);
 
   const loadConfig = useCallback(async () => {
@@ -35,7 +38,9 @@ export default function Availability({ onNavigate }) {
     try {
       const res = await fetchAvailability(user.tenantId, token);
       setConfig(res);
-    } catch {
+    } catch (err) {
+      console.warn("Failed to load availability config, using defaults:", err.message || err);
+      setError("Could not load saved settings. Showing defaults.");
       setConfig({
         timezone: "America/New_York",
         hours: Object.fromEntries(DAYS.map(d => [d, { enabled: d !== "saturday" && d !== "sunday", start: "09:00", end: "17:00" }])),

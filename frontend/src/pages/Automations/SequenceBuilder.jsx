@@ -318,12 +318,16 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
   const [templates, setTemplates] = useState([]);
   const [starterTemplates, setStarterTemplates] = useState([]);
   const [savingTpl, setSavingTpl] = useState(false);
+  const [tplError, setTplError] = useState(null);
 
   useEffect(() => {
     if (!user?.tenantId) return;
     fetchEmailTemplates(user.tenantId, token)
       .then((d) => { setTemplates(d.templates || []); setStarterTemplates(d.starter_templates || []); })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to load email templates:", err.message || err);
+        // Non-critical: template picker will show empty state
+      });
   }, [user?.tenantId, token]);
 
   const addStep = () => setSteps([...steps, emptyStep(steps.length + 1)]);
@@ -400,6 +404,7 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
     const step = steps[idx];
     if (!step.body_template.trim()) return;
     setSavingTpl(true);
+    setTplError(null);
     try {
       const res = await createEmailTemplate(user.tenantId, token, {
         name: `Template from Step ${idx + 1}`,
@@ -408,8 +413,9 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
         body_template: step.body_template,
       });
       setTemplates((prev) => [res.template, ...prev]);
-    } catch {
-      // silent
+    } catch (err) {
+      console.warn("Failed to save as template:", err.message || err);
+      setTplError("Failed to save template. Please try again.");
     } finally {
       setSavingTpl(false);
     }
@@ -522,6 +528,11 @@ export default function SequenceBuilder({ sequence, onSave, onClose, saving }) {
                       )}
                     </div>
                   </div>
+
+                  {/* Template save error */}
+                  {tplError && (
+                    <div style={{ color: "var(--red, #ef4444)", fontSize: "12px", padding: "4px 0" }}>{tplError}</div>
+                  )}
 
                   {/* Template picker */}
                   {showPicker && (
