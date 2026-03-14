@@ -6,6 +6,8 @@ import {
   fetchAnalyticsLeads,
   fetchAnalyticsResponseTimes,
   fetchAnalyticsWidget,
+  fetchConversations,
+  fetchTagDefinitions,
 } from "../utils/api";
 import {
   LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
@@ -76,6 +78,7 @@ export default function AnalyticsPage() {
   const [leadsData, setLeadsData] = useState(null);
   const [responseTimes, setResponseTimes] = useState(null);
   const [widgetData, setWidgetData] = useState(null);
+  const [tagDistribution, setTagDistribution] = useState([]);
   const [error, setError] = useState(null);
 
   const [currentTheme, setCurrentTheme] = useState(
@@ -97,18 +100,49 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [ov, conv, leads, resp, wid] = await Promise.allSettled([
+      const [ov, conv, leads, resp, wid, convos, tagDefs] = await Promise.allSettled([
         fetchAnalyticsOverview(user.tenantId, token, period),
         fetchAnalyticsConversations(user.tenantId, token, period),
         fetchAnalyticsLeads(user.tenantId, token, period),
         fetchAnalyticsResponseTimes(user.tenantId, token, period),
         fetchAnalyticsWidget(user.tenantId, token, period),
+        fetchConversations(user.tenantId, token),
+        fetchTagDefinitions(user.tenantId, token),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
       if (leads.status === "fulfilled") setLeadsData(leads.value);
       if (resp.status === "fulfilled") setResponseTimes(resp.value);
       if (wid.status === "fulfilled") setWidgetData(wid.value);
+
+      // Build tag distribution from conversations + tag definitions
+      if (convos.status === "fulfilled") {
+        const conversations = convos.value.conversations || [];
+        const tagCounts = {};
+        for (const c of conversations) {
+          for (const tag of (c.tags || [])) {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          }
+        }
+
+        // Build color map from tag definitions
+        const colorMap = {};
+        if (tagDefs.status === "fulfilled") {
+          for (const td of (tagDefs.value.tags || [])) {
+            colorMap[td.tag_name] = td.tag_color;
+          }
+        }
+
+        const distribution = Object.entries(tagCounts)
+          .map(([tag, count]) => ({
+            tag,
+            count,
+            color: colorMap[tag] || chartTheme.accent,
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        setTagDistribution(distribution);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -334,6 +368,52 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           ) : (
             <div className="analytics-empty">No widget data yet</div>
+          )}
+        </div>
+      </div>
+
+      {/* Conversation Tags */}
+      <div className="analytics-charts-row">
+        <div className="analytics-chart-card" style={{ flex: 1 }}>
+          <h3>Conversation Tags</h3>
+          <div className="analytics-chart-subtitle">
+            AI auto-categorization tag distribution across all conversations
+          </div>
+          {tagDistribution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={tagDistribution} margin={{ bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                <XAxis
+                  dataKey="tag"
+                  stroke={chartTheme.text}
+                  fontSize={11}
+                  angle={-35}
+                  textAnchor="end"
+                  interval={0}
+                  height={60}
+                />
+                <YAxis stroke={chartTheme.text} fontSize={11} allowDecimals={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="count"
+                  name="Conversations"
+                  radius={[4, 4, 0, 0]}
+                  fill={chartTheme.accent}
+                >
+                  {tagDistribution.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No conversation tags yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Tags are automatically assigned by AI when visitors chat through your widget.
+                Once conversations start flowing, you will see which topics come up most often.
+              </div>
+            </div>
           )}
         </div>
       </div>

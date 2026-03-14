@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchConversations, fetchConversationMessages, updateConversationTags } from "../utils/api";
+import { fetchConversations, fetchConversationMessages, updateConversationTags, fetchTagDefinitions } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 function timeAgo(dateStr) {
@@ -26,13 +26,18 @@ export default function ConversationsPage() {
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [tagDefs, setTagDefs] = useState([]);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
     try {
-      const res = await fetchConversations(user.tenantId, token);
-      setConversations(res.conversations || []);
+      const [convRes, tagRes] = await Promise.all([
+        fetchConversations(user.tenantId, token),
+        fetchTagDefinitions(user.tenantId, token).catch(() => ({ tags: [] })),
+      ]);
+      setConversations(convRes.conversations || []);
+      setTagDefs(tagRes.tags || []);
     } catch (err) {
       console.error("Failed to load conversations", err);
     } finally {
@@ -110,8 +115,46 @@ export default function ConversationsPage() {
     }
   };
 
-  // Collect all unique tags for the filter dropdown
-  const allTags = [...new Set(conversations.flatMap((c) => c.tags || []))].sort();
+  // Build a map of tag_name -> tag_color from tag definitions
+  const tagColorMap = {};
+  tagDefs.forEach((td) => {
+    if (td.tag_name && td.tag_color) tagColorMap[td.tag_name] = td.tag_color;
+  });
+
+  function getTagColor(tag) {
+    return tagColorMap[tag] || null;
+  }
+
+  function tagPillStyle(tag) {
+    const color = getTagColor(tag);
+    if (color) {
+      return {
+        display: "inline-block",
+        padding: "1px 7px",
+        borderRadius: 10,
+        fontSize: "0.68rem",
+        background: color + "26", // ~15% opacity hex suffix
+        color: color,
+      };
+    }
+    return {
+      display: "inline-block",
+      padding: "1px 7px",
+      borderRadius: 10,
+      fontSize: "0.68rem",
+      background: "var(--accent-dim, rgba(0,191,255,0.15))",
+      color: "var(--accent, #00BFFF)",
+    };
+  }
+
+  // Collect all unique tags with counts for the filter dropdown
+  const tagCounts = {};
+  conversations.forEach((c) => {
+    (c.tags || []).forEach((t) => {
+      tagCounts[t] = (tagCounts[t] || 0) + 1;
+    });
+  });
+  const allTags = Object.keys(tagCounts).sort();
 
   if (loading) return <SkeletonLoader />;
 
@@ -150,9 +193,9 @@ export default function ConversationsPage() {
                 onChange={(e) => setTagFilter(e.target.value)}
                 style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
               >
-                <option value="">All tags</option>
+                <option value="">All tags ({conversations.length})</option>
                 {allTags.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>{t} ({tagCounts[t]})</option>
                 ))}
               </select>
             )}
@@ -172,14 +215,7 @@ export default function ConversationsPage() {
                   {(c.tags || []).length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
                       {c.tags.map((tag) => (
-                        <span key={tag} style={{
-                          display: "inline-block",
-                          padding: "1px 7px",
-                          borderRadius: 10,
-                          fontSize: "0.68rem",
-                          background: "var(--accent-dim, rgba(0,191,255,0.15))",
-                          color: "var(--accent, #00BFFF)",
-                        }}>{tag}</span>
+                        <span key={tag} style={tagPillStyle(tag)}>{tag}</span>
                       ))}
                     </div>
                   )}
@@ -187,7 +223,9 @@ export default function ConversationsPage() {
               ))}
               {filtered.length === 0 && (
                 <div style={{ padding: "1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                  No conversations match your search.
+                  {tagFilter
+                    ? `No conversations tagged "${tagFilter}". Try selecting "All tags" to clear the filter.`
+                    : "No conversations match your search."}
                 </div>
               )}
             </div>
@@ -203,17 +241,22 @@ export default function ConversationsPage() {
                 {/* Tag management + export toolbar */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 0 0.5rem", gap: 8, flexWrap: "wrap" }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
-                    {(conversations.find((c) => c.session_id === selected)?.tags || []).map((tag) => (
-                      <span key={tag} style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        padding: "2px 8px", borderRadius: 10, fontSize: "0.75rem",
-                        background: "var(--accent-dim, rgba(0,191,255,0.15))",
-                        color: "var(--accent, #00BFFF)",
-                      }}>
-                        {tag}
-                        <span onClick={() => removeTag(selected, tag)} style={{ cursor: "pointer", fontWeight: 700 }}>&times;</span>
-                      </span>
-                    ))}
+                    {(conversations.find((c) => c.session_id === selected)?.tags || []).map((tag) => {
+                      const color = getTagColor(tag);
+                      const pillBg = color ? color + "26" : "var(--accent-dim, rgba(0,191,255,0.15))";
+                      const pillColor = color || "var(--accent, #00BFFF)";
+                      return (
+                        <span key={tag} style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          padding: "2px 8px", borderRadius: 10, fontSize: "0.75rem",
+                          background: pillBg,
+                          color: pillColor,
+                        }}>
+                          {tag}
+                          <span onClick={() => removeTag(selected, tag)} style={{ cursor: "pointer", fontWeight: 700 }}>&times;</span>
+                        </span>
+                      );
+                    })}
                     <input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}

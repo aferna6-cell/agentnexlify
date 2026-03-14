@@ -210,4 +210,9 @@ Creates `tenant_tag_definitions` table for customizable AI auto-categorization t
 
 **Operational note:** Migration 032 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
 
+### 033 — Action Items (AI-Extracted Tasks)
+Creates `action_items` table for AI-extracted actionable items from conversations. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), conversation_id (FK→conversations, ON DELETE SET NULL, nullable), lead_id (FK→leads, ON DELETE SET NULL, nullable), description (TEXT NOT NULL), due_date (DATE, nullable), priority (TEXT CHECK: low/medium/high, DEFAULT 'medium'), status (TEXT CHECK: pending/done/dismissed, DEFAULT 'pending'), assigned_to (FK→team_members, ON DELETE SET NULL, nullable), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status), (tenant_id, due_date) for non-null, and conversation_id for non-null. RLS enabled.
+
+**Operational note:** Migration 033 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

@@ -90,6 +90,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | jobs | Job board postings | tenant_id, title, description, pay_range, schedule, location, skills, is_active |
 | job_applications | Job applicants | job_id, tenant_id, applicant_name, applicant_phone, message, status |
 | tenant_tag_definitions | AI conversation auto-categorization tags | tenant_id, tag_name, tag_color, is_system, is_enabled |
+| action_items | AI-extracted tasks from conversations | tenant_id, conversation_id, lead_id, description, due_date, priority, status, assigned_to |
 
 > Always verify against live schema — this table may be outdated.
 
@@ -169,7 +170,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 032) → test in Supabase SQL editor → run on prod → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 033) → test in Supabase SQL editor → run on prod → update Pydantic models
 
 ## Knowledge Base
 

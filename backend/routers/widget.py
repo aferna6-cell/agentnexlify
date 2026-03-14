@@ -576,6 +576,75 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
         logger.warning("conversation_categorize: unexpected failure", exc_info=True)
 
 
+def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict]) -> None:
+    """Background task: AI extracts actionable items from conversation."""
+    if not messages or len(messages) < 4:
+        return
+
+    transcript_lines = []
+    for msg in messages[-20:]:
+        role = "Visitor" if msg["role"] == "user" else "Agent"
+        transcript_lines.append(f"{role}: {msg['content']}")
+    transcript = "\n".join(transcript_lines)
+
+    try:
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=300,
+            temperature=0,
+            system=(
+                "Extract actionable items from this business chat conversation. "
+                "Action items are things the business needs to DO: send a quote, "
+                "schedule a follow-up, prepare a document, call someone back, etc.\n\n"
+                "Return ONLY a JSON array of objects with these fields:\n"
+                '- "description": what needs to be done (max 100 chars)\n'
+                '- "priority": "low", "medium", or "high"\n'
+                '- "due_hint": natural language due date if mentioned, or null\n\n'
+                "If no action items exist, return []. Max 3 items."
+            ),
+            messages=[{"role": "user", "content": transcript}],
+        )
+        raw = resp.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        items = json.loads(raw)
+        if not isinstance(items, list) or not items:
+            return
+
+        db = get_supabase()
+
+        # Find conversation_id for this session
+        conv = (
+            db.table("conversations")
+            .select("id")
+            .eq("tenant_id", tenant_id)
+            .eq("session_id", session_id)
+            .limit(1)
+            .execute()
+        )
+        conv_id = conv.data[0]["id"] if conv.data else None
+
+        for item in items[:3]:
+            if not isinstance(item, dict) or not item.get("description"):
+                continue
+            data = {
+                "tenant_id": tenant_id,
+                "description": str(item["description"])[:500],
+                "priority": item.get("priority", "medium") if item.get("priority") in ("low", "medium", "high") else "medium",
+            }
+            if conv_id:
+                data["conversation_id"] = conv_id
+            db.table("action_items").insert(data).execute()
+
+    except json.JSONDecodeError:
+        logger.warning("action_item_extract: non-JSON response")
+    except anthropic.APIError as e:
+        logger.warning("action_item_extract: API error — %s", e)
+    except Exception:
+        logger.warning("action_item_extract: unexpected failure", exc_info=True)
+
+
 async def _capture_leads_from_session(
     tenant_id: str, session_id: str, conversation_id: str
 ) -> None:
@@ -1291,7 +1360,14 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             _categorize_conversation, tenant["id"], req.session_id, all_msgs,
         )
 
-    # 13. Watermark logic
+    # 13. AI action item extraction (every 8th message to save API calls)
+    if total_msgs >= 6 and total_msgs % 8 == 0:
+        all_msgs_for_actions = messages + [{"role": "assistant", "content": assistant_text}]
+        background_tasks.add_task(
+            _extract_action_items, tenant["id"], req.session_id, all_msgs_for_actions,
+        )
+
+    # 14. Watermark logic
     if tenant.get("plan") == "free":
         show_watermark = True
     else:
