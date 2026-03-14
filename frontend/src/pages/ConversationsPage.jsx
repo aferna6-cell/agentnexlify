@@ -1,6 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchConversations, fetchConversationMessages, updateConversationTags, fetchTagDefinitions } from "../utils/api";
+import {
+  fetchConversations,
+  fetchConversationMessages,
+  updateConversationTags,
+  fetchTagDefinitions,
+  fetchTeamMembers,
+  assignConversation,
+  fetchConversationNotes,
+  createConversationNote,
+  deleteConversationNote,
+} from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 function timeAgo(dateStr) {
@@ -16,6 +26,16 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString();
 }
 
+function formatNoteTime(dateStr) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function ConversationsPage() {
   const { user, token } = useAuth();
   const [conversations, setConversations] = useState([]);
@@ -28,16 +48,43 @@ export default function ConversationsPage() {
   const [tagInput, setTagInput] = useState("");
   const [tagDefs, setTagDefs] = useState([]);
 
+  // Shared inbox state
+  const [inboxFilter, setInboxFilter] = useState("all"); // "all" | "mine"
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMemberMap, setTeamMemberMap] = useState({}); // id -> { name, email }
+  const [assigning, setAssigning] = useState(false);
+
+  // Internal notes state
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [noteInput, setNoteInput] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
     try {
-      const [convRes, tagRes] = await Promise.all([
+      const [convRes, tagRes, teamRes] = await Promise.all([
         fetchConversations(user.tenantId, token),
         fetchTagDefinitions(user.tenantId, token).catch(() => ({ tags: [] })),
+        fetchTeamMembers(user.tenantId, token).catch(() => ({ members: [] })),
       ]);
       setConversations(convRes.conversations || []);
       setTagDefs(tagRes.tags || []);
+
+      const members = teamRes.members || teamRes || [];
+      setTeamMembers(Array.isArray(members) ? members : []);
+
+      // Build lookup map: team_member_id -> { name, email }
+      const map = {};
+      (Array.isArray(members) ? members : []).forEach((m) => {
+        const id = m.id || m.team_member_id;
+        if (id) {
+          map[id] = { name: m.name || m.email, email: m.email };
+        }
+      });
+      setTeamMemberMap(map);
     } catch (err) {
       console.error("Failed to load conversations", err);
     } finally {
@@ -50,6 +97,8 @@ export default function ConversationsPage() {
   const handleSelect = async (conv) => {
     setSelected(conv.session_id);
     setLoadingMessages(true);
+    setShowNotes(false);
+    setNotes([]);
     try {
       const res = await fetchConversationMessages(user.tenantId, conv.session_id, token);
       setMessages(res.messages || []);
@@ -57,6 +106,76 @@ export default function ConversationsPage() {
       console.error("Failed to load messages", err);
     } finally {
       setLoadingMessages(false);
+    }
+  };
+
+  // Load notes for the selected conversation
+  const loadNotes = async (sessionId) => {
+    if (!sessionId) return;
+    setLoadingNotes(true);
+    try {
+      const res = await fetchConversationNotes(user.tenantId, token, sessionId);
+      setNotes(res.notes || []);
+    } catch (err) {
+      console.error("Failed to load notes", err);
+      setNotes([]);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
+  const toggleNotes = () => {
+    const next = !showNotes;
+    setShowNotes(next);
+    if (next && selected) {
+      loadNotes(selected);
+    }
+  };
+
+  const handleAddNote = async () => {
+    const content = noteInput.trim();
+    if (!content || !selected) return;
+    setAddingNote(true);
+    try {
+      const res = await createConversationNote(user.tenantId, token, selected, content);
+      // Append the new note; the API may return the note object or we re-fetch
+      if (res && res.id) {
+        setNotes((prev) => [...prev, res]);
+      } else {
+        // Re-fetch to be safe
+        await loadNotes(selected);
+      }
+      setNoteInput("");
+    } catch (err) {
+      console.error("Failed to add note", err);
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      await deleteConversationNote(user.tenantId, token, noteId);
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    } catch (err) {
+      console.error("Failed to delete note", err);
+    }
+  };
+
+  // Assign conversation to a team member
+  const handleAssign = async (sessionId, assignedTo) => {
+    setAssigning(true);
+    try {
+      await assignConversation(user.tenantId, token, sessionId, assignedTo || null);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.session_id === sessionId ? { ...c, assigned_to: assignedTo || null } : c
+        )
+      );
+    } catch (err) {
+      console.error("Failed to assign conversation", err);
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -147,6 +266,13 @@ export default function ConversationsPage() {
     };
   }
 
+  // Helper: get assignee display name
+  function getAssigneeName(assignedTo) {
+    if (!assignedTo) return null;
+    if (teamMemberMap[assignedTo]) return teamMemberMap[assignedTo].name;
+    return "Team Member";
+  }
+
   // Collect all unique tags with counts for the filter dropdown
   const tagCounts = {};
   conversations.forEach((c) => {
@@ -158,7 +284,14 @@ export default function ConversationsPage() {
 
   if (loading) return <SkeletonLoader />;
 
+  // Determine current user's userId for "My Conversations" filter
+  const currentUserId = user?.userId || null;
+
   const filtered = conversations.filter((c) => {
+    // Inbox filter: "mine" shows only conversations assigned to current user
+    if (inboxFilter === "mine" && currentUserId) {
+      if (c.assigned_to !== currentUserId) return false;
+    }
     if (search) {
       const q = search.toLowerCase();
       if (!(c.lead_name || "").toLowerCase().includes(q) && !(c.preview || "").toLowerCase().includes(q)) return false;
@@ -166,6 +299,13 @@ export default function ConversationsPage() {
     if (tagFilter && !(c.tags || []).includes(tagFilter)) return false;
     return true;
   });
+
+  // Count for the filter buttons
+  const myCount = currentUserId
+    ? conversations.filter((c) => c.assigned_to === currentUserId).length
+    : 0;
+
+  const selectedConv = conversations.find((c) => c.session_id === selected);
 
   return (
     <div className="fade-in">
@@ -181,6 +321,58 @@ export default function ConversationsPage() {
       ) : (
         <div className="conversations-layout">
           <div className="conv-sidebar">
+            {/* Inbox filter toggle */}
+            <div style={{
+              display: "flex",
+              gap: 0,
+              marginBottom: 8,
+              borderRadius: 8,
+              overflow: "hidden",
+              border: "1px solid var(--border-color)",
+            }}>
+              <button
+                onClick={() => setInboxFilter("all")}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                  background: inboxFilter === "all"
+                    ? "var(--accent, #00BFFF)"
+                    : "var(--bg-secondary)",
+                  color: inboxFilter === "all"
+                    ? "#fff"
+                    : "var(--text-secondary)",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                All ({conversations.length})
+              </button>
+              <button
+                onClick={() => setInboxFilter("mine")}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  border: "none",
+                  borderLeft: "1px solid var(--border-color)",
+                  cursor: "pointer",
+                  background: inboxFilter === "mine"
+                    ? "var(--accent, #00BFFF)"
+                    : "var(--bg-secondary)",
+                  color: inboxFilter === "mine"
+                    ? "#fff"
+                    : "var(--text-secondary)",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                Mine ({myCount})
+              </button>
+            </div>
+
             <input
               className="conv-search"
               placeholder="Search conversations..."
@@ -200,30 +392,48 @@ export default function ConversationsPage() {
               </select>
             )}
             <div className="conv-list">
-              {filtered.map((c) => (
-                <div
-                  key={c.session_id}
-                  className={`conv-item${selected === c.session_id ? " active" : ""}`}
-                  onClick={() => handleSelect(c)}
-                >
-                  <div className="conv-item-header">
-                    <span className="conv-item-name">{c.lead_name || "Visitor"}</span>
-                    <span className="conv-item-time">{timeAgo(c.last_message_at)}</span>
-                  </div>
-                  <div className="conv-item-preview">{c.preview || c.last_message || "No messages"}</div>
-                  <div className="conv-item-count">{c.message_count} message{c.message_count !== 1 ? "s" : ""}</div>
-                  {(c.tags || []).length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                      {c.tags.map((tag) => (
-                        <span key={tag} style={tagPillStyle(tag)}>{tag}</span>
-                      ))}
+              {filtered.map((c) => {
+                const assigneeName = getAssigneeName(c.assigned_to);
+                return (
+                  <div
+                    key={c.session_id}
+                    className={`conv-item${selected === c.session_id ? " active" : ""}`}
+                    onClick={() => handleSelect(c)}
+                  >
+                    <div className="conv-item-header">
+                      <span className="conv-item-name">{c.lead_name || "Visitor"}</span>
+                      <span className="conv-item-time">{timeAgo(c.last_message_at)}</span>
                     </div>
-                  )}
-                </div>
-              ))}
+                    <div className="conv-item-preview">{c.preview || c.last_message || "No messages"}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+                      <span className="conv-item-count">{c.message_count} message{c.message_count !== 1 ? "s" : ""}</span>
+                      <span style={{
+                        fontSize: "0.7rem",
+                        color: assigneeName ? "var(--accent, #00BFFF)" : "var(--text-muted)",
+                        fontStyle: assigneeName ? "normal" : "italic",
+                        maxWidth: 100,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {assigneeName || "Unassigned"}
+                      </span>
+                    </div>
+                    {(c.tags || []).length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                        {c.tags.map((tag) => (
+                          <span key={tag} style={tagPillStyle(tag)}>{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {filtered.length === 0 && (
                 <div style={{ padding: "1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                  {tagFilter
+                  {inboxFilter === "mine" && myCount === 0
+                    ? "No conversations assigned to you yet. Assign conversations from the conversation view, or switch to \"All\" to see all conversations."
+                    : tagFilter
                     ? `No conversations tagged "${tagFilter}". Try selecting "All tags" to clear the filter.`
                     : "No conversations match your search."}
                 </div>
@@ -238,10 +448,45 @@ export default function ConversationsPage() {
               <div className="conv-empty-state">Loading...</div>
             ) : (
               <div className="conv-message-list">
-                {/* Tag management + export toolbar */}
+                {/* Toolbar: Assign dropdown + Tag management + Export + Notes toggle */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 0 0.5rem", gap: 8, flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
-                    {(conversations.find((c) => c.session_id === selected)?.tags || []).map((tag) => {
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
+                    {/* Assign to dropdown */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>Assign:</label>
+                      <select
+                        value={selectedConv?.assigned_to || ""}
+                        onChange={(e) => handleAssign(selected, e.target.value)}
+                        disabled={assigning}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "0.75rem",
+                          borderRadius: 6,
+                          border: "1px solid var(--border-color)",
+                          background: "var(--bg-secondary)",
+                          color: "var(--text-primary)",
+                          minWidth: 110,
+                          cursor: assigning ? "wait" : "pointer",
+                          opacity: assigning ? 0.6 : 1,
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {teamMembers.map((m) => {
+                          const id = m.id || m.team_member_id;
+                          return (
+                            <option key={id} value={id}>
+                              {m.name || m.email}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    {/* Divider */}
+                    <span style={{ width: 1, height: 16, background: "var(--border-color)", flexShrink: 0 }} />
+
+                    {/* Tags */}
+                    {(selectedConv?.tags || []).map((tag) => {
                       const color = getTagColor(tag);
                       const pillBg = color ? color + "26" : "var(--accent-dim, rgba(0,191,255,0.15))";
                       const pillColor = color || "var(--accent, #00BFFF)";
@@ -265,10 +510,25 @@ export default function ConversationsPage() {
                       style={{ width: 80, padding: "2px 6px", fontSize: "0.75rem", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
                     />
                   </div>
-                  {messages.length > 0 && (
-                    <button className="btn-sm" onClick={exportConversation}>Export Transcript</button>
-                  )}
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <button
+                      className="btn-sm"
+                      onClick={toggleNotes}
+                      style={{
+                        background: showNotes ? "rgba(139,92,246,0.15)" : undefined,
+                        color: showNotes ? "rgba(167,139,250,1)" : undefined,
+                        borderColor: showNotes ? "rgba(139,92,246,0.3)" : undefined,
+                      }}
+                    >
+                      Notes {notes.length > 0 ? `(${notes.length})` : ""}
+                    </button>
+                    {messages.length > 0 && (
+                      <button className="btn-sm" onClick={exportConversation}>Export</button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Chat messages */}
                 {messages.map((m) => (
                   <div key={m.id} className={`conv-msg ${m.role}`}>
                     <div className="conv-msg-role">{m.role === "user" ? "Visitor" : "AI"}</div>
@@ -278,6 +538,143 @@ export default function ConversationsPage() {
                 ))}
                 {messages.length === 0 && (
                   <div className="conv-empty-state">No messages in this conversation.</div>
+                )}
+
+                {/* Internal Notes Panel */}
+                {showNotes && (
+                  <div style={{
+                    marginTop: "1rem",
+                    padding: "1rem",
+                    borderRadius: 10,
+                    background: "rgba(139,92,246,0.06)",
+                    border: "1px solid rgba(139,92,246,0.2)",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                          Internal Notes
+                        </span>
+                        <span style={{
+                          fontSize: "0.65rem",
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          background: "rgba(139,92,246,0.15)",
+                          color: "rgba(167,139,250,1)",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                        }}>
+                          Internal
+                        </span>
+                      </div>
+                      <button
+                        onClick={toggleNotes}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--text-muted)",
+                          cursor: "pointer",
+                          fontSize: "1rem",
+                          padding: "0 4px",
+                          lineHeight: 1,
+                        }}
+                        title="Close notes"
+                      >
+                        &times;
+                      </button>
+                    </div>
+
+                    {loadingNotes ? (
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "0.5rem 0" }}>
+                        Loading notes...
+                      </div>
+                    ) : notes.length === 0 ? (
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "0.5rem 0" }}>
+                        No internal notes yet. Use notes to share context with your team about this conversation.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "0.75rem" }}>
+                        {notes.map((note) => (
+                          <div key={note.id} style={{
+                            padding: "10px 12px",
+                            borderRadius: 8,
+                            background: "rgba(139,92,246,0.08)",
+                            border: "1px solid rgba(139,92,246,0.12)",
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <div>
+                                <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "rgba(167,139,250,1)" }}>
+                                  {note.author_name || note.author_email || "Team Member"}
+                                </span>
+                                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: 8 }}>
+                                  {formatNoteTime(note.created_at)}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteNote(note.id)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "var(--text-muted)",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                  padding: "0 2px",
+                                  opacity: 0.7,
+                                }}
+                                title="Delete note"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                            <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", marginTop: 4, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                              {note.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add note input */}
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                      <textarea
+                        value={noteInput}
+                        onChange={(e) => setNoteInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddNote();
+                          }
+                        }}
+                        placeholder="Add an internal note... (Enter to send, Shift+Enter for new line)"
+                        rows={2}
+                        style={{
+                          flex: 1,
+                          padding: "8px 10px",
+                          fontSize: "0.85rem",
+                          borderRadius: 8,
+                          border: "1px solid rgba(139,92,246,0.25)",
+                          background: "var(--bg-secondary)",
+                          color: "var(--text-primary)",
+                          resize: "vertical",
+                          minHeight: 40,
+                          fontFamily: "inherit",
+                        }}
+                      />
+                      <button
+                        className="btn-primary"
+                        onClick={handleAddNote}
+                        disabled={addingNote || !noteInput.trim()}
+                        style={{
+                          padding: "8px 14px",
+                          fontSize: "0.8rem",
+                          whiteSpace: "nowrap",
+                          height: "fit-content",
+                        }}
+                      >
+                        {addingNote ? "Adding..." : "Add Note"}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

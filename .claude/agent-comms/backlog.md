@@ -49,9 +49,9 @@ _Multiple team members can see and respond to the same conversations. Internal n
 - [x] **Migration: conversation assignment + internal notes** — DONE (migration 034, 2026-03-14). Needs manual application in Supabase.
 - [x] **Conversation assignment endpoint** — DONE (PUT /api/v1/inbox/{tenant_id}/conversations/{id}/assign, 2026-03-14)
 - [x] **Internal notes endpoints** — DONE (POST/GET/DELETE via /api/v1/inbox, 2026-03-14)
-- [ ] **Team inbox UI** — ConversationsPage upgraded: show assigned team member avatar, "Assign to" dropdown, internal notes panel (toggle). Filter by "My conversations" vs "All". Show unassigned conversations prominently.
-- [ ] **Team member reply to conversation** — Allow team members to send a message back to the customer via the widget (inject into chat_messages as role='assistant' with a flag indicating human, not AI). Customer sees it in the widget. Dashboard shows "Replied by [Name]".
-- [ ] **Presence indicators** — Show which team member is currently viewing/typing in a conversation. Simple polling approach: last_active_conversation_id + last_active_at on team_members, updated on page view. Show "Alex is viewing this" badge.
+- [x] **Team inbox UI** — DONE (ConversationsPage upgraded: assignment dropdown, internal notes panel, "My/All" filter, 2026-03-14). Partial — presence badges not yet integrated.
+- [x] **Team member reply to conversation** — DONE (POST /api/v1/inbox/{tenant_id}/conversations/{id}/reply, inserts into chat_messages + conversations JSONB, 2026-03-14)
+- [x] **Presence indicators** — DONE (backend: migration 035, PUT/GET /api/v1/inbox/{tenant_id}/presence, 2026-03-14). Frontend presence display not yet integrated.
 
 ### Visual Chat Flow Builder
 

@@ -171,7 +171,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 034) → test in Supabase SQL editor → run on prod → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 035) → test in Supabase SQL editor → run on prod → update Pydantic models
 
 ## Knowledge Base
 

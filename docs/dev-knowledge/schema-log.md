@@ -220,4 +220,9 @@ Adds `assigned_to` (UUID FK→team_members, ON DELETE SET NULL) to `conversation
 
 **Operational note:** Migration 034 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
 
+### 035 — Team Presence Tracking
+Adds `last_active_conversation_id` (UUID FK→conversations, ON DELETE SET NULL) and `last_active_at` (TIMESTAMPTZ) to `team_members` table. Used for showing which team member is currently viewing/handling a conversation in the shared inbox.
+
+**Operational note:** Migration 035 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

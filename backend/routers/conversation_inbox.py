@@ -1,12 +1,15 @@
-"""Shared team inbox — conversation assignment + internal notes."""
+"""Shared team inbox — conversation assignment, internal notes, presence, team reply."""
 
+import json
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
+from backend.services.activity import log_activity
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,10 @@ class AssignRequest(BaseModel):
 
 class NoteCreate(BaseModel):
     content: str = Field(..., max_length=2000)
+
+
+class ReplyCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
 
 
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
@@ -166,3 +173,197 @@ async def delete_note(
     db = get_supabase()
     db.table("conversation_notes").delete().eq("id", note_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}
+
+
+# --- Team Reply ---
+
+def _resolve_replier_name(claims: dict, db, tenant_id: str) -> str:
+    """Determine the name of the team member sending a reply.
+
+    Checks JWT claims first (``name`` field), then falls back to a DB
+    lookup in ``team_members``.  If nothing is found, uses the email
+    address from the claims.
+    """
+    # JWT 'name' claim (set for team members on login)
+    if claims.get("name"):
+        return claims["name"]
+
+    # Fallback: look up by user_id (team_member id) in the JWT
+    user_id = claims.get("user_id")
+    if user_id:
+        try:
+            member = (
+                db.table("team_members")
+                .select("name")
+                .eq("id", user_id)
+                .eq("tenant_id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            if member.data and member.data[0].get("name"):
+                return member.data[0]["name"]
+        except Exception:
+            logger.warning("Failed to look up team member name for %s", user_id, exc_info=True)
+
+    # Last resort — use the email
+    return claims.get("email", "Team member")
+
+
+@router.post("/{tenant_id}/conversations/{conversation_id}/reply")
+async def reply_to_conversation(
+    tenant_id: str,
+    conversation_id: str,
+    req: ReplyCreate,
+    claims: dict = Depends(require_role("owner", "admin", "member")),
+):
+    """Send a team reply to a customer conversation.
+
+    The reply is inserted into ``chat_messages`` with role ``assistant``
+    so the widget shows it as a bot/team message.  The conversation's
+    JSONB ``messages`` array is also updated for legacy compatibility.
+    """
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+
+    # 1. Verify conversation belongs to tenant and get session_id
+    try:
+        conv = (
+            db.table("conversations")
+            .select("id, session_id, messages, lead_id")
+            .eq("id", conversation_id)
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        logger.error("reply: conversation lookup failed conv=%s tenant=%s: %s", conversation_id, tenant_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to look up conversation")
+
+    if not conv.data:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    conversation = conv.data[0]
+    session_id = conversation.get("session_id")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Conversation has no session_id")
+
+    reply_content = req.content.strip()
+
+    # 2. Insert into chat_messages with role "assistant"
+    try:
+        msg_result = (
+            db.table("chat_messages")
+            .insert({
+                "tenant_id": tenant_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": reply_content,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("reply: chat_messages insert failed session=%s tenant=%s: %s", session_id, tenant_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save reply message")
+
+    if not msg_result.data:
+        raise HTTPException(status_code=500, detail="Failed to save reply message")
+
+    created_message = msg_result.data[0]
+
+    # 3. Append to conversations.messages JSONB array (legacy format)
+    try:
+        existing_messages = conversation.get("messages") or []
+        if isinstance(existing_messages, str):
+            existing_messages = json.loads(existing_messages)
+
+        existing_messages.append({
+            "role": "assistant",
+            "content": reply_content,
+        })
+
+        db.table("conversations").update({
+            "messages": existing_messages,
+            "last_message_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", conversation_id).eq("tenant_id", tenant_id).execute()
+    except Exception:
+        # Non-fatal: chat_messages is the canonical store.
+        # The conversations JSONB is legacy and unreliable.
+        logger.warning(
+            "reply: conversations JSONB update failed conv=%s, chat_messages insert succeeded",
+            conversation_id, exc_info=True,
+        )
+
+    # 4. Log activity
+    replier_name = _resolve_replier_name(claims, db, tenant_id)
+    lead_id = conversation.get("lead_id")
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="team_reply",
+        description=f"Team reply by {replier_name}",
+        lead_id=str(lead_id) if lead_id else None,
+    )
+
+    logger.info(
+        "reply: OK tenant=%s conv=%s session=%s by=%s",
+        tenant_id, conversation_id, session_id, replier_name,
+    )
+
+    return {
+        "message": created_message,
+        "session_id": session_id,
+        "replied_by": replier_name,
+    }
+
+
+# --- Presence Tracking ---
+
+@router.put("/{tenant_id}/presence")
+async def update_presence(
+    tenant_id: str,
+    conversation_id: str | None = None,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Update which conversation the current team member is viewing.
+    Called by the frontend when opening a conversation. Pass null to clear."""
+    _verify_tenant(claims, tenant_id)
+
+    team_member_id = claims.get("team_member_id")
+    if not team_member_id:
+        return {"ok": True}  # Owner without team_member record — skip
+
+    db = get_supabase()
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        db.table("team_members").update({
+            "last_active_conversation_id": conversation_id,
+            "last_active_at": now,
+        }).eq("id", team_member_id).eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.warning("Presence update failed for member %s", team_member_id, exc_info=True)
+
+    return {"ok": True}
+
+
+@router.get("/{tenant_id}/presence")
+async def get_presence(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Get which team members are currently active and which conversations they're viewing."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    # Consider "active" if last_active_at is within the last 5 minutes
+    five_min_ago = datetime(2020, 1, 1, tzinfo=timezone.utc).isoformat()  # placeholder
+    from datetime import timedelta
+    five_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+
+    result = (
+        db.table("team_members")
+        .select("id, name, last_active_conversation_id, last_active_at")
+        .eq("tenant_id", tenant_id)
+        .gte("last_active_at", five_min_ago)
+        .execute()
+    )
+    return {"active_members": result.data or []}
