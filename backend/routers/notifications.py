@@ -140,16 +140,47 @@ async def get_notifications(
     except Exception:
         logger.warning("Notifications: failed to fetch activity log for %s", tenant_id, exc_info=True)
 
+    # --- 5. Overdue action items ---
+    overdue_action_items_count = 0
+    try:
+        today_str = now.strftime("%Y-%m-%d")
+        overdue_res = (
+            db.table("action_items")
+            .select("id, description, due_date, priority")
+            .eq("tenant_id", tenant_id)
+            .eq("status", "pending")
+            .lt("due_date", today_str)
+            .order("due_date")
+            .limit(10)
+            .execute()
+        )
+        overdue_data = overdue_res.data or []
+        overdue_action_items_count = len(overdue_data)
+
+        for item in overdue_data[:5]:
+            priority = item.get("priority", "medium")
+            recent_items.append(
+                NotificationItem(
+                    type="overdue_action_item",
+                    title=f"Overdue: {item['description'][:60]}",
+                    description=f"Priority: {priority} | Due: {item.get('due_date', 'unknown')}",
+                    created_at=item.get("due_date"),
+                )
+            )
+    except Exception:
+        logger.warning("Notifications: failed to fetch overdue action items for %s", tenant_id, exc_info=True)
+
     # --- Sort all items by created_at DESC and limit to 20 ---
     recent_items.sort(key=lambda item: item.created_at or "", reverse=True)
     recent_items = recent_items[:20]
 
-    total_unread = new_leads_count + new_conversations_count + todays_appointments_count
+    total_unread = new_leads_count + new_conversations_count + todays_appointments_count + overdue_action_items_count
 
     return NotificationsResponse(
         new_leads_count=new_leads_count,
         new_conversations_count=new_conversations_count,
         todays_appointments_count=todays_appointments_count,
+        overdue_action_items_count=overdue_action_items_count,
         total_unread=total_unread,
         recent_items=recent_items,
     )

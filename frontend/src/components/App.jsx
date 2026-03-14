@@ -28,6 +28,7 @@ const ContentStudioPage = lazy(() => import("../pages/ContentStudioPage"));
 const MenuPage = lazy(() => import("../pages/MenuPage"));
 const OrdersPage = lazy(() => import("../pages/OrdersPage"));
 const JobsPage = lazy(() => import("../pages/JobsPage"));
+const ActionItemsPage = lazy(() => import("../pages/ActionItemsPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -51,6 +52,7 @@ const pages = {
   menu: MenuPage,
   orders: OrdersPage,
   jobs: JobsPage,
+  action_items: ActionItemsPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {

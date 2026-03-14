@@ -9,6 +9,7 @@ import QuickActions from "./QuickActions";
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import OnboardingChecklist from "./OnboardingChecklist";
 import TodayAppointments from "./TodayAppointments";
+import ActionItemsWidget from "./ActionItemsWidget";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 const ONBOARDING_KEY_PREFIX = "anx_onboarding_";
@@ -174,6 +175,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           <div className="dashboard-bottom-row">
             <ActivityFeed activity={activity} />
             <TodayAppointments tenantId={user.tenantId} token={token} onNavigate={onNavigate} />
+            <ActionItemsWidget tenantId={user.tenantId} token={token} onNavigate={onNavigate} />
             <WidgetEmbed
               apiKey={dashData?.widget_api_key}
               tenantId={user.tenantId}

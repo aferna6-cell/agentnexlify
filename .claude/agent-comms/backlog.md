@@ -21,8 +21,8 @@ _Every chat and call conversation is auto-categorized by AI into business-meanin
 - [x] **Migration: tenant_tag_definitions table** — DONE (migration 032, 2026-03-14). Needs manual application in Supabase.
 - [x] **AI auto-categorization in chat pipeline** — DONE (widget.py, runs every 5th message as background task, 2026-03-14)
 - [x] **Custom tag management UI** — DONE (SettingsPage.jsx, color picker, system/custom badges, enable/disable, 2026-03-14)
-- [ ] **Tag filtering on ConversationsPage** — Dropdown filter showing all tags with counts. Click a tag to filter conversations. Show tag pills on conversation list items.
-- [ ] **Tag distribution analytics** — Bar chart on AnalyticsPage showing tag frequency over time. "You had 12 complaints this week vs 8 last week." Uses Recharts.
+- [x] **Tag filtering on ConversationsPage** — DONE (ConversationsPage.jsx, dropdown with counts, colored tag pills, 2026-03-14)
+- [x] **Tag distribution analytics** — DONE (AnalyticsPage.jsx, Recharts bar chart with per-tag colors, 2026-03-14)
 
 ### AI Action Item Extraction
 
@@ -32,8 +32,8 @@ _After every conversation (chat or call), AI extracts actionable items: "Custome
 
 **What we already have:** Nothing. Activity log tracks what happened, but doesn't extract what needs to happen next.
 
-- [ ] **Migration: action_items table** — id, tenant_id, conversation_id (nullable), lead_id (nullable), description, due_date (nullable), priority (low/medium/high), status (pending/done/dismissed), assigned_to (FK team_members, nullable), created_at. Migration 033.
-- [ ] **AI extraction in chat pipeline** — After conversation ends (or on each message batch), Claude extracts action items from the conversation. Items include: description, suggested due date (if mentioned), priority. Store in action_items table. Background task, same pattern as lead capture.
+- [x] **Migration: action_items table** — DONE (migration 033, 2026-03-14). Needs manual application in Supabase.
+- [x] **AI extraction in chat pipeline** — DONE (widget.py, runs every 8th message as background task, 2026-03-14)
 - [ ] **Action items dashboard widget** — Card on main dashboard showing pending action items sorted by due date. Quick "Mark Done" and "Dismiss" buttons. Click to see full conversation context.
 - [ ] **Action items page** — Full page view with filters: status, priority, assigned_to, date range. Assign to team members. Bulk mark done/dismiss.
 - [ ] **Action item notifications** — Include overdue action items in the notification bell aggregation. "You have 3 overdue action items."
