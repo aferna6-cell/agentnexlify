@@ -2,7 +2,7 @@
 
 _The continuous loop reads this file every cycle and works top to bottom within each section. Add tasks anytime — the loop picks them up automatically._
 
-_Last updated: 2026-03-13_
+_Last updated: 2026-03-14_
 
 ---
 
@@ -18,9 +18,9 @@ _Every chat and call conversation is auto-categorized by AI into business-meanin
 
 **What we already have:** Lead auto-tagging (freeform, done), conversation manual tagging (done). What's missing: AI auto-categorization of conversations into preset business categories, custom tag definitions per tenant, tag distribution analytics.
 
-- [ ] **Migration: tenant_tag_definitions table** — New table: id, tenant_id, tag_name, tag_color, is_system (boolean for preset vs custom), created_at. Seed with 6 system tags: New Lead, Pricing Question, Complaint, Appointment Request, Urgent, Follow-up Needed. Migration 032.
-- [ ] **AI auto-categorization in chat pipeline** — After each conversation (in the background task, not chat response path), call Claude to categorize the conversation into 1-3 tags from the tenant's tag definitions. Store on the existing conversations.tags TEXT[] column. Use the same background-task pattern as lead auto-tagging.
-- [ ] **Custom tag management UI** — Settings page section where business owners can add/edit/delete custom tags with color pickers. System tags are read-only but can be disabled.
+- [x] **Migration: tenant_tag_definitions table** — DONE (migration 032, 2026-03-14). Needs manual application in Supabase.
+- [x] **AI auto-categorization in chat pipeline** — DONE (widget.py, runs every 5th message as background task, 2026-03-14)
+- [x] **Custom tag management UI** — DONE (SettingsPage.jsx, color picker, system/custom badges, enable/disable, 2026-03-14)
 - [ ] **Tag filtering on ConversationsPage** — Dropdown filter showing all tags with counts. Click a tag to filter conversations. Show tag pills on conversation list items.
 - [ ] **Tag distribution analytics** — Bar chart on AnalyticsPage showing tag frequency over time. "You had 12 complaints this week vs 8 last week." Uses Recharts.
 
