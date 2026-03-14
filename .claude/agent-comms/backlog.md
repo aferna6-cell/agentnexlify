@@ -2,11 +2,142 @@
 
 _The continuous loop reads this file every cycle and works top to bottom within each section. Add tasks anytime — the loop picks them up automatically._
 
-_Last updated: 2026-03-12_
+_Last updated: 2026-03-13_
 
 ---
 
-## Features — Tier 0: Game Changers (build these FIRST)
+## Features — Tier 0: Quo-Inspired Competitive Features (BUILD FIRST)
+
+_Inspired by Quo (formerly OpenPhone) — an AI-powered business phone system serving 90K+ businesses. These features differentiate us from every other chatbot widget. Adapted for our chat-first platform._
+
+### AI Conversation Tags (Auto-Categorization)
+
+_Every chat and call conversation is auto-categorized by AI into business-meaningful tags: "New Lead", "Pricing Question", "Complaint", "Appointment Request", "Urgent", "Follow-up Needed". Business owners can create custom tags. Dashboard filters by tag._
+
+**Why this matters:** Quo auto-tags every call so managers get instant insights without manual logging. We should do the same for every chat conversation. This is different from our existing lead auto-tagging (which extracts freeform tags like "interested in: kitchen remodel") — this is preset business categories applied to conversations.
+
+**What we already have:** Lead auto-tagging (freeform, done), conversation manual tagging (done). What's missing: AI auto-categorization of conversations into preset business categories, custom tag definitions per tenant, tag distribution analytics.
+
+- [ ] **Migration: tenant_tag_definitions table** — New table: id, tenant_id, tag_name, tag_color, is_system (boolean for preset vs custom), created_at. Seed with 6 system tags: New Lead, Pricing Question, Complaint, Appointment Request, Urgent, Follow-up Needed. Migration 032.
+- [ ] **AI auto-categorization in chat pipeline** — After each conversation (in the background task, not chat response path), call Claude to categorize the conversation into 1-3 tags from the tenant's tag definitions. Store on the existing conversations.tags TEXT[] column. Use the same background-task pattern as lead auto-tagging.
+- [ ] **Custom tag management UI** — Settings page section where business owners can add/edit/delete custom tags with color pickers. System tags are read-only but can be disabled.
+- [ ] **Tag filtering on ConversationsPage** — Dropdown filter showing all tags with counts. Click a tag to filter conversations. Show tag pills on conversation list items.
+- [ ] **Tag distribution analytics** — Bar chart on AnalyticsPage showing tag frequency over time. "You had 12 complaints this week vs 8 last week." Uses Recharts.
+
+### AI Action Item Extraction
+
+_After every conversation (chat or call), AI extracts actionable items: "Customer wants a quote for kitchen remodel by Friday", "Schedule follow-up call for Tuesday", "Send menu PDF". These appear as tasks on the dashboard._
+
+**Why this matters:** Quo extracts action items from every call transcript. Business owners forget follow-ups — this catches everything. Turns passive conversation history into an active to-do list.
+
+**What we already have:** Nothing. Activity log tracks what happened, but doesn't extract what needs to happen next.
+
+- [ ] **Migration: action_items table** — id, tenant_id, conversation_id (nullable), lead_id (nullable), description, due_date (nullable), priority (low/medium/high), status (pending/done/dismissed), assigned_to (FK team_members, nullable), created_at. Migration 033.
+- [ ] **AI extraction in chat pipeline** — After conversation ends (or on each message batch), Claude extracts action items from the conversation. Items include: description, suggested due date (if mentioned), priority. Store in action_items table. Background task, same pattern as lead capture.
+- [ ] **Action items dashboard widget** — Card on main dashboard showing pending action items sorted by due date. Quick "Mark Done" and "Dismiss" buttons. Click to see full conversation context.
+- [ ] **Action items page** — Full page view with filters: status, priority, assigned_to, date range. Assign to team members. Bulk mark done/dismiss.
+- [ ] **Action item notifications** — Include overdue action items in the notification bell aggregation. "You have 3 overdue action items."
+
+### Shared Team Inbox
+
+_Multiple team members can see and respond to the same conversations. Internal notes (customer doesn't see). Assign conversations to specific team members. Show who is currently handling what._
+
+**Why this matters:** Quo's shared inbox is their #1 collaboration feature. Currently our team members can see conversations but can't take ownership, leave internal notes, or see who's handling what. Real businesses need handoff between team members.
+
+**What we already have:** Team members (done), lead assignment (done), conversation list (done). What's missing: conversation assignment, internal notes on conversations, real-time presence (who's handling what), team member reply to conversations.
+
+- [ ] **Migration: conversation assignment + internal notes** — Add assigned_to UUID FK to conversations table. New table: conversation_notes (id, conversation_id, tenant_id, author_id FK team_members, content, created_at). Migration 034.
+- [ ] **Conversation assignment endpoint** — PUT /conversations/{tenant_id}/{conversation_id}/assign. Activity log entry. Notification to assigned team member.
+- [ ] **Internal notes endpoints** — POST/GET/DELETE for conversation_notes. Notes visible only to team members, never to the customer via widget.
+- [ ] **Team inbox UI** — ConversationsPage upgraded: show assigned team member avatar, "Assign to" dropdown, internal notes panel (toggle). Filter by "My conversations" vs "All". Show unassigned conversations prominently.
+- [ ] **Team member reply to conversation** — Allow team members to send a message back to the customer via the widget (inject into chat_messages as role='assistant' with a flag indicating human, not AI). Customer sees it in the widget. Dashboard shows "Replied by [Name]".
+- [ ] **Presence indicators** — Show which team member is currently viewing/typing in a conversation. Simple polling approach: last_active_conversation_id + last_active_at on team_members, updated on page view. Show "Alex is viewing this" badge.
+
+### Visual Chat Flow Builder
+
+_Drag-and-drop builder for customizing the chat widget's conversation flow. "If customer asks about pricing -> show pricing card. If customer wants appointment -> show booking form. If after hours -> collect info and promise callback."_
+
+**Why this matters:** Quo has a visual call flow builder for phone routing. Our equivalent: a visual chat flow builder that lets business owners customize their widget's behavior without touching code. This is a massive differentiator — no other chat widget platform offers this for small businesses.
+
+**What we already have:** Widget config (greeting, colors, position). The AI handles all routing via system prompt. What's missing: visual builder for defining custom flows, conditional logic, and special actions.
+
+- [ ] **Migration: chat_flows table** — id, tenant_id, name, flow_json (JSONB — nodes and edges), is_active, created_at. Migration 035. Flow JSON structure: nodes (greeting, question, condition, action, handoff) with edges connecting them.
+- [ ] **Chat flow engine in widget backend** — When processing a chat message, check if tenant has an active flow. If so, evaluate flow conditions against the conversation context to determine next action. Actions: show pricing card, show booking form, transfer to human, collect info, send auto-reply. Falls back to AI for anything not covered by the flow.
+- [ ] **Visual flow builder page** — React page with a canvas-based drag-and-drop builder. Use React Flow (reactflow.dev) library. Node types: Greeting, Question, AI Response, Condition (if/else), Action (book appointment, show pricing, collect info), Handoff (transfer to team member). Edges connect nodes. Save as JSON.
+- [ ] **Preset flow templates** — 3-5 starter templates: "General business" (greeting → FAQ → appointment/human), "Restaurant" (greeting → menu → order → confirmation), "Contractor" (greeting → service type → quote request → book estimate). One-click apply.
+- [ ] **Flow analytics** — Track which nodes get triggered most. Show drop-off points. "80% of visitors hit the pricing node but only 20% book — consider adding a discount offer."
+
+### Analytics Dashboard Upgrade
+
+_Call volume, chat volume, response time, missed opportunities, lead conversion rate, AI tag distribution, per-agent metrics, busiest hours heat map._
+
+**Why this matters:** Quo's analytics show call patterns, missed call rates, and per-agent performance. Our current analytics are basic — we need the metrics that help business owners make decisions.
+
+**What we already have:** Basic stats (lead count, conversation count, appointment count). Email open tracking. Review analytics. What's missing: response time tracking, missed opportunity detection, conversion funnel, busiest hours, per-team-member metrics, heat map.
+
+- [ ] **Migration: response_metrics table** — id, tenant_id, conversation_id, first_message_at, first_response_at, response_time_seconds, channel (widget/sms/voice), resolved_at, outcome (lead_captured/appointment_booked/question_answered/no_action). Migration 036.
+- [ ] **Response time tracking** — Calculate and store time between customer first message and first AI/human response. Track per conversation. Aggregate for averages.
+- [ ] **Analytics page redesign** — Replace basic stats with full dashboard: (1) Chat volume over time (line chart), (2) Lead conversion funnel (conversations → leads → appointments → completed), (3) Response time trend, (4) Busiest hours heat map (7x24 grid, color by volume), (5) AI tag distribution (bar chart, from conversation tags), (6) Per-team-member metrics (conversations handled, avg response time, leads captured).
+- [ ] **Missed opportunity detection** — Flag conversations where: visitor asked a question but got no follow-up, visitor mentioned pricing but didn't book, conversation ended abruptly. Show as "Missed Opportunities" count with drill-down.
+
+### Snippets / Quick Replies
+
+_Pre-written response templates for common questions. Business owner creates them, team members send with one click. AI can also suggest which snippet to use._
+
+**Why this matters:** Quo has "Snippets" — saved replies that send complete messages with one click. We have email templates for sequences, but nothing for live conversations. Team members answering chats need quick access to standard responses.
+
+**What we already have:** Email templates (for automation sequences). What's missing: quick reply snippets for live chat/SMS conversations, AI snippet suggestions.
+
+- [ ] **Migration: snippets table** — id, tenant_id, title, content, shortcut (optional, e.g., "/hours"), category, usage_count, created_at. Migration 037.
+- [ ] **Snippets CRUD endpoints** — Standard CRUD in backend/routers/snippets.py. GET returns sorted by usage_count (most-used first). Search by title/content.
+- [ ] **Snippets management page** — Settings section or dedicated page. Create/edit/delete snippets. Categories: General, Pricing, Hours, Services, Custom. Bulk import from a list.
+- [ ] **Snippet picker in team inbox** — When team members reply to a conversation from the dashboard, show a "/" command or button to insert a snippet. Typeahead search. One-click insert.
+- [ ] **AI snippet suggestion** — When a team member is composing a reply, AI suggests the most relevant snippet based on the conversation context. Non-intrusive suggestion bar: "Suggested: [Hours & Location] — Click to insert."
+
+### AI Contact Suggestions (Enhanced Lead Capture)
+
+_When the chatbot talks to someone, extract their name, phone, email, business need from the conversation. Auto-suggest adding them as a lead. Auto-populate lead fields from conversation context._
+
+**Why this matters:** Quo auto-identifies contact details in conversations and suggests adding/updating contacts. Our lead capture already extracts some info, but it's one-shot — it doesn't continuously watch for new details mentioned later in the conversation, and it doesn't suggest updates to existing leads.
+
+**What we already have:** Lead auto-capture from conversations (done). Lead merge/dedup (done). What's missing: continuous extraction throughout conversation (not just first capture), suggest updates to existing leads, auto-populate service interest and notes from conversation context.
+
+- [ ] **Enhanced lead extraction — continuous mode** — Instead of extracting lead info once at the end, scan every N messages (e.g., every 3 messages) for new contact details. If a visitor mentions their email on message 8 after we already captured their name on message 2, update the lead.
+- [ ] **Lead update suggestions** — When AI detects info about an existing lead (matched by email/phone), create a pending suggestion: "Update John's record: add phone 555-1234, service interest: roof repair." Show in notification bell. Owner approves or dismisses.
+- [ ] **Auto-populate service interest + notes** — Extract service_interest and conversation summary from chat context. Auto-fill on the lead record. Currently only tags are extracted — add service_interest and a conversation_summary field.
+- [ ] **Dashboard: lead suggestion review panel** — UI for reviewing and approving AI-suggested lead updates. Batch approve/dismiss. Shows what changed and why.
+
+### AI Call Transcription & Summaries
+
+_After every AI-answered call, generate a transcript and AI summary with action items. Store in the conversation thread. Time-stamped transcript with jump-to-moment capability._
+
+**Why this matters:** Quo auto-transcribes and summarizes every call with action items. We have the AI Answering Service module planned but haven't specified the transcription and summary pipeline in detail. This enriches that module.
+
+**Note:** This extends our existing "AI Answering Service" module (already in Tier 2 of the backlog). Adding these items to that module's task list rather than duplicating.
+
+- [ ] **Call transcription pipeline** — Use Twilio's built-in recording transcription (or Whisper API for higher quality). Store timestamped transcript in the calls table `transcript` JSONB field (array of {timestamp, speaker, text} objects).
+- [ ] **AI call summary generation** — After transcription, call Claude to generate: (1) one-paragraph summary, (2) action items extracted, (3) caller sentiment (positive/neutral/negative), (4) suggested follow-up. Store as `summary` JSONB on calls table.
+- [ ] **Transcript viewer UI** — Call detail page shows timestamped transcript with clickable timestamps (jump to audio moment if recording is available). Summary and action items shown in a sidebar panel.
+- [ ] **Action items from calls → action_items table** — Feed extracted call action items into the same action_items table used for chat action items. Unified task list across channels.
+
+### MCP Integration
+
+_Allow business owners to connect AgentNexLiFy to Claude or ChatGPT via MCP so they can manage their business communications from their AI assistant._
+
+**Why this matters:** Quo offers MCP integration with Claude and ChatGPT. Business owners can ask "What calls did I miss today?" from their AI assistant. This is a power-user feature but positions us as forward-thinking.
+
+**What we already have:** Open API endpoints. Webhooks. What's missing: an MCP server that exposes our API as tools for AI assistants.
+
+- [ ] **MCP server scaffold** — Build a lightweight MCP server (Python, using the MCP SDK) that exposes AgentNexLiFy tools: get_leads, get_conversations, get_appointments, get_action_items, send_reply, create_appointment. Auth via API key.
+- [ ] **MCP tool definitions** — Define tool schemas for the most useful operations: (1) list_recent_leads, (2) list_today_appointments, (3) get_unread_conversations, (4) reply_to_conversation, (5) get_action_items, (6) get_analytics_summary. Each tool maps to existing API endpoints.
+- [ ] **MCP setup guide** — Dashboard page with instructions for connecting to Claude Desktop or ChatGPT. Copy-paste config. Test connection button.
+- [ ] **MCP authentication** — Generate per-tenant MCP API keys (separate from widget API keys). Rate limited. Read-only by default, write access opt-in.
+
+---
+
+## Features — Tier 1: Game Changers (COMPLETED)
+
+_Previously Tier 0. Website scraping and restaurant orders are now complete._
 
 ### Auto-Scrape Customer Website on Signup
 
@@ -36,7 +167,7 @@ _The chat widget can take food orders for restaurants — browse the menu, build
 
 ---
 
-## Features — Tier 1: "I need this to pay you money"
+## Features — Tier 2: "I need this to pay you money"
 _These are the features a customer needs before they'll upgrade from free._
 
 - [x] **Email notifications for new leads** — done 2026-03-12. Added `_send_new_lead_email_notification()` in widget.py, wired into both auto-capture and manual submit paths.
@@ -44,7 +175,7 @@ _These are the features a customer needs before they'll upgrade from free._
 - [x] **Lead import via CSV** — done 2026-03-12. Backend: POST /api/v1/leads/{tenant_id}/import with UploadFile. Frontend: Import CSV button on LeadsPage with result banner. Dedup by email, max 500 rows, fires webhooks.
 - [x] **Email template editor** — done 2026-03-12. Reusable template library (backend CRUD + migration 014) with 6 starter templates. SequenceBuilder enhanced with template picker, formatting toolbar, variable insertion, and live HTML preview panel. Templates can be saved from steps and reused across sequences.
 
-## Features — Tier 2: "This would make my life easier"
+## Features — Tier 3: "This would make my life easier"
 _These make the product sticky — once they use these, they won't leave._
 
 - [x] **Quick reply / follow-up from dashboard** — done 2026-03-12. Backend: POST /api/v1/leads/{tenant_id}/{lead_id}/email. Frontend: inline email compose in LeadDetailDrawer with subject/message fields. Auto-updates lead status from "new" to "contacted".
@@ -54,7 +185,7 @@ _These make the product sticky — once they use these, they won't leave._
 - [x] **Widget offline message** — done 2026-03-12. Migration 015 adds is_online/offline_message to widget_configs. Backend: toggle endpoint + offline contact form submission. Widget JS: detects offline status, shows contact form. Frontend: online/offline toggle on WidgetPage.
 - [x] **Dashboard notifications center** — done 2026-03-12. Backend: GET /api/v1/notifications/{tenant_id} aggregates leads/conversations/appointments/activity. Frontend: NotificationBell component with dropdown, badge count, 60s polling.
 
-## Features — Tier 3: "This makes me look professional"
+## Features — Tier 4: "This makes me look professional"
 _These differentiate from competitors and justify higher-tier pricing._
 
 - [x] **Review/rating request** — Already complete. Template in sequences.py with appointment_completed trigger. Resolves {{review_link}} from tenant.google_review_link. Configurable in Settings. In TemplateGallery.
@@ -64,7 +195,7 @@ _These differentiate from competitors and justify higher-tier pricing._
 - [x] **Lead merge** — done 2026-03-12. Backend: GET /duplicates finds matches by email/phone, POST /merge does keep-and-absorb merge. Frontend: "Find Duplicates" button on LeadsPage with merge modal.
 - [x] **Widget file/image upload** — done 2026-03-12. Backend: POST /api/v1/widget/upload with multipart form, validates type/size, stores in Supabase Storage chat-attachments bucket. Widget JS: paperclip button, inline image preview, file download links. Both widget copies synced.
 
-## Features — Tier 4: "I want the full platform"
+## Features — Tier 5: "I want the full platform"
 _Operations-tier features that justify the premium plan._
 
 - [x] **Zapier integration polish** — done 2026-03-12. Added automation.sms_sent to SUPPORTED_EVENTS. Enriched appointment.cancelled webhook with customer details. Updated all sample payloads to match actual field names. Added public GET /schema/events endpoint with event descriptions + sample payloads for Zapier setup. Conversation.message payload corrected to user_message/assistant_message fields.

@@ -219,4 +219,13 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Competitor analysis: Quo (formerly OpenPhone)
+**Date:** 2026-03-13
+**What they do:** AI-powered business phone system. $105M funded. 90K+ businesses. Key features: Sona AI voice agent, call transcription/summaries, AI call tags, auto-replies, shared inbox, visual call flow builder, analytics, CRM integrations.
+**What we're taking:** AI conversation tags, action item extraction, shared team inbox, visual chat flow builder, analytics upgrade, snippets/quick replies, AI contact suggestions, call transcription & summaries (extending our AI Answering Service module), MCP integration. Adapted for our chat-first (not phone-first) platform.
+**Our advantage:** We're chat-first + website widget + lead capture + appointment booking + CRM in one. Quo is phone-first and charges $15-35/user/month. We can offer more for less because our AI handles chat AND voice AND SMS in one widget. Quo requires separate CRM (HubSpot/Salesforce) — we have CRM built in. Quo's visual call flow builder routes phone calls — our visual chat flow builder routes chat conversations (lower barrier, no phone hardware needed).
+**What we're NOT taking:** Phone number provisioning (we already plan this in the AI Answering Service module), Sona AI voice agent (we have our own voice module planned), CRM integrations (we ARE the CRM — no need to sync to HubSpot/Salesforce for our target market).
+
+---
+
 _Add new decisions when significant architectural choices are made._
