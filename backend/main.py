@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -85,9 +86,11 @@ async def lifespan(app: FastAPI):
     global _startup_time
     _startup_time = time.time()
     logger.info("AgentNexLiFy starting up")
-    task = asyncio.create_task(_automation_loop())
+    if not os.environ.get("TESTING"):
+        task = asyncio.create_task(_automation_loop())
     yield
-    task.cancel()
+    if not os.environ.get("TESTING"):
+        task.cancel()
     logger.info("AgentNexLiFy shutting down")
 
 

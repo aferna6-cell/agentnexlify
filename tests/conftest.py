@@ -1,6 +1,9 @@
 """Shared test fixtures for AgentNexLiFy tests."""
 
+import os
 import sys
+
+os.environ["TESTING"] = "1"
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
