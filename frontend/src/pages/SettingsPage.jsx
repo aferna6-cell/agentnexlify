@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus } from "../utils/api";
+import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus, fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
@@ -26,6 +26,10 @@ export default function SettingsPage({ onNavigate }) {
   const [crawling, setCrawling] = useState(false);
   const [businessSlug, setBusinessSlug] = useState(null);
   const [businessPageEnabled, setBusinessPageEnabled] = useState(false);
+  const [tagDefs, setTagDefs] = useState([]);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#6b7280");
+  const [savingTag, setSavingTag] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -73,6 +77,15 @@ export default function SettingsPage({ onNavigate }) {
     }
   }, [user?.tenantId, token]);
 
+  // Load tag definitions
+  useEffect(() => {
+    if (user?.tenantId && token) {
+      fetchTagDefinitions(user.tenantId, token)
+        .then((data) => setTagDefs(data.tags || []))
+        .catch((err) => console.warn("Tag definitions fetch failed:", err.message));
+    }
+  }, [user?.tenantId, token]);
+
   const handleScanWebsite = async () => {
     if (!user?.tenantId) return;
     // Need either a website URL or an active business page
@@ -98,6 +111,46 @@ export default function SettingsPage({ onNavigate }) {
       setFeedback((prev) => prev.filter((f) => f.id !== id));
     } catch (err) {
       console.warn("Delete feedback failed:", err.message);
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!newTagName.trim()) return;
+    setSavingTag(true);
+    try {
+      const tag = await createTagDefinition(user.tenantId, token, {
+        tag_name: newTagName.trim(),
+        tag_color: newTagColor,
+      });
+      setTagDefs((prev) => [...prev, tag]);
+      setNewTagName("");
+      setNewTagColor("#6b7280");
+    } catch (err) {
+      console.warn("Create tag failed:", err.message);
+    } finally {
+      setSavingTag(false);
+    }
+  };
+
+  const handleToggleTag = async (tag) => {
+    try {
+      await updateTagDefinition(user.tenantId, token, tag.id, {
+        is_enabled: !tag.is_enabled,
+      });
+      setTagDefs((prev) =>
+        prev.map((t) => (t.id === tag.id ? { ...t, is_enabled: !t.is_enabled } : t))
+      );
+    } catch (err) {
+      console.warn("Toggle tag failed:", err.message);
+    }
+  };
+
+  const handleDeleteTag = async (tagId) => {
+    try {
+      await deleteTagDefinition(user.tenantId, token, tagId);
+      setTagDefs((prev) => prev.filter((t) => t.id !== tagId));
+    } catch (err) {
+      console.warn("Delete tag failed:", err.message);
     }
   };
 
@@ -417,6 +470,111 @@ export default function SettingsPage({ onNavigate }) {
             <button className="settings-link-btn" onClick={() => onNavigate?.("widget")}>Widget Settings</button>
             <button className="settings-link-btn" onClick={() => onNavigate?.("faq")}>FAQ Manager</button>
             <button className="settings-link-btn" onClick={() => onNavigate?.("availability")}>Calendar Availability</button>
+          </div>
+        </div>
+
+        {/* Conversation Tags */}
+        <div className="settings-card">
+          <h3>Conversation Tags</h3>
+          <p className="settings-card-desc">
+            Define tags for AI auto-categorization of conversations. System tags are built-in; add custom tags for your business needs.
+          </p>
+
+          {/* Tag list */}
+          {tagDefs.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 8 }}>
+              No tags defined yet. Add custom tags below, or the AI will use default categories when auto-tagging conversations.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+              {tagDefs.map((tag) => (
+                <div key={tag.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "8px 12px", borderRadius: 8,
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border-color)",
+                  opacity: tag.is_enabled ? 1 : 0.5,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{
+                      width: 10, height: 10, borderRadius: "50%",
+                      background: tag.tag_color || "#6b7280",
+                      flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>{tag.tag_name}</span>
+                    <span style={{
+                      fontSize: "0.7rem", padding: "2px 6px", borderRadius: 4,
+                      background: tag.is_system ? "rgba(59,130,246,0.15)" : "rgba(139,92,246,0.15)",
+                      color: tag.is_system ? "rgba(96,165,250,1)" : "rgba(167,139,250,1)",
+                    }}>
+                      {tag.is_system ? "system" : "custom"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      onClick={() => handleToggleTag(tag)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        fontSize: "0.8rem",
+                        color: tag.is_enabled ? "rgba(34,197,94,0.9)" : "var(--text-muted)",
+                      }}
+                      title={tag.is_enabled ? "Disable tag" : "Enable tag"}
+                    >
+                      {tag.is_enabled ? "enabled" : "disabled"}
+                    </button>
+                    {!tag.is_system && (
+                      <button
+                        onClick={() => handleDeleteTag(tag.id)}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          color: "var(--text-muted)", fontSize: "0.8rem",
+                        }}
+                        title="Delete custom tag"
+                      >
+                        delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add custom tag form */}
+          <div style={{
+            marginTop: 16, padding: "12px 14px", borderRadius: 8,
+            background: "var(--bg-secondary)", border: "1px solid var(--border-color)",
+          }}>
+            <label style={{ fontSize: "0.8rem", color: "var(--text-muted)", display: "block", marginBottom: 8 }}>
+              Add custom tag
+            </label>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                type="color"
+                value={newTagColor}
+                onChange={(e) => setNewTagColor(e.target.value)}
+                style={{
+                  width: 32, height: 32, padding: 0, border: "1px solid var(--border-color)",
+                  borderRadius: 6, cursor: "pointer", background: "transparent",
+                }}
+                title="Tag color"
+              />
+              <input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="e.g. pricing-inquiry"
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddTag(); }}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn-primary"
+                onClick={handleAddTag}
+                disabled={savingTag || !newTagName.trim()}
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {savingTag ? "Adding..." : "Add Tag"}
+              </button>
+            </div>
           </div>
         </div>
 

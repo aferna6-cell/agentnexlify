@@ -8,6 +8,7 @@ import {
   deleteJob,
   fetchJobApplications,
   updateApplicationStatus,
+  aiWriteJobDescription,
 } from "../utils/api";
 
 const APP_STATUS_LABELS = {
@@ -66,6 +67,10 @@ export default function JobsPage() {
   const [appsLoading, setAppsLoading] = useState(false);
   const [updatingAppId, setUpdatingAppId] = useState(null);
 
+  // AI writer
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiWriting, setAiWriting] = useState(false);
+
   // Toggling active/inactive
   const [togglingJobId, setTogglingJobId] = useState(null);
 
@@ -116,6 +121,7 @@ export default function JobsPage() {
   const openCreate = () => {
     setEditJob(null);
     setForm({ ...emptyForm });
+    setAiPrompt("");
     setShowModal(true);
   };
 
@@ -188,6 +194,27 @@ export default function JobsPage() {
       console.warn("Toggle failed:", err.message);
     } finally {
       setTogglingJobId(null);
+    }
+  };
+
+  const handleAiWrite = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiWriting(true);
+    try {
+      const result = await aiWriteJobDescription(user.tenantId, token, aiPrompt.trim());
+      setForm({
+        title: result.title || "",
+        description: result.description || "",
+        pay_range: result.pay_range || "",
+        schedule: result.schedule || "",
+        location: result.location || "",
+        skills: Array.isArray(result.skills) ? result.skills.join(", ") : "",
+      });
+      setAiPrompt("");
+    } catch (err) {
+      console.warn("AI write failed:", err.message);
+    } finally {
+      setAiWriting(false);
     }
   };
 
@@ -666,6 +693,68 @@ export default function JobsPage() {
             <h3 style={{ marginBottom: 16 }}>
               {editJob ? "Edit Job Posting" : "Post a New Job"}
             </h3>
+
+            {/* AI Writer (only on create) */}
+            {!editJob && (
+              <div
+                style={{
+                  background: "rgba(139,92,246,0.08)",
+                  border: "1px solid rgba(139,92,246,0.25)",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "#8b5cf6",
+                    marginBottom: 6,
+                  }}
+                >
+                  AI Job Writer
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder='e.g. "I need someone to help with junk removal 3 days a week"'
+                    style={{ flex: 1, fontSize: "0.85rem" }}
+                    onKeyDown={(e) => e.key === "Enter" && handleAiWrite()}
+                    disabled={aiWriting}
+                  />
+                  <button
+                    onClick={handleAiWrite}
+                    disabled={!aiPrompt.trim() || aiWriting}
+                    style={{
+                      background: "#8b5cf6",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "6px 14px",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      opacity: !aiPrompt.trim() || aiWriting ? 0.5 : 1,
+                    }}
+                  >
+                    {aiWriting ? "Writing..." : "AI Write"}
+                  </button>
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--text-muted)",
+                    marginTop: 4,
+                  }}
+                >
+                  Describe the role in plain language and AI will generate a professional posting
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label

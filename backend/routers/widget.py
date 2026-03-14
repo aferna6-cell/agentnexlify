@@ -254,6 +254,7 @@ def _build_system_prompt(
     corrections: list[dict] | None = None,
     website_content: str | None = None,
     menu_items: list[dict] | None = None,
+    job_listings: list[dict] | None = None,
 ) -> str:
     business_name = tenant.get("business_name", "our company")
     business_type = tenant.get("business_type", "")
@@ -326,6 +327,28 @@ def _build_system_prompt(
             + "\n- Only output this ONCE when the order is confirmed, never before."
         )
 
+    jobs_block = ""
+    if job_listings:
+        lines = []
+        for job in job_listings:
+            parts = [f"  - {job['title']}"]
+            if job.get("pay_range"):
+                parts.append(f"Pay: {job['pay_range']}")
+            if job.get("schedule"):
+                parts.append(f"Schedule: {job['schedule']}")
+            if job.get("location"):
+                parts.append(f"Location: {job['location']}")
+            lines.append(" | ".join(parts))
+        jobs_block = (
+            "\n\nOPEN JOB POSITIONS:\n"
+            + "\n".join(lines)
+            + "\n\nJOB INSTRUCTIONS:"
+            + "\n- If someone asks about hiring, jobs, or careers, tell them about the open positions."
+            + "\n- Share the job details (title, pay, schedule, location) when relevant."
+            + "\n- If they're interested in applying, ask for their name, phone number, and a short message about why they're a good fit."
+            + "\n- Be enthusiastic about the opportunity."
+        )
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
@@ -341,6 +364,7 @@ def _build_system_prompt(
         f"{faq_block}"
         f"{website_block}"
         f"{menu_block}"
+        f"{jobs_block}"
         f"{corrections_block}"
     )
 
@@ -463,6 +487,93 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
     except Exception:
         logger.warning("tag_extraction: unexpected failure", exc_info=True)
     return []
+
+
+SYSTEM_TAGS = [
+    "New Lead", "Pricing Question", "Complaint",
+    "Appointment Request", "Urgent", "Follow-up Needed",
+]
+
+
+def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dict]) -> None:
+    """Background task: AI auto-categorize conversation into preset business tags."""
+    if not messages or len(messages) < 3:
+        return
+
+    # Load tenant's tag definitions
+    db = get_supabase()
+    try:
+        tag_defs = (
+            db.table("tenant_tag_definitions")
+            .select("tag_name")
+            .eq("tenant_id", tenant_id)
+            .eq("is_enabled", True)
+            .execute()
+        )
+        available_tags = [t["tag_name"] for t in (tag_defs.data or [])]
+    except Exception:
+        # Fall back to system tags if table doesn't exist yet
+        available_tags = SYSTEM_TAGS
+
+    if not available_tags:
+        available_tags = SYSTEM_TAGS
+
+    transcript_lines = []
+    for msg in messages[-20:]:
+        role = "Visitor" if msg["role"] == "user" else "Agent"
+        transcript_lines.append(f"{role}: {msg['content']}")
+    transcript = "\n".join(transcript_lines)
+
+    try:
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=100,
+            temperature=0,
+            system=(
+                "Categorize this chat conversation into 1-3 tags from this list ONLY:\n"
+                + ", ".join(available_tags)
+                + "\n\nReturn ONLY a JSON array of matching tag names. "
+                "If none match, return []. Use exact tag names from the list."
+            ),
+            messages=[{"role": "user", "content": transcript}],
+        )
+        raw = resp.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        tags = json.loads(raw)
+        if not isinstance(tags, list) or not tags:
+            return
+
+        # Filter to valid tags only
+        valid_tags = [t for t in tags if isinstance(t, str) and t in available_tags][:3]
+        if not valid_tags:
+            return
+
+        # Update conversation tags (merge with existing)
+        conv = (
+            db.table("conversations")
+            .select("tags")
+            .eq("tenant_id", tenant_id)
+            .eq("session_id", session_id)
+            .limit(1)
+            .execute()
+        )
+        existing = []
+        if conv.data:
+            existing = conv.data[0].get("tags") or []
+
+        merged = list(set(existing + valid_tags))
+        db.table("conversations").update({"tags": merged}).eq(
+            "tenant_id", tenant_id
+        ).eq("session_id", session_id).execute()
+
+    except json.JSONDecodeError:
+        logger.warning("conversation_categorize: non-JSON response")
+    except anthropic.APIError as e:
+        logger.warning("conversation_categorize: API error — %s", e)
+    except Exception:
+        logger.warning("conversation_categorize: unexpected failure", exc_info=True)
 
 
 async def _capture_leads_from_session(
@@ -1081,7 +1192,23 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         except Exception:
             logger.warning("menu_items query failed for tenant %s", tenant["id"], exc_info=True)
 
-    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections, website_content, menu_items)
+    # Load active job listings
+    job_listings = None
+    try:
+        jobs_result = (
+            db.table("jobs")
+            .select("title, pay_range, schedule, location")
+            .eq("tenant_id", tenant["id"])
+            .eq("is_active", True)
+            .limit(20)
+            .execute()
+        )
+        if jobs_result.data:
+            job_listings = jobs_result.data
+    except Exception:
+        logger.warning("jobs query failed for tenant %s", tenant["id"], exc_info=True)
+
+    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections, website_content, menu_items, job_listings)
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
@@ -1156,7 +1283,15 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         _capture_leads_from_session, tenant["id"], req.session_id, conversation_id,
     )
 
-    # 12. Watermark logic
+    # 12. AI conversation categorization (every 5th message to save API calls)
+    total_msgs = len(messages) + 1  # +1 for the assistant reply we just got
+    if total_msgs >= 4 and total_msgs % 5 == 0:
+        all_msgs = messages + [{"role": "assistant", "content": assistant_text}]
+        background_tasks.add_task(
+            _categorize_conversation, tenant["id"], req.session_id, all_msgs,
+        )
+
+    # 13. Watermark logic
     if tenant.get("plan") == "free":
         show_watermark = True
     else:

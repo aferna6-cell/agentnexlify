@@ -205,4 +205,9 @@ Creates `jobs` table (tenant_id FK→tenants, title TEXT, description TEXT, pay_
 
 **Operational note:** Migration 031 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
 
+### 032 — Tenant Tag Definitions (AI Conversation Categorization)
+Creates `tenant_tag_definitions` table for customizable AI auto-categorization tags. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), tag_name (TEXT), tag_color (TEXT DEFAULT '#6b7280'), is_system (BOOLEAN DEFAULT false), is_enabled (BOOLEAN DEFAULT true), created_at (TIMESTAMPTZ). Unique constraint on (tenant_id, tag_name). Indexed on tenant_id. RLS enabled. Seeds 6 system tags (New Lead, Pricing Question, Complaint, Appointment Request, Urgent, Follow-up Needed) for all existing tenants via CROSS JOIN. New tenants get seeded on first API access via the backend.
+
+**Operational note:** Migration 032 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

@@ -2,6 +2,7 @@
 
 import logging
 
+import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
@@ -33,6 +34,10 @@ class JobUpdate(BaseModel):
     location: str | None = Field(None, max_length=200)
     skills: list[str] | None = None
     is_active: bool | None = None
+
+
+class AIJobWriteRequest(BaseModel):
+    role_description: str = Field(..., max_length=1000)
 
 
 class JobApplicationCreate(BaseModel):
@@ -148,6 +153,79 @@ async def delete_job(
         .execute()
     )
     return {"deleted": True}
+
+
+@router.post("/{tenant_id}/ai-write")
+async def ai_write_job_description(
+    tenant_id: str,
+    req: AIJobWriteRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """AI generates a professional job posting from a plain-language description."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    tenant_result = (
+        db.table("tenants")
+        .select("business_name, business_type, city")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    biz_name = ""
+    biz_type = ""
+    city = ""
+    if tenant_result.data:
+        biz_name = tenant_result.data[0].get("business_name", "")
+        biz_type = tenant_result.data[0].get("business_type", "")
+        city = tenant_result.data[0].get("city", "")
+
+    context = f"Business: {biz_name}" if biz_name else ""
+    if biz_type:
+        context += f" ({biz_type})"
+    if city:
+        context += f" in {city}"
+
+    prompt = (
+        f"Write a professional job posting based on this description from the business owner:\n\n"
+        f'"{req.role_description}"\n\n'
+        f"{context}\n\n"
+        f"Return ONLY valid JSON with these fields:\n"
+        f'{{"title": "Job Title", "description": "Full job description (2-4 paragraphs, include responsibilities, '
+        f'qualifications, and what makes this role great)", "pay_range": "Pay range if mentioned or null", '
+        f'"schedule": "Schedule type if mentioned or null", "location": "Location if mentioned or null", '
+        f'"skills": ["skill1", "skill2"]}}\n\n'
+        f"Rules:\n"
+        f"- Write for a small business audience — friendly and direct, not corporate\n"
+        f"- Include clear responsibilities and what a good candidate looks like\n"
+        f"- If pay/schedule/location aren't mentioned, set them to null\n"
+        f"- Extract 3-6 relevant skills from the description\n"
+        f"- Output ONLY the JSON object, no markdown fences"
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = response.content[0].text.strip()
+
+        # Parse JSON — handle markdown code blocks
+        import json
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            text = text.rsplit("```", 1)[0].strip()
+
+        result = json.loads(text)
+        return result
+    except json.JSONDecodeError:
+        logger.warning("AI job writer returned invalid JSON: %s", text[:200])
+        raise HTTPException(status_code=502, detail="AI returned invalid response — try again")
+    except anthropic.APIError as e:
+        logger.warning("Anthropic API error in AI job writer: %s", str(e))
+        raise HTTPException(status_code=502, detail="AI service error — try again")
 
 
 # --- Applications management (JWT-auth) ---
