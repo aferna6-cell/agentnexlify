@@ -731,4 +731,26 @@ export function deleteActionItem(tenantId, token, itemId) {
   return request(`/api/v1/action-items/${tenantId}/${itemId}`, { method: "DELETE", token });
 }
 
+// --- Shared Inbox ---
+
+export function assignConversation(tenantId, token, conversationId, assignedTo) {
+  return request(`/api/v1/inbox/${tenantId}/conversations/${conversationId}/assign`, {
+    method: "PUT", token, body: { assigned_to: assignedTo },
+  });
+}
+
+export function fetchConversationNotes(tenantId, token, conversationId) {
+  return request(`/api/v1/inbox/${tenantId}/conversations/${conversationId}/notes`, { token });
+}
+
+export function createConversationNote(tenantId, token, conversationId, content) {
+  return request(`/api/v1/inbox/${tenantId}/conversations/${conversationId}/notes`, {
+    method: "POST", token, body: { content },
+  });
+}
+
+export function deleteConversationNote(tenantId, token, noteId) {
+  return request(`/api/v1/inbox/${tenantId}/notes/${noteId}`, { method: "DELETE", token });
+}
+
 export { ApiError };

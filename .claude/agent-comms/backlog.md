@@ -46,9 +46,9 @@ _Multiple team members can see and respond to the same conversations. Internal n
 
 **What we already have:** Team members (done), lead assignment (done), conversation list (done). What's missing: conversation assignment, internal notes on conversations, real-time presence (who's handling what), team member reply to conversations.
 
-- [ ] **Migration: conversation assignment + internal notes** — Add assigned_to UUID FK to conversations table. New table: conversation_notes (id, conversation_id, tenant_id, author_id FK team_members, content, created_at). Migration 034.
-- [ ] **Conversation assignment endpoint** — PUT /conversations/{tenant_id}/{conversation_id}/assign. Activity log entry. Notification to assigned team member.
-- [ ] **Internal notes endpoints** — POST/GET/DELETE for conversation_notes. Notes visible only to team members, never to the customer via widget.
+- [x] **Migration: conversation assignment + internal notes** — DONE (migration 034, 2026-03-14). Needs manual application in Supabase.
+- [x] **Conversation assignment endpoint** — DONE (PUT /api/v1/inbox/{tenant_id}/conversations/{id}/assign, 2026-03-14)
+- [x] **Internal notes endpoints** — DONE (POST/GET/DELETE via /api/v1/inbox, 2026-03-14)
 - [ ] **Team inbox UI** — ConversationsPage upgraded: show assigned team member avatar, "Assign to" dropdown, internal notes panel (toggle). Filter by "My conversations" vs "All". Show unassigned conversations prominently.
 - [ ] **Team member reply to conversation** — Allow team members to send a message back to the customer via the widget (inject into chat_messages as role='assistant' with a flag indicating human, not AI). Customer sees it in the widget. Dashboard shows "Replied by [Name]".
 - [ ] **Presence indicators** — Show which team member is currently viewing/typing in a conversation. Simple polling approach: last_active_conversation_id + last_active_at on team_members, updated on page view. Show "Alex is viewing this" badge.

@@ -215,4 +215,9 @@ Creates `action_items` table for AI-extracted actionable items from conversation
 
 **Operational note:** Migration 033 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
 
+### 034 — Shared Inbox (Conversation Assignment + Internal Notes)
+Adds `assigned_to` (UUID FK→team_members, ON DELETE SET NULL) to `conversations` table for team member ownership. Creates `conversation_notes` table for internal team notes on conversations (never visible to customers). Columns: conversation_id (FK→conversations, ON DELETE CASCADE), tenant_id (FK→tenants, ON DELETE CASCADE), author_id (FK→team_members, ON DELETE CASCADE), content (TEXT NOT NULL), created_at (TIMESTAMPTZ). Indexed on conversation_id and tenant_id. RLS enabled.
+
+**Operational note:** Migration 034 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
