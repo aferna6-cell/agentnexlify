@@ -5,7 +5,7 @@
 # Usage: bash continuous-loop.sh /path/to/repo
 # =============================================================================
 
-set -e
+set -euo pipefail
 
 # Validate input
 if [ -z "$1" ]; then
@@ -18,6 +18,12 @@ fi
 
 REPO_DIR="$(cd "$1" && pwd)"
 cd "$REPO_DIR"
+
+COMMON_SH="$REPO_DIR/scripts/daily/common.sh"
+if [ -f "$COMMON_SH" ]; then
+    # shellcheck source=./daily/common.sh
+    source "$COMMON_SH"
+fi
 
 # Verify it's a git repo
 if [ ! -d ".git" ]; then
@@ -38,6 +44,18 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 REPO_NAME=$(basename "$REPO_DIR")
+CLAUDE_BIN="${AGENTNEXLIFY_CLAUDE_BIN:-}"
+if [ -f "$COMMON_SH" ]; then
+    CLAUDE_BIN="$(ensure_claude_bin /dev/stderr 2>/dev/null || true)"
+fi
+if [ -z "$CLAUDE_BIN" ]; then
+    if command -v claude >/dev/null 2>&1; then
+        CLAUDE_BIN="$(command -v claude)"
+    else
+        echo "ERROR: Claude CLI not found. Install @anthropic-ai/claude-code or set AGENTNEXLIFY_CLAUDE_BIN."
+        exit 1
+    fi
+fi
 
 echo -e "${CYAN}==========================================${NC}"
 echo -e "${CYAN}  Continuous Loop: ${GREEN}$REPO_NAME${NC}"
@@ -121,7 +139,7 @@ while true; do
     [ -f "$COMMS_DIR/checkpoint.md" ] && RESUME_CTX="Read .claude/agent-comms/checkpoint.md to restore state from the previous session. "
     [ -f "$LOOP_LOG" ] && RESUME_CTX="${RESUME_CTX}Read .claude/agent-comms/loop-log.md for history. Do not redo completed work. "
 
-    claude -p "
+    "$CLAUDE_BIN" -p "
 ${RESUME_CTX}You are in the continuous development loop. Read .claude/agent-comms/loop-prompt.md for your full instructions. Read .claude/agent-comms/backlog.md for the work queue. Begin with STEP 1.
 " \
     --dangerously-skip-permissions \

@@ -2,11 +2,14 @@
 # AgentNexLiFy Automated Evening Review
 # Runs claude -p headlessly to review the day and update knowledge base
 
-set -e
+set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+COMMON_SH="$REPO_DIR/scripts/daily/common.sh"
+# shellcheck source=./common.sh
+source "$COMMON_SH"
 LOG_DIR="$REPO_DIR/docs/daily-logs"
-DATE=$(date -u '+%Y-%m-%d')
+DATE="$(daily_date)"
 LOG_FILE="$LOG_DIR/auto-evening-$DATE.log"
 
 cd "$REPO_DIR"
@@ -14,12 +17,19 @@ cd "$REPO_DIR"
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
 
-echo "[$(date)] Starting automated evening review..." >> "$LOG_FILE"
+log_line "$LOG_FILE" "Starting automated evening review..."
+trap 'exit_code=$?; log_exit_status "$LOG_FILE" "Automated evening review" "$exit_code"' EXIT
 
-# Get latest changes
-git pull --rebase 2>> "$LOG_FILE" || echo "Git pull failed, continuing with local state" >> "$LOG_FILE"
+# Get latest changes when safe
+git_pull_if_clean "$LOG_FILE"
 
-claude -p "
+log_line "$LOG_FILE" "Static health snapshot:"
+bash "$REPO_DIR/scripts/daily/health-check.sh" >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "Static health snapshot failed."
+
+CLAUDE_BIN="$(ensure_claude_bin "$LOG_FILE")"
+log_line "$LOG_FILE" "Using Claude CLI: $CLAUDE_BIN"
+
+"$CLAUDE_BIN" -p "
 You are running the automated evening review for AgentNexLiFy. You are in headless mode — work autonomously.
 
 ## Your Context
@@ -48,10 +58,8 @@ For each migration file created/modified today:
 
 ## Step 3: End-of-Day Health Check
 Run the same health checks as the morning:
-1. Dangerous imports in backend/routers/ files
-2. Bare except block count (compare with morning if log exists)
-3. Widget file sync check
-4. .env in .gitignore
+1. Run `bash scripts/daily/health-check.sh` and capture its results first (dangerous router imports, bare except count, silent frontend catch count, widget sync, .env gitignore status)
+2. Compare the static health snapshot against the morning log if it exists
 
 ## Step 4: Update Task Backlog
 Update docs/daily-logs/current-tasks.md:
@@ -80,5 +88,3 @@ Be thorough but stay safe. Only modify files in docs/.
 " \
   --dangerously-skip-permissions \
   >> "$LOG_FILE" 2>&1
-
-echo "[$(date)] Evening review completed." >> "$LOG_FILE"

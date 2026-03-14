@@ -28,6 +28,7 @@ if (-not $claudePath) {
     exit 1
 }
 Write-Host "Claude Code found: $($claudePath.Source)" -ForegroundColor Green
+$claudeDir = Split-Path $claudePath.Source
 
 $gitBashPath = ""
 $possiblePaths = @(
@@ -58,8 +59,10 @@ $eveningBat = Join-Path $RepoPath "scripts\daily\run-evening.bat"
 REM AgentNexLiFy Automated Morning Routine
 REM Called by Windows Task Scheduler
 
+set "PATH=$claudeDir;%PATH%"
+set "AGENTNEXLIFY_CLAUDE_BIN=claude"
 cd /d "$RepoPath"
-"$gitBashPath" -c "cd '$($RepoPath -replace '\\','/')' && bash scripts/daily/morning-auto.sh"
+"$gitBashPath" -lc "cd '$($RepoPath -replace '\\','/')' && bash scripts/daily/morning-auto.sh"
 "@ | Set-Content -Path $morningBat -Encoding ASCII
 
 # Evening batch file
@@ -68,8 +71,10 @@ cd /d "$RepoPath"
 REM AgentNexLiFy Automated Evening Review
 REM Called by Windows Task Scheduler
 
+set "PATH=$claudeDir;%PATH%"
+set "AGENTNEXLIFY_CLAUDE_BIN=claude"
 cd /d "$RepoPath"
-"$gitBashPath" -c "cd '$($RepoPath -replace '\\','/')' && bash scripts/daily/evening-auto.sh"
+"$gitBashPath" -lc "cd '$($RepoPath -replace '\\','/')' && bash scripts/daily/evening-auto.sh"
 "@ | Set-Content -Path $eveningBat -Encoding ASCII
 
 Write-Host "Created wrapper scripts:" -ForegroundColor Green

@@ -2,6 +2,8 @@
 
 The morning and evening routines run automatically using `claude -p` (headless mode) on a schedule. They analyze the repo, update documentation, and prepare task plans — all without human intervention.
 
+They use the machine's local date for log/report filenames, record a small static health snapshot before the headless agent starts, and fail fast with a clear log entry if the Claude CLI cannot be resolved at runtime.
+
 ## What the Morning Routine Does
 
 **Script:** `scripts/daily/morning-auto.sh`
@@ -45,7 +47,16 @@ The morning and evening routines run automatically using `claude -p` (headless m
 - Touch .env files
 - Push to remote (developer pushes manually)
 
-These restrictions are enforced via `--allowedTools` and `--disallowedTools` flags in the `claude -p` invocation.
+The routines currently run with `claude -p --dangerously-skip-permissions`. Safety comes from the repo instructions and the prompts themselves, which still tell the headless session to keep automated edits inside `docs/`.
+
+## Shared Health Check
+
+Use `bash scripts/daily/health-check.sh` for the shared static checks. It reports:
+- dangerous imports in `backend/routers/`
+- bare `except:` count
+- silent async catch count in frontend/backend JS/TS
+- widget file sync
+- `.env` coverage in `.gitignore`
 
 ## Setup
 
@@ -76,6 +87,14 @@ To customize times (hour minute for morning, then evening):
 bash scripts/daily/setup-cron.sh 9 0 21 0
 ```
 
+If `claude` was installed or moved after the scheduler was first created, rerun the setup script. The setup scripts now persist the resolved Claude CLI path for cron and inject the Claude CLI directory into the Windows Task Scheduler wrapper PATH.
+
+Optional override for manual runs or custom schedulers:
+
+```bash
+export AGENTNEXLIFY_CLAUDE_BIN=/absolute/path/to/claude
+```
+
 ## Checking It Works
 
 ### View scheduled tasks (Windows)
@@ -101,6 +120,9 @@ bash scripts/daily/morning-auto.sh
 ```bash
 # Raw execution log (gitignored)
 cat docs/daily-logs/auto-morning-$(date +%Y-%m-%d).log
+
+# Evening raw execution log (same local date basis)
+cat docs/daily-logs/auto-evening-$(date +%Y-%m-%d).log
 
 # Daily report (committed)
 cat docs/daily-logs/$(date +%Y-%m-%d).md

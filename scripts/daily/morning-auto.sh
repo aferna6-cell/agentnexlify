@@ -3,12 +3,15 @@
 # Runs claude -p headlessly to perform intelligent morning startup
 # Scheduled via Task Scheduler (Windows) or cron (Linux/macOS)
 
-set -e
+set -euo pipefail
 
 # Configuration
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+COMMON_SH="$REPO_DIR/scripts/daily/common.sh"
+# shellcheck source=./common.sh
+source "$COMMON_SH"
 LOG_DIR="$REPO_DIR/docs/daily-logs"
-DATE=$(date -u '+%Y-%m-%d')
+DATE="$(daily_date)"
 LOG_FILE="$LOG_DIR/auto-morning-$DATE.log"
 
 cd "$REPO_DIR"
@@ -16,13 +19,21 @@ cd "$REPO_DIR"
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
 
-echo "[$(date)] Starting automated morning routine..." >> "$LOG_FILE"
+log_line "$LOG_FILE" "Starting automated morning routine..."
+trap 'exit_code=$?; log_exit_status "$LOG_FILE" "Automated morning routine" "$exit_code"' EXIT
 
-# Ensure we're on the latest code
-git pull --rebase 2>> "$LOG_FILE" || echo "Git pull failed, continuing with local state" >> "$LOG_FILE"
+# Ensure we're on the latest code when safe
+git_pull_if_clean "$LOG_FILE"
 
-# Run Claude Code headlessly with restricted permissions
-claude -p "
+# Capture a static health snapshot even if the headless agent fails to start
+log_line "$LOG_FILE" "Static health snapshot:"
+bash "$REPO_DIR/scripts/daily/health-check.sh" >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "Static health snapshot failed."
+
+CLAUDE_BIN="$(ensure_claude_bin "$LOG_FILE")"
+log_line "$LOG_FILE" "Using Claude CLI: $CLAUDE_BIN"
+
+# Run Claude Code headlessly
+"$CLAUDE_BIN" -p "
 You are running the automated morning routine for AgentNexLiFy. You are in headless mode — there is no human to interact with. Work autonomously.
 
 ## Your Context
@@ -34,12 +45,9 @@ You are running the automated morning routine for AgentNexLiFy. You are in headl
 
 ## Step 1: Health Check
 Run these checks and record the results:
-1. Scan backend/routers/ files for 'from __future__ import annotations' (CRITICAL if found)
-2. Count bare except blocks in backend Python files
-3. Check .env is in .gitignore
-4. Check for hardcoded API keys/tokens in code files (sk_live_, sk_test_, sk-ant-)
-5. Scan for TODO/FIXME comments in backend/ and frontend/src/ and count them
-6. Check widget file sync (widget/ vs frontend/public/widget/)
+1. Run `bash scripts/daily/health-check.sh` and capture its results first (dangerous router imports, bare except count, silent frontend catch count, widget sync, .env gitignore status)
+2. Check for hardcoded API keys/tokens in code files (sk_live_, sk_test_, sk-ant-)
+3. Scan for TODO/FIXME comments in backend/ and frontend/src/ and count them
 
 ## Step 2: Recent Activity Analysis
 1. Check git log for last 24 hours — what was committed?
@@ -89,5 +97,3 @@ Be thorough but stay within your safety boundaries. Write everything to files, n
 " \
   --dangerously-skip-permissions \
   >> "$LOG_FILE" 2>&1
-
-echo "[$(date)] Morning routine completed." >> "$LOG_FILE"

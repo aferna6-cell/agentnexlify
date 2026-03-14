@@ -2,7 +2,7 @@
 # Set up cron jobs for automated morning/evening routines
 # Works on Linux, macOS, and WSL
 
-set -e
+set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 MORNING_SCRIPT="$REPO_DIR/scripts/daily/morning-auto.sh"
@@ -30,21 +30,28 @@ if ! command -v claude &> /dev/null; then
     echo "ERROR: claude CLI not found. Install: npm install -g @anthropic-ai/claude-code"
     exit 1
 fi
-echo "Claude Code found: $(which claude)"
+CLAUDE_BIN="$(command -v claude)"
+echo "Claude Code found: $CLAUDE_BIN"
+
+TMP_CRONTAB="$(mktemp)"
+trap 'rm -f "$TMP_CRONTAB"' EXIT
 
 # Remove existing AgentNexLiFy cron entries
-crontab -l 2>/dev/null | grep -v "AgentNexLiFy" > /tmp/crontab_clean 2>/dev/null || true
+crontab -l 2>/dev/null | grep -v "AgentNexLiFy" > "$TMP_CRONTAB" 2>/dev/null || true
+
+printf -v morning_cmd 'cd %q && bash %q' "$REPO_DIR" "$MORNING_SCRIPT"
+printf -v evening_cmd 'cd %q && bash %q' "$REPO_DIR" "$EVENING_SCRIPT"
+printf -v claude_bin_q '%q' "$CLAUDE_BIN"
 
 # Add new entries
-echo "# AgentNexLiFy Morning Startup (weekdays)" >> /tmp/crontab_clean
-echo "$MORNING_MIN $MORNING_HOUR * * 1-5 cd $REPO_DIR && bash $MORNING_SCRIPT # AgentNexLiFy-Morning" >> /tmp/crontab_clean
+echo "# AgentNexLiFy Morning Startup (weekdays)" >> "$TMP_CRONTAB"
+printf '%s %s * * 1-5 AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-Morning\n' "$MORNING_MIN" "$MORNING_HOUR" "$claude_bin_q" "$morning_cmd" >> "$TMP_CRONTAB"
 
-echo "# AgentNexLiFy Evening Review (weekdays)" >> /tmp/crontab_clean
-echo "$EVENING_MIN $EVENING_HOUR * * 1-5 cd $REPO_DIR && bash $EVENING_SCRIPT # AgentNexLiFy-Evening" >> /tmp/crontab_clean
+echo "# AgentNexLiFy Evening Review (weekdays)" >> "$TMP_CRONTAB"
+printf '%s %s * * 1-5 AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-Evening\n' "$EVENING_MIN" "$EVENING_HOUR" "$claude_bin_q" "$evening_cmd" >> "$TMP_CRONTAB"
 
 # Install
-crontab /tmp/crontab_clean
-rm /tmp/crontab_clean
+crontab "$TMP_CRONTAB"
 
 echo ""
 echo "Cron jobs installed:"
