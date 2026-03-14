@@ -21,7 +21,7 @@ description: "Use this skill when building any new feature. Ensures schema safet
 2. Create router with try/except and logging on all DB calls
 3. Never use `from __future__ import annotations` in router files
 4. Register router in main.py if new file
-5. Create numbered migration if schema changes needed (next after 013)
+5. Create numbered migration if schema changes needed (next after 032). Use the `migration-workflow` skill.
 6. Remember: leads table uses `client_id`, all other tables use `tenant_id`
 
 ## Frontend (React/Vite)

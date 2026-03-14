@@ -271,4 +271,24 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Widget online-status toggle was unauthenticated
+**Date:** 2026-03-12
+**Symptom:** The dashboard's widget online/offline toggle could be changed without dashboard auth, and oversized widget messages had no schema-level cap.
+**Root Cause:** `PUT /api/v1/widget/config/{tenant_id}/online-status` accepted writes without verifying JWT claims against the tenant, and `WidgetChatRequest.message` had no `max_length` validation.
+**Files Changed:** `backend/routers/widget.py`, `backend/models/schemas.py`
+**Fix:** Added JWT-based tenant verification to the toggle endpoint and capped widget message bodies at 10,000 characters in the request model.
+**Prevention:** All dashboard-only widget config endpoints must use the same JWT/tenant dependency pattern as other authenticated routes. Public widget payload models need explicit upper bounds for message/content fields.
+
+---
+
+### Scheduled headless routines failed in non-interactive shells
+**Date:** 2026-03-12
+**Symptom:** Morning/evening scheduled runs either stalled waiting for permissions or failed immediately with `claude: command not found`, leaving only partial log output.
+**Root Cause:** Headless automation depended on interactive PATH resolution for `claude`, used UTC-dated log filenames that drifted past local evening runs, and let `git pull --rebase` emit avoidable errors on dirty worktrees before the actual headless step started.
+**Files Changed:** `scripts/daily/morning-auto.sh`, `scripts/daily/evening-auto.sh`, `scripts/daily/setup-cron.sh`, `scripts/daily/setup-scheduler.ps1`, `scripts/continuous-loop.sh`, `docs/scheduled-routines.md`
+**Fix:** Switched the routines to shared runtime preflight/logging helpers, local-date log naming, clean-worktree pull skipping, a static pre-run health snapshot, and persisted Claude CLI resolution for cron/Task Scheduler.
+**Prevention:** Any scheduled headless entrypoint must validate its CLI dependency at runtime, not just at install time. Scheduler wrappers should persist the CLI location or PATH, and daily logs should use the same local date basis as the human routine.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
