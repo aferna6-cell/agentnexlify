@@ -23,6 +23,26 @@ const STATUS_LABELS = {
   in_progress: "In Progress",
 };
 
+const SENTIMENT_COLORS = {
+  positive: { color: "#22c55e", bg: "rgba(34,197,94,0.1)", label: "Positive" },
+  neutral: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", label: "Neutral" },
+  negative: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", label: "Negative" },
+};
+
+const SPEAKER_COLORS = {
+  caller: "#3b82f6",
+  assistant: "#22c55e",
+};
+
+function formatTranscriptTimestamp(seconds) {
+  if (seconds === null || seconds === undefined) return "";
+  const s = Number(seconds);
+  if (isNaN(s)) return "";
+  const m = Math.floor(s / 60);
+  const rem = Math.floor(s % 60);
+  return `${String(m).padStart(2, "0")}:${String(rem).padStart(2, "0")}`;
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -364,7 +384,7 @@ export default function CallsPage() {
               borderRadius: 12,
               padding: 24,
               width: "90%",
-              maxWidth: 560,
+              maxWidth: 640,
               maxHeight: "80vh",
               overflowY: "auto",
               border: "1px solid var(--border-color)",
@@ -377,24 +397,42 @@ export default function CallsPage() {
               </div>
             ) : (
               <>
+                {/* Header with caller name, status badge, and sentiment badge */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
                     <h3 style={{ marginBottom: 6 }}>
                       {detailCall.caller_name || detailCall.caller_phone || detailCall.phone || "Unknown Caller"}
                     </h3>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "3px 10px",
-                        borderRadius: 4,
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        color: (STATUS_COLORS[detailCall.status] || STATUS_COLORS.completed).color,
-                        background: (STATUS_COLORS[detailCall.status] || STATUS_COLORS.completed).bg,
-                      }}
-                    >
-                      {STATUS_LABELS[detailCall.status] || detailCall.status}
-                    </span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "3px 10px",
+                          borderRadius: 4,
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          color: (STATUS_COLORS[detailCall.status] || STATUS_COLORS.completed).color,
+                          background: (STATUS_COLORS[detailCall.status] || STATUS_COLORS.completed).bg,
+                        }}
+                      >
+                        {STATUS_LABELS[detailCall.status] || detailCall.status}
+                      </span>
+                      {detailCall.sentiment && SENTIMENT_COLORS[detailCall.sentiment] && (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "3px 10px",
+                            borderRadius: 4,
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            color: SENTIMENT_COLORS[detailCall.sentiment].color,
+                            background: SENTIMENT_COLORS[detailCall.sentiment].bg,
+                          }}
+                        >
+                          {SENTIMENT_COLORS[detailCall.sentiment].label}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => setDetailCall(null)}
@@ -437,7 +475,7 @@ export default function CallsPage() {
                 </div>
 
                 {/* Summary */}
-                {detailCall.summary && (
+                {detailCall.summary ? (
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>
                       Summary
@@ -456,29 +494,149 @@ export default function CallsPage() {
                       {detailCall.summary}
                     </div>
                   </div>
-                )}
+                ) : null}
 
-                {/* Transcript */}
-                {detailCall.transcript && (
+                {/* Transcript — chat log style */}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>
+                    Transcript
+                  </div>
+                  {(() => {
+                    const transcript = detailCall.transcript;
+                    // Handle JSONB array transcript
+                    if (Array.isArray(transcript) && transcript.length > 0) {
+                      return (
+                        <div
+                          style={{
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-color)",
+                            borderRadius: 8,
+                            padding: 16,
+                            maxHeight: 320,
+                            overflowY: "auto",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 12,
+                          }}
+                        >
+                          {transcript.map((entry, idx) => {
+                            const speaker = (entry.speaker || entry.role || "unknown").toLowerCase();
+                            const isCaller = speaker === "caller" || speaker === "user" || speaker === "customer";
+                            const speakerColor = isCaller ? SPEAKER_COLORS.caller : SPEAKER_COLORS.assistant;
+                            const speakerLabel = isCaller ? "Caller" : "Assistant";
+                            const timestamp = formatTranscriptTimestamp(entry.timestamp ?? entry.time ?? entry.start);
+                            const text = entry.text || entry.content || entry.message || "";
+
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: isCaller ? "flex-start" : "flex-end",
+                                  maxWidth: "85%",
+                                  alignSelf: isCaller ? "flex-start" : "flex-end",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                                  <span
+                                    style={{
+                                      fontSize: "0.7rem",
+                                      fontWeight: 600,
+                                      color: speakerColor,
+                                    }}
+                                  >
+                                    {speakerLabel}
+                                  </span>
+                                  {timestamp && (
+                                    <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                                      {timestamp}
+                                    </span>
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    background: isCaller
+                                      ? "rgba(59,130,246,0.1)"
+                                      : "rgba(34,197,94,0.1)",
+                                    border: `1px solid ${isCaller ? "rgba(59,130,246,0.2)" : "rgba(34,197,94,0.2)"}`,
+                                    borderRadius: isCaller ? "2px 12px 12px 12px" : "12px 2px 12px 12px",
+                                    padding: "8px 12px",
+                                    fontSize: "0.85rem",
+                                    color: "var(--text-primary)",
+                                    lineHeight: 1.5,
+                                  }}
+                                >
+                                  {text}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+
+                    // Handle plain string transcript (legacy format)
+                    if (typeof transcript === "string" && transcript.trim()) {
+                      return (
+                        <div
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "var(--text-secondary)",
+                            lineHeight: 1.6,
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-color)",
+                            borderRadius: 8,
+                            padding: 12,
+                            maxHeight: 240,
+                            overflowY: "auto",
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {transcript}
+                        </div>
+                      );
+                    }
+
+                    // Empty / null transcript
+                    return (
+                      <div
+                        style={{
+                          background: "var(--bg-secondary)",
+                          border: "1px solid var(--border-color)",
+                          borderRadius: 8,
+                          padding: "20px 16px",
+                          textAlign: "center",
+                          color: "var(--text-muted)",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        Transcript not yet available.
+                        {detailCall.status === "in_progress" && " The call is still in progress."}
+                        {detailCall.status === "missed" && " Missed calls do not have transcripts."}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Action Taken */}
+                {detailCall.action_taken && (
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>
-                      Transcript
+                      Action Taken
                     </div>
                     <div
                       style={{
-                        fontSize: "0.85rem",
+                        fontSize: "0.9rem",
                         color: "var(--text-secondary)",
-                        lineHeight: 1.6,
-                        background: "var(--bg-secondary)",
-                        border: "1px solid var(--border-color)",
+                        lineHeight: 1.5,
+                        background: "rgba(139,92,246,0.06)",
+                        border: "1px solid rgba(139,92,246,0.15)",
                         borderRadius: 8,
                         padding: 12,
-                        maxHeight: 200,
-                        overflowY: "auto",
-                        whiteSpace: "pre-wrap",
                       }}
                     >
-                      {detailCall.transcript}
+                      {detailCall.action_taken}
                     </div>
                   </div>
                 )}
@@ -494,7 +652,9 @@ export default function CallsPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        display: "inline-block",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
                         padding: "8px 16px",
                         background: "var(--accent-dim)",
                         border: "1px solid var(--accent)",
@@ -505,7 +665,10 @@ export default function CallsPage() {
                         fontWeight: 600,
                       }}
                     >
-                      Listen to Recording
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                      Play Recording
                     </a>
                   </div>
                 )}

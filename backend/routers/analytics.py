@@ -798,3 +798,50 @@ async def get_missed_opportunities(
 
     _set_cache(cache_key, result)
     return result
+
+
+@router.get("/{tenant_id}/missed-calls")
+async def get_missed_call_analytics(
+    tenant_id: str,
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Per-day missed call analytics from activity_log."""
+    _check_tenant(claims, tenant_id)
+
+    cache_key = f"missed_calls:{tenant_id}:{period}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    days = {"7d": 7, "30d": 30, "90d": 90}[period]
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    db = get_supabase()
+    try:
+        entries = (
+            db.table("activity_log")
+            .select("created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("activity_type", "missed_call_textback")
+            .gte("created_at", since)
+            .order("created_at")
+            .limit(_QUERY_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.warning("missed-calls analytics failed for %s", tenant_id, exc_info=True)
+        return {"daily": [], "total": 0, "texted_back": 0}
+
+    daily_counts: dict[str, int] = defaultdict(int)
+    for entry in entries.data or []:
+        date_str = entry.get("created_at", "")[:10]
+        if date_str:
+            daily_counts[date_str] += 1
+
+    daily = [{"date": d, "count": c} for d, c in sorted(daily_counts.items())]
+    total = sum(c for c in daily_counts.values())
+
+    mc_response = {"daily": daily, "total": total, "texted_back": total}
+    _set_cache(cache_key, mc_response)
+    return mc_response

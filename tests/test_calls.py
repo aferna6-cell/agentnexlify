@@ -475,6 +475,24 @@ class TestTwimlHelpers:
         assert 'maxLength="120"' in twiml
         assert "https://example.com/callback" in twiml
 
+    def test_build_twiml_greeting_with_transcription(self):
+        from backend.routers.calls import _build_twiml_greeting
+
+        twiml = _build_twiml_greeting(
+            "Test Business",
+            "https://example.com/callback",
+            transcription_callback_url="https://example.com/transcription",
+        )
+        assert 'transcribe="true"' in twiml
+        assert 'transcriptionUrl="https://example.com/transcription"' in twiml
+
+    def test_build_twiml_greeting_without_transcription(self):
+        from backend.routers.calls import _build_twiml_greeting
+
+        twiml = _build_twiml_greeting("Test Business", "https://example.com/callback")
+        assert "transcribe" not in twiml
+        assert "transcriptionUrl" not in twiml
+
     def test_build_twiml_error(self):
         from backend.routers.calls import _build_twiml_error
 
@@ -492,6 +510,290 @@ class TestTwimlHelpers:
         assert "&lt;Fish&gt;" in twiml
         assert "&amp; Chips" in twiml
         assert "Bob&apos;s" in twiml
+
+
+# ---------------------------------------------------------------------------
+# Transcription complete tests
+# ---------------------------------------------------------------------------
+
+
+class TestTranscriptionComplete:
+    """Tests for POST /api/v1/calls/voice/transcription-complete."""
+
+    @patch("backend.routers.calls.get_supabase")
+    def test_transcription_stores_and_triggers_summary(self, mock_db):
+        """Completed transcription should store transcript and trigger background summary."""
+        mock_client = MagicMock()
+        mock_db.return_value = mock_client
+        _setup_table_mock(mock_client, {
+            "calls": (
+                [
+                    {
+                        "id": "call-uuid-001",
+                        "tenant_id": "tenant-001",
+                        "lead_id": "lead-uuid-001",
+                        "transcript": [],
+                    }
+                ],
+                1,
+            ),
+        })
+
+        form_data = urlencode({
+            "TranscriptionText": "Hi, I need a plumber for my kitchen sink.",
+            "TranscriptionSid": "TR123abc",
+            "RecordingSid": "RE123abc",
+            "CallSid": "CA123abc",
+            "TranscriptionStatus": "completed",
+        })
+
+        resp = client.post(
+            "/api/v1/calls/voice/transcription-complete",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.text == "OK"
+
+    def test_transcription_empty_text(self):
+        """Empty transcription text should be handled gracefully."""
+        form_data = urlencode({
+            "TranscriptionText": "",
+            "TranscriptionSid": "TR123abc",
+            "RecordingSid": "RE123abc",
+            "CallSid": "CA123abc",
+            "TranscriptionStatus": "completed",
+        })
+
+        resp = client.post(
+            "/api/v1/calls/voice/transcription-complete",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.text == "OK"
+
+    def test_transcription_missing_call_sid(self):
+        """Missing CallSid should be handled gracefully."""
+        form_data = urlencode({
+            "TranscriptionText": "Hello world",
+            "TranscriptionSid": "TR123abc",
+            "RecordingSid": "RE123abc",
+            "TranscriptionStatus": "completed",
+        })
+
+        resp = client.post(
+            "/api/v1/calls/voice/transcription-complete",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        assert resp.status_code == 200
+
+    @patch("backend.routers.calls.get_supabase")
+    def test_transcription_unknown_call_sid(self, mock_db):
+        """Transcription for an unknown call SID should return OK without error."""
+        mock_client = MagicMock()
+        mock_db.return_value = mock_client
+        _setup_table_mock(mock_client, {
+            "calls": ([], 0),
+        })
+
+        form_data = urlencode({
+            "TranscriptionText": "Test transcription text",
+            "TranscriptionSid": "TR123abc",
+            "RecordingSid": "RE123abc",
+            "CallSid": "CA_UNKNOWN",
+            "TranscriptionStatus": "completed",
+        })
+
+        resp = client.post(
+            "/api/v1/calls/voice/transcription-complete",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        assert resp.status_code == 200
+
+    def test_transcription_failed_status_skipped(self):
+        """Non-completed transcription status should be skipped."""
+        form_data = urlencode({
+            "TranscriptionText": "Some text",
+            "TranscriptionSid": "TR123abc",
+            "RecordingSid": "RE123abc",
+            "CallSid": "CA123abc",
+            "TranscriptionStatus": "failed",
+        })
+
+        resp = client.post(
+            "/api/v1/calls/voice/transcription-complete",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.text == "OK"
+
+
+# ---------------------------------------------------------------------------
+# AI summary generation unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateCallSummary:
+    """Unit tests for _generate_call_summary."""
+
+    @pytest.mark.asyncio
+    @patch("backend.routers.calls.log_activity")
+    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.anthropic.Anthropic")
+    async def test_summary_parses_json_response(self, mock_anthropic_cls, mock_db, mock_activity):
+        """Summary should parse Claude's JSON response and update the call."""
+        from backend.routers.calls import _generate_call_summary
+
+        # Mock Claude response
+        mock_client_instance = MagicMock()
+        mock_anthropic_cls.return_value = mock_client_instance
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text='{"summary": "Caller asked about pricing.", "action_items": ["Send quote by Friday"], "sentiment": "positive", "follow_up": "Email pricing sheet"}')]
+        mock_client_instance.messages.create.return_value = mock_response
+
+        # Mock DB
+        mock_client = MagicMock()
+        mock_db.return_value = mock_client
+        _setup_table_mock(mock_client, {
+            "calls": ([{"id": "call-001"}], 1),
+            "action_items": ([{"id": "ai-001"}], 1),
+        })
+
+        await _generate_call_summary(
+            call_id="call-001",
+            tenant_id="tenant-001",
+            lead_id="lead-001",
+            transcript_text="Caller: How much for a kitchen remodel?",
+        )
+
+        # Verify Claude was called
+        mock_client_instance.messages.create.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_summary_skips_empty_transcript(self):
+        """Empty transcript should skip summary generation."""
+        from backend.routers.calls import _generate_call_summary
+
+        # Should return without error
+        await _generate_call_summary(
+            call_id="call-001",
+            tenant_id="tenant-001",
+            lead_id=None,
+            transcript_text="",
+        )
+
+    @pytest.mark.asyncio
+    async def test_summary_skips_whitespace_transcript(self):
+        """Whitespace-only transcript should skip summary generation."""
+        from backend.routers.calls import _generate_call_summary
+
+        await _generate_call_summary(
+            call_id="call-001",
+            tenant_id="tenant-001",
+            lead_id=None,
+            transcript_text="   \n  ",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Action item insertion unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestInsertCallActionItems:
+    """Unit tests for _insert_call_action_items."""
+
+    @pytest.mark.asyncio
+    @patch("backend.routers.calls.log_activity")
+    @patch("backend.routers.calls.get_supabase")
+    async def test_inserts_action_items(self, mock_db, mock_activity):
+        """Should insert each action item into action_items table."""
+        from backend.routers.calls import _insert_call_action_items
+
+        mock_client = MagicMock()
+        mock_db.return_value = mock_client
+        _setup_table_mock(mock_client, {
+            "action_items": ([{"id": "ai-001"}], 1),
+        })
+
+        await _insert_call_action_items(
+            tenant_id="tenant-001",
+            lead_id="lead-001",
+            call_id="call-001",
+            items=["Send quote by Friday", "Schedule follow-up call"],
+        )
+
+        # Verify activity was logged
+        mock_activity.assert_called_once()
+        call_args = mock_activity.call_args
+        assert call_args.kwargs["activity_type"] == "call_action_items"
+        assert call_args.kwargs["tenant_id"] == "tenant-001"
+
+    @pytest.mark.asyncio
+    @patch("backend.routers.calls.log_activity")
+    @patch("backend.routers.calls.get_supabase")
+    async def test_skips_empty_items(self, mock_db, mock_activity):
+        """Empty item list should not insert anything."""
+        from backend.routers.calls import _insert_call_action_items
+
+        await _insert_call_action_items(
+            tenant_id="tenant-001",
+            lead_id=None,
+            call_id="call-001",
+            items=[],
+        )
+
+        # Should not call DB or log activity
+        mock_db.assert_not_called()
+        mock_activity.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("backend.routers.calls.log_activity")
+    @patch("backend.routers.calls.get_supabase")
+    async def test_sets_high_priority(self, mock_db, mock_activity):
+        """Call action items should always be high priority."""
+        from backend.routers.calls import _insert_call_action_items
+
+        mock_client = MagicMock()
+        mock_db.return_value = mock_client
+
+        # Track what gets inserted
+        insert_calls = []
+        table_mock = MagicMock()
+        for method in ["select", "insert", "update", "delete", "eq", "limit", "order"]:
+            getattr(table_mock, method).return_value = table_mock
+        result = MagicMock()
+        result.data = [{"id": "ai-001"}]
+        table_mock.execute.return_value = result
+
+        def track_insert(data):
+            insert_calls.append(data)
+            return table_mock
+
+        table_mock.insert = track_insert
+        mock_client.table.return_value = table_mock
+
+        await _insert_call_action_items(
+            tenant_id="tenant-001",
+            lead_id="lead-001",
+            call_id="call-001",
+            items=["Follow up with client"],
+        )
+
+        assert len(insert_calls) == 1
+        assert insert_calls[0]["priority"] == "high"
+        assert insert_calls[0]["status"] == "pending"
+        assert insert_calls[0]["tenant_id"] == "tenant-001"
+        assert insert_calls[0]["lead_id"] == "lead-001"
 
 
 # ---------------------------------------------------------------------------

@@ -1,18 +1,21 @@
 """AI Answering Service — voice call handling and call management endpoints.
 
 Twilio voice webhooks for incoming calls (greeting + recording + AI conversation),
+transcription pipeline, AI summary generation, and action item extraction,
 plus dashboard endpoints for listing, viewing, and aggregating call data.
 """
 
 import asyncio
+import json
 import logging
+import re
 from datetime import datetime, timezone
 from functools import partial
 from typing import Any
 from urllib.parse import parse_qs
 
 import anthropic
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -103,8 +106,17 @@ def _find_tenant_by_phone(phone: str) -> dict | None:
     return None
 
 
-def _build_twiml_greeting(business_name: str, recording_callback_url: str) -> str:
-    """Build a TwiML response that greets the caller and records their message."""
+def _build_twiml_greeting(
+    business_name: str,
+    recording_callback_url: str,
+    transcription_callback_url: str | None = None,
+) -> str:
+    """Build a TwiML response that greets the caller and records their message.
+
+    If transcription_callback_url is provided, the <Record> verb will include
+    transcribe="true" and transcriptionUrl so Twilio sends the transcribed text
+    back to our transcription-complete endpoint automatically.
+    """
     # XML-escape the business name to prevent injection
     safe_name = (
         business_name
@@ -114,6 +126,12 @@ def _build_twiml_greeting(business_name: str, recording_callback_url: str) -> st
         .replace('"', "&quot;")
         .replace("'", "&apos;")
     )
+    transcription_attrs = ""
+    if transcription_callback_url:
+        transcription_attrs = (
+            ' transcribe="true"'
+            f' transcriptionUrl="{transcription_callback_url}"'
+        )
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         "<Response>"
@@ -127,6 +145,7 @@ def _build_twiml_greeting(business_name: str, recording_callback_url: str) -> st
         ' playBeep="true"'
         f' recordingStatusCallback="{recording_callback_url}"'
         ' recordingStatusCallbackMethod="POST"'
+        f"{transcription_attrs}"
         " />"
         "<Say voice=\"alice\">We didn't receive a recording. Goodbye!</Say>"
         "</Response>"
@@ -200,6 +219,172 @@ def _xml_escape(text: str) -> str:
         .replace(">", "&gt;")
         .replace('"', "&quot;")
         .replace("'", "&apos;")
+    )
+
+
+# ---------------------------------------------------------------------------
+# AI call summary & action item extraction (Features 2 & 3)
+# ---------------------------------------------------------------------------
+
+
+async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | None, transcript_text: str) -> None:
+    """Generate an AI summary of a call transcript and store it.
+
+    Calls Claude to produce:
+    - A one-paragraph summary
+    - Action items (list)
+    - Caller sentiment (positive/neutral/negative)
+    - Suggested follow-up
+
+    Then updates the call record and inserts action items into action_items table.
+    This runs as a background task so it does not block the webhook response.
+    """
+    if not transcript_text or not transcript_text.strip():
+        logger.warning("Skipping summary generation for call %s: empty transcript", call_id)
+        return
+
+    prompt = (
+        "Analyze this phone call transcript and provide:\n"
+        "1. A one-paragraph summary\n"
+        "2. Action items (list)\n"
+        "3. Caller sentiment (positive/neutral/negative)\n"
+        "4. Suggested follow-up\n\n"
+        "Respond in this exact JSON format:\n"
+        "{\n"
+        '  "summary": "...",\n'
+        '  "action_items": ["item 1", "item 2"],\n'
+        '  "sentiment": "positive|neutral|negative",\n'
+        '  "follow_up": "..."\n'
+        "}\n\n"
+        f"Transcript:\n{transcript_text}"
+    )
+
+    try:
+        client = anthropic.Anthropic(
+            api_key=settings.anthropic_api_key, timeout=30.0
+        )
+        loop = asyncio.get_running_loop()
+        resp = await loop.run_in_executor(
+            None,
+            partial(
+                client.messages.create,
+                model="claude-sonnet-4-6",
+                max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}],
+            ),
+        )
+        raw_text = resp.content[0].text.strip()
+    except Exception:
+        logger.exception("Claude API call failed for call summary, call %s", call_id)
+        return
+
+    # Parse the JSON response from Claude
+    summary = ""
+    action_items: list[str] = []
+    sentiment = "neutral"
+    follow_up = ""
+
+    try:
+        # Extract JSON from the response (Claude may wrap it in markdown code blocks)
+        json_match = re.search(r"\{[\s\S]*\}", raw_text)
+        if json_match:
+            parsed = json.loads(json_match.group())
+            summary = parsed.get("summary", "")
+            action_items = parsed.get("action_items", [])
+            raw_sentiment = parsed.get("sentiment", "neutral").lower().strip()
+            if raw_sentiment in ("positive", "neutral", "negative"):
+                sentiment = raw_sentiment
+            else:
+                sentiment = "neutral"
+            follow_up = parsed.get("follow_up", "")
+        else:
+            logger.warning("No JSON found in Claude response for call %s, using raw text", call_id)
+            summary = raw_text[:500]
+    except (json.JSONDecodeError, AttributeError) as exc:
+        logger.warning("Failed to parse Claude summary JSON for call %s: %s", call_id, exc)
+        summary = raw_text[:500]
+
+    # Build action_taken from follow-up and action items
+    action_taken_parts: list[str] = []
+    if follow_up:
+        action_taken_parts.append(f"Follow-up: {follow_up}")
+    if action_items:
+        action_taken_parts.append("Action items: " + "; ".join(action_items))
+    action_taken = " | ".join(action_taken_parts) if action_taken_parts else None
+
+    # Update the call record with summary, sentiment, and action_taken
+    db = get_supabase()
+    try:
+        update_data: dict[str, Any] = {
+            "summary": summary,
+            "sentiment": sentiment,
+        }
+        if action_taken:
+            update_data["action_taken"] = action_taken
+
+        db.table("calls").update(update_data).eq("id", call_id).execute()
+        logger.info(
+            "Updated call %s with AI summary (sentiment=%s, %d action items)",
+            call_id, sentiment, len(action_items),
+        )
+    except Exception:
+        logger.exception("Failed to update call %s with AI summary", call_id)
+
+    # Feature 3: Insert action items into action_items table
+    if action_items:
+        await _insert_call_action_items(
+            tenant_id=tenant_id,
+            lead_id=lead_id,
+            call_id=call_id,
+            items=action_items,
+        )
+
+
+async def _insert_call_action_items(
+    tenant_id: str,
+    lead_id: str | None,
+    call_id: str,
+    items: list[str],
+) -> None:
+    """Insert action items extracted from a call into the action_items table.
+
+    Phone call action items are always high priority since they represent
+    direct customer communication.
+    """
+    if not items:
+        return
+
+    db = get_supabase()
+    inserted = 0
+    for item_text in items:
+        if not item_text or not item_text.strip():
+            continue
+        row: dict[str, Any] = {
+            "tenant_id": tenant_id,
+            "description": item_text.strip()[:500],
+            "priority": "high",
+            "status": "pending",
+        }
+        if lead_id:
+            row["lead_id"] = lead_id
+        try:
+            db.table("action_items").insert(row).execute()
+            inserted += 1
+        except Exception:
+            logger.exception(
+                "Failed to insert action item for call %s: %s",
+                call_id, item_text[:80],
+            )
+    if inserted:
+        logger.info("Inserted %d action items from call %s for tenant %s", inserted, call_id, tenant_id)
+
+    # Log activity for the action items creation
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="call_action_items",
+        description=f"AI extracted {inserted} action item(s) from phone call",
+        lead_id=lead_id,
+        metadata={"call_id": call_id, "action_item_count": inserted},
     )
 
 
@@ -630,6 +815,172 @@ async def handle_recording_complete(request: Request):
             "recording_url": recording_url,
             "lead_id": lead_id,
         },
+    )
+
+    # Request transcription of the recording via Twilio API.
+    # Twilio will POST the transcription to our transcription-complete endpoint.
+    recording_sid = params.get("RecordingSid", "")
+    if recording_sid and settings.twilio_account_sid and settings.twilio_auth_token:
+        base_url = str(request.base_url).rstrip("/")
+        transcription_url = f"{base_url}/api/v1/calls/voice/transcription-complete"
+        try:
+            import httpx
+            twilio_api_url = (
+                f"https://api.twilio.com/2010-04-01/Accounts/"
+                f"{settings.twilio_account_sid}/Recordings/"
+                f"{recording_sid}/Transcriptions.json"
+            )
+            async with httpx.AsyncClient(timeout=15.0) as http_client:
+                resp = await http_client.post(
+                    twilio_api_url,
+                    data={"TranscriptionUrl": transcription_url},
+                    auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+                )
+                if resp.status_code in (200, 201):
+                    logger.info(
+                        "Requested Twilio transcription for recording %s (call %s)",
+                        recording_sid, call_sid,
+                    )
+                else:
+                    logger.warning(
+                        "Twilio transcription request failed: status=%d body=%s",
+                        resp.status_code, resp.text[:200],
+                    )
+        except Exception:
+            logger.exception(
+                "Failed to request Twilio transcription for recording %s", recording_sid
+            )
+
+    return Response(content="OK", media_type="text/plain")
+
+
+@router.post("/voice/transcription-complete")
+@limiter.limit("30/minute")
+async def handle_transcription_complete(
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """Twilio transcription callback -- fires when a recording transcription is ready.
+
+    Twilio POSTs form-encoded data with:
+    - TranscriptionText: the transcribed text
+    - TranscriptionSid: unique transcription identifier
+    - RecordingSid: the recording that was transcribed
+    - CallSid: the original call SID
+
+    We:
+    1. Parse the transcription text
+    2. Find the call record by twilio_call_sid
+    3. Store the transcript as a JSONB array
+    4. Trigger AI summary generation as a background task
+    """
+    body = await request.body()
+
+    try:
+        params = {k: v[0] for k, v in parse_qs(body.decode()).items()}
+    except Exception:
+        logger.error("Failed to parse transcription callback body")
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    transcription_text = params.get("TranscriptionText", "")
+    transcription_sid = params.get("TranscriptionSid", "")
+    recording_sid = params.get("RecordingSid", "")
+    call_sid = params.get("CallSid", "")
+    transcription_status = params.get("TranscriptionStatus", "")
+
+    logger.info(
+        "Transcription complete: CallSid=%s, TranscriptionSid=%s, RecordingSid=%s, status=%s, text_len=%d",
+        call_sid, transcription_sid, recording_sid, transcription_status, len(transcription_text),
+    )
+
+    # Only process completed transcriptions
+    if transcription_status and transcription_status != "completed":
+        logger.info("Skipping transcription with status: %s", transcription_status)
+        return Response(content="OK", media_type="text/plain")
+
+    if not transcription_text.strip():
+        logger.warning("Empty transcription text for call %s", call_sid)
+        return Response(content="OK", media_type="text/plain")
+
+    if not call_sid:
+        logger.warning("Transcription callback missing CallSid")
+        return Response(content="OK", media_type="text/plain")
+
+    db = get_supabase()
+
+    # Find the call record by twilio_call_sid
+    call_record = None
+    try:
+        result = (
+            db.table("calls")
+            .select("id, tenant_id, lead_id, transcript")
+            .eq("twilio_call_sid", call_sid)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            call_record = result.data[0]
+    except Exception:
+        logger.exception("Failed to find call record for SID %s", call_sid)
+
+    if not call_record:
+        logger.warning(
+            "Transcription received for unknown call SID %s (transcription_sid=%s)",
+            call_sid, transcription_sid,
+        )
+        return Response(content="OK", media_type="text/plain")
+
+    call_id = call_record["id"]
+    tenant_id = call_record["tenant_id"]
+    lead_id = call_record.get("lead_id")
+
+    # Build the transcript as a JSONB array.
+    # Twilio provides the full transcription as one block of text.
+    # We store it as a structured array for consistency with the schema.
+    transcript_entry: list[dict[str, Any]] = [
+        {
+            "timestamp": 0,
+            "speaker": "caller",
+            "text": transcription_text.strip(),
+        }
+    ]
+
+    # If there is an existing transcript (e.g., from the AI conversation path),
+    # merge it rather than overwriting.
+    existing_transcript = call_record.get("transcript") or []
+    if existing_transcript and isinstance(existing_transcript, list):
+        # Append the new transcription entry
+        transcript_entry = existing_transcript + transcript_entry
+
+    # Update the call record with the transcript
+    try:
+        db.table("calls").update({
+            "transcript": transcript_entry,
+            "summary": "Transcription received. AI summary generating...",
+        }).eq("id", call_id).execute()
+        logger.info("Stored transcript for call %s (tenant %s)", call_id, tenant_id)
+    except Exception:
+        logger.exception("Failed to update call %s with transcript", call_id)
+
+    # Trigger AI summary generation as a background task (Feature 2)
+    # Build the full transcript text for the AI
+    full_transcript_text = transcription_text.strip()
+    if existing_transcript and isinstance(existing_transcript, list):
+        # Include existing transcript entries in the text sent to Claude
+        prior_parts = [
+            f"[{entry.get('speaker', 'unknown')}]: {entry.get('text', '')}"
+            for entry in existing_transcript
+            if entry.get("text")
+        ]
+        if prior_parts:
+            full_transcript_text = "\n".join(prior_parts) + "\n[caller]: " + transcription_text.strip()
+
+    background_tasks.add_task(
+        _generate_call_summary,
+        call_id=call_id,
+        tenant_id=tenant_id,
+        lead_id=lead_id,
+        transcript_text=full_transcript_text,
     )
 
     return Response(content="OK", media_type="text/plain")

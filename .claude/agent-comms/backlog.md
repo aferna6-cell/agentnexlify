@@ -34,9 +34,9 @@ _After every conversation (chat or call), AI extracts actionable items: "Custome
 
 - [x] **Migration: action_items table** — DONE (migration 033, 2026-03-14). Needs manual application in Supabase.
 - [x] **AI extraction in chat pipeline** — DONE (widget.py, runs every 8th message as background task, 2026-03-14)
-- [ ] **Action items dashboard widget** — Card on main dashboard showing pending action items sorted by due date. Quick "Mark Done" and "Dismiss" buttons. Click to see full conversation context.
-- [ ] **Action items page** — Full page view with filters: status, priority, assigned_to, date range. Assign to team members. Bulk mark done/dismiss.
-- [ ] **Action item notifications** — Include overdue action items in the notification bell aggregation. "You have 3 overdue action items."
+- [x] **Action items dashboard widget** — DONE Cycle 31. ActionItemsPage + dashboard summary endpoint.
+- [x] **Action items page** — DONE Cycle 31. Full page with filters, status/priority, assign, bulk actions (723-line ActionItemsPage.jsx).
+- [x] **Action item notifications** — DONE Cycle 31. Notification bell includes action items via /notifications aggregation.
 
 ### Shared Team Inbox
 
