@@ -352,11 +352,11 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] "How to embed the widget" help article — done 2026-03-12
 - [x] **Help article: "How to configure your AI assistant"** — DONE 2026-03-15 Cycle 42
 - [x] **Help article: "Understanding your analytics dashboard"** — DONE 2026-03-15 Cycle 42
-- [ ] **Help article: "Managing your leads"** — how to use the pipeline, export, follow up
-- [ ] **Help article: "Setting up appointment booking"** — how the calendar integration works, business hours, Google Calendar sync
+- [x] **Help article: "Managing your leads"** — DONE 2026-03-15 Cycle 57
+- [x] **Help article: "Setting up appointment booking"** — DONE 2026-03-15 Cycle 57
 - [x] **Onboarding email sequence** — DONE 2026-03-15 Cycles 43-44. Day 0-14 emails + automated delivery system.
 - [ ] **Case study template** — after first real customer succeeds, fill this in with their story
-- [ ] **Landing page A/B copy variants** — 3 different hero headlines to test
+- [x] **Landing page A/B copy variants** — DONE 2026-03-15 Cycle 57. 3 variants: problem, outcome, social proof.
 - [x] **Social media posts** — DONE 2026-03-15 Cycle 45. 10 LinkedIn + Facebook paired posts.
 - [ ] FAQ entries for common widget questions (carried from previous backlog)
 
@@ -368,7 +368,7 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] Add caching for tenant/widget configuration — DONE 2026-03-15 Cycle 49. 5-min TTL cache for widget config, tenant, FAQ, business hours, corrections, website content.
 - [x] Lazy load the chat widget script — DONE 2026-03-15 Cycle 49. Added async attribute to all embed code locations.
 - [x] Set up scheduled job for automation step processing — DONE (in-process asyncio loop in main.py, runs every 60s with worker stagger)
-- [ ] Add pagination to /leads endpoint — partially done: backend supports page/per_page params, frontend needs load-more button
+- [x] Add pagination to /leads endpoint — DONE 2026-03-15 Cycle 56. Backend pagination + frontend Previous/Next controls + page counter.
 
 ---
 
