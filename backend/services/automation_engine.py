@@ -810,3 +810,178 @@ async def send_pending_review_requests() -> int:
             logger.exception("Failed to mark review request sent for appointment %s", appt["id"])
 
     return sent
+
+
+# --- Onboarding Email Drip Sequence ---
+
+_ONBOARDING_STEPS = [
+    {
+        "day": 1,
+        "min_hours": 23,
+        "max_hours": 26,
+        "subject": "Quick win: teach your AI about {{business_name}}",
+        "body": (
+            "<h2>Hi {{owner_name}},</h2>"
+            "<p>Your chat widget is ready to go. Now let's make it sound like <em>you</em>.</p>"
+            "<p><strong>The fastest way to improve your AI: add your top 5 FAQs.</strong></p>"
+            "<p>Go to your <a href='https://agentnexlify.vercel.app'>FAQ Manager</a> and add the "
+            "questions your customers ask the most: your hours, pricing, service area, what makes "
+            "you different, and how to book.</p>"
+            "<p>Each FAQ you add makes the AI smarter. Customers get instant, accurate answers "
+            "instead of &ldquo;I'm not sure.&rdquo;</p>"
+            "<p><strong>Bonus:</strong> If you have a website, go to Settings and paste your URL. "
+            "Click &ldquo;Scan Website&rdquo; &mdash; the AI will read your site and learn your "
+            "services automatically.</p>"
+            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
+            "Open your dashboard &rarr;</a></p>"
+            "<p>Talk soon,<br>The AgentNexLiFy Team</p>"
+        ),
+    },
+    {
+        "day": 3,
+        "min_hours": 71,
+        "max_hours": 74,
+        "subject": "Your AI had its first conversations — here's what happened",
+        "body": (
+            "<h2>Hi {{owner_name}},</h2>"
+            "<p>By now your AI assistant has probably had a few conversations with visitors.</p>"
+            "<p><strong>See every conversation:</strong> Go to "
+            "<a href='https://agentnexlify.vercel.app'>Conversations</a> to see what visitors "
+            "asked and how the AI responded.</p>"
+            "<p><strong>Improve the AI with one click:</strong> See a response you don't love? "
+            "Click the thumbs-down button and type what the AI <em>should</em> have said. "
+            "It learns from your corrections.</p>"
+            "<p><strong>Check your leads:</strong> Go to Leads to see everyone who shared their "
+            "contact info. Follow up within an hour for the best results.</p>"
+            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
+            "Check your conversations &rarr;</a></p>"
+            "<p>&mdash; The AgentNexLiFy Team</p>"
+        ),
+    },
+    {
+        "day": 7,
+        "min_hours": 167,
+        "max_hours": 170,
+        "subject": "One week in — are you capturing every lead?",
+        "body": (
+            "<h2>Hi {{owner_name}},</h2>"
+            "<p>It's been a week since you set up your AI assistant for {{business_name}}.</p>"
+            "<p><strong>Is your widget on every page?</strong> The AI can only talk to visitors "
+            "on pages where the widget is installed. Check that the embed code is on every page.</p>"
+            "<p><strong>Are you following up on leads?</strong> Go to your Leads page and check "
+            "for any &ldquo;New&rdquo; leads you haven't contacted yet.</p>"
+            "<p><strong>Set up automations:</strong> Go to Automations and create a follow-up "
+            "sequence &mdash; emails that go out automatically after a lead comes in.</p>"
+            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
+            "Open your dashboard &rarr;</a></p>"
+            "<p>&mdash; The AgentNexLiFy Team</p>"
+        ),
+    },
+    {
+        "day": 14,
+        "min_hours": 335,
+        "max_hours": 338,
+        "subject": "You're leaving money on the table, {{owner_name}}",
+        "body": (
+            "<h2>Hi {{owner_name}},</h2>"
+            "<p>Two weeks in. Your AI assistant has been working 24/7 for {{business_name}}.</p>"
+            "<p>Here's what you might be missing on the free plan:</p>"
+            "<ul>"
+            "<li><strong>Automated follow-ups</strong> &mdash; emails and SMS that fire instantly when a new lead comes in</li>"
+            "<li><strong>SMS notifications</strong> &mdash; get a text the moment someone fills out your chat</li>"
+            "<li><strong>Google Calendar sync</strong> &mdash; appointments appear on your calendar automatically</li>"
+            "<li><strong>Review management</strong> &mdash; auto-request reviews, draft AI responses</li>"
+            "<li><strong>Team collaboration</strong> &mdash; invite team members, assign leads, internal notes</li>"
+            "</ul>"
+            "<p>One captured lead that turns into a customer pays for months of AgentNexLiFy. "
+            "The Growth plan is $199/month &mdash; less than a single Google ad click in most industries.</p>"
+            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
+            "See what you're missing &rarr;</a></p>"
+            "<p>&mdash; The AgentNexLiFy Team</p>"
+        ),
+    },
+]
+
+
+async def send_onboarding_emails() -> int:
+    """Send onboarding drip emails to tenants based on their signup date.
+
+    Checks tenants created within specific time windows (Day 1, 3, 7, 14).
+    Uses activity_log to track which emails have been sent (avoids duplicates).
+    Returns count of emails sent.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    sent = 0
+
+    for step in _ONBOARDING_STEPS:
+        window_start = now - timedelta(hours=step["max_hours"])
+        window_end = now - timedelta(hours=step["min_hours"])
+        activity_type = f"onboarding_email_day_{step['day']}"
+
+        try:
+            tenants = (
+                db.table("tenants")
+                .select("id, owner_name, owner_email, business_name")
+                .gte("created_at", window_start.isoformat())
+                .lte("created_at", window_end.isoformat())
+                .limit(BATCH_LIMIT)
+                .execute()
+            )
+        except Exception:
+            logger.exception("send_onboarding_emails: failed to query tenants for day %d", step["day"])
+            continue
+
+        for tenant in tenants.data or []:
+            tid = tenant["id"]
+            email = tenant.get("owner_email")
+            if not email:
+                continue
+
+            # Check if already sent
+            try:
+                existing = (
+                    db.table("activity_log")
+                    .select("id", count="exact")
+                    .eq("tenant_id", tid)
+                    .eq("activity_type", activity_type)
+                    .limit(1)
+                    .execute()
+                )
+                if existing.count and existing.count > 0:
+                    continue
+            except Exception:
+                logger.warning("send_onboarding_emails: couldn't check activity_log for %s, skipping", tid)
+                continue
+
+            owner_name = tenant.get("owner_name") or "there"
+            biz_name = tenant.get("business_name") or "your business"
+            context = {"owner_name": owner_name, "business_name": biz_name}
+
+            subject = render_template(step["subject"], context)
+            body = render_template(step["body"], context)
+
+            try:
+                result = await send_email(
+                    to=email,
+                    subject=subject,
+                    body_html=body,
+                    tenant_id=tid,
+                )
+                if result.get("success"):
+                    sent += 1
+                    logger.info("Sent onboarding day %d email to %s (tenant %s)", step["day"], email, tid)
+                    # Track in activity_log
+                    db.table("activity_log").insert({
+                        "tenant_id": tid,
+                        "activity_type": activity_type,
+                        "description": f"Onboarding email Day {step['day']} sent to {email}",
+                    }).execute()
+            except Exception:
+                logger.exception("Failed to send onboarding day %d email to %s", step["day"], email)
+
+    return sent

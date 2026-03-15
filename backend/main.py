@@ -48,7 +48,7 @@ _startup_time: float = 0.0
 
 async def _automation_loop():
     """Background loop that processes pending automation steps every 60 seconds."""
-    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders, send_pending_review_requests
+    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders, send_pending_review_requests, send_onboarding_emails
     while True:
         try:
             processed = await process_pending_steps()
@@ -77,6 +77,13 @@ async def _automation_loop():
                 logger.info("Automation loop: sent %d review requests", review_reqs)
         except Exception:
             logger.exception("Automation loop: send_pending_review_requests failed")
+
+        try:
+            onboarding = await send_onboarding_emails()
+            if onboarding:
+                logger.info("Automation loop: sent %d onboarding emails", onboarding)
+        except Exception:
+            logger.exception("Automation loop: send_onboarding_emails failed")
 
         await asyncio.sleep(60)
 
