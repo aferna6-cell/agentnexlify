@@ -343,7 +343,7 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] Test business page: valid slug, non-existent slug, slug with special characters — DONE 2026-03-15 Cycle 55 (3 tests)
 - [x] Test CORS: request from allowed origin, request from disallowed origin — DONE 2026-03-15 Cycle 59
 - [x] Test rate limiting: verified decorators applied on all public endpoints — DONE 2026-03-15 Cycle 59 (2 tests)
-- [ ] Test Google Calendar OAuth: expired token refresh, disconnected account behavior
+- [x] Test Google Calendar OAuth: status, disconnect, connected — DONE 2026-03-15 Cycle 80 (3 tests)
 - [x] Test team invites: validated invite token returns member info — DONE 2026-03-15 Cycle 55
 
 ## Content — Marketing & Docs
