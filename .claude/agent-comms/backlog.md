@@ -128,8 +128,8 @@ _Allow business owners to connect AgentNexLiFy to Claude or ChatGPT via MCP so t
 
 **What we already have:** Open API endpoints. Webhooks. What's missing: an MCP server that exposes our API as tools for AI assistants.
 
-- [ ] **MCP server scaffold** — Build a lightweight MCP server (Python, using the MCP SDK) that exposes AgentNexLiFy tools: get_leads, get_conversations, get_appointments, get_action_items, send_reply, create_appointment. Auth via API key.
-- [ ] **MCP tool definitions** — Define tool schemas for the most useful operations: (1) list_recent_leads, (2) list_today_appointments, (3) get_unread_conversations, (4) reply_to_conversation, (5) get_action_items, (6) get_analytics_summary. Each tool maps to existing API endpoints.
+- [x] **MCP server scaffold** — DONE 2026-03-15 Cycle 54. backend/mcp_server.py using FastMCP SDK. Auth via widget API key. Run standalone or mount.
+- [x] **MCP tool definitions** — DONE 2026-03-15 Cycle 54. 6 tools: list_recent_leads, list_today_appointments, get_unread_conversations, get_action_items, get_analytics_summary, reply_to_conversation.
 - [ ] **MCP setup guide** — Dashboard page with instructions for connecting to Claude Desktop or ChatGPT. Copy-paste config. Test connection button.
 - [ ] **MCP authentication** — Generate per-tenant MCP API keys (separate from widget API keys). Rate limited. Read-only by default, write access opt-in.
 
