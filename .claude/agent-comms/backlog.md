@@ -65,7 +65,7 @@ _Drag-and-drop builder for customizing the chat widget's conversation flow. "If 
 - [x] **Chat flow engine in widget backend** — done 2026-03-14. Widget checks active flow, evaluates conditions, falls back to AI. Cycle 38.
 - [x] **Visual flow builder page** — done 2026-03-15. ChatFlowBuilderPage with @xyflow/react drag-and-drop editor, 6 node types, node editor panel, template creation. Cycle 40.
 - [x] **Preset flow templates** — DONE (3 templates: General Business, Restaurant, Contractor, stored in backend with one-click create, 2026-03-14)
-- [ ] **Flow analytics** — Track which nodes get triggered most. Show drop-off points. "80% of visitors hit the pricing node but only 20% book — consider adding a discount offer."
+- [x] **Flow analytics** — DONE 2026-03-15 Cycle 63. GET /analytics endpoint with daily usage, per-node stats, improvement suggestions. Activity tracking on flow usage.
 
 ### Analytics Dashboard Upgrade
 
