@@ -159,6 +159,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         onNavigate={onNavigate}
         hotLeadsCount={dashData?.hot_leads_count ?? 0}
         emailsSentToday={seqStats?.emails_sent_today ?? 0}
+        missedCallsThisWeek={dashData?.missed_calls_this_week ?? null}
       />
       <div className="analytics-link" onClick={() => onNavigate("analytics")}>
         View Analytics &rarr;

@@ -18,6 +18,10 @@ export default function SettingsPage({ onNavigate }) {
     google_review_link: "",
     review_request_config: { enabled: false, delay_hours: 24, method: "email" },
     website_url: "",
+    textback_enabled: false,
+    textback_message: "Hi! Sorry we missed your call at {business_name}. How can we help? Reply here and we'll get back to you right away.",
+    textback_quiet_start: "22:00",
+    textback_quiet_end: "08:00",
   });
   const [email, setEmail] = useState("");
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
@@ -46,6 +50,10 @@ export default function SettingsPage({ onNavigate }) {
         google_review_link: tenant.google_review_link || "",
         review_request_config: tenant.review_request_config || { enabled: false, delay_hours: 24, method: "email" },
         website_url: tenant.website_url || "",
+        textback_enabled: tenant.textback_enabled || false,
+        textback_message: tenant.textback_message || "Hi! Sorry we missed your call at {business_name}. How can we help? Reply here and we'll get back to you right away.",
+        textback_quiet_start: tenant.textback_quiet_start || "22:00",
+        textback_quiet_end: tenant.textback_quiet_end || "08:00",
       });
       setEmail(tenant.owner_email || "");
       setBusinessSlug(tenant.business_slug || null);
@@ -455,6 +463,109 @@ export default function SettingsPage({ onNavigate }) {
                   <option value="sms">SMS</option>
                   <option value="both">Email + SMS</option>
                 </select>
+              </div>
+            </>
+          )}
+          <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
+            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+          </button>
+        </div>
+
+        {/* Missed Call Text-Back */}
+        <div className="settings-card">
+          <h3>Missed Call Text-Back</h3>
+          <p className="settings-card-desc">
+            Automatically send a text message when you miss a phone call, so potential customers get an instant response.
+          </p>
+          <div className="settings-field" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input
+              type="checkbox"
+              checked={form.textback_enabled}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, textback_enabled: e.target.checked }));
+                setSaved(false);
+              }}
+              id="textback-toggle"
+              style={{ width: "auto" }}
+            />
+            <label htmlFor="textback-toggle" style={{ margin: 0, cursor: "pointer" }}>
+              Enable missed call text-back
+            </label>
+          </div>
+          {form.textback_enabled && (
+            <>
+              <div className="settings-field">
+                <label>Greeting Message</label>
+                <textarea
+                  value={form.textback_message}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, textback_message: e.target.value }));
+                    setSaved(false);
+                  }}
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-secondary)",
+                    color: "var(--text-primary)",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    fontSize: "0.9rem",
+                  }}
+                  placeholder="Hi! Sorry we missed your call..."
+                />
+                <span className="settings-field-hint">
+                  Use {"{business_name}"} to insert your business name automatically
+                </span>
+              </div>
+              <div className="settings-field">
+                <label>Quiet Hours</label>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "0 0 8px" }}>
+                  Don't send text-backs during these hours (e.g., late night). Missed calls during quiet hours will be texted when quiet hours end.
+                </p>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Start</span>
+                    <input
+                      type="time"
+                      value={form.textback_quiet_start}
+                      onChange={(e) => {
+                        setForm((f) => ({ ...f, textback_quiet_start: e.target.value }));
+                        setSaved(false);
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid var(--border-color)",
+                        background: "var(--bg-secondary)",
+                        color: "var(--text-primary)",
+                        fontSize: "0.9rem",
+                      }}
+                    />
+                  </div>
+                  <span style={{ color: "var(--text-muted)", marginTop: 18 }}>to</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>End</span>
+                    <input
+                      type="time"
+                      value={form.textback_quiet_end}
+                      onChange={(e) => {
+                        setForm((f) => ({ ...f, textback_quiet_end: e.target.value }));
+                        setSaved(false);
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid var(--border-color)",
+                        background: "var(--bg-secondary)",
+                        color: "var(--text-primary)",
+                        fontSize: "0.9rem",
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </>
           )}

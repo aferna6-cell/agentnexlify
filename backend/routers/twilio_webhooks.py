@@ -58,10 +58,9 @@ def _verify_twilio_signature(request: Request, body: bytes) -> bool:
 def _find_tenant_by_phone(phone: str) -> dict | None:
     """Look up tenant by their configured notification_phone or Twilio number."""
     db = get_supabase()
-    # Try matching notification_phone first
     result = (
         db.table("tenants")
-        .select("id, business_name, notification_phone, sms_notifications_enabled, plan")
+        .select("id, business_name, notification_phone, sms_notifications_enabled, plan, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end")
         .eq("sms_notifications_enabled", True)
         .limit(50)
         .execute()
@@ -115,8 +114,35 @@ async def handle_missed_call(request: Request):
     business_name = tenant.get("business_name", "us")
     tenant_id = tenant["id"]
 
-    # Send text-back
-    message = format_textback_message(DEFAULT_TEXTBACK, business_name)
+    # Check if text-back is enabled for this tenant
+    if not tenant.get("textback_enabled", False):
+        logger.info("Text-back disabled for tenant %s, skipping", tenant_id)
+        return PlainTextResponse("OK")
+
+    # Check quiet hours
+    quiet_start = tenant.get("textback_quiet_start")  # e.g. "22:00"
+    quiet_end = tenant.get("textback_quiet_end")  # e.g. "07:00"
+    if quiet_start and quiet_end:
+        from datetime import datetime, timezone
+        now_utc = datetime.now(timezone.utc)
+        hour_now = now_utc.hour * 100 + now_utc.minute
+        try:
+            qs = int(quiet_start.replace(":", ""))
+            qe = int(quiet_end.replace(":", ""))
+            if qs > qe:  # Overnight quiet hours (e.g., 22:00 - 07:00)
+                if hour_now >= qs or hour_now < qe:
+                    logger.info("Quiet hours active for tenant %s (%s-%s), skipping text-back", tenant_id, quiet_start, quiet_end)
+                    return PlainTextResponse("OK")
+            elif qs <= hour_now < qe:
+                logger.info("Quiet hours active for tenant %s, skipping text-back", tenant_id)
+                return PlainTextResponse("OK")
+        except ValueError:
+            pass  # Malformed quiet hours, proceed with text-back
+
+    # Send text-back using custom message or default
+    custom_msg = tenant.get("textback_message")
+    template = custom_msg if custom_msg and custom_msg.strip() else DEFAULT_TEXTBACK
+    message = format_textback_message(template, business_name)
     sent = await send_sms(to=caller, body=message)
 
     if sent:

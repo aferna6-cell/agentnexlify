@@ -130,7 +130,7 @@ _Allow business owners to connect AgentNexLiFy to Claude or ChatGPT via MCP so t
 
 - [x] **MCP server scaffold** — DONE 2026-03-15 Cycle 54. backend/mcp_server.py using FastMCP SDK. Auth via widget API key. Run standalone or mount.
 - [x] **MCP tool definitions** — DONE 2026-03-15 Cycle 54. 6 tools: list_recent_leads, list_today_appointments, get_unread_conversations, get_action_items, get_analytics_summary, reply_to_conversation.
-- [ ] **MCP setup guide** — Dashboard page with instructions for connecting to Claude Desktop or ChatGPT. Copy-paste config. Test connection button.
+- [x] **MCP setup guide** — DONE 2026-03-15 Cycle 58. MCPSetupPage with Claude Desktop config, API key copy, tool list, example prompts.
 - [ ] **MCP authentication** — Generate per-tenant MCP API keys (separate from widget API keys). Rate limited. Read-only by default, write access opt-in.
 
 ---
@@ -268,10 +268,10 @@ _AI answers phone calls, takes messages, books appointments, texts the owner a s
 ## Features — Module: Missed Call Text-Back
 _When a call goes to voicemail, auto-text the caller with an AI agent that handles the conversation via SMS._
 
-- [ ] **Missed call detection** — Twilio webhook detects when a call isn't answered (goes to voicemail or rings out). Triggers the text-back flow.
-- [ ] **Auto text-back message** — Sends an SMS within 30 seconds: "Hi! Sorry we missed your call at [Business Name]. How can we help?" The AI then handles the SMS conversation using the same chat engine that powers the widget.
-- [ ] **SMS conversation threading** — Track the SMS conversation in a new `sms_conversations` table (or extend chat_sessions with a channel type: 'widget' | 'sms' | 'call'). All messages appear in the dashboard alongside widget conversations.
-- [ ] **Lead capture from SMS** — When the caller provides their name/email/need via text, create a lead. Same extraction logic as the widget.
+- [x] **Missed call detection** — DONE 2026-03-15 Cycle 60. POST /api/v1/twilio/missed-call webhook. Auto-detects no-answer/busy/failed calls.
+- [x] **Auto text-back message** — DONE 2026-03-15 Cycle 60. Auto-sends "{business_name} missed your call" text within seconds. AI handles SMS replies via /api/v1/twilio/sms-reply.
+- [x] **SMS conversation threading** — DONE 2026-03-15 Cycle 60. Messages stored in chat_messages with session_id=sms_{phone}. Visible in ConversationsPage alongside widget chats.
+- [x] **Lead capture from SMS** — DONE 2026-03-15 Cycle 60. Lead auto-created on missed call with phone number. SMS AI replies use same chat engine that extracts lead info.
 - [ ] **Configurable text-back settings** — Dashboard toggle: enable/disable, customize the greeting message, set quiet hours (don't text at 2am), set max texts per conversation.
 - [ ] **Missed call analytics** — Dashboard widget showing: calls missed per day, text-back response rate, leads captured from missed calls. This data alone justifies the subscription — "You missed 23 calls this month. We captured 18 of them via text."
 

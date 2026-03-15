@@ -240,4 +240,14 @@ Creates `chat_flows` table for customizable chat conversation flows. Columns: te
 
 **Applied:** 2026-03-15 via Supabase MCP.
 
+### 039 — Leads Compound Index
+Adds compound index `idx_leads_client_created ON leads(client_id, created_at DESC)` for faster lead list queries and analytics date-range filters.
+
+**Applied:** 2026-03-15 via Supabase MCP.
+
+### 040 — Missed Call Text-Back Settings
+Adds 4 columns to `tenants`: `textback_enabled` (BOOLEAN DEFAULT false), `textback_message` (TEXT), `textback_quiet_start` (TEXT, e.g. "22:00"), `textback_quiet_end` (TEXT, e.g. "07:00"). Configures per-tenant auto text-back behavior for missed calls.
+
+**Applied:** 2026-03-15 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

@@ -389,6 +389,23 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     except Exception:
         logger.debug("chat_messages count failed for tenant %s", tenant_id)
 
+    # Missed calls this week
+    missed_calls = 0
+    try:
+        from datetime import datetime, timedelta, timezone as tz
+        week_ago = (datetime.now(tz.utc) - timedelta(days=7)).isoformat()
+        mc_result = (
+            db.table("activity_log")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("activity_type", "missed_call_textback")
+            .gte("created_at", week_ago)
+            .execute()
+        )
+        missed_calls = mc_result.count or 0
+    except Exception:
+        logger.debug("Missed calls count failed for tenant %s", tenant_id)
+
     trial = _compute_trial_status(t)
 
     response = DashboardResponse(
@@ -405,6 +422,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         hot_leads_count=hot_leads_count,
         trial_days_remaining=trial["trial_days_remaining"],
         trial_expired=trial["trial_expired"],
+        missed_calls_this_week=missed_calls,
     )
     logger.info("Dashboard response for %s: %s", tenant_id, response.model_dump())
     return response
@@ -687,7 +705,7 @@ async def update_settings(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     body = await request.json()
-    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled", "google_review_link", "review_request_config", "website_url"}
+    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled", "google_review_link", "review_request_config", "website_url", "textback_enabled", "textback_message", "textback_quiet_start", "textback_quiet_end"}
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
@@ -712,7 +730,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     db = get_supabase()
     result = (
         db.table("tenants")
-        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled")
+        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end")
         .eq("id", tenant_id)
         .limit(1)
         .execute()

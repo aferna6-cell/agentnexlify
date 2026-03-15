@@ -156,6 +156,7 @@ class DashboardResponse(BaseModel):
     hot_leads_count: int = 0
     trial_days_remaining: int | None = None
     trial_expired: bool = False
+    missed_calls_this_week: int | None = None
 
 
 class TrialStatusResponse(BaseModel):
