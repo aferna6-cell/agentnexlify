@@ -105,7 +105,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 > Always verify against live schema — this table may be outdated.
 
 ## Plan Names
-- free, growth ($199), professional ($399), enterprise ($799)
+- free, growth ($199), autopilot ($299), professional ($399), enterprise ($799)
 - Old names (DO NOT USE): foundation, operations
 
 ## Schema Discipline

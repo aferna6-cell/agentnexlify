@@ -23,6 +23,7 @@ const LiveChatAlternative = lazy(() => import("./pages/LiveChatAlternative"));
 const TidioAlternative = lazy(() => import("./pages/TidioAlternative"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 const BusinessPage = lazy(() => import("./pages/BusinessPage"));
+const ClientPortalPublicPage = lazy(() => import("./pages/ClientPortalPublicPage"));
 
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
@@ -112,6 +113,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/compare/:competitor" element={<CompareRoute />} />
             {/* Team invite accept page (public, no auth) */}
             <Route path="/invite/:token" element={<AcceptInvitePage />} />
+            {/* Public client portal — no auth, standalone */}
+            <Route path="/client/:token" element={<ClientPortalPublicPage />} />
             {/* Public business pages — no auth, standalone */}
             <Route path="/biz/:slug" element={<BusinessPage />} />
             {/* Everything else falls to auth-gated dashboard */}

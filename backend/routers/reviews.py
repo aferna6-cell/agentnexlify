@@ -16,6 +16,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
 
+# ---------------------------------------------------------------------------
+# Response models
+# ---------------------------------------------------------------------------
+
+
+class ReviewResponseStats(BaseModel):
+    total_reviews: int = 0
+    responded_count: int = 0
+    unresponded_count: int = 0
+    response_rate_percent: float = 0.0
+    avg_response_time_hours: float | None = None
+    reviews_this_month: int = 0
+    responses_this_month: int = 0
+
+
 class ReviewCreate(BaseModel):
     platform: str = "google"
     author_name: str
@@ -83,6 +98,87 @@ async def list_reviews(
             "unresponded": total - responded_count,
         },
     }
+
+
+@router.get("/{tenant_id}/response-stats", response_model=ReviewResponseStats)
+async def get_response_stats(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Return response history stats for a tenant's reviews.
+
+    Includes total/responded/unresponded counts, response rate, approximate
+    average response time (using updated_at as proxy for response time), and
+    this-month breakdowns.
+    """
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    stats = ReviewResponseStats()
+
+    try:
+        all_reviews = (
+            db.table("reviews")
+            .select("id, responded, created_at, updated_at, review_date")
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+        reviews = all_reviews.data or []
+    except Exception:
+        logger.error("Failed to fetch reviews for response stats, tenant %s", tenant_id, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch review stats")
+
+    if not reviews:
+        return stats
+
+    stats.total_reviews = len(reviews)
+    stats.responded_count = sum(1 for r in reviews if r.get("responded"))
+    stats.unresponded_count = stats.total_reviews - stats.responded_count
+    stats.response_rate_percent = round(
+        (stats.responded_count / stats.total_reviews) * 100, 1
+    )
+
+    # Approximate avg response time: time between created_at and updated_at
+    # for responded reviews. updated_at is set when owner_response is written.
+    response_times_hours: list[float] = []
+    for r in reviews:
+        if not r.get("responded"):
+            continue
+        created_raw = r.get("review_date") or r.get("created_at")
+        updated_raw = r.get("updated_at")
+        if not created_raw or not updated_raw:
+            continue
+        try:
+            created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+            updated_dt = datetime.fromisoformat(updated_raw.replace("Z", "+00:00"))
+            diff_hours = (updated_dt - created_dt).total_seconds() / 3600
+            if diff_hours >= 0:
+                response_times_hours.append(diff_hours)
+        except Exception:
+            logger.debug("Skipping review %s for response time calc", r.get("id"))
+
+    if response_times_hours:
+        stats.avg_response_time_hours = round(
+            sum(response_times_hours) / len(response_times_hours), 1
+        )
+
+    # This-month breakdowns
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    for r in reviews:
+        created_raw = r.get("created_at") or r.get("review_date")
+        if not created_raw:
+            continue
+        try:
+            created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+        except Exception:
+            continue
+        if created_dt >= month_start:
+            stats.reviews_this_month += 1
+            if r.get("responded"):
+                stats.responses_this_month += 1
+
+    return stats
 
 
 @router.post("/{tenant_id}")

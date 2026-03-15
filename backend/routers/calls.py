@@ -1,14 +1,17 @@
 """AI Answering Service — voice call handling and call management endpoints.
 
-Twilio voice webhooks for incoming calls (greeting + recording), plus
-dashboard endpoints for listing, viewing, and aggregating call data.
+Twilio voice webhooks for incoming calls (greeting + recording + AI conversation),
+plus dashboard endpoints for listing, viewing, and aggregating call data.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any
 from urllib.parse import parse_qs
 
+import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -22,6 +25,9 @@ from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
+
+# Max AI conversation rounds before ending the call
+_MAX_VOICE_ROUNDS = 3
 
 router = APIRouter(prefix="/api/v1/calls", tags=["calls"])
 
@@ -139,6 +145,64 @@ def _build_twiml_error() -> str:
     )
 
 
+def _build_twiml_gather(say_text: str, respond_url: str, round_num: int) -> str:
+    """Build TwiML that speaks text and then gathers speech input.
+
+    Uses <Gather> with speech input and a configurable action URL.
+    After the gather timeout, falls back to a goodbye message.
+    """
+    safe_text = (
+        say_text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        "<Response>"
+        f'<Gather input="speech" timeout="5" speechTimeout="auto"'
+        f' action="{respond_url}?round={round_num}" method="POST">'
+        f'<Say voice="alice">{safe_text}</Say>'
+        "</Gather>"
+        '<Say voice="alice">'
+        "I didn't hear anything. Thank you for calling! Goodbye."
+        "</Say>"
+        "</Response>"
+    )
+
+
+def _build_twiml_goodbye(say_text: str) -> str:
+    """Build TwiML that speaks a goodbye message and hangs up."""
+    safe_text = (
+        say_text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        "<Response>"
+        f'<Say voice="alice">{safe_text}</Say>'
+        "</Response>"
+    )
+
+
+def _xml_escape(text: str) -> str:
+    """Escape text for safe inclusion in XML."""
+    return (
+        text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+
+
 # ---------------------------------------------------------------------------
 # Twilio voice webhooks
 # ---------------------------------------------------------------------------
@@ -147,10 +211,13 @@ def _build_twiml_error() -> str:
 @router.post("/voice/incoming")
 @limiter.limit("30/minute")
 async def handle_incoming_call(request: Request):
-    """Twilio voice webhook -- plays a greeting and records the caller's message.
+    """Twilio voice webhook -- greets the caller and starts AI conversation.
 
     Twilio POSTs form-encoded data with caller info. We respond with TwiML
-    that plays a greeting using the business name and then records.
+    that plays a greeting using the business name and then uses <Gather> to
+    collect the caller's speech for an AI-powered conversation loop.
+
+    Falls back to voicemail recording if the AI conversation path fails.
     """
     body = await request.body()
 
@@ -174,12 +241,41 @@ async def handle_incoming_call(request: Request):
 
     business_name = tenant.get("business_name", "our business")
 
-    # Build the recording callback URL
-    # Use the same host the request came in on
+    # Build the respond URL for the Gather action
     base_url = str(request.base_url).rstrip("/")
-    recording_callback = f"{base_url}/api/v1/calls/voice/recording-complete"
+    respond_url = f"{base_url}/api/v1/calls/voice/respond"
 
-    twiml = _build_twiml_greeting(business_name, recording_callback)
+    greeting = (
+        f"Thanks for calling {_xml_escape(business_name)}! "
+        "How can I help you today?"
+    )
+    # Use raw XML since greeting is already escaped where needed
+    twiml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        "<Response>"
+        f'<Gather input="speech" timeout="5" speechTimeout="auto"'
+        f' action="{respond_url}?round=1" method="POST">'
+        f'<Say voice="alice">{greeting}</Say>'
+        "</Gather>"
+        '<Say voice="alice">'
+        "I didn't hear anything. Thank you for calling! Goodbye."
+        "</Say>"
+        "</Response>"
+    )
+
+    # Save the greeting as the first assistant message
+    try:
+        session_id = f"call_{call_sid}"
+        db = get_supabase()
+        db.table("chat_messages").insert({
+            "tenant_id": tenant["id"],
+            "session_id": session_id,
+            "role": "assistant",
+            "content": f"Thanks for calling {business_name}! How can I help you today?",
+        }).execute()
+    except Exception:
+        logger.exception("Failed to save greeting message for call %s", call_sid)
+
     return Response(content=twiml, media_type="application/xml")
 
 

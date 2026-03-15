@@ -1181,6 +1181,100 @@ async def send_portal_links() -> int:
     return sent
 
 
+async def check_new_reviews() -> int:
+    """Check for new reviews created in the last 60 seconds and notify tenant owners.
+
+    For each new review, if the tenant has a notification_phone, sends an SMS alert
+    and logs an activity_log entry with activity_type='new_review_alert'.
+
+    Returns count of alerts sent.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(seconds=60)).isoformat()
+    sent = 0
+
+    try:
+        recent_reviews = (
+            db.table("reviews")
+            .select("id, tenant_id, rating, author_name, platform, review_text")
+            .gte("created_at", cutoff)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("check_new_reviews: failed to query recent reviews")
+        return 0
+
+    for review in recent_reviews.data or []:
+        tenant_id = review.get("tenant_id")
+        if not tenant_id:
+            continue
+
+        # Look up tenant notification phone
+        try:
+            tenant_result = (
+                db.table("tenants")
+                .select("notification_phone, business_name")
+                .eq("id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            logger.exception("check_new_reviews: failed to look up tenant %s", tenant_id)
+            continue
+
+        if not tenant_result.data:
+            continue
+
+        tenant = tenant_result.data[0]
+        notification_phone = tenant.get("notification_phone")
+
+        rating = review.get("rating", "?")
+        author_name = review.get("author_name", "Someone")
+        platform = review.get("platform", "unknown")
+        review_text = review.get("review_text") or ""
+        truncated_text = review_text[:80] + "..." if len(review_text) > 80 else review_text
+
+        # Log activity regardless of whether SMS is sent
+        from backend.services.activity import log_activity
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="new_review_alert",
+            description=(
+                f"New {rating}-star review from {author_name} on {platform}"
+            ),
+            metadata={
+                "review_id": review.get("id"),
+                "rating": rating,
+                "author_name": author_name,
+                "platform": platform,
+            },
+        )
+
+        # Send SMS if phone is configured
+        if notification_phone:
+            sms_body = (
+                f"New {rating}-star review from {author_name} on {platform}: "
+                f"'{truncated_text}'. Reply in your dashboard."
+            )
+            try:
+                sms_ok = await send_sms(to=notification_phone, body=sms_body)
+                if sms_ok:
+                    sent += 1
+                    logger.info(
+                        "Sent new review alert SMS to %s for tenant %s (review %s)",
+                        notification_phone, tenant_id, review.get("id"),
+                    )
+            except Exception:
+                logger.exception(
+                    "check_new_reviews: failed to send SMS to %s for tenant %s",
+                    notification_phone, tenant_id,
+                )
+
+    return sent
+
+
 async def send_onboarding_emails() -> int:
     """Send onboarding drip emails to tenants based on their signup date.
 

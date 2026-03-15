@@ -14,6 +14,7 @@ _initialized = False
 PLAN_PRICES: dict[str, dict[str, str]] = {
     "growth": {"monthly": "price_growth_monthly"},
     "professional": {"monthly": "price_professional_monthly"},
+    "autopilot": {"monthly": "price_autopilot_monthly"},
     "enterprise": {"monthly": "price_enterprise_monthly"},
 }
 

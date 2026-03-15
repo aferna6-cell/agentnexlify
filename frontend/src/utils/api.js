@@ -951,4 +951,22 @@ export function fetchSeoKeywords(tenantId, token) {
   return request(`/api/v1/seo/${tenantId}/keywords`, { token });
 }
 
+// --- Missed Call Analytics ---
+
+export function fetchMissedCallAnalytics(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/missed-calls?period=${period}`, { token });
+}
+
+// --- Onboarding Status ---
+
+export function fetchOnboardingStatus(tenantId, token) {
+  return request(`/api/v1/onboarding/${tenantId}/status`, { token });
+}
+
+// --- Client Portal Public ---
+
+export function fetchClientPortalPublic(portalToken) {
+  return request(`/api/v1/portal/portal/${portalToken}`);
+}
+
 export { ApiError };

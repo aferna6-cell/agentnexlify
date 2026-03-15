@@ -55,7 +55,7 @@ async def _automation_loop():
     """
     import random
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
-    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders, send_monthly_reports, send_pending_review_requests, send_onboarding_emails, send_portal_links
+    from backend.services.automation_engine import check_new_reviews, check_no_response_leads, process_pending_steps, send_appointment_reminders, send_monthly_reports, send_pending_review_requests, send_onboarding_emails, send_portal_links
     while True:
         try:
             processed = await process_pending_steps()
@@ -105,6 +105,13 @@ async def _automation_loop():
                 logger.info("Automation loop: sent %d monthly reports", reports)
         except Exception:
             logger.exception("Automation loop: send_monthly_reports failed")
+
+        try:
+            review_alerts = await check_new_reviews()
+            if review_alerts:
+                logger.info("Automation loop: sent %d review alert notifications", review_alerts)
+        except Exception:
+            logger.exception("Automation loop: check_new_reviews failed")
 
         await asyncio.sleep(60)
 

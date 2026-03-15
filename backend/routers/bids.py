@@ -1,10 +1,12 @@
-"""Contractor Bid Manager — CRUD for bids, bid templates, AI bid generation, and stats."""
+"""Contractor Bid Manager — CRUD for bids, bid templates, AI bid generation, PDF, and stats."""
 
 import json
 import logging
+from datetime import datetime, timezone
 
 import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from backend.config import settings
@@ -581,3 +583,276 @@ async def update_bid_status(
     if not result.data:
         raise HTTPException(status_code=404, detail="Bid not found")
     return result.data[0]
+
+
+# ---------------------------------------------------------------------------
+# PDF (HTML) Generation
+# ---------------------------------------------------------------------------
+
+def _build_bid_html(bid: dict, business: dict, customer: dict) -> str:
+    """Build a professional, print-friendly HTML document for a bid."""
+    biz_name = business.get("business_name") or "Business"
+    biz_email = business.get("owner_email") or ""
+    biz_phone = business.get("phone") or ""
+    biz_city = business.get("city") or ""
+
+    cust_name = customer.get("name") or ""
+    cust_email = customer.get("email") or ""
+    cust_phone = customer.get("phone") or ""
+
+    title = bid.get("title") or "Bid"
+    description = bid.get("description") or ""
+    items = bid.get("items_json") or []
+    subtotal = bid.get("subtotal", 0)
+    tax = bid.get("tax", 0)
+    total = bid.get("total", 0)
+    terms = bid.get("terms") or ""
+    timeline = bid.get("timeline") or ""
+    warranty = bid.get("warranty") or ""
+    bid_status = bid.get("status") or "draft"
+    created_at = bid.get("created_at") or ""
+
+    # Format date
+    date_display = ""
+    if created_at:
+        try:
+            dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            date_display = dt.strftime("%B %d, %Y")
+        except Exception:
+            date_display = created_at[:10] if len(created_at) >= 10 else created_at
+
+    # Build line items rows
+    items_rows = ""
+    for i, item in enumerate(items, 1):
+        desc = item.get("description", "")
+        qty = item.get("quantity", 1)
+        unit = item.get("unit", "each")
+        unit_price = item.get("unit_price", 0)
+        line_total = item.get("total", 0)
+        items_rows += (
+            f"<tr>"
+            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;'>{i}</td>"
+            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;'>{desc}</td>"
+            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;'>{qty} {unit}</td>"
+            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;'>${unit_price:,.2f}</td>"
+            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;'>${line_total:,.2f}</td>"
+            f"</tr>"
+        )
+
+    # Build optional sections
+    terms_section = ""
+    if terms:
+        terms_section = (
+            f"<div style='margin-top:24px;'>"
+            f"<h3 style='font-size:14px;color:#374151;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.5px;'>Payment Terms</h3>"
+            f"<p style='margin:0;color:#4b5563;line-height:1.6;'>{terms}</p>"
+            f"</div>"
+        )
+    timeline_section = ""
+    if timeline:
+        timeline_section = (
+            f"<div style='margin-top:24px;'>"
+            f"<h3 style='font-size:14px;color:#374151;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.5px;'>Timeline</h3>"
+            f"<p style='margin:0;color:#4b5563;line-height:1.6;'>{timeline}</p>"
+            f"</div>"
+        )
+    warranty_section = ""
+    if warranty:
+        warranty_section = (
+            f"<div style='margin-top:24px;'>"
+            f"<h3 style='font-size:14px;color:#374151;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.5px;'>Warranty</h3>"
+            f"<p style='margin:0;color:#4b5563;line-height:1.6;'>{warranty}</p>"
+            f"</div>"
+        )
+
+    customer_block = ""
+    if cust_name or cust_email or cust_phone:
+        customer_block = (
+            f"<div>"
+            f"<h3 style='font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px 0;'>Prepared For</h3>"
+            f"<p style='margin:0;font-weight:600;color:#111827;'>{cust_name}</p>"
+            + (f"<p style='margin:2px 0;color:#4b5563;'>{cust_email}</p>" if cust_email else "")
+            + (f"<p style='margin:2px 0;color:#4b5563;'>{cust_phone}</p>" if cust_phone else "")
+            + "</div>"
+        )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title} — {biz_name}</title>
+<style>
+  @media print {{
+    body {{ margin: 0; padding: 0; }}
+    .no-print {{ display: none !important; }}
+    @page {{ margin: 0.75in; }}
+  }}
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; padding: 0; background: #f9fafb; }}
+</style>
+</head>
+<body>
+<div style="max-width:800px;margin:24px auto;background:#ffffff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);overflow:hidden;">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:32px 40px;color:#ffffff;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
+      <div>
+        <h1 style="margin:0;font-size:28px;font-weight:700;">{biz_name}</h1>
+        <p style="margin:4px 0 0 0;opacity:0.85;font-size:14px;">{biz_email}{(' | ' + biz_phone) if biz_phone else ''}{(' | ' + biz_city) if biz_city else ''}</p>
+      </div>
+      <div style="text-align:right;">
+        <span style="background:rgba(255,255,255,0.2);padding:4px 16px;border-radius:20px;font-size:13px;text-transform:uppercase;letter-spacing:1px;">{bid_status}</span>
+        <p style="margin:8px 0 0 0;font-size:13px;opacity:0.85;">{date_display}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div style="padding:32px 40px;">
+
+    <!-- Title & Description -->
+    <h2 style="margin:0 0 8px 0;font-size:22px;color:#1e3a5f;">{title}</h2>
+    {'<p style="margin:0 0 24px 0;color:#4b5563;line-height:1.6;">' + description + '</p>' if description else '<div style="margin-bottom:24px;"></div>'}
+
+    <!-- Customer Info -->
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px;padding:16px;background:#f3f4f6;border-radius:6px;">
+      {customer_block}
+    </div>
+
+    <!-- Line Items -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      <thead>
+        <tr style="background:#f9fafb;">
+          <th style="padding:10px 12px;text-align:left;font-size:12px;text-transform:uppercase;color:#6b7280;letter-spacing:0.5px;border-bottom:2px solid #e5e7eb;width:40px;">#</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;text-transform:uppercase;color:#6b7280;letter-spacing:0.5px;border-bottom:2px solid #e5e7eb;">Description</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;text-transform:uppercase;color:#6b7280;letter-spacing:0.5px;border-bottom:2px solid #e5e7eb;">Qty</th>
+          <th style="padding:10px 12px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;letter-spacing:0.5px;border-bottom:2px solid #e5e7eb;">Unit Price</th>
+          <th style="padding:10px 12px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;letter-spacing:0.5px;border-bottom:2px solid #e5e7eb;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items_rows}
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:32px;">
+      <div style="width:280px;">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;color:#4b5563;">
+          <span>Subtotal</span><span>${subtotal:,.2f}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;color:#4b5563;">
+          <span>Tax</span><span>${tax:,.2f}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;margin-top:4px;border-top:2px solid #1e3a5f;font-size:18px;font-weight:700;color:#1e3a5f;">
+          <span>Total</span><span>${total:,.2f}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terms / Timeline / Warranty -->
+    {terms_section}
+    {timeline_section}
+    {warranty_section}
+
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:16px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
+    <p style="margin:0;font-size:12px;color:#9ca3af;">Generated by {biz_name} via AgentNexLiFy</p>
+  </div>
+
+</div>
+
+<!-- Print button (hidden in print) -->
+<div class="no-print" style="text-align:center;padding:16px;">
+  <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:10px 32px;border-radius:6px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
+</div>
+
+</body>
+</html>"""
+    return html
+
+
+@router.post("/{tenant_id}/{bid_id}/pdf")
+async def generate_bid_pdf(
+    tenant_id: str,
+    bid_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Generate a branded HTML document for a bid that can be printed to PDF.
+
+    Returns an HTML page with professional styling and a print button.
+    The browser's print dialog can save as PDF.
+    """
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+
+    # Fetch the bid
+    try:
+        bid_result = (
+            db.table("bids")
+            .select("*")
+            .eq("id", bid_id)
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch bid %s for PDF generation", bid_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch bid")
+
+    if not bid_result.data:
+        raise HTTPException(status_code=404, detail="Bid not found")
+
+    bid = bid_result.data[0]
+
+    # Fetch business info
+    business: dict = {}
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("business_name, owner_email, phone, city")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if tenant_result.data:
+            business = tenant_result.data[0]
+    except Exception:
+        logger.warning("Could not fetch tenant info for bid PDF, tenant %s", tenant_id, exc_info=True)
+
+    # Fetch customer info if lead_id is set — leads table uses client_id
+    customer: dict = {}
+    lead_id = bid.get("lead_id")
+    if lead_id:
+        try:
+            lead_result = (
+                db.table("leads")
+                .select("name, email, phone")
+                .eq("id", lead_id)
+                .eq("client_id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            if lead_result.data:
+                customer = lead_result.data[0]
+        except Exception:
+            logger.warning("Could not fetch lead %s for bid PDF", lead_id, exc_info=True)
+
+    html = _build_bid_html(bid, business, customer)
+
+    # Save the URL pattern to the bid's pdf_url field
+    pdf_url = f"/api/v1/bids/{tenant_id}/{bid_id}/pdf"
+    try:
+        db.table("bids").update({"pdf_url": pdf_url}).eq("id", bid_id).eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.warning("Could not save pdf_url for bid %s", bid_id, exc_info=True)
+
+    return HTMLResponse(
+        content=html,
+        headers={"Content-Disposition": f'inline; filename="bid-{bid_id[:8]}.html"'},
+    )

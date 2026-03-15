@@ -1,11 +1,13 @@
-"""Client Portal endpoints — service records, portal tokens, and public portal view."""
+"""Client Portal endpoints — service records, portal tokens, photo upload, and public portal view."""
 
 import logging
 import secrets
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 
+from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
@@ -174,6 +176,100 @@ async def delete_service_record(
         raise HTTPException(status_code=404, detail="Service record not found")
 
 
+# ── Photo upload for service records ─────────────────────────
+
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+_MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+@router.post("/{tenant_id}/service-records/{record_id}/upload")
+async def upload_service_photo(
+    tenant_id: str,
+    record_id: str,
+    file: UploadFile,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Upload a photo for a service record.
+
+    Accepts image/jpeg, image/png, image/webp up to 10 MB.
+    Stores in Supabase Storage bucket 'service-photos'.
+    Appends the public URL to the service record's photos_json array.
+    """
+    _verify_tenant(claims, tenant_id)
+
+    # Validate file type
+    content_type = file.content_type or ""
+    if content_type not in _ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type not allowed: {content_type}. Accepted: JPEG, PNG, WebP.",
+        )
+
+    # Read file with size check
+    data = await file.read()
+    if len(data) > _MAX_PHOTO_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10 MB)")
+
+    db = get_supabase()
+
+    # Verify the service record exists and belongs to this tenant
+    try:
+        existing = (
+            db.table("service_records")
+            .select("id, photos_json")
+            .eq("id", record_id)
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch service record %s for photo upload", record_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch service record")
+
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Service record not found")
+
+    record = existing.data[0]
+    current_photos = record.get("photos_json") or []
+
+    # Generate unique path in Supabase Storage
+    ext = (file.filename or "photo.jpg").rsplit(".", 1)[-1][:10]
+    unique_name = f"{uuid.uuid4().hex[:12]}.{ext}"
+    path = f"{tenant_id}/{record_id}/{unique_name}"
+
+    try:
+        db.storage.from_("service-photos").upload(
+            path,
+            data,
+            file_options={"content-type": content_type},
+        )
+    except Exception:
+        logger.exception("Photo upload to storage failed for record %s", record_id)
+        raise HTTPException(status_code=500, detail="Photo upload failed")
+
+    # Build public URL
+    public_url = f"{settings.supabase_url}/storage/v1/object/public/service-photos/{path}"
+
+    # Append URL to photos_json array
+    updated_photos = current_photos + [public_url]
+    try:
+        result = (
+            db.table("service_records")
+            .update({"photos_json": updated_photos})
+            .eq("id", record_id)
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to update photos_json for record %s", record_id)
+        raise HTTPException(status_code=500, detail="Failed to update service record")
+
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to update service record")
+
+    return result.data[0]
+
+
 @router.post("/{tenant_id}/portal-link/{lead_id}")
 async def generate_portal_link(
     tenant_id: str,
@@ -297,24 +393,28 @@ async def get_portal_data(token: str, request: Request):
 
     service_records = records_result.data or []
 
-    # Check if booking is enabled for this tenant (rebook flag)
+    # Check if booking is enabled and fetch widget API key for rebook button
     rebook_enabled = False
+    widget_api_key = None
     try:
         wc_result = (
             db.table("widget_configs")
-            .select("booking_enabled")
+            .select("booking_enabled, api_key")
             .eq("tenant_id", tenant_id)
             .limit(1)
             .execute()
         )
         if wc_result.data:
             rebook_enabled = bool(wc_result.data[0].get("booking_enabled"))
+            widget_api_key = wc_result.data[0].get("api_key")
     except Exception:
-        logger.warning("Failed to check booking_enabled for tenant %s", tenant_id)
+        logger.warning("Failed to check widget config for tenant %s", tenant_id)
 
     return {
         "business": business,
         "customer": customer,
         "service_records": service_records,
         "rebook_enabled": rebook_enabled,
+        "widget_api_key": widget_api_key,
+        "api_base": "https://agentnexlify-production.up.railway.app",
     }

@@ -7,7 +7,7 @@ _daily_sms: dict[str, int] = {}
 _last_reset_date: str = ""
 
 # Plans with unlimited SMS
-_UNLIMITED_PLANS = {"growth", "professional", "enterprise"}
+_UNLIMITED_PLANS = {"growth", "professional", "autopilot", "enterprise"}
 FREE_DAILY_LIMIT = 50
 
 

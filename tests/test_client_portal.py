@@ -324,7 +324,7 @@ class TestPublicPortal:
             "tenants": [{"id": "tenant-001", "business_name": "Test Biz", "owner_email": "a@b.com", "industry": "auto", "city": "NYC"}],
             "leads": [{"id": "lead-001", "name": "Jane", "email": "jane@x.com", "phone": "555-1234"}],
             "service_records": [{"id": "sr-001", "title": "Oil Change"}],
-            "widget_configs": [{"booking_enabled": True}],
+            "widget_configs": [{"booking_enabled": True, "api_key": "wk_test123"}],
         }
 
         def mock_table(name):
@@ -351,6 +351,8 @@ class TestPublicPortal:
         assert data["customer"]["name"] == "Jane"
         assert len(data["service_records"]) == 1
         assert data["rebook_enabled"] is True
+        assert data["widget_api_key"] == "wk_test123"
+        assert data["api_base"] == "https://agentnexlify-production.up.railway.app"
 
     def test_portal_invalid_token(self, test_client):
         client, db_mock = test_client
@@ -372,7 +374,7 @@ class TestPublicPortal:
             "tenants": [{"id": "t1", "business_name": "Biz"}],
             "leads": [{"id": "l1", "name": "Bob"}],
             "service_records": [],
-            "widget_configs": [{"booking_enabled": False}],
+            "widget_configs": [{"booking_enabled": False, "api_key": "wk_disabled"}],
         }
 
         def mock_table(name):
@@ -394,4 +396,7 @@ class TestPublicPortal:
 
         resp = client.get("/api/v1/portal/portal/tok")
         assert resp.status_code == 200
-        assert resp.json()["rebook_enabled"] is False
+        body = resp.json()
+        assert body["rebook_enabled"] is False
+        assert body["widget_api_key"] == "wk_disabled"
+        assert body["api_base"] == "https://agentnexlify-production.up.railway.app"
