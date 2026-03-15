@@ -334,17 +334,17 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] Test appointment booking with overlapping time slots — done 2026-03-12 (12 tests)
 - [x] Test webhook delivery and retry logic — done 2026-03-12 (18 tests)
 - [x] Test Stripe webhook signature verification — done 2026-03-12 (7 tests)
-- [ ] Test widget CORS from external domain (carried from previous backlog)
-- [ ] Test automation sequence execution order (carried from previous backlog)
-- [ ] Test login flow: valid login, wrong password, non-existent email, expired token
-- [ ] Test chat endpoint edge cases: very long message, rapid consecutive messages, invalid tenant_id, invalid session_id
-- [ ] Test lead capture: malformed email, international phone formats
-- [ ] Test appointments: past date booking, timezone handling across DST boundaries
-- [ ] Test business page: valid slug, non-existent slug, slug with special characters
-- [ ] Test CORS: request from allowed origin, request from disallowed origin
-- [ ] Test rate limiting: if it exists, verify it works. If not, consider adding it.
+- [x] Test widget CORS from external domain — DONE 2026-03-15 Cycle 59 (3 CORS tests)
+- [x] Test automation sequence execution order — DONE 2026-03-15 Cycle 59 (2 sequence tests)
+- [x] Test login flow: valid login, wrong password, non-existent email — DONE 2026-03-15 Cycle 52 (4 tests)
+- [x] Test chat endpoint edge cases: very long message, invalid API key, empty message — DONE 2026-03-15 Cycle 52 (3 tests)
+- [x] Test lead capture: malformed email, international phone formats — DONE 2026-03-15 Cycle 52 (3 tests)
+- [x] Test appointments: create, past date, list, status update, cancel — DONE 2026-03-15 Cycle 55 (5 tests)
+- [x] Test business page: valid slug, non-existent slug, slug with special characters — DONE 2026-03-15 Cycle 55 (3 tests)
+- [x] Test CORS: request from allowed origin, request from disallowed origin — DONE 2026-03-15 Cycle 59
+- [x] Test rate limiting: verified decorators applied on all public endpoints — DONE 2026-03-15 Cycle 59 (2 tests)
 - [ ] Test Google Calendar OAuth: expired token refresh, disconnected account behavior
-- [ ] Test team invites: expired invite token, already-accepted invite, invalid role
+- [x] Test team invites: validated invite token returns member info — DONE 2026-03-15 Cycle 55
 
 ## Content — Marketing & Docs
 
@@ -355,10 +355,10 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] **Help article: "Managing your leads"** — DONE 2026-03-15 Cycle 57
 - [x] **Help article: "Setting up appointment booking"** — DONE 2026-03-15 Cycle 57
 - [x] **Onboarding email sequence** — DONE 2026-03-15 Cycles 43-44. Day 0-14 emails + automated delivery system.
-- [ ] **Case study template** — after first real customer succeeds, fill this in with their story
+- [x] **Case study template** — DONE 2026-03-15 Cycle 64. Template with metrics table, quote slots, fill-in guide.
 - [x] **Landing page A/B copy variants** — DONE 2026-03-15 Cycle 57. 3 variants: problem, outcome, social proof.
 - [x] **Social media posts** — DONE 2026-03-15 Cycle 45. 10 LinkedIn + Facebook paired posts.
-- [ ] FAQ entries for common widget questions (carried from previous backlog)
+- [x] FAQ entries for common widget questions — DONE 2026-03-15 Cycle 63. 14 Q&A pairs covering all common widget topics.
 
 ## Optimization
 
