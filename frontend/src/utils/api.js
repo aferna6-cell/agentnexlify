@@ -853,4 +853,88 @@ export function revokeMcpKey(tenantId, token) {
   return request(`/api/v1/auth/mcp-key/${tenantId}`, { method: "DELETE", token });
 }
 
+// --- Bids ---
+
+export function fetchBids(tenantId, token, { status } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  const qs = params.toString() ? `?${params}` : "";
+  return request(`/api/v1/bids/${tenantId}${qs}`, { token });
+}
+
+export function createBid(tenantId, token, data) {
+  return request(`/api/v1/bids/${tenantId}`, { method: "POST", token, body: data });
+}
+
+export function updateBid(tenantId, token, bidId, data) {
+  return request(`/api/v1/bids/${tenantId}/${bidId}`, { method: "PUT", token, body: data });
+}
+
+export function deleteBid(tenantId, token, bidId) {
+  return request(`/api/v1/bids/${tenantId}/${bidId}`, { method: "DELETE", token });
+}
+
+export function updateBidStatus(tenantId, token, bidId, status) {
+  return request(`/api/v1/bids/${tenantId}/${bidId}/status`, { method: "PUT", token, body: { status } });
+}
+
+export function fetchBidStats(tenantId, token) {
+  return request(`/api/v1/bids/${tenantId}/stats`, { token });
+}
+
+export function fetchBidTemplates(tenantId, token) {
+  return request(`/api/v1/bids/${tenantId}/templates`, { token });
+}
+
+export function createBidTemplate(tenantId, token, data) {
+  return request(`/api/v1/bids/${tenantId}/templates`, { method: "POST", token, body: data });
+}
+
+export function deleteBidTemplate(tenantId, token, templateId) {
+  return request(`/api/v1/bids/${tenantId}/templates/${templateId}`, { method: "DELETE", token });
+}
+
+export function aiGenerateBid(tenantId, token, jobDescription) {
+  return request(`/api/v1/bids/${tenantId}/ai-generate`, { method: "POST", token, body: { job_description: jobDescription } });
+}
+
+// --- Client Portal ---
+
+export function fetchServiceRecords(tenantId, token) {
+  return request(`/api/v1/portal/${tenantId}/service-records`, { token });
+}
+
+export function createServiceRecord(tenantId, token, data) {
+  return request(`/api/v1/portal/${tenantId}/service-records`, { method: "POST", token, body: data });
+}
+
+export function updateServiceRecord(tenantId, token, recordId, data) {
+  return request(`/api/v1/portal/${tenantId}/service-records/${recordId}`, { method: "PUT", token, body: data });
+}
+
+export function deleteServiceRecord(tenantId, token, recordId) {
+  return request(`/api/v1/portal/${tenantId}/service-records/${recordId}`, { method: "DELETE", token });
+}
+
+export function generatePortalLink(tenantId, token, leadId) {
+  return request(`/api/v1/portal/${tenantId}/portal-link/${leadId}`, { method: "POST", token });
+}
+
+// --- Calls ---
+
+export function fetchCalls(tenantId, token, { status } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  const qs = params.toString() ? `?${params}` : "";
+  return request(`/api/v1/calls/${tenantId}${qs}`, { token });
+}
+
+export function fetchCallDetail(tenantId, token, callId) {
+  return request(`/api/v1/calls/${tenantId}/${callId}`, { token });
+}
+
+export function fetchCallStats(tenantId, token) {
+  return request(`/api/v1/calls/${tenantId}/stats`, { token });
+}
+
 export { ApiError };

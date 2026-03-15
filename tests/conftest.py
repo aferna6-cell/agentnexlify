@@ -88,6 +88,17 @@ def mock_supabase():
         yield client
 
 
+@pytest.fixture(autouse=True)
+def _clear_widget_cache():
+    """Clear the widget module's in-memory cache between tests to prevent contamination."""
+    yield
+    try:
+        from backend.routers.widget import _cache
+        _cache.clear()
+    except Exception:
+        pass
+
+
 @pytest.fixture
 def mock_settings():
     """Patch settings with test values."""
