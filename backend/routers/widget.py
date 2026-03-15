@@ -8,6 +8,7 @@ import hmac
 import json
 import logging
 import re
+import time as _time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -107,19 +108,61 @@ PHONE_RE = re.compile(
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# In-memory TTL cache — reduces DB load on hot widget endpoints
+# ---------------------------------------------------------------------------
+
+_cache: dict[str, tuple[float, Any]] = {}
+_WIDGET_CACHE_TTL = 300  # 5 minutes for config data
+_CHAT_CACHE_TTL = 300    # 5 minutes for FAQ/hours/corrections
+
+
+def _get_cached(key: str, ttl: int = _WIDGET_CACHE_TTL) -> Any | None:
+    if key in _cache:
+        ts, data = _cache[key]
+        if _time.time() - ts < ttl:
+            return data
+        del _cache[key]
+    return None
+
+
+def _set_cache(key: str, data: Any) -> None:
+    if len(_cache) > 1000:
+        cutoff = _time.time() - _WIDGET_CACHE_TTL
+        expired = [k for k, (ts, _) in _cache.items() if ts < cutoff]
+        for k in expired:
+            del _cache[k]
+    _cache[key] = (_time.time(), data)
+
+
+def _invalidate_cache(prefix: str) -> None:
+    """Remove all cache entries matching a prefix."""
+    to_del = [k for k in _cache if k.startswith(prefix)]
+    for k in to_del:
+        del _cache[k]
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
 def _get_widget_config(api_key: str) -> dict[str, Any]:
+    cached = _get_cached(f"wc:{api_key}")
+    if cached is not None:
+        return cached
     db = get_supabase()
     result = db.table("widget_configs").select("*").eq("api_key", api_key).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Widget not found")
+    _set_cache(f"wc:{api_key}", result.data[0])
     return result.data[0]
 
 
 def _get_tenant(tenant_id: str) -> dict[str, Any]:
+    cached = _get_cached(f"t:{tenant_id}")
+    if cached is not None:
+        return cached
     db = get_supabase()
     result = db.table("tenants").select(
         "id, business_name, business_type, city, plan, plan_status, "
@@ -128,6 +171,7 @@ def _get_tenant(tenant_id: str) -> dict[str, Any]:
     ).eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
+    _set_cache(f"t:{tenant_id}", result.data[0])
     return result.data[0]
 
 
@@ -1372,60 +1416,78 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         messages[0]["role"] if messages else "NONE",
     )
 
-    # 6. Build system prompt with FAQ
+    # 6. Build system prompt with FAQ (cached per tenant, 5-min TTL)
+    tid = tenant["id"]
     db = get_supabase()
-    try:
-        faq_result = (
-            db.table("faq_entries")
-            .select("question, answer")
-            .eq("tenant_id", tenant["id"])
-            .eq("is_active", True)
-            .execute()
-        )
-        faq_data = faq_result.data or []
-    except Exception:
-        logger.warning("faq_entries query failed for tenant %s", tenant["id"], exc_info=True)
-        faq_data = []
 
-    # Load business hours for AI context
-    bh_data = None
-    try:
-        bh_result = (
-            db.table("business_hours")
-            .select("timezone, hours")
-            .eq("tenant_id", tenant["id"])
-            .limit(1)
-            .execute()
-        )
-        if bh_result.data:
-            bh_data = bh_result.data[0]
-    except Exception:
-        logger.warning("business_hours query failed for tenant %s", tenant["id"], exc_info=True)
+    faq_data = _get_cached(f"faq:{tid}", _CHAT_CACHE_TTL)
+    if faq_data is None:
+        try:
+            faq_result = (
+                db.table("faq_entries")
+                .select("question, answer")
+                .eq("tenant_id", tid)
+                .eq("is_active", True)
+                .execute()
+            )
+            faq_data = faq_result.data or []
+        except Exception:
+            logger.warning("faq_entries query failed for tenant %s", tid, exc_info=True)
+            faq_data = []
+        _set_cache(f"faq:{tid}", faq_data)
 
-    # Load AI corrections from owner feedback
-    corrections = []
-    try:
-        fb_result = (
-            db.table("ai_feedback")
-            .select("correction")
-            .eq("tenant_id", tenant["id"])
-            .eq("rating", "thumbs_down")
-            .not_.is_("correction", "null")
-            .order("created_at", desc=True)
-            .limit(20)
-            .execute()
-        )
-        corrections = fb_result.data or []
-    except Exception:
-        logger.warning("ai_feedback query failed for tenant %s", tenant["id"], exc_info=True)
+    # Load business hours for AI context (cached)
+    bh_cache_key = f"bh:{tid}"
+    bh_data = _get_cached(bh_cache_key, _CHAT_CACHE_TTL)
+    if bh_data is None:
+        try:
+            bh_result = (
+                db.table("business_hours")
+                .select("timezone, hours")
+                .eq("tenant_id", tid)
+                .limit(1)
+                .execute()
+            )
+            bh_data = bh_result.data[0] if bh_result.data else False
+        except Exception:
+            logger.warning("business_hours query failed for tenant %s", tid, exc_info=True)
+            bh_data = False
+        _set_cache(bh_cache_key, bh_data)
+    if bh_data is False:
+        bh_data = None
 
-    # Load crawled website content for AI knowledge
-    website_content = None
-    try:
-        from backend.services.website_crawler import get_crawled_content
-        website_content = get_crawled_content(tenant["id"])
-    except Exception:
-        logger.warning("website_content load failed for tenant %s", tenant["id"], exc_info=True)
+    # Load AI corrections from owner feedback (cached)
+    corrections = _get_cached(f"corr:{tid}", _CHAT_CACHE_TTL)
+    if corrections is None:
+        try:
+            fb_result = (
+                db.table("ai_feedback")
+                .select("correction")
+                .eq("tenant_id", tid)
+                .eq("rating", "thumbs_down")
+                .not_.is_("correction", "null")
+                .order("created_at", desc=True)
+                .limit(20)
+                .execute()
+            )
+            corrections = fb_result.data or []
+        except Exception:
+            logger.warning("ai_feedback query failed for tenant %s", tid, exc_info=True)
+            corrections = []
+        _set_cache(f"corr:{tid}", corrections)
+
+    # Load crawled website content for AI knowledge (cached)
+    website_content = _get_cached(f"wsc:{tid}", _CHAT_CACHE_TTL)
+    if website_content is None:
+        try:
+            from backend.services.website_crawler import get_crawled_content
+            website_content = get_crawled_content(tid) or False
+        except Exception:
+            logger.warning("website_content load failed for tenant %s", tid, exc_info=True)
+            website_content = False
+        _set_cache(f"wsc:{tid}", website_content)
+    if website_content is False:
+        website_content = None
 
     # Load menu items for restaurant tenants
     menu_items = None

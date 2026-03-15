@@ -41,6 +41,7 @@ export default function BusinessPage() {
 
     const script = document.createElement("script");
     script.id = "anx-biz-widget";
+    script.async = true;
     script.src = `${API_BASE}/widget/agentnexlify-widget.js`;
     script.setAttribute("data-api-key", biz.widget_api_key);
     script.setAttribute("data-brand-color", biz.widget_primary_color || "#00BFFF");

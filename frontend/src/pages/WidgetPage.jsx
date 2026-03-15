@@ -150,7 +150,7 @@ export default function WidgetPage() {
   };
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
-  const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${apiKey}" data-api-base="${apiBase}"></script>`;
+  const embedCode = `<script async src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${apiKey}" data-api-base="${apiBase}"></script>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode).then(() => {

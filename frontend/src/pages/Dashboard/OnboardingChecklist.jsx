@@ -241,7 +241,7 @@ export default function OnboardingChecklist({
   };
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
-  const embedCode = `<script src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${dashData?.widget_api_key || "your-api-key"}" data-api-base="${apiBase}"></script>`;
+  const embedCode = `<script async src="https://app.agentnexlify.com/widget/agentnexlify-widget.js" data-api-key="${dashData?.widget_api_key || "your-api-key"}" data-api-base="${apiBase}"></script>`;
 
   const handleCopyEmbed = () => {
     navigator.clipboard.writeText(embedCode).then(() => {
