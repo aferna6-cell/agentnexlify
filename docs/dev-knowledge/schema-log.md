@@ -99,7 +99,7 @@ Creates `ai_feedback` for per-message thumbs up/down ratings and optional correc
 ### 028 — Website crawl cache
 Adds `tenants.website_url` and creates `website_content` for cached crawl results (`pages_json`, `extracted_text`, `crawl_status`, `error_message`, `pages_found`, `crawled_at`). This supports Cloudflare-powered website scanning and prompt enrichment without re-crawling on every chat request.
 
-**Operational note:** Migrations 025-028 were added on 2026-03-12. Migration files do not auto-apply; confirm they were run in the Supabase SQL editor before relying on these schema changes in production.
+**Applied:** Migrations 025-032 applied on 2026-03-15 via Supabase MCP.
 
 ## Known Schema Gotchas
 
@@ -198,17 +198,17 @@ Creates `menu_items` table for restaurant menu management. Columns: tenant_id (F
 ### 030 — Orders (Restaurant)
 Creates `orders` table for restaurant order management. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL, nullable), session_id (TEXT), customer_name/phone/email (TEXT), items_json (JSONB NOT NULL), subtotal/tax/total (NUMERIC(10,2)), order_type (TEXT: 'pickup'/'delivery'), delivery_address (TEXT), status (TEXT DEFAULT 'new': new/confirmed/preparing/ready/delivered/cancelled), notes (TEXT), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status) and (tenant_id, created_at DESC). RLS enabled.
 
-**Operational note:** Migrations 029-030 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 ### 031 — Job Board (Jobs + Applications)
 Creates `jobs` table (tenant_id FK→tenants, title TEXT, description TEXT, pay_range TEXT, schedule TEXT, location TEXT, skills TEXT[], is_active BOOLEAN DEFAULT true, created_at, updated_at). Creates `job_applications` table (job_id FK→jobs, tenant_id FK→tenants, applicant_name TEXT, applicant_phone TEXT, message TEXT, status TEXT DEFAULT 'new': new/contacted/interviewed/hired/rejected, notes TEXT, created_at). Indexed on jobs(tenant_id, is_active), job_applications(job_id, status), job_applications(tenant_id, created_at DESC). RLS enabled on both tables.
 
-**Operational note:** Migration 031 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 ### 032 — Tenant Tag Definitions (AI Conversation Categorization)
 Creates `tenant_tag_definitions` table for customizable AI auto-categorization tags. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), tag_name (TEXT), tag_color (TEXT DEFAULT '#6b7280'), is_system (BOOLEAN DEFAULT false), is_enabled (BOOLEAN DEFAULT true), created_at (TIMESTAMPTZ). Unique constraint on (tenant_id, tag_name). Indexed on tenant_id. RLS enabled. Seeds 6 system tags (New Lead, Pricing Question, Complaint, Appointment Request, Urgent, Follow-up Needed) for all existing tenants via CROSS JOIN. New tenants get seeded on first API access via the backend.
 
-**Operational note:** Migration 032 created on 2026-03-13. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 ### 033 — Action Items (AI-Extracted Tasks)
 Creates `action_items` table for AI-extracted actionable items from conversations. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), conversation_id (FK→conversations, ON DELETE SET NULL, nullable), lead_id (FK→leads, ON DELETE SET NULL, nullable), description (TEXT NOT NULL), due_date (DATE, nullable), priority (TEXT CHECK: low/medium/high, DEFAULT 'medium'), status (TEXT CHECK: pending/done/dismissed, DEFAULT 'pending'), assigned_to (FK→team_members, ON DELETE SET NULL, nullable), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status), (tenant_id, due_date) for non-null, and conversation_id for non-null. RLS enabled.

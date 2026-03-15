@@ -572,6 +572,22 @@ def _extract_service_interest(messages: list[dict]) -> str | None:
     return interests[0] if interests else None
 
 
+def _build_conversation_summary(messages: list[dict[str, str]]) -> str | None:
+    """Build a brief summary of the conversation from user messages.
+    Returns a 1-2 sentence summary or None if too short."""
+    user_msgs = [m["content"] for m in messages if m["role"] == "user"]
+    if len(user_msgs) < 2:
+        return None
+    # Combine up to 500 chars of user messages into a summary
+    combined = " ".join(user_msgs)[:500]
+    # Simple extractive summary: first user message + last user message
+    first = user_msgs[0][:150].strip()
+    last = user_msgs[-1][:150].strip() if len(user_msgs) > 1 else ""
+    if last and last != first:
+        return f"{first} ... {last}"
+    return first if len(first) > 20 else None
+
+
 def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]:
     """Use Claude to extract auto-tags from conversation messages.
 
@@ -825,7 +841,7 @@ async def _capture_leads_from_session(
             try:
                 existing = (
                     db.table("leads")
-                    .select("id, name, phone")
+                    .select("id, name, phone, areas_of_interest, conversation_summary")
                     .eq("client_id", tenant_id)
                     .eq("email", combined["email"])
                     .limit(1)
@@ -845,8 +861,12 @@ async def _capture_leads_from_session(
                     updates["name"] = combined["name"]
                 if combined.get("phone") and not lead.get("phone"):
                     updates["phone"] = combined["phone"]
-                if combined.get("service_interest") and not lead.get("service_interest"):
-                    updates["service_interest"] = combined["service_interest"]
+                if combined.get("service_interest") and not lead.get("areas_of_interest"):
+                    updates["areas_of_interest"] = combined["service_interest"]
+                # Auto-update conversation summary
+                summary = _build_conversation_summary(messages)
+                if summary and not lead.get("conversation_summary"):
+                    updates["conversation_summary"] = summary
                 if updates:
                     db.table("leads").update(updates).eq("id", lead["id"]).execute()
                     log_activity(
@@ -884,7 +904,11 @@ async def _capture_leads_from_session(
             if combined.get(key):
                 lead_fields[key] = combined[key]
         if service_interest:
-            lead_fields["service_interest"] = service_interest
+            lead_fields["areas_of_interest"] = service_interest
+        # Auto-populate conversation summary
+        summary = _build_conversation_summary(messages)
+        if summary:
+            lead_fields["conversation_summary"] = summary
 
         # Only set conversation_id if it looks like a valid UUID
         try:
@@ -1626,7 +1650,7 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     if req.phone:
         fields["phone"] = req.phone
     if req.service:
-        fields["service_interest"] = req.service
+        fields["areas_of_interest"] = req.service
 
     if not fields:
         raise HTTPException(status_code=400, detail="No lead fields provided")
