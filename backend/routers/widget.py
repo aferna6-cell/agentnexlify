@@ -1532,10 +1532,11 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
     # Load active chat flow
     active_flow = None
+    active_flow_id = None
     try:
         flow_result = (
             db.table("chat_flows")
-            .select("flow_json")
+            .select("id, flow_json")
             .eq("tenant_id", tenant["id"])
             .eq("is_active", True)
             .limit(1)
@@ -1543,6 +1544,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         )
         if flow_result.data:
             active_flow = flow_result.data[0].get("flow_json")
+            active_flow_id = flow_result.data[0].get("id")
     except Exception:
         logger.warning("chat_flows query failed for tenant %s", tenant["id"], exc_info=True)
 
@@ -1553,6 +1555,25 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         flow_instructions = _build_flow_instructions(active_flow)
         if flow_instructions:
             system_prompt += flow_instructions
+
+    # Track flow usage in activity_log for new conversations
+    if active_flow_id and is_new:
+        try:
+            log_activity(
+                tenant_id=tenant["id"],
+                activity_type="flow_used",
+                description=f"Chat flow used in conversation",
+                metadata={
+                    "flow_id": active_flow_id,
+                    "session_id": req.session_id,
+                    "conversation_id": conversation_id,
+                },
+            )
+        except Exception:
+            logger.warning(
+                "Failed to log flow_used for tenant %s flow %s",
+                tenant["id"], active_flow_id, exc_info=True,
+            )
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
