@@ -30,6 +30,7 @@ const OrdersPage = lazy(() => import("../pages/OrdersPage"));
 const JobsPage = lazy(() => import("../pages/JobsPage"));
 const ActionItemsPage = lazy(() => import("../pages/ActionItemsPage"));
 const SnippetsPage = lazy(() => import("../pages/SnippetsPage"));
+const ChatFlowBuilderPage = lazy(() => import("../pages/ChatFlowBuilderPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -55,6 +56,7 @@ const pages = {
   jobs: JobsPage,
   action_items: ActionItemsPage,
   snippets: SnippetsPage,
+  chat_flows: ChatFlowBuilderPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {
