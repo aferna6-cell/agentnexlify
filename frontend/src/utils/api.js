@@ -843,4 +843,14 @@ export function handleLeadSuggestion(tenantId, token, suggestionId, action) {
   });
 }
 
+// --- MCP API Keys ---
+
+export function generateMcpKey(tenantId, token) {
+  return request(`/api/v1/auth/mcp-key/${tenantId}`, { method: "POST", token });
+}
+
+export function revokeMcpKey(tenantId, token) {
+  return request(`/api/v1/auth/mcp-key/${tenantId}`, { method: "DELETE", token });
+}
+
 export { ApiError };

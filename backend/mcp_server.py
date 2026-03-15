@@ -26,8 +26,23 @@ mcp = FastMCP(
 # --- Auth helper ---
 
 def _get_tenant_by_api_key(api_key: str) -> dict | None:
-    """Look up tenant by widget API key. Returns tenant dict or None."""
+    """Look up tenant by MCP API key or widget API key. Returns tenant dict or None."""
     db = get_supabase()
+
+    # Try MCP key first
+    if api_key.startswith("mcp_"):
+        mcp_result = (
+            db.table("tenants")
+            .select("id, business_name, owner_email, plan, business_type, mcp_enabled")
+            .eq("mcp_api_key", api_key)
+            .eq("mcp_enabled", True)
+            .limit(1)
+            .execute()
+        )
+        if mcp_result.data:
+            return mcp_result.data[0]
+
+    # Fall back to widget API key
     result = (
         db.table("widget_configs")
         .select("tenant_id")

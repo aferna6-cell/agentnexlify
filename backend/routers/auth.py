@@ -691,6 +691,42 @@ async def update_conversation_tags(
     return {"session_id": session_id, "tags": tags}
 
 
+# ── MCP API Keys ──────────────────────────────────────────
+
+
+@router.post("/mcp-key/{tenant_id}")
+async def generate_mcp_key(tenant_id: str, claims: dict = Depends(require_role("owner"))):
+    """Generate or regenerate an MCP API key for the tenant."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    import secrets as sec
+    mcp_key = f"mcp_{sec.token_urlsafe(32)}"
+
+    db = get_supabase()
+    result = (
+        db.table("tenants")
+        .update({"mcp_api_key": mcp_key, "mcp_enabled": True})
+        .eq("id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    return {"mcp_api_key": mcp_key}
+
+
+@router.delete("/mcp-key/{tenant_id}")
+async def revoke_mcp_key(tenant_id: str, claims: dict = Depends(require_role("owner"))):
+    """Revoke the MCP API key."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    db.table("tenants").update({"mcp_api_key": None, "mcp_enabled": False}).eq("id", tenant_id).execute()
+    return {"success": True}
+
+
 # ── Tenant Settings ──────────────────────────────────────────
 
 
