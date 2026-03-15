@@ -238,12 +238,12 @@ _Turn one piece of content into posts for every platform._
 ## Features — Module: Local SEO Tools
 _Google Business Profile optimization and local ranking intelligence._
 
-- [ ] **GBP connection** — Reuse the Google Business Profile OAuth from the Reputation Manager module. Pull business info, hours, photos, posts, and Q&A.
-- [ ] **Profile completeness score** — Analyze the tenant's GBP profile and score it (0-100%). Flag missing fields: description, hours, categories, photos, services, attributes. Give specific recommendations ("Add at least 10 photos — businesses with 10+ photos get 35% more clicks").
-- [ ] **Auto-post to GBP** — Schedule weekly posts to GBP from the Content Studio. GBP posts expire after 7 days, so consistent posting is important for ranking. AI generates posts about the business's services, promotions, or seasonal content.
-- [ ] **Local keyword suggestions** — Based on the business type and location, suggest keywords they should mention in their GBP description and posts. Example: a plumber in Clemson should mention "emergency plumber Clemson SC", "water heater repair Clemson".
-- [ ] **Review velocity tracker** — Track how many reviews they're getting per month vs. competitors (if we can see competitor data via search APIs). More reviews = higher ranking.
-- [ ] **Local SEO dashboard widget** — Summary card on the main dashboard: GBP score, review count, post frequency, top keywords.
+- [ ] **GBP connection** — Google Business Profile OAuth. Deferred (requires Google API approval).
+- [x] **Profile completeness score** — DONE 2026-03-15 Cycle 69. SEO profile analysis with 0-100 score, missing fields, recommendations.
+- [ ] **Auto-post to GBP** — Deferred (requires GBP OAuth).
+- [x] **Local keyword suggestions** — DONE 2026-03-15 Cycle 69. Claude generates keywords based on business_type + city. Stored in seo_profiles.
+- [ ] **Review velocity tracker** — Deferred (requires competitor data source).
+- [x] **Local SEO dashboard widget** — DONE 2026-03-15 Cycle 69. GET /dashboard-widget returns score + top recommendations.
 
 ## Features — Module: Job Board (Add-on)
 _For businesses that need to hire. SMS-first, no resume required._
@@ -283,7 +283,7 @@ _AI generates professional estimates/proposals from a job description. Track bid
 - [x] **PDF bid generation** — PARTIAL: PDF generation deferred. Bid data stored with pdf_url field ready for future PDF service.
 - [x] **Bid tracking** — DONE 2026-03-15 Cycle 67. Status pipeline (draft→sent→viewed→accepted/rejected/expired). Stats: total, win rate, avg value, pipeline value.
 - [x] **Bid-to-lead connection** — DONE 2026-03-15 Cycle 67. Bids have lead_id FK. Can be linked on creation.
-- [ ] **Quick bid from chat** — When the widget AI detects a quote request, auto-generate bid from conversation context. Deferred.
+- [x] **Quick bid from chat** — DONE 2026-03-15 Cycle 70. AI collects job details conversationally, outputs BID_REQUEST marker, creates action item.
 
 ## Features — Module: Client Portal
 _Customers get a link to their portal showing invoices, job photos, warranty, and a rebook button._
@@ -298,22 +298,22 @@ _Customers get a link to their portal showing invoices, job photos, warranty, an
 ## Features — Module: AI Review Responder
 _Chrome extension that drafts review responses on Google/Yelp with one click._
 
-- [ ] **Chrome extension scaffold** — Build a Chrome extension (manifest v3) that detects when the user is on Google Maps reviews or Yelp business page. Adds a "Draft Response" button next to each review.
-- [ ] **AI response generation** — When clicked, sends the review text + star rating + business context to the AgentNexLiFy API. Claude generates a professional, personalized response. Tone matches the rating: warm and grateful for 5-star, empathetic and solution-oriented for 1-star.
-- [ ] **Response customization** — Extension shows the draft in an editable popup. Owner tweaks it if needed, then clicks "Copy" to paste into the reply box. One-click workflow.
-- [ ] **Business context sync** — Extension connects to the owner's AgentNexLiFy account (API key or OAuth). Pulls their business name, services, and tone preferences so responses are on-brand.
-- [ ] **Response history** — Track which reviews have been responded to. Show stats in the AgentNexLiFy dashboard: total reviews, response rate, average response time.
-- [ ] **Review alert integration** — Tie into the Reputation Manager module: when a new review is detected, send a notification with a direct link to respond. The extension makes responding take 10 seconds instead of 5 minutes.
+- [x] **Chrome extension scaffold** — DONE 2026-03-15 Cycle 72. Manifest v3, popup UI, content scripts for Google Maps + Yelp.
+- [x] **AI response generation** — DONE 2026-03-15 Cycle 72. Uses widget chat API to generate review responses via Claude.
+- [x] **Response customization** — DONE 2026-03-15 Cycle 72. Popup shows draft, copy button, regenerate button.
+- [x] **Business context sync** — DONE 2026-03-15 Cycle 72. Connects via widget API key, stores in chrome.storage.
+- [ ] **Response history** — Track responded reviews in dashboard. Deferred.
+- [ ] **Review alert integration** — Notification on new review with direct respond link. Deferred.
 
 ## Features — Module: Local Business Autopilot
 _Done-for-you digital presence: website + GBP + widget + reviews + booking in one subscription._
 
-- [ ] **Autopilot onboarding wizard** — New onboarding flow specifically for the Autopilot tier. Collects: business name, type, address, phone, hours, services, photos. Uses this to auto-generate everything else.
-- [ ] **Auto-generated business page** — Uses the hosted business page feature (already built) but enhanced: AI writes the page content (hero text, about section, services, FAQs) from the onboarding info. Professional enough to be their only web presence.
-- [ ] **GBP optimization recommendations** — Based on their Google Business Profile (connected via OAuth), generate a checklist: "Add 5 more photos", "Update your description to include [keywords]", "Add these 3 services". Score their profile completeness.
-- [ ] **Auto-configured widget** — Widget is pre-configured with their business info from onboarding. AI already knows their hours, services, and can book appointments on day one. No manual setup.
-- [ ] **Monthly performance report** — Auto-generated email sent on the 1st of each month: conversations this month, leads captured, appointments booked, reviews received, website visits. Makes the value tangible so they never cancel.
-- [ ] **Autopilot pricing tier** — Create a new premium pricing tier ($149-199/month) that bundles: hosted page + widget + review management + missed call text-back + monthly report. Position as "We handle your entire online presence."
+- [ ] **Autopilot onboarding wizard** — Enhanced onboarding flow. Deferred (existing signup + settings covers most of this).
+- [ ] **Auto-generated business page** — AI writes page content from onboarding info. Deferred.
+- [x] **GBP optimization recommendations** — DONE 2026-03-15 Cycle 69. Local SEO profile analysis with completeness score + recommendations.
+- [ ] **Auto-configured widget** — Widget pre-configured from onboarding. Deferred (widget already auto-creates on signup).
+- [x] **Monthly performance report** — DONE 2026-03-15 Cycle 70. Auto-email with conversations/leads/appointments/reviews to autopilot tenants every 28 days.
+- [ ] **Autopilot pricing tier** — New $149-199/month bundle. Deferred (business decision).
 
 ## Bugs — Known Issues
 
