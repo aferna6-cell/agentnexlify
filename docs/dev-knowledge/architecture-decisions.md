@@ -261,4 +261,29 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** Onboarding drip emails use time-window queries on `tenants.created_at` (e.g., created 23-26 hours ago → Day 1 email). Deduplication via activity_log entries.
 **Why:** Event-driven would require a new event system or Stripe-style webhook pipeline. Time-window is simple and runs in the existing automation loop. The 3-hour window (e.g., 23-26h) tolerates clock drift and loop intervals. activity_log dedup prevents re-sends across worker restarts.
 
+### MCP server: widget API key auth, not separate tokens (v1)
+**Date:** 2026-03-15
+**Decision:** The MCP server accepts both widget API keys (anx_*) and dedicated MCP keys (mcp_*). V1 launched with widget keys for simplicity; dedicated MCP keys were added in the same session.
+**Why:** Shipping fast with existing auth was more important than perfect security. Widget keys are already per-tenant and rate-limited. MCP keys add a second auth path with explicit opt-in (mcp_enabled flag).
+
+### AI voice handler: Twilio Gather/Say loop, not Media Streams
+**Date:** 2026-03-15
+**Decision:** The AI phone answering service uses Twilio's `<Gather input="speech">` → `<Say>` loop (3 rounds max) rather than Twilio Media Streams for real-time bidirectional audio.
+**Why:** Media Streams requires WebSocket handling, audio chunking, and a streaming-capable AI model. The Gather/Say approach works with standard HTTP webhooks and the existing sync Claude API. Latency is higher (~3-5s per turn) but acceptable for v1. Can upgrade to Media Streams + streaming Claude in a future iteration.
+
+### PDF bids: HTML invoice, not weasyprint/reportlab
+**Date:** 2026-03-15
+**Decision:** Bid PDFs are generated as styled HTML documents with print-friendly CSS, served with a download content-disposition header. The browser's "Print to PDF" handles the actual PDF creation.
+**Why:** Adding weasyprint or reportlab as dependencies would increase Docker image size by 100MB+ and require system-level packages (cairo, pango). The HTML approach is zero-dependency, looks professional, and lets the user customize before printing. Can add server-side PDF generation later if needed.
+
+### GBP OAuth: scaffold built, awaiting credentials
+**Date:** 2026-03-15
+**Decision:** The Google Business Profile OAuth flow is fully implemented (auth URL generation, callback token exchange, profile fetch, post scaffold) but non-functional until Google API credentials are configured.
+**Why:** Building the code now means the feature is "one config change away" from working. When Google API approval comes through, we just add the client_id and client_secret to env vars — no code changes needed.
+
+### Background automation: 9 tasks in one loop, staggered workers
+**Date:** 2026-03-15
+**Decision:** All 9 background automation tasks (sequences, reminders, reviews, onboarding, monthly reports, portal links, missed calls, review alerts, no-response) run in a single asyncio loop with 60-second intervals and 0-30s random worker stagger.
+**Why:** Simple to operate (one loop, one log stream), each task has its own try/except so failures are isolated, and the stagger reduces duplicate execution across 4 Railway workers. Individual tasks are idempotent (dedup checks). If any task becomes too slow, it can be extracted to its own loop or Railway cron job.
+
 _Add new decisions when significant architectural choices are made._
