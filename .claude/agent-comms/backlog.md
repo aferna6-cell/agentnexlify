@@ -131,7 +131,7 @@ _Allow business owners to connect AgentNexLiFy to Claude or ChatGPT via MCP so t
 - [x] **MCP server scaffold** — DONE 2026-03-15 Cycle 54. backend/mcp_server.py using FastMCP SDK. Auth via widget API key. Run standalone or mount.
 - [x] **MCP tool definitions** — DONE 2026-03-15 Cycle 54. 6 tools: list_recent_leads, list_today_appointments, get_unread_conversations, get_action_items, get_analytics_summary, reply_to_conversation.
 - [x] **MCP setup guide** — DONE 2026-03-15 Cycle 58. MCPSetupPage with Claude Desktop config, API key copy, tool list, example prompts.
-- [ ] **MCP authentication** — Generate per-tenant MCP API keys (separate from widget API keys). Rate limited. Read-only by default, write access opt-in.
+- [x] **MCP authentication** — DONE 2026-03-15 Cycle 65. Migration 041 adds mcp_api_key + mcp_enabled. POST/DELETE /mcp-key endpoints. MCP server validates mcp_ keys.
 
 ---
 
