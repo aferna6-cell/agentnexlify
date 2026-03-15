@@ -1081,6 +1081,106 @@ async def send_monthly_reports() -> int:
     return sent
 
 
+async def send_portal_links() -> int:
+    """Send portal links to customers after job completion.
+
+    When an appointment is marked 'completed' and the lead has a portal token,
+    auto-send an email with the portal link. Tracks delivery via activity_log.
+    """
+    db = get_supabase()
+    sent = 0
+
+    try:
+        # Find completed appointments without portal link sent
+        appts = (
+            db.table("appointments")
+            .select("id, tenant_id, lead_id, customer_name, customer_email")
+            .eq("status", "completed")
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_portal_links: failed to query completed appointments")
+        return 0
+
+    for appt in appts.data or []:
+        lead_id = appt.get("lead_id")
+        customer_email = appt.get("customer_email")
+        if not lead_id or not customer_email:
+            continue
+
+        tenant_id = appt["tenant_id"]
+        activity_key = f"portal_link_sent_{appt['id']}"
+
+        # Check if already sent
+        try:
+            existing = (
+                db.table("activity_log")
+                .select("id", count="exact")
+                .eq("tenant_id", tenant_id)
+                .eq("activity_type", "portal_link_sent")
+                .eq("description", activity_key)
+                .limit(1)
+                .execute()
+            )
+            if existing.count and existing.count > 0:
+                continue
+        except Exception:
+            continue
+
+        # Check if portal token exists
+        try:
+            tok_result = (
+                db.table("portal_tokens")
+                .select("token")
+                .eq("tenant_id", tenant_id)
+                .eq("lead_id", lead_id)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            continue
+
+        if not tok_result.data:
+            continue
+
+        token = tok_result.data[0]["token"]
+        portal_url = f"https://agentnexlify.vercel.app/client/{token}"
+
+        # Get business name
+        try:
+            t_result = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+            biz_name = t_result.data[0]["business_name"] if t_result.data else "Our Team"
+        except Exception:
+            biz_name = "Our Team"
+
+        customer_name = appt.get("customer_name") or "there"
+
+        subject = f"Your service details from {biz_name}"
+        body = (
+            f"<h2>Hi {customer_name},</h2>"
+            f"<p>Thank you for choosing <strong>{biz_name}</strong>!</p>"
+            f"<p>You can view your service details, documents, and book again anytime:</p>"
+            f"<p style='text-align:center;margin:20px 0;'>"
+            f"<a href='{portal_url}' style='background:#3b82f6;color:#fff;padding:12px 24px;"
+            f"border-radius:6px;text-decoration:none;font-weight:600;'>View Your Portal</a></p>"
+            f"<p>Best,<br>The {biz_name} Team</p>"
+        )
+
+        try:
+            result = await send_email(to=customer_email, subject=subject, body_html=body, tenant_id=tenant_id)
+            if result.get("success"):
+                sent += 1
+                # Track delivery
+                from backend.services.activity import log_activity
+                log_activity(tenant_id=tenant_id, activity_type="portal_link_sent", description=activity_key)
+                logger.info("Sent portal link to %s for appointment %s", customer_email, appt["id"])
+        except Exception:
+            logger.exception("Failed to send portal link for appointment %s", appt["id"])
+
+    return sent
+
+
 async def send_onboarding_emails() -> int:
     """Send onboarding drip emails to tenants based on their signup date.
 

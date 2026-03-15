@@ -1387,6 +1387,95 @@ async def _process_order_from_chat(
 
 
 # ---------------------------------------------------------------------------
+# Bid request extraction from chat (contractor quick-bid via chat)
+# ---------------------------------------------------------------------------
+
+BID_REQUEST_RE = re.compile(r"<!--BID_REQUEST:(.*?)-->", re.DOTALL)
+
+
+def _extract_bid_request_from_response(response_text: str) -> dict | None:
+    """Extract structured bid request JSON from AI response, if present."""
+    match = BID_REQUEST_RE.search(response_text)
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(1).strip())
+    except (json.JSONDecodeError, ValueError):
+        logger.warning("bid_extract: found BID_REQUEST marker but JSON parse failed")
+        return None
+
+
+def _strip_bid_request_from_response(response_text: str) -> str:
+    """Remove the BID_REQUEST marker from the response shown to the user."""
+    return BID_REQUEST_RE.sub("", response_text).rstrip()
+
+
+def _process_bid_request_from_chat(
+    tenant_id: str, session_id: str, bid_data: dict,
+) -> None:
+    """Log a bid request as a high-priority action item for the business owner."""
+    db = get_supabase()
+
+    scope = bid_data.get("scope", "")
+    customer_name = bid_data.get("customer_name", "Unknown")
+    customer_email = bid_data.get("customer_email", "")
+    customer_phone = bid_data.get("customer_phone", "")
+    timeline = bid_data.get("timeline", "")
+    location = bid_data.get("location", "")
+    budget = bid_data.get("budget", "")
+
+    # Build a readable description
+    parts = [f"Bid request from {customer_name}"]
+    if scope:
+        parts.append(f"Scope: {scope}")
+    if timeline:
+        parts.append(f"Timeline: {timeline}")
+    if location:
+        parts.append(f"Location: {location}")
+    if budget:
+        parts.append(f"Budget: {budget}")
+    if customer_email:
+        parts.append(f"Email: {customer_email}")
+    if customer_phone:
+        parts.append(f"Phone: {customer_phone}")
+    description = " | ".join(parts)
+
+    # Find the conversation_id for this session
+    conversation_id = None
+    try:
+        conv_result = (
+            db.table("conversations")
+            .select("id")
+            .eq("tenant_id", tenant_id)
+            .eq("session_id", session_id)
+            .limit(1)
+            .execute()
+        )
+        if conv_result.data:
+            conversation_id = conv_result.data[0]["id"]
+    except Exception:
+        logger.warning("bid_request: failed to find conversation for session %s", session_id, exc_info=True)
+
+    try:
+        db.table("action_items").insert({
+            "tenant_id": tenant_id,
+            "conversation_id": conversation_id,
+            "description": description[:1000],
+            "priority": "high",
+            "status": "open",
+        }).execute()
+        logger.info(
+            "bid_request: logged action item for tenant=%s session=%s customer=%s",
+            tenant_id, session_id, customer_name,
+        )
+    except Exception:
+        logger.exception(
+            "bid_request: failed to insert action_item for tenant=%s session=%s",
+            tenant_id, session_id,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -1563,6 +1652,23 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("jobs query failed for tenant %s", tenant["id"], exc_info=True)
 
+    # Load bid templates (cached) — enables quote/bid collection in chat
+    bid_templates = _get_cached(f"bidtpl:{tid}", _CHAT_CACHE_TTL)
+    if bid_templates is None:
+        try:
+            bt_result = (
+                db.table("bid_templates")
+                .select("name, description")
+                .eq("tenant_id", tid)
+                .limit(20)
+                .execute()
+            )
+            bid_templates = bt_result.data if bt_result.data else []
+        except Exception:
+            logger.warning("bid_templates query failed for tenant %s", tid, exc_info=True)
+            bid_templates = []
+        _set_cache(f"bidtpl:{tid}", bid_templates)
+
     # Load active chat flow
     active_flow = None
     active_flow_id = None
@@ -1581,7 +1687,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("chat_flows query failed for tenant %s", tenant["id"], exc_info=True)
 
-    system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections, website_content, menu_items, job_listings)
+    system_prompt = _build_system_prompt(
+        tenant, faq_data, bh_data, corrections, website_content,
+        menu_items, job_listings, bid_templates=bid_templates or None,
+    )
 
     # Inject active flow instructions into system prompt
     if active_flow and active_flow.get("nodes"):
@@ -1662,6 +1771,14 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         assistant_text = _strip_order_json_from_response(assistant_text)
         background_tasks.add_task(
             _process_order_from_chat, tenant["id"], req.session_id, order_data,
+        )
+
+    # 9b. Extract bid request from AI response (contractor quick-bid flow)
+    bid_request_data = _extract_bid_request_from_response(assistant_text)
+    if bid_request_data:
+        assistant_text = _strip_bid_request_from_response(assistant_text)
+        background_tasks.add_task(
+            _process_bid_request_from_chat, tenant["id"], req.session_id, bid_request_data,
         )
 
     # 10. Save user + assistant messages to chat_messages table
