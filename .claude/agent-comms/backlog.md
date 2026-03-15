@@ -321,10 +321,10 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 
 - [x] Widget not capturing phone numbers with country codes (international format) — fixed 2026-03-12
 - [x] Dashboard analytics may show wrong timezone for appointment times — fixed 2026-03-12
-- [ ] Test signup with an email that already exists — does it show a helpful error or crash?
-- [ ] Test what happens when Claude API is slow or down — does the widget hang or show an error?
-- [ ] Test what happens when Supabase is paused (free tier) — does the app show a helpful error or just break?
-- [ ] Verify automation sequence execution runs on a schedule — the engine exists but needs a scheduled job runner (cron or Railway cron) to call process_pending_steps()
+- [x] Test signup with an email that already exists — NOT A BUG, returns 409 correctly (investigated 2026-03-15)
+- [x] Test what happens when Claude API is slow or down — FIXED: added 30s timeout to all 10 Anthropic calls (2026-03-15 Cycle 52)
+- [x] Test what happens when Supabase is paused — PARTIALLY FIXED: health check now returns "degraded" (2026-03-15 Cycle 52)
+- [x] Verify automation sequence execution runs on a schedule — NOT A BUG, runs correctly as asyncio task in main.py (confirmed 2026-03-15)
 
 ## Tests — Coverage Gaps
 
@@ -350,19 +350,14 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 
 - [x] Welcome email for new signups — done 2026-03-12
 - [x] "How to embed the widget" help article — done 2026-03-12
-- [ ] **Help article: "How to configure your AI assistant"** — step-by-step guide for adding FAQs, business info, and training the AI
-- [ ] **Help article: "Understanding your analytics dashboard"** — what each metric means
+- [x] **Help article: "How to configure your AI assistant"** — DONE 2026-03-15 Cycle 42
+- [x] **Help article: "Understanding your analytics dashboard"** — DONE 2026-03-15 Cycle 42
 - [ ] **Help article: "Managing your leads"** — how to use the pipeline, export, follow up
 - [ ] **Help article: "Setting up appointment booking"** — how the calendar integration works, business hours, Google Calendar sync
-- [ ] **Onboarding email sequence:**
-  - Day 0: Welcome + getting started (already written)
-  - Day 1: "Configure your AI" — prompt them to add business info and FAQs
-  - Day 3: "Your first conversation" — tips for getting the most out of the widget
-  - Day 7: "How's it going?" — check in, link to upgrade if they're getting value
-  - Day 14: "You're missing out" — highlight features on paid tiers
+- [x] **Onboarding email sequence** — DONE 2026-03-15 Cycles 43-44. Day 0-14 emails + automated delivery system.
 - [ ] **Case study template** — after first real customer succeeds, fill this in with their story
 - [ ] **Landing page A/B copy variants** — 3 different hero headlines to test
-- [ ] **Social media posts** — 10 posts for LinkedIn and Facebook targeting small business owners. Focus on pain points (missed leads, after-hours inquiries, no-shows) not features.
+- [x] **Social media posts** — DONE 2026-03-15 Cycle 45. 10 LinkedIn + Facebook paired posts.
 - [ ] FAQ entries for common widget questions (carried from previous backlog)
 
 ## Optimization

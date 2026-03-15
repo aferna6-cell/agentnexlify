@@ -291,4 +291,34 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Anthropic client default timeout blocks workers for 30 minutes
+**Date:** 2026-03-15
+**Symptom:** Widget chat hangs indefinitely when Claude API is slow/degraded. Workers become unresponsive.
+**Root Cause:** The Anthropic Python SDK defaults to 600s read timeout with 2 retries (3 attempts). A single slow request could block a worker thread for up to 30 minutes. With 4 workers, 4 concurrent slow requests = entire backend unresponsive.
+**Fix:** Added `timeout=30.0` to all 10 `anthropic.Anthropic()` calls across 8 files.
+**Files Changed:** widget.py, content.py, reviews.py, jobs.py, snippets.py, menu.py, automation_engine.py
+**Prevention:** Always set explicit timeout when creating Anthropic clients. Never rely on SDK defaults for production code.
+
+---
+
+### Health check always returns "ok" even when database is down
+**Date:** 2026-03-15
+**Symptom:** Monitoring shows "ok" but entire application returns 500 errors on every request.
+**Root Cause:** `/health` endpoint checked Supabase connectivity but always returned `status: "ok"` regardless of the result.
+**Fix:** Returns `status: "degraded"` when Supabase is unreachable.
+**Files Changed:** backend/main.py
+**Prevention:** Health check status must reflect actual service health. If any critical dependency is down, status should not be "ok".
+
+---
+
+### leads.service_interest column doesn't exist — areas_of_interest is correct
+**Date:** 2026-03-15
+**Symptom:** Lead service interest never saved; Supabase errors silently swallowed.
+**Root Cause:** Code referenced `service_interest` column but live DB has `areas_of_interest` (schema drift from early development). The code worked because errors were caught and silently ignored.
+**Fix:** Updated all references in widget.py to use `areas_of_interest`. Fixed lead dedup query to include `areas_of_interest` and `conversation_summary`.
+**Files Changed:** backend/routers/widget.py
+**Prevention:** Always verify column names against live schema before writing queries. CLAUDE.md now documents the correct column name.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
