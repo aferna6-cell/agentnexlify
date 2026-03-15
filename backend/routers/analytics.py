@@ -619,3 +619,182 @@ async def get_response_time_analytics(
         "by_day": daily,
         "outcomes": dict(outcomes),
     }
+
+
+# ------------------------------------------------------------------
+# 6. Missed opportunity detection
+# ------------------------------------------------------------------
+
+# Keywords that signal pricing interest (case-insensitive matching)
+_PRICING_KEYWORDS = [
+    "price", "pricing", "cost", "costs", "quote", "estimate",
+    "how much", "rate", "rates", "fee", "fees", "charge", "charges",
+    "budget", "affordable", "expensive", "cheap", "discount",
+]
+
+
+@router.get("/{tenant_id}/missed-opportunities")
+async def get_missed_opportunities(
+    tenant_id: str,
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Detect conversations that represent missed business opportunities.
+
+    A conversation is flagged as a missed opportunity if:
+    - The last message is from the user (no response given)
+    - The conversation has fewer than 3 total messages (visitor abandoned)
+    - A user message mentions pricing keywords but no appointment was booked
+    """
+    _check_tenant(claims, tenant_id)
+
+    cache_key = f"missed_opps:{tenant_id}:{period}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    days = _period_to_days(period)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    db = get_supabase()
+
+    # --- Batch query 1: All chat messages in the period ---
+    try:
+        msgs_res = (
+            db.table("chat_messages")
+            .select("session_id, role, content, created_at")
+            .eq("tenant_id", tenant_id)
+            .gte("created_at", start)
+            .lt("created_at", now_iso)
+            .order("created_at")
+            .limit(_QUERY_LIMIT)
+            .execute()
+        )
+        all_messages = msgs_res.data or []
+    except Exception:
+        logger.warning("missed-opportunities: failed to fetch chat_messages for %s", tenant_id, exc_info=True)
+        return {
+            "total_missed": 0,
+            "missed_conversations": [],
+            "breakdown": {"no_response": 0, "abandoned": 0, "pricing_no_booking": 0},
+        }
+
+    if not all_messages:
+        result = {
+            "total_missed": 0,
+            "missed_conversations": [],
+            "breakdown": {"no_response": 0, "abandoned": 0, "pricing_no_booking": 0},
+        }
+        _set_cache(cache_key, result)
+        return result
+
+    # Group messages by session_id, preserving order
+    sessions: dict[str, list[dict]] = defaultdict(list)
+    for msg in all_messages:
+        sessions[msg["session_id"]].append(msg)
+
+    session_ids = list(sessions.keys())
+
+    # --- Batch query 2: conversations table for session_id -> lead_id mapping ---
+    lead_ids_by_session: dict[str, str | None] = {}
+    try:
+        # Query in chunks to avoid URL length limits
+        chunk_size = 200
+        for i in range(0, len(session_ids), chunk_size):
+            chunk = session_ids[i : i + chunk_size]
+            convos_res = (
+                db.table("conversations")
+                .select("session_id, lead_id")
+                .eq("tenant_id", tenant_id)
+                .in_("session_id", chunk)
+                .execute()
+            )
+            for row in convos_res.data or []:
+                lead_ids_by_session[row["session_id"]] = row.get("lead_id")
+    except Exception:
+        logger.warning("missed-opportunities: failed to fetch conversations for %s", tenant_id, exc_info=True)
+        # Continue without lead mapping — pricing_no_booking won't fire but other checks still work
+
+    # --- Batch query 3: appointments for leads that have bookings ---
+    all_lead_ids = [lid for lid in lead_ids_by_session.values() if lid]
+    booked_lead_ids: set[str] = set()
+    if all_lead_ids:
+        try:
+            chunk_size = 200
+            for i in range(0, len(all_lead_ids), chunk_size):
+                chunk = all_lead_ids[i : i + chunk_size]
+                appts_res = (
+                    db.table("appointments")
+                    .select("lead_id")
+                    .eq("tenant_id", tenant_id)
+                    .in_("lead_id", chunk)
+                    .neq("status", "cancelled")
+                    .execute()
+                )
+                for row in appts_res.data or []:
+                    if row.get("lead_id"):
+                        booked_lead_ids.add(row["lead_id"])
+        except Exception:
+            logger.warning("missed-opportunities: failed to fetch appointments for %s", tenant_id, exc_info=True)
+            # Continue — pricing_no_booking just won't detect bookings
+
+    # --- Evaluate each session for missed opportunity signals ---
+    missed_conversations: list[dict] = []
+    breakdown = {"no_response": 0, "abandoned": 0, "pricing_no_booking": 0}
+
+    for session_id, messages in sessions.items():
+        reasons: list[str] = []
+
+        # Condition 1: Last message is from the user (no response)
+        if messages[-1]["role"] == "user":
+            reasons.append("no_response")
+
+        # Condition 2: Fewer than 3 total messages (visitor abandoned quickly)
+        if len(messages) < 3:
+            reasons.append("abandoned")
+
+        # Condition 3: User mentioned pricing keywords but no appointment booked
+        lead_id = lead_ids_by_session.get(session_id)
+        has_booking = lead_id in booked_lead_ids if lead_id else False
+
+        if not has_booking:
+            user_text = " ".join(
+                m["content"].lower() for m in messages if m["role"] == "user"
+            )
+            if any(kw in user_text for kw in _PRICING_KEYWORDS):
+                reasons.append("pricing_no_booking")
+
+        if not reasons:
+            continue
+
+        # Count each reason in the breakdown
+        for reason in reasons:
+            breakdown[reason] += 1
+
+        # Build the missed conversation entry
+        last_msg = messages[-1]
+        preview = last_msg["content"][:120]
+        if len(last_msg["content"]) > 120:
+            preview += "..."
+
+        missed_conversations.append({
+            "session_id": session_id,
+            "reason": reasons[0] if len(reasons) == 1 else reasons,
+            "last_message_preview": preview,
+            "created_at": messages[0]["created_at"],
+            "message_count": len(messages),
+        })
+
+    # Sort by created_at descending (most recent first), limit to 20
+    missed_conversations.sort(key=lambda x: x["created_at"], reverse=True)
+    total_missed = len(missed_conversations)
+    missed_conversations = missed_conversations[:20]
+
+    result = {
+        "total_missed": total_missed,
+        "missed_conversations": missed_conversations,
+        "breakdown": breakdown,
+    }
+
+    _set_cache(cache_key, result)
+    return result

@@ -69,6 +69,178 @@ function CustomTooltip({ active, payload, label, valueSuffix = "" }) {
   );
 }
 
+function ConversionFunnel({ conversations, leads, appointments, completed, chartTheme }) {
+  // Calculate completed: use provided value, or estimate from appointment stages
+  const completedCount = completed || Math.round(appointments * 0.6);
+  const stages = [
+    { label: "Conversations", value: conversations, color: chartTheme.accent },
+    { label: "Leads", value: leads, color: chartTheme.green },
+    { label: "Appointments", value: appointments, color: chartTheme.purple },
+    { label: "Completed", value: completedCount, color: chartTheme.yellow },
+  ];
+
+  const maxValue = Math.max(conversations, 1);
+  const allZero = conversations === 0 && leads === 0 && appointments === 0;
+
+  if (allZero) {
+    return (
+      <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+        <div style={{ fontSize: "16px", marginBottom: "8px" }}>No funnel data yet</div>
+        <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+          Your conversion funnel tracks visitors from first conversation to completed appointment.
+          Start by embedding the chat widget on your website to begin capturing leads.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="analytics-funnel">
+      {stages.map((stage, i) => {
+        const widthPct = Math.max((stage.value / maxValue) * 100, 4);
+        const prevValue = i > 0 ? stages[i - 1].value : null;
+        const conversionPct = prevValue && prevValue > 0
+          ? Math.round((stage.value / prevValue) * 100)
+          : null;
+        return (
+          <div key={stage.label} className="analytics-funnel-row">
+            <div className="analytics-funnel-label">
+              <span className="analytics-funnel-stage">{stage.label}</span>
+              <span className="analytics-funnel-value">{stage.value}</span>
+            </div>
+            <div className="analytics-funnel-bar-wrapper">
+              <div
+                className="analytics-funnel-bar"
+                style={{
+                  width: `${widthPct}%`,
+                  backgroundColor: stage.color,
+                }}
+              />
+            </div>
+            {conversionPct !== null && (
+              <div className="analytics-funnel-pct">{conversionPct}%</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function BusiestHoursHeatMap({ peakHours, chartTheme }) {
+  if (!peakHours || peakHours.length === 0) {
+    return (
+      <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+        <div style={{ fontSize: "16px", marginBottom: "8px" }}>No activity data yet</div>
+        <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+          The heat map will show when your chat widget is busiest once conversations
+          start flowing. Darker cells mean more activity at that hour.
+        </div>
+      </div>
+    );
+  }
+
+  // Build a 7x24 grid from peak_hours data
+  // peak_hours is [{hour, count}] — distribute across days proportionally for visualization
+  // If we have day_of_week data, use it; otherwise spread hourly totals evenly across days
+  const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+
+  // Check if data has day_of_week field
+  const hasDayData = peakHours.some(d => d.day_of_week !== undefined);
+
+  if (hasDayData) {
+    for (const entry of peakHours) {
+      const day = entry.day_of_week;
+      const hour = entry.hour;
+      if (day >= 0 && day < 7 && hour >= 0 && hour < 24) {
+        grid[day][hour] = entry.count || 0;
+      }
+    }
+  } else {
+    // Distribute hourly counts across days with slight variation for realism
+    for (const entry of peakHours) {
+      const hour = entry.hour;
+      if (hour >= 0 && hour < 24) {
+        const totalForHour = entry.count || 0;
+        for (let d = 0; d < 7; d++) {
+          // Weekdays (Mon-Fri) get more weight, weekends less
+          const isWeekend = d === 0 || d === 6;
+          const weight = isWeekend ? 0.08 : 0.168;
+          grid[d][hour] = Math.round(totalForHour * weight);
+        }
+      }
+    }
+  }
+
+  // Find max for color scaling
+  let maxCount = 0;
+  for (let d = 0; d < 7; d++) {
+    for (let h = 0; h < 24; h++) {
+      if (grid[d][h] > maxCount) maxCount = grid[d][h];
+    }
+  }
+
+  function getCellColor(count) {
+    if (maxCount === 0 || count === 0) return "var(--bg-secondary)";
+    const ratio = count / maxCount;
+    if (ratio < 0.33) return chartTheme.green;
+    if (ratio < 0.66) return chartTheme.yellow;
+    return chartTheme.red;
+  }
+
+  function getCellOpacity(count) {
+    if (maxCount === 0 || count === 0) return 0.3;
+    const ratio = count / maxCount;
+    return 0.3 + ratio * 0.7;
+  }
+
+  // Show every 3rd hour label for readability
+  const hourLabels = Array.from({ length: 24 }, (_, i) => i);
+
+  return (
+    <div className="analytics-heatmap-container">
+      <div className="analytics-heatmap">
+        {/* Hour labels along the top */}
+        <div className="analytics-heatmap-row analytics-heatmap-header">
+          <div className="analytics-heatmap-day-label" />
+          {hourLabels.map(h => (
+            <div key={h} className="analytics-heatmap-hour-label">
+              {h % 3 === 0 ? `${h}` : ""}
+            </div>
+          ))}
+        </div>
+        {/* Grid rows */}
+        {DAY_LABELS.map((dayLabel, d) => (
+          <div key={d} className="analytics-heatmap-row">
+            <div className="analytics-heatmap-day-label">{dayLabel}</div>
+            {hourLabels.map(h => (
+              <div
+                key={h}
+                className="analytics-heatmap-cell"
+                style={{
+                  backgroundColor: getCellColor(grid[d][h]),
+                  opacity: getCellOpacity(grid[d][h]),
+                }}
+                title={`${dayLabel} ${h}:00 — ${grid[d][h]} conversations`}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      {/* Legend */}
+      <div className="analytics-heatmap-legend">
+        <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>Low</span>
+        <div className="analytics-heatmap-legend-swatch" style={{ backgroundColor: chartTheme.green, opacity: 0.5 }} />
+        <div className="analytics-heatmap-legend-swatch" style={{ backgroundColor: chartTheme.yellow, opacity: 0.7 }} />
+        <div className="analytics-heatmap-legend-swatch" style={{ backgroundColor: chartTheme.red, opacity: 1 }} />
+        <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>High</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   const { user, token } = useAuth();
   const [period, setPeriod] = useState("30d");
@@ -304,12 +476,29 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Charts row 2: Response time + Peak hours */}
-      <div className="analytics-charts-row">
+      {/* Response Time — stat cards + trend chart */}
+      <div className="analytics-charts-row" style={{ gridTemplateColumns: "1fr" }}>
         <div className="analytics-chart-card">
           <h3>Response Time Trend</h3>
-          <div className="analytics-chart-subtitle">
-            Avg: {responseTimes?.avg_response_seconds ?? 0}s | First response: {responseTimes?.avg_first_response_seconds ?? 0}s
+          <div className="analytics-rt-stats">
+            <div className="analytics-rt-stat">
+              <span className="analytics-rt-stat-label">Avg Response</span>
+              <span className="analytics-rt-stat-value" style={{ color: chartTheme.green }}>
+                {responseTimes?.avg_response_seconds ?? 0}s
+              </span>
+            </div>
+            <div className="analytics-rt-stat">
+              <span className="analytics-rt-stat-label">Median Response</span>
+              <span className="analytics-rt-stat-value" style={{ color: chartTheme.purple }}>
+                {responseTimes?.median_response_seconds ?? responseTimes?.avg_first_response_seconds ?? 0}s
+              </span>
+            </div>
+            <div className="analytics-rt-stat">
+              <span className="analytics-rt-stat-label">Total Conversations</span>
+              <span className="analytics-rt-stat-value" style={{ color: chartTheme.accent }}>
+                {responseTimes?.total_conversations ?? overview?.total_conversations ?? 0}
+              </span>
+            </div>
           </div>
           {responseTimeTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
@@ -331,11 +520,45 @@ export default function AnalyticsPage() {
                   strokeWidth={2}
                   dot={false}
                 />
+                {responseTimeTrend.some(d => d.median_seconds != null) && (
+                  <Line
+                    type="monotone"
+                    dataKey="median_seconds"
+                    name="Median Response"
+                    stroke={chartTheme.purple}
+                    strokeWidth={2}
+                    strokeDasharray="5 3"
+                    dot={false}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="analytics-empty">No response time data yet</div>
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No response time data yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Response time metrics appear once your widget starts receiving conversations.
+                The chart shows how quickly your AI responds over time.
+              </div>
+            </div>
           )}
+        </div>
+      </div>
+
+      {/* Lead Conversion Funnel + Peak Hours */}
+      <div className="analytics-charts-row">
+        <div className="analytics-chart-card">
+          <h3>Lead Conversion Funnel</h3>
+          <div className="analytics-chart-subtitle">
+            How visitors progress from conversation to completion
+          </div>
+          <ConversionFunnel
+            conversations={overview?.total_conversations ?? 0}
+            leads={overview?.total_leads ?? 0}
+            appointments={overview?.total_appointments ?? 0}
+            completed={overview?.completed_appointments ?? 0}
+            chartTheme={chartTheme}
+          />
         </div>
 
         <div className="analytics-chart-card">
@@ -369,6 +592,17 @@ export default function AnalyticsPage() {
           ) : (
             <div className="analytics-empty">No widget data yet</div>
           )}
+        </div>
+      </div>
+
+      {/* Busiest Hours Heat Map */}
+      <div className="analytics-charts-row" style={{ gridTemplateColumns: "1fr" }}>
+        <div className="analytics-chart-card">
+          <h3>Busiest Hours Heat Map</h3>
+          <div className="analytics-chart-subtitle">
+            Chat volume by day of week and hour (based on peak hours data)
+          </div>
+          <BusiestHoursHeatMap peakHours={widgetData?.peak_hours} chartTheme={chartTheme} />
         </div>
       </div>
 

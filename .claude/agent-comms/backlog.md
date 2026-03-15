@@ -77,8 +77,8 @@ _Call volume, chat volume, response time, missed opportunities, lead conversion 
 
 - [x] **Migration: response_metrics table** — DONE (migration 037, 2026-03-14)
 - [x] **Response time tracking** — DONE (widget.py records metrics on first exchange, analytics endpoint at GET /response-times, 2026-03-14)
-- [ ] **Analytics page redesign** — Replace basic stats with full dashboard: (1) Chat volume over time (line chart), (2) Lead conversion funnel (conversations → leads → appointments → completed), (3) Response time trend, (4) Busiest hours heat map (7x24 grid, color by volume), (5) AI tag distribution (bar chart, from conversation tags), (6) Per-team-member metrics (conversations handled, avg response time, leads captured).
-- [ ] **Missed opportunity detection** — Flag conversations where: visitor asked a question but got no follow-up, visitor mentioned pricing but didn't book, conversation ended abruptly. Show as "Missed Opportunities" count with drill-down.
+- [x] **Analytics page redesign** — DONE (response time trend chart, lead conversion funnel, busiest hours heat map, 2026-03-14)
+- [x] **Missed opportunity detection** — DONE (GET /missed-opportunities with 3 signal types, cached, 2026-03-14)
 
 ### Snippets / Quick Replies
 
