@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads, fetchTeamMembers } from "../utils/api";
+import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads, fetchTeamMembers, fetchLeadSuggestions, handleLeadSuggestion } from "../utils/api";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
 import LeadDetailDrawer from "./Dashboard/LeadDetailDrawer";
 
@@ -120,6 +120,7 @@ export default function LeadsPage() {
   const [merging, setMerging] = useState(false);
   const [assignedFilter, setAssignedFilter] = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const fileInputRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -141,6 +142,9 @@ export default function LeadsPage() {
       fetchTeamMembers(user.tenantId, token)
         .then((data) => setTeamMembers(data.members || []))
         .catch((err) => console.warn("Team fetch failed:", err.message));
+      fetchLeadSuggestions(user.tenantId, token)
+        .then((data) => setSuggestions(data.suggestions || []))
+        .catch((err) => console.warn("Suggestions fetch failed:", err.message));
     }
   }, [user?.tenantId, token]);
 
@@ -273,6 +277,54 @@ export default function LeadsPage() {
         <h1>Leads</h1>
         <p>{leads.length} total lead{leads.length !== 1 ? "s" : ""}</p>
       </div>
+
+      {/* AI Lead Update Suggestions */}
+      {suggestions.length > 0 && (
+        <div style={{
+          marginBottom: 16, padding: "12px 16px", borderRadius: 10,
+          background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.3)",
+        }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "#8b5cf6", marginBottom: 8 }}>
+            AI Suggestions ({suggestions.length})
+          </div>
+          {suggestions.slice(0, 5).map((s) => {
+            const sData = s.metadata?.suggestions || {};
+            return (
+              <div key={s.id} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "6px 0", borderTop: "1px solid rgba(139,92,246,0.15)",
+                fontSize: 12, gap: 8,
+              }}>
+                <div style={{ flex: 1, color: "var(--text-primary)" }}>
+                  {s.description}
+                  {Object.entries(sData).map(([field, vals]) => (
+                    <span key={field} style={{ marginLeft: 8, color: "var(--text-secondary)" }}>
+                      {field}: <s style={{ opacity: 0.5 }}>{vals.old}</s> → <strong>{vals.new}</strong>
+                    </span>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  <button onClick={async () => {
+                    await handleLeadSuggestion(user.tenantId, token, s.id, "approve");
+                    setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+                    loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder });
+                  }} style={{
+                    background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "none",
+                    borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11,
+                  }}>Approve</button>
+                  <button onClick={async () => {
+                    await handleLeadSuggestion(user.tenantId, token, s.id, "dismiss");
+                    setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+                  }} style={{
+                    background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "none",
+                    borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11,
+                  }}>Dismiss</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="leads-toolbar">
         <input

@@ -582,3 +582,76 @@ async def assign_lead(
         logger.warning("Failed to log assignment activity", exc_info=True)
 
     return result.data[0]
+
+
+# --- Lead Update Suggestions ---
+
+
+@router.get("/{tenant_id}/suggestions")
+async def list_lead_suggestions(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """List pending AI-generated lead update suggestions."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    result = (
+        db.table("activity_log")
+        .select("id, lead_id, description, metadata, created_at")
+        .eq("tenant_id", tenant_id)
+        .eq("activity_type", "lead_suggestion")
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    return {"suggestions": result.data or []}
+
+
+class SuggestionAction(BaseModel):
+    action: str  # "approve" or "dismiss"
+
+
+@router.post("/{tenant_id}/suggestions/{suggestion_id}")
+async def handle_suggestion(
+    tenant_id: str,
+    suggestion_id: str,
+    req: SuggestionAction,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Approve or dismiss a lead update suggestion."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if req.action not in ("approve", "dismiss"):
+        raise HTTPException(status_code=400, detail="Action must be 'approve' or 'dismiss'")
+
+    db = get_supabase()
+
+    # Fetch the suggestion
+    suggestion = (
+        db.table("activity_log")
+        .select("id, lead_id, metadata")
+        .eq("id", suggestion_id)
+        .eq("tenant_id", tenant_id)
+        .eq("activity_type", "lead_suggestion")
+        .limit(1)
+        .execute()
+    )
+    if not suggestion.data:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+
+    entry = suggestion.data[0]
+
+    if req.action == "approve":
+        # Apply the suggested updates to the lead
+        suggestions = (entry.get("metadata") or {}).get("suggestions", {})
+        if suggestions and entry.get("lead_id"):
+            updates = {field: s["new"] for field, s in suggestions.items()}
+            db.table("leads").update(updates).eq("id", entry["lead_id"]).execute()
+            logger.info("Approved suggestion %s: updated lead %s with %s", suggestion_id, entry["lead_id"], list(updates.keys()))
+
+    # Delete the suggestion (both approve and dismiss)
+    db.table("activity_log").delete().eq("id", suggestion_id).execute()
+
+    return {"success": True, "action": req.action}

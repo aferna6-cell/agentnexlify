@@ -857,16 +857,35 @@ async def _capture_leads_from_session(
                 lead = existing.data[0]
                 logger.info("lead_capture: existing lead found id=%s", lead["id"])
                 updates: dict[str, str] = {}
-                if combined.get("name") and not lead.get("name"):
-                    updates["name"] = combined["name"]
-                if combined.get("phone") and not lead.get("phone"):
-                    updates["phone"] = combined["phone"]
-                if combined.get("service_interest") and not lead.get("areas_of_interest"):
-                    updates["areas_of_interest"] = combined["service_interest"]
-                # Auto-update conversation summary
+                suggestions: dict[str, dict] = {}  # field → {old, new}
+                for field, db_field in [("name", "name"), ("phone", "phone")]:
+                    if combined.get(field):
+                        if not lead.get(db_field):
+                            updates[db_field] = combined[field]  # auto-fill blanks
+                        elif lead[db_field] != combined[field]:
+                            suggestions[db_field] = {"old": lead[db_field], "new": combined[field]}
+                if combined.get("service_interest"):
+                    if not lead.get("areas_of_interest"):
+                        updates["areas_of_interest"] = combined["service_interest"]
+                    elif lead["areas_of_interest"] != combined["service_interest"]:
+                        suggestions["areas_of_interest"] = {"old": lead["areas_of_interest"], "new": combined["service_interest"]}
+                # Auto-update conversation summary (always overwrite with latest)
                 summary = _build_conversation_summary(messages)
                 if summary and not lead.get("conversation_summary"):
                     updates["conversation_summary"] = summary
+                # Create pending suggestions for conflicting data
+                if suggestions:
+                    try:
+                        log_activity(
+                            tenant_id=tenant_id,
+                            activity_type="lead_suggestion",
+                            description=f"AI suggests updating {', '.join(suggestions.keys())} for {lead.get('name') or lead.get('email') or 'lead'}",
+                            lead_id=lead["id"],
+                            metadata={"suggestions": suggestions, "source": "widget"},
+                        )
+                        logger.info("lead_capture: created suggestion for lead %s: %s", lead["id"], list(suggestions.keys()))
+                    except Exception:
+                        logger.warning("lead_capture: failed to create suggestion", exc_info=True)
                 if updates:
                     db.table("leads").update(updates).eq("id", lead["id"]).execute()
                     log_activity(
