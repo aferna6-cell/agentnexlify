@@ -225,4 +225,9 @@ Adds `last_active_conversation_id` (UUID FK→conversations, ON DELETE SET NULL)
 
 **Operational note:** Migration 035 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
 
+### 036 — Snippets / Quick Replies
+Creates `snippets` table for pre-written response templates. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), title (TEXT NOT NULL), content (TEXT NOT NULL), shortcut (TEXT, optional), category (TEXT DEFAULT 'General'), usage_count (INTEGER DEFAULT 0), created_at (TIMESTAMPTZ). Indexed on tenant_id, (tenant_id, category), and unique on (tenant_id, shortcut) where not null. RLS enabled.
+
+**Operational note:** Migration 036 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

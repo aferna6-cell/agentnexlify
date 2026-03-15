@@ -439,6 +439,39 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     return info
 
 
+def _extract_service_interest(messages: list[dict]) -> str | None:
+    """Extract the visitor's primary service interest from user messages.
+    Uses simple keyword matching — no AI call to keep it fast."""
+    user_texts = " ".join(
+        msg["content"].lower() for msg in messages if msg["role"] == "user"
+    )
+    if len(user_texts) < 20:
+        return None
+
+    # Common service interest keywords
+    interests = []
+    keywords = {
+        "quote": "requesting a quote",
+        "estimate": "requesting an estimate",
+        "price": "pricing inquiry",
+        "cost": "pricing inquiry",
+        "appointment": "booking appointment",
+        "schedule": "scheduling",
+        "repair": "repair service",
+        "install": "installation",
+        "consult": "consultation",
+        "emergency": "emergency service",
+        "order": "placing an order",
+        "reserv": "reservation",
+        "book": "booking",
+    }
+    for kw, interest in keywords.items():
+        if kw in user_texts:
+            interests.append(interest)
+
+    return interests[0] if interests else None
+
+
 def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]:
     """Use Claude to extract auto-tags from conversation messages.
 
@@ -712,6 +745,8 @@ async def _capture_leads_from_session(
                     updates["name"] = combined["name"]
                 if combined.get("phone") and not lead.get("phone"):
                     updates["phone"] = combined["phone"]
+                if combined.get("service_interest") and not lead.get("service_interest"):
+                    updates["service_interest"] = combined["service_interest"]
                 if updates:
                     db.table("leads").update(updates).eq("id", lead["id"]).execute()
                     log_activity(
@@ -737,6 +772,9 @@ async def _capture_leads_from_session(
                     logger.warning("lead_capture: tag extraction failed for lead %s", lead["id"], exc_info=True)
                 return
 
+        # Extract service interest from conversation context
+        service_interest = _extract_service_interest(messages)
+
         # Create new lead — live schema: client_id, status (not tenant_id, lead_stage)
         lead_fields: dict[str, Any] = {
             "client_id": tenant_id,
@@ -745,6 +783,8 @@ async def _capture_leads_from_session(
         for key in ("name", "email", "phone"):
             if combined.get(key):
                 lead_fields[key] = combined[key]
+        if service_interest:
+            lead_fields["service_interest"] = service_interest
 
         # Only set conversation_id if it looks like a valid UUID
         try:
