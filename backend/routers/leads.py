@@ -30,9 +30,11 @@ async def get_leads(
     sort: str = Query("lead_score"),
     order: str = Query("desc"),
     assigned_to: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=500),
     claims: dict = Depends(_get_current_tenant),
 ):
-    """Get all leads for a tenant, with optional filtering/sorting."""
+    """Get leads for a tenant with filtering, sorting, and pagination."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -42,7 +44,7 @@ async def get_leads(
 
     db = get_supabase()
     try:
-        query = db.table("leads").select("*").eq("client_id", tenant_id)
+        query = db.table("leads").select("*", count="exact").eq("client_id", tenant_id)
 
         if stage:
             query = query.eq("status", stage)
@@ -63,11 +65,22 @@ async def get_leads(
         desc = order.lower() == "desc"
         query = query.order(sort, desc=desc)
 
+        # Pagination
+        offset = (page - 1) * per_page
+        query = query.range(offset, offset + per_page - 1)
+
         result = query.execute()
-        return {"leads": result.data or []}
+        total = result.count if result.count is not None else len(result.data or [])
+        return {
+            "leads": result.data or [],
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": (total + per_page - 1) // per_page if total else 1,
+        }
     except Exception:
         logger.warning("Leads query failed for tenant %s", tenant_id, exc_info=True)
-        return {"leads": []}
+        return {"leads": [], "total": 0, "page": 1, "per_page": per_page, "total_pages": 1}
 
 
 @router.get("/{tenant_id}/summary")

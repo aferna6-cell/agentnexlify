@@ -47,7 +47,14 @@ _startup_time: float = 0.0
 
 
 async def _automation_loop():
-    """Background loop that processes pending automation steps every 60 seconds."""
+    """Background loop that processes pending automation steps every 60 seconds.
+
+    With multiple Uvicorn workers, each worker runs its own loop. We use a
+    random jitter (0-30s) to spread execution across workers and rely on
+    idempotent operations (dedup checks in each function) to prevent duplicates.
+    """
+    import random
+    await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
     from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders, send_pending_review_requests, send_onboarding_emails
     while True:
         try:

@@ -367,12 +367,13 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 
 ## Optimization
 
-- [ ] Add rate limiting to all public endpoints (prevent abuse of /api/v1/widget/chat, /biz/{slug})
-- [ ] Add request logging middleware (track API usage per tenant for billing/quota enforcement)
-- [ ] Optimize database queries — add indexes on commonly queried columns (leads.client_id + created_at, chat_messages.tenant_id + session_id, appointments.tenant_id + start_time)
-- [ ] Add caching for tenant/widget configuration (the widget loads tenant config on every page view via /api/v1/widget/config/{api_key} — cache with 5-min TTL)
-- [ ] Lazy load the chat widget script (don't block the customer's page load — async + defer)
-- [ ] Set up scheduled job for automation step processing (Railway cron or background worker to call process_pending_steps() every minute)
+- [x] Add rate limiting to all public endpoints — DONE 2026-03-15 Cycle 46. All public endpoints now rate-limited via slowapi.
+- [x] Add request logging middleware — DONE (already implemented, JSON structured with tenant_id + duration + request_id)
+- [x] Optimize database queries — DONE 2026-03-15 Cycle 49. Added idx_leads_client_created. chat_messages and appointments already indexed.
+- [x] Add caching for tenant/widget configuration — DONE 2026-03-15 Cycle 49. 5-min TTL cache for widget config, tenant, FAQ, business hours, corrections, website content.
+- [x] Lazy load the chat widget script — DONE 2026-03-15 Cycle 49. Added async attribute to all embed code locations.
+- [x] Set up scheduled job for automation step processing — DONE (in-process asyncio loop in main.py, runs every 60s with worker stagger)
+- [ ] Add pagination to /leads endpoint — partially done: backend supports page/per_page params, frontend needs load-more button
 
 ---
 
