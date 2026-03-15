@@ -293,7 +293,7 @@ _Customers get a link to their portal showing invoices, job photos, warranty, an
 - [ ] **Photo upload for job documentation** — Supabase Storage integration for before/after photos. Deferred.
 - [x] **Invoice attachment** — DONE 2026-03-15 Cycle 68. invoice_amount field on service_records. PDF upload deferred.
 - [ ] **Rebook button** — Client portal "Book Again" opens chat widget with pre-populated info. Deferred.
-- [ ] **Automated portal link delivery** — Auto-send portal link via SMS/email after job completion. Deferred.
+- [x] **Automated portal link delivery** — DONE 2026-03-15 Cycle 73. Auto-emails portal link to customer after appointment marked completed.
 
 ## Features — Module: AI Review Responder
 _Chrome extension that drafts review responses on Google/Yelp with one click._
