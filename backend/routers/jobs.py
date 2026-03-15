@@ -6,6 +6,8 @@ import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from backend.limiter import limiter
+
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
@@ -285,7 +287,8 @@ async def update_application_status(
 # --- Public endpoints (no auth) ---
 
 @router.get("/public/{tenant_id}/listings")
-async def public_job_listings(tenant_id: str):
+@limiter.limit("120/minute")
+async def public_job_listings(request: Request, tenant_id: str):
     """Public endpoint — returns active job listings for a tenant."""
     db = get_supabase()
 
@@ -321,7 +324,9 @@ async def public_job_listings(tenant_id: str):
 
 
 @router.post("/public/{tenant_id}/{job_id}/apply")
+@limiter.limit("10/minute")
 async def public_apply(
+    request: Request,
     tenant_id: str,
     job_id: str,
     req: JobApplicationCreate,

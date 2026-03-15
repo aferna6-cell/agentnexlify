@@ -4,7 +4,9 @@ import html as html_lib
 import logging
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from backend.limiter import limiter
 
 from backend.models.database import get_supabase
 from backend.models.schemas import (
@@ -169,7 +171,8 @@ async def invite_member(req: TeamInviteRequest, claims: dict = Depends(_get_curr
 
 
 @router.get("/invite/{token}", response_model=InviteValidationResponse)
-async def validate_invite(token: str):
+@limiter.limit("30/minute")
+async def validate_invite(request: Request, token: str):
     db = get_supabase()
     result = (
         db.table("team_members")
@@ -206,7 +209,8 @@ async def validate_invite(token: str):
 
 
 @router.post("/accept-invite")
-async def accept_invite(req: AcceptInviteRequest):
+@limiter.limit("10/minute")
+async def accept_invite(request: Request, req: AcceptInviteRequest):
     db = get_supabase()
     result = (
         db.table("team_members")
