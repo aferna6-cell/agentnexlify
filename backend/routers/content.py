@@ -308,6 +308,14 @@ async def repurpose_content(
             }],
         )
         raw = resp.content[0].text.strip()
+    except anthropic.RateLimitError:
+        raise HTTPException(status_code=429, detail="AI service rate limited — please try again in a moment")
+    except anthropic.AuthenticationError:
+        logger.error("Anthropic API auth failure during content repurpose")
+        raise HTTPException(status_code=502, detail="AI service configuration error")
+    except anthropic.APIError as e:
+        logger.error("Anthropic API error during content repurpose: %s", str(e))
+        raise HTTPException(status_code=502, detail="AI service temporarily unavailable")
     except Exception:
         logger.error("Content repurpose failed for %s", content_id, exc_info=True)
         raise HTTPException(status_code=500, detail="AI content generation failed")

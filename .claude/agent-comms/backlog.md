@@ -62,8 +62,8 @@ _Drag-and-drop builder for customizing the chat widget's conversation flow. "If 
 **What we already have:** Widget config (greeting, colors, position). The AI handles all routing via system prompt. What's missing: visual builder for defining custom flows, conditional logic, and special actions.
 
 - [x] **Migration: chat_flows table** — DONE (migration 038, 2026-03-14)
-- [ ] **Chat flow engine in widget backend** — When processing a chat message, check if tenant has an active flow. If so, evaluate flow conditions against the conversation context to determine next action. Actions: show pricing card, show booking form, transfer to human, collect info, send auto-reply. Falls back to AI for anything not covered by the flow.
-- [ ] **Visual flow builder page** — React page with a canvas-based drag-and-drop builder. Use React Flow (reactflow.dev) library. Node types: Greeting, Question, AI Response, Condition (if/else), Action (book appointment, show pricing, collect info), Handoff (transfer to team member). Edges connect nodes. Save as JSON.
+- [x] **Chat flow engine in widget backend** — done 2026-03-14. Widget checks active flow, evaluates conditions, falls back to AI. Cycle 38.
+- [x] **Visual flow builder page** — done 2026-03-15. ChatFlowBuilderPage with @xyflow/react drag-and-drop editor, 6 node types, node editor panel, template creation. Cycle 40.
 - [x] **Preset flow templates** — DONE (3 templates: General Business, Restaurant, Contractor, stored in backend with one-click create, 2026-03-14)
 - [ ] **Flow analytics** — Track which nodes get triggered most. Show drop-off points. "80% of visitors hit the pricing node but only 20% book — consider adding a discount offer."
 
@@ -252,8 +252,8 @@ _For businesses that need to hire. SMS-first, no resume required._
 - [x] **Public job page** — done 2026-03-13. GET /api/v1/jobs/public/{tenant_id}/listings returns active jobs with business info. No auth required.
 - [x] **SMS-first application** — done 2026-03-13. POST /api/v1/jobs/public/{tenant_id}/{job_id}/apply accepts name + phone + message. SMS confirmation to applicant. SMS notification to owner. No resume, no account needed.
 - [x] **Applicant management** — done 2026-03-13. JobsPage shows applications per job with status management (new/contacted/interviewed/hired/rejected). Notes field. Status update endpoint.
-- [ ] **AI job description writer** — Tenant describes the role in plain language ("I need someone to help with junk removal 3 days a week"), AI generates a proper job posting optimized for the role.
-- [ ] **Job widget integration** — The chat widget can mention open jobs when relevant. If someone chats "are you hiring?" the AI knows about open positions and can direct them to apply.
+- [x] **AI job description writer** — done 2026-03-13. POST /api/v1/jobs/{tenant_id}/ai-write endpoint. Claude generates structured job posting from plain language description. Frontend "AI Write" button on JobsPage.
+- [x] **Job widget integration** — done 2026-03-13. Active jobs injected into widget system prompt. AI mentions open positions when relevant to conversation.
 
 ## Features — Module: AI Answering Service
 _AI answers phone calls, takes messages, books appointments, texts the owner a summary. Powered by Twilio Voice + Claude._

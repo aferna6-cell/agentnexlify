@@ -379,29 +379,23 @@ async def public_apply(
                 )
                 await send_sms(to=owner_phone, body=sms_body)
     except Exception:
-        logger.warning("Failed to send application notification SMS", exc_info=True)
+        logger.warning("Failed to send application notification SMS to owner", exc_info=True)
 
-    # Send SMS confirmation to applicant
+    # Send SMS confirmation to applicant (best-effort, don't fail the request)
+    sms_warnings = []
     try:
-        tenant_result = (
-            db.table("tenants")
-            .select("business_name, business_phone")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if tenant_result.data:
-            biz_name = tenant_result.data[0].get("business_name", "the business")
-            biz_phone = tenant_result.data[0].get("business_phone", "")
+        if req.applicant_phone:
             from backend.services.twilio_service import send_sms
             confirm_body = (
                 f"Thanks for applying to {job['title']} at {biz_name}! "
                 f"We've received your application and will be in touch."
             )
-            if biz_phone:
-                confirm_body += f"\nQuestions? Call {biz_phone}"
             await send_sms(to=req.applicant_phone, body=confirm_body)
     except Exception:
-        logger.warning("Failed to send application confirmation SMS", exc_info=True)
+        logger.warning("Failed to send application confirmation SMS to %s", req.applicant_phone, exc_info=True)
+        sms_warnings.append("Confirmation SMS could not be sent")
 
-    return {"success": True, "application_id": result.data[0]["id"]}
+    resp = {"success": True, "application_id": result.data[0]["id"]}
+    if sms_warnings:
+        resp["warnings"] = sms_warnings
+    return resp

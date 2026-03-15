@@ -245,6 +245,14 @@ async def generate_ai_draft(
             }],
         )
         draft = resp.content[0].text.strip()
+    except anthropic.RateLimitError:
+        raise HTTPException(status_code=429, detail="AI service rate limited — please try again in a moment")
+    except anthropic.AuthenticationError:
+        logger.error("Anthropic API auth failure during review draft")
+        raise HTTPException(status_code=502, detail="AI service configuration error")
+    except anthropic.APIError as e:
+        logger.error("Anthropic API error during review draft: %s", str(e))
+        raise HTTPException(status_code=502, detail="AI service temporarily unavailable")
     except Exception:
         logger.error("AI draft generation failed for review %s", review_id, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to generate AI draft")
