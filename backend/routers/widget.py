@@ -151,8 +151,12 @@ def _get_widget_config(api_key: str) -> dict[str, Any]:
     cached = _get_cached(f"wc:{api_key}")
     if cached is not None:
         return cached
-    db = get_supabase()
-    result = db.table("widget_configs").select("*").eq("api_key", api_key).limit(1).execute()
+    try:
+        db = get_supabase()
+        result = db.table("widget_configs").select("*").eq("api_key", api_key).limit(1).execute()
+    except Exception:
+        logger.warning("Database unreachable in _get_widget_config", exc_info=True)
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
     if not result.data:
         raise HTTPException(status_code=404, detail="Widget not found")
     _set_cache(f"wc:{api_key}", result.data[0])
@@ -163,12 +167,16 @@ def _get_tenant(tenant_id: str) -> dict[str, Any]:
     cached = _get_cached(f"t:{tenant_id}")
     if cached is not None:
         return cached
-    db = get_supabase()
-    result = db.table("tenants").select(
-        "id, business_name, business_type, city, plan, plan_status, "
-        "free_trial_started_at, conversations_used_this_month, "
-        "sms_notifications_enabled, notification_phone"
-    ).eq("id", tenant_id).limit(1).execute()
+    try:
+        db = get_supabase()
+        result = db.table("tenants").select(
+            "id, business_name, business_type, city, plan, plan_status, "
+            "free_trial_started_at, conversations_used_this_month, "
+            "sms_notifications_enabled, notification_phone"
+        ).eq("id", tenant_id).limit(1).execute()
+    except Exception:
+        logger.warning("Database unreachable in _get_tenant", exc_info=True)
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     _set_cache(f"t:{tenant_id}", result.data[0])

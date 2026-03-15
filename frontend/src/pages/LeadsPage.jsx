@@ -121,6 +121,9 @@ export default function LeadsPage() {
   const [assignedFilter, setAssignedFilter] = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
   const fileInputRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -128,8 +131,10 @@ export default function LeadsPage() {
     if (!user?.tenantId) return;
     setLoading(true);
     try {
-      const res = await fetchLeads(user.tenantId, token, params);
+      const res = await fetchLeads(user.tenantId, token, { ...params, page: params.page || 1, per_page: 100 });
       setLeads(res.leads || []);
+      setTotalPages(res.total_pages || 1);
+      setTotalLeads(res.total || 0);
     } catch {
       setLeads([]);
     } finally {
@@ -149,8 +154,8 @@ export default function LeadsPage() {
   }, [user?.tenantId, token]);
 
   useEffect(() => {
-    loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined });
-  }, [loadLeads, stageFilter, sortField, sortOrder, assignedFilter]);
+    loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined, page });
+  }, [loadLeads, stageFilter, sortField, sortOrder, assignedFilter, page]);
 
   // Debounced search
   useEffect(() => {
@@ -275,7 +280,7 @@ export default function LeadsPage() {
     <div className="fade-in">
       <div className="page-header">
         <h1>Leads</h1>
-        <p>{leads.length} total lead{leads.length !== 1 ? "s" : ""}</p>
+        <p>{totalLeads} total lead{totalLeads !== 1 ? "s" : ""}</p>
       </div>
 
       {/* AI Lead Update Suggestions */}
@@ -337,7 +342,7 @@ export default function LeadsPage() {
         <select
           className="leads-filter"
           value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value)}
+          onChange={(e) => { setStageFilter(e.target.value); setPage(1); }}
         >
           <option value="">All Stages</option>
           {STAGES.map((s) => (
@@ -347,7 +352,7 @@ export default function LeadsPage() {
         <select
           className="leads-filter"
           value={assignedFilter}
-          onChange={(e) => setAssignedFilter(e.target.value)}
+          onChange={(e) => { setAssignedFilter(e.target.value); setPage(1); }}
         >
           <option value="">All Assignees</option>
           {teamMembers.map((m) => (
@@ -415,6 +420,30 @@ export default function LeadsPage() {
           onSort={handleSort}
           onSelectLead={setSelectedLead}
         />
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{
+          display: "flex", justifyContent: "center", alignItems: "center", gap: 12,
+          padding: "16px 0", marginTop: 8,
+        }}>
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="btn btn-secondary"
+            style={{ padding: "6px 14px", fontSize: 13 }}
+          >Previous</button>
+          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+            Page {page} of {totalPages} ({totalLeads} leads)
+          </span>
+          <button
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            className="btn btn-secondary"
+            style={{ padding: "6px 14px", fontSize: 13 }}
+          >Next</button>
+        </div>
       )}
 
       {selectedLead && (

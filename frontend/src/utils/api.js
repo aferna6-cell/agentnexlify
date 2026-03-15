@@ -28,13 +28,15 @@ async function request(path, { method = "GET", body, token } = {}) {
 
 // --- Dashboard API ---
 
-export function fetchLeads(tenantId, token, { stage, search, sort, order, assigned_to } = {}) {
+export function fetchLeads(tenantId, token, { stage, search, sort, order, assigned_to, page, per_page } = {}) {
   const params = new URLSearchParams();
   if (stage) params.set("stage", stage);
   if (search) params.set("search", search);
   if (sort) params.set("sort", sort);
   if (order) params.set("order", order);
   if (assigned_to) params.set("assigned_to", assigned_to);
+  if (page) params.set("page", String(page));
+  if (per_page) params.set("per_page", String(per_page));
   const qs = params.toString();
   return request(`/api/v1/leads/${tenantId}${qs ? `?${qs}` : ""}`, { token });
 }
