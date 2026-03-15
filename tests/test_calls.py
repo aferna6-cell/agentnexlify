@@ -108,8 +108,10 @@ class TestVoiceIncoming:
         body = resp.text
         assert "<Response>" in body
         assert "Acme Plumbing" in body
-        assert "<Record" in body
-        assert "recording-complete" in body
+        # Incoming calls now use Gather for AI conversation instead of Record
+        assert "<Gather" in body
+        assert 'input="speech"' in body
+        assert "voice/respond" in body
 
     @patch("backend.routers.calls._find_tenant_by_phone")
     def test_incoming_call_no_tenant(self, mock_find):

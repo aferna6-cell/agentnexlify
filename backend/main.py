@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, email_templates, integrations, jobs, leads, local_seo, menu, notifications, orders, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget
+from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, email_templates, integrations, jobs, leads, local_seo, menu, notifications, onboarding, orders, phone, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -277,6 +277,8 @@ app.include_router(client_portal.router)
 app.include_router(bids.router)
 app.include_router(calls.router)
 app.include_router(local_seo.router)
+app.include_router(onboarding.router)
+app.include_router(phone.router)
 
 
 # --- Static files (widget) ---

@@ -252,6 +252,8 @@ export default function AnalyticsPage() {
   const [responseTimes, setResponseTimes] = useState(null);
   const [widgetData, setWidgetData] = useState(null);
   const [tagDistribution, setTagDistribution] = useState([]);
+  const [missedCallsData, setMissedCallsData] = useState(null);
+  const [missedCallsError, setMissedCallsError] = useState(false);
   const [error, setError] = useState(null);
 
   const [currentTheme, setCurrentTheme] = useState(
@@ -273,7 +275,7 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [ov, conv, leads, resp, wid, convos, tagDefs] = await Promise.allSettled([
+      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls] = await Promise.allSettled([
         fetchAnalyticsOverview(user.tenantId, token, period),
         fetchAnalyticsConversations(user.tenantId, token, period),
         fetchAnalyticsLeads(user.tenantId, token, period),
@@ -281,6 +283,7 @@ export default function AnalyticsPage() {
         fetchAnalyticsWidget(user.tenantId, token, period),
         fetchConversations(user.tenantId, token),
         fetchTagDefinitions(user.tenantId, token),
+        fetchMissedCallAnalytics(user.tenantId, token, period),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
@@ -315,6 +318,15 @@ export default function AnalyticsPage() {
           .sort((a, b) => b.count - a.count);
 
         setTagDistribution(distribution);
+      }
+
+      // Missed calls analytics
+      if (missedCalls.status === "fulfilled") {
+        setMissedCallsData(missedCalls.value);
+        setMissedCallsError(false);
+      } else {
+        setMissedCallsData(null);
+        setMissedCallsError(true);
       }
     } catch (err) {
       setError(err.message);
@@ -604,6 +616,71 @@ export default function AnalyticsPage() {
             Chat volume by day of week and hour (based on peak hours data)
           </div>
           <BusiestHoursHeatMap peakHours={widgetData?.peak_hours} chartTheme={chartTheme} />
+        </div>
+      </div>
+
+      {/* Missed Calls */}
+      <div className="analytics-charts-row" style={{ gridTemplateColumns: "1fr" }}>
+        <div className="analytics-chart-card">
+          <h3>Missed Calls</h3>
+          <div className="analytics-chart-subtitle">
+            Missed call volume per day
+          </div>
+          {missedCallsError ? (
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>Missed call analytics coming soon</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Once missed call tracking is enabled, you will see a daily breakdown of missed calls here.
+                Enable the AI Answering Service to start capturing missed calls automatically.
+              </div>
+            </div>
+          ) : missedCallsData?.daily && missedCallsData.daily.length > 0 ? (
+            <>
+              <div className="analytics-rt-stats" style={{ marginBottom: "12px" }}>
+                <div className="analytics-rt-stat">
+                  <span className="analytics-rt-stat-label">Total Missed</span>
+                  <span className="analytics-rt-stat-value" style={{ color: chartTheme.red }}>
+                    {missedCallsData.total ?? missedCallsData.daily.reduce((sum, d) => sum + (d.count || 0), 0)}
+                  </span>
+                </div>
+                {missedCallsData.texted_back != null && (
+                  <div className="analytics-rt-stat">
+                    <span className="analytics-rt-stat-label">Texted Back</span>
+                    <span className="analytics-rt-stat-value" style={{ color: chartTheme.green }}>
+                      {missedCallsData.texted_back}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={missedCallsData.daily}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <XAxis
+                    dataKey="date"
+                    stroke={chartTheme.text}
+                    fontSize={11}
+                    tickFormatter={d => d.slice(5)}
+                  />
+                  <YAxis stroke={chartTheme.text} fontSize={11} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar
+                    dataKey="count"
+                    name="Missed Calls"
+                    fill={chartTheme.red}
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </>
+          ) : (
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No missed calls recorded</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Great news! No missed calls during this period. If you have the AI Answering Service
+                enabled, missed calls are automatically followed up with a text message.
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

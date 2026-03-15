@@ -279,6 +279,211 @@ async def handle_incoming_call(request: Request):
     return Response(content=twiml, media_type="application/xml")
 
 
+@router.post("/voice/respond")
+@limiter.limit("30/minute")
+async def handle_voice_respond(request: Request):
+    """AI voice conversation handler -- processes speech input and responds.
+
+    Twilio POSTs form-encoded data with the caller's SpeechResult from <Gather>.
+    We:
+    1. Extract the caller's speech text
+    2. Look up the tenant
+    3. Load conversation history from chat_messages
+    4. Call Claude with business context
+    5. Return TwiML with <Say> + another <Gather> for continued conversation
+    6. Save both messages to chat_messages
+
+    After _MAX_VOICE_ROUNDS rounds or if no speech is detected, end with goodbye.
+    """
+    body = await request.body()
+
+    try:
+        raw_params = parse_qs(body.decode())
+        params = {k: v[0] for k, v in raw_params.items()}
+    except Exception:
+        logger.error("Failed to parse voice respond body")
+        return Response(
+            content=_build_twiml_goodbye("Sorry, I had trouble understanding. Goodbye!"),
+            media_type="application/xml",
+        )
+
+    speech_result = params.get("SpeechResult", "")
+    call_sid = params.get("CallSid", "")
+    caller = params.get("From", "")
+    called = params.get("To", "")
+
+    # Parse round number from query string
+    query_string = str(request.url.query) if request.url.query else ""
+    round_num = 1
+    try:
+        qs_params = parse_qs(query_string)
+        round_num = int(qs_params.get("round", ["1"])[0])
+    except (ValueError, TypeError):
+        round_num = 1
+
+    logger.info(
+        "Voice respond: SID=%s, round=%d, speech='%s'",
+        call_sid, round_num, speech_result[:100],
+    )
+
+    if not speech_result:
+        return Response(
+            content=_build_twiml_goodbye(
+                "I didn't catch that. Thank you for calling! Goodbye."
+            ),
+            media_type="application/xml",
+        )
+
+    # Find the tenant
+    tenant = _find_tenant_by_phone(called)
+    if not tenant:
+        logger.warning("Voice respond: no tenant found for %s", called)
+        return Response(
+            content=_build_twiml_goodbye(
+                "Sorry, I'm unable to assist right now. Goodbye!"
+            ),
+            media_type="application/xml",
+        )
+
+    tenant_id = tenant["id"]
+    business_name = tenant.get("business_name", "our business")
+    session_id = f"call_{call_sid}"
+    db = get_supabase()
+
+    # Save the caller's message
+    try:
+        db.table("chat_messages").insert({
+            "tenant_id": tenant_id,
+            "session_id": session_id,
+            "role": "user",
+            "content": speech_result,
+        }).execute()
+    except Exception:
+        logger.exception("Failed to save user voice message for call %s", call_sid)
+
+    # Load conversation history for context
+    conversation_messages: list[dict[str, str]] = []
+    try:
+        history = (
+            db.table("chat_messages")
+            .select("role, content")
+            .eq("tenant_id", tenant_id)
+            .eq("session_id", session_id)
+            .order("created_at", desc=False)
+            .limit(20)
+            .execute()
+        )
+        for msg in history.data or []:
+            conversation_messages.append({
+                "role": msg["role"],
+                "content": msg["content"],
+            })
+    except Exception:
+        logger.exception("Failed to load conversation history for call %s", call_sid)
+        # Fall back to just this message
+        conversation_messages = [{"role": "user", "content": speech_result}]
+
+    # Load business info for system prompt context
+    business_info = ""
+    try:
+        tenant_detail = (
+            db.table("tenants")
+            .select("business_name, business_type, owner_email")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if tenant_detail.data:
+            td = tenant_detail.data[0]
+            business_info = f"Business: {td.get('business_name', '')}. "
+            if td.get("business_type"):
+                business_info += f"Type: {td['business_type']}. "
+    except Exception:
+        logger.warning("Failed to load tenant details for voice AI, tenant %s", tenant_id)
+
+    # Load FAQ for additional context
+    faq_text = ""
+    try:
+        faq_result = (
+            db.table("faq_entries")
+            .select("question, answer")
+            .eq("tenant_id", tenant_id)
+            .limit(10)
+            .execute()
+        )
+        if faq_result.data:
+            faq_text = "Frequently Asked Questions:\n" + "\n".join(
+                f"Q: {f['question']}\nA: {f['answer']}" for f in faq_result.data
+            )
+    except Exception:
+        logger.warning("Failed to load FAQ for voice AI, tenant %s", tenant_id)
+
+    system_prompt = (
+        f"You are a helpful phone assistant for {business_name}. {business_info}"
+        "You are speaking with a caller on the phone. Keep your responses concise "
+        "and conversational -- ideally 1-3 sentences since this will be spoken aloud. "
+        "Be warm and helpful. If you don't know the answer, offer to have someone "
+        "call them back. Never say you are an AI unless directly asked."
+    )
+    if faq_text:
+        system_prompt += f"\n\n{faq_text}"
+
+    # Call Claude for AI response
+    ai_response = ""
+    try:
+        client = anthropic.Anthropic(
+            api_key=settings.anthropic_api_key, timeout=30.0
+        )
+        resp = await asyncio.get_running_loop().run_in_executor(
+            None,
+            partial(
+                client.messages.create,
+                model="claude-sonnet-4-6",
+                max_tokens=200,
+                system=system_prompt,
+                messages=conversation_messages,
+            ),
+        )
+        ai_response = resp.content[0].text.strip()
+    except Exception:
+        logger.exception("Claude API call failed for voice respond, call %s", call_sid)
+        ai_response = (
+            "I'm sorry, I'm having a little trouble right now. "
+            "Let me have someone call you back as soon as possible."
+        )
+
+    # Save the AI response
+    try:
+        db.table("chat_messages").insert({
+            "tenant_id": tenant_id,
+            "session_id": session_id,
+            "role": "assistant",
+            "content": ai_response,
+        }).execute()
+    except Exception:
+        logger.exception("Failed to save AI voice response for call %s", call_sid)
+
+    # Check if we should continue or end the conversation
+    if round_num >= _MAX_VOICE_ROUNDS:
+        goodbye_text = (
+            f"{ai_response} "
+            f"Thank you for calling {_xml_escape(business_name)}! "
+            "Have a great day. Goodbye!"
+        )
+        return Response(
+            content=_build_twiml_goodbye(goodbye_text),
+            media_type="application/xml",
+        )
+
+    # Continue conversation with another Gather
+    base_url = str(request.base_url).rstrip("/")
+    respond_url = f"{base_url}/api/v1/calls/voice/respond"
+    next_round = round_num + 1
+
+    twiml = _build_twiml_gather(ai_response, respond_url, next_round)
+    return Response(content=twiml, media_type="application/xml")
+
+
 @router.post("/voice/recording-complete")
 @limiter.limit("30/minute")
 async def handle_recording_complete(request: Request):

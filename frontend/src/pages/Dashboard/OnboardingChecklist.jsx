@@ -99,6 +99,7 @@ export default function OnboardingChecklist({
   onNavigate,
   onDismiss,
   onStepComplete,
+  onboardingStatus,
 }) {
   const [stored, setStored] = useState(() => getStoredState(tenantId));
   const [expanded, setExpanded] = useState(true);
@@ -120,12 +121,31 @@ export default function OnboardingChecklist({
   const [showPreview, setShowPreview] = useState(false);
 
   const steps = computeSteps(dashData, stored);
+
+  // Merge API-driven onboarding status into steps if available
+  if (onboardingStatus?.steps) {
+    const apiSteps = onboardingStatus.steps;
+    for (const step of steps) {
+      if (apiSteps[step.key] !== undefined) {
+        // API says done? Override to true. Local already true? Keep it.
+        step.complete = step.complete || apiSteps[step.key];
+      }
+    }
+  }
+
   // "live" step is complete when all previous 5 are complete
   const prevComplete = steps.slice(0, 5).every((s) => s.complete);
   steps[5].complete = prevComplete;
 
   const completedCount = steps.filter((s) => s.complete).length;
-  const allDone = completedCount === 6;
+  const totalSteps = steps.length;
+
+  // Use API percentage if available, otherwise compute from steps
+  const completionPct = onboardingStatus?.completion_percentage != null
+    ? onboardingStatus.completion_percentage
+    : Math.round((completedCount / totalSteps) * 100);
+
+  const allDone = completedCount === totalSteps;
 
   // Initialize form state from dashData
   useEffect(() => {
@@ -566,14 +586,14 @@ export default function OnboardingChecklist({
             {allDone ? "Setup Complete" : "Get Started"}
           </h3>
           <span className="onboarding-progress-text">
-            {completedCount} of {steps.length} steps complete
+            {completedCount} of {totalSteps} steps complete ({completionPct}%)
           </span>
         </div>
         <div className="onboarding-header-right">
           <div className="onboarding-progress-bar">
             <div
               className="onboarding-progress-fill"
-              style={{ width: `${(completedCount / steps.length) * 100}%` }}
+              style={{ width: `${completionPct}%` }}
             />
           </div>
           <button

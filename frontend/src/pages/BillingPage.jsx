@@ -27,6 +27,19 @@ const PLANS = [
     popular: true,
   },
   {
+    key: "autopilot",
+    name: "Autopilot",
+    price: "$199",
+    period: "/mo",
+    features: [
+      "Everything in Professional",
+      "Missed call text-back",
+      "Monthly reports",
+      "Local SEO tools",
+      "Auto portal delivery",
+    ],
+  },
+  {
     key: "enterprise",
     name: "Enterprise",
     price: "$799",

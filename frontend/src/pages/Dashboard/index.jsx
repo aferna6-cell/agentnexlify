@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity, updateLead, deleteLead, fetchCrmDashboardWidgets, fetchSequenceStats } from "../../utils/api";
+import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity, updateLead, deleteLead, fetchCrmDashboardWidgets, fetchSequenceStats, fetchOnboardingStatus } from "../../utils/api";
 import OverviewCards from "./OverviewCards";
 import LeadPipeline from "./LeadPipeline";
 import ActivityFeed from "./ActivityFeed";
@@ -35,13 +35,14 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [crmWidgets, setCrmWidgets] = useState(null);
   const [seqStats, setSeqStats] = useState(null);
+  const [onboardingStatus, setOnboardingStatus] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
     setError(null);
     try {
-      const [dashRes, leadsRes, autoRes, activityRes, crmRes, seqStatsRes] =
+      const [dashRes, leadsRes, autoRes, activityRes, crmRes, seqStatsRes, onboardRes] =
         await Promise.allSettled([
           fetchDashboard(user.tenantId, token),
           fetchLeads(user.tenantId, token),
@@ -49,6 +50,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           fetchActivity(user.tenantId, token),
           fetchCrmDashboardWidgets(user.tenantId, token),
           fetchSequenceStats(user.tenantId, token),
+          fetchOnboardingStatus(user.tenantId, token),
         ]);
 
       if (dashRes.status === "fulfilled") {
@@ -61,6 +63,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
       if (activityRes.status === "fulfilled") setActivity(activityRes.value.activity || []);
       if (crmRes.status === "fulfilled") setCrmWidgets(crmRes.value);
       if (seqStatsRes.status === "fulfilled") setSeqStats(seqStatsRes.value);
+      if (onboardRes.status === "fulfilled") setOnboardingStatus(onboardRes.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -148,6 +151,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           onNavigate={onNavigate}
           onDismiss={() => setShowOnboarding(false)}
           onStepComplete={handleStepComplete}
+          onboardingStatus={onboardingStatus}
         />
       )}
 
