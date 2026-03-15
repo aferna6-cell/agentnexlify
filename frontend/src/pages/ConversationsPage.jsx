@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   fetchConversations,
@@ -10,8 +10,18 @@ import {
   fetchConversationNotes,
   createConversationNote,
   deleteConversationNote,
+  fetchSnippets,
+  replyToConversation,
 } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
+
+const SNIPPET_CATEGORY_COLORS = {
+  general: { color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
+  pricing: { color: "#22c55e", bg: "rgba(34,197,94,0.1)" },
+  hours: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  services: { color: "#8b5cf6", bg: "rgba(139,92,246,0.1)" },
+  custom: { color: "#ec4899", bg: "rgba(236,72,153,0.1)" },
+};
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -60,6 +70,39 @@ export default function ConversationsPage() {
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [noteInput, setNoteInput] = useState("");
   const [addingNote, setAddingNote] = useState(false);
+
+  // Reply state
+  const [replyInput, setReplyInput] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
+  // Snippet picker state
+  const [showSnippetPicker, setShowSnippetPicker] = useState(false);
+  const [snippetsCache, setSnippetsCache] = useState(null); // null = not loaded yet
+  const [snippetsLoading, setSnippetsLoading] = useState(false);
+  const [snippetSearch, setSnippetSearch] = useState("");
+  const snippetPickerRef = useRef(null);
+  const replyTextareaRef = useRef(null);
+  const snippetSearchRef = useRef(null);
+
+  // Close snippet picker on outside click
+  useEffect(() => {
+    if (!showSnippetPicker) return;
+    const handleClickOutside = (e) => {
+      if (snippetPickerRef.current && !snippetPickerRef.current.contains(e.target)) {
+        setShowSnippetPicker(false);
+        setSnippetSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSnippetPicker]);
+
+  // Focus search input when picker opens
+  useEffect(() => {
+    if (showSnippetPicker && snippetSearchRef.current) {
+      snippetSearchRef.current.focus();
+    }
+  }, [showSnippetPicker]);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -161,6 +204,127 @@ export default function ConversationsPage() {
       console.error("Failed to delete note", err);
     }
   };
+
+  // Load snippets (lazy, cached)
+  const loadSnippets = async () => {
+    if (snippetsCache !== null) return; // already cached
+    if (!user?.tenantId) return;
+    setSnippetsLoading(true);
+    try {
+      const res = await fetchSnippets(user.tenantId, token);
+      setSnippetsCache(res.snippets || res || []);
+    } catch (err) {
+      console.error("Failed to load snippets", err);
+      setSnippetsCache([]); // cache empty to avoid re-fetching on error
+    } finally {
+      setSnippetsLoading(false);
+    }
+  };
+
+  const toggleSnippetPicker = () => {
+    const next = !showSnippetPicker;
+    setShowSnippetPicker(next);
+    setSnippetSearch("");
+    if (next) {
+      loadSnippets();
+    }
+  };
+
+  const insertSnippet = (snippet) => {
+    const textarea = replyTextareaRef.current;
+    if (!textarea) {
+      // Fallback: just append
+      setReplyInput((prev) => {
+        // If the user typed "/" to trigger, remove the trailing "/"
+        if (prev.endsWith("/")) return prev.slice(0, -1) + snippet.content;
+        return prev ? prev + "\n" + snippet.content : snippet.content;
+      });
+    } else {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const currentVal = replyInput;
+
+      // Check if there's a "/" trigger to remove
+      let insertStart = start;
+      let prefix = currentVal.slice(0, start);
+      if (prefix.endsWith("/")) {
+        insertStart = start - 1;
+        prefix = currentVal.slice(0, insertStart);
+      }
+
+      const after = currentVal.slice(end);
+      const newVal = prefix + snippet.content + after;
+      setReplyInput(newVal);
+
+      // Move cursor to end of inserted content
+      requestAnimationFrame(() => {
+        const cursorPos = prefix.length + snippet.content.length;
+        textarea.setSelectionRange(cursorPos, cursorPos);
+        textarea.focus();
+      });
+    }
+
+    setShowSnippetPicker(false);
+    setSnippetSearch("");
+  };
+
+  const handleSendReply = async () => {
+    const content = replyInput.trim();
+    if (!content || !selected) return;
+    setSendingReply(true);
+    try {
+      await replyToConversation(user.tenantId, token, selected, content);
+      // Append the reply to the local messages list
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `reply-${Date.now()}`,
+          role: "assistant",
+          content,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      setReplyInput("");
+    } catch (err) {
+      console.error("Failed to send reply", err);
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  const handleReplyKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendReply();
+    }
+  };
+
+  const handleReplyChange = (e) => {
+    const val = e.target.value;
+    setReplyInput(val);
+
+    // "/" shortcut trigger: if the user just typed "/" at start of input or after whitespace/newline
+    if (val.endsWith("/")) {
+      const charBefore = val.length >= 2 ? val[val.length - 2] : null;
+      if (charBefore === null || charBefore === " " || charBefore === "\n") {
+        loadSnippets();
+        setShowSnippetPicker(true);
+        setSnippetSearch("");
+      }
+    }
+  };
+
+  // Filter snippets for the picker
+  const filteredSnippets = (snippetsCache || []).filter((s) => {
+    if (!snippetSearch.trim()) return true;
+    const q = snippetSearch.toLowerCase();
+    return (
+      (s.title || "").toLowerCase().includes(q) ||
+      (s.content || "").toLowerCase().includes(q) ||
+      (s.shortcut || "").toLowerCase().includes(q) ||
+      (s.category || "").toLowerCase().includes(q)
+    );
+  });
 
   // Assign conversation to a team member
   const handleAssign = async (sessionId, assignedTo) => {
@@ -676,6 +840,287 @@ export default function ConversationsPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Reply area with snippet picker */}
+                <div style={{
+                  marginTop: "1rem",
+                  padding: "0.75rem",
+                  borderRadius: 10,
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border-color)",
+                  position: "relative",
+                }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                    {/* Snippet picker button */}
+                    <div style={{ position: "relative" }} ref={snippetPickerRef}>
+                      <button
+                        onClick={toggleSnippetPicker}
+                        title="Insert snippet (or type / in the reply box)"
+                        style={{
+                          background: showSnippetPicker
+                            ? "rgba(59,130,246,0.15)"
+                            : "transparent",
+                          border: showSnippetPicker
+                            ? "1px solid rgba(59,130,246,0.3)"
+                            : "1px solid var(--border-color)",
+                          borderRadius: 8,
+                          padding: "8px 10px",
+                          cursor: "pointer",
+                          color: showSnippetPicker
+                            ? "#3b82f6"
+                            : "var(--text-secondary)",
+                          fontSize: "1rem",
+                          lineHeight: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: 38,
+                          width: 38,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                      </button>
+
+                      {/* Snippet picker dropdown */}
+                      {showSnippetPicker && (
+                        <div style={{
+                          position: "absolute",
+                          bottom: "calc(100% + 8px)",
+                          left: 0,
+                          width: 360,
+                          maxHeight: 380,
+                          background: "var(--bg-primary)",
+                          border: "1px solid var(--border-color)",
+                          borderRadius: 12,
+                          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                          display: "flex",
+                          flexDirection: "column",
+                          overflow: "hidden",
+                          zIndex: 100,
+                        }}>
+                          {/* Picker header */}
+                          <div style={{
+                            padding: "10px 12px",
+                            borderBottom: "1px solid var(--border-color)",
+                          }}>
+                            <div style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginBottom: 8,
+                            }}>
+                              <span style={{
+                                fontWeight: 600,
+                                fontSize: "0.85rem",
+                                color: "var(--text-primary)",
+                              }}>
+                                Insert Snippet
+                              </span>
+                              <span style={{
+                                fontSize: "0.65rem",
+                                color: "var(--text-muted)",
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                                background: "var(--bg-secondary)",
+                                fontFamily: "monospace",
+                              }}>
+                                / shortcut
+                              </span>
+                            </div>
+                            <input
+                              ref={snippetSearchRef}
+                              type="text"
+                              value={snippetSearch}
+                              onChange={(e) => setSnippetSearch(e.target.value)}
+                              placeholder="Search snippets..."
+                              style={{
+                                width: "100%",
+                                padding: "7px 10px",
+                                borderRadius: 6,
+                                border: "1px solid var(--border-color)",
+                                background: "var(--bg-secondary)",
+                                color: "var(--text-primary)",
+                                fontSize: "0.8rem",
+                                outline: "none",
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                  setShowSnippetPicker(false);
+                                  setSnippetSearch("");
+                                  replyTextareaRef.current?.focus();
+                                }
+                                // Enter selects first filtered snippet
+                                if (e.key === "Enter" && filteredSnippets.length > 0) {
+                                  e.preventDefault();
+                                  insertSnippet(filteredSnippets[0]);
+                                }
+                              }}
+                            />
+                          </div>
+
+                          {/* Picker body */}
+                          <div style={{
+                            flex: 1,
+                            overflowY: "auto",
+                            padding: "4px 0",
+                          }}>
+                            {snippetsLoading ? (
+                              <div style={{
+                                padding: "1.5rem",
+                                textAlign: "center",
+                                color: "var(--text-muted)",
+                                fontSize: "0.85rem",
+                              }}>
+                                Loading snippets...
+                              </div>
+                            ) : filteredSnippets.length === 0 ? (
+                              <div style={{
+                                padding: "1.5rem 1rem",
+                                textAlign: "center",
+                                color: "var(--text-muted)",
+                                fontSize: "0.85rem",
+                                lineHeight: 1.6,
+                              }}>
+                                {(snippetsCache || []).length === 0
+                                  ? "No snippets created yet. Go to Snippets in the sidebar to create reusable reply templates."
+                                  : "No snippets match your search. Try a different keyword."}
+                              </div>
+                            ) : (
+                              filteredSnippets.map((snippet) => {
+                                const catKey = (snippet.category || "general").toLowerCase();
+                                const catColor = SNIPPET_CATEGORY_COLORS[catKey] || SNIPPET_CATEGORY_COLORS.general;
+                                return (
+                                  <button
+                                    key={snippet.id}
+                                    onClick={() => insertSnippet(snippet)}
+                                    style={{
+                                      display: "block",
+                                      width: "100%",
+                                      padding: "10px 12px",
+                                      background: "transparent",
+                                      border: "none",
+                                      borderBottom: "1px solid var(--border-color)",
+                                      cursor: "pointer",
+                                      textAlign: "left",
+                                      transition: "background 0.1s ease",
+                                      color: "inherit",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = "var(--bg-secondary)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
+                                    <div style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      marginBottom: 4,
+                                    }}>
+                                      <span style={{
+                                        fontWeight: 600,
+                                        fontSize: "0.85rem",
+                                        color: "var(--text-primary)",
+                                        flex: 1,
+                                        minWidth: 0,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                      }}>
+                                        {snippet.title}
+                                      </span>
+                                      <span style={{
+                                        display: "inline-block",
+                                        padding: "1px 6px",
+                                        borderRadius: 4,
+                                        fontSize: "0.65rem",
+                                        fontWeight: 600,
+                                        color: catColor.color,
+                                        background: catColor.bg,
+                                        textTransform: "capitalize",
+                                        whiteSpace: "nowrap",
+                                        flexShrink: 0,
+                                      }}>
+                                        {snippet.category || "general"}
+                                      </span>
+                                      {snippet.shortcut && (
+                                        <span style={{
+                                          fontSize: "0.65rem",
+                                          fontFamily: "monospace",
+                                          color: "var(--accent, #00BFFF)",
+                                          background: "var(--accent-dim, rgba(0,191,255,0.1))",
+                                          padding: "1px 5px",
+                                          borderRadius: 3,
+                                          flexShrink: 0,
+                                        }}>
+                                          /{snippet.shortcut}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div style={{
+                                      fontSize: "0.78rem",
+                                      color: "var(--text-secondary)",
+                                      lineHeight: 1.4,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                    }}>
+                                      {snippet.content}
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Reply textarea */}
+                    <textarea
+                      ref={replyTextareaRef}
+                      value={replyInput}
+                      onChange={handleReplyChange}
+                      onKeyDown={handleReplyKeyDown}
+                      placeholder='Type a reply... (Enter to send, Shift+Enter for new line, "/" for snippets)'
+                      rows={2}
+                      style={{
+                        flex: 1,
+                        padding: "8px 10px",
+                        fontSize: "0.85rem",
+                        borderRadius: 8,
+                        border: "1px solid var(--border-color)",
+                        background: "var(--bg-primary)",
+                        color: "var(--text-primary)",
+                        resize: "vertical",
+                        minHeight: 40,
+                        fontFamily: "inherit",
+                        outline: "none",
+                      }}
+                    />
+
+                    {/* Send button */}
+                    <button
+                      className="btn-primary"
+                      onClick={handleSendReply}
+                      disabled={sendingReply || !replyInput.trim()}
+                      style={{
+                        padding: "8px 16px",
+                        fontSize: "0.8rem",
+                        whiteSpace: "nowrap",
+                        height: "fit-content",
+                      }}
+                    >
+                      {sendingReply ? "Sending..." : "Send"}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

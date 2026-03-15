@@ -230,4 +230,9 @@ Creates `snippets` table for pre-written response templates. Columns: tenant_id 
 
 **Operational note:** Migration 036 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
 
+### 037 — Response Metrics (Analytics Dashboard Upgrade)
+Creates `response_metrics` table for tracking conversation response times and outcomes. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), conversation_id (FK→conversations, ON DELETE SET NULL), session_id (TEXT), first_message_at (TIMESTAMPTZ), first_response_at (TIMESTAMPTZ), response_time_seconds (INTEGER), channel (TEXT DEFAULT 'widget'), resolved_at (TIMESTAMPTZ), outcome (TEXT CHECK), created_at (TIMESTAMPTZ). Indexed on tenant_id and (tenant_id, created_at DESC). RLS enabled.
+
+**Operational note:** Migration 037 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

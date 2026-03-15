@@ -439,6 +439,51 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     return info
 
 
+def _record_response_metric(tenant_id: str, session_id: str, conversation_id: str) -> None:
+    """Background task: record response time for the first message exchange."""
+    try:
+        db = get_supabase()
+        messages = (
+            db.table("chat_messages")
+            .select("role, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("session_id", session_id)
+            .order("created_at")
+            .limit(5)
+            .execute()
+        )
+        if not messages.data or len(messages.data) < 2:
+            return
+
+        first_user = None
+        first_response = None
+        for msg in messages.data:
+            if msg["role"] == "user" and not first_user:
+                first_user = msg["created_at"]
+            elif msg["role"] == "assistant" and first_user and not first_response:
+                first_response = msg["created_at"]
+
+        if not first_user or not first_response:
+            return
+
+        from datetime import datetime
+        t1 = datetime.fromisoformat(first_user.replace("Z", "+00:00"))
+        t2 = datetime.fromisoformat(first_response.replace("Z", "+00:00"))
+        response_seconds = max(0, int((t2 - t1).total_seconds()))
+
+        db.table("response_metrics").insert({
+            "tenant_id": tenant_id,
+            "session_id": session_id,
+            "conversation_id": conversation_id if conversation_id else None,
+            "first_message_at": first_user,
+            "first_response_at": first_response,
+            "response_time_seconds": response_seconds,
+            "channel": "widget",
+        }).execute()
+    except Exception:
+        logger.warning("response_metric: failed for tenant %s session %s", tenant_id, session_id, exc_info=True)
+
+
 def _extract_service_interest(messages: list[dict]) -> str | None:
     """Extract the visitor's primary service interest from user messages.
     Uses simple keyword matching — no AI call to keep it fast."""
@@ -1407,7 +1452,13 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             _extract_action_items, tenant["id"], req.session_id, all_msgs_for_actions,
         )
 
-    # 14. Watermark logic
+    # 14. Response time tracking (first message → first response)
+    if total_msgs <= 2:  # First exchange — record response time
+        background_tasks.add_task(
+            _record_response_metric, tenant["id"], req.session_id, conversation_id,
+        )
+
+    # 15. Watermark logic
     if tenant.get("plan") == "free":
         show_watermark = True
     else:

@@ -559,3 +559,63 @@ async def get_widget_analytics(
 
     _set_cache(cache_key, result)
     return result
+
+
+@router.get("/{tenant_id}/response-times")
+async def get_response_time_analytics(
+    tenant_id: str,
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Get response time analytics from the response_metrics table."""
+    _check_tenant(claims, tenant_id)
+
+    days = {"7d": 7, "30d": 30, "90d": 90}[period]
+    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    db = get_supabase()
+    try:
+        result = (
+            db.table("response_metrics")
+            .select("response_time_seconds, first_message_at, outcome")
+            .eq("tenant_id", tenant_id)
+            .gte("created_at", start)
+            .order("created_at")
+            .limit(1000)
+            .execute()
+        )
+    except Exception:
+        logger.warning("response_time_analytics: query failed for %s", tenant_id, exc_info=True)
+        return {"avg_response_seconds": 0, "median_response_seconds": 0, "total_conversations": 0, "by_day": [], "outcomes": {}}
+
+    data = result.data or []
+    if not data:
+        return {"avg_response_seconds": 0, "median_response_seconds": 0, "total_conversations": 0, "by_day": [], "outcomes": {}}
+
+    times = [d["response_time_seconds"] for d in data if d.get("response_time_seconds") is not None]
+    avg_time = round(sum(times) / len(times)) if times else 0
+    sorted_times = sorted(times)
+    median_time = sorted_times[len(sorted_times) // 2] if sorted_times else 0
+
+    # Group by day
+    by_day: dict[str, list[int]] = defaultdict(list)
+    for d in data:
+        if d.get("first_message_at") and d.get("response_time_seconds") is not None:
+            day = d["first_message_at"][:10]
+            by_day[day].append(d["response_time_seconds"])
+
+    daily = [{"date": day, "avg_seconds": round(sum(v) / len(v)), "count": len(v)} for day, v in sorted(by_day.items())]
+
+    # Outcomes
+    outcomes: dict[str, int] = defaultdict(int)
+    for d in data:
+        outcome = d.get("outcome") or "unknown"
+        outcomes[outcome] += 1
+
+    return {
+        "avg_response_seconds": avg_time,
+        "median_response_seconds": median_time,
+        "total_conversations": len(data),
+        "by_day": daily,
+        "outcomes": dict(outcomes),
+    }

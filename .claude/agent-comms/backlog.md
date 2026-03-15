@@ -75,8 +75,8 @@ _Call volume, chat volume, response time, missed opportunities, lead conversion 
 
 **What we already have:** Basic stats (lead count, conversation count, appointment count). Email open tracking. Review analytics. What's missing: response time tracking, missed opportunity detection, conversion funnel, busiest hours, per-team-member metrics, heat map.
 
-- [ ] **Migration: response_metrics table** — id, tenant_id, conversation_id, first_message_at, first_response_at, response_time_seconds, channel (widget/sms/voice), resolved_at, outcome (lead_captured/appointment_booked/question_answered/no_action). Migration 036.
-- [ ] **Response time tracking** — Calculate and store time between customer first message and first AI/human response. Track per conversation. Aggregate for averages.
+- [x] **Migration: response_metrics table** — DONE (migration 037, 2026-03-14)
+- [x] **Response time tracking** — DONE (widget.py records metrics on first exchange, analytics endpoint at GET /response-times, 2026-03-14)
 - [ ] **Analytics page redesign** — Replace basic stats with full dashboard: (1) Chat volume over time (line chart), (2) Lead conversion funnel (conversations → leads → appointments → completed), (3) Response time trend, (4) Busiest hours heat map (7x24 grid, color by volume), (5) AI tag distribution (bar chart, from conversation tags), (6) Per-team-member metrics (conversations handled, avg response time, leads captured).
 - [ ] **Missed opportunity detection** — Flag conversations where: visitor asked a question but got no follow-up, visitor mentioned pricing but didn't book, conversation ended abruptly. Show as "Missed Opportunities" count with drill-down.
 
@@ -88,10 +88,10 @@ _Pre-written response templates for common questions. Business owner creates the
 
 **What we already have:** Email templates (for automation sequences). What's missing: quick reply snippets for live chat/SMS conversations, AI snippet suggestions.
 
-- [ ] **Migration: snippets table** — id, tenant_id, title, content, shortcut (optional, e.g., "/hours"), category, usage_count, created_at. Migration 037.
-- [ ] **Snippets CRUD endpoints** — Standard CRUD in backend/routers/snippets.py. GET returns sorted by usage_count (most-used first). Search by title/content.
-- [ ] **Snippets management page** — Settings section or dedicated page. Create/edit/delete snippets. Categories: General, Pricing, Hours, Services, Custom. Bulk import from a list.
-- [ ] **Snippet picker in team inbox** — When team members reply to a conversation from the dashboard, show a "/" command or button to insert a snippet. Typeahead search. One-click insert.
+- [x] **Migration: snippets table** — DONE (migration 036, 2026-03-14)
+- [x] **Snippets CRUD endpoints** — DONE (backend/routers/snippets.py, 2026-03-14)
+- [x] **Snippets management page** — DONE (SnippetsPage.jsx with category tabs, search, shortcuts, 2026-03-14)
+- [x] **Snippet picker in team inbox** — DONE (ConversationsPage: lightning bolt button + "/" shortcut trigger, search, category badges, 2026-03-14)
 - [ ] **AI snippet suggestion** — When a team member is composing a reply, AI suggests the most relevant snippet based on the conversation context. Non-intrusive suggestion bar: "Suggested: [Hours & Location] — Click to insert."
 
 ### AI Contact Suggestions (Enhanced Lead Capture)
@@ -102,7 +102,7 @@ _When the chatbot talks to someone, extract their name, phone, email, business n
 
 **What we already have:** Lead auto-capture from conversations (done). Lead merge/dedup (done). What's missing: continuous extraction throughout conversation (not just first capture), suggest updates to existing leads, auto-populate service interest and notes from conversation context.
 
-- [ ] **Enhanced lead extraction — continuous mode** — Instead of extracting lead info once at the end, scan every N messages (e.g., every 3 messages) for new contact details. If a visitor mentions their email on message 8 after we already captured their name on message 2, update the lead.
+- [x] **Enhanced lead extraction — continuous mode** — DONE (already runs on every message, now also extracts service_interest via keyword matching, 2026-03-14)
 - [ ] **Lead update suggestions** — When AI detects info about an existing lead (matched by email/phone), create a pending suggestion: "Update John's record: add phone 555-1234, service interest: roof repair." Show in notification bell. Owner approves or dismisses.
 - [ ] **Auto-populate service interest + notes** — Extract service_interest and conversation summary from chat context. Auto-fill on the lead record. Currently only tags are extracted — add service_interest and a conversation_summary field.
 - [ ] **Dashboard: lead suggestion review panel** — UI for reviewing and approving AI-suggested lead updates. Batch approve/dismiss. Shows what changed and why.
