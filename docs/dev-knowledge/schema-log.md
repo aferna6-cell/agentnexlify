@@ -250,4 +250,24 @@ Adds 4 columns to `tenants`: `textback_enabled` (BOOLEAN DEFAULT false), `textba
 
 **Applied:** 2026-03-15 via Supabase MCP.
 
+### 041 — MCP API Keys
+Adds `mcp_api_key` (TEXT, unique index) and `mcp_enabled` (BOOLEAN DEFAULT false) to `tenants`. Dedicated API keys for MCP server authentication, separate from widget API keys.
+
+**Applied:** 2026-03-15 via Supabase MCP.
+
+### 042 — Contractor Bid Manager (Bids + Templates)
+Creates `bid_templates` (tenant_id, name, description, default_items JSONB) and `bids` (tenant_id, lead_id, title, description, items_json JSONB, subtotal/tax/total NUMERIC, terms, timeline, warranty, status CHECK draft/sent/viewed/accepted/rejected/expired, pdf_url, sent_at, viewed_at). Indexed on (tenant_id, status) and (tenant_id, created_at DESC). RLS enabled.
+
+**Applied:** 2026-03-15 via Supabase MCP.
+
+### 043 — Client Portal (Service Records + Portal Tokens)
+Creates `service_records` (tenant_id, lead_id, title, description, service_date, photos_json/documents_json JSONB, notes, invoice_amount) and `portal_tokens` (tenant_id, lead_id, token UNIQUE). Indexed on tenant_id, lead_id, and token. RLS enabled.
+
+**Applied:** 2026-03-15 via Supabase MCP.
+
+### 044 — AI Answering Service (Calls)
+Creates `calls` (tenant_id, lead_id, caller_phone, called_number, direction inbound/outbound, duration_seconds, status, recording_url, transcript JSONB, summary, sentiment positive/neutral/negative, action_taken, twilio_call_sid). Indexed on (tenant_id, created_at DESC), (tenant_id, status), and twilio_call_sid. RLS enabled.
+
+**Applied:** 2026-03-15 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

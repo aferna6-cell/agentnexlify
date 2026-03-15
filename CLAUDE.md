@@ -44,7 +44,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 - `backend/` — FastAPI service (`main.py`, `routers/` with 31 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–040)
+- `migrations/` — SQL migration files (001–044)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
@@ -95,6 +95,11 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | snippets | Quick reply templates for team conversations | tenant_id, title, content, shortcut, category, usage_count |
 | response_metrics | Conversation response time tracking | tenant_id, conversation_id, response_time_seconds, channel, outcome |
 | chat_flows | Visual chat flow builder | tenant_id, name, flow_json (JSONB), is_active |
+| bids | Contractor bid/estimate tracking | tenant_id, lead_id, title, items_json (JSONB), total, status, pdf_url |
+| bid_templates | Reusable bid templates | tenant_id, name, default_items (JSONB) |
+| service_records | Client portal job records | tenant_id, lead_id, title, service_date, photos_json, invoice_amount |
+| portal_tokens | Client portal access tokens | tenant_id, lead_id, token (unique) |
+| calls | AI answering service call logs | tenant_id, caller_phone, duration_seconds, transcript (JSONB), summary, sentiment |
 
 > Always verify against live schema — this table may be outdated.
 
@@ -177,7 +182,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 040) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 044) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
 
 ## Knowledge Base
 
