@@ -453,7 +453,7 @@ async def _generate_ai_email(
 
     try:
         # Run sync Anthropic call in thread pool to avoid blocking the event loop
-        client = anthropic.Anthropic(api_key=app_settings.anthropic_api_key)
+        client = anthropic.Anthropic(api_key=app_settings.anthropic_api_key, timeout=30.0)
         response = await asyncio.get_running_loop().run_in_executor(
             None,
             partial(

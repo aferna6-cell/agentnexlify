@@ -220,7 +220,7 @@ async def generate_ai_draft(
     }.get(req.tone, "professional and courteous")
 
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=30.0)
         resp = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=300,

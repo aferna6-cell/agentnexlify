@@ -206,7 +206,7 @@ async def ai_write_job_description(
     )
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,

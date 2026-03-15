@@ -649,7 +649,7 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
     transcript = "\n".join(transcript_lines)
 
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=30.0)
         resp = client.messages.create(
             model=MODEL,
             max_tokens=200,
@@ -718,7 +718,7 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
     transcript = "\n".join(transcript_lines)
 
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=30.0)
         resp = client.messages.create(
             model=MODEL,
             max_tokens=100,
@@ -781,7 +781,7 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
     transcript = "\n".join(transcript_lines)
 
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=30.0)
         resp = client.messages.create(
             model=MODEL,
             max_tokens=300,
@@ -1559,7 +1559,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     logger.info("widget_chat: calling Anthropic model=%s api_key=%s msg_count=%d",
                 MODEL, api_key_preview, len(messages))
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
         api_response = client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,

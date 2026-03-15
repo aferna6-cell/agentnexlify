@@ -239,7 +239,7 @@ async def import_menu_from_website(
 
     # Use Claude to extract menu items
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=4000,

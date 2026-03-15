@@ -274,8 +274,9 @@ async def health():
     except Exception:
         logger.warning("Health check: supabase unreachable", exc_info=True)
 
+    overall = "ok" if supabase_status == "connected" else "degraded"
     return {
-        "status": "ok",
+        "status": overall,
         "service": "agentnexlify",
         "uptime_seconds": uptime,
         "checks": {

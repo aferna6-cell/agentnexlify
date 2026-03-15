@@ -206,7 +206,7 @@ async def suggest_snippet(
     )
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
         resp = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=50,

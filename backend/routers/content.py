@@ -288,7 +288,7 @@ async def repurpose_content(
     platform_keys = list(PLATFORM_SPECS.keys())
 
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=30.0)
         resp = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=4000,
