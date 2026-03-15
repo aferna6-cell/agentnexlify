@@ -228,4 +228,20 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 
 ---
 
+### Chat flow engine: prompt injection, not hard-coded routing
+**Date:** 2026-03-14
+**Decision:** The chat flow engine works by injecting flow instructions into the AI system prompt, not by implementing a hard-coded state machine that intercepts messages. When a tenant has an active flow, the flow's nodes and edges are translated into natural language instructions appended to the system prompt.
+**Why:** A hard-coded flow engine would need to track conversation state, evaluate conditions, and handle edge cases — all of which the AI already handles naturally. By translating the flow into instructions, we get the benefits of structured conversation flow while keeping the AI's ability to handle unexpected questions. The AI can deviate from the flow when appropriate (e.g., answering an urgent question mid-flow) and return to it naturally.
+**Implication:** Flow "conditions" are keyword-based triggers in the prompt, not regex evaluations. The AI interprets them flexibly. Flow "actions" like "show booking" become instructions to offer appointment booking. This means flows guide behavior rather than enforce it strictly — acceptable for v1, may need tightening if customers want strict routing.
+
+### AI snippet suggestion: index-based response, not semantic search
+**Date:** 2026-03-14
+**Decision:** The snippet suggestion endpoint sends all snippets (up to 20) to Claude along with the conversation context and asks it to return the index number of the best match. No vector database, no embeddings, no semantic search.
+**Why:** With <100 snippets per tenant, sending the full list to Claude is fast and cheap (one API call with ~2K tokens). Vector search would require embedding infrastructure and wouldn't be significantly better at this scale. The Claude-based approach understands nuance (e.g., a "We're closed on Sundays" snippet matching a "Do you work weekends?" question) that keyword matching would miss.
+
+### Response time tracking: per-first-exchange, not per-message
+**Date:** 2026-03-14
+**Decision:** Response time is measured once per conversation — the time between the first user message and the first assistant response. Subsequent messages are not tracked for response time.
+**Why:** For AI-powered chat, every message gets an instant response. The meaningful metric is how quickly the AI responds to the initial contact. For team replies, the response time would be from the customer's message to the team member's reply, but this requires tracking which messages are from team members vs AI — deferred to a future iteration.
+
 _Add new decisions when significant architectural choices are made._

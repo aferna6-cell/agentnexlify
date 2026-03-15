@@ -439,6 +439,61 @@ def _extract_lead_info(text: str) -> dict[str, str]:
     return info
 
 
+def _build_flow_instructions(flow_json: dict) -> str:
+    """Convert a chat flow definition into natural language instructions for the AI."""
+    nodes = flow_json.get("nodes", [])
+    edges = flow_json.get("edges", [])
+    if not nodes:
+        return ""
+
+    lines = ["\n\nCONVERSATION FLOW INSTRUCTIONS:"]
+    lines.append("Follow this conversation flow when appropriate:")
+
+    for node in nodes:
+        ntype = node.get("type", "")
+        data = node.get("data", {})
+        nid = node.get("id", "")
+
+        if ntype == "greeting":
+            msg = data.get("message", "")
+            if msg:
+                lines.append(f"- Start with: \"{msg}\"")
+        elif ntype == "question":
+            q = data.get("question", data.get("label", ""))
+            if q:
+                lines.append(f"- Ask: \"{q}\"")
+        elif ntype == "condition":
+            label = data.get("label", "")
+            condition = data.get("condition", "")
+            # Find edges from this node
+            outgoing = [e for e in edges if e.get("source") == nid]
+            if label and outgoing:
+                options = [f"'{e.get('label', 'next')}'" for e in outgoing if e.get("label")]
+                if options:
+                    lines.append(f"- Decision: {label} → options: {', '.join(options)}")
+        elif ntype == "action":
+            action = data.get("action", "")
+            label = data.get("label", "")
+            action_map = {
+                "show_booking": "offer to book an appointment",
+                "show_menu": "show the menu",
+                "take_order": "help place an order",
+                "confirm_order": "confirm the order details",
+                "collect_info": "collect the visitor's contact information and requirements",
+            }
+            instruction = action_map.get(action, label)
+            if instruction:
+                lines.append(f"- Action: {instruction}")
+        elif ntype == "handoff":
+            lines.append("- If the visitor needs human help, let them know a team member will follow up")
+        elif ntype == "ai_response":
+            label = data.get("label", "Answer questions")
+            lines.append(f"- {label} using your knowledge and the business context above")
+
+    lines.append("- For anything not covered by this flow, use your best judgment based on the business context.")
+    return "\n".join(lines)
+
+
 def _record_response_metric(tenant_id: str, session_id: str, conversation_id: str) -> None:
     """Background task: record response time for the first message exchange."""
     try:
@@ -1362,7 +1417,29 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("jobs query failed for tenant %s", tenant["id"], exc_info=True)
 
+    # Load active chat flow
+    active_flow = None
+    try:
+        flow_result = (
+            db.table("chat_flows")
+            .select("flow_json")
+            .eq("tenant_id", tenant["id"])
+            .eq("is_active", True)
+            .limit(1)
+            .execute()
+        )
+        if flow_result.data:
+            active_flow = flow_result.data[0].get("flow_json")
+    except Exception:
+        logger.warning("chat_flows query failed for tenant %s", tenant["id"], exc_info=True)
+
     system_prompt = _build_system_prompt(tenant, faq_data, bh_data, corrections, website_content, menu_items, job_listings)
+
+    # Inject active flow instructions into system prompt
+    if active_flow and active_flow.get("nodes"):
+        flow_instructions = _build_flow_instructions(active_flow)
+        if flow_instructions:
+            system_prompt += flow_instructions
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
