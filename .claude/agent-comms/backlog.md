@@ -272,8 +272,8 @@ _When a call goes to voicemail, auto-text the caller with an AI agent that handl
 - [x] **Auto text-back message** — DONE 2026-03-15 Cycle 60. Auto-sends "{business_name} missed your call" text within seconds. AI handles SMS replies via /api/v1/twilio/sms-reply.
 - [x] **SMS conversation threading** — DONE 2026-03-15 Cycle 60. Messages stored in chat_messages with session_id=sms_{phone}. Visible in ConversationsPage alongside widget chats.
 - [x] **Lead capture from SMS** — DONE 2026-03-15 Cycle 60. Lead auto-created on missed call with phone number. SMS AI replies use same chat engine that extracts lead info.
-- [ ] **Configurable text-back settings** — Dashboard toggle: enable/disable, customize the greeting message, set quiet hours (don't text at 2am), set max texts per conversation.
-- [ ] **Missed call analytics** — Dashboard widget showing: calls missed per day, text-back response rate, leads captured from missed calls. This data alone justifies the subscription — "You missed 23 calls this month. We captured 18 of them via text."
+- [x] **Configurable text-back settings** — DONE 2026-03-15 Cycle 61. SettingsPage: toggle, custom message, quiet hours. Backend respects all settings.
+- [x] **Missed call analytics** — DONE 2026-03-15 Cycle 61. Dashboard "Missed Calls This Week" stat card from activity_log. Per-day breakdown deferred to analytics page.
 
 ## Features — Module: Contractor Bid Manager
 _AI generates professional estimates/proposals from a job description. Track bid status._

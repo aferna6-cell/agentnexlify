@@ -41,10 +41,10 @@ Dashboard (React/Vite) → FastAPI /api/* → Supabase
 Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant from day one.
 
 ## Key Directories
-- `backend/` — FastAPI service (`main.py`, `routers/` with 30 files, `services/` for business logic)
+- `backend/` — FastAPI service (`main.py`, `routers/` with 31 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–039)
+- `migrations/` — SQL migration files (001–040)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
@@ -177,7 +177,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 039) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 040) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
 
 ## Knowledge Base
 
