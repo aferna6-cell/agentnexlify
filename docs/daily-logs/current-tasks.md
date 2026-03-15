@@ -2,37 +2,37 @@
 
 Updated by the automated morning/evening routines and interactive sessions.
 
-## Top Priorities (2026-03-14)
+## Top Priorities (2026-03-15)
 
-1. **Commit and push all uncommitted work** — 20 files, 3 features, infrastructure updates sitting uncommitted
-2. **Apply migrations 025-032 in live Supabase** — 8 pending, features broken in prod without them
-3. **Fix frontend silent catches + analytics.py deprecation** — quality/reliability cleanup
+1. **Apply migrations 033-038 to live Supabase** — 6 new migrations from Cycles 30-38, features broken in prod without them
+2. **Clean up legacy widget files** — widget/ has stale nexlify-chat.js, nexlify-chat.src.js, README.md not in frontend/public/widget/
+3. **Verify Cycles 34-38 end-to-end** — 5 feature cycles shipped yesterday, need live DB validation
 
 ## Active Tasks
 
-### Priority 0 — Ship Now
-- [ ] Commit all uncommitted changes (tag definitions, AI job writer, job listings in widget, infrastructure)
-- [ ] Apply and verify migrations 025-032 in live Supabase
-- [ ] Push to Railway/Vercel
+### Priority 0 — Apply Now
+- [ ] Apply migrations 033-038 in live Supabase (action_items, shared_inbox, team_presence, snippets, response_metrics, chat_flows)
+- [ ] Clean up legacy widget files (widget/nexlify-chat.js, widget/nexlify-chat.src.js, widget/README.md)
 
 ### Priority 1 — Quality & Stability
 - [ ] Fix analytics.py deprecation: `regex=` → `pattern=` in Query() calls (lines 313, 384, 475)
 - [ ] Replace 5 silent frontend catches (App.jsx, BillingPage.jsx, Availability.jsx, Dashboard/OnboardingChecklist.jsx, Automations/SequenceBuilder.jsx)
 - [ ] Investigate `tests/test_auth_endpoints.py::TestRegister::test_duplicate_email_returns_409` hanging under pytest
-- [ ] E2E test: tag auto-categorization flow (widget chat → background categorize → conversations.tags)
-- [ ] E2E test: AI job writer endpoint → job form population
-- [ ] E2E test: job listings visible in widget chat responses
+- [ ] E2E test: snippets CRUD + snippet picker in shared inbox
+- [ ] E2E test: chat flow builder + flow engine in widget
+- [ ] E2E test: response metrics tracking + analytics dashboard
 
 ### Priority 2 — Feature Follow-Up
 - [ ] Tag definitions UI rendering in SettingsPage (state/handlers exist, JSX section may be incomplete)
 - [ ] Configure Cloudflare Browser Rendering env vars (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`)
-- [ ] E2E test: website crawl → `website_content` storage → widget prompt enrichment
-- [ ] Re-run scheduler setup so routines pick up new CLI resolution
-- [ ] Test one manual morning/evening scheduled run
+- [ ] E2E test: action items extraction + dashboard widget + full page
+- [ ] E2E test: shared team inbox — assignment, reply, presence indicators
+- [ ] E2E test: website crawl → website_content → widget prompt enrichment
 
 ### Priority 3 — Reliability
 - [ ] Add contract tests for high-churn `api.js` flows (billing, webhooks, settings, content, tags)
-- [ ] Clean up legacy widget files (`widget/nexlify-chat.js`, `widget/nexlify-chat.src.js`)
+- [ ] Re-run scheduler setup so routines pick up new CLI resolution
+- [ ] Test one manual morning/evening scheduled run
 
 ### Priority 4 — Content / Docs
 - [ ] Help article: "How to configure your AI assistant"
@@ -40,20 +40,21 @@ Updated by the automated morning/evening routines and interactive sessions.
 
 ## Completed (Recent)
 
-- [x] AI conversation auto-categorization in widget (2026-03-13, uncommitted)
-- [x] Tenant tag definitions CRUD — backend + frontend + migration 032 (2026-03-13, uncommitted)
-- [x] AI job writer endpoint + frontend UI (2026-03-13, uncommitted)
-- [x] Job listings in widget system prompt (2026-03-13, uncommitted)
-- [x] Daily routine infrastructure: common.sh, health-check.sh, scheduler fixes (2026-03-12, uncommitted)
-- [x] Content Studio — full module (2026-03-12)
-- [x] Reputation Manager — reviews, AI drafting, auto requests, analytics (2026-03-12)
-- [x] Team permissions enforcement on all write endpoints (2026-03-12)
-- [x] Lead assignment to team members (2026-03-12)
-- [x] AI response tuning with thumbs up/down (2026-03-12)
-- [x] Stripe subscription management inline (2026-03-12)
-- [x] 97 tests passing (2026-03-12)
-- [x] Frontend code-splitting pass (2026-03-12)
-- [x] Migration 032 documented in schema-log.md (2026-03-13)
+- [x] Chat flow engine in widget + architecture docs — Cycle 38 (2026-03-14)
+- [x] AI snippet suggestion + chat flow builder backend — Cycle 37 (2026-03-14)
+- [x] Analytics dashboard upgrade — Cycle 36 (2026-03-14)
+- [x] Snippet picker + response time tracking — Cycle 35 (2026-03-14)
+- [x] Snippets + enhanced lead capture — Cycle 34 (2026-03-14)
+- [x] Shared team inbox complete — Cycle 33 (2026-03-14)
+- [x] Shared team inbox — assignment, internal notes — Cycle 32 (2026-03-14)
+- [x] Action items complete — Cycle 31 (2026-03-14)
+- [x] Action items + tag filtering + tag analytics — Cycle 30 (2026-03-14)
+- [x] AI conversation tags, AI job writer, job listings in widget — Cycle 29 (2026-03-13)
+- [x] Job board module — Cycle 28 (2026-03-13)
+- [x] Menu display in widget + restaurant ordering — Cycle 27 (2026-03-13)
+- [x] Orders dashboard + order notifications — Cycle 26 (2026-03-13)
+- [x] Menu auto-import + orders table — Cycle 25 (2026-03-13)
+- [x] Restaurant menu management — Cycle 24.5 (2026-03-13)
 
 ---
 

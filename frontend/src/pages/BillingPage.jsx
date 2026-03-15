@@ -54,7 +54,7 @@ export default function BillingPage() {
     try {
       const [data, trial] = await Promise.all([
         fetchDashboard(user.tenantId, token),
-        fetchTrialStatus(user.tenantId, token).catch(() => null),
+        fetchTrialStatus(user.tenantId, token).catch((err) => { console.warn("Trial status fetch failed:", err.message); return null; }),
       ]);
       setDashData(data);
       setTrialData(trial);

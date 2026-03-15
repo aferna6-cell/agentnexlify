@@ -85,7 +85,7 @@ export default function OrdersPage() {
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
       if (selectedOrder?.id === orderId) setSelectedOrder(updated);
       // Refresh stats
-      fetchOrderStats(user.tenantId, token).then(setStats).catch(() => {});
+      fetchOrderStats(user.tenantId, token).then(setStats).catch((err) => console.warn("Order stats refresh failed:", err.message));
     } catch (err) {
       console.warn("Status update failed:", err.message);
     } finally {

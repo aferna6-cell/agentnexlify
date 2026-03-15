@@ -166,29 +166,43 @@ async def list_sequences(tenant_id: str, claims: dict = Depends(_get_current_ten
         .execute()
     )
 
+    seq_ids = [s["id"] for s in (seqs.data or [])]
+    if not seq_ids:
+        return {"sequences": []}
+
+    # Batch fetch steps and executions for all sequences (avoids N+1)
+    all_steps = (
+        db.table("automation_steps")
+        .select("sequence_id")
+        .in_("sequence_id", seq_ids)
+        .execute()
+    )
+    all_execs = (
+        db.table("automation_executions")
+        .select("sequence_id,status")
+        .in_("sequence_id", seq_ids)
+        .execute()
+    )
+
+    # Build lookup maps
+    step_counts = {}
+    for s in (all_steps.data or []):
+        step_counts[s["sequence_id"]] = step_counts.get(s["sequence_id"], 0) + 1
+
+    exec_by_seq = {}
+    for e in (all_execs.data or []):
+        exec_by_seq.setdefault(e["sequence_id"], []).append(e["status"])
+
     result = []
-    for seq in seqs.data or []:
-        # Step count
-        steps = (
-            db.table("automation_steps")
-            .select("id", count="exact")
-            .eq("sequence_id", seq["id"])
-            .execute()
-        )
-        # Execution stats
-        execs = (
-            db.table("automation_executions")
-            .select("status")
-            .eq("sequence_id", seq["id"])
-            .execute()
-        )
-        exec_data = execs.data or []
+    for seq in seqs.data:
+        sid = seq["id"]
+        statuses = exec_by_seq.get(sid, [])
         result.append({
             **seq,
-            "step_count": steps.count or 0,
-            "total_enrolled": len(exec_data),
-            "active_count": sum(1 for e in exec_data if e["status"] == "in_progress"),
-            "completed_count": sum(1 for e in exec_data if e["status"] == "completed"),
+            "step_count": step_counts.get(sid, 0),
+            "total_enrolled": len(statuses),
+            "active_count": sum(1 for st in statuses if st == "in_progress"),
+            "completed_count": sum(1 for st in statuses if st == "completed"),
         })
 
     return {"sequences": result}
