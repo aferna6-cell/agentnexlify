@@ -213,31 +213,31 @@ Creates `tenant_tag_definitions` table for customizable AI auto-categorization t
 ### 033 — Action Items (AI-Extracted Tasks)
 Creates `action_items` table for AI-extracted actionable items from conversations. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), conversation_id (FK→conversations, ON DELETE SET NULL, nullable), lead_id (FK→leads, ON DELETE SET NULL, nullable), description (TEXT NOT NULL), due_date (DATE, nullable), priority (TEXT CHECK: low/medium/high, DEFAULT 'medium'), status (TEXT CHECK: pending/done/dismissed, DEFAULT 'pending'), assigned_to (FK→team_members, ON DELETE SET NULL, nullable), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status), (tenant_id, due_date) for non-null, and conversation_id for non-null. RLS enabled.
 
-**Operational note:** Migration 033 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 ### 034 — Shared Inbox (Conversation Assignment + Internal Notes)
 Adds `assigned_to` (UUID FK→team_members, ON DELETE SET NULL) to `conversations` table for team member ownership. Creates `conversation_notes` table for internal team notes on conversations (never visible to customers). Columns: conversation_id (FK→conversations, ON DELETE CASCADE), tenant_id (FK→tenants, ON DELETE CASCADE), author_id (FK→team_members, ON DELETE CASCADE), content (TEXT NOT NULL), created_at (TIMESTAMPTZ). Indexed on conversation_id and tenant_id. RLS enabled.
 
-**Operational note:** Migration 034 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP. Note: index uses `client_id` (not `tenant_id`) since conversations table uses that FK name.
 
 ### 035 — Team Presence Tracking
 Adds `last_active_conversation_id` (UUID FK→conversations, ON DELETE SET NULL) and `last_active_at` (TIMESTAMPTZ) to `team_members` table. Used for showing which team member is currently viewing/handling a conversation in the shared inbox.
 
-**Operational note:** Migration 035 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 ### 036 — Snippets / Quick Replies
 Creates `snippets` table for pre-written response templates. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), title (TEXT NOT NULL), content (TEXT NOT NULL), shortcut (TEXT, optional), category (TEXT DEFAULT 'General'), usage_count (INTEGER DEFAULT 0), created_at (TIMESTAMPTZ). Indexed on tenant_id, (tenant_id, category), and unique on (tenant_id, shortcut) where not null. RLS enabled.
 
-**Operational note:** Migration 036 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 ### 037 — Response Metrics (Analytics Dashboard Upgrade)
 Creates `response_metrics` table for tracking conversation response times and outcomes. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), conversation_id (FK→conversations, ON DELETE SET NULL), session_id (TEXT), first_message_at (TIMESTAMPTZ), first_response_at (TIMESTAMPTZ), response_time_seconds (INTEGER), channel (TEXT DEFAULT 'widget'), resolved_at (TIMESTAMPTZ), outcome (TEXT CHECK), created_at (TIMESTAMPTZ). Indexed on tenant_id and (tenant_id, created_at DESC). RLS enabled.
 
-**Operational note:** Migration 037 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 ### 038 — Chat Flows (Visual Flow Builder)
 Creates `chat_flows` table for customizable chat conversation flows. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT NOT NULL), description (TEXT), flow_json (JSONB NOT NULL, stores nodes and edges), is_active (BOOLEAN DEFAULT false), is_template (BOOLEAN DEFAULT false), created_at, updated_at (TIMESTAMPTZ). Indexed on tenant_id and active flows. RLS enabled. Only one flow can be active per tenant (enforced in backend).
 
-**Operational note:** Migration 038 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+**Applied:** 2026-03-15 via Supabase MCP.
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

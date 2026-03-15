@@ -4,13 +4,13 @@ Updated by the automated morning/evening routines and interactive sessions.
 
 ## Top Priorities (2026-03-15)
 
-1. **Apply migrations 033-038 to live Supabase** — 6 new migrations, features broken in prod without them
-2. **Verify Cycles 34-38 end-to-end** — after migrations are applied, test live
+1. **Verify Cycles 34-38 end-to-end** — migrations applied, test live features
 
 ## Active Tasks
 
-### Priority 0 — Apply Now
-- [ ] Apply migrations 033-038 in live Supabase (action_items, shared_inbox, team_presence, snippets, response_metrics, chat_flows)
+### Priority 0 — Verify
+- [x] ~~Apply migrations 033-038 in live Supabase~~ — DONE 2026-03-15 via Supabase MCP
+- [ ] Verify action items, shared inbox, snippets, response metrics, chat flows work in production
 
 ### Priority 1 — Quality & Stability
 - [ ] E2E test: snippets CRUD + snippet picker in shared inbox
