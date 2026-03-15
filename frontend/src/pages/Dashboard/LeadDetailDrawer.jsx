@@ -31,6 +31,93 @@ function scoreColor(score) {
   return "var(--text-muted)";
 }
 
+function temperatureBadge(temp) {
+  if (!temp) return null;
+  const t = temp.toLowerCase();
+  const config = {
+    hot: { color: "#ff4444", bg: "rgba(255, 68, 68, 0.15)", border: "rgba(255, 68, 68, 0.3)" },
+    warm: { color: "#f5a623", bg: "rgba(245, 166, 35, 0.15)", border: "rgba(245, 166, 35, 0.3)" },
+    cold: { color: "#00bfff", bg: "rgba(0, 191, 255, 0.15)", border: "rgba(0, 191, 255, 0.3)" },
+  };
+  const c = config[t] || config.cold;
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
+      padding: "3px 10px",
+      borderRadius: 12,
+      fontSize: "0.75rem",
+      fontWeight: 600,
+      background: c.bg,
+      color: c.color,
+      border: `1px solid ${c.border}`,
+    }}>
+      {t === "hot" ? (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v10m0 0l-3-3m3 3l3-3M5 21a7 7 0 0114 0" /><circle cx="12" cy="17" r="4" fill="currentColor" opacity="0.3" /></svg>
+      ) : t === "warm" ? (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
+      ) : (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 17.58A11 11 0 0 0 18 4.41C9.71 4.41 3 11.12 3 19.41h9.71" /><path d="M12.71 12.71L17 8.41" /></svg>
+      )}
+      {temp.charAt(0).toUpperCase() + temp.slice(1).toLowerCase()}
+    </span>
+  );
+}
+
+function GenericScoreFactors({ lead }) {
+  const factors = [
+    { label: "Has email", met: !!lead.email, points: 20 },
+    { label: "Has phone", met: !!lead.phone, points: 15 },
+    { label: "Has name", met: !!lead.name, points: 10 },
+    { label: "Has conversation", met: !!lead.conversation_id || !!lead.session_id, points: 10 },
+    { label: "Booked appointment", met: lead.status === "appointment_booked", points: 25 },
+  ];
+  const earned = factors.filter((f) => f.met).reduce((sum, f) => sum + f.points, 0);
+
+  return (
+    <div className="score-factors-section">
+      <div className="score-factors-header">
+        <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          Score Factors
+        </span>
+        <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+          {earned} pts from profile
+        </span>
+      </div>
+      <div className="score-factors-list">
+        {factors.map((f) => (
+          <div key={f.label} className="score-factor-row">
+            <span className="score-factor-left">
+              {f.met ? (
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="10" fill="var(--green)" />
+                  <path d="M6 10l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="10" fill="var(--border)" />
+                  <path d="M7 7l6 6M13 7l-6 6" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              )}
+              <span style={{ color: f.met ? "var(--text-primary)" : "var(--text-muted)", fontSize: "0.8rem" }}>
+                {f.label}
+              </span>
+            </span>
+            <span style={{
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              color: f.met ? "var(--green)" : "var(--text-muted)",
+            }}>
+              {f.met ? `+${f.points}` : `+${f.points}`}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ScoreBreakdown({ breakdown }) {
   if (!breakdown) return null;
   const eng = breakdown.engagement?.total || 0;
@@ -204,15 +291,19 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
                 {lead.lead_score ?? "N/A"} / 100
               </div>
             </div>
-            <span
-              className={`lead-tag ${scoreClass(lead.lead_score)}`}
-              style={{ marginLeft: "auto", fontSize: 13 }}
-            >
-              {scoreLabel(lead.lead_score)}
-            </span>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+              {lead.lead_temperature && temperatureBadge(lead.lead_temperature)}
+              <span
+                className={`lead-tag ${scoreClass(lead.lead_score)}`}
+                style={{ fontSize: 13 }}
+              >
+                {scoreLabel(lead.lead_score)}
+              </span>
+            </div>
           </div>
 
           <ScoreBreakdown breakdown={breakdown} />
+          {!breakdown && <GenericScoreFactors lead={lead} />}
 
           {/* Auto-tags */}
           {lead.tags && lead.tags.length > 0 && (
@@ -351,10 +442,6 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
           {/* Read-only metadata */}
           <div className="intel-section">
             <div className="intel-title">Info</div>
-            <div className="intel-row">
-              <span className="intel-label">Temperature</span>
-              <span className="intel-value">{lead.lead_temperature || "-"}</span>
-            </div>
             <div className="intel-row">
               <span className="intel-label">Created</span>
               <span className="intel-value">

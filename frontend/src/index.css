@@ -436,6 +436,37 @@ body {
 .score-category-value { font-weight: 600; color: var(--text-primary); }
 .score-category-value.decay { color: var(--red); }
 
+/* Score factors (generic breakdown) */
+.score-factors-section {
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.score-factors-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.score-factors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.score-factor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+.score-factor-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Sort button */
 .pipeline-sort-btn {
   background: var(--bg-card); border: 1px solid var(--border);

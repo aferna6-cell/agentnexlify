@@ -62,6 +62,25 @@ def upsert_business_hours(tenant_id: str, data: dict) -> dict:
     return result.data[0] if result.data else payload
 
 
+def _get_exception_for_date(hours: dict, target_date: date) -> dict | None:
+    """Check if a date has an exception override in the hours JSONB.
+
+    The hours JSONB may contain an "exceptions" key with a list of:
+      {"date": "2026-12-25", "closed": true}
+      {"date": "2026-12-31", "open": "10:00", "close": "14:00"}
+
+    Returns the matching exception dict, or None if no exception applies.
+    """
+    exceptions = hours.get("exceptions")
+    if not exceptions or not isinstance(exceptions, list):
+        return None
+    date_str = target_date.isoformat()
+    for exc in exceptions:
+        if isinstance(exc, dict) and exc.get("date") == date_str:
+            return exc
+    return None
+
+
 def generate_available_slots(
     tenant_id: str,
     target_date: date,
@@ -70,6 +89,10 @@ def generate_available_slots(
 
     Returns list of {"start": "HH:MM", "end": "HH:MM", "start_utc": ISO, "end_utc": ISO}.
     Filters out already-booked slots and past times.
+
+    Supports exception dates in the hours JSONB:
+    - {"date": "YYYY-MM-DD", "closed": true} => no slots for that day
+    - {"date": "YYYY-MM-DD", "open": "HH:MM", "close": "HH:MM"} => override hours
     """
     config = get_business_hours(tenant_id)
     if not config:
@@ -81,18 +104,37 @@ def generate_available_slots(
     buffer = config.get("buffer_minutes", 0)
     step = duration + buffer
 
-    # Determine day of week
-    day_name = DAY_NAMES[target_date.weekday()]
-    day_config = hours.get(day_name, {})
+    # Check for exception date overrides (holidays, special hours)
+    exception = _get_exception_for_date(hours, target_date)
+    if exception:
+        if exception.get("closed", False):
+            logger.info("slots: date %s is closed (exception override) for tenant %s", target_date, tenant_id)
+            return []
+        # Use override hours for this date
+        override_open = exception.get("open")
+        override_close = exception.get("close")
+        if override_open and override_close:
+            open_parts = override_open.split(":")
+            close_parts = override_close.split(":")
+            day_start = time(int(open_parts[0]), int(open_parts[1]))
+            day_end = time(int(close_parts[0]), int(close_parts[1]))
+        else:
+            # Exception exists but no open/close and not closed — fall through to normal hours
+            exception = None
 
-    if not day_config.get("enabled", False):
-        return []
+    if not exception:
+        # Determine day of week
+        day_name = DAY_NAMES[target_date.weekday()]
+        day_config = hours.get(day_name, {})
 
-    # Parse start/end times
-    start_parts = day_config["start"].split(":")
-    end_parts = day_config["end"].split(":")
-    day_start = time(int(start_parts[0]), int(start_parts[1]))
-    day_end = time(int(end_parts[0]), int(end_parts[1]))
+        if not day_config.get("enabled", False):
+            return []
+
+        # Parse start/end times
+        start_parts = day_config["start"].split(":")
+        end_parts = day_config["end"].split(":")
+        day_start = time(int(start_parts[0]), int(start_parts[1]))
+        day_end = time(int(end_parts[0]), int(end_parts[1]))
 
     # Generate all possible slot start times
     now_utc = datetime.now(timezone.utc)

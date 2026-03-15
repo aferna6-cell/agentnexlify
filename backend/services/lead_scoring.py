@@ -180,14 +180,65 @@ def score_lead(lead_id: str) -> dict[str, Any]:
     raw_score = min(engagement + intent + recency, 100)
     final_score = max(0, raw_score - decay)
 
-    # 5. Persist score (live schema: lead_score CHECK 1-10, scale from 0-100)
+    # 5. Compute temperature from final score
+    if final_score >= 70:
+        temperature = "hot"
+    elif final_score >= 40:
+        temperature = "warm"
+    else:
+        temperature = "cold"
+
+    # 6. Build human-readable score factors breakdown
+    factors: list[str] = []
+    if eng_bd.get("email"):
+        factors.append(f"Has email (+{eng_bd['email']})")
+    if eng_bd.get("phone"):
+        factors.append(f"Has phone (+{eng_bd['phone']})")
+    if eng_bd.get("name"):
+        factors.append(f"Has name (+{eng_bd['name']})")
+    if eng_bd.get("messages", 0) > 0:
+        factors.append(f"Messages: {eng_bd.get('message_count', 0)} (+{eng_bd['messages']})")
+    if int_bd.get("pricing"):
+        factors.append(f"Asked about pricing (+{int_bd['pricing']})")
+    if int_bd.get("availability"):
+        factors.append(f"Asked about availability (+{int_bd['availability']})")
+    if int_bd.get("services"):
+        factors.append(f"Interested in services (+{int_bd['services']})")
+    if int_bd.get("urgency"):
+        factors.append(f"Expressed urgency (+{int_bd['urgency']})")
+    if rec_bd.get("total", 0) > 0:
+        factors.append(f"Recent activity (+{rec_bd['total']})")
+    if dec_bd.get("total", 0) > 0:
+        factors.append(f"Inactivity decay (-{dec_bd['total']})")
+
+    # 7. Persist score + temperature + factors
     db_score = max(1, min(10, round(final_score / 10)))
-    db.table("leads").update({"lead_score": db_score}).eq("id", lead_id).execute()
+    update_payload = {
+        "lead_score": db_score,
+        "lead_temperature": temperature,
+    }
+    db.table("leads").update(update_payload).eq("id", lead_id).execute()
+
+    # 8. Store score factors in activity_log for dashboard visibility
+    client_id = lead.get("client_id")
+    if client_id and factors:
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": client_id,
+                "lead_id": lead_id,
+                "activity_type": "lead_scored",
+                "description": f"Lead scored {final_score}/100 ({temperature})",
+                "metadata": {"factors": factors, "score": final_score, "temperature": temperature},
+            }).execute()
+        except Exception:
+            logger.warning("Failed to log score factors for lead %s", lead_id, exc_info=True)
 
     return {
         "lead_id": lead_id,
         "score": final_score,
         "raw_score": raw_score,
+        "temperature": temperature,
+        "factors": factors,
         "breakdown": {
             "engagement": eng_bd,
             "intent": int_bd,
