@@ -1,5 +1,8 @@
 """Tests for business page endpoints — public page + dashboard settings."""
 
+import os
+os.environ["TESTING"] = "1"
+
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -151,3 +154,189 @@ class TestBusinessPagePublicData:
         assert _PLAN_RANK["free"] < _PLAN_RANK["growth"]
         assert _PLAN_RANK["growth"] < _PLAN_RANK["professional"]
         assert _PLAN_RANK["professional"] < _PLAN_RANK["enterprise"]
+
+
+# =========================================================================
+# Integration tests: HTTP endpoints via TestClient
+# =========================================================================
+
+
+def _setup_table_mock(db_mock, table_responses):
+    """Configure db_mock.table() to return different data per table name."""
+    call_counts = {}
+
+    def mock_table(name):
+        call_counts.setdefault(name, 0)
+        call_counts[name] += 1
+
+        table = MagicMock()
+        data = table_responses.get(name, [])
+
+        if data and isinstance(data[0], list):
+            idx = min(call_counts[name] - 1, len(data) - 1)
+            current_data = data[idx]
+        else:
+            current_data = data
+
+        for method in [
+            "select", "insert", "update", "delete", "eq", "neq",
+            "gte", "lte", "gt", "lt", "limit", "order", "ilike",
+            "in_", "is_", "or_", "contains", "not_",
+        ]:
+            getattr(table, method).return_value = table
+
+        result = MagicMock()
+        result.data = current_data
+        result.count = len(current_data) if current_data else 0
+        table.execute.return_value = result
+
+        return table
+
+    db_mock.table = mock_table
+
+
+@pytest.fixture
+def http_client(mock_settings):
+    """Create a FastAPI TestClient with mocked Supabase for endpoint tests."""
+    mock_settings.sentry_dsn = None
+    mock_settings.supabase_service_key = "fake-key"
+
+    db_mock = MagicMock()
+    patches = [
+        patch("backend.models.database.get_supabase", return_value=db_mock),
+        patch("backend.routers.auth.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget.get_supabase", return_value=db_mock),
+        patch("backend.routers.business_page.get_supabase", return_value=db_mock),
+        patch("backend.routers.team.get_supabase", return_value=db_mock),
+        patch("backend.services.activity.get_supabase", return_value=db_mock),
+        patch("backend.services.webhook_dispatcher.get_supabase", return_value=db_mock),
+        patch("backend.services.lead_scoring.get_supabase", return_value=db_mock),
+    ]
+    for p in patches:
+        p.start()
+
+    from backend.main import app
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+
+    yield client, db_mock
+
+    try:
+        from backend.routers.widget import _cache
+        _cache.clear()
+    except Exception:
+        pass
+
+    for p in patches:
+        p.stop()
+
+
+# ── Public business page endpoint tests ─────────────────────
+
+
+class TestBusinessPageEndpoints:
+    """Integration tests for GET /biz/{slug} endpoint."""
+
+    def test_business_page_valid_slug(self, http_client):
+        """GET /biz/{slug} with a valid, enabled slug returns 200 with page data."""
+        client, db_mock = http_client
+
+        _setup_table_mock(db_mock, {
+            "tenants": [{
+                "id": "tenant-biz-001",
+                "business_name": "Joe's Plumbing",
+                "business_description": "Expert plumbers in Denver",
+                "business_phone": "+15559876543",
+                "business_address": "123 Main St",
+                "business_city": "Denver",
+                "business_state": "CO",
+                "business_hours_display": "Mon-Fri 9-5",
+                "business_logo_url": None,
+                "business_cover_url": None,
+                "business_page_enabled": True,
+                "business_services": ["Pipe repair", "Drain cleaning"],
+                "plan": "growth",
+                "bp_color_theme": "ocean",
+                "bp_font_family": None,
+                "bp_hide_powered_by": False,
+                "bp_custom_css": None,
+                "bp_meta_title": None,
+                "bp_meta_description": None,
+            }],
+            "widget_configs": [{
+                "api_key": "anx_biz_key",
+                "primary_color": "#FF6600",
+                "bot_name": "Joe Bot",
+                "greeting_message": "Need a plumber?",
+                "position": "bottom-right",
+            }],
+        })
+
+        response = client.get("/biz/joes-plumbing")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["business_name"] == "Joe's Plumbing"
+        assert data["description"] == "Expert plumbers in Denver"
+        assert data["widget_api_key"] == "anx_biz_key"
+        assert data["widget_bot_name"] == "Joe Bot"
+        assert data["services"] == ["Pipe repair", "Drain cleaning"]
+
+    def test_business_page_nonexistent_slug(self, http_client):
+        """GET /biz/{slug} with a slug that does not exist returns 404."""
+        client, db_mock = http_client
+
+        _setup_table_mock(db_mock, {
+            "tenants": [],  # no matching tenant
+        })
+
+        response = client.get("/biz/nonexistent-business-xyz")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_business_page_special_chars(self, http_client):
+        """GET /biz/{slug} with special chars in the slug is handled gracefully.
+
+        FastAPI will URL-decode the path parameter. The endpoint queries the DB
+        with whatever string arrives. Special characters should not cause a 500.
+        """
+        client, db_mock = http_client
+
+        _setup_table_mock(db_mock, {
+            "tenants": [],  # no match expected
+        })
+
+        # URL-encoded special characters; FastAPI will decode them
+        response = client.get("/biz/test%20slug%21%40%23")
+        assert response.status_code == 404
+        # The important thing is no 500 error
+        assert "not found" in response.json()["detail"].lower()
+
+
+# ── Team invite validation endpoint test ────────────────────
+
+
+class TestTeamInviteValidate:
+    """Test GET /api/v1/team/invite/{token} — public invite validation."""
+
+    def test_team_invite_validate(self, http_client):
+        """GET /api/v1/team/invite/{token} with a valid token returns member info."""
+        client, db_mock = http_client
+
+        _setup_table_mock(db_mock, {
+            "team_members": [{
+                "email": "invited@example.com",
+                "role": "admin",
+                "tenant_id": "tenant-team-001",
+                "invite_accepted": False,
+            }],
+            "tenants": [{
+                "business_name": "Team Test Biz",
+            }],
+        })
+
+        response = client.get("/api/v1/team/invite/some-valid-token-abc123")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["email"] == "invited@example.com"
+        assert data["role"] == "admin"
+        assert data["business_name"] == "Team Test Biz"
