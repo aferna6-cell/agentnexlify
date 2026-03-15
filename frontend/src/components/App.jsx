@@ -35,6 +35,7 @@ const MCPSetupPage = lazy(() => import("../pages/MCPSetupPage"));
 const BidsPage = lazy(() => import("../pages/BidsPage"));
 const ClientPortalPage = lazy(() => import("../pages/ClientPortalPage"));
 const CallsPage = lazy(() => import("../pages/CallsPage"));
+const LocalSEOPage = lazy(() => import("../pages/LocalSEOPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -65,6 +66,7 @@ const pages = {
   bids: BidsPage,
   client_portal: ClientPortalPage,
   calls: CallsPage,
+  local_seo: LocalSEOPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {

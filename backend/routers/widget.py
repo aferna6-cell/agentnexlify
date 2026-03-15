@@ -307,6 +307,7 @@ def _build_system_prompt(
     website_content: str | None = None,
     menu_items: list[dict] | None = None,
     job_listings: list[dict] | None = None,
+    bid_templates: list[dict] | None = None,
 ) -> str:
     business_name = tenant.get("business_name", "our company")
     business_type = tenant.get("business_type", "")
@@ -401,6 +402,37 @@ def _build_system_prompt(
             + "\n- Be enthusiastic about the opportunity."
         )
 
+    bid_block = ""
+    if bid_templates:
+        lines = []
+        for tmpl in bid_templates:
+            name = tmpl.get("name", "Unnamed template")
+            desc = f" — {tmpl['description']}" if tmpl.get("description") else ""
+            lines.append(f"  - {name}{desc}")
+        bid_block = (
+            "\n\nQUOTE/BID COLLECTION:"
+            "\n- If someone asks for a quote, estimate, bid, or pricing on a job, "
+            "collect the job details conversationally:"
+            "\n  1. Scope of work (what needs to be done)"
+            "\n  2. Timeline (when they need it done)"
+            "\n  3. Location / address"
+            "\n  4. Budget range (if they're willing to share)"
+            "\n  5. Their name, email, and phone"
+            "\n- Available service templates:\n"
+            + "\n".join(lines)
+            + "\n- After collecting details, summarize the request and let them know someone will "
+            "follow up with a formal estimate."
+            + "\n\nIMPORTANT — When you have enough details to create a bid request (at minimum: "
+            "scope of work and contact info), append this EXACT block at the very end of your "
+            "response (after your normal message):"
+            + '\n<!--BID_REQUEST:{"scope":"Description of work","timeline":"When needed",'
+            '"location":"Address or area","budget":"Budget range or empty string",'
+            '"customer_name":"Name","customer_email":"email@example.com",'
+            '"customer_phone":"555-1234"}-->'
+            + "\n- Fill in the real values from the conversation."
+            + "\n- Only output this ONCE when you have enough info, never before."
+        )
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
@@ -417,6 +449,7 @@ def _build_system_prompt(
         f"{website_block}"
         f"{menu_block}"
         f"{jobs_block}"
+        f"{bid_block}"
         f"{corrections_block}"
     )
 

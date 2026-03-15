@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, email_templates, integrations, jobs, leads, menu, notifications, orders, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget
+from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, email_templates, integrations, jobs, leads, local_seo, menu, notifications, orders, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -55,7 +55,7 @@ async def _automation_loop():
     """
     import random
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
-    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders, send_pending_review_requests, send_onboarding_emails
+    from backend.services.automation_engine import check_no_response_leads, process_pending_steps, send_appointment_reminders, send_monthly_reports, send_pending_review_requests, send_onboarding_emails
     while True:
         try:
             processed = await process_pending_steps()
@@ -91,6 +91,13 @@ async def _automation_loop():
                 logger.info("Automation loop: sent %d onboarding emails", onboarding)
         except Exception:
             logger.exception("Automation loop: send_onboarding_emails failed")
+
+        try:
+            reports = await send_monthly_reports()
+            if reports:
+                logger.info("Automation loop: sent %d monthly reports", reports)
+        except Exception:
+            logger.exception("Automation loop: send_monthly_reports failed")
 
         await asyncio.sleep(60)
 
@@ -255,6 +262,7 @@ app.include_router(chat_flows.router)
 app.include_router(client_portal.router)
 app.include_router(bids.router)
 app.include_router(calls.router)
+app.include_router(local_seo.router)
 
 
 # --- Static files (widget) ---

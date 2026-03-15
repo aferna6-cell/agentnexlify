@@ -937,4 +937,18 @@ export function fetchCallStats(tenantId, token) {
   return request(`/api/v1/calls/${tenantId}/stats`, { token });
 }
 
+// --- Local SEO ---
+
+export function analyzeSeoProfile(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/analyze`, { method: "POST", token });
+}
+
+export function fetchSeoProfile(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}`, { token });
+}
+
+export function fetchSeoKeywords(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/keywords`, { token });
+}
+
 export { ApiError };

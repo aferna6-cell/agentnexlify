@@ -1,0 +1,28 @@
+/* AgentNexLiFy Review Responder — Content Script Styles */
+
+.anx-draft-response-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 14px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  z-index: 10000;
+}
+
+.anx-draft-response-btn:hover {
+  background: #2563eb;
+}
+
+.anx-draft-response-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

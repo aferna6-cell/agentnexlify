@@ -8,6 +8,7 @@ import {
   deleteServiceRecord,
   generatePortalLink,
   fetchLeads,
+  sendLeadEmail,
 } from "../utils/api";
 
 function formatDate(dateStr) {
@@ -48,6 +49,10 @@ export default function ClientPortalPage() {
   const [generatingLinkFor, setGeneratingLinkFor] = useState(null);
   const [portalLinks, setPortalLinks] = useState({});
   const [copiedId, setCopiedId] = useState(null);
+
+  // Send portal link to client
+  const [sendingToClient, setSendingToClient] = useState(null);
+  const [sendToast, setSendToast] = useState(null);
 
   // Deleting
   const [deletingIds, setDeletingIds] = useState(new Set());
@@ -168,6 +173,28 @@ export default function ClientPortalPage() {
     });
   };
 
+  const handleSendToClient = async (leadId) => {
+    const url = portalLinks[leadId];
+    const lead = leadMap[leadId];
+    if (!url || !lead) return;
+    setSendingToClient(leadId);
+    setSendToast(null);
+    try {
+      await sendLeadEmail(user.tenantId, token, leadId, {
+        subject: "Your service portal",
+        body: `Hello${lead.name ? " " + lead.name : ""},\n\nYou can view your service history, invoices, and details through your personal portal:\n\n${url}\n\nIf you have any questions, feel free to reach out.\n\nThank you!`,
+      });
+      setSendToast({ type: "success", message: `Portal link sent to ${lead.email || lead.name || "client"}` });
+      setTimeout(() => setSendToast(null), 4000);
+    } catch (err) {
+      console.warn("Send portal link failed:", err.message);
+      setSendToast({ type: "error", message: err.body?.detail || err.message || "Failed to send portal link. Make sure the client has an email address." });
+      setTimeout(() => setSendToast(null), 5000);
+    } finally {
+      setSendingToClient(null);
+    }
+  };
+
   // Build lead name lookup
   const leadMap = {};
   leads.forEach((l) => { leadMap[l.id] = l; });
@@ -271,21 +298,40 @@ export default function ClientPortalPage() {
                 >
                   <span style={{ fontSize: "0.85rem", fontWeight: 500 }}>{displayName}</span>
                   {hasLink ? (
-                    <button
-                      onClick={() => handleCopyLink(leadId)}
-                      style={{
-                        background: isCopied ? "rgba(34,197,94,0.1)" : "var(--accent-dim)",
-                        border: `1px solid ${isCopied ? "#22c55e" : "var(--accent)"}`,
-                        borderRadius: 6,
-                        padding: "4px 10px",
-                        color: isCopied ? "#22c55e" : "var(--accent)",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {isCopied ? "Copied!" : "Copy Link"}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleCopyLink(leadId)}
+                        style={{
+                          background: isCopied ? "rgba(34,197,94,0.1)" : "var(--accent-dim)",
+                          border: `1px solid ${isCopied ? "#22c55e" : "var(--accent)"}`,
+                          borderRadius: 6,
+                          padding: "4px 10px",
+                          color: isCopied ? "#22c55e" : "var(--accent)",
+                          cursor: "pointer",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {isCopied ? "Copied!" : "Copy Link"}
+                      </button>
+                      <button
+                        onClick={() => handleSendToClient(leadId)}
+                        disabled={sendingToClient === leadId}
+                        style={{
+                          background: "rgba(139,92,246,0.1)",
+                          border: "1px solid rgba(139,92,246,0.4)",
+                          borderRadius: 6,
+                          padding: "4px 10px",
+                          color: "#8b5cf6",
+                          cursor: sendingToClient === leadId ? "default" : "pointer",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          opacity: sendingToClient === leadId ? 0.6 : 1,
+                        }}
+                      >
+                        {sendingToClient === leadId ? "Sending..." : "Send to Client"}
+                      </button>
+                    </>
                   ) : (
                     <button
                       onClick={() => handleGeneratePortalLink(leadId)}
@@ -309,6 +355,40 @@ export default function ClientPortalPage() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Send-to-client toast */}
+      {sendToast && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "10px 16px",
+            background: sendToast.type === "success" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+            border: `1px solid ${sendToast.type === "success" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+            borderRadius: 8,
+            color: sendToast.type === "success" ? "#22c55e" : "#ef4444",
+            fontSize: "0.85rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{sendToast.message}</span>
+          <button
+            onClick={() => setSendToast(null)}
+            style={{
+              marginLeft: 12,
+              background: "none",
+              border: "none",
+              color: sendToast.type === "success" ? "#22c55e" : "#ef4444",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              textDecoration: "underline",
+            }}
+          >
+            dismiss
+          </button>
         </div>
       )}
 

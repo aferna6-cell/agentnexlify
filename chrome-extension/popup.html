@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 360px;
+      min-height: 200px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a14;
+      color: #fff;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #333;
+    }
+    .header h1 { font-size: 15px; font-weight: 600; }
+    .header .badge {
+      font-size: 10px;
+      background: rgba(59,130,246,0.15);
+      color: #3b82f6;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .section { margin-bottom: 16px; }
+    .section-label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      background: #1e1e2e;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus, textarea:focus { border-color: #3b82f6; }
+    textarea { min-height: 60px; resize: vertical; }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-secondary { background: #1e1e2e; color: #fff; border: 1px solid #333; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .status {
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+    .status-success { background: rgba(34,197,94,0.1); color: #22c55e; }
+    .status-error { background: rgba(239,68,68,0.1); color: #ef4444; }
+    .draft-box {
+      background: #1e1e2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .actions { display: flex; gap: 8px; margin-top: 8px; }
+    .actions .btn { flex: 1; }
+    .connected {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #22c55e;
+    }
+    .connected .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>AgentNexLiFy</h1>
+    <span class="badge">Review Responder</span>
+  </div>
+
+  <!-- Settings (shown when not connected) -->
+  <div id="settings-view">
+    <div class="section">
+      <div class="section-label">API Key</div>
+      <input type="text" id="api-key" placeholder="Your AgentNexLiFy API key" />
+    </div>
+    <div class="section">
+      <div class="section-label">API Base URL</div>
+      <input type="text" id="api-base" value="https://agentnexlify-production.up.railway.app" />
+    </div>
+    <button class="btn btn-primary" id="connect-btn">Connect</button>
+    <div id="connect-status"></div>
+  </div>
+
+  <!-- Main view (shown when connected) -->
+  <div id="main-view" style="display:none;">
+    <div class="connected">
+      <span class="dot"></span>
+      <span>Connected to <strong id="biz-name"></strong></span>
+    </div>
+
+    <div class="section" style="margin-top: 12px;">
+      <div class="section-label">Review Text</div>
+      <textarea id="review-text" placeholder="Paste the review here, or click 'Detect Review' on the page..."></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Rating</div>
+      <div style="display:flex;gap:4px;" id="rating-stars">
+        <span class="star" data-rating="1" style="cursor:pointer;font-size:20px;">&#9733;</span>
+        <span class="star" data-rating="2" style="cursor:pointer;font-size:20px;">&#9733;</span>
+        <span class="star" data-rating="3" style="cursor:pointer;font-size:20px;">&#9733;</span>
+        <span class="star" data-rating="4" style="cursor:pointer;font-size:20px;">&#9733;</span>
+        <span class="star" data-rating="5" style="cursor:pointer;font-size:20px;">&#9733;</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="draft-btn">Draft AI Response</button>
+
+    <div id="draft-result" style="display:none;">
+      <div class="draft-box" id="draft-text"></div>
+      <div class="actions">
+        <button class="btn btn-secondary" id="copy-btn">Copy</button>
+        <button class="btn btn-secondary" id="regenerate-btn">Regenerate</button>
+      </div>
+    </div>
+
+    <div id="draft-status"></div>
+
+    <button class="btn btn-secondary" id="disconnect-btn" style="margin-top:12px;">Disconnect</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
