@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, billing, business_page, clients, content, conversation_inbox, crawl, email_templates, integrations, jobs, leads, menu, notifications, orders, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, webhooks, widget
+from backend.routers import action_items, analytics, appointments, auth, automations, billing, business_page, chat_flows, clients, content, conversation_inbox, crawl, email_templates, integrations, jobs, leads, menu, notifications, orders, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, webhooks, widget
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -236,6 +236,7 @@ app.include_router(tag_definitions.router)
 app.include_router(action_items.router)
 app.include_router(conversation_inbox.router)
 app.include_router(snippets.router)
+app.include_router(chat_flows.router)
 
 
 # --- Static files (widget) ---

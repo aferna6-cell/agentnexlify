@@ -2,9 +2,11 @@
 
 import logging
 
+import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
@@ -170,3 +172,66 @@ async def delete_snippet(
     db = get_supabase()
     db.table("snippets").delete().eq("id", snippet_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}
+
+
+class SuggestRequest(BaseModel):
+    conversation_context: str = Field(..., max_length=3000)
+
+
+@router.post("/{tenant_id}/suggest")
+async def suggest_snippet(
+    tenant_id: str,
+    req: SuggestRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """AI suggests the best matching snippet based on conversation context."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    snippets_result = (
+        db.table("snippets")
+        .select("id, title, content, category")
+        .eq("tenant_id", tenant_id)
+        .order("usage_count", desc=True)
+        .limit(20)
+        .execute()
+    )
+    snippets = snippets_result.data or []
+    if not snippets:
+        return {"suggestion": None, "reason": "No snippets available"}
+
+    snippet_list = "\n".join(
+        f"[{i}] {s['title']} ({s['category']}): {s['content'][:100]}"
+        for i, s in enumerate(snippets)
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=50,
+            temperature=0,
+            system=(
+                "You are a snippet suggestion engine. Given a conversation context and a list of available snippets, "
+                "return ONLY the number [N] of the best matching snippet, or 'none' if no snippet is relevant.\n"
+                "Output ONLY the number or 'none'. No explanation."
+            ),
+            messages=[{"role": "user", "content": f"Conversation:\n{req.conversation_context}\n\nAvailable snippets:\n{snippet_list}"}],
+        )
+        answer = resp.content[0].text.strip().lower()
+        if answer == "none":
+            return {"suggestion": None, "reason": "No relevant snippet found"}
+
+        # Parse the index
+        idx_str = answer.strip("[]")
+        try:
+            idx = int(idx_str)
+        except ValueError:
+            return {"suggestion": None, "reason": "AI returned invalid response"}
+
+        if 0 <= idx < len(snippets):
+            return {"suggestion": snippets[idx]}
+        return {"suggestion": None, "reason": "AI returned out-of-range index"}
+    except anthropic.APIError as e:
+        logger.warning("Snippet suggestion API error: %s", e)
+        return {"suggestion": None, "reason": "AI service unavailable"}

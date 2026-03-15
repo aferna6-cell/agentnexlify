@@ -235,4 +235,9 @@ Creates `response_metrics` table for tracking conversation response times and ou
 
 **Operational note:** Migration 037 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
 
+### 038 — Chat Flows (Visual Flow Builder)
+Creates `chat_flows` table for customizable chat conversation flows. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT NOT NULL), description (TEXT), flow_json (JSONB NOT NULL, stores nodes and edges), is_active (BOOLEAN DEFAULT false), is_template (BOOLEAN DEFAULT false), created_at, updated_at (TIMESTAMPTZ). Indexed on tenant_id and active flows. RLS enabled. Only one flow can be active per tenant (enforced in backend).
+
+**Operational note:** Migration 038 created on 2026-03-14. Must be applied manually via Supabase SQL editor.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

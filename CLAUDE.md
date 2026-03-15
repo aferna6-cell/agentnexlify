@@ -94,6 +94,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | conversation_notes | Internal team notes on conversations | conversation_id, tenant_id, author_id, content |
 | snippets | Quick reply templates for team conversations | tenant_id, title, content, shortcut, category, usage_count |
 | response_metrics | Conversation response time tracking | tenant_id, conversation_id, response_time_seconds, channel, outcome |
+| chat_flows | Visual chat flow builder | tenant_id, name, flow_json (JSONB), is_active |
 
 > Always verify against live schema — this table may be outdated.
 
@@ -173,7 +174,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 037) → test in Supabase SQL editor → run on prod → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 038) → test in Supabase SQL editor → run on prod → update Pydantic models
 
 ## Knowledge Base
 

@@ -61,10 +61,10 @@ _Drag-and-drop builder for customizing the chat widget's conversation flow. "If 
 
 **What we already have:** Widget config (greeting, colors, position). The AI handles all routing via system prompt. What's missing: visual builder for defining custom flows, conditional logic, and special actions.
 
-- [ ] **Migration: chat_flows table** — id, tenant_id, name, flow_json (JSONB — nodes and edges), is_active, created_at. Migration 035. Flow JSON structure: nodes (greeting, question, condition, action, handoff) with edges connecting them.
+- [x] **Migration: chat_flows table** — DONE (migration 038, 2026-03-14)
 - [ ] **Chat flow engine in widget backend** — When processing a chat message, check if tenant has an active flow. If so, evaluate flow conditions against the conversation context to determine next action. Actions: show pricing card, show booking form, transfer to human, collect info, send auto-reply. Falls back to AI for anything not covered by the flow.
 - [ ] **Visual flow builder page** — React page with a canvas-based drag-and-drop builder. Use React Flow (reactflow.dev) library. Node types: Greeting, Question, AI Response, Condition (if/else), Action (book appointment, show pricing, collect info), Handoff (transfer to team member). Edges connect nodes. Save as JSON.
-- [ ] **Preset flow templates** — 3-5 starter templates: "General business" (greeting → FAQ → appointment/human), "Restaurant" (greeting → menu → order → confirmation), "Contractor" (greeting → service type → quote request → book estimate). One-click apply.
+- [x] **Preset flow templates** — DONE (3 templates: General Business, Restaurant, Contractor, stored in backend with one-click create, 2026-03-14)
 - [ ] **Flow analytics** — Track which nodes get triggered most. Show drop-off points. "80% of visitors hit the pricing node but only 20% book — consider adding a discount offer."
 
 ### Analytics Dashboard Upgrade
@@ -92,7 +92,7 @@ _Pre-written response templates for common questions. Business owner creates the
 - [x] **Snippets CRUD endpoints** — DONE (backend/routers/snippets.py, 2026-03-14)
 - [x] **Snippets management page** — DONE (SnippetsPage.jsx with category tabs, search, shortcuts, 2026-03-14)
 - [x] **Snippet picker in team inbox** — DONE (ConversationsPage: lightning bolt button + "/" shortcut trigger, search, category badges, 2026-03-14)
-- [ ] **AI snippet suggestion** — When a team member is composing a reply, AI suggests the most relevant snippet based on the conversation context. Non-intrusive suggestion bar: "Suggested: [Hours & Location] — Click to insert."
+- [x] **AI snippet suggestion** — DONE (POST /api/v1/snippets/{tenant_id}/suggest, uses Claude to match conversation context to best snippet, 2026-03-14)
 
 ### AI Contact Suggestions (Enhanced Lead Capture)
 
