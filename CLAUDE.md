@@ -16,7 +16,7 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 Valid model IDs (March 2026): claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001. NEVER use a model ID not on this list. If Anthropic releases new models, update this list AFTER verifying the ID works.
 
 ### Migration Discipline
-Migration SQL files do NOT auto-apply. After creating a migration, it must be manually run in the Supabase SQL editor. Always flag new migrations in commit messages.
+Migration SQL files do NOT auto-apply. After creating a migration, apply it via Supabase MCP (`mcp__supabase__apply_migration`) or the Supabase SQL editor. Always flag new migrations in commit messages and update schema-log.md.
 
 ## Tech Stack
 - Backend: FastAPI, Python 3.11, Pydantic, Supabase Python client
@@ -41,10 +41,10 @@ Dashboard (React/Vite) → FastAPI /api/* → Supabase
 Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant from day one.
 
 ## Key Directories
-- `backend/` — FastAPI service (`main.py`, `routers/` with 25 files, `services/` for business logic)
+- `backend/` — FastAPI service (`main.py`, `routers/` with 30 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–031)
+- `migrations/` — SQL migration files (001–039)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
@@ -62,9 +62,9 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 |-------|---------|-------------|
 | tenants | Core accounts/billing | id, business_name, owner_email, plan, plan_status, stripe_customer_id, password_hash, owner_name, business_slug |
 | widget_configs | Chat widget customization | tenant_id, api_key, bot_name, primary_color, greeting_message, position, branding (JSONB), booking_enabled, is_online |
-| leads | Lead records | client_id (FK→tenants), name, email, phone, status, lead_score, lead_temperature, service_interest, tags (TEXT[]) |
+| leads | Lead records | client_id (FK→tenants), name, email, phone, status, lead_score, lead_temperature, areas_of_interest, conversation_summary, tags (TEXT[]), assigned_to |
 | chat_messages | Canonical message store | tenant_id, session_id, role, content, created_at |
-| conversations | Chat conversation container (legacy) | tenant_id, session_id, messages (JSONB), lead_id |
+| conversations | Chat conversation container | client_id (FK→tenants), session_id, status, lead_id, tags (TEXT[]), assigned_to |
 | appointments | Booked slots | tenant_id, lead_id, customer_name, start_time, end_time, status, google_event_id, recurrence_rule, recurrence_parent_id |
 | business_hours | Availability config | tenant_id, timezone, hours (JSONB), slot_duration_minutes |
 | automation_sequences | Multi-step email series | tenant_id, name, trigger_event, is_active |
@@ -108,6 +108,8 @@ ALWAYS check the actual Supabase schema before writing queries. Known past issue
 - `status` is correct for lead status (NOT `lead_stage`)
 - Foreign keys pointing to renamed/dropped tables
 - `password_hash` and `owner_name` added in migration 002
+- `areas_of_interest` is correct for leads (NOT `service_interest` — that column never existed)
+- `conversations` table uses `client_id` (NOT `tenant_id`) — same as leads
 
 Before writing any database query, verify the column exists. When creating a migration, check it doesn't conflict with existing schema.
 
@@ -116,6 +118,7 @@ Before writing any database query, verify the column exists. When creating a mig
 - Always use explicit Pydantic model classes for request bodies, not inline parameters
 - CORS is configured in main.py — if widget stops working on external sites, check CORS first
 - Production runs with 4 Uvicorn workers — in-memory state is per-process only
+- Widget config + chat data uses 5-min TTL in-memory cache (per-worker) — invalidates automatically
 
 ## Frontend Patterns
 - Dashboard uses a dark theme — match it for any new components
@@ -174,7 +177,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 038) → test in Supabase SQL editor → run on prod → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 039) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
 
 ## Knowledge Base
 

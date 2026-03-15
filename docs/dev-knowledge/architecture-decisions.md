@@ -244,4 +244,21 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** Response time is measured once per conversation — the time between the first user message and the first assistant response. Subsequent messages are not tracked for response time.
 **Why:** For AI-powered chat, every message gets an instant response. The meaningful metric is how quickly the AI responds to the initial contact. For team replies, the response time would be from the customer's message to the team member's reply, but this requires tracking which messages are from team members vs AI — deferred to a future iteration.
 
+### Widget config TTL cache: per-worker, 5-minute expiry
+**Date:** 2026-03-15
+**Decision:** Widget config, tenant data, FAQ entries, business hours, AI corrections, and website content are cached in-memory with a 5-minute TTL. The cache is per-worker (4 Uvicorn workers = 4 separate caches).
+**Why:** The widget config endpoint is the hottest path — called on every page view. FAQ/hours/corrections are loaded on every chat message but rarely change. A 5-minute TTL means changes propagate within 5 minutes (acceptable for config data). Per-worker cache avoids shared state complexity.
+**Implication:** Config changes (widget settings, FAQ updates, feedback corrections) take up to 5 minutes to take effect. If a user reports "I changed my greeting but it didn't update", wait 5 minutes. The cache auto-evicts after TTL — no manual invalidation needed.
+
+### Lead update suggestions: activity_log, not separate table
+**Date:** 2026-03-15
+**Decision:** AI-generated lead update suggestions (when new info conflicts with existing lead data) are stored in the `activity_log` table with `activity_type = "lead_suggestion"` and proposed changes in `metadata.suggestions`. No separate table.
+**Why:** Avoids a migration for a lightweight feature. activity_log already has tenant_id, lead_id, metadata JSONB. Suggestions are ephemeral — approved or dismissed, then deleted. The volume is low (only on conflicting data, not every extraction).
+**Implication:** Suggestions appear alongside other activity items. The GET /suggestions endpoint filters by activity_type. If suggestion volume grows, consider a dedicated table.
+
+### Onboarding emails: time-window queries, not event-driven
+**Date:** 2026-03-15
+**Decision:** Onboarding drip emails use time-window queries on `tenants.created_at` (e.g., created 23-26 hours ago → Day 1 email). Deduplication via activity_log entries.
+**Why:** Event-driven would require a new event system or Stripe-style webhook pipeline. Time-window is simple and runs in the existing automation loop. The 3-hour window (e.g., 23-26h) tolerates clock drift and loop intervals. activity_log dedup prevents re-sends across worker restarts.
+
 _Add new decisions when significant architectural choices are made._
