@@ -103,9 +103,9 @@ _When the chatbot talks to someone, extract their name, phone, email, business n
 **What we already have:** Lead auto-capture from conversations (done). Lead merge/dedup (done). What's missing: continuous extraction throughout conversation (not just first capture), suggest updates to existing leads, auto-populate service interest and notes from conversation context.
 
 - [x] **Enhanced lead extraction — continuous mode** — DONE (already runs on every message, now also extracts service_interest via keyword matching, 2026-03-14)
-- [ ] **Lead update suggestions** — When AI detects info about an existing lead (matched by email/phone), create a pending suggestion: "Update John's record: add phone 555-1234, service interest: roof repair." Show in notification bell. Owner approves or dismisses.
-- [ ] **Auto-populate service interest + notes** — Extract service_interest and conversation summary from chat context. Auto-fill on the lead record. Currently only tags are extracted — add service_interest and a conversation_summary field.
-- [ ] **Dashboard: lead suggestion review panel** — UI for reviewing and approving AI-suggested lead updates. Batch approve/dismiss. Shows what changed and why.
+- [x] **Lead update suggestions** — DONE 2026-03-15. Conflicting data creates pending suggestions via activity_log. Backend GET/POST endpoints. Cycle 48.
+- [x] **Auto-populate service interest + notes** — DONE 2026-03-15. areas_of_interest + conversation_summary auto-populated on lead create/update. Fixed schema mismatch (service_interest→areas_of_interest). Cycle 47.
+- [x] **Dashboard: lead suggestion review panel** — DONE 2026-03-15. Purple banner on LeadsPage with Approve/Dismiss per suggestion. Cycle 48.
 
 ### AI Call Transcription & Summaries
 
