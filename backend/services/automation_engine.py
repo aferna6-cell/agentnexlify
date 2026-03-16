@@ -1181,6 +1181,97 @@ async def send_portal_links() -> int:
     return sent
 
 
+async def send_csat_surveys() -> int:
+    """Send CSAT surveys for recently completed conversations.
+
+    Checks for conversations that ended 1-2 hours ago (to give a cooling period)
+    where the lead has an email and no survey has been sent yet.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    window_start = (now - timedelta(hours=2)).isoformat()
+    window_end = (now - timedelta(hours=1)).isoformat()
+    sent = 0
+
+    try:
+        # Find completed appointments in the window
+        appts = (
+            db.table("appointments")
+            .select("id, tenant_id, lead_id, customer_email, customer_name")
+            .eq("status", "completed")
+            .gte("updated_at", window_start)
+            .lte("updated_at", window_end)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_csat_surveys: failed to query appointments")
+        return 0
+
+    for appt in appts.data or []:
+        email = appt.get("customer_email")
+        if not email:
+            continue
+
+        tenant_id = appt["tenant_id"]
+        activity_key = f"csat_sent_{appt['id']}"
+
+        # Check if already sent
+        try:
+            existing = (
+                db.table("activity_log")
+                .select("id", count="exact")
+                .eq("tenant_id", tenant_id)
+                .eq("activity_type", "csat_sent")
+                .eq("description", activity_key)
+                .limit(1)
+                .execute()
+            )
+            if existing.count and existing.count > 0:
+                continue
+        except Exception:
+            continue
+
+        # Get business name
+        try:
+            t = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+            biz_name = t.data[0]["business_name"] if t.data else "us"
+        except Exception:
+            biz_name = "us"
+
+        customer_name = appt.get("customer_name") or "there"
+        survey_token = f"{tenant_id}:appt_{appt['id']}"
+        survey_url = f"https://agentnexlify.vercel.app/survey?token={survey_token}"
+
+        subject = f"How was your experience with {biz_name}?"
+        body = (
+            f"<h2>Hi {customer_name},</h2>"
+            f"<p>Thank you for choosing <strong>{biz_name}</strong>!</p>"
+            f"<p>We'd love to hear about your experience. It takes just 10 seconds:</p>"
+            f"<p style='text-align:center;margin:20px 0;font-size:28px;'>"
+            f"<a href='{survey_url}&r=1' style='text-decoration:none;margin:0 4px;'>1</a> "
+            f"<a href='{survey_url}&r=2' style='text-decoration:none;margin:0 4px;'>2</a> "
+            f"<a href='{survey_url}&r=3' style='text-decoration:none;margin:0 4px;'>3</a> "
+            f"<a href='{survey_url}&r=4' style='text-decoration:none;margin:0 4px;'>4</a> "
+            f"<a href='{survey_url}&r=5' style='text-decoration:none;margin:0 4px;'>5</a>"
+            f"</p>"
+            f"<p style='text-align:center;color:#888;font-size:12px;'>1 = Poor &nbsp;&nbsp; 5 = Excellent</p>"
+            f"<p>Best,<br>The {biz_name} Team</p>"
+        )
+
+        try:
+            result = await send_email(to=email, subject=subject, body_html=body, tenant_id=tenant_id)
+            if result.get("success"):
+                sent += 1
+                from backend.services.activity import log_activity
+                log_activity(tenant_id=tenant_id, activity_type="csat_sent", description=activity_key)
+                logger.info("Sent CSAT survey to %s for appointment %s", email, appt["id"])
+        except Exception:
+            logger.exception("Failed to send CSAT survey for appointment %s", appt["id"])
+
+    return sent
+
+
 async def check_new_reviews() -> int:
     """Check for new reviews created in the last 60 seconds and notify tenant owners.
 

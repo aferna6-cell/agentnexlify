@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, email_templates, gbp, integrations, jobs, leads, local_seo, menu, notifications, onboarding, orders, phone, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget
+from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, email_templates, gbp, integrations, jobs, leads, local_seo, menu, notifications, onboarding, orders, phone, reviews, sequences, sms, snippets, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -55,7 +55,7 @@ async def _automation_loop():
     """
     import random
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
-    from backend.services.automation_engine import check_new_reviews, check_no_response_leads, process_pending_steps, send_appointment_reminders, send_monthly_reports, send_pending_review_requests, send_onboarding_emails, send_portal_links
+    from backend.services.automation_engine import check_new_reviews, check_no_response_leads, process_pending_steps, send_appointment_reminders, send_csat_surveys, send_monthly_reports, send_pending_review_requests, send_onboarding_emails, send_portal_links
     while True:
         try:
             processed = await process_pending_steps()
@@ -112,6 +112,13 @@ async def _automation_loop():
                 logger.info("Automation loop: sent %d review alert notifications", review_alerts)
         except Exception:
             logger.exception("Automation loop: check_new_reviews failed")
+
+        try:
+            csat_sent = await send_csat_surveys()
+            if csat_sent:
+                logger.info("Automation loop: sent %d CSAT surveys", csat_sent)
+        except Exception:
+            logger.exception("Automation loop: send_csat_surveys failed")
 
         await asyncio.sleep(60)
 
@@ -280,6 +287,7 @@ app.include_router(local_seo.router)
 app.include_router(onboarding.router)
 app.include_router(phone.router)
 app.include_router(gbp.router)
+app.include_router(csat.router)
 
 
 # --- Static files (widget) ---
