@@ -235,7 +235,7 @@ async def handle_inbound_sms(request: Request):
             faq_result = db.table("faq_entries").select("question, answer").eq("tenant_id", tenant_id).eq("is_active", True).execute()
             faq_data = faq_result.data or []
         except Exception:
-            pass
+            logger.warning("FAQ load failed for SMS reply, tenant %s", tenant_id, exc_info=True)
 
         system_prompt = _build_system_prompt(tenant, faq_data)
 
