@@ -308,6 +308,7 @@ def _build_system_prompt(
     menu_items: list[dict] | None = None,
     job_listings: list[dict] | None = None,
     bid_templates: list[dict] | None = None,
+    custom_field_defs: list[dict] | None = None,
 ) -> str:
     business_name = tenant.get("business_name", "our company")
     business_type = tenant.get("business_type", "")
@@ -433,6 +434,22 @@ def _build_system_prompt(
             + "\n- Only output this ONCE when you have enough info, never before."
         )
 
+    custom_fields_block = ""
+    if custom_field_defs:
+        lines = []
+        for f in custom_field_defs:
+            name = f.get("field_name", "")
+            ftype = f.get("field_type", "text")
+            req = " (required)" if f.get("is_required") else ""
+            opts = f" Options: {', '.join(f['options'])}" if f.get("options") else ""
+            lines.append(f"  - {name} ({ftype}){req}{opts}")
+        custom_fields_block = (
+            "\n\nCUSTOM INFORMATION TO COLLECT:"
+            "\nDuring conversation, try to naturally collect these details when relevant:"
+            "\n" + "\n".join(lines)
+            + "\n- Only ask for these when it fits the conversation flow. Don't interrogate the visitor."
+        )
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
@@ -447,6 +464,7 @@ def _build_system_prompt(
         f"{hours_block}"
         f"{faq_block}"
         f"{website_block}"
+        f"{custom_fields_block}"
         f"{menu_block}"
         f"{jobs_block}"
         f"{bid_block}"
@@ -1669,6 +1687,21 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             bid_templates = []
         _set_cache(f"bidtpl:{tid}", bid_templates)
 
+    # Load custom lead field definitions
+    custom_field_defs = []
+    try:
+        cf_result = (
+            db.table("lead_field_definitions")
+            .select("field_name, field_type, options, is_required")
+            .eq("tenant_id", tid)
+            .order("sort_order")
+            .limit(20)
+            .execute()
+        )
+        custom_field_defs = cf_result.data if cf_result.data else []
+    except Exception:
+        logger.debug("custom field defs query failed for tenant %s", tid, exc_info=True)
+
     # Load active chat flow
     active_flow = None
     active_flow_id = None
@@ -1690,6 +1723,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     system_prompt = _build_system_prompt(
         tenant, faq_data, bh_data, corrections, website_content,
         menu_items, job_listings, bid_templates=bid_templates or None,
+        custom_field_defs=custom_field_defs or None,
     )
 
     # Inject active flow instructions into system prompt

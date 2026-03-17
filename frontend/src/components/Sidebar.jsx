@@ -77,10 +77,26 @@ const MoonIcon = () => (
   </svg>
 );
 
+const HamburgerIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 export default function Sidebar({ currentPage, onNavigate, plan }) {
   const { user, logout } = useAuth();
   const activePlan = plan || user?.plan || "free";
   const userRole = user?.role || "owner";
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("theme") || "dark";
@@ -91,6 +107,28 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
     if (appEl) appEl.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  // Close sidebar on mobile when clicking outside
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleClickOutside = (e) => {
+      if (!e.target.closest(".sidebar") && !e.target.closest(".sidebar-hamburger")) {
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [mobileOpen]);
+
+  // Close sidebar on mobile when navigating
+  const handleNavClick = (key) => {
+    setMobileOpen(false);
+    if (key === "support") {
+      window.open("/contact", "_blank");
+    } else {
+      onNavigate(key);
+    }
+  };
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -104,48 +142,62 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
   );
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-logo">
-        <span>AgentNexLiFy</span>
-      </div>
-      <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <div
-            key={item.key}
-            className={`nav-item${currentPage === item.key ? " active" : ""}`}
-            onClick={() => item.key === "support" ? window.open("/contact", "_blank") : onNavigate(item.key)}
-          >
-            <span className="nav-item-icon">{item.icon}</span>
-            <span className="nav-item-label">{item.label}</span>
-          </div>
-        ))}
-      </nav>
-      <div className="sidebar-footer">
-        <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
-          <span className="nav-item-icon">{theme === "dark" ? <SunIcon /> : <MoonIcon />}</span>
-          <span className="nav-item-label">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-        </button>
-        {user && (
-          <div className="sidebar-user">
-            <div className="sidebar-user-name">{user.name || user.businessName || user.email}</div>
-            <div className="sidebar-user-badges">
-              <div
-                className="sidebar-plan-badge"
-                style={planColors[activePlan] ? { color: planColors[activePlan].color, background: planColors[activePlan].bg } : undefined}
-              >{planLabels[activePlan] || activePlan}</div>
-              {user.isTeamMember && (
-                <div
-                  className="sidebar-role-badge"
-                  style={roleColors[userRole] ? { color: roleColors[userRole].color, background: roleColors[userRole].bg } : undefined}
-                >{userRole}</div>
-              )}
+    <>
+      {/* Hamburger button — only visible on mobile */}
+      <button
+        className="sidebar-hamburger"
+        onClick={() => setMobileOpen((prev) => !prev)}
+        aria-label={mobileOpen ? "Close menu" : "Open menu"}
+      >
+        {mobileOpen ? <CloseIcon /> : <HamburgerIcon />}
+      </button>
+
+      {/* Backdrop overlay — only on mobile when open */}
+      {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
+
+      <div className={`sidebar${mobileOpen ? " sidebar-mobile-open" : ""}`}>
+        <div className="sidebar-logo">
+          <span>AgentNexLiFy</span>
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <div
+              key={item.key}
+              className={`nav-item${currentPage === item.key ? " active" : ""}`}
+              onClick={() => handleNavClick(item.key)}
+            >
+              <span className="nav-item-icon">{item.icon}</span>
+              <span className="nav-item-label">{item.label}</span>
             </div>
-          </div>
-        )}
-        <button className="sidebar-logout" onClick={logout}>
-          Log out
-        </button>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+            <span className="nav-item-icon">{theme === "dark" ? <SunIcon /> : <MoonIcon />}</span>
+            <span className="nav-item-label">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          </button>
+          {user && (
+            <div className="sidebar-user">
+              <div className="sidebar-user-name">{user.name || user.businessName || user.email}</div>
+              <div className="sidebar-user-badges">
+                <div
+                  className="sidebar-plan-badge"
+                  style={planColors[activePlan] ? { color: planColors[activePlan].color, background: planColors[activePlan].bg } : undefined}
+                >{planLabels[activePlan] || activePlan}</div>
+                {user.isTeamMember && (
+                  <div
+                    className="sidebar-role-badge"
+                    style={roleColors[userRole] ? { color: roleColors[userRole].color, background: roleColors[userRole].bg } : undefined}
+                  >{userRole}</div>
+                )}
+              </div>
+            </div>
+          )}
+          <button className="sidebar-logout" onClick={logout}>
+            Log out
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

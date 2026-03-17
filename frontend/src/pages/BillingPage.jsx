@@ -44,7 +44,7 @@ const PLANS = [
     name: "Enterprise",
     price: "$899",
     period: "/mo",
-    features: ["Everything in Professional", "AI visibility tracking (GEO)", "Competitor analysis", "Team accounts", "White-label branding"],
+    features: ["Everything in Professional", "AI visibility tracking (GEO)", "Priority onboarding support", "Team accounts", "White-label branding"],
   },
 ];
 

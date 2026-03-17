@@ -173,15 +173,32 @@ export default function Calendar({ onNavigate }) {
       {loading ? (
         <div className="calendar-loading">Loading appointments...</div>
       ) : !loading && appointments.length === 0 ? (
-        <div className="empty-card" style={{ textAlign: "center", padding: "3rem 2rem" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📅</div>
-          <h3 style={{ margin: "0 0 0.5rem", color: "var(--text-primary)" }}>No appointments yet</h3>
-          <p style={{ color: "var(--text-muted)", marginBottom: "1rem" }}>
-            When customers book through your widget, appointments will appear here.
+        <div className="empty-card" style={{
+          background: "var(--bg-secondary)",
+          borderRadius: 12,
+          padding: 48,
+          textAlign: "center",
+        }}>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--text-muted)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginBottom: 12 }}
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <h3 style={{ margin: "0 0 0.5rem", color: "var(--text-primary)", fontSize: "1rem", fontWeight: 600 }}>No appointments yet</h3>
+          <p style={{ color: "var(--text-muted)", marginBottom: 0, fontSize: "0.875rem", maxWidth: 360, margin: "0 auto" }}>
+            Appointments booked through your chat widget or added manually will appear here.
           </p>
-          <button className="btn-primary" onClick={() => onNavigate("availability")}>
-            Set up availability
-          </button>
         </div>
       ) : view === "week" ? (
         <div className="calendar-week">

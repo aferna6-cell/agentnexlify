@@ -507,15 +507,114 @@ def _advance_execution(db, execution: dict, current_step: dict) -> None:
 
 
 async def check_no_response_leads() -> int:
-    """Find leads with no response in 24h and trigger sequences. Returns count triggered.
+    """Find leads with status 'new' that have had no chat activity in 24+ hours and trigger
+    the no_response_24h automation sequence for each.
 
-    DISABLED: The live conversations table schema doesn't reliably have the
-    columns needed for this query (started_at, last_message_at, and even
-    created_at filters return HTTP 400).  Re-enable once the conversations
-    schema is verified / migrated.
+    Strategy: avoid querying conversations columns that may not exist. Instead:
+      1. Load 'new' leads created more than 24h ago (batch, BATCH_LIMIT).
+      2. For each lead, resolve conversation_id -> session_id -> latest chat_messages row.
+      3. If the last message timestamp is >= 24h ago (or no messages at all), trigger.
+      4. Skip leads already enrolled in an active no_response_24h execution to avoid
+         re-triggering on every loop iteration.
+
+    Returns count of sequences triggered.
     """
-    logger.debug("check_no_response_leads: skipped (disabled — conversations schema mismatch)")
-    return 0
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=24)
+    triggered = 0
+
+    try:
+        leads_result = (
+            db.table("leads")
+            .select("id, client_id, conversation_id, created_at")
+            .eq("status", "new")
+            .lte("created_at", cutoff.isoformat())
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("check_no_response_leads: failed to query leads")
+        return 0
+
+    leads = leads_result.data or []
+    if not leads:
+        return 0
+
+    for lead in leads:
+        lead_id = lead["id"]
+        tenant_id = lead["client_id"]
+
+        # Skip if already enrolled in an active no_response_24h execution
+        try:
+            existing = (
+                db.table("automation_executions")
+                .select("id")
+                .eq("lead_id", lead_id)
+                .eq("tenant_id", tenant_id)
+                .eq("status", "active")
+                .limit(1)
+                .execute()
+            )
+            # Also check sequences to confirm it's a no_response_24h one
+            if existing.data:
+                exec_id = existing.data[0]["id"]
+                seq_check = (
+                    db.table("automation_executions")
+                    .select("automation_sequences(trigger_event)")
+                    .eq("id", exec_id)
+                    .limit(1)
+                    .execute()
+                )
+                if seq_check.data:
+                    seq_data = seq_check.data[0].get("automation_sequences") or {}
+                    if seq_data.get("trigger_event") == "no_response_24h":
+                        continue
+        except Exception:
+            logger.debug("check_no_response_leads: enrollment check failed for lead %s", lead_id, exc_info=True)
+
+        # Resolve last chat message timestamp via conversation_id -> session_id -> chat_messages
+        last_message_at = None
+        conv_id = lead.get("conversation_id")
+        if conv_id:
+            try:
+                conv_row = (
+                    db.table("conversations")
+                    .select("session_id")
+                    .eq("id", conv_id)
+                    .limit(1)
+                    .execute()
+                )
+                session_id = conv_row.data[0].get("session_id") if conv_row.data else None
+                if session_id:
+                    msg_row = (
+                        db.table("chat_messages")
+                        .select("created_at")
+                        .eq("tenant_id", tenant_id)
+                        .eq("session_id", session_id)
+                        .order("created_at", desc=True)
+                        .limit(1)
+                        .execute()
+                    )
+                    if msg_row.data:
+                        raw_ts = msg_row.data[0]["created_at"]
+                        last_message_at = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
+            except Exception:
+                logger.debug("check_no_response_leads: chat_messages lookup failed for lead %s", lead_id, exc_info=True)
+
+        # Determine whether to trigger: no messages at all, or last message older than 24h
+        if last_message_at is not None and last_message_at > cutoff:
+            continue  # Recent activity — skip
+
+        try:
+            count = await trigger_sequence(tenant_id, lead_id, "no_response_24h")
+            if count:
+                triggered += count
+                logger.info("check_no_response_leads: triggered sequence for lead %s (tenant %s)", lead_id, tenant_id)
+        except Exception:
+            logger.exception("check_no_response_leads: trigger_sequence failed for lead %s", lead_id)
+
+    return triggered
 
 
 async def send_appointment_reminders() -> int:

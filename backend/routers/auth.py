@@ -28,6 +28,7 @@ from backend.models.schemas import (
     WidgetConfigUpdateRequest,
 )
 from backend.services.stripe_service import PLAN_PRICES, get_or_create_customer
+from backend.services.email_sender import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,32 @@ async def register(request: Request, req: RegisterRequest):
     }).execute()
 
     token = _create_token(tenant_id, req.email, "free", req.business_name, business_type=req.industry)
+
+    # Send welcome email — non-blocking, failure must not prevent signup from completing
+    try:
+        await send_email(
+            to=req.email,
+            subject="Welcome to AgentNexLiFy!",
+            body_html=(
+                f"<h2>Welcome to AgentNexLiFy, {req.owner_name or 'there'}!</h2>"
+                "<p>Your AI-powered business automation platform is ready to go.</p>"
+                "<p><strong>Here's what to do next:</strong></p>"
+                "<ol>"
+                "<li>Configure your AI assistant with your business info and FAQs</li>"
+                "<li>Customize your chat widget's appearance</li>"
+                "<li>Embed the widget on your website with one line of code</li>"
+                "</ol>"
+                "<p>Your AI assistant will start capturing leads and booking appointments automatically.</p>"
+                f"<p><a href='https://agentnexlify.vercel.app/dashboard' style='background:#3b82f6;color:#fff;"
+                "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
+                "Go to Dashboard &rarr;</a></p>"
+                "<p>&mdash; The AgentNexLiFy Team</p>"
+            ),
+            tenant_id=tenant_id,
+        )
+    except Exception:
+        # Welcome email failure must never block signup
+        logger.warning("Welcome email failed for new tenant %s", tenant_id, exc_info=True)
 
     return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
 

@@ -458,7 +458,12 @@ export default function AnalyticsPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="analytics-empty">No conversation data yet</div>
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No conversation data yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Start conversations through your chat widget to see analytics here. Each visitor chat will be tracked on this chart.
+              </div>
+            </div>
           )}
         </div>
 
@@ -484,7 +489,12 @@ export default function AnalyticsPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="analytics-empty">No lead data yet</div>
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No lead data yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Capture leads through your widget or import them to see pipeline data. Each lead is tracked by stage as it moves through your funnel.
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -603,7 +613,12 @@ export default function AnalyticsPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="analytics-empty">No widget data yet</div>
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No peak hours data yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Once visitors start chatting through your widget, this chart will show which hours of the day are busiest so you can optimize your availability.
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -745,7 +760,12 @@ export default function AnalyticsPage() {
               ))}
             </div>
           ) : (
-            <div className="analytics-empty">No data yet</div>
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No top days yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Your highest-traffic days will appear here once conversations start flowing through your widget.
+              </div>
+            </div>
           )}
         </div>
 

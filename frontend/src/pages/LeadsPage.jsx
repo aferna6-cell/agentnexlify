@@ -95,7 +95,38 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
             </tr>
           ))}
           {leads.length === 0 && (
-            <tr><td colSpan={7} className="leads-table-empty">No leads found</td></tr>
+            <tr>
+              <td colSpan={7}>
+                <div style={{
+                  background: "var(--bg-secondary)",
+                  borderRadius: 12,
+                  padding: 48,
+                  textAlign: "center",
+                  margin: "8px 0",
+                }}>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--text-muted)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ marginBottom: 12 }}
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--text-primary)", marginBottom: 8 }}>
+                    No leads yet
+                  </div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", maxWidth: 360, margin: "0 auto" }}>
+                    Leads captured from your chat widget will appear here. Set up your widget to start capturing visitors.
+                  </div>
+                </div>
+              </td>
+            </tr>
           )}
         </tbody>
       </table>

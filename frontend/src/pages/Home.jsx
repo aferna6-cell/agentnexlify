@@ -55,7 +55,7 @@ const faqData = [
     id: "faq-a3",
     question: "What tools do you integrate with?",
     answer:
-      "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more. If you use it, we can probably connect to it.",
+      "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. We also integrate with Twilio for SMS and Stripe for payments.",
   },
   {
     id: "faq-a5",
@@ -377,7 +377,7 @@ export default function Home() {
   "mainEntity": [
     { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, automation, basic SEO audit, and AI content writer. Professional adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
-    { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
+    { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. We also integrate with Twilio for SMS and Stripe for payments." } },
 
     { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
@@ -733,7 +733,7 @@ export default function Home() {
                 <li>AI appointment booking agent</li>
                 <li>Team accounts &amp; roles</li>
                 <li>AI visibility tracking (GEO score)</li>
-                <li>Competitor analysis &amp; insights</li>
+                <li>Priority onboarding &amp; migration support</li>
                 <li>Unlimited social media campaigns</li>
                 <li>Webhook integrations</li>
                 <li>White-label branding &amp; custom CSS</li>
