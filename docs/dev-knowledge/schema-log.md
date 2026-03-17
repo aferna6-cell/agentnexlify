@@ -270,4 +270,14 @@ Creates `calls` (tenant_id, lead_id, caller_phone, called_number, direction inbo
 
 **Applied:** 2026-03-15 via Supabase MCP.
 
+### 049 — SEO Audit, GEO Scores, Keyword Rankings
+Creates `seo_audits` (tenant_id, overall_score, categories JSONB, critical_issues/warnings/passed_checks/recommendations JSONB, pages_analyzed). Creates `geo_scores` (tenant_id, overall_score, platform_scores JSONB, visibility_factors/recommendations JSONB, business_name/type/city/website_url). Creates `keyword_rankings` (tenant_id, keyword, difficulty_score, estimated_position, search_volume_estimate, recommendations JSONB). All indexed on tenant_id. RLS with service_role. Unique constraint on (tenant_id, keyword) for keyword_rankings.
+
+**Applied:** 2026-03-17 via Supabase MCP.
+
+### 050 — Social Media Marketing + Campaigns
+Creates `social_posts` (tenant_id, platform CHECK facebook/instagram/twitter/linkedin/google_business, content, media_urls JSONB, hashtags TEXT[], status CHECK draft/scheduled/published/failed, scheduled_for, published_at, external_post_id, engagement_data JSONB). Creates `marketing_campaigns` (tenant_id, name, type CHECK email/sms, subject, body, target_filter JSONB, status CHECK draft/scheduled/sending/sent/failed, scheduled_for, sent_at, totals for recipients/sent/opened/clicked). Creates `campaign_sends` (campaign_id, tenant_id, lead_id, channel, recipient, status CHECK sent/delivered/opened/clicked/bounced/failed, timestamps). All indexed, RLS with service_role.
+
+**Applied:** 2026-03-17 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

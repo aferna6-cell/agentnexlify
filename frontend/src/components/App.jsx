@@ -36,6 +36,8 @@ const BidsPage = lazy(() => import("../pages/BidsPage"));
 const ClientPortalPage = lazy(() => import("../pages/ClientPortalPage"));
 const CallsPage = lazy(() => import("../pages/CallsPage"));
 const LocalSEOPage = lazy(() => import("../pages/LocalSEOPage"));
+const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
+const MarketingCampaignsPage = lazy(() => import("../pages/MarketingCampaignsPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -67,6 +69,8 @@ const pages = {
   client_portal: ClientPortalPage,
   calls: CallsPage,
   local_seo: LocalSEOPage,
+  social_media: SocialMediaPage,
+  campaigns: MarketingCampaignsPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {

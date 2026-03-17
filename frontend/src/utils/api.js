@@ -951,6 +951,40 @@ export function fetchSeoKeywords(tenantId, token) {
   return request(`/api/v1/seo/${tenantId}/keywords`, { token });
 }
 
+// --- SEO Audit ---
+
+export function runSeoAudit(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/audit`, { method: "POST", token });
+}
+
+export function fetchSeoAudit(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/audit`, { token });
+}
+
+export function fetchSeoAuditHistory(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/audit/history`, { token });
+}
+
+// --- GEO Score (AI Visibility) ---
+
+export function runGeoScore(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/geo-score`, { method: "POST", token });
+}
+
+export function fetchGeoScore(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/geo-score`, { token });
+}
+
+// --- Keyword Tracking ---
+
+export function trackKeywords(tenantId, token, keywords) {
+  return request(`/api/v1/seo/${tenantId}/keywords/track`, { method: "POST", token, body: { keywords } });
+}
+
+export function fetchKeywordRankings(tenantId, token) {
+  return request(`/api/v1/seo/${tenantId}/keywords/rankings`, { token });
+}
+
 // --- Missed Call Analytics ---
 
 export function fetchMissedCallAnalytics(tenantId, token, period = "30d") {
@@ -967,6 +1001,78 @@ export function fetchOnboardingStatus(tenantId, token) {
 
 export function fetchClientPortalPublic(portalToken) {
   return request(`/api/v1/portal/portal/${portalToken}`);
+}
+
+// --- Social Media ---
+
+export function fetchSocialPosts(tenantId, token, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.platform) params.set("platform", filters.platform);
+  if (filters.status) params.set("status", filters.status);
+  const qs = params.toString();
+  return request(`/api/v1/social/${tenantId}/posts${qs ? "?" + qs : ""}`, { token });
+}
+
+export function createSocialPost(tenantId, token, data) {
+  return request(`/api/v1/social/${tenantId}/posts`, { method: "POST", token, body: data });
+}
+
+export function updateSocialPost(tenantId, token, postId, data) {
+  return request(`/api/v1/social/${tenantId}/posts/${postId}`, { method: "PUT", token, body: data });
+}
+
+export function deleteSocialPost(tenantId, token, postId) {
+  return request(`/api/v1/social/${tenantId}/posts/${postId}`, { method: "DELETE", token });
+}
+
+export function generateSocialContent(tenantId, token, data) {
+  return request(`/api/v1/social/${tenantId}/generate`, { method: "POST", token, body: data });
+}
+
+export function generateSocialCampaign(tenantId, token, data) {
+  return request(`/api/v1/social/${tenantId}/generate-campaign`, { method: "POST", token, body: data });
+}
+
+export function fetchSocialCalendar(tenantId, token, month, year) {
+  return request(`/api/v1/social/${tenantId}/calendar?month=${month}&year=${year}`, { token });
+}
+
+export function fetchSocialAnalytics(tenantId, token) {
+  return request(`/api/v1/social/${tenantId}/analytics`, { token });
+}
+
+// --- Marketing Campaigns ---
+
+export function fetchMarketingCampaigns(tenantId, token, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.type) params.set("type", filters.type);
+  if (filters.status) params.set("status", filters.status);
+  const qs = params.toString();
+  return request(`/api/v1/campaigns/${tenantId}${qs ? "?" + qs : ""}`, { token });
+}
+
+export function createMarketingCampaign(tenantId, token, data) {
+  return request(`/api/v1/campaigns/${tenantId}`, { method: "POST", token, body: data });
+}
+
+export function sendMarketingCampaign(tenantId, token, campaignId) {
+  return request(`/api/v1/campaigns/${tenantId}/${campaignId}/send`, { method: "POST", token });
+}
+
+export function fetchCampaignDetail(tenantId, token, campaignId) {
+  return request(`/api/v1/campaigns/${tenantId}/${campaignId}`, { token });
+}
+
+export function fetchCampaignAnalytics(tenantId, token, campaignId) {
+  return request(`/api/v1/campaigns/${tenantId}/${campaignId}/analytics`, { token });
+}
+
+export function generateCampaignContent(tenantId, token, data) {
+  return request(`/api/v1/campaigns/${tenantId}/generate-email`, { method: "POST", token, body: data });
+}
+
+export function estimateCampaignRecipients(tenantId, token, filters) {
+  return request(`/api/v1/campaigns/${tenantId}/estimate`, { method: "POST", token, body: filters });
 }
 
 export { ApiError };
