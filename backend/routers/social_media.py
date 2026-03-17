@@ -60,12 +60,12 @@ class SocialPostCreate(BaseModel):
 
 
 class SocialPostUpdate(BaseModel):
-    platform: str | None = None
-    content: str | None = None
-    media_urls: list[str] | None = None
+    platform: str | None = Field(None, max_length=50)
+    content: str | None = Field(None, max_length=5000)
+    media_urls: list[str] | None = Field(None, max_length=20)
     scheduled_for: str | None = None
-    hashtags: list[str] | None = None
-    status: str | None = None
+    hashtags: list[str] | None = Field(None, max_length=30)
+    status: str | None = Field(None, max_length=20)
 
 
 class AIGenerateRequest(BaseModel):

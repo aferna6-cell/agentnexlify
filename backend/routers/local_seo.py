@@ -84,10 +84,10 @@ class SEOAuditHistoryItem(BaseModel):
 # --- GEO Score models (match geo_scores table) ---
 
 class GEOScoreRequest(BaseModel):
-    business_name: Optional[str] = None
-    business_type: Optional[str] = None
-    city: Optional[str] = None
-    website_url: Optional[str] = None
+    business_name: Optional[str] = Field(None, max_length=200)
+    business_type: Optional[str] = Field(None, max_length=100)
+    city: Optional[str] = Field(None, max_length=100)
+    website_url: Optional[str] = Field(None, max_length=2000)
 
 
 class GEOScoreResponse(BaseModel):

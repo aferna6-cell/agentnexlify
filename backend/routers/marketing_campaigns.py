@@ -47,12 +47,12 @@ class CampaignCreate(BaseModel):
 
 
 class CampaignUpdate(BaseModel):
-    name: str | None = None
-    subject: str | None = None
-    body: str | None = None
+    name: str | None = Field(None, max_length=200)
+    subject: str | None = Field(None, max_length=200)
+    body: str | None = Field(None, max_length=50000)
     target_filter: CampaignTargetFilter | None = None
     scheduled_for: str | None = None
-    status: str | None = None
+    status: str | None = Field(None, max_length=20)
 
 
 class GenerateEmailRequest(BaseModel):
@@ -262,6 +262,13 @@ async def update_campaign(
 ):
     """Update a marketing campaign."""
     _verify_tenant(claims, tenant_id)
+
+    # Validate status if provided — block reverting sent/sending campaigns to draft
+    if req.status:
+        if req.status not in VALID_CAMPAIGN_STATUSES:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {req.status}")
+        if req.status in ("sent", "sending"):
+            raise HTTPException(status_code=400, detail="Cannot manually set status to sent/sending")
 
     updates = {}
     for k, v in req.model_dump().items():
