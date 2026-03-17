@@ -41,10 +41,10 @@ Dashboard (React/Vite) → FastAPI /api/* → Supabase
 Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant from day one.
 
 ## Key Directories
-- `backend/` — FastAPI service (`main.py`, `routers/` with 38 files, `services/` for business logic)
+- `backend/` — FastAPI service (`main.py`, `routers/` with 40 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–046, some duplicate numbers at 005/007)
+- `migrations/` — SQL migration files (001–050, some duplicate numbers at 005/007)
 - `chrome-extension/` — AI Review Responder Chrome Extension (manifest v3)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
@@ -101,11 +101,18 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | service_records | Client portal job records | tenant_id, lead_id, title, service_date, photos_json, invoice_amount |
 | portal_tokens | Client portal access tokens | tenant_id, lead_id, token (unique) |
 | calls | AI answering service call logs | tenant_id, caller_phone, duration_seconds, transcript (JSONB), summary, sentiment |
+| seo_audits | Website SEO audit results | tenant_id, overall_score, categories (JSONB), critical_issues/warnings/passed_checks/recommendations (JSONB), pages_analyzed |
+| geo_scores | AI visibility (GEO) scoring | tenant_id, overall_score, platform_scores (JSONB), visibility_factors/recommendations (JSONB), business_name, city |
+| keyword_rankings | SEO keyword tracking | tenant_id, keyword, difficulty_score, estimated_position, search_volume_estimate, recommendations (JSONB) |
+| social_posts | Social media post management | tenant_id, platform, content, media_urls (JSONB), hashtags (TEXT[]), status, scheduled_for, engagement_data (JSONB) |
+| marketing_campaigns | Email/SMS blast campaigns | tenant_id, name, type (email/sms), subject, body, target_filter (JSONB), status, total_recipients/sent/opened/clicked |
+| campaign_sends | Campaign send tracking | campaign_id, tenant_id, lead_id, channel, recipient, status, sent_at/opened_at/clicked_at |
 
 > Always verify against live schema — this table may be outdated.
 
 ## Plan Names
-- free, growth ($199), autopilot ($299), professional ($399), enterprise ($799)
+- free, growth ($249), professional ($499), autopilot ($299), enterprise ($899)
+- Old prices (legacy subscribers): growth ($199), professional ($399), enterprise ($799)
 - Old names (DO NOT USE): foundation, operations
 
 ## Schema Discipline
