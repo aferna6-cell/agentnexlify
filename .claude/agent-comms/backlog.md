@@ -360,6 +360,21 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] **Social media posts** — DONE 2026-03-15 Cycle 45. 10 LinkedIn + Facebook paired posts.
 - [x] FAQ entries for common widget questions — DONE 2026-03-15 Cycle 63. 14 Q&A pairs covering all common widget topics.
 
+## Features — Module: Marketing & SEO (Okara Competitive Response)
+_Added 2026-03-17 to close competitive gaps with Okara AI's CMO product._
+
+- [x] **SEO Audit Hub** — DONE 2026-03-17 Cycle 88. AI-powered website audit with scoring, categorized issues, recommendations. Reused existing website crawl data.
+- [x] **GEO Visibility Tracking** — DONE 2026-03-17 Cycle 88. AI estimates brand visibility across ChatGPT, Claude, Perplexity, Gemini with per-platform scores.
+- [x] **Keyword Rank Tracking** — DONE 2026-03-17 Cycle 88. Add/track keywords with AI-estimated difficulty, position, volume. Unique constraint per tenant+keyword.
+- [x] **Social Media Post Management** — DONE 2026-03-17 Cycle 88. CRUD for posts across 5 platforms, calendar view, analytics. AI content generation + campaign generator.
+- [x] **Marketing Campaigns** — DONE 2026-03-17 Cycle 88. Email/SMS blast campaigns with audience targeting (status, temperature, tags). Real Resend + Twilio sending.
+- [x] **AI Marketing Content Writer** — DONE 2026-03-17 Cycle 88. AI generates platform-optimized social posts and campaign emails with tone/type controls.
+- [x] **Pricing Restructure** — DONE 2026-03-17 Cycle 88. Growth $249, Professional $499, Enterprise $899. Marketing/SEO features included per tier.
+- [ ] **Social media platform OAuth** — Connect to Facebook/Twitter/LinkedIn APIs for direct posting (currently create-and-copy)
+- [ ] **Real SERP data integration** — Connect to SEMrush/Ahrefs API for actual keyword position data
+- [ ] **Competitor analysis dashboard** — Track competitor SEO scores and compare
+- [ ] **Automated social media posting scheduler** — Background job that publishes scheduled posts to connected platforms
+
 ## Optimization
 
 - [x] Add rate limiting to all public endpoints — DONE 2026-03-15 Cycle 46. All public endpoints now rate-limited via slowapi.
