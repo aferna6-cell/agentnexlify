@@ -306,8 +306,8 @@ export default function FreeWidget() {
                 <tr>
                   <th></th>
                   <th className="highlight">Free Plan<span className="price-tag">$0/mo</span></th>
-                  <th>Growth<span className="price-tag">$199/mo</span></th>
-                  <th>Professional<span className="price-tag">$399/mo</span></th>
+                  <th>Growth<span className="price-tag">$249/mo</span></th>
+                  <th>Professional<span className="price-tag">$499/mo</span></th>
                 </tr>
               </thead>
               <tbody>

@@ -14,22 +14,22 @@ const PLANS = [
   {
     key: "growth",
     name: "Growth",
-    price: "$199",
+    price: "$249",
     period: "/mo",
-    features: ["Unlimited conversations", "Appointment booking", "SMS notifications", "Analytics dashboard"],
+    features: ["Appointment booking", "SMS notifications", "Basic SEO audit", "AI content writer", "Analytics dashboard"],
   },
   {
     key: "professional",
     name: "Professional",
-    price: "$399",
+    price: "$499",
     period: "/mo",
-    features: ["Everything in Growth", "Email follow-ups", "CRM & client management", "Lead Scoring"],
+    features: ["Everything in Growth", "Full SEO suite", "Social media marketing", "Email & SMS campaigns", "Advanced analytics"],
     popular: true,
   },
   {
     key: "autopilot",
     name: "Autopilot",
-    price: "$199",
+    price: "$299",
     period: "/mo",
     features: [
       "Everything in Professional",
@@ -42,9 +42,9 @@ const PLANS = [
   {
     key: "enterprise",
     name: "Enterprise",
-    price: "$799",
+    price: "$899",
     period: "/mo",
-    features: ["Everything in Professional", "Team accounts", "Webhook integrations", "White-label branding", "Dedicated support"],
+    features: ["Everything in Professional", "AI visibility tracking (GEO)", "Competitor analysis", "Team accounts", "White-label branding"],
   },
 ];
 

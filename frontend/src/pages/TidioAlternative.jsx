@@ -47,7 +47,7 @@ const data = {
       {
         icon: "tag",
         heading: "Flat pricing means no surprises",
-        body: "Tidio charges per agent seat, which gets expensive as your team grows. NexLiFy uses flat monthly pricing \u2014 $199, $399, or $799/mo \u2014 regardless of how many people use the dashboard.",
+        body: "Tidio charges per agent seat, which gets expensive as your team grows. NexLiFy uses flat monthly pricing \u2014 $249, $499, or $899/mo \u2014 regardless of how many people use the dashboard. Plus, you get SEO tools, social media marketing, and AI content generation included.",
       },
     ],
   },

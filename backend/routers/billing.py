@@ -135,11 +135,19 @@ async def stripe_webhook(request: Request):
 
 
 AMOUNT_TO_PLAN: dict[int, str] = {
-    # Monthly only
+    # Monthly only (current pricing)
+    24900: "growth",
+    49900: "professional",
+    89900: "enterprise",
+    # Legacy monthly pricing (keep for existing subscribers)
     19900: "growth",
     39900: "professional",
     79900: "enterprise",
-    # Monthly + setup fee (first invoice)
+    # Monthly + setup fee (first invoice, setup currently waived)
+    54800: "growth",         # $249 + $299 setup
+    99800: "professional",   # $499 + $499 setup
+    189800: "enterprise",    # $899 + $999 setup
+    # Legacy monthly + setup fee
     49800: "growth",         # $199 + $299 setup
     89800: "professional",   # $399 + $499 setup
     179800: "enterprise",    # $799 + $999 setup

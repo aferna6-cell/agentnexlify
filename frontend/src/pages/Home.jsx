@@ -43,7 +43,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding.",
+      "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, automation, basic SEO audit, and AI content writer. Professional adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
@@ -375,7 +375,7 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, and analytics. Professional adds email follow-ups, CRM, and lead scoring. Enterprise adds team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, automation, basic SEO audit, and AI content writer. Professional adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Gmail, Outlook, Google Calendar, Calendly, most CRMs (HubSpot, Follow Up Boss, Salesforce), Slack, QuickBooks, and more." } },
 
@@ -438,7 +438,7 @@ export default function Home() {
                 <span className="accent-gradient">Business</span>
               </h1>
               <p className="lp-hero-sub reveal">
-                Capture every customer, book appointments, and follow up &mdash; automatically.
+                Capture customers, book appointments, run marketing campaigns, and grow your online presence &mdash; all on autopilot.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
@@ -519,7 +519,7 @@ export default function Home() {
         <div className="container">
           <div className="lp-features-header">
             <div className="section-label reveal">Features</div>
-            <h2 className="section-title reveal">Everything your business needs.</h2>
+            <h2 className="section-title reveal">Automation, marketing, and growth &mdash; in one place.</h2>
           </div>
           <div className="lp-features-grid">
             <div className="lp-feature-card reveal">
@@ -554,8 +554,29 @@ export default function Home() {
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
               </div>
-              <h3>Email Sequences</h3>
-              <p>Helpful email sequences that keep your customers engaged.</p>
+              <h3>Email &amp; SMS Campaigns</h3>
+              <p>Send targeted email and SMS campaigns to the right leads at the right time.</p>
+            </div>
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              </div>
+              <h3>SEO Audit &amp; Optimization</h3>
+              <p>AI-powered website audits with actionable recommendations to rank higher.</p>
+            </div>
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </div>
+              <h3>AI Content Writer</h3>
+              <p>Generate blog posts, social media content, and marketing copy with AI.</p>
+            </div>
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              </div>
+              <h3>Social Media Marketing</h3>
+              <p>Create, schedule, and manage social media posts across all platforms.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
@@ -594,9 +615,9 @@ export default function Home() {
         <div className="container">
           <div className="lp-pricing-header">
             <div className="section-label reveal">Pricing</div>
-            <h2 className="section-title reveal">Simple pricing. Real results.</h2>
+            <h2 className="section-title reveal">One platform. Every tool your business needs.</h2>
             <p className="section-subtitle reveal">
-              Every plan includes hands-on setup, onboarding, and ongoing support from our team.
+              CRM, marketing, SEO, social media, and AI automation &mdash; all included. Hands-on setup and ongoing support with every plan.
             </p>
           </div>
           <div className="lp-pricing-grid">
@@ -631,9 +652,9 @@ export default function Home() {
             {/* Growth */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Growth</div>
-              <div className="lp-pricing-tagline">The essentials to capture and convert every customer</div>
+              <div className="lp-pricing-tagline">Capture, convert, and start marketing smarter</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$199</span>
+                <span className="lp-pricing-dollar">$249</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
@@ -646,10 +667,11 @@ export default function Home() {
                 <li>Email &amp; form lead capture</li>
                 <li>Auto follow-up email &amp; SMS</li>
                 <li>CRM contact management</li>
-                <li>Basic reporting dashboard</li>
                 <li>Appointment booking</li>
                 <li>2 automation sequences</li>
                 <li>Up to 500 conversations/month</li>
+                <li>Basic SEO audit &amp; recommendations</li>
+                <li>AI content writer</li>
                 <li>Hosted business page</li>
                 <li>Basic analytics &amp; reporting</li>
                 <li>Email support</li>
@@ -662,9 +684,9 @@ export default function Home() {
             {/* Professional — Most Popular */}
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">Professional</div>
-              <div className="lp-pricing-tagline">The complete toolkit to run and grow your business</div>
+              <div className="lp-pricing-tagline">The complete toolkit to run, grow, and market your business</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$399</span>
+                <span className="lp-pricing-dollar">$499</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
@@ -679,6 +701,10 @@ export default function Home() {
                 <li>CRM pipeline automation</li>
                 <li>AI-powered email responses</li>
                 <li>Review request automation</li>
+                <li>Full SEO audit suite &amp; keyword tracking</li>
+                <li>Social media content &amp; scheduling</li>
+                <li>Email &amp; SMS marketing campaigns</li>
+                <li>AI marketing content generator</li>
                 <li>Custom business page styling</li>
                 <li>Advanced analytics &amp; insights</li>
                 <li>Priority email &amp; chat support</li>
@@ -691,9 +717,9 @@ export default function Home() {
             {/* Enterprise */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Enterprise</div>
-              <div className="lp-pricing-tagline">White-glove service with dedicated support</div>
+              <div className="lp-pricing-tagline">White-glove service with full marketing automation</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$799</span>
+                <span className="lp-pricing-dollar">$899</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
@@ -706,6 +732,9 @@ export default function Home() {
                 <li>Unlimited automation sequences</li>
                 <li>AI appointment booking agent</li>
                 <li>Team accounts &amp; roles</li>
+                <li>AI visibility tracking (GEO score)</li>
+                <li>Competitor analysis &amp; insights</li>
+                <li>Unlimited social media campaigns</li>
                 <li>Webhook integrations</li>
                 <li>White-label branding &amp; custom CSS</li>
                 <li>White-glove business page design</li>
