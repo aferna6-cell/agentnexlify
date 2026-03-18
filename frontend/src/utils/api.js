@@ -1075,4 +1075,42 @@ export function estimateCampaignRecipients(tenantId, token, filters) {
   return request(`/api/v1/campaigns/${tenantId}/estimate`, { method: "POST", token, body: filters });
 }
 
+// Invoices
+export function fetchInvoices(tenantId, token, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.status) params.set("status", filters.status);
+  if (filters.lead_id) params.set("lead_id", filters.lead_id);
+  const qs = params.toString();
+  return request(`/api/v1/invoices/${tenantId}${qs ? "?" + qs : ""}`, { token });
+}
+export function createInvoice(tenantId, token, data) {
+  return request(`/api/v1/invoices/${tenantId}`, { method: "POST", token, body: data });
+}
+export function sendInvoice(tenantId, token, invoiceId, data) {
+  return request(`/api/v1/invoices/${tenantId}/${invoiceId}/send`, { method: "POST", token, body: data });
+}
+export function markInvoicePaid(tenantId, token, invoiceId) {
+  return request(`/api/v1/invoices/${tenantId}/${invoiceId}/mark-paid`, { method: "POST", token });
+}
+export function fetchInvoiceStats(tenantId, token) {
+  return request(`/api/v1/invoices/${tenantId}/stats`, { token });
+}
+export function createInvoiceFromBid(tenantId, token, bidId) {
+  return request(`/api/v1/invoices/${tenantId}/from-bid/${bidId}`, { method: "POST", token });
+}
+
+// Pipeline
+export function fetchPipelineStages(tenantId, token) {
+  return request(`/api/v1/pipeline/${tenantId}/stages`, { token });
+}
+export function fetchPipelineBoard(tenantId, token) {
+  return request(`/api/v1/pipeline/${tenantId}/board`, { token });
+}
+export function fetchPipelineAnalytics(tenantId, token) {
+  return request(`/api/v1/pipeline/${tenantId}/analytics`, { token });
+}
+export function movePipelineLead(tenantId, token, leadId, data) {
+  return request(`/api/v1/pipeline/${tenantId}/move/${leadId}`, { method: "PUT", token, body: data });
+}
+
 export { ApiError };

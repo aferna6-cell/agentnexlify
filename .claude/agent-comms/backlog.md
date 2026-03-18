@@ -375,6 +375,43 @@ _Added 2026-03-17 to close competitive gaps with Okara AI's CMO product._
 - [ ] **Competitor analysis dashboard** — Track competitor SEO scores and compare
 - [ ] **Automated social media posting scheduler** — Background job that publishes scheduled posts to connected platforms
 
+## Features — Tier 6: GoHighLevel/Jobber Competitive Response (BUILD NEXT)
+
+_Inspired by GoHighLevel, Jobber, ServiceTitan, HubSpot, Podium. These close the biggest competitive gaps._
+
+### Invoicing & Text-to-Pay
+- [ ] **Migration: invoices table** — items_json JSONB, total, status, stripe_payment_link, due_date, paid_at
+- [ ] **Backend: invoices router** — CRUD + Stripe Payment Link creation + send via SMS/email
+- [ ] **Frontend: InvoicesPage** — Create/send/track invoices, payment status
+- [ ] **Wire bids → invoices** — Auto-convert accepted bids to invoices
+- [ ] **Payment reminders** — Auto-send reminders for unpaid invoices
+
+### Sales Pipeline / Kanban Board
+- [ ] **Migration: pipeline_stages table** — tenant-configurable stages with sort order
+- [ ] **Backend: pipeline endpoints** — Stage CRUD, lead stage transitions, pipeline analytics
+- [ ] **Frontend: Pipeline board** — Drag-and-drop Kanban with deal values, expected close dates
+- [ ] **Default pipelines** — Seed industry-specific pipelines on tenant creation
+
+### AI Business Insights (Weekly Intelligence Brief)
+- [ ] **Backend: AI insights service** — Weekly analysis of leads, appointments, pipeline, revenue
+- [ ] **Email delivery** — Weekly "Business Intelligence Brief" to tenant owner
+- [ ] **Dashboard widget** — AI insights summary card on main dashboard
+
+### Smart Lists (Dynamic Lead Segments)
+- [ ] **Migration: smart_lists table** — filter_json JSONB, cached lead_count
+- [ ] **Backend: smart list engine** — Filter engine translating JSON rules to Supabase queries
+- [ ] **Frontend: SmartListsPage** — Rule builder UI, list preview, use-in-campaign
+
+### Form & Survey Builder
+- [ ] **Migration: forms + form_submissions tables**
+- [ ] **Backend: form CRUD + public submit** — Auto-creates leads from submissions
+- [ ] **Frontend: FormBuilderPage** — Drag-and-drop field editor, embeddable renderer
+
+### Documents & E-Signatures (Future)
+- [ ] **Migration: documents table** — template_html, signed_at, signature_data
+- [ ] **Backend: document rendering + signature** — PDF generation, signature capture
+- [ ] **Frontend: document builder + signature pad**
+
 ## Optimization
 
 - [x] Add rate limiting to all public endpoints — DONE 2026-03-15 Cycle 46. All public endpoints now rate-limited via slowapi.

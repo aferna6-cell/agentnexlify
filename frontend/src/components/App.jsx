@@ -38,6 +38,8 @@ const CallsPage = lazy(() => import("../pages/CallsPage"));
 const LocalSEOPage = lazy(() => import("../pages/LocalSEOPage"));
 const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
 const MarketingCampaignsPage = lazy(() => import("../pages/MarketingCampaignsPage"));
+const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
+const PipelinePage = lazy(() => import("../pages/PipelinePage"));
 
 const pages = {
   dashboard: Dashboard,

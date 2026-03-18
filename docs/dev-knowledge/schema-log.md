@@ -280,4 +280,14 @@ Creates `social_posts` (tenant_id, platform CHECK facebook/instagram/twitter/lin
 
 **Applied:** 2026-03-17 via Supabase MCP.
 
+### 051 — Invoicing & Text-to-Pay
+Creates `invoices` table for tracking billable work with Stripe Payment Link integration. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL), bid_id (FK→bids, ON DELETE SET NULL), invoice_number (TEXT NOT NULL), items_json (JSONB NOT NULL DEFAULT '[]'), subtotal/tax_amount/total (NUMERIC(10,2)), tax_rate (NUMERIC(5,2)), status (TEXT CHECK: draft/sent/viewed/paid/overdue/cancelled, DEFAULT 'draft'), due_date (DATE), paid_at (TIMESTAMPTZ), payment_method (TEXT), stripe_payment_link (TEXT), stripe_payment_id (TEXT), notes (TEXT), sent_at/sent_via (TEXT), created_at/updated_at (TIMESTAMPTZ). Indexed on tenant_id, lead_id, and (tenant_id, status). RLS with service_role.
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
+### 052 — Sales Pipeline Stages
+Creates `pipeline_stages` table for tenant-configurable sales pipeline stages. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT NOT NULL), sort_order (INTEGER DEFAULT 0), color (TEXT DEFAULT '#3b82f6'), is_won (BOOLEAN DEFAULT false), is_lost (BOOLEAN DEFAULT false), created_at (TIMESTAMPTZ). Indexed on tenant_id. RLS with service_role. Also adds to `leads` table: deal_value (NUMERIC(12,2) DEFAULT 0), expected_close_date (DATE), stage_changed_at (TIMESTAMPTZ DEFAULT now()).
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

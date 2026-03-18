@@ -446,14 +446,20 @@ async def send_campaign(
             except Exception:
                 logger.exception("Failed to track campaign send for lead %s", lead_id)
 
-        # Update campaign with results
+        # Update campaign with results — isolated try/except since messages already sent
         final_status = "sent" if total_sent > 0 else "failed"
-        db.table("marketing_campaigns").update({
-            "status": final_status,
-            "sent_at": datetime.now(timezone.utc).isoformat(),
-            "total_recipients": len(leads),
-            "total_sent": total_sent,
-        }).eq("id", campaign_id).execute()
+        try:
+            db.table("marketing_campaigns").update({
+                "status": final_status,
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "total_recipients": len(leads),
+                "total_sent": total_sent,
+            }).eq("id", campaign_id).execute()
+        except Exception:
+            logger.exception(
+                "Failed to update final status for campaign %s (sent=%d, failed=%d)",
+                campaign_id, total_sent, total_failed,
+            )
 
         return {
             "campaign_id": campaign_id,
@@ -467,7 +473,7 @@ async def send_campaign(
         raise
     except Exception:
         logger.exception("Failed to send campaign %s for tenant %s", campaign_id, tenant_id)
-        # Mark campaign as failed
+        # Mark campaign as failed — only safe if no messages were sent
         try:
             db = get_supabase()
             db.table("marketing_campaigns").update({

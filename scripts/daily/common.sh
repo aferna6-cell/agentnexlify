@@ -30,6 +30,19 @@ resolve_claude_bin() {
         return 0
     fi
 
+    # Check common install locations (Task Scheduler/cron may have minimal PATH)
+    local candidate
+    for candidate in \
+        "$HOME/.local/bin/claude" \
+        "$HOME/.npm-global/bin/claude" \
+        "/usr/local/bin/claude" \
+        "$HOME/.nvm/versions/node/$(ls "$HOME/.nvm/versions/node/" 2>/dev/null | tail -1)/bin/claude"; do
+        if [ -x "$candidate" ] 2>/dev/null; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+
     return 1
 }
 

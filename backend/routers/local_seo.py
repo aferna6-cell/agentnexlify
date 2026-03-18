@@ -221,6 +221,7 @@ async def _generate_keywords(business_type: Optional[str], city: Optional[str]) 
 
     location_desc = city or "your area"
     biz_desc = business_type or "local business"
+    raw = ""
 
     try:
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
@@ -353,6 +354,7 @@ USER EXPERIENCE:
 - Mobile-friendly indicators from HTML structure
 
 Return ONLY the raw JSON object, no markdown fences or explanations."""
+    raw = ""
 
     try:
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0)
@@ -459,6 +461,7 @@ Evaluate these visibility factors:
 
 Score conservatively. Most small local businesses score 20-50 unless they have strong online presence.
 Return ONLY the raw JSON object, no markdown fences."""
+    raw = ""
 
     try:
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=45.0)
@@ -535,6 +538,7 @@ Guidelines:
 - recommendations: 1-3 specific tips to rank for this keyword.
 
 Return ONLY the raw JSON array, no markdown fences."""
+    raw = ""
 
     try:
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=45.0)
@@ -940,7 +944,11 @@ async def run_seo_audit(
         )
 
     # Extract structured data from AI result
-    overall_score = int(audit_result.get("overall_score", 0))
+    try:
+        overall_score = int(audit_result.get("overall_score") or 0)
+    except (TypeError, ValueError):
+        logger.warning("AI returned non-integer overall_score: %s", audit_result.get("overall_score"))
+        overall_score = 0
     categories = audit_result.get("categories", {})
     recommendations_list = audit_result.get("recommendations", [])
 
@@ -1164,7 +1172,11 @@ async def calculate_geo_score(
             detail="GEO analysis could not be completed. Please try again.",
         )
 
-    overall_score = int(geo_result.get("overall_score", 0))
+    try:
+        overall_score = int(geo_result.get("overall_score") or 0)
+    except (TypeError, ValueError):
+        logger.warning("AI returned non-integer GEO overall_score: %s", geo_result.get("overall_score"))
+        overall_score = 0
     platform_scores = geo_result.get("platform_scores", {})
     visibility_factors = geo_result.get("visibility_factors", [])
     recommendations_list = geo_result.get("recommendations", [])
