@@ -380,22 +380,22 @@ _Added 2026-03-17 to close competitive gaps with Okara AI's CMO product._
 _Inspired by GoHighLevel, Jobber, ServiceTitan, HubSpot, Podium. These close the biggest competitive gaps._
 
 ### Invoicing & Text-to-Pay
-- [ ] **Migration: invoices table** — items_json JSONB, total, status, stripe_payment_link, due_date, paid_at
-- [ ] **Backend: invoices router** — CRUD + Stripe Payment Link creation + send via SMS/email
-- [ ] **Frontend: InvoicesPage** — Create/send/track invoices, payment status
-- [ ] **Wire bids → invoices** — Auto-convert accepted bids to invoices
-- [ ] **Payment reminders** — Auto-send reminders for unpaid invoices
+- [x] **Migration: invoices table** — DONE 2026-03-18 Cycle 91. Migration 051 applied to live Supabase.
+- [x] **Backend: invoices router** — DONE 2026-03-17 Cycle 91. 869 lines, full CRUD + Stripe Payment Link + send via SMS/email.
+- [x] **Frontend: InvoicesPage** — DONE 2026-03-17 Cycle 91. 1030 lines, create/send/track invoices.
+- [x] **Wire bids → invoices** — DONE 2026-03-18 Cycle 92. Status validation + duplicate prevention guard.
+- [x] **Payment reminders** — DONE 2026-03-18 Cycle 92. Auto-send email+SMS for overdue/due-tomorrow, dedup per day.
 
 ### Sales Pipeline / Kanban Board
-- [ ] **Migration: pipeline_stages table** — tenant-configurable stages with sort order
-- [ ] **Backend: pipeline endpoints** — Stage CRUD, lead stage transitions, pipeline analytics
-- [ ] **Frontend: Pipeline board** — Drag-and-drop Kanban with deal values, expected close dates
-- [ ] **Default pipelines** — Seed industry-specific pipelines on tenant creation
+- [x] **Migration: pipeline_stages table** — DONE 2026-03-18 Cycle 91. Migration 052 applied to live Supabase.
+- [x] **Backend: pipeline endpoints** — DONE 2026-03-17 Cycle 91. 524 lines, stage CRUD + board + analytics.
+- [x] **Frontend: Pipeline board** — DONE 2026-03-17 Cycle 91. 674 lines, Kanban with deal values.
+- [x] **Default pipelines** — DONE 2026-03-18 Cycle 92. 6 default stages auto-seeded on first access.
 
 ### AI Business Insights (Weekly Intelligence Brief)
-- [ ] **Backend: AI insights service** — Weekly analysis of leads, appointments, pipeline, revenue
-- [ ] **Email delivery** — Weekly "Business Intelligence Brief" to tenant owner
-- [ ] **Dashboard widget** — AI insights summary card on main dashboard
+- [x] **Backend: AI insights service** — DONE 2026-03-18 Cycle 92. Weekly Claude analysis of 7-day metrics (runs Mondays for paid tenants).
+- [x] **Email delivery** — DONE 2026-03-18 Cycle 92. Weekly "Business Intelligence Brief" with metrics table + AI insights.
+- [x] **Dashboard widget** — DONE 2026-03-18 Cycle 92. AIInsightsWidget with key metrics + AI analysis bullets.
 
 ### Smart Lists (Dynamic Lead Segments)
 - [ ] **Migration: smart_lists table** — filter_json JSONB, cached lead_count
