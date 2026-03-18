@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
+from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
@@ -215,8 +216,23 @@ async def create_review(
         "external_review_id": req.external_review_id,
     }
 
-    result = db.table("reviews").insert(payload).execute()
-    return result.data[0] if result.data else payload
+    try:
+        result = db.table("reviews").insert(payload).execute()
+    except Exception:
+        logger.exception("Failed to insert review for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to create review")
+
+    review = result.data[0] if result.data else payload
+    try:
+        fire_event_background(tenant_id, "review.received", {
+            "review_id": review.get("id"),
+            "platform": req.platform,
+            "author_name": req.author_name,
+            "rating": req.rating,
+        })
+    except Exception:
+        logger.warning("Failed to fire review.received webhook for tenant %s", tenant_id, exc_info=True)
+    return review
 
 
 @router.patch("/{tenant_id}/{review_id}")

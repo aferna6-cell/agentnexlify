@@ -1183,4 +1183,18 @@ export function fetchFormStats(tenantId, token) {
   return request(`/api/v1/forms/${tenantId}/stats`, { token });
 }
 
+// --- Facebook Messenger Channel ---
+
+export function fetchFacebookStatus(tenantId, token) {
+  return request(`/api/v1/channels/facebook/${tenantId}/status`, { token });
+}
+
+export function getFacebookAuthUrl(tenantId, token) {
+  return request(`/api/v1/channels/facebook/${tenantId}/auth-url`, { token });
+}
+
+export function disconnectFacebook(tenantId, token) {
+  return request(`/api/v1/channels/facebook/${tenantId}/disconnect`, { method: "DELETE", token });
+}
+
 export { ApiError };

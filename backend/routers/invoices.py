@@ -13,6 +13,7 @@ from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.twilio_service import send_sms
+from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
@@ -484,7 +485,16 @@ async def create_invoice(
 
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create invoice")
-    return result.data[0]
+
+    invoice = result.data[0]
+    fire_event_background(tenant_id, "invoice.created", {
+        "invoice_id": invoice["id"],
+        "invoice_number": invoice.get("invoice_number"),
+        "total": invoice.get("total"),
+        "status": invoice.get("status"),
+        "lead_id": invoice.get("lead_id"),
+    })
+    return invoice
 
 
 @router.get("/{tenant_id}/{invoice_id}")
@@ -890,4 +900,13 @@ async def mark_invoice_paid(
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    return result.data[0]
+
+    paid_invoice = result.data[0]
+    fire_event_background(tenant_id, "invoice.paid", {
+        "invoice_id": invoice_id,
+        "invoice_number": paid_invoice.get("invoice_number"),
+        "total": paid_invoice.get("total"),
+        "payment_method": req.payment_method,
+        "lead_id": paid_invoice.get("lead_id"),
+    })
+    return paid_invoice

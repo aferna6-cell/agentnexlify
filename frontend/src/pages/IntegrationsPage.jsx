@@ -11,6 +11,9 @@ import {
   fetchGoogleCalendarStatus,
   startGoogleCalendarAuth,
   disconnectGoogleCalendar,
+  fetchFacebookStatus,
+  getFacebookAuthUrl,
+  disconnectFacebook,
 } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
@@ -34,6 +37,158 @@ function GoogleCalendarIcon({ size = 40 }) {
       <rect x="20" y="16" width="1" height="20" fill="#E0E0E0" />
       <rect x="28" y="16" width="1" height="20" fill="#E0E0E0" />
     </svg>
+  );
+}
+
+/* ── Inline SVG: Facebook 'f' logo ── */
+function FacebookIcon({ size = 40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" rx="8" fill="#1877F2" />
+      <path
+        d="M33 24h-6v-4c0-1.1.9-2 2-2h4v-6h-4c-4.4 0-8 3.6-8 8v4h-4v6h4v14h6V30h4l2-6z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
+
+/* ── Facebook Messenger Section ── */
+function FacebookMessengerSection({ token }) {
+  const { user } = useAuth();
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadStatus = useCallback(async () => {
+    if (!user?.tenantId) return;
+    setLoading(true);
+    try {
+      const data = await fetchFacebookStatus(user.tenantId, token);
+      setStatus(data);
+    } catch (err) {
+      console.error("Failed to load Facebook status", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.tenantId, token]);
+
+  useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    setError(null);
+    try {
+      const data = await getFacebookAuthUrl(user.tenantId, token);
+      if (data.auth_url) window.open(data.auth_url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError("Failed to start Facebook authorization.");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirmDisconnect) {
+      setConfirmDisconnect(true);
+      return;
+    }
+    setDisconnecting(true);
+    setError(null);
+    try {
+      await disconnectFacebook(user.tenantId, token);
+      setConfirmDisconnect(false);
+      await loadStatus();
+    } catch (err) {
+      setError("Failed to disconnect.");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const connected = status?.connected;
+
+  return (
+    <div style={{ ...gcStyles.card, marginTop: "1rem" }}>
+      <div style={gcStyles.cardTop}>
+        <div style={gcStyles.iconWrap}><FacebookIcon size={40} /></div>
+        <div style={gcStyles.cardInfo}>
+          <div style={gcStyles.cardTitle}>
+            Facebook Messenger
+            {connected && <span style={gcStyles.connectedBadge}>Connected</span>}
+          </div>
+          <div style={gcStyles.cardDesc}>
+            Receive and reply to Facebook Messenger conversations from your shared inbox
+          </div>
+        </div>
+      </div>
+      {loading && (
+        <div style={{ marginTop: "0.75rem", color: "var(--text-muted)", fontSize: "0.8125rem" }}>
+          Checking connection status...
+        </div>
+      )}
+      {!loading && connected && status?.page_name && (
+        <div style={gcStyles.details}>
+          <div style={gcStyles.detailRow}>
+            <span style={gcStyles.detailLabel}>Page</span>
+            <span style={gcStyles.detailValue}>{status.page_name}</span>
+          </div>
+          {status.page_id && (
+            <div style={{ ...gcStyles.detailRow, marginTop: "0.375rem" }}>
+              <span style={gcStyles.detailLabel}>Page ID</span>
+              <span style={{ ...gcStyles.detailValue, color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                {status.page_id}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      {error && <div className="error-banner" style={{ marginTop: "0.75rem" }}>{error}</div>}
+      <div style={gcStyles.cardActions}>
+        {!loading && connected ? (
+          <button
+            className="btn-danger"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+          >
+            {disconnecting ? "Disconnecting..." : confirmDisconnect ? "Confirm disconnect?" : "Disconnect"}
+          </button>
+        ) : (
+          !loading && (
+            <button
+              onClick={handleConnect}
+              disabled={connecting}
+              style={{
+                background: connecting ? "var(--bg-secondary)" : "#1877F2",
+                color: "#fff",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+                padding: "0.5rem 1.125rem",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                cursor: connecting ? "not-allowed" : "pointer",
+                opacity: connecting ? 0.7 : 1,
+                transition: "opacity 0.15s",
+              }}
+            >
+              {connecting ? "Opening..." : "Connect Facebook"}
+            </button>
+          )
+        )}
+        {!loading && connected && confirmDisconnect && (
+          <button
+            className="btn-secondary"
+            onClick={() => setConfirmDisconnect(false)}
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -326,7 +481,10 @@ export default function IntegrationsPage({ onNavigate }) {
 
       {/* Services Tab */}
       {activeTab === "services" && (
-        <GoogleCalendarSection token={token} />
+        <>
+          <GoogleCalendarSection token={token} />
+          <FacebookMessengerSection token={token} />
+        </>
       )}
 
       {/* Webhooks Tab */}

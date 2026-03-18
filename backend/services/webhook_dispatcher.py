@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 SUPPORTED_EVENTS = {
     "lead.created",
     "lead.updated",
+    "lead.status_changed",
     "appointment.booked",
     "appointment.cancelled",
     "conversation.started",
@@ -25,6 +26,10 @@ SUPPORTED_EVENTS = {
     "automation.sms_sent",
     "order.created",
     "call.completed",
+    "invoice.created",
+    "invoice.paid",
+    "form.submitted",
+    "review.received",
 }
 
 _TIMEOUT = 10.0
