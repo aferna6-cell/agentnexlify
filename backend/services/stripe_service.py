@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 _initialized = False
 
+# LAUNCH BLOCKER: Replace these placeholder IDs with real Stripe price IDs
+# from your Stripe dashboard (https://dashboard.stripe.com/prices).
+# Real IDs look like: price_1Abc123def456...
+# Without real IDs, checkout sessions will fail with a Stripe API error.
 PLAN_PRICES: dict[str, dict[str, str]] = {
     "growth": {"monthly": "price_growth_monthly"},
     "professional": {"monthly": "price_professional_monthly"},

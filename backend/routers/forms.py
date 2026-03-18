@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from backend.dependencies import verify_tenant
 from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
@@ -64,11 +65,6 @@ class PublicFormSubmission(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _verify_tenant(claims: dict, tenant_id: str) -> None:
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
 
 def _generate_public_token() -> str:
     """Generate a short, URL-safe public token for form embedding."""
@@ -309,7 +305,7 @@ async def form_stats(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Form analytics: total forms, total submissions, conversion rate."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -365,7 +361,7 @@ async def list_forms(
     limit: int = Query(50, ge=1, le=200),
 ):
     """List all forms for a tenant."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -396,7 +392,7 @@ async def create_form(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Create a new form with fields and settings."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     public_token = _generate_public_token()
     fields = [field.model_dump() for field in req.fields_json]
@@ -437,7 +433,7 @@ async def get_form(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get a single form with submission stats."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -485,7 +481,7 @@ async def update_form(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Update form name, fields, settings, or active status."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -550,7 +546,7 @@ async def delete_form(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Delete a form and its submissions."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -596,7 +592,7 @@ async def list_submissions(
     limit: int = Query(50, ge=1, le=200),
 ):
     """List form submissions with optional lead enrichment."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 

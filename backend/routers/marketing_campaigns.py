@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.config import settings
+from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import build_unsubscribe_url, send_email
@@ -64,37 +65,12 @@ class GenerateEmailRequest(BaseModel):
 
 # --- Helpers ---
 
-def _verify_tenant(claims: dict, tenant_id: str) -> None:
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-
 def _validate_campaign_type(campaign_type: str) -> None:
     if campaign_type not in VALID_CAMPAIGN_TYPES:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid campaign type: {campaign_type}. Must be one of: {', '.join(sorted(VALID_CAMPAIGN_TYPES))}",
         )
-
-
-def _get_business_context(db, tenant_id: str) -> tuple[str, str]:
-    """Fetch business name and type for AI context."""
-    try:
-        result = (
-            db.table("tenants")
-            .select("business_name, business_type")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if result.data:
-            return (
-                result.data[0].get("business_name", "the business"),
-                result.data[0].get("business_type", ""),
-            )
-    except Exception:
-        logger.warning("Failed to fetch business context for tenant %s", tenant_id, exc_info=True)
-    return ("the business", "")
 
 
 def _query_target_leads(db, tenant_id: str, target_filter: dict | None) -> list[dict]:
@@ -146,7 +122,7 @@ async def create_campaign(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Create a marketing campaign."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
     _validate_campaign_type(req.type)
 
     if req.type == "email" and not req.subject:
@@ -186,7 +162,7 @@ async def list_campaigns(
     offset: int = Query(0, ge=0),
 ):
     """List marketing campaigns with optional filters."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
@@ -232,7 +208,7 @@ async def get_campaign(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get a single campaign with details."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
@@ -262,7 +238,7 @@ async def update_campaign(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Update a marketing campaign."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     # Validate status if provided — block reverting sent/sending campaigns to draft
     if req.status:
@@ -308,7 +284,7 @@ async def delete_campaign(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Delete a marketing campaign."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
@@ -453,7 +429,7 @@ async def send_campaign(
     then returns immediately. The actual send loop runs as an asyncio background task
     so the HTTP handler is never blocked for more than a few milliseconds.
     """
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
@@ -530,7 +506,7 @@ async def get_campaign_analytics(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get campaign performance analytics."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
@@ -598,7 +574,7 @@ async def estimate_recipients(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Estimate how many leads match the given target filter."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
@@ -618,7 +594,7 @@ async def generate_campaign_email(
     claims: dict = Depends(_get_current_tenant),
 ):
     """AI-generate a campaign email with subject and body."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     if req.campaign_type not in VALID_CAMPAIGN_CONTENT_TYPES:
         raise HTTPException(
@@ -627,7 +603,7 @@ async def generate_campaign_email(
         )
 
     db = get_supabase()
-    business_name, business_type = _get_business_context(db, tenant_id)
+    business_name, business_type = get_business_context(db, tenant_id)
     biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
 
     type_instructions = {

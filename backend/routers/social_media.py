@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.config import settings
+from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 
@@ -83,11 +84,6 @@ class AICampaignRequest(BaseModel):
 
 # --- Helpers ---
 
-def _verify_tenant(claims: dict, tenant_id: str) -> None:
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-
 def _validate_platform(platform: str) -> None:
     if platform not in VALID_PLATFORMS:
         raise HTTPException(
@@ -104,26 +100,6 @@ def _validate_status(status: str) -> None:
         )
 
 
-def _get_business_context(db, tenant_id: str) -> tuple[str, str]:
-    """Fetch business name and type for AI context."""
-    try:
-        result = (
-            db.table("tenants")
-            .select("business_name, business_type")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if result.data:
-            return (
-                result.data[0].get("business_name", "the business"),
-                result.data[0].get("business_type", ""),
-            )
-    except Exception:
-        logger.warning("Failed to fetch business context for tenant %s", tenant_id, exc_info=True)
-    return ("the business", "")
-
-
 # --- Post CRUD Endpoints ---
 
 @router.post("/{tenant_id}/posts")
@@ -133,7 +109,7 @@ async def create_post(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Create a social media post."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
     _validate_platform(req.platform)
 
     status = "draft"
@@ -175,7 +151,7 @@ async def list_posts(
     offset: int = Query(0, ge=0),
 ):
     """List social media posts with optional filters."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     if platform:
         _validate_platform(platform)
@@ -231,7 +207,7 @@ async def update_post(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Update a social media post."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     if req.platform:
         _validate_platform(req.platform)
@@ -270,7 +246,7 @@ async def delete_post(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Delete a social media post."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
@@ -299,11 +275,11 @@ async def generate_post_content(
     claims: dict = Depends(_get_current_tenant),
 ):
     """AI-generate social media content optimized for a specific platform."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
     _validate_platform(req.platform)
 
     db = get_supabase()
-    business_name, business_type = _get_business_context(db, tenant_id)
+    business_name, business_type = get_business_context(db, tenant_id)
 
     platform_info = PLATFORM_LIMITS[req.platform]
     biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
@@ -378,13 +354,13 @@ async def generate_campaign_content(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Generate a week of social media content across platforms."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     for platform in req.platforms:
         _validate_platform(platform)
 
     db = get_supabase()
-    business_name, business_type = _get_business_context(db, tenant_id)
+    business_name, business_type = get_business_context(db, tenant_id)
     biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
 
     platforms_desc = "\n".join(
@@ -495,7 +471,7 @@ async def get_calendar(
     year: int = Query(..., ge=2020, le=2100),
 ):
     """Get social media posts in a calendar view, grouped by date."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     _, last_day = monthrange(year, month)
     start_date = f"{year}-{month:02d}-01T00:00:00Z"
@@ -581,7 +557,7 @@ async def get_analytics(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get social media analytics summary."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     try:
         db = get_supabase()
