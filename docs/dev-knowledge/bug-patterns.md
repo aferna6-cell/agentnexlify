@@ -321,4 +321,31 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### check_no_response_leads dedup never matched — re-enrolled every 60 seconds
+**Date:** 2026-03-18
+**Symptom:** Leads with no chat response got enrolled in the no_response_24h sequence on every automation loop tick (every 60 seconds), spamming them with emails.
+**Root Cause:** The dedup check in `check_no_response_leads` queried `automation_executions` with `.eq("status", "active")`, but `trigger_sequence` inserts executions with `"status": "in_progress"`. These never match, so the dedup check always returned no rows and every lead was re-enrolled every 60 seconds.
+**Fix:** Changed the dedup query to `.in_("status", ["active", "in_progress"])` so both statuses are recognized. Also refactored to a batch query (Q2a/Q2b) — collect all lead IDs, fetch all their executions in one query, then fetch sequence trigger_events in a second query. Builds `already_enrolled_lead_ids` set entirely in Python.
+**Files Changed:** `backend/services/automation_engine.py`
+**Prevention:** When inserting a row with a specific status, ensure any dedup/existence checks query for that exact status value. The insert status and the dedup filter must match.
+
+---
+
+### check_no_response_leads N+1 queries — 3-5 DB queries per lead
+**Date:** 2026-03-18
+**Symptom:** With 50 leads, the function issued up to 250 DB round-trips per loop iteration, adding measurable latency to the 60-second automation loop.
+**Root Cause:** Three inner queries (enrollment dedup, conversations session_id, chat_messages latest timestamp) ran inside a per-lead for-loop. With BATCH_LIMIT=50 leads that's 150-250 queries for what should be a single pass.
+**Fix:** Refactored `check_no_response_leads` to batch all reads before the loop:
+  - Q1: fetch candidate leads (unchanged)
+  - Q2a: single `.in_("lead_id", all_lead_ids)` + `.in_("status", ["active","in_progress"])` on automation_executions
+  - Q2b: single `.in_("id", enrolled_seq_ids)` on automation_sequences to get trigger_events
+  - Q3: single `.in_("id", all_conv_ids)` on conversations for session_id mapping
+  - Q4: single `.in_("session_id", all_session_ids)` on chat_messages ordered desc; Python dedup by first occurrence per session_id
+  - Lead evaluation loop is now pure Python with zero additional DB calls
+Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("sequence_id", seq_ids)` query instead of one query per sequence; groups by sequence_id in Python.
+**Files Changed:** `backend/services/automation_engine.py`
+**Prevention:** Any for-loop over a batch of DB rows that queries inside the loop is an N+1 pattern. Collect all IDs first, batch-fetch with `.in_()`, then join in Python.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

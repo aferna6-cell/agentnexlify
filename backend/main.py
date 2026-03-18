@@ -46,95 +46,109 @@ if settings.sentry_dsn:
 _startup_time: float = 0.0
 
 
+async def _safe_run(name: str, fn, timeout: float = 30.0):
+    """Run an automation function with a timeout. Logs results and exceptions."""
+    try:
+        result = await asyncio.wait_for(fn(), timeout=timeout)
+        if result:
+            logger.info("Automation loop: %s returned %s", name, result)
+    except asyncio.TimeoutError:
+        logger.warning("Automation loop: %s timed out after %.0fs", name, timeout)
+    except Exception:
+        logger.exception("Automation loop: %s failed", name)
+
+
 async def _automation_loop():
-    """Background loop that processes pending automation steps every 60 seconds.
+    """Background loop that runs automation tasks on a tiered schedule.
 
     With multiple Uvicorn workers, each worker runs its own loop. We use a
     random jitter (0-30s) to spread execution across workers and rely on
     idempotent operations (dedup checks in each function) to prevent duplicates.
+
+    Tiers:
+      - Every 60s  (every tick): core sequences, no-response leads, reminders
+      - Every 5min (tick % 5):   notifications, review requests, onboarding, CSAT
+      - Every 30min (tick % 30): heavy/infrequent tasks (monthly reports, briefs)
     """
     import random
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
-    from backend.services.automation_engine import check_new_reviews, check_no_response_leads, process_pending_steps, send_appointment_reminders, send_csat_surveys, send_invoice_payment_reminders, send_monthly_reports, send_pending_review_requests, send_onboarding_emails, send_portal_links, send_weekly_intelligence_briefs
+    from backend.services.automation_engine import (
+        check_new_reviews,
+        check_no_response_leads,
+        process_pending_steps,
+        send_appointment_reminders,
+        send_csat_surveys,
+        send_invoice_payment_reminders,
+        send_monthly_reports,
+        send_pending_review_requests,
+        send_onboarding_emails,
+        send_portal_links,
+        send_weekly_intelligence_briefs,
+    )
+
+    tick = 0
     while True:
-        try:
-            processed = await process_pending_steps()
-            if processed:
-                logger.info("Automation loop: processed %d steps", processed)
-        except Exception:
-            logger.exception("Automation loop: process_pending_steps failed")
+        tick += 1
 
-        try:
-            triggered = await check_no_response_leads()
-            if triggered:
-                logger.info("Automation loop: triggered %d no-response sequences", triggered)
-        except Exception:
-            logger.exception("Automation loop: check_no_response_leads failed")
+        # Every 60s: core automation tasks run in parallel
+        core_tasks = [
+            _safe_run("process_pending_steps", process_pending_steps),
+            _safe_run("check_no_response_leads", check_no_response_leads),
+            _safe_run("send_appointment_reminders", send_appointment_reminders),
+        ]
 
-        try:
-            reminders = await send_appointment_reminders()
-            if reminders:
-                logger.info("Automation loop: sent %d appointment reminders", reminders)
-        except Exception:
-            logger.exception("Automation loop: send_appointment_reminders failed")
+        # Every 5 min: notification/reminder functions
+        if tick % 5 == 0:
+            core_tasks.extend([
+                _safe_run("send_pending_review_requests", send_pending_review_requests),
+                _safe_run("send_onboarding_emails", send_onboarding_emails),
+                _safe_run("send_portal_links", send_portal_links),
+                _safe_run("send_csat_surveys", send_csat_surveys),
+                _safe_run("check_new_reviews", check_new_reviews),
+                _safe_run("send_invoice_payment_reminders", send_invoice_payment_reminders),
+            ])
 
-        try:
-            review_reqs = await send_pending_review_requests()
-            if review_reqs:
-                logger.info("Automation loop: sent %d review requests", review_reqs)
-        except Exception:
-            logger.exception("Automation loop: send_pending_review_requests failed")
+        # Every 30 min: heavy/infrequent tasks
+        if tick % 30 == 0:
+            core_tasks.extend([
+                _safe_run("send_monthly_reports", send_monthly_reports),
+                _safe_run("send_weekly_intelligence_briefs", send_weekly_intelligence_briefs),
+            ])
 
-        try:
-            onboarding = await send_onboarding_emails()
-            if onboarding:
-                logger.info("Automation loop: sent %d onboarding emails", onboarding)
-        except Exception:
-            logger.exception("Automation loop: send_onboarding_emails failed")
+        # Stalled campaign recovery: find campaigns stuck in 'sending' for >30 min
+        if tick % 5 == 0:
+            core_tasks.append(_safe_run("recover_stalled_campaigns", _recover_stalled_campaigns))
 
-        try:
-            portal = await send_portal_links()
-            if portal:
-                logger.info("Automation loop: sent %d portal links", portal)
-        except Exception:
-            logger.exception("Automation loop: send_portal_links failed")
-
-        try:
-            reports = await send_monthly_reports()
-            if reports:
-                logger.info("Automation loop: sent %d monthly reports", reports)
-        except Exception:
-            logger.exception("Automation loop: send_monthly_reports failed")
-
-        try:
-            review_alerts = await check_new_reviews()
-            if review_alerts:
-                logger.info("Automation loop: sent %d review alert notifications", review_alerts)
-        except Exception:
-            logger.exception("Automation loop: check_new_reviews failed")
-
-        try:
-            csat_sent = await send_csat_surveys()
-            if csat_sent:
-                logger.info("Automation loop: sent %d CSAT surveys", csat_sent)
-        except Exception:
-            logger.exception("Automation loop: send_csat_surveys failed")
-
-        try:
-            inv_reminders = await send_invoice_payment_reminders()
-            if inv_reminders:
-                logger.info("Automation loop: sent %d invoice payment reminders", inv_reminders)
-        except Exception:
-            logger.exception("Automation loop: send_invoice_payment_reminders failed")
-
-        try:
-            briefs = await send_weekly_intelligence_briefs()
-            if briefs:
-                logger.info("Automation loop: sent %d weekly intelligence briefs", briefs)
-        except Exception:
-            logger.exception("Automation loop: send_weekly_intelligence_briefs failed")
-
+        await asyncio.gather(*core_tasks)
         await asyncio.sleep(60)
+
+
+async def _recover_stalled_campaigns():
+    """Mark marketing campaigns stuck in 'sending' for >30 minutes as 'failed'."""
+    from datetime import datetime, timedelta, timezone
+    from backend.models.database import get_supabase
+
+    db = get_supabase()
+    stale_cutoff = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
+    try:
+        stalled = (
+            db.table("marketing_campaigns")
+            .select("id, name, tenant_id")
+            .eq("status", "sending")
+            .lt("updated_at", stale_cutoff)
+            .limit(50)
+            .execute()
+        )
+        if not stalled.data:
+            return 0
+        stalled_ids = [r["id"] for r in stalled.data]
+        for campaign_id in stalled_ids:
+            db.table("marketing_campaigns").update({"status": "failed"}).eq("id", campaign_id).execute()
+            logger.warning("Marked stalled campaign %s as failed", campaign_id)
+        return len(stalled_ids)
+    except Exception:
+        logger.exception("_recover_stalled_campaigns failed")
+        return 0
 
 
 @asynccontextmanager

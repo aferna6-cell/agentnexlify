@@ -40,28 +40,50 @@ async def trigger_sequence(
         .execute()
     )
 
-    enrolled = 0
-    for seq in result.data or []:
-        # For lead_stage_change, check target_stage matches
+    sequences = result.data or []
+    if not sequences:
+        return 0
+
+    # Filter sequences by trigger_context before fetching steps
+    eligible_seqs = []
+    for seq in sequences:
         if trigger_event == "lead_stage_change":
             target = (seq.get("trigger_config") or {}).get("target_stage")
             if target and target != trigger_context.get("new_stage"):
                 continue
+        eligible_seqs.append(seq)
 
-        # Get the first step's delay
-        steps = (
-            db.table("automation_steps")
-            .select("delay_minutes")
-            .eq("sequence_id", seq["id"])
-            .eq("is_active", True)
-            .order("step_order")
-            .limit(1)
-            .execute()
-        )
-        if not steps.data:
+    if not eligible_seqs:
+        return 0
+
+    # Batch-fetch the first active step for all eligible sequences in one query.
+    # We fetch step_order + sequence_id so we can group in Python; limit to
+    # len(eligible_seqs) rows because we only need one row per sequence and
+    # Supabase returns them in step_order order.
+    seq_ids = [s["id"] for s in eligible_seqs]
+    steps_result = (
+        db.table("automation_steps")
+        .select("sequence_id, step_order, delay_minutes")
+        .in_("sequence_id", seq_ids)
+        .eq("is_active", True)
+        .order("step_order")
+        .limit(len(seq_ids) * 20)  # generous upper bound; deduped in Python below
+        .execute()
+    )
+    # Build mapping sequence_id -> first step (lowest step_order)
+    first_step_by_seq: dict[str, dict] = {}
+    for step in steps_result.data or []:
+        sid = step["sequence_id"]
+        if sid not in first_step_by_seq:
+            first_step_by_seq[sid] = step
+
+    enrolled = 0
+    for seq in eligible_seqs:
+        first_step = first_step_by_seq.get(seq["id"])
+        if not first_step:
             continue
 
-        delay = steps.data[0]["delay_minutes"]
+        delay = first_step["delay_minutes"]
         next_run = datetime.now(timezone.utc) + timedelta(minutes=delay)
 
         try:
@@ -510,12 +532,15 @@ async def check_no_response_leads() -> int:
     """Find leads with status 'new' that have had no chat activity in 24+ hours and trigger
     the no_response_24h automation sequence for each.
 
-    Strategy: avoid querying conversations columns that may not exist. Instead:
-      1. Load 'new' leads created more than 24h ago (batch, BATCH_LIMIT).
-      2. For each lead, resolve conversation_id -> session_id -> latest chat_messages row.
-      3. If the last message timestamp is >= 24h ago (or no messages at all), trigger.
-      4. Skip leads already enrolled in an active no_response_24h execution to avoid
-         re-triggering on every loop iteration.
+    Strategy (batched — <=5 DB round-trips for the read/check phase regardless of lead count):
+      Q1. Load 'new' leads created more than 24h ago (batch, BATCH_LIMIT).
+      Q2. Batch fetch automation_executions for all lead IDs where status is active or
+          in_progress, then fetch those sequences' trigger_events. Build a set of lead IDs
+          already enrolled in a no_response_24h sequence.
+      Q3. Batch fetch conversations for all conversation IDs to get session_id mapping.
+      Q4. Batch fetch latest chat_messages for all session IDs; deduplicate in Python to
+          get the most recent timestamp per session_id.
+      Then loop in Python to decide which leads to trigger.
 
     Returns count of sequences triggered.
     """
@@ -524,6 +549,7 @@ async def check_no_response_leads() -> int:
     cutoff = now - timedelta(hours=24)
     triggered = 0
 
+    # Q1: fetch candidate leads
     try:
         leads_result = (
             db.table("leads")
@@ -541,68 +567,104 @@ async def check_no_response_leads() -> int:
     if not leads:
         return 0
 
+    all_lead_ids = [lead["id"] for lead in leads]
+    all_conv_ids = [lead["conversation_id"] for lead in leads if lead.get("conversation_id")]
+
+    # Q2a: batch fetch active/in_progress executions for all leads
+    already_enrolled_lead_ids: set[str] = set()
+    try:
+        exec_result = (
+            db.table("automation_executions")
+            .select("lead_id, sequence_id")
+            .in_("lead_id", all_lead_ids)
+            .in_("status", ["active", "in_progress"])
+            .execute()
+        )
+        exec_rows = exec_result.data or []
+    except Exception:
+        logger.warning("check_no_response_leads: batch enrollment check failed, proceeding without dedup", exc_info=True)
+        exec_rows = []
+
+    if exec_rows:
+        # Q2b: fetch trigger_events for the sequences referenced by those executions
+        enrolled_seq_ids = list({row["sequence_id"] for row in exec_rows})
+        try:
+            seq_result = (
+                db.table("automation_sequences")
+                .select("id, trigger_event")
+                .in_("id", enrolled_seq_ids)
+                .execute()
+            )
+            no_response_seq_ids: set[str] = {
+                s["id"] for s in (seq_result.data or [])
+                if s.get("trigger_event") == "no_response_24h"
+            }
+        except Exception:
+            logger.warning("check_no_response_leads: batch sequence trigger_event check failed", exc_info=True)
+            no_response_seq_ids = set()
+
+        for row in exec_rows:
+            if row["sequence_id"] in no_response_seq_ids:
+                already_enrolled_lead_ids.add(row["lead_id"])
+
+    # Q3: batch fetch conversations to build conv_id -> session_id mapping
+    conv_to_session: dict[str, str] = {}
+    if all_conv_ids:
+        try:
+            conv_result = (
+                db.table("conversations")
+                .select("id, session_id")
+                .in_("id", all_conv_ids)
+                .execute()
+            )
+            for row in conv_result.data or []:
+                if row.get("session_id"):
+                    conv_to_session[row["id"]] = row["session_id"]
+        except Exception:
+            logger.warning("check_no_response_leads: batch conversations lookup failed", exc_info=True)
+
+    # Q4: batch fetch latest chat_messages per session_id
+    # Supabase returns rows in order; we take the first occurrence per session_id (latest).
+    all_session_ids = list(set(conv_to_session.values()))
+    session_last_message: dict[str, datetime] = {}
+    if all_session_ids:
+        try:
+            msg_result = (
+                db.table("chat_messages")
+                .select("session_id, created_at")
+                .in_("session_id", all_session_ids)
+                .order("created_at", desc=True)
+                .limit(len(all_session_ids) * 10)  # generous; deduplicated in Python
+                .execute()
+            )
+            for row in msg_result.data or []:
+                sid = row["session_id"]
+                if sid not in session_last_message:
+                    raw_ts = row["created_at"]
+                    session_last_message[sid] = datetime.fromisoformat(
+                        raw_ts.replace("Z", "+00:00")
+                    )
+        except Exception:
+            logger.warning("check_no_response_leads: batch chat_messages lookup failed", exc_info=True)
+
+    # Now evaluate each lead entirely in Python (no more DB calls in this loop)
     for lead in leads:
         lead_id = lead["id"]
         tenant_id = lead["client_id"]
 
-        # Skip if already enrolled in an active no_response_24h execution
-        try:
-            existing = (
-                db.table("automation_executions")
-                .select("id")
-                .eq("lead_id", lead_id)
-                .eq("tenant_id", tenant_id)
-                .eq("status", "active")
-                .limit(1)
-                .execute()
-            )
-            # Also check sequences to confirm it's a no_response_24h one
-            if existing.data:
-                exec_id = existing.data[0]["id"]
-                seq_check = (
-                    db.table("automation_executions")
-                    .select("automation_sequences(trigger_event)")
-                    .eq("id", exec_id)
-                    .limit(1)
-                    .execute()
-                )
-                if seq_check.data:
-                    seq_data = seq_check.data[0].get("automation_sequences") or {}
-                    if seq_data.get("trigger_event") == "no_response_24h":
-                        continue
-        except Exception:
-            logger.debug("check_no_response_leads: enrollment check failed for lead %s", lead_id, exc_info=True)
+        # Skip if already enrolled in a no_response_24h sequence
+        if lead_id in already_enrolled_lead_ids:
+            continue
 
-        # Resolve last chat message timestamp via conversation_id -> session_id -> chat_messages
+        # Determine last message timestamp for this lead
         last_message_at = None
         conv_id = lead.get("conversation_id")
         if conv_id:
-            try:
-                conv_row = (
-                    db.table("conversations")
-                    .select("session_id")
-                    .eq("id", conv_id)
-                    .limit(1)
-                    .execute()
-                )
-                session_id = conv_row.data[0].get("session_id") if conv_row.data else None
-                if session_id:
-                    msg_row = (
-                        db.table("chat_messages")
-                        .select("created_at")
-                        .eq("tenant_id", tenant_id)
-                        .eq("session_id", session_id)
-                        .order("created_at", desc=True)
-                        .limit(1)
-                        .execute()
-                    )
-                    if msg_row.data:
-                        raw_ts = msg_row.data[0]["created_at"]
-                        last_message_at = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
-            except Exception:
-                logger.debug("check_no_response_leads: chat_messages lookup failed for lead %s", lead_id, exc_info=True)
+            session_id = conv_to_session.get(conv_id)
+            if session_id:
+                last_message_at = session_last_message.get(session_id)
 
-        # Determine whether to trigger: no messages at all, or last message older than 24h
+        # Skip if there has been recent activity within 24h
         if last_message_at is not None and last_message_at > cutoff:
             continue  # Recent activity — skip
 
@@ -610,7 +672,10 @@ async def check_no_response_leads() -> int:
             count = await trigger_sequence(tenant_id, lead_id, "no_response_24h")
             if count:
                 triggered += count
-                logger.info("check_no_response_leads: triggered sequence for lead %s (tenant %s)", lead_id, tenant_id)
+                logger.info(
+                    "check_no_response_leads: triggered sequence for lead %s (tenant %s)",
+                    lead_id, tenant_id,
+                )
         except Exception:
             logger.exception("check_no_response_leads: trigger_sequence failed for lead %s", lead_id)
 

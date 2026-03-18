@@ -88,42 +88,53 @@ async def get_overview(
     now_iso = datetime.now(timezone.utc).isoformat()
     db = get_supabase()
 
-    # Current period conversations (from chat_messages, count unique sessions)
+    # Current period conversations — count rows in conversations table (avoids
+    # fetching up to 10,000 chat_messages rows just to count unique sessions)
     try:
-        curr_convos = (
+        curr_conv_result = (
+            db.table("conversations")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .gte("created_at", start)
+            .lt("created_at", now_iso)
+            .limit(1)
+            .execute()
+        )
+        total_conversations = curr_conv_result.count or 0
+    except Exception:
+        logger.warning("Failed to fetch conversation analytics for %s", tenant_id, exc_info=True)
+        total_conversations = 0
+
+    # Avg messages per conversation via chat_messages (bounded query)
+    try:
+        curr_msgs = (
             db.table("chat_messages")
-            .select("session_id")
+            .select("id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
             .lt("created_at", now_iso)
             .limit(_QUERY_LIMIT)
             .execute()
         )
-        curr_sessions = set(r["session_id"] for r in (curr_convos.data or []))
-        total_conversations = len(curr_sessions)
-
-        # Total messages
-        total_messages = len(curr_convos.data or [])
+        total_messages = len(curr_msgs.data or [])
         avg_messages = round(total_messages / total_conversations, 1) if total_conversations > 0 else 0
     except Exception:
-        logger.warning("Failed to fetch conversation analytics", exc_info=True)
-        total_conversations = 0
+        logger.warning("Failed to fetch message count for %s", tenant_id, exc_info=True)
         total_messages = 0
         avg_messages = 0
 
     # Previous period conversations
     try:
-        prev_convos = (
-            db.table("chat_messages")
-            .select("session_id")
+        prev_conv_result = (
+            db.table("conversations")
+            .select("id", count="exact")
             .eq("tenant_id", tenant_id)
             .gte("created_at", prev_start)
             .lt("created_at", start)
-            .limit(_QUERY_LIMIT)
+            .limit(1)
             .execute()
         )
-        prev_sessions = set(r["session_id"] for r in (prev_convos.data or []))
-        prev_conversations = len(prev_sessions)
+        prev_conversations = prev_conv_result.count or 0
     except Exception:
         logger.warning("Failed to fetch previous period conversations for %s", tenant_id, exc_info=True)
         prev_conversations = 0
@@ -270,9 +281,11 @@ async def get_conversations_trend(
     db = get_supabase()
 
     try:
-        msgs = (
-            db.table("chat_messages")
-            .select("session_id, created_at")
+        # Query conversations table directly — avoids fetching thousands of
+        # chat_messages rows just to count unique sessions per day.
+        convos = (
+            db.table("conversations")
+            .select("created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
             .lt("created_at", now_iso)
@@ -281,20 +294,20 @@ async def get_conversations_trend(
             .execute()
         )
 
-        # Group unique sessions by date
-        sessions_by_date: dict[str, set[str]] = defaultdict(set)
-        for row in msgs.data or []:
+        # Count conversations by date
+        count_by_date: dict[str, int] = defaultdict(int)
+        for row in convos.data or []:
             date_str = row["created_at"][:10]
-            sessions_by_date[date_str].add(row["session_id"])
+            count_by_date[date_str] += 1
 
-        # Build full date range
+        # Build full date range with zeroes for days with no activity
         today = datetime.now(timezone.utc).date()
         result_data = []
         for i in range(days):
             d = (today - timedelta(days=days - 1 - i)).isoformat()
-            result_data.append({"date": d, "count": len(sessions_by_date.get(d, set()))})
+            result_data.append({"date": d, "count": count_by_date.get(d, 0)})
     except Exception:
-        logger.warning("Failed to fetch conversation trends", exc_info=True)
+        logger.warning("Failed to fetch conversation trends for %s", tenant_id, exc_info=True)
         result_data = []
 
     result = {"data": result_data}

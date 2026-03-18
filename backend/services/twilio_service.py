@@ -15,6 +15,7 @@ import re
 import httpx
 
 from backend.config import settings
+from backend.services.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -37,18 +38,24 @@ async def send_sms(to: str, body: str, from_number: str | None = None) -> bool:
     if len(body) > 1600:
         body = body[:1597] + "..."
 
+    payload = {
+        "From": from_number or settings.twilio_phone_number,
+        "To": to,
+        "Body": body,
+    }
+
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                url,
-                data={
-                    "From": from_number or settings.twilio_phone_number,
-                    "To": to,
-                    "Body": body,
-                },
-                auth=(settings.twilio_account_sid, settings.twilio_auth_token),
-            )
-            resp.raise_for_status()
+        async def _do_send():
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    url,
+                    data=payload,
+                    auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+                )
+                resp.raise_for_status()
+                return resp
+
+        await with_retry(_do_send, max_retries=2, backoff_base=1.0, label=f"twilio.sms:{to}")
         logger.info("SMS sent to %s", to)
         return True
     except Exception:

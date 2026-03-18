@@ -12,6 +12,7 @@ from typing import Any
 import resend
 
 from backend.config import settings
+from backend.services.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -176,17 +177,29 @@ async def send_email(
     else:
         final_html += pixel
 
+    resend.api_key = settings.resend_api_key
+    send_params: dict[str, Any] = {
+        "from": FROM_ADDRESS,
+        "to": [to],
+        "subject": subject,
+        "html": final_html,
+    }
+    if unsubscribe_url:
+        send_params["headers"] = {"List-Unsubscribe": f"<{unsubscribe_url}>"}
+
     try:
-        resend.api_key = settings.resend_api_key
-        send_params: dict[str, Any] = {
-            "from": FROM_ADDRESS,
-            "to": [to],
-            "subject": subject,
-            "html": final_html,
-        }
-        if unsubscribe_url:
-            send_params["headers"] = {"List-Unsubscribe": f"<{unsubscribe_url}>"}
-        result = resend.Emails.send(send_params)
+        import asyncio
+
+        # resend.Emails.send is synchronous — run in thread to avoid blocking the
+        # event loop and to allow with_retry's async sleep between attempts.
+        result = await with_retry(
+            lambda: asyncio.get_event_loop().run_in_executor(
+                None, lambda: resend.Emails.send(send_params)
+            ),
+            max_retries=2,
+            backoff_base=1.0,
+            label=f"resend.send:{to}",
+        )
         _increment_send_count(tenant_id)
         logger.info("Email sent to %s for tenant %s", to, tenant_id)
         return {"success": True, "detail": "sent", "resend_id": result.get("id", "")}
