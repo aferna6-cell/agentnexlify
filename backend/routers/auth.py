@@ -582,7 +582,11 @@ async def delete_faq(
 
 
 @router.get("/conversations/{tenant_id}")
-async def list_conversations(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+async def list_conversations(
+    tenant_id: str,
+    channel: str | None = None,
+    claims: dict = Depends(_get_current_tenant),
+):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -633,26 +637,42 @@ async def list_conversations(tenant_id: str, claims: dict = Depends(_get_current
     except Exception:
         logger.warning("Failed to map lead names to conversations", exc_info=True)
 
-    # Fetch tags from conversations table
+    # Fetch tags and channel from conversations table
     tags_map = {}
+    channel_map = {}
+    assigned_map = {}
     try:
-        conv_result = (
+        conv_query = (
             db.table("conversations")
-            .select("session_id, tags")
-            .eq("tenant_id", tenant_id)
-            .execute()
+            .select("session_id, tags, channel, assigned_to")
+            .eq("client_id", tenant_id)
         )
+        if channel:
+            conv_query = conv_query.eq("channel", channel)
+        conv_result = conv_query.execute()
         for conv in (conv_result.data or []):
             sid = conv.get("session_id")
-            if sid and conv.get("tags"):
-                tags_map[sid] = conv["tags"]
+            if sid:
+                if conv.get("tags"):
+                    tags_map[sid] = conv["tags"]
+                channel_map[sid] = conv.get("channel") or "widget"
+                if conv.get("assigned_to"):
+                    assigned_map[sid] = conv["assigned_to"]
     except Exception:
-        logger.warning("Failed to fetch conversation tags", exc_info=True)
+        logger.warning("Failed to fetch conversation metadata", exc_info=True)
 
     conv_list = sorted(sessions.values(), key=lambda s: s["last_message_at"], reverse=True)
+
+    # If filtering by channel, limit conv_list to sessions that appear in channel_map
+    if channel:
+        channel_session_ids = set(channel_map.keys())
+        conv_list = [c for c in conv_list if c["session_id"] in channel_session_ids]
+
     for c in conv_list:
         c["lead_name"] = lead_map.get(c["session_id"], "")
         c["tags"] = tags_map.get(c["session_id"], [])
+        c["channel"] = channel_map.get(c["session_id"], "widget")
+        c["assigned_to"] = assigned_map.get(c["session_id"])
 
     return {"conversations": conv_list}
 

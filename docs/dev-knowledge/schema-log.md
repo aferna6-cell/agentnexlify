@@ -300,4 +300,19 @@ Creates `forms` table for embeddable forms that auto-create leads on submission.
 
 **Applied:** 2026-03-18 via Supabase MCP.
 
+### 055 — Campaign Sending Started At
+Adds `sending_started_at` (TIMESTAMPTZ) to `marketing_campaigns` table. Used by the background campaign send task to detect stalled campaigns (stuck in 'sending' for >30 minutes).
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
+### 056 — Google Place ID
+Adds `google_place_id` (TEXT) to `tenants` table. Enables direct Google write-review links (`https://search.google.com/local/writereview?placeid={id}`) in review request automation.
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
+### 057 — Conversation Channel Index + SMS Backfill
+Adds index `idx_conversations_channel ON conversations(client_id, channel)` for omnichannel inbox filtering. Backfills existing SMS conversations (`session_id LIKE 'sms_%'`) to `channel='sms'`. Note: `channel` column (TEXT DEFAULT 'widget') already existed on conversations table.
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

@@ -23,6 +23,12 @@ const SNIPPET_CATEGORY_COLORS = {
   custom: { color: "#ec4899", bg: "rgba(236,72,153,0.1)" },
 };
 
+const CHANNEL_BADGE = {
+  widget: { label: "Chat", color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
+  sms: { label: "SMS", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
+  facebook: { label: "FB", color: "#1877f2", bg: "rgba(24,119,242,0.12)" },
+};
+
 function timeAgo(dateStr) {
   if (!dateStr) return "";
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -55,6 +61,7 @@ export default function ConversationsPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [channelFilter, setChannelFilter] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tagDefs, setTagDefs] = useState([]);
 
@@ -109,7 +116,7 @@ export default function ConversationsPage() {
     setLoading(true);
     try {
       const [convRes, tagRes, teamRes] = await Promise.all([
-        fetchConversations(user.tenantId, token),
+        fetchConversations(user.tenantId, token, { channel: channelFilter || undefined }),
         fetchTagDefinitions(user.tenantId, token).catch(() => ({ tags: [] })),
         fetchTeamMembers(user.tenantId, token).catch(() => ({ members: [] })),
       ]);
@@ -133,7 +140,7 @@ export default function ConversationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenantId, token]);
+  }, [user?.tenantId, token, channelFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -543,6 +550,16 @@ export default function ConversationsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <select
+              value={channelFilter}
+              onChange={(e) => { setChannelFilter(e.target.value); setSelected(null); }}
+              style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
+            >
+              <option value="">All Channels</option>
+              <option value="widget">Widget (Chat)</option>
+              <option value="sms">SMS</option>
+              <option value="facebook">Facebook</option>
+            </select>
             {allTags.length > 0 && (
               <select
                 value={tagFilter}
@@ -570,7 +587,27 @@ export default function ConversationsPage() {
                     </div>
                     <div className="conv-item-preview">{c.preview || c.last_message || "No messages"}</div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
-                      <span className="conv-item-count">{c.message_count} message{c.message_count !== 1 ? "s" : ""}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <span className="conv-item-count">{c.message_count} message{c.message_count !== 1 ? "s" : ""}</span>
+                        {(() => {
+                          const ch = c.channel || "widget";
+                          const badge = CHANNEL_BADGE[ch] || CHANNEL_BADGE.widget;
+                          return (
+                            <span style={{
+                              fontSize: "0.62rem",
+                              fontWeight: 600,
+                              padding: "1px 5px",
+                              borderRadius: 4,
+                              color: badge.color,
+                              background: badge.bg,
+                              lineHeight: 1.4,
+                              flexShrink: 0,
+                            }}>
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                       <span style={{
                         fontSize: "0.7rem",
                         color: assigneeName ? "var(--accent, #00BFFF)" : "var(--text-muted)",
@@ -597,6 +634,8 @@ export default function ConversationsPage() {
                 <div style={{ padding: "1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
                   {inboxFilter === "mine" && myCount === 0
                     ? "No conversations assigned to you yet. Assign conversations from the conversation view, or switch to \"All\" to see all conversations."
+                    : channelFilter
+                    ? `No ${CHANNEL_BADGE[channelFilter]?.label || channelFilter} conversations found. Switch to "All Channels" to see all conversations.`
                     : tagFilter
                     ? `No conversations tagged "${tagFilter}". Try selecting "All tags" to clear the filter.`
                     : "No conversations match your search."}
@@ -850,6 +889,33 @@ export default function ConversationsPage() {
                   border: "1px solid var(--border-color)",
                   position: "relative",
                 }}>
+                  {/* Channel indicator for outbound reply */}
+                  {(() => {
+                    const convChannel = selectedConv?.channel || "widget";
+                    const badge = CHANNEL_BADGE[convChannel] || CHANNEL_BADGE.widget;
+                    return (
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        marginBottom: 8,
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                      }}>
+                        <span>Reply via</span>
+                        <span style={{
+                          fontWeight: 600,
+                          padding: "1px 6px",
+                          borderRadius: 4,
+                          color: badge.color,
+                          background: badge.bg,
+                          fontSize: "0.72rem",
+                        }}>
+                          {badge.label}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                     {/* Snippet picker button */}
                     <div style={{ position: "relative" }} ref={snippetPickerRef}>

@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
 
+    facebook_app_id: str = ""
+    facebook_app_secret: str = ""
+    facebook_verify_token: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
