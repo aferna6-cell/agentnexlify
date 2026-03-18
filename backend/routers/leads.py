@@ -225,6 +225,14 @@ async def update_lead(
         **updates,
     })
 
+    # Fire status-change event when status is explicitly updated
+    if "status" in updates:
+        fire_event_background(tenant_id, "lead.status_changed", {
+            "lead_id": lead_id,
+            "new_status": updates["status"],
+            "source": "leads_update",
+        })
+
     return result.data[0]
 
 

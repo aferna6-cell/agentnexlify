@@ -10,6 +10,7 @@ from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
+from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
@@ -515,5 +516,13 @@ async def move_lead(
         lead_id=lead_id,
         metadata={"old_status": old_status, "new_status": new_status},
     )
+
+    fire_event_background(tenant_id, "lead.status_changed", {
+        "lead_id": lead_id,
+        "old_status": old_status,
+        "new_status": new_status,
+        "lead_name": lead.get("name"),
+        "source": "pipeline_move",
+    })
 
     return updated_lead
