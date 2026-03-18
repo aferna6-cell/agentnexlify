@@ -6,6 +6,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
@@ -145,8 +146,7 @@ async def initiate_sms_conversation(
     record, and fires the conversation.message webhook.
     """
     # Verify the authenticated tenant matches the path parameter
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 

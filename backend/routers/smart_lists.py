@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
@@ -154,11 +155,6 @@ def _execute_smart_list_query(tenant_id: str, filter_json: dict, db, select_cols
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _verify_tenant(claims: dict, tenant_id: str) -> None:
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -169,7 +165,7 @@ async def list_smart_lists(
     claims: dict = Depends(_get_current_tenant),
 ):
     """List all smart lists for a tenant, ordered by creation date."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -194,7 +190,7 @@ async def create_smart_list(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Create a new smart list with a name and filter definition."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -236,7 +232,7 @@ async def update_smart_list(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Update a smart list's name, description, or filter definition."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     updates: dict = {}
     if req.name is not None:
@@ -287,7 +283,7 @@ async def delete_smart_list(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Delete a smart list."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -329,7 +325,7 @@ async def get_smart_list_leads(
     limit: int = Query(50, ge=1, le=200),
 ):
     """Execute the smart list's filter and return matching leads with pagination."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -392,7 +388,7 @@ async def refresh_smart_list(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Refresh the cached lead count for a smart list."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -453,7 +449,7 @@ async def export_smart_list(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Export matching leads as a CSV file download."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 

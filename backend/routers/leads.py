@@ -44,7 +44,11 @@ async def get_leads(
 
     db = get_supabase()
     try:
-        query = db.table("leads").select("*", count="exact").eq("client_id", tenant_id)
+        query = db.table("leads").select(
+            "id, client_id, name, email, phone, status, lead_score, lead_temperature, "
+            "areas_of_interest, tags, assigned_to, deal_value, created_at, updated_at",
+            count="exact",
+        ).eq("client_id", tenant_id)
 
         if stage:
             query = query.eq("status", stage)

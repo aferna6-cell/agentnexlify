@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.config import settings
+from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
@@ -56,11 +57,6 @@ class MarkPaidRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _verify_tenant(claims: dict, tenant_id: str) -> None:
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
 
 def _compute_invoice_totals(items: list[dict], tax_rate: float) -> tuple[float, float, float]:
     """Return (subtotal, tax_amount, total) from line items and a tax_rate percentage."""
@@ -237,7 +233,7 @@ async def invoice_stats(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Invoice summary statistics: outstanding balance, paid total, overdue count, avg days to pay."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -297,7 +293,7 @@ async def create_invoice_from_bid(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Create an invoice by copying items and amounts from an accepted bid."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -396,7 +392,7 @@ async def list_invoices(
     limit: int = Query(50, ge=1, le=200),
 ):
     """List invoices for a tenant. Joins lead name for display."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -453,7 +449,7 @@ async def create_invoice(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Create a new invoice. Auto-calculates subtotal, tax, and total."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     items = [item.model_dump() for item in req.items]
     subtotal, tax_amount, total = _compute_invoice_totals(items, req.tax_rate)
@@ -498,7 +494,7 @@ async def get_invoice(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get a single invoice with lead details."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -549,7 +545,7 @@ async def update_invoice(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Update an invoice. Only allowed when status is 'draft'."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -631,7 +627,7 @@ async def delete_invoice(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Delete an invoice. Only allowed when status is 'draft'."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -679,7 +675,7 @@ async def send_invoice(
     Creates a Stripe Payment Link if one does not yet exist, then dispatches
     via the requested channel(s). Updates status to 'sent'.
     """
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -842,7 +838,7 @@ async def mark_invoice_paid(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Manually mark an invoice as paid."""
-    _verify_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 

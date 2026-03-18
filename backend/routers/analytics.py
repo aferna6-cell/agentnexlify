@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 
@@ -20,11 +21,6 @@ _CACHE_TTL = 300  # 5 minutes
 
 # Safety cap for unbounded queries — prevents timeouts on large tenants
 _QUERY_LIMIT = 10000
-
-
-def _check_tenant(claims: dict, tenant_id: str) -> None:
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
 
 
 def _get_cached(key: str) -> dict | None:
@@ -76,7 +72,7 @@ async def get_overview(
     period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     cache_key = f"overview:{tenant_id}:{period}"
     cached = _get_cached(cache_key)
@@ -268,7 +264,7 @@ async def get_conversations_trend(
     period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     cache_key = f"convos_trend:{tenant_id}:{period}"
     cached = _get_cached(cache_key)
@@ -326,7 +322,7 @@ async def get_leads_analytics(
     period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     cache_key = f"leads_analytics:{tenant_id}:{period}"
     cached = _get_cached(cache_key)
@@ -397,7 +393,7 @@ async def get_widget_analytics(
     period: str = Query("30d", pattern="^(7d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     cache_key = f"widget:{tenant_id}:{period}"
     cached = _get_cached(cache_key)
@@ -495,7 +491,7 @@ async def get_response_time_analytics(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get response time analytics from the response_metrics table."""
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     days = {"7d": 7, "30d": 30, "90d": 90}[period]
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
@@ -573,7 +569,7 @@ async def get_missed_opportunities(
     - The conversation has fewer than 3 total messages (visitor abandoned)
     - A user message mentions pricing keywords but no appointment was booked
     """
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     cache_key = f"missed_opps:{tenant_id}:{period}"
     cached = _get_cached(cache_key)
@@ -734,7 +730,7 @@ async def get_missed_call_analytics(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Per-day missed call analytics from activity_log."""
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     cache_key = f"missed_calls:{tenant_id}:{period}"
     cached = _get_cached(cache_key)
@@ -787,7 +783,7 @@ async def get_ai_insights(
     import anthropic
     from backend.config import settings
 
-    _check_tenant(claims, tenant_id)
+    verify_tenant(claims, tenant_id)
 
     cache_key = f"ai_insights:{tenant_id}"
     cached = _get_cached(cache_key)

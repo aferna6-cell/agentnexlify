@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
@@ -74,8 +75,7 @@ async def list_stages(
     claims: dict = Depends(_get_current_tenant),
 ):
     """List pipeline stages ordered by sort_order. Auto-seeds defaults if none exist."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -105,8 +105,7 @@ async def create_stage(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Create a custom pipeline stage."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
     try:
@@ -140,8 +139,7 @@ async def update_stage(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Update a pipeline stage (name, color, sort_order)."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     updates = {k: v for k, v in req.model_dump().items() if v is not None}
     if not updates:
@@ -173,8 +171,7 @@ async def delete_stage(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Delete a pipeline stage. Fails if any leads are currently in this stage."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -238,8 +235,7 @@ async def get_pipeline_board(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get all leads grouped by status with deal values and time-in-stage metrics."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -329,8 +325,7 @@ async def get_pipeline_analytics(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Pipeline metrics: pipeline value, won value, conversion rate, avg deal, avg days-to-close."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
@@ -457,8 +452,7 @@ async def move_lead(
     claims: dict = Depends(_get_current_tenant),
 ):
     """Move a lead to a new pipeline stage. Updates status and stage_changed_at."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    verify_tenant(claims, tenant_id)
 
     db = get_supabase()
 
