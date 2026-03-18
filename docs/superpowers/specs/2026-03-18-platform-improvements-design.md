@@ -11,20 +11,29 @@
 ### 1A. Campaign send → background task
 **File:** `backend/routers/marketing_campaigns.py`
 **Problem:** `send_campaign()` sends up to 500 emails/SMS synchronously in the HTTP handler, blocking a worker for minutes.
-**Fix:** After validating the campaign and building the recipient list, set `status=sending` in the DB and dispatch the actual send loop to `asyncio.create_task()`. Return immediately with `{"status": "sending", "campaign_id": "..."}`. The send task updates the campaign record with final counts on completion.
-**Acceptance:** Campaign endpoint returns within 2 seconds. Campaign status transitions: draft → sending → sent/failed.
+**Fix:** After validating the campaign and building the recipient list, set `status=sending` and `sending_started_at=now()` in the DB and dispatch the actual send loop to `asyncio.create_task()`. Return immediately with `{"status": "sending", "campaign_id": "..."}`. The background task must:
+- Wrap the entire send loop in `try/except` — on unhandled error, mark campaign `status=failed` with error details.
+- Update campaign with final counts on completion.
+- Add a startup recovery check to the automation loop: campaigns stuck in `sending` for >30 minutes get marked `failed`.
+**Acceptance:** Campaign endpoint returns within 2 seconds. Campaign status transitions: draft → sending → sent/failed. Crashed background tasks don't leave campaigns stuck forever.
 
 ### 1B. Rate limit public form submit
 **File:** `backend/routers/forms.py`
 **Problem:** Public form endpoints have zero rate limiting. Attackers can spam unlimited fake leads.
-**Fix:** Add `@limiter.limit("10/minute")` to `POST /api/v1/forms/public/{token}/submit` and `@limiter.limit("30/minute")` to `GET /api/v1/forms/public/{token}`.
+**Fix:** Add `@limiter.limit("10/minute")` to `POST /api/v1/forms/public/{token}/submit` and `@limiter.limit("30/minute")` to `GET /api/v1/forms/public/{token}`. Requires `from backend.limiter import limiter` and adding `request: Request` as a parameter on both endpoints (required by slowapi).
 **Acceptance:** 11th submission within a minute returns 429.
 
 ### 1C. Remove duplicate analytics route
 **File:** `backend/routers/analytics.py`
 **Problem:** Two `GET /{tenant_id}/response-times` handlers. First (line ~381) is dead code shadowed by second (line ~564).
-**Fix:** Delete the first handler (`get_response_times`, lines 381-470).
+**Fix:** Delete the `get_response_times` function (the first of two `/{tenant_id}/response-times` handlers). Keep `get_response_time_analytics` (the second one, which queries `response_metrics`). Identify by function name, not line numbers (they shift with edits).
 **Acceptance:** Response times endpoint returns data from `response_metrics` table. No behavior change for callers.
+
+### 1E. Exclude password_hash from team members endpoint
+**File:** `backend/routers/team.py`
+**Problem:** Team members GET endpoint uses `select("*")` which returns `password_hash` to the frontend. This is a security vulnerability.
+**Fix:** Change to explicit column list excluding `password_hash`. Apply immediately — this is a data exposure issue, not just an optimization.
+**Acceptance:** Team members API response never contains `password_hash`.
 
 ### 1D. Fix GBP OAuth redirect URI
 **File:** `backend/routers/gbp.py`, line 46
@@ -44,7 +53,7 @@
 - Batch-fetch last message timestamps for all relevant session_ids in one query.
 - Batch-fetch active sequence + first step data in a single joined query.
 - Iterate results in Python using dicts keyed by lead_id/sequence_id.
-**Acceptance:** `check_no_response_leads()` executes <=5 DB queries regardless of lead count (down from 150-250). `trigger_sequence()` executes <=2 queries per invocation.
+**Acceptance:** `check_no_response_leads()` executes <=5 DB queries for the read/check phase regardless of lead count (down from 150-250). `trigger_sequence()` calls for qualifying leads are additional but only affect the small subset that need enrollment. `trigger_sequence()` itself executes <=2 queries per invocation.
 
 ### 2B. Fix analytics session counting
 **File:** `backend/routers/analytics.py`
@@ -56,8 +65,8 @@
 **File:** `backend/main.py`
 **Problem:** 11 automation functions run sequentially. A slow function delays all subsequent ones.
 **Fix:** Group functions by frequency and run via `asyncio.gather()`:
-- **Every 60s:** `process_pending_steps`, `check_no_response_leads`, `send_appointment_reminders`, `check_new_reviews`, `send_invoice_payment_reminders`
-- **Every 5 min:** `send_pending_review_requests`, `send_onboarding_emails`, `send_portal_links`, `send_csat_surveys`
+- **Every 60s:** `process_pending_steps`, `check_no_response_leads`, `send_appointment_reminders`
+- **Every 5 min:** `send_pending_review_requests`, `send_onboarding_emails`, `send_portal_links`, `send_csat_surveys`, `check_new_reviews`, `send_invoice_payment_reminders`
 - **Every 30 min:** `send_monthly_reports`, `send_weekly_intelligence_briefs`
 Add a 30s timeout per function via `asyncio.wait_for()`.
 **Acceptance:** Automation loop cycle time is bounded by the slowest function, not the sum of all. Functions that only need to run every 5/30 minutes don't execute every 60s.
@@ -67,7 +76,7 @@ Add a 30s timeout per function via `asyncio.wait_for()`.
 **Problem:** Anthropic, Resend, and Twilio calls fail permanently on transient errors (5xx, timeouts).
 **Fix:** Create `async def with_retry(fn, max_retries=2, backoff_base=1.0)` that:
 - Calls `fn()`
-- On transient error (5xx, timeout, connection error): wait `backoff_base * 2^attempt` seconds, retry
+- On transient error (5xx, 529 Anthropic overloaded, timeout, connection error): wait `backoff_base * 2^attempt` seconds, retry
 - On 4xx or non-transient error: raise immediately
 - After max_retries exhausted: raise the last error
 Apply to: `send_email()`, `send_sms()`, and Anthropic `messages.create()` calls in automation_engine.py.
@@ -84,6 +93,7 @@ Apply to: `send_email()`, `send_sms()`, and Anthropic `messages.create()` calls 
 - Backend: `POST /api/v1/book/{business_slug}/submit` — validates slot availability, creates appointment, creates/updates lead (using `client_id`), sends confirmation email. Rate limited at 5/minute.
 - Frontend: add "Booking Link" section to Settings page showing the URL + iframe embed code with copy buttons.
 - No new migration needed. Uses existing `business_hours`, `appointments`, `leads`, `tenants` tables.
+- Implementation note: create or reuse a shared `get_tenant_by_slug(slug)` helper (currently duplicated in auth.py, crawl.py, business_page.py).
 **Acceptance:** Business owner texts `https://...railway.app/api/v1/book/joes-plumbing` to a customer. Customer sees available slots, books, gets confirmation. Appointment appears in dashboard calendar.
 
 ### 3B. Two-Way SMS Conversations
@@ -92,6 +102,7 @@ Apply to: `send_email()`, `send_sms()`, and Anthropic `messages.create()` calls 
 - Backend: `POST /api/v1/sms/{tenant_id}/send` — authenticated. Accepts `{phone, message}`. Sends via Twilio from the tenant's provisioned number. Stores in `chat_messages` with `session_id=sms_{normalized_phone}`, `role=assistant`. Creates/finds conversation record. Fires `conversation.message` webhook.
 - Frontend: add "New SMS" button to ConversationsPage. Opens compose panel with phone number input + message textarea. On send, the SMS conversation appears in the conversation list (the inbound webhook path already handles replies).
 - Guard: tenant must have a provisioned phone number. If not, show "Set up your business phone number first" with link to Settings.
+- Implementation note: the `sms_{normalized_phone}` session_id convention is already used by `twilio_webhooks.py` for inbound SMS and missed-call text-back. Verify this at implementation time to ensure the Phase 5B backfill (`WHERE session_id LIKE 'sms_%'`) will match existing records.
 **Acceptance:** Business owner opens Conversations, clicks "New SMS", texts a customer. Customer's reply appears in the same thread. Thread is visible alongside widget chats.
 
 ### 3C. Enhanced Review Automation
@@ -123,7 +134,7 @@ All register under `/api/v1/widget` prefix. No API contract changes. Widget JS u
 ### 4B. Extract shared dependencies
 **File:** New `backend/dependencies.py`
 **Contents:**
-- `verify_tenant(claims: dict, tenant_id: str)` — canonical tenant verification, replacing 33 copies
+- `verify_tenant(claims: dict, tenant_id: str)` — canonical tenant verification, replacing ~27 copies across router files
 - `get_business_context(tenant_id: str, db)` — tenant + business info lookup, replacing 2 duplicates
 **Migration strategy:** Update files touched in Phases 1-3 first. Remaining files migrated incrementally in future cycles. No behavioral change.
 
@@ -148,9 +159,11 @@ All register under `/api/v1/widget` prefix. No API contract changes. Widget JS u
 7. Analytics overview GET — already uses count queries (post Phase 2B fix)
 8. Notifications GET — narrow to: type, description, created_at, lead_id
 9. FAQ list GET — select: id, question, answer, category
-10. Team members GET — exclude password_hash (security)
+10. Team members GET — already fixed in Phase 1E
 
-**Acceptance:** No `select("*")` in these 10 endpoints. Team members endpoint never returns `password_hash`.
+Note: Phase 4D should be done after Phase 4A (widget split) so that widget items target the post-split file names.
+
+**Acceptance:** No `select("*")` in these 10 endpoints.
 
 ---
 
@@ -181,14 +194,14 @@ Inbound: webhook handlers call `channel_manager.receive()` after normalizing. Re
 Outbound: team inbox reply calls `channel_manager.send()`. Channel auto-detected from session_id prefix, or explicitly passed. Dispatches to Twilio (SMS), Facebook API, widget websocket, etc.
 **Migration path:** Existing widget.py and twilio_webhooks.py continue working. New channels use the channel_manager from day one. Existing channels migrate incrementally.
 
-### 5B. Migration: channel column on conversations
-**Migration 055 or 056 (depending on 3C):**
+### 5B. Migration 056: channel column on conversations
 ```sql
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'widget';
-CREATE INDEX IF NOT EXISTS idx_conversations_channel ON conversations(client_id, channel);
--- Backfill SMS conversations
+CREATE INDEX IF NOT EXISTS idx_conversations_channel ON conversations(tenant_id, channel);
+-- Backfill SMS conversations (uses sms_ prefix convention from twilio_webhooks.py)
 UPDATE conversations SET channel = 'sms' WHERE session_id LIKE 'sms_%';
 ```
+Note: The `conversations` table uses `tenant_id` (not `client_id`) as its FK column. The `leads` table is the one that uses `client_id`. The index must use `tenant_id`. The backfill UPDATE should be small for most tenants; if table is large, batch with `LIMIT 1000` in a loop.
 **Acceptance:** Every conversation has a `channel` value. Existing widget conversations default to 'widget'. SMS conversations correctly tagged.
 
 ### 5C. Facebook Messenger integration
