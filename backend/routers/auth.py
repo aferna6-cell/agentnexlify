@@ -477,7 +477,7 @@ async def update_widget_config(
 
     # Handle branding separately: sanitize CSS + strip plan-disallowed fields
     if req.branding is not None:
-        from backend.routers.widget import _filter_branding_for_plan, _sanitize_css
+        from backend.routers.widget_helpers import _filter_branding_for_plan, _sanitize_css
         branding_dict = req.branding.model_dump(exclude_none=True)
         if "custom_css" in branding_dict:
             branding_dict["custom_css"] = _sanitize_css(branding_dict["custom_css"])

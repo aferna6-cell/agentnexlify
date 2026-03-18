@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, reviews, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget
+from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, reviews, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget_chat, widget_config, widget_lead
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -174,7 +174,7 @@ app = FastAPI(
 # --- CORS ---
 # Widget is embedded on customer websites (arbitrary origins), so we MUST
 # allow all origins.  Per-widget domain restrictions are enforced at the
-# application level in widget.py:_check_origin().
+# application level in widget_helpers.py:_check_origin().
 #
 # Note: allow_credentials cannot be True when allow_origins is ["*"], so
 # we disable it.  The widget uses API-key auth, not cookies.
@@ -294,7 +294,9 @@ app.include_router(webhooks.router)
 app.include_router(sms.router)
 app.include_router(team.router)
 app.include_router(twilio_webhooks.router)
-app.include_router(widget.router)
+app.include_router(widget_chat.router)
+app.include_router(widget_config.router)
+app.include_router(widget_lead.router)
 app.include_router(notifications.router)
 app.include_router(business_page.router)
 app.include_router(booking_page.router)

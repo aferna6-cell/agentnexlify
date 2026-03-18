@@ -226,7 +226,7 @@ async def handle_inbound_sms(request: Request):
     # Generate AI response using the same chat engine
     try:
         import anthropic
-        from backend.routers.widget import _build_system_prompt, _load_chat_history
+        from backend.routers.widget_helpers import _build_system_prompt, _load_chat_history
 
         # Load context
         history = _load_chat_history(tenant_id, session_id, limit=10)
