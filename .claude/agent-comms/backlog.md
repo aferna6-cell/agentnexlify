@@ -398,14 +398,14 @@ _Inspired by GoHighLevel, Jobber, ServiceTitan, HubSpot, Podium. These close the
 - [x] **Dashboard widget** — DONE 2026-03-18 Cycle 92. AIInsightsWidget with key metrics + AI analysis bullets.
 
 ### Smart Lists (Dynamic Lead Segments)
-- [ ] **Migration: smart_lists table** — filter_json JSONB, cached lead_count
-- [ ] **Backend: smart list engine** — Filter engine translating JSON rules to Supabase queries
-- [ ] **Frontend: SmartListsPage** — Rule builder UI, list preview, use-in-campaign
+- [x] **Migration: smart_lists table** — DONE 2026-03-18 Cycle 93. Migration 053 applied to live Supabase.
+- [x] **Backend: smart list engine** — DONE 2026-03-18 Cycle 93. Filter engine, CRUD, CSV export, count refresh.
+- [x] **Frontend: SmartListsPage** — DONE 2026-03-18 Cycle 93. Rule builder UI, lead table, export.
 
 ### Form & Survey Builder
-- [ ] **Migration: forms + form_submissions tables**
-- [ ] **Backend: form CRUD + public submit** — Auto-creates leads from submissions
-- [ ] **Frontend: FormBuilderPage** — Drag-and-drop field editor, embeddable renderer
+- [x] **Migration: forms + form_submissions tables** — DONE 2026-03-18 Cycle 93. Migration 054 applied to live Supabase.
+- [x] **Backend: form CRUD + public submit** — DONE 2026-03-18 Cycle 93. Auto-creates leads from submissions.
+- [x] **Frontend: FormBuilderPage** — DONE 2026-03-18 Cycle 93. Field builder, live preview, embed code.
 
 ### Documents & E-Signatures (Future)
 - [ ] **Migration: documents table** — template_html, signed_at, signature_data

@@ -40,6 +40,8 @@ const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
 const MarketingCampaignsPage = lazy(() => import("../pages/MarketingCampaignsPage"));
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
+const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
+const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -75,6 +77,8 @@ const pages = {
   campaigns: MarketingCampaignsPage,
   invoices: InvoicesPage,
   pipeline: PipelinePage,
+  smart_lists: SmartListsPage,
+  form_builder: FormBuilderPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {

@@ -290,4 +290,14 @@ Creates `pipeline_stages` table for tenant-configurable sales pipeline stages. C
 
 **Applied:** 2026-03-18 via Supabase MCP.
 
+### 053 — Smart Lists (Dynamic Lead Segments)
+Creates `smart_lists` table for tenant-configurable saved filter presets that dynamically resolve to lead sets. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT NOT NULL), description (TEXT), filter_json (JSONB NOT NULL DEFAULT '{}'), cached_lead_count (INTEGER DEFAULT 0), last_refreshed_at (TIMESTAMPTZ), is_default (BOOLEAN DEFAULT false), created_at/updated_at (TIMESTAMPTZ). Indexed on tenant_id. RLS with service_role.
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
+### 054 — Form & Survey Builder
+Creates `forms` table for embeddable forms that auto-create leads on submission. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT NOT NULL), description (TEXT), fields_json (JSONB NOT NULL DEFAULT '[]'), settings_json (JSONB NOT NULL DEFAULT '{}'), is_active (BOOLEAN DEFAULT true), submission_count (INTEGER DEFAULT 0), public_token (TEXT UNIQUE), redirect_url (TEXT), success_message (TEXT DEFAULT 'Thank you...'), created_at/updated_at (TIMESTAMPTZ). Creates `form_submissions` table: form_id (FK→forms, ON DELETE CASCADE), tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL), data_json (JSONB NOT NULL DEFAULT '{}'), source_url (TEXT), ip_address (TEXT), created_at (TIMESTAMPTZ). Indexed on tenant_id, public_token, form_id. RLS with service_role.
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

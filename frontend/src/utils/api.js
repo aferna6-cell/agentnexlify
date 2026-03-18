@@ -1127,4 +1127,57 @@ export function fetchAIInsights(tenantId, token) {
   return request(`/api/v1/analytics/${tenantId}/ai-insights`, { token });
 }
 
+// Smart Lists
+export function fetchSmartLists(tenantId, token) {
+  return request(`/api/v1/smart-lists/${tenantId}`, { token });
+}
+export function createSmartList(tenantId, token, data) {
+  return request(`/api/v1/smart-lists/${tenantId}`, { method: "POST", token, body: data });
+}
+export function updateSmartList(tenantId, token, listId, data) {
+  return request(`/api/v1/smart-lists/${tenantId}/${listId}`, { method: "PUT", token, body: data });
+}
+export function deleteSmartList(tenantId, token, listId) {
+  return request(`/api/v1/smart-lists/${tenantId}/${listId}`, { method: "DELETE", token });
+}
+export function fetchSmartListLeads(tenantId, token, listId) {
+  return request(`/api/v1/smart-lists/${tenantId}/${listId}/leads`, { token });
+}
+export function refreshSmartList(tenantId, token, listId) {
+  return request(`/api/v1/smart-lists/${tenantId}/${listId}/refresh`, { method: "POST", token });
+}
+export async function exportSmartList(tenantId, token, listId) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/v1/smart-lists/${tenantId}/${listId}/export`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, err);
+  }
+  return res.blob();
+}
+
+// Forms
+export function fetchForms(tenantId, token) {
+  return request(`/api/v1/forms/${tenantId}`, { token });
+}
+export function createForm(tenantId, token, data) {
+  return request(`/api/v1/forms/${tenantId}`, { method: "POST", token, body: data });
+}
+export function fetchForm(tenantId, token, formId) {
+  return request(`/api/v1/forms/${tenantId}/${formId}`, { token });
+}
+export function updateForm(tenantId, token, formId, data) {
+  return request(`/api/v1/forms/${tenantId}/${formId}`, { method: "PUT", token, body: data });
+}
+export function deleteForm(tenantId, token, formId) {
+  return request(`/api/v1/forms/${tenantId}/${formId}`, { method: "DELETE", token });
+}
+export function fetchFormSubmissions(tenantId, token, formId) {
+  return request(`/api/v1/forms/${tenantId}/${formId}/submissions`, { token });
+}
+export function fetchFormStats(tenantId, token) {
+  return request(`/api/v1/forms/${tenantId}/stats`, { token });
+}
+
 export { ApiError };
