@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore, sendLeadEmail, assignLead, fetchTeamMembers } from "../../utils/api";
+import { fetchLeadScore, sendLeadEmail, assignLead, fetchTeamMembers, fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },
@@ -182,6 +182,12 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   const [teamMembers, setTeamMembers] = useState([]);
   const [assignedTo, setAssignedTo] = useState(lead.assigned_to || "");
 
+  // Custom Fields state
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
+  const [customFieldValues, setCustomFieldValues] = useState({});
+  const [savingCustomFields, setSavingCustomFields] = useState(false);
+  const [customFieldStatus, setCustomFieldStatus] = useState(null);
+
   useEffect(() => {
     if (user?.tenantId && token) {
       fetchTeamMembers(user.tenantId, token)
@@ -189,6 +195,18 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
         .catch((err) => console.warn("Team members fetch failed:", err.message));
     }
   }, [user?.tenantId, token]);
+
+  // Load custom field definitions + values for this lead
+  useEffect(() => {
+    if (!user?.tenantId || !token || !lead.id) return;
+    Promise.all([
+      fetchFieldDefinitions(user.tenantId, token).catch(() => null),
+      fetchLeadFieldValues(user.tenantId, token, lead.id).catch(() => null),
+    ]).then(([defs, vals]) => {
+      setCustomFieldDefs(Array.isArray(defs) ? defs : (defs?.fields || []));
+      setCustomFieldValues(vals && typeof vals === "object" ? vals : {});
+    });
+  }, [user?.tenantId, token, lead.id]);
 
   useEffect(() => {
     setForm({
@@ -208,12 +226,27 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     setEmailSubject("");
     setEmailBody("");
     setEmailStatus(null);
+    setCustomFieldValues({});
+    setCustomFieldStatus(null);
     if (user?.tenantId && lead.id && token) {
       fetchLeadScore(user.tenantId, lead.id, token)
         .then((data) => setBreakdown(data.breakdown))
         .catch((err) => console.warn("Lead score fetch failed:", err.message));
     }
   }, [lead, user?.tenantId, token]);
+
+  const handleSaveCustomFields = async () => {
+    setSavingCustomFields(true);
+    setCustomFieldStatus(null);
+    try {
+      await updateLeadFieldValues(user.tenantId, token, lead.id, customFieldValues);
+      setCustomFieldStatus("saved");
+    } catch (err) {
+      setCustomFieldStatus(err.body?.detail || err.message || "Failed to save");
+    } finally {
+      setSavingCustomFields(false);
+    }
+  };
 
   const handleChange = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -438,6 +471,97 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               <textarea className="drawer-textarea" value={form.conversation_summary} onChange={handleChange("conversation_summary")} placeholder="Add notes..." rows={3} />
             </div>
           </div>
+
+          {/* Custom Fields */}
+          {customFieldDefs.length > 0 && (
+            <div className="intel-section">
+              <div className="intel-title">Custom Fields</div>
+              {customFieldDefs.map((field) => {
+                const fieldId = field.id;
+                const currentVal = customFieldValues[fieldId] !== undefined ? customFieldValues[fieldId] : "";
+                const onChange = (val) => setCustomFieldValues((prev) => ({ ...prev, [fieldId]: val }));
+
+                return (
+                  <div key={fieldId} className="drawer-field">
+                    <label className="drawer-label">
+                      {field.name}
+                      {field.is_required && (
+                        <span style={{ color: "#f87171", marginLeft: 4 }}>*</span>
+                      )}
+                    </label>
+                    {field.field_type === "text" && (
+                      <input
+                        className="drawer-input"
+                        value={currentVal}
+                        onChange={(e) => onChange(e.target.value)}
+                        placeholder={field.name}
+                      />
+                    )}
+                    {field.field_type === "number" && (
+                      <input
+                        className="drawer-input"
+                        type="number"
+                        value={currentVal}
+                        onChange={(e) => onChange(e.target.value)}
+                        placeholder="0"
+                      />
+                    )}
+                    {field.field_type === "date" && (
+                      <input
+                        className="drawer-input"
+                        type="date"
+                        value={currentVal}
+                        onChange={(e) => onChange(e.target.value)}
+                      />
+                    )}
+                    {field.field_type === "checkbox" && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+                        <input
+                          type="checkbox"
+                          checked={!!currentVal}
+                          onChange={(e) => onChange(e.target.checked)}
+                          style={{ width: "auto" }}
+                        />
+                        {field.name}
+                      </label>
+                    )}
+                    {field.field_type === "dropdown" && (
+                      <select
+                        className="drawer-select"
+                        value={currentVal}
+                        onChange={(e) => onChange(e.target.value)}
+                      >
+                        <option value="">-- Select --</option>
+                        {(field.options || []).map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
+
+              {customFieldStatus === "saved" && (
+                <div style={{ color: "var(--green, #22c55e)", fontSize: "0.85rem", marginTop: 4 }}>
+                  Custom fields saved
+                </div>
+              )}
+              {customFieldStatus && customFieldStatus !== "saved" && (
+                <div style={{ color: "#f87171", fontSize: "0.85rem", marginTop: 4 }}>
+                  {customFieldStatus}
+                </div>
+              )}
+
+              <button
+                className="btn-secondary"
+                onClick={handleSaveCustomFields}
+                disabled={savingCustomFields}
+                style={{ marginTop: 10, fontSize: "0.85rem" }}
+              >
+                {savingCustomFields ? "Saving..." : "Save Custom Fields"}
+              </button>
+            </div>
+          )}
 
           {/* Read-only metadata */}
           <div className="intel-section">

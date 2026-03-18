@@ -12,6 +12,7 @@ import {
 } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import UpgradePrompt, { planBelowRequired } from "../components/UpgradePrompt";
 
 /* ---- Constants ---- */
 
@@ -116,8 +117,11 @@ const modalStyle = {
 
 /* ==== Main Component ==== */
 
-export default function MarketingCampaignsPage() {
+export default function MarketingCampaignsPage({ onNavigate }) {
   const { user, token } = useAuth();
+
+  // Plan gating
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Data state
   const [campaigns, setCampaigns] = useState([]);
@@ -205,6 +209,16 @@ export default function MarketingCampaignsPage() {
 
   return (
     <div style={{ padding: "24px 32px", maxWidth: 1200 }}>
+      {/* Upgrade prompt modal */}
+      {showUpgradePrompt && (
+        <UpgradePrompt
+          feature="Marketing Campaigns"
+          requiredPlan="growth"
+          onClose={() => setShowUpgradePrompt(false)}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
@@ -215,10 +229,30 @@ export default function MarketingCampaignsPage() {
             Create and send targeted email and SMS campaigns to your leads
           </p>
         </div>
-        <button onClick={() => setShowCreate(true)} style={btnPrimary}>
+        <button
+          onClick={() => {
+            if (planBelowRequired(user?.plan, "growth")) {
+              setShowUpgradePrompt(true);
+            } else {
+              setShowCreate(true);
+            }
+          }}
+          style={btnPrimary}
+        >
           + Create Campaign
         </button>
       </div>
+
+      {/* Plan gate banner for free users */}
+      {planBelowRequired(user?.plan, "growth") && (
+        <UpgradePrompt
+          feature="Marketing Campaigns"
+          requiredPlan="growth"
+          onClose={() => {}}
+          onNavigate={onNavigate}
+          variant="banner"
+        />
+      )}
 
       {/* Stat Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>

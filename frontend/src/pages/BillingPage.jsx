@@ -4,47 +4,63 @@ import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, chang
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const PLANS = [
+  { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
+  { key: "growth",       name: "Growth",       price: "$249", period: "/mo" },
+  { key: "professional", name: "Professional", price: "$499", period: "/mo", popular: true },
+  { key: "autopilot",   name: "Autopilot",    price: "$299", period: "/mo" },
+  { key: "enterprise",  name: "Enterprise",   price: "$899", period: "/mo" },
+];
+
+// Data-driven feature comparison matrix
+// value can be: true (checkmark), false (dash), or a string (custom label)
+const FEATURE_MATRIX = [
   {
-    key: "free",
-    name: "Free",
-    price: "$0",
-    period: "/mo",
-    features: ["Unlimited conversations", "14-day free trial", "AI chat widget", "Customer capture", "Basic dashboard"],
+    feature: "AI Chat Widget",
+    free: true, growth: true, professional: true, autopilot: true, enterprise: true,
   },
   {
-    key: "growth",
-    name: "Growth",
-    price: "$249",
-    period: "/mo",
-    features: ["Appointment booking", "SMS notifications", "Basic SEO audit", "AI content writer", "Analytics dashboard"],
+    feature: "Leads & CRM",
+    free: "50 leads", growth: "Unlimited", professional: "Unlimited", autopilot: "Unlimited", enterprise: "Unlimited",
   },
   {
-    key: "professional",
-    name: "Professional",
-    price: "$499",
-    period: "/mo",
-    features: ["Everything in Growth", "Full SEO suite", "Social media marketing", "Email & SMS campaigns", "Advanced analytics"],
-    popular: true,
+    feature: "Appointments & Booking",
+    free: true, growth: true, professional: true, autopilot: true, enterprise: true,
   },
   {
-    key: "autopilot",
-    name: "Autopilot",
-    price: "$299",
-    period: "/mo",
-    features: [
-      "Everything in Professional",
-      "Missed call text-back",
-      "Monthly reports",
-      "Local SEO tools",
-      "Auto portal delivery",
-    ],
+    feature: "Email Automation",
+    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
   },
   {
-    key: "enterprise",
-    name: "Enterprise",
-    price: "$899",
-    period: "/mo",
-    features: ["Everything in Professional", "AI visibility tracking (GEO)", "Priority onboarding support", "Team accounts", "White-label branding"],
+    feature: "SMS Text-Back",
+    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
+  },
+  {
+    feature: "Invoicing",
+    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
+  },
+  {
+    feature: "Pipeline Management",
+    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
+  },
+  {
+    feature: "SEO & Marketing Suite",
+    free: false, growth: false, professional: true, autopilot: true, enterprise: true,
+  },
+  {
+    feature: "AI Answering Service",
+    free: false, growth: false, professional: true, autopilot: false, enterprise: true,
+  },
+  {
+    feature: "Custom Fields",
+    free: false, growth: false, professional: true, autopilot: false, enterprise: true,
+  },
+  {
+    feature: "Team Members",
+    free: "1", growth: "3", professional: "10", autopilot: "1", enterprise: "Unlimited",
+  },
+  {
+    feature: "White Label",
+    free: false, growth: false, professional: false, autopilot: false, enterprise: true,
   },
 ];
 
@@ -254,54 +270,178 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Plan Cards */}
-      <h3 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Plans</h3>
-      <div className="billing-plans">
-        {PLANS.map((plan) => {
-          const isCurrent = plan.key === currentPlan;
-          return (
-            <div key={plan.key} className={`billing-plan-card${plan.popular ? " popular" : ""}${isCurrent ? " current" : ""}`}>
-              {plan.popular && <div className="billing-popular-badge">Most Popular</div>}
-              <div className="billing-plan-card-name">{plan.name}</div>
-              <div className="billing-plan-card-price">
-                {plan.price}<span>{plan.period}</span>
-              </div>
-              {plan.setup && <div className="billing-plan-setup">{plan.setup}</div>}
-              <ul className="billing-plan-features">
-                {plan.features.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-              {isCurrent ? (
-                <button className="btn-secondary" disabled>Current Plan</button>
-              ) : plan.key === "free" ? (
-                currentPlan !== "free" ? (
-                  <button className="btn-secondary" onClick={() => { setConfirmCancel(false); handleCancel(); }} disabled={cancelStatus === "cancelling"}>
-                    {cancelStatus === "cancelling" ? "Cancelling..." : "Downgrade"}
-                  </button>
-                ) : (
-                  <button className="btn-secondary" disabled>Free Tier</button>
-                )
-              ) : currentPlan === "free" ? (
-                <button
-                  className="btn-primary"
-                  onClick={() => handleUpgrade(plan.key)}
-                  disabled={upgrading === plan.key}
-                >
-                  {upgrading === plan.key ? "Redirecting..." : "Upgrade"}
-                </button>
-              ) : (
-                <button
-                  className="btn-primary"
-                  onClick={() => handleChangePlan(plan.key)}
-                  disabled={changingPlan === plan.key}
-                >
-                  {changingPlan === plan.key ? "Switching..." : "Switch Plan"}
-                </button>
-              )}
-            </div>
-          );
-        })}
+      {/* Plan Comparison Matrix */}
+      <h3 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Plan Comparison</h3>
+      <div style={{ overflowX: "auto", marginBottom: "2rem" }}>
+        <table style={{
+          width: "100%",
+          borderCollapse: "separate",
+          borderSpacing: 0,
+          background: "var(--bg-secondary, var(--card-bg))",
+          border: "1px solid var(--border-color)",
+          borderRadius: 12,
+          overflow: "hidden",
+          minWidth: 700,
+        }}>
+          <thead>
+            <tr>
+              <th style={{
+                textAlign: "left",
+                padding: "16px 20px",
+                fontSize: "0.8rem",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                borderBottom: "1px solid var(--border-color)",
+                width: "22%",
+              }}>
+                Feature
+              </th>
+              {PLANS.map((plan) => {
+                const isCurrent = plan.key === currentPlan;
+                return (
+                  <th key={plan.key} style={{
+                    textAlign: "center",
+                    padding: "12px 8px 16px",
+                    borderBottom: "1px solid var(--border-color)",
+                    background: isCurrent
+                      ? "rgba(0,191,255,0.07)"
+                      : plan.popular ? "rgba(139,92,246,0.05)" : "transparent",
+                    position: "relative",
+                  }}>
+                    {plan.popular && (
+                      <div style={{
+                        position: "absolute",
+                        top: 0,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        background: "linear-gradient(135deg, var(--accent, #00bfff), #8b5cf6)",
+                        color: "#fff",
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        padding: "2px 10px",
+                        borderRadius: "0 0 6px 6px",
+                        letterSpacing: "0.04em",
+                        whiteSpace: "nowrap",
+                      }}>
+                        MOST POPULAR
+                      </div>
+                    )}
+                    <div style={{
+                      fontSize: "0.9rem",
+                      fontWeight: 700,
+                      color: isCurrent ? "var(--accent)" : "var(--text-primary)",
+                      marginTop: plan.popular ? 14 : 4,
+                    }}>
+                      {plan.name}
+                    </div>
+                    <div style={{
+                      fontSize: "0.8rem",
+                      color: "var(--text-muted)",
+                      marginTop: 2,
+                    }}>
+                      {plan.price}<span style={{ fontSize: "0.7rem" }}>{plan.period}</span>
+                    </div>
+                    {isCurrent && (
+                      <div style={{
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        color: "var(--accent)",
+                        marginTop: 4,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                      }}>
+                        Current
+                      </div>
+                    )}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {FEATURE_MATRIX.map((row, rowIdx) => (
+              <tr key={row.feature} style={{ background: rowIdx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                <td style={{
+                  padding: "13px 20px",
+                  fontSize: "0.875rem",
+                  color: "var(--text-secondary)",
+                  borderBottom: rowIdx < FEATURE_MATRIX.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                  fontWeight: 500,
+                }}>
+                  {row.feature}
+                </td>
+                {PLANS.map((plan) => {
+                  const isCurrent = plan.key === currentPlan;
+                  const val = row[plan.key];
+                  let cell;
+                  if (val === true) {
+                    cell = (
+                      <span style={{ color: "#22c55e", fontSize: "1rem", fontWeight: 700 }}>&#x2713;</span>
+                    );
+                  } else if (val === false) {
+                    cell = (
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>&mdash;</span>
+                    );
+                  } else {
+                    cell = (
+                      <span style={{ color: "var(--text-primary)", fontSize: "0.8rem", fontWeight: 600 }}>
+                        {val}
+                      </span>
+                    );
+                  }
+                  return (
+                    <td key={plan.key} style={{
+                      textAlign: "center",
+                      padding: "13px 8px",
+                      borderBottom: rowIdx < FEATURE_MATRIX.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                      background: isCurrent ? "rgba(0,191,255,0.05)" : "transparent",
+                    }}>
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td style={{ padding: "16px 20px", borderTop: "1px solid var(--border-color)" }} />
+              {PLANS.map((plan) => {
+                const isCurrent = plan.key === currentPlan;
+                let btn;
+                if (isCurrent) {
+                  btn = <button className="btn-secondary" disabled style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>Current Plan</button>;
+                } else if (plan.key === "free") {
+                  btn = currentPlan !== "free"
+                    ? <button className="btn-secondary" onClick={() => { setConfirmCancel(false); handleCancel(); }} disabled={cancelStatus === "cancelling"} style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>
+                        {cancelStatus === "cancelling" ? "Cancelling..." : "Downgrade"}
+                      </button>
+                    : <button className="btn-secondary" disabled style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>Free Tier</button>;
+                } else if (currentPlan === "free") {
+                  btn = <button className="btn-primary" onClick={() => handleUpgrade(plan.key)} disabled={upgrading === plan.key} style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>
+                    {upgrading === plan.key ? "Redirecting..." : "Upgrade"}
+                  </button>;
+                } else {
+                  btn = <button className="btn-primary" onClick={() => handleChangePlan(plan.key)} disabled={changingPlan === plan.key} style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>
+                    {changingPlan === plan.key ? "Switching..." : "Switch Plan"}
+                  </button>;
+                }
+                return (
+                  <td key={plan.key} style={{
+                    padding: "16px 10px",
+                    textAlign: "center",
+                    borderTop: "1px solid var(--border-color)",
+                    background: isCurrent ? "rgba(0,191,255,0.05)" : "transparent",
+                  }}>
+                    {btn}
+                  </td>
+                );
+              })}
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   );

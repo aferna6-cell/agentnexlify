@@ -1239,4 +1239,26 @@ export function disconnectFacebook(tenantId, token) {
   return request(`/api/v1/channels/facebook/${tenantId}/disconnect`, { method: "DELETE", token });
 }
 
+// --- Custom Fields ---
+
+export function fetchFieldDefinitions(tenantId, token) {
+  return request(`/api/v1/custom-fields/${tenantId}/definitions`, { token });
+}
+
+export function createFieldDefinition(tenantId, token, data) {
+  return request(`/api/v1/custom-fields/${tenantId}/definitions`, { method: "POST", token, body: data });
+}
+
+export function deleteFieldDefinition(tenantId, token, fieldId) {
+  return request(`/api/v1/custom-fields/${tenantId}/definitions/${fieldId}`, { method: "DELETE", token });
+}
+
+export function fetchLeadFieldValues(tenantId, token, leadId) {
+  return request(`/api/v1/custom-fields/${tenantId}/values/${leadId}`, { token });
+}
+
+export function updateLeadFieldValues(tenantId, token, leadId, values) {
+  return request(`/api/v1/custom-fields/${tenantId}/values/${leadId}`, { method: "PUT", token, body: values });
+}
+
 export { ApiError };

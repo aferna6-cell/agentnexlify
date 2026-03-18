@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus, fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition, searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber } from "../utils/api";
+import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus, fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition, searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber, fetchFieldDefinitions, createFieldDefinition, deleteFieldDefinition } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
@@ -34,6 +34,16 @@ export default function SettingsPage({ onNavigate }) {
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#6b7280");
   const [savingTag, setSavingTag] = useState(false);
+
+  // Custom Fields state
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
+  const [cfLoadError, setCfLoadError] = useState(null);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldType, setNewFieldType] = useState("text");
+  const [newFieldOptions, setNewFieldOptions] = useState("");
+  const [newFieldRequired, setNewFieldRequired] = useState(false);
+  const [savingField, setSavingField] = useState(false);
+  const [deletingFieldId, setDeletingFieldId] = useState(null);
 
   // Phone provisioning state
   const [provisionedPhone, setProvisionedPhone] = useState(null);
@@ -107,6 +117,58 @@ export default function SettingsPage({ onNavigate }) {
         .catch((err) => console.warn("Tag definitions fetch failed:", err.message));
     }
   }, [user?.tenantId, token]);
+
+  // Load custom field definitions
+  useEffect(() => {
+    if (user?.tenantId && token) {
+      setCfLoadError(null);
+      fetchFieldDefinitions(user.tenantId, token)
+        .then((data) => setCustomFieldDefs(Array.isArray(data) ? data : (data.fields || [])))
+        .catch((err) => {
+          console.warn("Custom field definitions fetch failed:", err.message);
+          setCfLoadError("Could not load custom fields.");
+        });
+    }
+  }, [user?.tenantId, token]);
+
+  const handleAddCustomField = async () => {
+    if (!newFieldName.trim()) return;
+    setSavingField(true);
+    try {
+      const options = newFieldType === "dropdown"
+        ? newFieldOptions.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+      const created = await createFieldDefinition(user.tenantId, token, {
+        name: newFieldName.trim(),
+        field_type: newFieldType,
+        options,
+        is_required: newFieldRequired,
+      });
+      setCustomFieldDefs((prev) => [...prev, created]);
+      setNewFieldName("");
+      setNewFieldType("text");
+      setNewFieldOptions("");
+      setNewFieldRequired(false);
+    } catch (err) {
+      console.warn("Create custom field failed:", err.message);
+      alert(err.message || "Failed to create field");
+    } finally {
+      setSavingField(false);
+    }
+  };
+
+  const handleDeleteCustomField = async (fieldId) => {
+    setDeletingFieldId(fieldId);
+    try {
+      await deleteFieldDefinition(user.tenantId, token, fieldId);
+      setCustomFieldDefs((prev) => prev.filter((f) => f.id !== fieldId));
+    } catch (err) {
+      console.warn("Delete custom field failed:", err.message);
+      alert(err.message || "Failed to delete field");
+    } finally {
+      setDeletingFieldId(null);
+    }
+  };
 
   const handleScanWebsite = async () => {
     if (!user?.tenantId) return;
@@ -975,6 +1037,171 @@ export default function SettingsPage({ onNavigate }) {
                 {savingTag ? "Adding..." : "Add Tag"}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Custom Fields */}
+        <div className="settings-card">
+          <h3>Custom Fields</h3>
+          <p className="settings-card-desc">
+            Add custom fields to collect additional information on each lead.
+            Fields appear in the lead detail panel and can be filled in for any contact.
+          </p>
+
+          {cfLoadError && (
+            <p style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 8 }}>{cfLoadError}</p>
+          )}
+
+          {/* Existing fields list */}
+          {customFieldDefs.length === 0 && !cfLoadError ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 8 }}>
+              No custom fields yet. Add fields below to track additional information on your leads,
+              such as "Preferred contact time", "Project type", or "Lead source".
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+              {customFieldDefs.map((field) => (
+                <div key={field.id} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "9px 14px",
+                  borderRadius: 8,
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border-color)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontWeight: 500 }}>
+                      {field.name}
+                    </span>
+                    <span style={{
+                      fontSize: "0.7rem",
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      background: "rgba(0,191,255,0.12)",
+                      color: "var(--accent, #00bfff)",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                    }}>
+                      {field.field_type}
+                    </span>
+                    {field.is_required && (
+                      <span style={{
+                        fontSize: "0.7rem",
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                        background: "rgba(239,68,68,0.12)",
+                        color: "#f87171",
+                        fontWeight: 600,
+                      }}>
+                        Required
+                      </span>
+                    )}
+                    {field.field_type === "dropdown" && field.options && field.options.length > 0 && (
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                        ({field.options.join(", ")})
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteCustomField(field.id)}
+                    disabled={deletingFieldId === field.id}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      padding: "2px 4px",
+                    }}
+                    title="Delete field"
+                  >
+                    {deletingFieldId === field.id ? "..." : "delete"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add field form */}
+          <div style={{
+            marginTop: 16,
+            padding: "14px 16px",
+            borderRadius: 8,
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border-color)",
+          }}>
+            <label style={{ fontSize: "0.8rem", color: "var(--text-muted)", display: "block", marginBottom: 10 }}>
+              Add a new field
+            </label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <input
+                value={newFieldName}
+                onChange={(e) => setNewFieldName(e.target.value)}
+                placeholder="Field name (e.g. Project Type)"
+                style={{ flex: "2 1 160px", minWidth: 140 }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomField(); }}
+              />
+              <select
+                value={newFieldType}
+                onChange={(e) => { setNewFieldType(e.target.value); setNewFieldOptions(""); }}
+                style={{
+                  flex: "1 1 110px",
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border-color)",
+                  background: "var(--bg-primary)",
+                  color: "var(--text-primary)",
+                  fontSize: "0.9rem",
+                }}
+              >
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="dropdown">Dropdown</option>
+                <option value="date">Date</option>
+                <option value="checkbox">Checkbox</option>
+              </select>
+              {newFieldType === "dropdown" && (
+                <input
+                  value={newFieldOptions}
+                  onChange={(e) => setNewFieldOptions(e.target.value)}
+                  placeholder="Options: Yes, No, Maybe"
+                  style={{ flex: "3 1 180px", minWidth: 150 }}
+                  title="Enter comma-separated options"
+                />
+              )}
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                fontSize: "0.85rem",
+                whiteSpace: "nowrap",
+                alignSelf: "center",
+              }}>
+                <input
+                  type="checkbox"
+                  checked={newFieldRequired}
+                  onChange={(e) => setNewFieldRequired(e.target.checked)}
+                  style={{ width: "auto" }}
+                />
+                Required
+              </label>
+              <button
+                className="btn-primary"
+                onClick={handleAddCustomField}
+                disabled={savingField || !newFieldName.trim()}
+                style={{ whiteSpace: "nowrap", alignSelf: "flex-start" }}
+              >
+                {savingField ? "Adding..." : "Add Field"}
+              </button>
+            </div>
+            {newFieldType === "dropdown" && (
+              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "8px 0 0" }}>
+                Enter comma-separated options for the dropdown (e.g. "Option A, Option B, Option C")
+              </p>
+            )}
           </div>
         </div>
 

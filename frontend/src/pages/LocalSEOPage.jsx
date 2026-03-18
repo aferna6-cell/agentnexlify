@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
+import UpgradePrompt, { planBelowRequired } from "../components/UpgradePrompt";
 import {
   analyzeSeoProfile,
   fetchSeoProfile,
@@ -1306,9 +1307,10 @@ function ProfileTab({ tenantId, token }) {
    Main Page Component
    ────────────────────────────────────────────────────────── */
 
-export default function LocalSEOPage() {
+export default function LocalSEOPage({ onNavigate }) {
   const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState("audit");
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   if (!user?.tenantId) {
     return (
@@ -1325,12 +1327,33 @@ export default function LocalSEOPage() {
 
   return (
     <div className="fade-in">
+      {/* Upgrade prompt modal */}
+      {showUpgradePrompt && (
+        <UpgradePrompt
+          feature="Local SEO & Marketing Hub"
+          requiredPlan="professional"
+          onClose={() => setShowUpgradePrompt(false)}
+          onNavigate={onNavigate}
+        />
+      )}
+
       <div className="page-header">
         <div>
           <h1>SEO & Marketing Hub</h1>
           <p>Audit your site, track AI visibility, and optimize for search engines</p>
         </div>
       </div>
+
+      {/* Plan gate banner for free/growth users */}
+      {planBelowRequired(user?.plan, "professional") && (
+        <UpgradePrompt
+          feature="Local SEO & Marketing Hub"
+          requiredPlan="professional"
+          onClose={() => {}}
+          onNavigate={onNavigate}
+          variant="banner"
+        />
+      )}
 
       {/* Tabs */}
       <div className="wh-tabs">
