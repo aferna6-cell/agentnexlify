@@ -140,6 +140,13 @@ async def register(request: Request, req: RegisterRequest):
     tenant = result.data[0]
     tenant_id = str(tenant["id"])
 
+    # Save website_url if provided (column already exists from migration 028)
+    if req.website_url:
+        try:
+            db.table("tenants").update({"website_url": req.website_url}).eq("id", tenant_id).execute()
+        except Exception:
+            logger.warning("Failed to save website_url for new tenant %s", tenant_id, exc_info=True)
+
     # Create widget config with prefixed api_key and defaults
     api_key = f"anx_{secrets.token_urlsafe(32)}"
     db.table("widget_configs").insert({
@@ -179,6 +186,15 @@ async def register(request: Request, req: RegisterRequest):
     except Exception:
         # Welcome email failure must never block signup
         logger.warning("Welcome email failed for new tenant %s", tenant_id, exc_info=True)
+
+    # Trigger background website crawl if URL was provided — trains AI from minute one
+    if req.website_url:
+        try:
+            from backend.services.website_crawler import start_crawl
+            await start_crawl(tenant_id, req.website_url)
+        except Exception:
+            # Crawl failure must never block signup
+            logger.warning("Signup crawl failed for new tenant %s url=%s", tenant_id, req.website_url, exc_info=True)
 
     return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
 

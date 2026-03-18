@@ -87,6 +87,7 @@ class RegisterRequest(BaseModel):
     password: str
     industry: str = "other"
     city: str = ""
+    website_url: str | None = None
 
     @field_validator("email")
     @classmethod
@@ -101,6 +102,21 @@ class RegisterRequest(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
+        return v
+
+    @field_validator("website_url")
+    @classmethod
+    def validate_website_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        import re
+        if not re.match(r"^https?://", v, re.IGNORECASE):
+            v = f"https://{v}"
+        if not re.match(r"^https?://[^\s/$.?#].[^\s]*$", v, re.IGNORECASE):
+            raise ValueError("Invalid website URL")
         return v
 
 

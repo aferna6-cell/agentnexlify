@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus, fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition } from "../utils/api";
+import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus, fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition, searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
@@ -35,6 +35,16 @@ export default function SettingsPage({ onNavigate }) {
   const [newTagColor, setNewTagColor] = useState("#6b7280");
   const [savingTag, setSavingTag] = useState(false);
 
+  // Phone provisioning state
+  const [provisionedPhone, setProvisionedPhone] = useState(null);
+  const [phoneAreaCode, setPhoneAreaCode] = useState("");
+  const [availableNumbers, setAvailableNumbers] = useState([]);
+  const [searchingNumbers, setSearchingNumbers] = useState(false);
+  const [provisioningPhone, setProvisioningPhone] = useState(false);
+  const [releasingPhone, setReleasingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState(null);
+  const [phoneSuccess, setPhoneSuccess] = useState(null);
+
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
@@ -59,6 +69,10 @@ export default function SettingsPage({ onNavigate }) {
       setBusinessSlug(tenant.business_slug || null);
       setBusinessPageEnabled(!!tenant.business_page_enabled);
       if (tenant.plan) setLivePlan(tenant.plan);
+      // phone_number is stored in notification_phone; only track it as "provisioned"
+      // if it was set via Twilio (starts with + international format)
+      const maybeProvisioned = tenant.notification_phone || "";
+      setProvisionedPhone(maybeProvisioned.startsWith("+") ? maybeProvisioned : null);
     } catch (err) {
       console.error("Failed to load settings", err);
     } finally {
@@ -159,6 +173,63 @@ export default function SettingsPage({ onNavigate }) {
       setTagDefs((prev) => prev.filter((t) => t.id !== tagId));
     } catch (err) {
       console.warn("Delete tag failed:", err.message);
+    }
+  };
+
+  const handleSearchNumbers = async () => {
+    if (!phoneAreaCode.trim()) return;
+    setPhoneError(null);
+    setPhoneSuccess(null);
+    setAvailableNumbers([]);
+    setSearchingNumbers(true);
+    try {
+      const res = await searchAvailableNumbers(user.tenantId, token, phoneAreaCode.trim());
+      setAvailableNumbers(res.numbers || []);
+      if (!res.numbers || res.numbers.length === 0) {
+        setPhoneError("No available numbers found for that area code. Try a different code.");
+      }
+    } catch (err) {
+      setPhoneError(err.message || "Failed to search for numbers.");
+    } finally {
+      setSearchingNumbers(false);
+    }
+  };
+
+  const handleProvision = async () => {
+    if (!phoneAreaCode.trim()) return;
+    setPhoneError(null);
+    setPhoneSuccess(null);
+    setProvisioningPhone(true);
+    try {
+      const res = await provisionPhoneNumber(user.tenantId, token, phoneAreaCode.trim());
+      setProvisionedPhone(res.phone_number);
+      setAvailableNumbers([]);
+      setPhoneAreaCode("");
+      setPhoneSuccess(`Number ${res.phone_number} provisioned successfully.`);
+      // Update local form so the notification_phone field reflects new number
+      setForm((f) => ({ ...f, notification_phone: res.phone_number }));
+    } catch (err) {
+      setPhoneError(err.message || "Failed to provision number. Please try again.");
+    } finally {
+      setProvisioningPhone(false);
+    }
+  };
+
+  const handleReleasePhone = async () => {
+    if (!window.confirm("Are you sure you want to release this phone number? This cannot be undone.")) return;
+    setPhoneError(null);
+    setPhoneSuccess(null);
+    setReleasingPhone(true);
+    try {
+      await releasePhoneNumber(user.tenantId, token);
+      setProvisionedPhone(null);
+      setAvailableNumbers([]);
+      setPhoneSuccess("Phone number released.");
+      setForm((f) => ({ ...f, notification_phone: "" }));
+    } catch (err) {
+      setPhoneError(err.message || "Failed to release number. Please try again.");
+    } finally {
+      setReleasingPhone(false);
     }
   };
 
@@ -573,6 +644,224 @@ export default function SettingsPage({ onNavigate }) {
             {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
           </button>
         </div>
+
+        {/* Business Phone Number */}
+        <div className="settings-card">
+          <h3>Business Phone Number</h3>
+          <p className="settings-card-desc">
+            Provision a dedicated business phone number to enable the AI Answering Service,
+            Missed Call Text-Back, and Two-Way SMS with your leads.
+          </p>
+
+          {phoneError && (
+            <div style={{
+              marginBottom: 12, padding: "8px 12px", borderRadius: 6, fontSize: "0.85rem",
+              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+              color: "var(--red, #ef4444)",
+            }}>
+              {phoneError}
+            </div>
+          )}
+
+          {phoneSuccess && (
+            <div style={{
+              marginBottom: 12, padding: "8px 12px", borderRadius: 6, fontSize: "0.85rem",
+              background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)",
+              color: "var(--green, #4ade80)",
+            }}>
+              {phoneSuccess}
+            </div>
+          )}
+
+          {provisionedPhone ? (
+            /* Already has a number */
+            <div>
+              <div style={{
+                padding: "12px 14px", borderRadius: 8,
+                background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)",
+                marginBottom: 12,
+              }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>
+                  Active phone number
+                </div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--green, #4ade80)", letterSpacing: 1 }}>
+                  {provisionedPhone}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4 }}>
+                  Calls and SMS are routed through this number to your AI assistant.
+                </div>
+              </div>
+              <button
+                className="btn-danger"
+                onClick={handleReleasePhone}
+                disabled={releasingPhone}
+                style={{ fontSize: "0.85rem" }}
+              >
+                {releasingPhone ? "Releasing..." : "Release Number"}
+              </button>
+            </div>
+          ) : (
+            /* No number — show search UI */
+            <div>
+              <div className="settings-field">
+                <label>Area Code</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={phoneAreaCode}
+                    onChange={(e) => {
+                      setPhoneAreaCode(e.target.value.replace(/\D/g, "").slice(0, 3));
+                      setAvailableNumbers([]);
+                      setPhoneError(null);
+                    }}
+                    placeholder="e.g. 512"
+                    maxLength={3}
+                    style={{ width: 100, flex: "none" }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSearchNumbers(); }}
+                  />
+                  <button
+                    className="btn-secondary"
+                    onClick={handleSearchNumbers}
+                    disabled={searchingNumbers || !phoneAreaCode.trim()}
+                  >
+                    {searchingNumbers ? "Searching..." : "Search Available"}
+                  </button>
+                </div>
+                <span className="settings-field-hint">
+                  Enter your preferred area code to find local numbers.
+                </span>
+              </div>
+
+              {availableNumbers.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 8 }}>
+                    {availableNumbers.length} number{availableNumbers.length !== 1 ? "s" : ""} available
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                    {availableNumbers.map((n) => (
+                      <div key={n.phone_number} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "8px 12px", borderRadius: 8,
+                        background: "var(--bg-secondary)", border: "1px solid var(--border-color)",
+                      }}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: "var(--text-primary)", marginRight: 8 }}>
+                            {n.friendly_name}
+                          </span>
+                          {n.locality && (
+                            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                              {n.locality}{n.region ? `, ${n.region}` : ""}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 6, fontSize: "0.72rem" }}>
+                          {n.capabilities?.voice && (
+                            <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(59,130,246,0.15)", color: "#60a5fa" }}>Voice</span>
+                          )}
+                          {n.capabilities?.sms && (
+                            <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,0.15)", color: "#4ade80" }}>SMS</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    className="btn-primary"
+                    onClick={handleProvision}
+                    disabled={provisioningPhone}
+                  >
+                    {provisioningPhone ? "Provisioning..." : "Provision First Available Number"}
+                  </button>
+                  <span className="settings-field-hint" style={{ display: "block", marginTop: 6 }}>
+                    This will purchase the first available number and configure it for your account.
+                  </span>
+                </div>
+              )}
+
+              {!availableNumbers.length && !searchingNumbers && (
+                <div style={{
+                  marginTop: 10, padding: "10px 14px", borderRadius: 8, fontSize: "0.83rem",
+                  background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.2)",
+                  color: "var(--text-secondary)",
+                }}>
+                  A provisioned number enables: AI Answering Service, Missed Call Text-Back, and Two-Way SMS.
+                  Search above to get started.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Booking Page */}
+        {businessSlug && (
+          <div className="settings-card">
+            <h3>Booking Page</h3>
+            <p className="settings-card-desc">
+              Share this link with customers so they can book appointments directly. Embed the widget on any website to let visitors book without leaving your page.
+            </p>
+
+            {/* Booking URL */}
+            <div className="settings-field">
+              <label>Booking URL</label>
+              <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+                <input
+                  readOnly
+                  value={`https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}`}
+                  style={{ flex: 1, fontFamily: "monospace", fontSize: "0.82rem", color: "var(--text-secondary)" }}
+                  onClick={(e) => e.target.select()}
+                />
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}`)
+                      .catch(() => {});
+                  }}
+                  style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                >
+                  Copy Link
+                </button>
+              </div>
+            </div>
+
+            {/* Embed Code */}
+            <div className="settings-field" style={{ marginTop: 12 }}>
+              <label>Embed Code (iframe)</label>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <textarea
+                  readOnly
+                  rows={4}
+                  value={`<iframe\n  src="https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border:none;border-radius:12px;"\n></iframe>`}
+                  style={{
+                    flex: 1,
+                    fontFamily: "monospace",
+                    fontSize: "0.78rem",
+                    color: "var(--text-secondary)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: 6,
+                    padding: "8px 10px",
+                    resize: "none",
+                    lineHeight: 1.5,
+                  }}
+                  onClick={(e) => e.target.select()}
+                />
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `<iframe\n  src="https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border:none;border-radius:12px;"\n></iframe>`
+                    ).catch(() => {});
+                  }}
+                  style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                >
+                  Copy Code
+                </button>
+              </div>
+              <span className="settings-field-hint">
+                Paste this into your website's HTML to embed the booking form.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Quick Links */}
         <div className="settings-card">

@@ -42,6 +42,7 @@ const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
 const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
 const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
+const CSATPage = lazy(() => import("../pages/CSATPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -79,6 +80,7 @@ const pages = {
   pipeline: PipelinePage,
   smart_lists: SmartListsPage,
   form_builder: FormBuilderPage,
+  csat: CSATPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {

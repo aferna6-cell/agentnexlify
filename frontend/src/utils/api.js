@@ -1183,6 +1183,48 @@ export function fetchFormStats(tenantId, token) {
   return request(`/api/v1/forms/${tenantId}/stats`, { token });
 }
 
+// --- CSAT ---
+
+export function fetchCSATStats(tenantId, token, period = "30d") {
+  return request(`/api/v1/csat/${tenantId}/stats?period=${period}`, { token });
+}
+
+export function fetchCSATResponses(tenantId, token) {
+  return request(`/api/v1/csat/${tenantId}/responses`, { token });
+}
+
+// --- Phone Provisioning ---
+
+export function searchAvailableNumbers(tenantId, token, areaCode) {
+  return request(`/api/v1/phone/${tenantId}/available?area_code=${encodeURIComponent(areaCode)}`, { token });
+}
+
+export function provisionPhoneNumber(tenantId, token, areaCode) {
+  return request(`/api/v1/phone/${tenantId}/provision`, {
+    method: "POST",
+    token,
+    body: { area_code: areaCode },
+  });
+}
+
+export function releasePhoneNumber(tenantId, token) {
+  return request(`/api/v1/phone/${tenantId}/release`, { method: "DELETE", token });
+}
+
+// Provision a specific phone number by its E.164 string (e.g. "+15125551234")
+export function provisionPhone(tenantId, token, phoneNumber) {
+  return request(`/api/v1/phone/${tenantId}/provision`, {
+    method: "POST",
+    token,
+    body: { phone_number: phoneNumber },
+  });
+}
+
+// Release the provisioned phone number for this tenant
+export function releasePhone(tenantId, token) {
+  return request(`/api/v1/phone/${tenantId}/release`, { method: "DELETE", token });
+}
+
 // --- Facebook Messenger Channel ---
 
 export function fetchFacebookStatus(tenantId, token) {
