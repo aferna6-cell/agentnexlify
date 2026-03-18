@@ -1,5 +1,6 @@
 """Marketing Campaigns endpoints — email/SMS blast campaigns with AI generation."""
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -329,59 +330,20 @@ async def delete_campaign(
 
 # --- Send Campaign ---
 
-@router.post("/{tenant_id}/{campaign_id}/send")
-async def send_campaign(
-    tenant_id: str,
+async def _send_campaign_background(
     campaign_id: str,
-    claims: dict = Depends(_get_current_tenant),
-):
-    """Execute/send a marketing campaign to matching leads."""
-    _verify_tenant(claims, tenant_id)
+    tenant_id: str,
+    leads: list[dict],
+    campaign: dict,
+) -> None:
+    """Background task: send a campaign to all matched leads and update DB with results.
 
+    Runs after the HTTP handler has already returned. On any unhandled error the
+    campaign status is set to 'failed' so the dashboard never shows a stuck 'sending'
+    state.
+    """
     try:
         db = get_supabase()
-
-        # Fetch the campaign
-        campaign_result = (
-            db.table("marketing_campaigns")
-            .select("*")
-            .eq("id", campaign_id)
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if not campaign_result.data:
-            raise HTTPException(status_code=404, detail="Campaign not found")
-
-        campaign = campaign_result.data[0]
-
-        if campaign["status"] in ("sending", "sent"):
-            raise HTTPException(status_code=400, detail=f"Campaign already {campaign['status']}")
-
-        # Mark as sending
-        db.table("marketing_campaigns").update({
-            "status": "sending",
-        }).eq("id", campaign_id).execute()
-
-        # Query target leads (uses client_id, not tenant_id)
-        target_filter = campaign.get("target_filter") or {}
-        leads = _query_target_leads(db, tenant_id, target_filter)
-
-        if not leads:
-            db.table("marketing_campaigns").update({
-                "status": "sent",
-                "sent_at": datetime.now(timezone.utc).isoformat(),
-                "total_recipients": 0,
-                "total_sent": 0,
-            }).eq("id", campaign_id).execute()
-            return {
-                "campaign_id": campaign_id,
-                "status": "sent",
-                "total_recipients": 0,
-                "total_sent": 0,
-                "message": "No matching leads found",
-            }
-
         total_sent = 0
         total_failed = 0
         campaign_type = campaign["type"]
@@ -446,7 +408,7 @@ async def send_campaign(
             except Exception:
                 logger.exception("Failed to track campaign send for lead %s", lead_id)
 
-        # Update campaign with results — isolated try/except since messages already sent
+        # Update campaign with final results
         final_status = "sent" if total_sent > 0 else "failed"
         try:
             db.table("marketing_campaigns").update({
@@ -455,32 +417,107 @@ async def send_campaign(
                 "total_recipients": len(leads),
                 "total_sent": total_sent,
             }).eq("id", campaign_id).execute()
+            logger.info(
+                "Campaign %s completed: status=%s sent=%d failed=%d",
+                campaign_id, final_status, total_sent, total_failed,
+            )
         except Exception:
             logger.exception(
                 "Failed to update final status for campaign %s (sent=%d, failed=%d)",
                 campaign_id, total_sent, total_failed,
             )
 
-        return {
-            "campaign_id": campaign_id,
-            "status": final_status,
-            "total_recipients": len(leads),
-            "total_sent": total_sent,
-            "total_failed": total_failed,
-        }
-
-    except HTTPException:
-        raise
     except Exception:
-        logger.exception("Failed to send campaign %s for tenant %s", campaign_id, tenant_id)
-        # Mark campaign as failed — only safe if no messages were sent
+        logger.exception(
+            "Unhandled error in background send for campaign %s — marking as failed",
+            campaign_id,
+        )
         try:
             db = get_supabase()
             db.table("marketing_campaigns").update({
                 "status": "failed",
             }).eq("id", campaign_id).execute()
         except Exception:
-            logger.exception("Failed to mark campaign %s as failed", campaign_id)
+            logger.exception("Failed to mark campaign %s as failed after background error", campaign_id)
+
+
+@router.post("/{tenant_id}/{campaign_id}/send")
+async def send_campaign(
+    tenant_id: str,
+    campaign_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Execute/send a marketing campaign to matching leads.
+
+    Validates the campaign, builds the recipient list, marks status as 'sending',
+    then returns immediately. The actual send loop runs as an asyncio background task
+    so the HTTP handler is never blocked for more than a few milliseconds.
+    """
+    _verify_tenant(claims, tenant_id)
+
+    try:
+        db = get_supabase()
+
+        # Fetch the campaign
+        campaign_result = (
+            db.table("marketing_campaigns")
+            .select("*")
+            .eq("id", campaign_id)
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not campaign_result.data:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        campaign = campaign_result.data[0]
+
+        if campaign["status"] in ("sending", "sent"):
+            raise HTTPException(status_code=400, detail=f"Campaign already {campaign['status']}")
+
+        # Query target leads (uses client_id, not tenant_id) before changing status
+        target_filter = campaign.get("target_filter") or {}
+        leads = _query_target_leads(db, tenant_id, target_filter)
+
+        if not leads:
+            db.table("marketing_campaigns").update({
+                "status": "sent",
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "total_recipients": 0,
+                "total_sent": 0,
+            }).eq("id", campaign_id).execute()
+            return {
+                "campaign_id": campaign_id,
+                "status": "sent",
+                "total_recipients": 0,
+                "total_sent": 0,
+                "message": "No matching leads found",
+            }
+
+        # Mark as sending with a timestamp before dispatching the background task
+        db.table("marketing_campaigns").update({
+            "status": "sending",
+            "sending_started_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", campaign_id).execute()
+
+        # Dispatch the send loop as a non-blocking background task and return immediately
+        asyncio.create_task(
+            _send_campaign_background(campaign_id, tenant_id, leads, campaign)
+        )
+
+        return {"status": "sending", "campaign_id": campaign_id}
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to initiate campaign %s for tenant %s", campaign_id, tenant_id)
+        try:
+            db = get_supabase()
+            db.table("marketing_campaigns").update({
+                "status": "failed",
+            }).eq("id", campaign_id).execute()
+        except Exception:
+            logger.exception("Failed to mark campaign %s as failed after initiation error", campaign_id)
         raise HTTPException(status_code=500, detail="Campaign send failed")
 
 

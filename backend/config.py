@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     frontend_url: str = "http://localhost:5173"
+    api_url: str = "https://agentnexlify-production.up.railway.app"
 
     resend_api_key: str = ""
 

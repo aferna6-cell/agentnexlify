@@ -374,97 +374,6 @@ async def get_leads_analytics(
 
 
 # ------------------------------------------------------------------
-# 4. Response times
-# ------------------------------------------------------------------
-
-
-@router.get("/{tenant_id}/response-times")
-async def get_response_times(
-    tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
-    claims: dict = Depends(_get_current_tenant),
-):
-    _check_tenant(claims, tenant_id)
-
-    cache_key = f"resp_times:{tenant_id}:{period}"
-    cached = _get_cached(cache_key)
-    if cached:
-        return cached
-
-    days = _period_to_days(period)
-    now_iso = datetime.now(timezone.utc).isoformat()
-    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    db = get_supabase()
-
-    try:
-        msgs = (
-            db.table("chat_messages")
-            .select("session_id, role, created_at")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", start)
-            .lt("created_at", now_iso)
-            .order("created_at")
-            .limit(_QUERY_LIMIT)
-            .execute()
-        )
-
-        # Group by session
-        sessions: dict[str, list[dict]] = defaultdict(list)
-        for row in msgs.data or []:
-            sessions[row["session_id"]].append(row)
-
-        response_times: list[float] = []
-        first_response_times: list[float] = []
-        daily_response: dict[str, list[float]] = defaultdict(list)
-
-        for session_id, messages in sessions.items():
-            messages.sort(key=lambda x: x["created_at"])
-            first_response_found = False
-
-            for i in range(1, len(messages)):
-                if messages[i]["role"] == "assistant" and messages[i - 1]["role"] == "user":
-                    user_time = datetime.fromisoformat(messages[i - 1]["created_at"].replace("Z", "+00:00"))
-                    bot_time = datetime.fromisoformat(messages[i]["created_at"].replace("Z", "+00:00"))
-                    diff = (bot_time - user_time).total_seconds()
-
-                    if 0 < diff < 300:  # Ignore anomalies > 5 min
-                        response_times.append(diff)
-                        date_str = messages[i]["created_at"][:10]
-                        daily_response[date_str].append(diff)
-
-                        if not first_response_found:
-                            first_response_times.append(diff)
-                            first_response_found = True
-
-        avg_response = round(sum(response_times) / len(response_times), 2) if response_times else 0
-        avg_first_response = round(sum(first_response_times) / len(first_response_times), 2) if first_response_times else 0
-
-        # Build daily trend
-        today = datetime.now(timezone.utc).date()
-        trend_data = []
-        for i in range(days):
-            d = (today - timedelta(days=days - 1 - i)).isoformat()
-            day_times = daily_response.get(d, [])
-            avg = round(sum(day_times) / len(day_times), 2) if day_times else None
-            trend_data.append({"date": d, "avg_seconds": avg})
-
-    except Exception:
-        logger.warning("Failed to compute response times", exc_info=True)
-        avg_response = 0
-        avg_first_response = 0
-        trend_data = []
-
-    result = {
-        "avg_response_seconds": avg_response,
-        "avg_first_response_seconds": avg_first_response,
-        "trend": trend_data,
-    }
-
-    _set_cache(cache_key, result)
-    return result
-
-
-# ------------------------------------------------------------------
 # 5. Widget analytics
 # ------------------------------------------------------------------
 
@@ -559,6 +468,11 @@ async def get_widget_analytics(
 
     _set_cache(cache_key, result)
     return result
+
+
+# ------------------------------------------------------------------
+# 4. Response times (reads from response_metrics table)
+# ------------------------------------------------------------------
 
 
 @router.get("/{tenant_id}/response-times")

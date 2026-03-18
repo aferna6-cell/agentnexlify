@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.webhook_dispatcher import fire_event_background
@@ -86,7 +87,8 @@ def _generate_public_token() -> str:
 # ---------------------------------------------------------------------------
 
 @router.get("/public/{token}")
-async def get_public_form(token: str):
+@limiter.limit("30/minute")
+async def get_public_form(request: Request, token: str):
     """Get form definition by public token for rendering. No auth required."""
     db = get_supabase()
     try:
@@ -122,6 +124,7 @@ async def get_public_form(token: str):
 
 
 @router.post("/public/{token}/submit")
+@limiter.limit("10/minute")
 async def submit_public_form(
     token: str,
     req: PublicFormSubmission,

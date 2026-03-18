@@ -43,7 +43,7 @@ async def get_gbp_auth_url(
     if not client_id:
         raise HTTPException(status_code=503, detail="Google Business Profile integration not configured")
 
-    redirect_uri = f"{settings.frontend_url}/api/v1/gbp/callback"
+    redirect_uri = f"{settings.api_url}/api/v1/gbp/callback"
     scopes = "https://www.googleapis.com/auth/business.manage"
 
     auth_url = (
@@ -70,7 +70,7 @@ async def gbp_oauth_callback(code: str = Query(...), state: str = Query(...)):
     if not client_id or not client_secret:
         raise HTTPException(status_code=503, detail="Google integration not configured")
 
-    redirect_uri = f"{settings.frontend_url}/api/v1/gbp/callback"
+    redirect_uri = f"{settings.api_url}/api/v1/gbp/callback"
 
     import httpx
     try:
