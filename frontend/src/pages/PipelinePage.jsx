@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
-import { fetchLeads, updateLead } from "../utils/api";
+import { fetchLeads, movePipelineLead, createLead } from "../utils/api";
 
 const PIPELINE_STAGES = [
   { key: "new", label: "New", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
@@ -404,7 +404,7 @@ export default function PipelinePage() {
     setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, status: newStage } : l)));
     setMovingId(leadId);
     try {
-      await updateLead(user.tenantId, token, leadId, { status: newStage });
+      await movePipelineLead(user.tenantId, token, leadId, { new_stage: newStage });
       setError(null);
     } catch (err) {
       setLeads(prev);
@@ -418,12 +418,6 @@ export default function PipelinePage() {
   const handleAddDeal = async (formData) => {
     setSavingDeal(true);
     try {
-      // Create a new lead with pipeline data via updateLead (POST equivalent)
-      // The leads table uses status field for pipeline stage
-      const { updateLead: _ul, ...rest } = { updateLead }; // eslint-disable-line no-unused-vars
-      // Use the create lead API — but since no createLead helper exists in api.js,
-      // we'll use updateLead-compatible approach via fetchLeads refresh after optimistic add
-      // For now, do a direct create via the request pattern matching existing api functions
       const body = {
         name: formData.name.trim(),
         email: formData.email.trim() || null,
@@ -433,21 +427,7 @@ export default function PipelinePage() {
         expected_close_date: formData.expected_close || null,
       };
 
-      // Use fetch directly since createLead isn't in api.js yet
-      const BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
-      const res = await fetch(`${BASE}/api/v1/leads/${user.tenantId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `Error ${res.status}`);
-      }
-      const newLead = await res.json();
+      const newLead = await createLead(user.tenantId, token, body);
       setLeads((prev) => [newLead, ...prev]);
       setShowAddDeal(false);
       setError(null);

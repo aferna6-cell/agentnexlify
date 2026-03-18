@@ -319,6 +319,34 @@ async def create_invoice_from_bid(
         raise HTTPException(status_code=404, detail="Bid not found")
 
     bid = bid_result.data[0]
+
+    # Only accepted bids can be converted to invoices
+    if bid.get("status") != "accepted":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Bid status is '{bid.get('status')}' — only accepted bids can be converted to invoices",
+        )
+
+    # Prevent duplicate invoice creation from the same bid
+    try:
+        existing_invoice = (
+            db.table("invoices")
+            .select("id, invoice_number")
+            .eq("tenant_id", tenant_id)
+            .eq("bid_id", bid_id)
+            .limit(1)
+            .execute()
+        )
+        if existing_invoice.data:
+            raise HTTPException(
+                status_code=409,
+                detail=f"An invoice ({existing_invoice.data[0].get('invoice_number', '')}) already exists for this bid",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.warning("Could not check for existing invoice from bid %s", bid_id, exc_info=True)
+
     bid_items_raw = bid.get("items_json") or []
 
     # Normalize bid items to invoice item format

@@ -845,3 +845,148 @@ async def get_missed_call_analytics(
     mc_response = {"daily": daily, "total": total, "texted_back": total}
     _set_cache(cache_key, mc_response)
     return mc_response
+
+
+@router.get("/{tenant_id}/ai-insights")
+async def get_ai_insights(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Generate AI-powered business insights for the last 7 days.
+
+    Returns metrics + Claude-generated analysis with actionable recommendations.
+    Cached for 1 hour to avoid excessive API calls.
+    """
+    import anthropic
+    from backend.config import settings
+
+    _check_tenant(claims, tenant_id)
+
+    cache_key = f"ai_insights:{tenant_id}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    week_ago = (now - timedelta(days=7)).isoformat()
+    prev_week_start = (now - timedelta(days=14)).isoformat()
+
+    metrics = {}
+
+    # Current week leads (uses client_id)
+    try:
+        leads_result = db.table("leads").select("id, status, lead_temperature, deal_value").eq("client_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
+        leads_data = leads_result.data or []
+        metrics["new_leads"] = len(leads_data)
+        metrics["hot_leads"] = sum(1 for l in leads_data if l.get("lead_temperature") == "hot")
+        metrics["pipeline_value"] = sum(float(l.get("deal_value") or 0) for l in leads_data)
+    except Exception:
+        metrics["new_leads"] = 0
+        metrics["hot_leads"] = 0
+        metrics["pipeline_value"] = 0
+
+    # Previous week leads for comparison
+    try:
+        prev_leads = db.table("leads").select("id", count="exact").eq("client_id", tenant_id).gte("created_at", prev_week_start).lt("created_at", week_ago).limit(1).execute()
+        metrics["prev_leads"] = prev_leads.count or 0
+    except Exception:
+        metrics["prev_leads"] = 0
+
+    # Conversations
+    try:
+        conv_result = db.table("conversations").select("id", count="exact").eq("client_id", tenant_id).gte("created_at", week_ago).limit(1).execute()
+        metrics["conversations"] = conv_result.count or 0
+    except Exception:
+        metrics["conversations"] = 0
+
+    # Appointments
+    try:
+        appt_result = db.table("appointments").select("id, status").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
+        appt_data = appt_result.data or []
+        metrics["appointments"] = len(appt_data)
+        metrics["completed_appointments"] = sum(1 for a in appt_data if a.get("status") == "completed")
+    except Exception:
+        metrics["appointments"] = 0
+        metrics["completed_appointments"] = 0
+
+    # Invoices
+    try:
+        inv_result = db.table("invoices").select("id, status, total").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
+        inv_data = inv_result.data or []
+        metrics["invoices_created"] = len(inv_data)
+        metrics["invoices_paid"] = sum(1 for i in inv_data if i.get("status") == "paid")
+        metrics["revenue"] = sum(float(i.get("total") or 0) for i in inv_data if i.get("status") == "paid")
+        metrics["outstanding"] = sum(float(i.get("total") or 0) for i in inv_data if i.get("status") in ("sent", "viewed", "overdue"))
+    except Exception:
+        metrics["invoices_created"] = 0
+        metrics["invoices_paid"] = 0
+        metrics["revenue"] = 0
+        metrics["outstanding"] = 0
+
+    # Reviews
+    try:
+        rev_result = db.table("reviews").select("id, rating").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(50).execute()
+        rev_data = rev_result.data or []
+        metrics["reviews"] = len(rev_data)
+        metrics["avg_rating"] = round(sum(r.get("rating", 0) for r in rev_data) / max(len(rev_data), 1), 1) if rev_data else 0
+    except Exception:
+        metrics["reviews"] = 0
+        metrics["avg_rating"] = 0
+
+    # Pending action items
+    try:
+        actions_result = db.table("action_items").select("id", count="exact").eq("tenant_id", tenant_id).eq("status", "pending").limit(1).execute()
+        metrics["pending_actions"] = actions_result.count or 0
+    except Exception:
+        metrics["pending_actions"] = 0
+
+    # Get tenant info for AI context
+    try:
+        tenant_result = db.table("tenants").select("business_name, business_type").eq("id", tenant_id).limit(1).execute()
+        tenant_info = tenant_result.data[0] if tenant_result.data else {}
+    except Exception:
+        tenant_info = {}
+
+    biz_name = tenant_info.get("business_name") or "Your Business"
+    biz_type = tenant_info.get("business_type") or "local business"
+
+    # Generate AI analysis
+    ai_analysis = ""
+    if settings.anthropic_api_key:
+        lead_change = metrics["new_leads"] - metrics.get("prev_leads", 0)
+        change_text = f"{'up' if lead_change > 0 else 'down'} {abs(lead_change)} from last week" if lead_change != 0 else "same as last week"
+
+        try:
+            client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=400,
+                messages=[{"role": "user", "content": f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".
+
+This week's metrics:
+- New leads: {metrics['new_leads']} ({change_text}), {metrics['hot_leads']} hot
+- Conversations: {metrics['conversations']}
+- Appointments: {metrics['appointments']} ({metrics['completed_appointments']} completed)
+- Invoices: {metrics['invoices_created']} created, {metrics['invoices_paid']} paid
+- Revenue collected: ${metrics['revenue']:.2f}, outstanding: ${metrics['outstanding']:.2f}
+- Pipeline value: ${metrics['pipeline_value']:.2f}
+- Reviews: {metrics['reviews']} (avg {metrics['avg_rating']})
+- Pending action items: {metrics['pending_actions']}
+
+Write 3-4 bullet points: what's going well, what needs attention, one actionable recommendation. Be specific with numbers. Keep it under 200 words."""}],
+            )
+            ai_analysis = response.content[0].text if response.content else ""
+        except Exception:
+            logger.warning("AI insights generation failed for tenant %s", tenant_id, exc_info=True)
+
+    result = {
+        "metrics": metrics,
+        "ai_analysis": ai_analysis,
+        "generated_at": now.isoformat(),
+        "business_name": biz_name,
+    }
+
+    # Cache for 1 hour (override default TTL)
+    _cache[cache_key] = (time.time() + 3600 - _CACHE_TTL, result)
+    return result

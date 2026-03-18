@@ -28,6 +28,9 @@ async function request(path, { method = "GET", body, token } = {}) {
 
 // --- Dashboard API ---
 
+export function createLead(tenantId, token, data) {
+  return request(`/api/v1/leads/${tenantId}`, { method: "POST", token, body: data });
+}
 export function fetchLeads(tenantId, token, { stage, search, sort, order, assigned_to, page, per_page } = {}) {
   const params = new URLSearchParams();
   if (stage) params.set("stage", stage);
@@ -1086,6 +1089,12 @@ export function fetchInvoices(tenantId, token, filters = {}) {
 export function createInvoice(tenantId, token, data) {
   return request(`/api/v1/invoices/${tenantId}`, { method: "POST", token, body: data });
 }
+export function updateInvoice(tenantId, token, invoiceId, data) {
+  return request(`/api/v1/invoices/${tenantId}/${invoiceId}`, { method: "PUT", token, body: data });
+}
+export function deleteInvoice(tenantId, token, invoiceId) {
+  return request(`/api/v1/invoices/${tenantId}/${invoiceId}`, { method: "DELETE", token });
+}
 export function sendInvoice(tenantId, token, invoiceId, data) {
   return request(`/api/v1/invoices/${tenantId}/${invoiceId}/send`, { method: "POST", token, body: data });
 }
@@ -1111,6 +1120,11 @@ export function fetchPipelineAnalytics(tenantId, token) {
 }
 export function movePipelineLead(tenantId, token, leadId, data) {
   return request(`/api/v1/pipeline/${tenantId}/move/${leadId}`, { method: "PUT", token, body: data });
+}
+
+// AI Insights
+export function fetchAIInsights(tenantId, token) {
+  return request(`/api/v1/analytics/${tenantId}/ai-insights`, { token });
 }
 
 export { ApiError };

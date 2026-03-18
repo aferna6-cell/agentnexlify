@@ -55,7 +55,7 @@ async def _automation_loop():
     """
     import random
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
-    from backend.services.automation_engine import check_new_reviews, check_no_response_leads, process_pending_steps, send_appointment_reminders, send_csat_surveys, send_monthly_reports, send_pending_review_requests, send_onboarding_emails, send_portal_links
+    from backend.services.automation_engine import check_new_reviews, check_no_response_leads, process_pending_steps, send_appointment_reminders, send_csat_surveys, send_invoice_payment_reminders, send_monthly_reports, send_pending_review_requests, send_onboarding_emails, send_portal_links, send_weekly_intelligence_briefs
     while True:
         try:
             processed = await process_pending_steps()
@@ -119,6 +119,20 @@ async def _automation_loop():
                 logger.info("Automation loop: sent %d CSAT surveys", csat_sent)
         except Exception:
             logger.exception("Automation loop: send_csat_surveys failed")
+
+        try:
+            inv_reminders = await send_invoice_payment_reminders()
+            if inv_reminders:
+                logger.info("Automation loop: sent %d invoice payment reminders", inv_reminders)
+        except Exception:
+            logger.exception("Automation loop: send_invoice_payment_reminders failed")
+
+        try:
+            briefs = await send_weekly_intelligence_briefs()
+            if briefs:
+                logger.info("Automation loop: sent %d weekly intelligence briefs", briefs)
+        except Exception:
+            logger.exception("Automation loop: send_weekly_intelligence_briefs failed")
 
         await asyncio.sleep(60)
 

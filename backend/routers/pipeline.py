@@ -19,11 +19,12 @@ router = APIRouter(prefix="/api/v1/pipeline", tags=["pipeline"])
 # ---------------------------------------------------------------------------
 
 DEFAULT_STAGES = [
-    {"name": "New", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-    {"name": "Contacted", "sort_order": 1, "color": "#f59e0b", "is_won": False, "is_lost": False},
-    {"name": "Quoted", "sort_order": 2, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-    {"name": "Won", "sort_order": 3, "color": "#22c55e", "is_won": True, "is_lost": False},
-    {"name": "Lost", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
+    {"name": "New Lead", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+    {"name": "Contacted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+    {"name": "Qualified", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+    {"name": "Proposal Sent", "sort_order": 3, "color": "#ec4899", "is_won": False, "is_lost": False},
+    {"name": "Won", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
+    {"name": "Lost", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
 ]
 
 
@@ -426,7 +427,7 @@ async def get_pipeline_analytics(
                     if is_won:
                         won_this_month += 1
             except Exception:
-                pass
+                logger.warning("pipeline analytics: failed to parse dates for lead %s", lead.get("id"), exc_info=True)
 
     conversion_rate = round(won_count / total_closed * 100, 1) if total_closed > 0 else 0.0
     avg_deal_value = round(total_won_value / won_count, 2) if won_count > 0 else 0.0

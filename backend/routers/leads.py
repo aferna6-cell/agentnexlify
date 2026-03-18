@@ -134,6 +134,61 @@ async def get_lead_score(
     return LeadScoreResponse(**result)
 
 
+class LeadCreateRequest(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    status: str | None = "new"
+    lead_temperature: str | None = None
+    areas_of_interest: str | None = None
+    deal_value: float | None = None
+    expected_close_date: str | None = None
+
+
+@router.post("/{tenant_id}", status_code=201)
+async def create_lead(
+    tenant_id: str,
+    req: LeadCreateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Create a lead manually (e.g. from pipeline Add Deal)."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if not req.name and not req.email and not req.phone:
+        raise HTTPException(status_code=400, detail="At least one of name, email, or phone is required")
+
+    db = get_supabase()
+    lead_data = {
+        "client_id": tenant_id,
+        "name": req.name,
+        "email": req.email,
+        "phone": req.phone,
+        "status": req.status or "new",
+        "lead_temperature": req.lead_temperature,
+        "areas_of_interest": req.areas_of_interest,
+        "source": "manual",
+    }
+    if req.deal_value is not None:
+        lead_data["deal_value"] = req.deal_value
+    if req.expected_close_date:
+        lead_data["expected_close_date"] = req.expected_close_date
+
+    # Remove None values
+    lead_data = {k: v for k, v in lead_data.items() if v is not None}
+
+    result = db.table("leads").insert(lead_data).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create lead")
+
+    lead = result.data[0]
+    log_activity(tenant_id=tenant_id, lead_id=lead["id"], activity_type="lead_created",
+                 description=f"Lead created manually: {req.name or req.email or req.phone}")
+    fire_event_background(tenant_id, "lead.created", {"lead_id": lead["id"], "name": req.name, "source": "manual"})
+
+    return lead
+
+
 @router.patch("/{tenant_id}/{lead_id}")
 async def update_lead(
     tenant_id: str,

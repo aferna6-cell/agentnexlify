@@ -73,6 +73,8 @@ const pages = {
   local_seo: LocalSEOPage,
   social_media: SocialMediaPage,
   campaigns: MarketingCampaignsPage,
+  invoices: InvoicesPage,
+  pipeline: PipelinePage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {
