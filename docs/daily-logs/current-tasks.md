@@ -2,70 +2,64 @@
 
 Updated by the automated morning/evening routines and interactive sessions.
 
-## Today's Top 3 Priorities (2026-03-19)
+## Today's Top 3 Priorities (2026-03-20)
 
-1. **Verify migrations 045-048 applied** — 4 migrations found undocumented; need live DB confirmation
-2. **Verify new pages E2E** — Smart Lists, Forms, Invoices, Pipeline, CSAT (all built but untested end-to-end)
-3. **Frontend build check** — api.js (40 touches) and App.jsx (19 touches) this week; confirm Vercel build passes
+1. ~~**Verify migrations 045-058 applied**~~ DONE — all 14 confirmed applied
+2. ~~**Delete `_widget_legacy.py` + fix SettingsPage catches**~~ DONE
+3. ~~**Verify new pages E2E**~~ DONE — 8 bugs found and fixed across Smart Lists, Forms, Invoices, Pipeline
 
 ## Active Tasks
 
-### Priority 1 — Verify / Critical
-- [ ] Verify migrations 045-048 applied to live Supabase (seo_profiles, csat_responses, custom_field_definitions, tenants.autopilot_enabled)
-- [ ] Verify Smart Lists page works E2E (create, filter, export CSV)
-- [ ] Verify Forms page works E2E (create, embed, public submit, lead creation)
-- [ ] Verify Invoices + Pipeline pages (carried forward)
-- [ ] Verify CSAT page works E2E (new in Cycle 100)
-- [ ] Verify public booking page (new in Cycle 96)
-- [ ] Verify omnichannel inbox filtering (new in Cycle 98)
-- [ ] Verify Facebook Messenger webhook flow (new in Cycle 99)
+### Priority 1 — Remaining from today's verification
+- [ ] Forms embed URL returns JSON not HTML (needs frontend route or backend HTML endpoint)
+- [ ] Pipeline frontend should fetch stages from API instead of using hardcoded values
+- [ ] Pipeline frontend should use `fetchPipelineBoard` instead of `fetchLeads` for grouped data
 
-### Priority 2 — Feature Backlog
+### Priority 2 — Quality
+- [ ] Add contract tests for api.js flows
+- [ ] Configure Cloudflare Browser Rendering env vars
+- [ ] Consider splitting api.js into domain modules (hotspot)
+- [ ] Consider splitting main.py router registration (hotspot)
+- [ ] Verify older features in production
+
+### Priority 3 — Feature Backlog
 - [ ] Social media platform OAuth (direct posting)
 - [ ] Real SERP data integration (SEMrush/Ahrefs)
 - [ ] Competitor analysis dashboard
 - [ ] Automated social media posting scheduler
-- [ ] Documents & E-Signatures (future Tier 6 item)
+- [ ] Documents & E-Signatures
 
-### Priority 3 — Quality
-- [ ] Fix 2 silent catches in SettingsPage.jsx (lines 878, 914 — genuinely empty .catch(() => {}))
-- [ ] Add contract tests for api.js flows
-- [ ] Configure Cloudflare Browser Rendering env vars
-- [ ] Consider splitting api.js into domain modules (40 changes in 7 days — hotspot)
-- [ ] Consider splitting main.py router registration (36 changes in 7 days — hotspot)
-- [ ] Delete archived `backend/routers/_widget_legacy.py`
-- [ ] Verify older features in production
+## Completed Today (2026-03-20)
 
-### Priority 4 — Improvements
-- [ ] Add frontend build validation to CI
-- [ ] Audit `.catch(() => null)` patterns in dashboard pages
+### Verification & Bug Fixes (Cycle 102)
+- [x] Verified all migrations 045-058 applied to live Supabase
+- [x] Deleted `backend/routers/_widget_legacy.py`
+- [x] Fixed SettingsPage.jsx silent catches
+- [x] Fixed Smart Lists filter key mismatch (CRITICAL — filters were silently ignored)
+- [x] Fixed Smart Lists `lead_count` → `cached_lead_count`
+- [x] Removed Smart Lists non-functional preview button
+- [x] Fixed Forms `is_active` read from wrong location
+- [x] Fixed Forms `data` → `data_json` submission field
+- [x] Fixed Pipeline move payload `new_stage` → `status` (CRITICAL — 422 error)
+- [x] Fixed Invoices `markInvoicePaid` empty body (CRITICAL — 422 error)
+- [x] Fixed Invoices `items` → `items_json` field name
+- [x] Fixed Invoices `payment_link` → `stripe_payment_link`
+- [x] Verified CSAT page fully wired
+- [x] Verified public booking page fully wired
+- [x] Verified omnichannel/Facebook fully wired
+- [x] Fixed conversation_inbox.py `tenant_id` → `client_id` (CRITICAL — all inbox ops broken)
+- [x] Fixed auth.py `update_conversation_tags` `tenant_id` → `client_id` (CRITICAL)
+- [x] Fixed inbox session_id vs UUID mismatch — added `_find_conversation()` helper (CRITICAL)
+- [x] Fixed csat.py silent exception — added logging
+- [x] Added 4 new entries to bug-patterns.md
 
-## Completed Yesterday (2026-03-18)
-
-### Cycle 101
-- [x] Custom fields UI (LeadDetailDrawer)
-- [x] Billing matrix with plan comparison
-- [x] Upgrade prompts (UpgradePrompt component)
-
-### Cycle 100
-- [x] CSAT dashboard page
-- [x] Booking page URL + embed code in Settings
-- [x] Migration 058 (conversations.lead_id FK fix)
-- [x] Signup website_url auto-crawl
-
-### Cycle 99
-- [x] Facebook connect UI in IntegrationsPage
-- [x] Webhook events for Zapier (lead.status_changed)
-
-### Earlier (last 7 days)
-- [x] Omnichannel channel manager + Facebook Messenger + inbox filter (Cycle 98)
-- [x] Widget.py split into 5 modules (Cycle 97)
-- [x] Public booking page + two-way SMS + review automation (Cycle 96)
-- [x] Parallelized automation loop + batch queries (Cycle 95)
-- [x] Campaign background task + rate limiting + OAuth fix (Cycle 94)
-- [x] Smart Lists + Form Builder (Cycle 93)
-- [x] Payment reminders + AI insights + sidebar nav (Cycle 92)
-- [x] Invoicing + Sales Pipeline (Cycle 91)
+### Previous Completed
+- [x] Custom fields UI, billing matrix, upgrade prompts (Cycle 101)
+- [x] CSAT, booking URL, FK fix, website_url (Cycle 100)
+- [x] Facebook connect, webhook events (Cycle 99)
+- [x] Omnichannel channel manager, inbox filter (Cycle 98)
+- [x] Widget.py split (Cycle 97)
+- [x] Public booking, two-way SMS, review automation (Cycle 96)
 
 ---
 

@@ -384,4 +384,58 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+### Frontend-backend field name mismatches — silent data display failures
+**Date:** 2026-03-20
+**Symptom:** Data exists in DB but never displays in the UI. No errors in console. Fields show "?" or "—" or empty.
+**Root Cause:** Frontend reads a different property name than what the backend returns from Supabase `SELECT *`. Common pattern: backend stores `items_json`, `data_json`, `cached_lead_count`, `stripe_payment_link` but frontend reads `items`, `data`, `lead_count`, `payment_link`.
+**Fix:** Align frontend property names to match the actual DB column names returned by Supabase. Affected files: SmartListsPage.jsx, FormBuilderPage.jsx, InvoicesPage.jsx.
+**Prevention:** When creating a new page that reads from a Supabase table, verify the column names in the migration SQL file. The backend uses `SELECT *` which returns raw column names — do not assume camelCase or shortened names.
+
+---
+
+### Frontend-backend filter key mismatches — filters silently ignored
+**Date:** 2026-03-20
+**Symptom:** Smart Lists filters appear to work (no errors) but return all leads regardless of filter values.
+**Root Cause:** Frontend `emptyFilters` used keys `statuses`, `temperature`, `tags` but backend `_apply_filters()` expected `status`, `lead_temperature`, `tags_include`. Since `filter_json` is saved as JSONB and re-read by the backend, mismatched keys are silently skipped.
+**Fix:** Updated frontend filter keys to match backend expectations.
+**Prevention:** When building filter UIs, check the backend filter-parsing function for the exact key names it reads with `.get()`.
+
+---
+
+### Frontend request body mismatch — 422 errors on actions
+**Date:** 2026-03-20
+**Symptom:** Pipeline drag-drop and invoice mark-paid fail with 422 Unprocessable Entity.
+**Root Cause:** (1) PipelinePage sent `{ new_stage: ... }` but backend Pydantic model expected `{ status: ... }`. (2) markInvoicePaid sent no body but backend expected a Pydantic model body (even with all-optional fields, FastAPI requires valid JSON).
+**Fix:** Corrected field name to `status` and added `body: {}` to markInvoicePaid.
+**Prevention:** Always check the backend Pydantic request model field names before writing the frontend API call. For POST/PUT endpoints with Pydantic Body params, always send at least `{}`.
+
+---
+
+### Frontend reads nested property for top-level column
+**Date:** 2026-03-20
+**Symptom:** Form active/inactive status badge always shows "Active" regardless of actual state.
+**Root Cause:** FormBuilderPage read `form.settings_json?.is_active` but `is_active` is a top-level column on the `forms` table, not nested inside `settings_json`. Since `undefined !== false` evaluates to `true`, all forms appeared active.
+**Fix:** Changed to `form.is_active !== false`.
+**Prevention:** Check the migration SQL to distinguish between top-level columns and JSONB-nested fields before accessing properties.
+
+---
+
+### conversations table uses client_id — not tenant_id (regression of lead capture bug)
+**Date:** 2026-03-20
+**Symptom:** Inbox assign, reply, notes, and conversation tag updates all return 404 "Conversation not found" despite conversations existing in the database.
+**Root Cause:** `conversation_inbox.py` and `auth.py` queried the `conversations` table with `.eq("tenant_id", tenant_id)`, but the conversations table FK column is `client_id` (same as the leads table). This is a regression of the original `client_id` vs `tenant_id` bug pattern.
+**Fix:** Changed all conversations-table queries in `conversation_inbox.py` (4 locations) and `auth.py` `update_conversation_tags` (2 locations) from `tenant_id` to `client_id`.
+**Prevention:** Both `leads` and `conversations` tables use `client_id` as their FK to tenants — NEVER use `tenant_id` when querying either table. This is now documented in CLAUDE.md.
+
+---
+
+### Frontend passes session_id but backend expects UUID — inbox operations broken
+**Date:** 2026-03-20
+**Symptom:** All inbox operations (assign, notes, reply) return 404 even after fixing client_id. Conversations exist but can't be found.
+**Root Cause:** ConversationsPage.jsx stores `conv.session_id` as the selected identifier and passes it to all inbox API calls. But the backend `conversation_inbox.py` looked up conversations by `.eq("id", conversation_id)` — the UUID primary key. Since session_id and UUID id are different values, no matches were found.
+**Fix:** Added `_find_conversation()` helper that tries UUID lookup first, then falls back to session_id + client_id lookup.
+**Prevention:** When building endpoints that receive IDs from the frontend, verify what the frontend actually sends (check the React component's state and API call). Don't assume UUID — the frontend may use a natural key like session_id.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
