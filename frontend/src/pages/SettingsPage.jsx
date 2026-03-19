@@ -875,7 +875,7 @@ export default function SettingsPage({ onNavigate }) {
                   className="btn-secondary"
                   onClick={() => {
                     navigator.clipboard.writeText(`https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}`)
-                      .catch(() => {});
+                      .catch(() => { /* clipboard unavailable in insecure context */ });
                   }}
                   style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                 >
@@ -911,7 +911,7 @@ export default function SettingsPage({ onNavigate }) {
                   onClick={() => {
                     navigator.clipboard.writeText(
                       `<iframe\n  src="https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border:none;border-radius:12px;"\n></iframe>`
-                    ).catch(() => {});
+                    ).catch(() => { /* clipboard unavailable in insecure context */ });
                   }}
                   style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                 >

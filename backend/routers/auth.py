@@ -737,7 +737,7 @@ async def update_conversation_tags(
     existing = (
         db.table("conversations")
         .select("id")
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .eq("session_id", session_id)
         .limit(1)
         .execute()
@@ -746,7 +746,7 @@ async def update_conversation_tags(
         db.table("conversations").update({"tags": tags}).eq("id", existing.data[0]["id"]).execute()
     else:
         db.table("conversations").insert({
-            "tenant_id": tenant_id,
+            "client_id": tenant_id,
             "session_id": session_id,
             "tags": tags,
         }).execute()

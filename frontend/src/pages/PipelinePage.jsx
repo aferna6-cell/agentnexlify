@@ -404,7 +404,7 @@ export default function PipelinePage() {
     setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, status: newStage } : l)));
     setMovingId(leadId);
     try {
-      await movePipelineLead(user.tenantId, token, leadId, { new_stage: newStage });
+      await movePipelineLead(user.tenantId, token, leadId, { status: newStage });
       setError(null);
     } catch (err) {
       setLeads(prev);

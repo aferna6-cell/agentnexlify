@@ -450,7 +450,7 @@ export default function FormBuilderPage() {
   // ---- Derived stats ----
   const totalForms = stats?.total_forms ?? forms.length;
   const totalSubmissions = stats?.total_submissions ?? 0;
-  const activeForms = stats?.active_forms ?? forms.filter((f) => f.settings_json?.is_active !== false).length;
+  const activeForms = stats?.active_forms ?? forms.filter((f) => f.is_active !== false).length;
   const conversionRate = stats?.conversion_rate ?? 0;
 
   if (loading) return <SkeletonLoader />;
@@ -544,7 +544,7 @@ export default function FormBuilderPage() {
 
             {submissions.map((sub, idx) => {
               const isExpanded = expandedSubId === sub.id;
-              const submissionData = sub.data || sub.submission_data || {};
+              const submissionData = sub.data_json || sub.data || sub.submission_data || {};
               const summaryParts = Object.values(submissionData).filter(Boolean).slice(0, 3);
               const summaryText = summaryParts.join(" / ") || "—";
 
@@ -1188,7 +1188,7 @@ export default function FormBuilderPage() {
 
           {forms.map((form) => {
             const isDeleting = deletingIds.has(form.id);
-            const isActive = form.settings_json?.is_active !== false;
+            const isActive = form.is_active !== false;
             const subCount = form.submission_count ?? form.submissions_count ?? 0;
 
             return (

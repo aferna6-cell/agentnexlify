@@ -75,7 +75,7 @@ async def submit_survey(req: SurveySubmit, request: Request):
         if conv.data:
             lead_id = conv.data[0].get("lead_id")
     except Exception:
-        pass
+        logger.warning("CSAT: failed to look up lead_id for session %s", req.session_id, exc_info=True)
 
     # Store the rating
     try:

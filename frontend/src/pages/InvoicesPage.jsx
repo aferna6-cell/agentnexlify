@@ -267,7 +267,7 @@ export default function InvoicesPage() {
 
   const handleCopyPaymentLink = (invoice, e) => {
     if (e) e.stopPropagation();
-    const link = invoice.payment_link || `${window.location.origin}/pay/${invoice.id}`;
+    const link = invoice.stripe_payment_link || `${window.location.origin}/pay/${invoice.id}`;
     navigator.clipboard.writeText(link).then(() => {
       setCopiedId(invoice.id);
       setTimeout(() => setCopiedId(null), 2000);
@@ -475,7 +475,7 @@ export default function InvoicesPage() {
 
           {filteredInvoices.map((inv) => {
             const isDeleting = deletingIds.has(inv.id);
-            const total = calcTotal(inv.items || [], inv.tax_rate || 0);
+            const total = calcTotal(inv.items_json || [], inv.tax_rate || 0);
             const canSend = inv.status === "draft" || inv.status === "sent";
             const canPay = inv.status === "sent" || inv.status === "viewed" || inv.status === "overdue";
 
@@ -634,7 +634,7 @@ export default function InvoicesPage() {
             </div>
 
             {/* Line Items */}
-            {(detailInvoice.items || []).length > 0 && (
+            {(detailInvoice.items_json || []).length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
                   Items
@@ -646,7 +646,7 @@ export default function InvoicesPage() {
                     <span style={{ textAlign: "right" }}>Unit Price</span>
                     <span style={{ textAlign: "right" }}>Total</span>
                   </div>
-                  {detailInvoice.items.map((item, idx) => (
+                  {detailInvoice.items_json.map((item, idx) => (
                     <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "1px solid var(--border-color)", fontSize: "0.85rem" }}>
                       <span>{item.description}</span>
                       <span style={{ textAlign: "right" }}>{item.quantity}</span>
@@ -659,7 +659,7 @@ export default function InvoicesPage() {
                 {/* Totals */}
                 <div style={{ padding: "8px 12px", fontSize: "0.85rem" }}>
                   {(() => {
-                    const sub = calcSubtotal(detailInvoice.items);
+                    const sub = calcSubtotal(detailInvoice.items_json);
                     const taxRate = detailInvoice.tax_rate || 0;
                     const taxAmt = sub * (taxRate / 100);
                     const total = sub + taxAmt;
@@ -690,7 +690,7 @@ export default function InvoicesPage() {
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input
                   readOnly
-                  value={detailInvoice.payment_link || `${window.location.origin}/pay/${detailInvoice.id}`}
+                  value={detailInvoice.stripe_payment_link || `${window.location.origin}/pay/${detailInvoice.id}`}
                   style={{ flex: 1, fontSize: "0.8rem", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
                 />
                 <button

@@ -1102,7 +1102,7 @@ export function sendInvoice(tenantId, token, invoiceId, data) {
   return request(`/api/v1/invoices/${tenantId}/${invoiceId}/send`, { method: "POST", token, body: data });
 }
 export function markInvoicePaid(tenantId, token, invoiceId) {
-  return request(`/api/v1/invoices/${tenantId}/${invoiceId}/mark-paid`, { method: "POST", token });
+  return request(`/api/v1/invoices/${tenantId}/${invoiceId}/mark-paid`, { method: "POST", token, body: {} });
 }
 export function fetchInvoiceStats(tenantId, token) {
   return request(`/api/v1/invoices/${tenantId}/stats`, { token });

@@ -41,11 +41,11 @@ const STATUS_BADGE_COLORS = {
 };
 
 const emptyFilters = {
-  statuses: [],
-  temperature: "",
+  status: [],
+  lead_temperature: "",
   min_score: "",
   max_score: "",
-  tags: "",
+  tags_include: [],
   assigned_to: "",
   created_after: "",
   created_before: "",
@@ -97,9 +97,9 @@ function StatusBadge({ status }) {
 
 function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount }) {
   const toggleStatus = (val) => {
-    const cur = filters.statuses || [];
+    const cur = filters.status || [];
     const next = cur.includes(val) ? cur.filter((s) => s !== val) : [...cur, val];
-    onChange({ ...filters, statuses: next });
+    onChange({ ...filters, status: next });
   };
 
   const set = (key, val) => onChange({ ...filters, [key]: val });
@@ -107,11 +107,11 @@ function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount 
   const clearAll = () => onChange({ ...emptyFilters });
 
   const hasAnyFilter =
-    (filters.statuses || []).length > 0 ||
-    filters.temperature ||
+    (filters.status || []).length > 0 ||
+    filters.lead_temperature ||
     filters.min_score ||
     filters.max_score ||
-    filters.tags ||
+    (filters.tags_include || []).length > 0 ||
     filters.assigned_to ||
     filters.created_after ||
     filters.created_before ||
@@ -158,7 +158,7 @@ function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount 
         <label style={labelStyle}>Status</label>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {STATUS_OPTIONS.map((opt) => {
-            const checked = (filters.statuses || []).includes(opt.value);
+            const checked = (filters.status || []).includes(opt.value);
             return (
               <label
                 key={opt.value}
@@ -193,8 +193,8 @@ function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount 
       <div style={rowStyle}>
         <label style={labelStyle}>Temperature</label>
         <select
-          value={filters.temperature || ""}
-          onChange={(e) => set("temperature", e.target.value)}
+          value={filters.lead_temperature || ""}
+          onChange={(e) => set("lead_temperature", e.target.value)}
           style={{ width: "100%", fontSize: "0.85rem" }}
         >
           {TEMPERATURE_OPTIONS.map((opt) => (
@@ -238,8 +238,8 @@ function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount 
         <label style={labelStyle}>Tags (comma-separated)</label>
         <input
           type="text"
-          value={filters.tags || ""}
-          onChange={(e) => set("tags", e.target.value)}
+          value={(filters.tags_include || []).join(", ")}
+          onChange={(e) => set("tags_include", e.target.value ? e.target.value.split(",").map(t => t.trim()).filter(Boolean) : [])}
           placeholder="e.g. interested, follow-up"
           style={{ width: "100%", fontSize: "0.85rem" }}
         />
@@ -313,25 +313,7 @@ function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount 
         />
       </div>
 
-      {/* Preview button */}
-      <button
-        onClick={onPreview}
-        disabled={previewing}
-        style={{
-          width: "100%",
-          padding: "10px",
-          borderRadius: 8,
-          border: "1px solid var(--accent)",
-          background: "var(--accent-dim)",
-          color: "var(--accent)",
-          cursor: previewing ? "wait" : "pointer",
-          fontSize: "0.85rem",
-          fontWeight: 600,
-          transition: "all 0.15s ease",
-        }}
-      >
-        {previewing ? "Checking..." : previewCount !== null ? `Preview: ${previewCount} lead${previewCount !== 1 ? "s" : ""} match` : "Preview Matching Leads"}
-      </button>
+      {/* Preview: requires saved list to query leads — only shown when editing */}
     </div>
   );
 }
@@ -687,7 +669,7 @@ export default function SmartListsPage({ onNavigate }) {
       const data = await refreshSmartList(user.tenantId, token, listId);
       // Update the count in the list
       setSmartLists((prev) =>
-        prev.map((l) => (l.id === listId ? { ...l, lead_count: data.lead_count ?? l.lead_count } : l))
+        prev.map((l) => (l.id === listId ? { ...l, cached_lead_count: data.cached_lead_count ?? l.cached_lead_count } : l))
       );
       // If it's the selected list, reload leads too
       if (listId === selectedListId) {
@@ -868,7 +850,7 @@ export default function SmartListsPage({ onNavigate }) {
                           marginLeft: 8,
                         }}
                       >
-                        {isRefreshing ? "..." : (list.lead_count ?? "?")}
+                        {isRefreshing ? "..." : (list.cached_lead_count ?? "?")}
                       </span>
                     </div>
                     {list.description && (
@@ -1077,12 +1059,12 @@ export default function SmartListsPage({ onNavigate }) {
                       ? (() => { try { return JSON.parse(selectedList.filter_json); } catch { return {}; } })()
                       : selectedList.filter_json || {};
                     const badges = [];
-                    if ((f.statuses || []).length > 0)
-                      badges.push(`Status: ${f.statuses.join(", ")}`);
-                    if (f.temperature) badges.push(`Temp: ${f.temperature}`);
+                    if ((f.status || []).length > 0)
+                      badges.push(`Status: ${f.status.join(", ")}`);
+                    if (f.lead_temperature) badges.push(`Temp: ${f.lead_temperature}`);
                     if (f.min_score) badges.push(`Score >= ${f.min_score}`);
                     if (f.max_score) badges.push(`Score <= ${f.max_score}`);
-                    if (f.tags) badges.push(`Tags: ${f.tags}`);
+                    if ((f.tags_include || []).length > 0) badges.push(`Tags: ${f.tags_include.join(", ")}`);
                     if (f.assigned_to) badges.push(`Assigned: ${f.assigned_to}`);
                     if (f.created_after) badges.push(`After: ${f.created_after}`);
                     if (f.created_before) badges.push(`Before: ${f.created_before}`);

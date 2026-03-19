@@ -33,6 +33,32 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+def _find_conversation(db, conversation_id: str, tenant_id: str, select: str = "id"):
+    """Look up a conversation by UUID id or session_id (frontend passes session_id)."""
+    conv = (
+        db.table("conversations")
+        .select(select)
+        .eq("id", conversation_id)
+        .eq("client_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if conv.data:
+        return conv.data[0]
+    # Fallback: try session_id
+    conv = (
+        db.table("conversations")
+        .select(select)
+        .eq("session_id", conversation_id)
+        .eq("client_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if conv.data:
+        return conv.data[0]
+    return None
+
+
 # --- Conversation Assignment ---
 
 @router.put("/{tenant_id}/conversations/{conversation_id}/assign")
@@ -47,17 +73,11 @@ async def assign_conversation(
 
     db = get_supabase()
 
-    # Verify conversation belongs to tenant
-    conv = (
-        db.table("conversations")
-        .select("id")
-        .eq("id", conversation_id)
-        .eq("tenant_id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not conv.data:
+    # Verify conversation belongs to tenant (supports UUID or session_id)
+    conv_row = _find_conversation(db, conversation_id, tenant_id)
+    if not conv_row:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    conv_uuid = conv_row["id"]
 
     # If assigning, verify team member exists
     assignee_name = None
@@ -78,8 +98,8 @@ async def assign_conversation(
     result = (
         db.table("conversations")
         .update({"assigned_to": req.assigned_to})
-        .eq("id", conversation_id)
-        .eq("tenant_id", tenant_id)
+        .eq("id", conv_uuid)
+        .eq("client_id", tenant_id)
         .execute()
     )
 
@@ -109,10 +129,16 @@ async def list_notes(
     _verify_tenant(claims, tenant_id)
 
     db = get_supabase()
+    # Resolve conversation_id (may be UUID or session_id from frontend)
+    conv_row = _find_conversation(db, conversation_id, tenant_id)
+    if not conv_row:
+        return {"notes": []}
+    conv_uuid = conv_row["id"]
+
     result = (
         db.table("conversation_notes")
         .select("*, team_members(name)")
-        .eq("conversation_id", conversation_id)
+        .eq("conversation_id", conv_uuid)
         .eq("tenant_id", tenant_id)
         .order("created_at", desc=False)
         .execute()
@@ -132,6 +158,12 @@ async def create_note(
 
     db = get_supabase()
 
+    # Resolve conversation_id (may be UUID or session_id from frontend)
+    conv_row = _find_conversation(db, conversation_id, tenant_id)
+    if not conv_row:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv_uuid = conv_row["id"]
+
     # Get team member ID from claims
     team_member_id = claims.get("team_member_id")
     if not team_member_id:
@@ -150,7 +182,7 @@ async def create_note(
             raise HTTPException(status_code=400, detail="Could not identify note author")
 
     data = {
-        "conversation_id": conversation_id,
+        "conversation_id": conv_uuid,
         "tenant_id": tenant_id,
         "author_id": team_member_id,
         "content": req.content.strip(),
@@ -226,24 +258,15 @@ async def reply_to_conversation(
 
     db = get_supabase()
 
-    # 1. Verify conversation belongs to tenant and get session_id
+    # 1. Verify conversation belongs to tenant and get session_id (supports UUID or session_id)
     try:
-        conv = (
-            db.table("conversations")
-            .select("id, session_id, messages, lead_id")
-            .eq("id", conversation_id)
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
+        conversation = _find_conversation(db, conversation_id, tenant_id, select="id, session_id, messages, lead_id")
     except Exception as e:
         logger.error("reply: conversation lookup failed conv=%s tenant=%s: %s", conversation_id, tenant_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to look up conversation")
 
-    if not conv.data:
+    if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-
-    conversation = conv.data[0]
     session_id = conversation.get("session_id")
     if not session_id:
         raise HTTPException(status_code=400, detail="Conversation has no session_id")
@@ -285,7 +308,7 @@ async def reply_to_conversation(
         db.table("conversations").update({
             "messages": existing_messages,
             "last_message_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", conversation_id).eq("tenant_id", tenant_id).execute()
+        }).eq("id", conversation["id"]).eq("client_id", tenant_id).execute()
     except Exception:
         # Non-fatal: chat_messages is the canonical store.
         # The conversations JSONB is legacy and unreliable.
