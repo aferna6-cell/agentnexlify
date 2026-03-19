@@ -338,6 +338,60 @@ async def send_lead_email(
     return {"success": True, "detail": "Email sent"}
 
 
+class QuickSmsRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=1600)
+
+
+@router.post("/{tenant_id}/{lead_id}/sms")
+async def send_lead_sms(
+    tenant_id: str,
+    lead_id: str,
+    req: QuickSmsRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Send a quick follow-up SMS to a lead."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    lead_result = (
+        db.table("leads")
+        .select("id, phone, name")
+        .eq("id", lead_id)
+        .eq("client_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not lead_result.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    lead = lead_result.data[0]
+    if not lead.get("phone"):
+        raise HTTPException(status_code=400, detail="Lead has no phone number")
+
+    from backend.services.twilio_service import send_sms
+    success = await send_sms(to=lead["phone"], body=req.message)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send SMS")
+
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="sms_sent",
+        description=f"Follow-up SMS sent to {lead.get('name', lead['phone'])}",
+        lead_id=lead_id,
+    )
+
+    # Auto-update lead status from "new" to "contacted"
+    try:
+        current = db.table("leads").select("status").eq("id", lead_id).limit(1).execute()
+        if current.data and current.data[0].get("status") == "new":
+            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).execute()
+    except Exception:
+        logger.warning("Failed to auto-update lead status after SMS", exc_info=True)
+
+    return {"success": True, "detail": "SMS sent"}
+
+
 @router.get("/{tenant_id}/duplicates")
 async def find_duplicate_leads(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """Find potential duplicate leads by email or phone."""

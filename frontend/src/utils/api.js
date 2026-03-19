@@ -156,6 +156,13 @@ export function sendLeadEmail(tenantId, token, leadId, data) {
     body: data,
   });
 }
+export function sendLeadSms(tenantId, token, leadId, message) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}/sms`, {
+    method: "POST",
+    token,
+    body: { message },
+  });
+}
 
 export function assignLead(tenantId, token, leadId, assignedTo) {
   return request(`/api/v1/leads/${tenantId}/${leadId}/assign`, {

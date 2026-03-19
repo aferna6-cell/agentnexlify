@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore, sendLeadEmail, assignLead, fetchTeamMembers, fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api";
+import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, fetchTeamMembers, fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },
@@ -179,6 +179,10 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   const [emailBody, setEmailBody] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState(null);
+  const [showSms, setShowSms] = useState(false);
+  const [smsBody, setSmsBody] = useState("");
+  const [sendingSms, setSendingSms] = useState(false);
+  const [smsStatus, setSmsStatus] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [assignedTo, setAssignedTo] = useState(lead.assigned_to || "");
 
@@ -307,6 +311,22 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     }
   };
 
+  const handleSendSms = async () => {
+    if (!smsBody.trim()) return;
+    setSendingSms(true);
+    setSmsStatus(null);
+    try {
+      await sendLeadSms(user.tenantId, token, lead.id, smsBody);
+      setSmsStatus("sent");
+      setSmsBody("");
+      setShowSms(false);
+    } catch (err) {
+      setSmsStatus(err.body?.detail || err.message || "Failed to send");
+    } finally {
+      setSendingSms(false);
+    }
+  };
+
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer" onClick={(e) => e.stopPropagation()}>
@@ -393,24 +413,42 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
             </div>
             <div className="drawer-field">
               <label className="drawer-label">Phone</label>
-              <input className="drawer-input" type="tel" value={form.phone} onChange={handleChange("phone")} placeholder="(555) 123-4567" />
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input className="drawer-input" type="tel" value={form.phone} onChange={handleChange("phone")} placeholder="(555) 123-4567" style={{ flex: 1 }} />
+                {form.phone && (
+                  <a href={`tel:${form.phone}`} title="Call" style={{ color: "var(--accent)", fontSize: "1.1rem", textDecoration: "none", flexShrink: 0 }}>
+                    &#9742;
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Quick Email */}
-          {form.email && (
+          {/* Quick Follow-up */}
+          {(form.email || form.phone) && (
             <div className="intel-section">
               <div className="intel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 Quick Follow-up
-                {!showEmail && (
-                  <button className="btn-sm" onClick={() => setShowEmail(true)}>Send Email</button>
-                )}
+                <div style={{ display: "flex", gap: 6 }}>
+                  {form.email && !showEmail && !showSms && (
+                    <button className="btn-sm" onClick={() => { setShowEmail(true); setShowSms(false); }}>Email</button>
+                  )}
+                  {form.phone && !showSms && !showEmail && (
+                    <button className="btn-sm" onClick={() => { setShowSms(true); setShowEmail(false); }} style={{ background: "var(--green, #22c55e)" }}>SMS</button>
+                  )}
+                </div>
               </div>
               {emailStatus === "sent" && (
                 <div style={{ color: "var(--green, #22c55e)", fontSize: "0.85rem", marginBottom: 8 }}>Email sent successfully</div>
               )}
               {emailStatus && emailStatus !== "sent" && (
                 <div style={{ color: "var(--red, #ef4444)", fontSize: "0.85rem", marginBottom: 8 }}>{emailStatus}</div>
+              )}
+              {smsStatus === "sent" && (
+                <div style={{ color: "var(--green, #22c55e)", fontSize: "0.85rem", marginBottom: 8 }}>SMS sent successfully</div>
+              )}
+              {smsStatus && smsStatus !== "sent" && (
+                <div style={{ color: "var(--red, #ef4444)", fontSize: "0.85rem", marginBottom: 8 }}>{smsStatus}</div>
               )}
               {showEmail && (
                 <>
@@ -424,9 +462,25 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                     <button className="btn-sm" onClick={handleSendEmail} disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}>
-                      {sendingEmail ? "Sending..." : "Send"}
+                      {sendingEmail ? "Sending..." : "Send Email"}
                     </button>
                     <button className="btn-sm" onClick={() => setShowEmail(false)} style={{ background: "var(--bg-darker, #1a1a2e)" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
+              {showSms && (
+                <>
+                  <div className="drawer-field">
+                    <label className="drawer-label">Text Message</label>
+                    <textarea className="drawer-textarea" value={smsBody} onChange={(e) => setSmsBody(e.target.value)} placeholder="Hi, just following up on your inquiry..." rows={3} maxLength={1600} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <button className="btn-sm" onClick={handleSendSms} disabled={sendingSms || !smsBody.trim()} style={{ background: "var(--green, #22c55e)" }}>
+                      {sendingSms ? "Sending..." : "Send SMS"}
+                    </button>
+                    <button className="btn-sm" onClick={() => setShowSms(false)} style={{ background: "var(--bg-darker, #1a1a2e)" }}>
                       Cancel
                     </button>
                   </div>
