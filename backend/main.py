@@ -142,9 +142,9 @@ async def _recover_stalled_campaigns():
         if not stalled.data:
             return 0
         stalled_ids = [r["id"] for r in stalled.data]
-        for campaign_id in stalled_ids:
-            db.table("marketing_campaigns").update({"status": "failed"}).eq("id", campaign_id).execute()
-            logger.warning("Marked stalled campaign %s as failed", campaign_id)
+        db.table("marketing_campaigns").update({"status": "failed"}).in_("id", stalled_ids).execute()
+        for cid in stalled_ids:
+            logger.warning("Marked stalled campaign %s as failed", cid)
         return len(stalled_ids)
     except Exception:
         logger.exception("_recover_stalled_campaigns failed")

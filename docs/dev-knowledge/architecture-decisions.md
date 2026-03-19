@@ -286,4 +286,19 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** All 9 background automation tasks (sequences, reminders, reviews, onboarding, monthly reports, portal links, missed calls, review alerts, no-response) run in a single asyncio loop with 60-second intervals and 0-30s random worker stagger.
 **Why:** Simple to operate (one loop, one log stream), each task has its own try/except so failures are isolated, and the stagger reduces duplicate execution across 4 Railway workers. Individual tasks are idempotent (dedup checks). If any task becomes too slow, it can be extracted to its own loop or Railway cron job.
 
+### Public embeddable pages: server-rendered HTML from FastAPI
+**Date:** 2026-03-20
+**Decision:** Public embeddable content (booking page, public forms) is rendered as self-contained HTML responses from FastAPI endpoints, not as React routes. The HTML includes inline CSS and vanilla JS — no external dependencies.
+**Why:** Embeddable content loaded in iframes on third-party websites can't depend on our React app or build system. Self-contained HTML with inline styles ensures the embed works regardless of the host page's CSS or JS. The booking page (booking_page.py) and forms embed (forms.py /embed) both follow this pattern.
+
+### Pipeline board: backend-driven stages, not frontend constants
+**Date:** 2026-03-20
+**Decision:** The Pipeline page fetches stages from `GET /pipeline/{tenantId}/board` instead of using hardcoded stage constants. The backend seeds default stages on first access and supports custom stages per tenant.
+**Why:** Hardcoded frontend stages ("new", "contacted", "quoted", "won", "lost") didn't match backend defaults ("New Lead", "Contacted", "Qualified", "Proposal Sent", "Won", "Lost"), causing lead grouping failures. Making the frontend dynamic enables future per-tenant pipeline customization.
+
+### Conversation lookup: dual-key resolution (UUID + session_id)
+**Date:** 2026-03-20
+**Decision:** The `_find_conversation()` helper in conversation_inbox.py tries UUID lookup first, then falls back to session_id + client_id. This accommodates both internal callers (using UUID) and the frontend (which tracks conversations by session_id).
+**Why:** The ConversationsPage stores and passes `session_id` as the conversation identifier, but the backend originally expected the UUID primary key. Rather than changing the frontend (which would require the conversations list to include the UUID alongside session_id and a refactor of all state management), the backend now accepts either.
+
 _Add new decisions when significant architectural choices are made._

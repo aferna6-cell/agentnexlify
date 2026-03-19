@@ -5,6 +5,7 @@ import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
 
@@ -322,20 +323,22 @@ async def list_members(tenant_id: str, claims: dict = Depends(_get_current_tenan
 # ── PUT /members/{tenant_id}/{member_id} ───────────────────
 
 
+class UpdateMemberRoleRequest(BaseModel):
+    role: str = Field(..., pattern=r"^(admin|member|viewer)$")
+
+
 @router.put("/members/{tenant_id}/{member_id}")
 async def update_member_role(
     tenant_id: str,
     member_id: str,
-    request_body: dict,
+    req: UpdateMemberRoleRequest,
     claims: dict = Depends(_get_current_tenant),
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     _require_owner(claims)
 
-    new_role = request_body.get("role")
-    if new_role not in ("admin", "member", "viewer"):
-        raise HTTPException(status_code=400, detail="Invalid role")
+    new_role = req.role
 
     db = get_supabase()
 
