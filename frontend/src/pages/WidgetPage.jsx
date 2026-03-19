@@ -182,9 +182,18 @@ export default function WidgetPage() {
           <div className="embed-code-block">
             <code>{embedCode}</code>
           </div>
-          <button className="btn-primary" onClick={handleCopy} style={{ marginTop: "0.75rem" }}>
-            {copied ? "Copied!" : "Copy Embed Code"}
-          </button>
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+            <button className="btn-primary" onClick={handleCopy}>
+              {copied ? "Copied!" : "Copy Embed Code"}
+            </button>
+            <a
+              className="btn-secondary"
+              href={`mailto:?subject=${encodeURIComponent("Chat widget install instructions")}&body=${encodeURIComponent(`Hi,\n\nPlease add this code snippet before the closing </body> tag on our website:\n\n${embedCode}\n\nThis will add our AI chat widget to the site. No other changes are needed.\n\nThanks!`)}`}
+              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+            >
+              Email to Developer
+            </a>
+          </div>
         </div>
 
         {/* Online / Offline Toggle */}

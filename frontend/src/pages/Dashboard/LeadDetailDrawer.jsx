@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, fetchTeamMembers, fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api";
+import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, fetchTeamMembers, fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues, requestReviewForLead } from "../../utils/api";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },
@@ -185,6 +185,8 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   const [smsStatus, setSmsStatus] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [assignedTo, setAssignedTo] = useState(lead.assigned_to || "");
+  const [sendingReview, setSendingReview] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState(null);
 
   // Custom Fields state
   const [customFieldDefs, setCustomFieldDefs] = useState([]);
@@ -327,6 +329,19 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     }
   };
 
+  const handleRequestReview = async () => {
+    setSendingReview(true);
+    setReviewStatus(null);
+    try {
+      const result = await requestReviewForLead(user.tenantId, token, lead.id);
+      setReviewStatus(`Review request sent via ${result.sent_via.join(" & ")}`);
+    } catch (err) {
+      setReviewStatus(err.body?.detail || err.message || "Failed to send review request");
+    } finally {
+      setSendingReview(false);
+    }
+  };
+
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer" onClick={(e) => e.stopPropagation()}>
@@ -436,6 +451,17 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
                   {form.phone && !showSms && !showEmail && (
                     <button className="btn-sm" onClick={() => { setShowSms(true); setShowEmail(false); }} style={{ background: "var(--green, #22c55e)" }}>SMS</button>
                   )}
+                  {!showEmail && !showSms && (
+                    <button
+                      className="btn-sm"
+                      onClick={handleRequestReview}
+                      disabled={sendingReview}
+                      style={{ background: "var(--purple, #8b5cf6)" }}
+                      title="Send a review request via email and/or SMS"
+                    >
+                      {sendingReview ? "Sending..." : "Request Review"}
+                    </button>
+                  )}
                 </div>
               </div>
               {emailStatus === "sent" && (
@@ -449,6 +475,9 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               )}
               {smsStatus && smsStatus !== "sent" && (
                 <div style={{ color: "var(--red, #ef4444)", fontSize: "0.85rem", marginBottom: 8 }}>{smsStatus}</div>
+              )}
+              {reviewStatus && (
+                <div style={{ color: reviewStatus.startsWith("Review request sent") ? "var(--green, #22c55e)" : "var(--red, #ef4444)", fontSize: "0.85rem", marginBottom: 8 }}>{reviewStatus}</div>
               )}
               {showEmail && (
                 <>

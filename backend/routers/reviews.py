@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
+from backend.services.email_sender import send_email, build_unsubscribe_url
+from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -376,3 +378,98 @@ async def generate_ai_draft(
     }).eq("id", review_id).execute()
 
     return {"draft": draft}
+
+
+@router.post("/{tenant_id}/request-review/{lead_id}")
+async def send_review_request(
+    tenant_id: str,
+    lead_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Send a one-click review request to a specific lead via email and/or SMS."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+
+    # Load lead
+    lead_result = db.table("leads").select("name, email, phone, unsubscribed").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+    if not lead_result.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = lead_result.data[0]
+
+    if lead.get("unsubscribed"):
+        raise HTTPException(status_code=400, detail="Lead has unsubscribed from communications")
+
+    if not lead.get("email") and not lead.get("phone"):
+        raise HTTPException(status_code=400, detail="Lead has no email or phone number")
+
+    # Load tenant for business name + review link
+    tenant_result = db.table("tenants").select("business_name, google_review_link, google_place_id").eq("id", tenant_id).limit(1).execute()
+    if not tenant_result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant = tenant_result.data[0]
+
+    # Build review link
+    place_id = tenant.get("google_place_id")
+    if place_id:
+        review_link = f"https://search.google.com/local/writereview?placeid={place_id}"
+    else:
+        review_link = tenant.get("google_review_link") or ""
+
+    if not review_link:
+        raise HTTPException(status_code=400, detail="No review link configured — add your Google review link in Settings")
+
+    business_name = tenant.get("business_name") or "Our Team"
+    customer_name = lead.get("name") or "there"
+    sent_channels = []
+
+    # Send email
+    if lead.get("email"):
+        unsub_url = build_unsubscribe_url(lead_id)
+        subject = f"How was your experience with {business_name}?"
+        body = (
+            f"<h2>Hi {customer_name},</h2>"
+            f"<p>Thank you for choosing <strong>{business_name}</strong>! "
+            f"We hope everything went well.</p>"
+            f"<p>We'd really appreciate it if you could take a moment to share your experience:</p>"
+            f'<p style="text-align:center;margin:20px 0;">'
+            f'<a href="{review_link}" style="background:#4f46e5;color:#fff;padding:12px 24px;'
+            f'border-radius:6px;text-decoration:none;font-weight:600;">Leave a Review</a></p>'
+            f"<p>Your feedback helps us improve and helps others find us. Thank you!</p>"
+            f"<p>Best,<br>The {business_name} Team</p>"
+        )
+        try:
+            result = await send_email(to=lead["email"], subject=subject, body_html=body, tenant_id=tenant_id, unsubscribe_url=unsub_url)
+            if result.get("success"):
+                sent_channels.append("email")
+        except Exception:
+            logger.exception("Failed to send review request email to lead %s", lead_id)
+
+    # Send SMS
+    if lead.get("phone"):
+        sms_body = (
+            f"Hi {customer_name}, thanks for choosing {business_name}! "
+            f"We'd love your feedback. Leave a review here: {review_link}"
+        )
+        try:
+            sms_ok = await send_sms(to=lead["phone"], body=sms_body)
+            if sms_ok:
+                sent_channels.append("sms")
+        except Exception:
+            logger.exception("Failed to send review request SMS to lead %s", lead_id)
+
+    if not sent_channels:
+        raise HTTPException(status_code=500, detail="Failed to send review request")
+
+    # Log the activity
+    try:
+        db.table("activity_log").insert({
+            "tenant_id": tenant_id,
+            "lead_id": lead_id,
+            "activity_type": "review_request_sent",
+            "description": f"Review request sent via {', '.join(sent_channels)}",
+        }).execute()
+    except Exception:
+        logger.warning("Failed to log review request activity for lead %s", lead_id, exc_info=True)
+
+    return {"sent_via": sent_channels}

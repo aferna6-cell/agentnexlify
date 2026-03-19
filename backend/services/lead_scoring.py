@@ -17,6 +17,13 @@ _PRICING_KEYWORDS = ["price", "pricing", "cost", "fee", "rate", "charge", "quote
 _AVAILABILITY_KEYWORDS = ["available", "availability", "schedule", "appointment", "book", "when can", "open", "slot"]
 _SERVICES_KEYWORDS = ["service", "offer", "provide", "do you", "help with", "looking for", "need", "want"]
 _URGENCY_KEYWORDS = ["urgent", "asap", "today", "tomorrow", "right away", "immediately", "soon", "rush"]
+_EMERGENCY_KEYWORDS = [
+    "emergency", "leak", "flood", "flooded", "flooding", "burst", "broken",
+    "no hot water", "no heat", "no power", "overflowing", "sewage",
+    "gas smell", "smoke", "fire", "water damage", "mold",
+    "locked out", "break-in", "alarm", "pain", "severe",
+    "can't wait", "right now", "911", "help me",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +86,9 @@ def _score_intent(messages: list[dict[str, Any]]) -> tuple[int, dict]:
     if any(kw in text for kw in _URGENCY_KEYWORDS):
         points += 10
         breakdown["urgency"] = 10
+    if any(kw in text for kw in _EMERGENCY_KEYWORDS):
+        points += 15
+        breakdown["emergency"] = 15
 
     capped = min(points, 40)
     breakdown["total"] = capped
@@ -181,7 +191,9 @@ def score_lead(lead_id: str) -> dict[str, Any]:
     final_score = max(0, raw_score - decay)
 
     # 5. Compute temperature from final score
-    if final_score >= 70:
+    # Emergency keywords force "hot" regardless of score
+    has_emergency = int_bd.get("emergency", 0) > 0
+    if has_emergency or final_score >= 70:
         temperature = "hot"
     elif final_score >= 40:
         temperature = "warm"
@@ -206,6 +218,8 @@ def score_lead(lead_id: str) -> dict[str, Any]:
         factors.append(f"Interested in services (+{int_bd['services']})")
     if int_bd.get("urgency"):
         factors.append(f"Expressed urgency (+{int_bd['urgency']})")
+    if int_bd.get("emergency"):
+        factors.append(f"Emergency detected (+{int_bd['emergency']})")
     if rec_bd.get("total", 0) > 0:
         factors.append(f"Recent activity (+{rec_bd['total']})")
     if dec_bd.get("total", 0) > 0:

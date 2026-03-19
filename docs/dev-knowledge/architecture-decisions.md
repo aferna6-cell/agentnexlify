@@ -301,4 +301,14 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** The `_find_conversation()` helper in conversation_inbox.py tries UUID lookup first, then falls back to session_id + client_id. This accommodates both internal callers (using UUID) and the frontend (which tracks conversations by session_id).
 **Why:** The ConversationsPage stores and passes `session_id` as the conversation identifier, but the backend originally expected the UUID primary key. Rather than changing the frontend (which would require the conversations list to include the UUID alongside session_id and a refactor of all state management), the backend now accepts either.
 
+### Emergency detection in lead scoring — force "hot" temperature
+**Date:** 2026-03-19
+**Decision:** Added `_EMERGENCY_KEYWORDS` list separate from `_URGENCY_KEYWORDS`. Emergency keywords (leak, flood, broken, etc.) add +15 to intent score AND force `lead_temperature = "hot"` regardless of total score. This is a product-level decision: a lead saying "my pipe burst" should always be treated as hot even if they haven't provided contact info yet.
+**Why:** Service businesses (plumbers, HVAC, electricians) need emergency leads flagged immediately. The standard scoring algorithm might rate a brand-new lead with emergency language as "warm" (low engagement score), but the business owner needs to see it immediately.
+
+### One-click review request — immediate send, no delay
+**Date:** 2026-03-19
+**Decision:** The `POST /reviews/{tenant_id}/request-review/{lead_id}` endpoint sends review requests immediately (no delay_hours check). This is intentional: the automated `send_pending_review_requests` function respects the configured delay, but the manual one-click action represents explicit user intent and should fire instantly.
+**Why:** When a business owner clicks "Request Review" on a lead, they've already decided it's the right time. Adding a delay would be confusing.
+
 _Add new decisions when significant architectural choices are made._

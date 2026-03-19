@@ -164,6 +164,13 @@ export function sendLeadSms(tenantId, token, leadId, message) {
   });
 }
 
+export function requestReviewForLead(tenantId, token, leadId) {
+  return request(`/api/v1/reviews/${tenantId}/request-review/${leadId}`, {
+    method: "POST",
+    token,
+  });
+}
+
 export function assignLead(tenantId, token, leadId, assignedTo) {
   return request(`/api/v1/leads/${tenantId}/${leadId}/assign`, {
     method: "PUT",
