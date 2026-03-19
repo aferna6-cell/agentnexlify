@@ -430,12 +430,12 @@ export default function FormBuilderPage() {
 
   // ---- Embed helpers ----
   const getEmbedIframe = (form) => {
-    const url = `${EMBED_BASE}/api/v1/forms/public/${form.public_token || form.id}`;
-    return `<iframe src="${url}" width="100%" height="500" frameborder="0"></iframe>`;
+    const url = `${EMBED_BASE}/api/v1/forms/public/${form.public_token || form.id}/embed`;
+    return `<iframe src="${url}" width="100%" height="500" frameborder="0" style="border:none;border-radius:12px;"></iframe>`;
   };
 
   const getDirectLink = (form) => {
-    return `${EMBED_BASE}/api/v1/forms/public/${form.public_token || form.id}`;
+    return `${EMBED_BASE}/api/v1/forms/public/${form.public_token || form.id}/embed`;
   };
 
   const copyToClipboard = (text, type) => {

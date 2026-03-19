@@ -1,15 +1,23 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
-import { fetchLeads, movePipelineLead, createLead } from "../utils/api";
+import { fetchPipelineBoard, movePipelineLead, createLead } from "../utils/api";
 
-const PIPELINE_STAGES = [
-  { key: "new", label: "New", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
-  { key: "contacted", label: "Contacted", color: "#3b82f6", bg: "rgba(59,130,246,0.08)" },
-  { key: "quoted", label: "Quoted", color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
-  { key: "won", label: "Won", color: "#22c55e", bg: "rgba(34,197,94,0.08)" },
-  { key: "lost", label: "Lost", color: "#ef4444", bg: "rgba(239,68,68,0.08)" },
+const FALLBACK_STAGES = [
+  { name: "New Lead", sort_order: 0, color: "#3b82f6", is_won: false, is_lost: false },
+  { name: "Contacted", sort_order: 1, color: "#8b5cf6", is_won: false, is_lost: false },
+  { name: "Qualified", sort_order: 2, color: "#f59e0b", is_won: false, is_lost: false },
+  { name: "Proposal Sent", sort_order: 3, color: "#ec4899", is_won: false, is_lost: false },
+  { name: "Won", sort_order: 4, color: "#10b981", is_won: true, is_lost: false },
+  { name: "Lost", sort_order: 5, color: "#ef4444", is_won: false, is_lost: true },
 ];
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 const TEMPERATURE_COLORS = {
   hot: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", label: "Hot" },
@@ -32,13 +40,13 @@ function daysAgo(dateStr) {
   return `${days}d ago`;
 }
 
-function PipelineCard({ lead, onMove, onSelect, movingId }) {
+function PipelineCard({ lead, onMove, onSelect, movingId, stages }) {
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const temp = TEMPERATURE_COLORS[lead.lead_temperature] || null;
   const dealValue = formatCurrency(lead.deal_value);
   const isMoving = movingId === lead.id;
 
-  const otherStages = PIPELINE_STAGES.filter((s) => s.key !== lead.status);
+  const otherStages = (stages || []).filter((s) => s.name.toLowerCase() !== (lead.status || "").toLowerCase());
 
   return (
     <div
@@ -99,10 +107,10 @@ function PipelineCard({ lead, onMove, onSelect, movingId }) {
             >
               {otherStages.map((stage) => (
                 <button
-                  key={stage.key}
+                  key={stage.name}
                   onClick={() => {
                     setShowMoveMenu(false);
-                    onMove(lead.id, stage.key);
+                    onMove(lead.id, stage.name);
                   }}
                   style={{
                     display: "block",
@@ -115,10 +123,10 @@ function PipelineCard({ lead, onMove, onSelect, movingId }) {
                     fontSize: "0.82rem",
                     color: stage.color,
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = stage.bg; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = hexToRgba(stage.color, 0.08); }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
                 >
-                  {stage.label}
+                  {stage.name}
                 </button>
               ))}
             </div>
@@ -175,14 +183,14 @@ function PipelineCard({ lead, onMove, onSelect, movingId }) {
   );
 }
 
-function AddDealModal({ onClose, onSave, saving }) {
+function AddDealModal({ onClose, onSave, saving, stages }) {
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     deal_value: "",
     expected_close: "",
-    status: "new",
+    status: stages[0]?.name || "New Lead",
   });
 
   const handleSubmit = () => {
@@ -262,8 +270,8 @@ function AddDealModal({ onClose, onSave, saving }) {
               onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
               style={{ width: "100%" }}
             >
-              {PIPELINE_STAGES.map((s) => (
-                <option key={s.key} value={s.key}>{s.label}</option>
+              {stages.map((s) => (
+                <option key={s.name} value={s.name}>{s.name}</option>
               ))}
             </select>
           </div>
@@ -371,7 +379,9 @@ function LeadQuickView({ lead, onClose }) {
 
 export default function PipelinePage() {
   const { user, token } = useAuth();
-  const [leads, setLeads] = useState([]);
+  const [stages, setStages] = useState(FALLBACK_STAGES);
+  const [leadsByStage, setLeadsByStage] = useState({});
+  const [allLeads, setAllLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [movingId, setMovingId] = useState(null);
@@ -379,15 +389,20 @@ export default function PipelinePage() {
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [savingDeal, setSavingDeal] = useState(false);
 
-  const loadLeads = useCallback(async () => {
+  const loadBoard = useCallback(async () => {
     if (!user?.tenantId) return;
     try {
-      // Fetch all leads across all pipeline stages
-      const res = await fetchLeads(user.tenantId, token, { per_page: 500 });
-      setLeads(res.leads || []);
+      const res = await fetchPipelineBoard(user.tenantId, token);
+      const boardStages = res.stages || FALLBACK_STAGES;
+      setStages(boardStages);
+      setLeadsByStage(res.leads_by_stage || {});
+      // Flatten all leads for stats
+      const all = [];
+      Object.values(res.leads_by_stage || {}).forEach((arr) => all.push(...arr));
+      setAllLeads(all);
       setError(null);
     } catch (err) {
-      console.warn("Failed to load pipeline leads:", err.message);
+      console.warn("Failed to load pipeline board:", err.message);
       setError(err.message || "Failed to load pipeline");
     } finally {
       setLoading(false);
@@ -396,24 +411,22 @@ export default function PipelinePage() {
 
   useEffect(() => {
     setLoading(true);
-    loadLeads();
-  }, [loadLeads]);
+    loadBoard();
+  }, [loadBoard]);
 
   const handleMove = useCallback(async (leadId, newStage) => {
-    const prev = leads.slice();
-    setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, status: newStage } : l)));
     setMovingId(leadId);
     try {
       await movePipelineLead(user.tenantId, token, leadId, { status: newStage });
       setError(null);
+      loadBoard();
     } catch (err) {
-      setLeads(prev);
       console.warn("Move lead failed:", err.message);
       setError(err.message || "Failed to move lead");
     } finally {
       setMovingId(null);
     }
-  }, [leads, user?.tenantId, token]);
+  }, [user?.tenantId, token, loadBoard]);
 
   const handleAddDeal = async (formData) => {
     setSavingDeal(true);
@@ -422,14 +435,14 @@ export default function PipelinePage() {
         name: formData.name.trim(),
         email: formData.email.trim() || null,
         phone: formData.phone.trim() || null,
-        status: formData.status || "new",
+        status: formData.status || (stages[0]?.name || "New Lead"),
         deal_value: Number(formData.deal_value) || null,
         expected_close_date: formData.expected_close || null,
       };
 
-      const newLead = await createLead(user.tenantId, token, body);
-      setLeads((prev) => [newLead, ...prev]);
+      await createLead(user.tenantId, token, body);
       setShowAddDeal(false);
+      loadBoard();
       setError(null);
     } catch (err) {
       console.warn("Add deal failed:", err.message);
@@ -441,28 +454,20 @@ export default function PipelinePage() {
 
   if (loading) return <SkeletonLoader />;
 
-  // Compute stats
-  const totalPipelineValue = leads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
-  const wonLeads = leads.filter((l) => l.status === "won");
-  const closedLeads = leads.filter((l) => l.status === "won" || l.status === "lost");
+  // Compute stats from all leads
+  const wonStages = stages.filter((s) => s.is_won);
+  const lostStages = stages.filter((s) => s.is_lost);
+  const wonNames = new Set(wonStages.map((s) => s.name.toLowerCase()));
+  const lostNames = new Set(lostStages.map((s) => s.name.toLowerCase()));
+
+  const totalPipelineValue = allLeads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+  const wonLeads = allLeads.filter((l) => wonNames.has((l.status || "").toLowerCase()));
+  const closedLeads = allLeads.filter((l) => wonNames.has((l.status || "").toLowerCase()) || lostNames.has((l.status || "").toLowerCase()));
   const conversionRate = closedLeads.length > 0 ? Math.round((wonLeads.length / closedLeads.length) * 100) : 0;
-  const leadsWithValue = leads.filter((l) => Number(l.deal_value) > 0);
+  const leadsWithValue = allLeads.filter((l) => Number(l.deal_value) > 0);
   const avgDealValue = leadsWithValue.length > 0
     ? totalPipelineValue / leadsWithValue.length
     : 0;
-
-  // Group leads by stage key
-  const leadsByStage = {};
-  PIPELINE_STAGES.forEach((s) => { leadsByStage[s.key] = []; });
-  leads.forEach((lead) => {
-    const stageKey = lead.status;
-    if (leadsByStage[stageKey]) {
-      leadsByStage[stageKey].push(lead);
-    } else {
-      // Unknown stage — put in "new"
-      leadsByStage["new"].push(lead);
-    }
-  });
 
   return (
     <div className="fade-in">
@@ -474,7 +479,7 @@ export default function PipelinePage() {
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <button
             className="btn-primary"
-            onClick={() => { setLoading(true); loadLeads(); }}
+            onClick={() => { setLoading(true); loadBoard(); }}
             style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
           >
             Refresh
@@ -522,7 +527,7 @@ export default function PipelinePage() {
       )}
 
       {/* Kanban Board */}
-      {leads.length === 0 ? (
+      {allLeads.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
           <div style={{ fontSize: "2rem", marginBottom: 12 }}>No deals in pipeline</div>
           <p style={{ maxWidth: 440, margin: "0 auto 20px", lineHeight: 1.6 }}>
@@ -536,19 +541,20 @@ export default function PipelinePage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${PIPELINE_STAGES.length}, minmax(220px, 1fr))`,
+            gridTemplateColumns: `repeat(${stages.length}, minmax(220px, 1fr))`,
             gap: 12,
             overflowX: "auto",
             paddingBottom: 8,
           }}
         >
-          {PIPELINE_STAGES.map((stage, stageIdx) => {
-            const stageLeads = leadsByStage[stage.key] || [];
+          {stages.map((stage, stageIdx) => {
+            const stageLeads = leadsByStage[stage.name] || [];
             const stageValue = stageLeads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+            const stageBg = hexToRgba(stage.color, 0.08);
 
             return (
               <div
-                key={stage.key}
+                key={stage.name}
                 style={{
                   background: stageIdx % 2 === 0 ? "var(--bg-secondary)" : "rgba(255,255,255,0.02)",
                   border: "1px solid var(--border-color)",
@@ -566,12 +572,12 @@ export default function PipelinePage() {
                     borderBottom: "2px solid var(--border-color)",
                     borderTopLeftRadius: 12,
                     borderTopRightRadius: 12,
-                    background: stage.bg,
+                    background: stageBg,
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontWeight: 700, fontSize: "0.9rem", color: stage.color }}>
-                      {stage.label}
+                      {stage.name}
                     </span>
                     <span
                       style={{
@@ -626,6 +632,7 @@ export default function PipelinePage() {
                         onMove={handleMove}
                         onSelect={setSelectedLead}
                         movingId={movingId}
+                        stages={stages}
                       />
                     ))
                   )}
@@ -647,6 +654,7 @@ export default function PipelinePage() {
           onClose={() => setShowAddDeal(false)}
           onSave={handleAddDeal}
           saving={savingDeal}
+          stages={stages}
         />
       )}
     </div>

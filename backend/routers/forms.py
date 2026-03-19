@@ -1,10 +1,12 @@
 """Form & Survey Builder — create embeddable forms, collect submissions, auto-create leads."""
 
+import html
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
@@ -117,6 +119,144 @@ async def get_public_form(request: Request, token: str):
         "success_message": form.get("success_message", "Thank you for your submission!"),
         "redirect_url": form.get("redirect_url"),
     }
+
+
+@router.get("/public/{token}/embed", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def get_public_form_embed(request: Request, token: str):
+    """Render the form as a self-contained HTML page for iframe embedding."""
+    db = get_supabase()
+    try:
+        result = (
+            db.table("forms")
+            .select("id, name, description, fields_json, settings_json, is_active, public_token")
+            .eq("public_token", token)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch public form for embed")
+        return HTMLResponse("<h2>Something went wrong. Please try again later.</h2>", status_code=500)
+
+    if not result.data:
+        return HTMLResponse("<h2>Form not found</h2>", status_code=404)
+
+    form = result.data[0]
+    if not form.get("is_active"):
+        return HTMLResponse("<h2>This form is no longer accepting submissions.</h2>", status_code=410)
+
+    fields = form.get("fields_json") or []
+    settings = form.get("settings_json") or {}
+    theme_color = html.escape(settings.get("theme_color", "#7c3aed"))
+    submit_text = html.escape(settings.get("submit_button_text", "Submit"))
+    form_name = html.escape(form.get("name", "Form"))
+    form_desc = html.escape(form.get("description") or "")
+    form_token = html.escape(form.get("public_token", token))
+
+    # Build field HTML
+    field_html_parts = []
+    for f in fields:
+        fid = html.escape(f.get("id", ""))
+        flabel = html.escape(f.get("label", ""))
+        ftype = f.get("type", "text")
+        freq = f.get("required", False)
+        fplaceholder = html.escape(f.get("placeholder") or "")
+        req_attr = "required" if freq else ""
+        req_mark = ' <span style="color:#ef4444">*</span>' if freq else ""
+
+        if ftype in ("text", "email", "phone", "number", "date"):
+            input_type = {"phone": "tel"}.get(ftype, ftype)
+            field_html_parts.append(
+                f'<div class="field"><label>{flabel}{req_mark}</label>'
+                f'<input type="{input_type}" name="{fid}" placeholder="{fplaceholder}" {req_attr}/></div>'
+            )
+        elif ftype == "textarea":
+            field_html_parts.append(
+                f'<div class="field"><label>{flabel}{req_mark}</label>'
+                f'<textarea name="{fid}" placeholder="{fplaceholder}" rows="4" {req_attr}></textarea></div>'
+            )
+        elif ftype in ("select", "radio"):
+            options = f.get("options") or []
+            if ftype == "select":
+                opts_html = '<option value="">Select...</option>'
+                for o in options:
+                    ov = html.escape(str(o))
+                    opts_html += f'<option value="{ov}">{ov}</option>'
+                field_html_parts.append(
+                    f'<div class="field"><label>{flabel}{req_mark}</label>'
+                    f'<select name="{fid}" {req_attr}>{opts_html}</select></div>'
+                )
+            else:
+                radios = ""
+                for o in options:
+                    ov = html.escape(str(o))
+                    radios += f'<label class="radio"><input type="radio" name="{fid}" value="{ov}" {req_attr}/> {ov}</label>'
+                field_html_parts.append(f'<div class="field"><label>{flabel}{req_mark}</label><div class="radio-group">{radios}</div></div>')
+        elif ftype == "checkbox":
+            field_html_parts.append(
+                f'<div class="field checkbox"><label><input type="checkbox" name="{fid}" value="true" {req_attr}/> {flabel}</label></div>'
+            )
+
+    fields_html = "\n".join(field_html_parts)
+
+    page_html = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{form_name}</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#1e293b;padding:24px}}
+.form-container{{max-width:560px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:32px}}
+h1{{font-size:1.5rem;margin-bottom:4px}}
+.desc{{color:#64748b;margin-bottom:24px;font-size:.9rem}}
+.field{{margin-bottom:16px}}
+.field label{{display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;color:#334155}}
+.field input,.field textarea,.field select{{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.9rem;transition:border .15s}}
+.field input:focus,.field textarea:focus,.field select:focus{{outline:none;border-color:{theme_color};box-shadow:0 0 0 3px {theme_color}22}}
+.checkbox label{{font-weight:normal;display:flex;align-items:center;gap:8px;cursor:pointer}}
+.radio-group{{display:flex;flex-direction:column;gap:6px}}
+.radio label{{font-weight:normal;display:flex;align-items:center;gap:6px;cursor:pointer}}
+.submit-btn{{width:100%;padding:12px;border:none;border-radius:8px;background:{theme_color};color:#fff;font-size:1rem;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity .15s}}
+.submit-btn:hover{{opacity:.9}}
+.submit-btn:disabled{{opacity:.5;cursor:wait}}
+.success{{text-align:center;padding:40px 20px;color:#16a34a;font-size:1.1rem}}
+.error{{color:#ef4444;font-size:.85rem;margin-top:8px}}
+.powered{{text-align:center;margin-top:16px;font-size:.75rem;color:#94a3b8}}
+.powered a{{color:#94a3b8;text-decoration:none}}
+</style></head><body>
+<div class="form-container">
+<h1>{form_name}</h1>
+{"<p class='desc'>" + form_desc + "</p>" if form_desc else ""}
+<form id="publicForm">
+{fields_html}
+<button type="submit" class="submit-btn" id="submitBtn">{submit_text}</button>
+<div id="errorMsg" class="error" style="display:none"></div>
+</form>
+<div id="successMsg" class="success" style="display:none"></div>
+</div>
+<div class="powered">Powered by <a href="https://agentnexlify.com" target="_blank">AgentNexLiFy</a></div>
+<script>
+document.getElementById("publicForm").addEventListener("submit",async function(e){{
+e.preventDefault();
+const btn=document.getElementById("submitBtn");
+const err=document.getElementById("errorMsg");
+btn.disabled=true;err.style.display="none";
+const fd=new FormData(this);
+const data={{}};
+fd.forEach((v,k)=>{{if(data[k]){{if(!Array.isArray(data[k]))data[k]=[data[k]];data[k].push(v)}}else data[k]=v}});
+try{{
+const r=await fetch(window.location.href.replace("/embed","/submit"),{{
+method:"POST",headers:{{"Content-Type":"application/json"}},body:JSON.stringify({{data:data}})
+}});
+if(!r.ok)throw new Error((await r.json().catch(()=>({{}}))).detail||"Submission failed");
+document.getElementById("publicForm").style.display="none";
+document.getElementById("successMsg").style.display="block";
+document.getElementById("successMsg").textContent={repr(form.get("success_message") or "Thank you for your submission!")};
+}}catch(ex){{err.textContent=ex.message;err.style.display="block"}}
+finally{{btn.disabled=false}}
+}});
+</script></body></html>"""
+
+    return HTMLResponse(page_html)
 
 
 @router.post("/public/{token}/submit")
