@@ -103,6 +103,86 @@ def require_role(*allowed_roles):
     return checker
 
 
+# ── Industry FAQ Seeds ───────────────────────────────────────
+
+INDUSTRY_FAQS: dict[str, list[dict]] = {
+    "plumbing": [
+        {"question": "What services do you offer?", "answer": "We offer a full range of plumbing services including drain cleaning, water heater installation and repair, leak detection, pipe repair, sewer line services, faucet and fixture installation, and emergency plumbing.", "category": "Services"},
+        {"question": "Do you offer emergency service?", "answer": "Yes, we offer emergency plumbing services. Contact us and we'll get back to you as quickly as possible.", "category": "Services"},
+        {"question": "Are you licensed and insured?", "answer": "Yes, we are fully licensed and insured. We carry all required licenses and liability insurance for your protection.", "category": "About"},
+        {"question": "What areas do you serve?", "answer": "We serve the local area. Contact us to confirm we can service your location.", "category": "About"},
+        {"question": "Do you give free estimates?", "answer": "Yes, we provide free estimates for most plumbing jobs. Contact us to schedule an estimate.", "category": "Pricing"},
+    ],
+    "dental": [
+        {"question": "What services do you offer?", "answer": "We offer comprehensive dental care including cleanings, exams, fillings, crowns, root canals, teeth whitening, Invisalign, dental implants, and emergency dental care.", "category": "Services"},
+        {"question": "Do you accept dental insurance?", "answer": "Yes, we accept most major dental insurance plans. Contact us with your insurance information and we'll verify your coverage.", "category": "Insurance"},
+        {"question": "Do you see new patients?", "answer": "Yes! We are always welcoming new patients. You can book an appointment through our chat or call us directly.", "category": "About"},
+        {"question": "Do you offer emergency dental care?", "answer": "Yes, we offer same-day emergency appointments for dental emergencies like toothaches, broken teeth, or dental trauma.", "category": "Services"},
+    ],
+    "restaurant": [
+        {"question": "What are your hours?", "answer": "Please check our business hours for the most up-to-date schedule. You can also ask us here!", "category": "Hours"},
+        {"question": "Do you offer delivery?", "answer": "Please ask us about our current delivery options and delivery area.", "category": "Orders"},
+        {"question": "Can I make a reservation?", "answer": "Yes! You can book a table through our chat widget or call us directly.", "category": "Reservations"},
+        {"question": "Do you cater events?", "answer": "Yes, we offer catering services for events of all sizes. Contact us for a custom quote.", "category": "Catering"},
+    ],
+    "realestate": [
+        {"question": "What areas do you cover?", "answer": "We serve the local real estate market. Contact us to discuss your specific area of interest.", "category": "Areas"},
+        {"question": "Are you a buyer's or seller's agent?", "answer": "We work with both buyers and sellers. Whether you're looking to buy your dream home or sell your property, we can help.", "category": "Services"},
+        {"question": "How do I schedule a showing?", "answer": "You can schedule a showing by chatting with us here, calling, or booking an appointment through our scheduling system.", "category": "Showings"},
+    ],
+    "legal": [
+        {"question": "What areas of law do you practice?", "answer": "Contact us to learn about our practice areas and how we can help with your legal matter.", "category": "Services"},
+        {"question": "Do you offer free consultations?", "answer": "Yes, we offer free initial consultations. Book an appointment to discuss your case.", "category": "Consultations"},
+        {"question": "Are consultations confidential?", "answer": "Absolutely. All communications with our firm are protected by attorney-client privilege.", "category": "Privacy"},
+    ],
+    "salon": [
+        {"question": "What services do you offer?", "answer": "We offer haircuts, coloring, styling, blowouts, treatments, and more. Contact us for our full service menu.", "category": "Services"},
+        {"question": "How do I book an appointment?", "answer": "You can book an appointment right here in our chat, call us, or use our online booking system.", "category": "Booking"},
+        {"question": "Do you accept walk-ins?", "answer": "We welcome walk-ins based on availability, but we recommend booking an appointment to guarantee your preferred time.", "category": "Booking"},
+    ],
+    "auto_shop": [
+        {"question": "What services do you offer?", "answer": "We offer oil changes, brake service, tire rotation, engine diagnostics, transmission repair, AC service, and more.", "category": "Services"},
+        {"question": "Do you give free estimates?", "answer": "Yes, we provide free estimates for most repair work. Bring your vehicle in or describe the issue and we'll give you a quote.", "category": "Pricing"},
+        {"question": "Do you work on all makes and models?", "answer": "Yes, our certified technicians work on all makes and models of cars, trucks, and SUVs.", "category": "Services"},
+    ],
+    "medical": [
+        {"question": "Are you accepting new patients?", "answer": "Yes, we are currently accepting new patients. Book an appointment to get started.", "category": "About"},
+        {"question": "What insurance do you accept?", "answer": "We accept most major insurance plans. Contact us with your insurance information to verify coverage.", "category": "Insurance"},
+        {"question": "Do you offer telehealth appointments?", "answer": "Please ask us about our current telehealth options for virtual visits.", "category": "Services"},
+    ],
+    "fitness": [
+        {"question": "What memberships do you offer?", "answer": "We offer a variety of membership options. Contact us to learn about our plans and pricing.", "category": "Memberships"},
+        {"question": "Do you offer personal training?", "answer": "Yes! We have certified personal trainers available. Book a consultation to get started.", "category": "Services"},
+        {"question": "Do you offer a free trial?", "answer": "Yes, we offer a free trial so you can experience our facility before committing. Ask us to get started!", "category": "Trial"},
+    ],
+}
+
+
+def _seed_industry_faqs(tenant_id: str, industry: str, business_name: str, city: str) -> None:
+    """Insert starter FAQ entries for the tenant based on their industry."""
+    faqs = INDUSTRY_FAQS.get(industry, [])
+    if not faqs:
+        return
+    db = get_supabase()
+    rows = []
+    for faq in faqs:
+        answer = faq["answer"]
+        if city:
+            answer = answer.replace("the local area", f"the {city} area")
+            answer = answer.replace("the local real estate market", f"the {city} real estate market")
+        rows.append({
+            "tenant_id": tenant_id,
+            "question": faq["question"],
+            "answer": answer,
+            "category": faq.get("category", "General"),
+        })
+    try:
+        db.table("faq_entries").insert(rows).execute()
+        logger.info("Seeded %d industry FAQs for tenant %s (industry=%s)", len(rows), tenant_id, industry)
+    except Exception:
+        logger.warning("Failed to seed industry FAQs for tenant %s", tenant_id, exc_info=True)
+
+
 # ── Endpoints ────────────────────────────────────────────────
 
 
@@ -164,6 +244,9 @@ async def register(request: Request, req: RegisterRequest):
         "position": "bottom-right",
         "show_watermark": True,
     }).execute()
+
+    # Auto-generate industry-specific starter FAQs so the AI has baseline knowledge
+    _seed_industry_faqs(tenant_id, req.industry, req.business_name, req.city)
 
     token = _create_token(tenant_id, req.email, "free", req.business_name, business_type=req.industry)
 
