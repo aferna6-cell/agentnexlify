@@ -348,4 +348,40 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+### Campaign send endpoint blocks request thread until all emails sent
+**Date:** 2026-03-18
+**Symptom:** POST /campaigns/send hangs for minutes when sending to large lead lists, eventually timing out. Other API requests back up behind it.
+**Root Cause:** The campaign send loop (iterating leads, sending emails/SMS) ran synchronously inside the request handler. A 500-lead campaign blocked the worker for the entire send duration.
+**Files Changed:** `backend/routers/marketing_campaigns.py`, `migrations/055_campaign_sending_started_at.sql`
+**Fix:** Extracted send loop into `_send_campaign_background()`, dispatched via `asyncio.create_task()`. Endpoint returns immediately. Background task marks campaign failed on error. Migration 055 adds `sending_started_at` for stall detection (>30 min).
+**Prevention:** Any operation that iterates and sends (emails, SMS, webhooks) must run as a background task, never in the request handler. Check for `asyncio.create_task()` pattern.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### GBP OAuth redirect URI pointed to frontend instead of backend
+**Date:** 2026-03-18
+**Symptom:** Google Business Profile OAuth callback fails with redirect_uri_mismatch error.
+**Root Cause:** `gbp.py` used `frontend_url` for the OAuth redirect URI, but the callback endpoint is on the backend (Railway).
+**Files Changed:** `backend/routers/gbp.py`, `backend/config.py`
+**Fix:** Changed redirect URI to use `api_url` (Railway production URL). Added `api_url` setting to config.py.
+**Prevention:** OAuth redirect URIs must point to the backend API server, not the frontend.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### conversations.lead_id FK missing ON DELETE clause — dangling references
+**Date:** 2026-03-18
+**Symptom:** Deleting or merging a lead leaves orphaned `lead_id` references in the conversations table. No error raised, but conversations reference non-existent leads.
+**Root Cause:** The original FK constraint on `conversations.lead_id` had no `ON DELETE` clause, defaulting to `RESTRICT` or `NO ACTION`. Lead delete/merge operations didn't cascade.
+**Files Changed:** `migrations/058_fix_conversations_lead_fk.sql`
+**Fix:** Migration 058 drops and re-creates the FK with `ON DELETE SET NULL`.
+**Prevention:** All FK constraints referencing leads should use `ON DELETE SET NULL` or `ON DELETE CASCADE` depending on the relationship. Check existing FKs when adding new tables that reference leads.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

@@ -315,4 +315,9 @@ Adds index `idx_conversations_channel ON conversations(client_id, channel)` for 
 
 **Applied:** 2026-03-18 via Supabase MCP.
 
+### 058 — Fix Conversations Lead FK
+Drops and re-creates `conversations.lead_id` FK constraint with `ON DELETE SET NULL`. The original constraint had no ON DELETE clause, causing dangling references when leads were deleted or merged.
+
+**Applied:** 2026-03-18 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
