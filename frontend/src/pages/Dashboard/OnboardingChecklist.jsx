@@ -6,6 +6,8 @@ import {
   deleteFaqEntry,
   createFromTemplate,
   fetchSequences,
+  fetchAvailability,
+  updateAvailability,
 } from "../../utils/api";
 import { trackEvent } from "../../utils/analytics";
 
@@ -29,6 +31,11 @@ function setStoredState(tenantId, state) {
 
 const DEFAULT_GREETING = "Hi! How can I help you today?";
 const DEFAULT_COLOR = "#00BFFF";
+
+const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const DEFAULT_HOURS = Object.fromEntries(
+  DAYS_OF_WEEK.map((d) => [d, { enabled: ["monday", "tuesday", "wednesday", "thursday", "friday"].includes(d), start: "09:00", end: "17:00" }])
+);
 
 const COLOR_SWATCHES = [
   "#00BFFF", "#6366F1", "#8B5CF6", "#EC4899",
@@ -56,6 +63,12 @@ function computeSteps(dashData, stored) {
       title: "Welcome & Business Info",
       description: "Confirm your business details",
       complete: !!businessName && businessName !== "My Business",
+    },
+    {
+      key: "hours",
+      title: "Set Business Hours",
+      description: "Tell customers when you're available",
+      complete: !!stored.hoursDone,
     },
     {
       key: "agent",
@@ -131,6 +144,8 @@ export default function OnboardingChecklist({
   const [sequenceCreated, setSequenceCreated] = useState(false);
   const [sequenceError, setSequenceError] = useState(null);
   const [existingSequences, setExistingSequences] = useState(null);
+  const [businessHours, setBusinessHours] = useState(DEFAULT_HOURS);
+  const [hoursLoaded, setHoursLoaded] = useState(false);
 
   const steps = computeSteps(dashData, stored);
 
@@ -179,6 +194,20 @@ export default function OnboardingChecklist({
         });
     }
   }, [activeStep, tenantId, token]);
+
+  // Load business hours when hours step opens
+  useEffect(() => {
+    if (activeStep === "hours" && tenantId && token && !hoursLoaded) {
+      fetchAvailability(tenantId, token)
+        .then((data) => {
+          if (data?.hours) {
+            setBusinessHours((prev) => ({ ...prev, ...data.hours }));
+          }
+          setHoursLoaded(true);
+        })
+        .catch(() => setHoursLoaded(true));
+    }
+  }, [activeStep, tenantId, token, hoursLoaded]);
 
   // Load existing sequences when automations step opens
   useEffect(() => {
@@ -232,6 +261,21 @@ export default function OnboardingChecklist({
     } catch (e) {
       console.warn("Failed to save greeting:", e.message || e);
       setSaveError(e.body?.detail || e.message || "Failed to save greeting. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveHours = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await updateAvailability(tenantId, token, { hours: businessHours });
+      updateStored({ hoursDone: true });
+      onStepComplete?.();
+    } catch (e) {
+      console.warn("Failed to save hours:", e.message || e);
+      setSaveError(e.body?.detail || e.message || "Failed to save business hours.");
     } finally {
       setSaving(false);
     }
@@ -361,6 +405,64 @@ export default function OnboardingChecklist({
               Business info was set during signup. You can update it from
               Settings.
             </p>
+          </div>
+        );
+
+      case "hours":
+        return (
+          <div className="onboarding-step-body">
+            <p className="onboarding-hint">
+              Set your business hours so the AI knows when you're available and can inform visitors.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {DAYS_OF_WEEK.map((day) => {
+                const cfg = businessHours[day] || { enabled: false, start: "09:00", end: "17:00" };
+                return (
+                  <div key={day} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--border, #2a2a3e)" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, width: 120, cursor: "pointer", fontSize: "0.85rem", color: cfg.enabled ? "var(--text-primary)" : "var(--text-muted)" }}>
+                      <input
+                        type="checkbox"
+                        checked={cfg.enabled}
+                        onChange={(e) => setBusinessHours((prev) => ({ ...prev, [day]: { ...prev[day], enabled: e.target.checked } }))}
+                        style={{ width: "auto" }}
+                      />
+                      {day.charAt(0).toUpperCase() + day.slice(1)}
+                    </label>
+                    {cfg.enabled && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem" }}>
+                        <input
+                          type="time"
+                          value={cfg.start}
+                          onChange={(e) => setBusinessHours((prev) => ({ ...prev, [day]: { ...prev[day], start: e.target.value } }))}
+                          className="onboarding-input"
+                          style={{ width: 110, padding: "4px 6px", fontSize: "0.82rem" }}
+                        />
+                        <span style={{ color: "var(--text-muted)" }}>to</span>
+                        <input
+                          type="time"
+                          value={cfg.end}
+                          onChange={(e) => setBusinessHours((prev) => ({ ...prev, [day]: { ...prev[day], end: e.target.value } }))}
+                          className="onboarding-input"
+                          style={{ width: 110, padding: "4px 6px", fontSize: "0.82rem" }}
+                        />
+                      </div>
+                    )}
+                    {!cfg.enabled && (
+                      <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>Closed</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              className="onboarding-save-btn"
+              onClick={handleSaveHours}
+              disabled={saving}
+              style={{ marginTop: 12 }}
+            >
+              {saving ? "Saving..." : "Save Business Hours"}
+            </button>
+            {saveError && <div className="onboarding-error">{saveError}</div>}
           </div>
         );
 

@@ -1293,6 +1293,7 @@
     html += `<div class="anx-form-group"><label class="anx-form-label">Name *</label><input class="anx-form-input" id="anx-book-name" placeholder="Your name" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Email *</label><input class="anx-form-input" id="anx-book-email" type="email" placeholder="your@email.com" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Phone</label><input class="anx-form-input" id="anx-book-phone" type="tel" placeholder="(optional)"></div>`;
+    html += `<div class="anx-form-group"><label class="anx-form-label">Reason for Visit</label><input class="anx-form-input" id="anx-book-reason" placeholder="e.g. Consultation, Repair, Checkup"></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Notes</label><input class="anx-form-input" id="anx-book-notes" placeholder="(optional)"></div>`;
     html += `<button class="anx-book-submit" id="anx-book-confirm">Confirm Appointment</button>`;
     html += `<div id="anx-book-error" style="color:#ff4444;font-size:12px;text-align:center;display:none;"></div>`;
@@ -1307,7 +1308,9 @@
     const name = document.getElementById("anx-book-name").value.trim();
     const email = document.getElementById("anx-book-email").value.trim();
     const phone = document.getElementById("anx-book-phone").value.trim();
-    const notes = document.getElementById("anx-book-notes").value.trim();
+    const reason = document.getElementById("anx-book-reason").value.trim();
+    const rawNotes = document.getElementById("anx-book-notes").value.trim();
+    const notes = [reason ? `Service: ${reason}` : "", rawNotes].filter(Boolean).join(" | ");
     const errEl = document.getElementById("anx-book-error");
     const btn = document.getElementById("anx-book-confirm");
 
