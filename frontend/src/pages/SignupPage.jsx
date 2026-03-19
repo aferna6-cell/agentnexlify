@@ -22,6 +22,8 @@ export default function SignupPage() {
     business_name: "",
     owner_name: "",
     email: "",
+    phone: "",
+    website_url: "",
     industry: "other",
     city: "",
     password: "",
@@ -52,6 +54,8 @@ export default function SignupPage() {
           business_name: form.business_name,
           owner_name: form.owner_name,
           email: form.email,
+          phone: form.phone || undefined,
+          website_url: form.website_url || undefined,
           industry: form.industry,
           city: form.city,
           password: form.password,
@@ -110,6 +114,26 @@ export default function SignupPage() {
               onChange={update("email")}
               placeholder="you@company.com"
               required
+            />
+          </div>
+          <div className="login-field">
+            <label>Phone <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></label>
+            <input
+              type="tel"
+              className="login-input"
+              value={form.phone}
+              onChange={update("phone")}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+          <div className="login-field">
+            <label>Website <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></label>
+            <input
+              type="url"
+              className="login-input"
+              value={form.website_url}
+              onChange={update("website_url")}
+              placeholder="https://yoursite.com"
             />
           </div>
           <div className="login-field">

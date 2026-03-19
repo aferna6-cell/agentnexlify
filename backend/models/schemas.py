@@ -87,6 +87,7 @@ class RegisterRequest(BaseModel):
     password: str
     industry: str = "other"
     city: str = ""
+    phone: str | None = None
     website_url: str | None = None
 
     @field_validator("email")

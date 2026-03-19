@@ -140,12 +140,18 @@ async def register(request: Request, req: RegisterRequest):
     tenant = result.data[0]
     tenant_id = str(tenant["id"])
 
-    # Save website_url if provided (column already exists from migration 028)
+    # Save optional fields provided at signup
+    extra_fields = {}
     if req.website_url:
+        extra_fields["website_url"] = req.website_url
+    if req.phone:
+        extra_fields["notification_phone"] = req.phone
+        extra_fields["sms_notifications_enabled"] = True
+    if extra_fields:
         try:
-            db.table("tenants").update({"website_url": req.website_url}).eq("id", tenant_id).execute()
+            db.table("tenants").update(extra_fields).eq("id", tenant_id).execute()
         except Exception:
-            logger.warning("Failed to save website_url for new tenant %s", tenant_id, exc_info=True)
+            logger.warning("Failed to save signup fields for new tenant %s", tenant_id, exc_info=True)
 
     # Create widget config with prefixed api_key and defaults
     api_key = f"anx_{secrets.token_urlsafe(32)}"
