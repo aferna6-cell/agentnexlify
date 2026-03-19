@@ -270,6 +270,26 @@ Creates `calls` (tenant_id, lead_id, caller_phone, called_number, direction inbo
 
 **Applied:** 2026-03-15 via Supabase MCP.
 
+### 045 — Local SEO Profile Scores
+Creates `seo_profiles` table for GBP profile completeness and local keyword recommendations. Columns: tenant_id (FK→tenants, ON DELETE CASCADE, UNIQUE), completeness_score (INTEGER DEFAULT 0), missing_fields (JSONB), recommendations (JSONB), keyword_suggestions (JSONB), last_analyzed_at (TIMESTAMPTZ), created_at, updated_at. Indexed on tenant_id. RLS with service_role.
+
+**Applied:** Needs verification — added in Cycle 69-72.
+
+### 046 — Business Autopilot Settings
+Adds 3 columns to `tenants`: `autopilot_enabled` (BOOLEAN DEFAULT false), `onboarding_completed_at` (TIMESTAMPTZ), `last_monthly_report_at` (TIMESTAMPTZ). Supports autopilot onboarding progress and monthly report tracking.
+
+**Applied:** Needs verification — added in Cycle 69-72.
+
+### 047 — CSAT/NPS Satisfaction Surveys
+Creates `csat_responses` table for post-conversation satisfaction tracking. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), conversation_id (FK→conversations, ON DELETE SET NULL), lead_id (FK→leads, ON DELETE SET NULL), session_id (TEXT), rating (INTEGER CHECK 1-5), feedback (TEXT), channel (TEXT DEFAULT 'email'), created_at (TIMESTAMPTZ). Indexed on (tenant_id, created_at DESC). RLS with service_role.
+
+**Applied:** Needs verification — added in Cycle 86.
+
+### 048 — Custom Lead Fields
+Creates `custom_field_definitions` table for per-tenant configurable lead attributes. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), field_name (TEXT), field_type (TEXT CHECK: text/number/dropdown/date/checkbox, DEFAULT 'text'), options (JSONB DEFAULT '[]'), is_required (BOOLEAN DEFAULT false), sort_order (INTEGER DEFAULT 0), created_at (TIMESTAMPTZ). Unique on (tenant_id, field_name). Also adds `custom_fields` (JSONB DEFAULT '{}') to `leads` table. Indexed on tenant_id. RLS with service_role.
+
+**Applied:** Needs verification — added in Cycle 87.
+
 ### 049 — SEO Audit, GEO Scores, Keyword Rankings
 Creates `seo_audits` (tenant_id, overall_score, categories JSONB, critical_issues/warnings/passed_checks/recommendations JSONB, pages_analyzed). Creates `geo_scores` (tenant_id, overall_score, platform_scores JSONB, visibility_factors/recommendations JSONB, business_name/type/city/website_url). Creates `keyword_rankings` (tenant_id, keyword, difficulty_score, estimated_position, search_volume_estimate, recommendations JSONB). All indexed on tenant_id. RLS with service_role. Unique constraint on (tenant_id, keyword) for keyword_rankings.
 
