@@ -133,6 +133,11 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
         {"question": "What areas do you cover?", "answer": "We serve the local real estate market. Contact us to discuss your specific area of interest.", "category": "Areas"},
         {"question": "Are you a buyer's or seller's agent?", "answer": "We work with both buyers and sellers. Whether you're looking to buy your dream home or sell your property, we can help.", "category": "Services"},
         {"question": "How do I schedule a showing?", "answer": "You can schedule a showing by chatting with us here, calling, or booking an appointment through our scheduling system.", "category": "Showings"},
+        {"question": "Do I need to be pre-approved?", "answer": "Getting pre-approved for a mortgage before house hunting is highly recommended. It shows sellers you're a serious buyer and helps you understand your budget.", "category": "Buying"},
+        {"question": "How long does it take to buy a house?", "answer": "The typical home buying process takes 30-60 days from accepted offer to closing. Finding the right home can take a few weeks to several months depending on the market.", "category": "Buying"},
+        {"question": "What are your commission rates?", "answer": "Our commission structure is competitive and transparent. Contact us for details — we're happy to explain how our fees work.", "category": "Pricing"},
+        {"question": "How do you market my property?", "answer": "We use professional photography, virtual tours, MLS listing, social media marketing, and targeted advertising to maximize your property's exposure.", "category": "Selling"},
+        {"question": "What's my home worth?", "answer": "We offer free comparative market analyses (CMA) to help you understand your home's current value. Contact us to schedule yours.", "category": "Selling"},
     ],
     "legal": [
         {"question": "What areas of law do you practice?", "answer": "Contact us to learn about our practice areas and how we can help with your legal matter.", "category": "Services"},
