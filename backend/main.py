@@ -81,6 +81,7 @@ async def _automation_loop():
         send_invoice_payment_reminders,
         send_monthly_reports,
         send_pending_review_requests,
+        send_rebook_suggestions,
         send_onboarding_emails,
         send_portal_links,
         send_weekly_intelligence_briefs,
@@ -101,6 +102,7 @@ async def _automation_loop():
         if tick % 5 == 0:
             core_tasks.extend([
                 _safe_run("send_pending_review_requests", send_pending_review_requests),
+                _safe_run("send_rebook_suggestions", send_rebook_suggestions),
                 _safe_run("send_onboarding_emails", send_onboarding_emails),
                 _safe_run("send_portal_links", send_portal_links),
                 _safe_run("send_csat_surveys", send_csat_surveys),

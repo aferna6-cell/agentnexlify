@@ -682,6 +682,36 @@ async def check_no_response_leads() -> int:
     return triggered
 
 
+# ---------------------------------------------------------------------------
+# Business-type-aware reminder extras
+# ---------------------------------------------------------------------------
+
+_REMINDER_EXTRAS: dict[str, list[str]] = {
+    "dental": ["Insurance card", "Photo ID", "List of current medications"],
+    "medical": ["Insurance card", "Photo ID", "List of current medications", "Medical records if transferring"],
+    "salon": ["Arrive 5-10 minutes early", "Photos of desired style (if applicable)"],
+    "auto_shop": ["Vehicle registration", "Description of any issues"],
+    "legal": ["Relevant documents or contracts", "Photo ID", "List of questions"],
+    "realestate": ["Pre-approval letter (if buying)", "Photo ID"],
+    "plumbing": ["Photos of the issue (if possible)", "Clear access to the problem area"],
+    "contractor": ["Photos of the project area", "Any permits or HOA approvals"],
+    "fitness": ["Comfortable workout clothes", "Water bottle", "Towel"],
+}
+
+
+def _get_reminder_extras(business_type: str, notes: str) -> list[str]:
+    """Return business-type-aware items to bring/prepare for an appointment."""
+    extras = _REMINDER_EXTRAS.get(business_type, [])
+    # Check if notes mention a specific service that needs extra instructions
+    notes_lower = notes.lower()
+    if business_type == "dental":
+        if any(kw in notes_lower for kw in ["root canal", "surgery", "extraction"]):
+            extras = extras + ["Arrange a ride home (sedation may be used)"]
+        if "cleaning" in notes_lower or "checkup" in notes_lower:
+            extras = extras + ["Floss before your visit"]
+    return extras
+
+
 async def send_appointment_reminders() -> int:
     """Check for upcoming appointments and send email/SMS reminders.
 
@@ -728,7 +758,7 @@ async def send_appointment_reminders() -> int:
             tenant_id = appt["tenant_id"]
 
             try:
-                tenant = db.table("tenants").select("business_name, owner_email, plan").eq("id", tenant_id).limit(1).execute()
+                tenant = db.table("tenants").select("business_name, owner_email, plan, business_type").eq("id", tenant_id).limit(1).execute()
                 if not tenant.data:
                     continue
                 tenant_data = tenant.data[0]
@@ -746,6 +776,10 @@ async def send_appointment_reminders() -> int:
 
             customer_name = appt.get("customer_name") or "there"
             customer_email = appt.get("customer_email")
+            business_type = (tenant_data.get("business_type") or "").lower()
+
+            # Business-type-aware reminder extras
+            bring_items = _get_reminder_extras(business_type, appt.get("notes") or "")
 
             # Send email reminder
             if customer_email:
@@ -753,11 +787,16 @@ async def send_appointment_reminders() -> int:
                     "24h": f"Reminder: Your appointment with {business_name} tomorrow",
                     "1h": f"Your appointment with {business_name} is in 1 hour",
                 }
+                bring_html = ""
+                if bring_items and window["label"] == "24h":
+                    bring_html = "<p><strong>Please remember to bring:</strong></p><ul>" + "".join(f"<li>{item}</li>" for item in bring_items) + "</ul>"
+
                 body_map = {
                     "24h": (
                         f"<h2>Hi {customer_name},</h2>"
                         f"<p>This is a friendly reminder that you have an appointment "
                         f"with <strong>{business_name}</strong> scheduled for <strong>{time_str}</strong>.</p>"
+                        f"{bring_html}"
                         f"<p>If you need to reschedule or cancel, please reply to this email "
                         f"or contact us directly.</p>"
                         f"<p>We look forward to seeing you!</p>"
@@ -798,10 +837,14 @@ async def send_appointment_reminders() -> int:
             # Send SMS reminder if phone available
             customer_phone = appt.get("customer_phone")
             if customer_phone:
+                bring_sms = ""
+                if bring_items and window["label"] == "24h":
+                    bring_sms = " Please bring: " + ", ".join(bring_items[:3]) + "."
+
                 sms_map = {
                     "24h": (
                         f"Hi {customer_name}, reminder: you have an appointment "
-                        f"with {business_name} tomorrow ({time_str}). "
+                        f"with {business_name} tomorrow ({time_str}).{bring_sms} "
                         f"Reply to reschedule."
                     ),
                     "1h": (
@@ -829,6 +872,111 @@ async def send_appointment_reminders() -> int:
                 db.table("appointments").update({"notes": updated_notes}).eq("id", appt["id"]).execute()
             except Exception:
                 logger.exception("Failed to mark reminder sent for appointment %s", appt["id"])
+
+    return sent
+
+
+# ---------------------------------------------------------------------------
+# Rebook automation — suggest next appointment after completion
+# ---------------------------------------------------------------------------
+
+_REBOOK_INTERVALS: dict[str, tuple[int, str]] = {
+    "dental": (180, "6-month checkup and cleaning"),
+    "medical": (365, "annual physical"),
+    "salon": (42, "next appointment"),
+    "fitness": (30, "next session"),
+}
+
+
+async def send_rebook_suggestions() -> int:
+    """After appointment completion, suggest rebooking for relevant business types.
+
+    Checks completed appointments from 24-48 hours ago. Sends one rebook
+    suggestion per appointment. Deduped via activity_log.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    sent = 0
+
+    # Look at appointments completed 24-48h ago
+    window_start = now - timedelta(hours=48)
+    window_end = now - timedelta(hours=24)
+
+    try:
+        appts = (
+            db.table("appointments")
+            .select("id, tenant_id, customer_name, customer_email, customer_phone, lead_id, updated_at")
+            .eq("status", "completed")
+            .gte("updated_at", window_start.isoformat())
+            .lte("updated_at", window_end.isoformat())
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_rebook_suggestions: failed to query completed appointments")
+        return 0
+
+    tenant_cache: dict[str, dict | None] = {}
+
+    for appt in appts.data or []:
+        tenant_id = appt["tenant_id"]
+
+        if tenant_id not in tenant_cache:
+            try:
+                t = db.table("tenants").select("business_name, business_type, plan").eq("id", tenant_id).limit(1).execute()
+                tenant_cache[tenant_id] = t.data[0] if t.data else None
+            except Exception:
+                tenant_cache[tenant_id] = None
+
+        tenant = tenant_cache.get(tenant_id)
+        if not tenant:
+            continue
+
+        btype = (tenant.get("business_type") or "").lower()
+        if btype not in _REBOOK_INTERVALS:
+            continue
+
+        days, suggestion = _REBOOK_INTERVALS[btype]
+
+        # Dedup: check if we already sent a rebook for this appointment
+        try:
+            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("lead_id", appt.get("lead_id")).eq("activity_type", "rebook_suggestion_sent").limit(1).execute()
+            if existing.data:
+                continue
+        except Exception:
+            pass
+
+        business_name = tenant.get("business_name") or "Us"
+        customer_name = appt.get("customer_name") or "there"
+        customer_email = appt.get("customer_email")
+
+        if customer_email:
+            subject = f"Time to schedule your {suggestion} with {business_name}"
+            body = (
+                f"<h2>Hi {customer_name},</h2>"
+                f"<p>We hope your recent visit to <strong>{business_name}</strong> went well!</p>"
+                f"<p>We recommend scheduling your next <strong>{suggestion}</strong> in about "
+                f"<strong>{days} days</strong> to stay on track.</p>"
+                f"<p>Reply to this email or contact us to book your next appointment.</p>"
+                f"<p>Best,<br>The {business_name} Team</p>"
+            )
+            try:
+                result = await send_email(to=customer_email, subject=subject, body_html=body, tenant_id=tenant_id)
+                if result.get("success"):
+                    sent += 1
+            except Exception:
+                logger.exception("Failed to send rebook suggestion for appointment %s", appt["id"])
+
+        # Log to prevent duplicates
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "lead_id": appt.get("lead_id"),
+                "activity_type": "rebook_suggestion_sent",
+                "description": f"Rebook suggestion sent: {suggestion} in {days} days",
+            }).execute()
+        except Exception:
+            logger.warning("Failed to log rebook suggestion for appointment %s", appt["id"], exc_info=True)
 
     return sent
 
