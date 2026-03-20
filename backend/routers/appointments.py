@@ -305,3 +305,130 @@ async def delete_appointment(
     })
 
     return {"status": "cancelled", "id": appointment_id}
+
+
+# ---------------------------------------------------------------------------
+# Service Types — define services with custom durations for booking
+# ---------------------------------------------------------------------------
+
+from pydantic import BaseModel, Field
+
+
+class ServiceTypeCreate(BaseModel):
+    name: str = Field(..., max_length=200)
+    duration_minutes: int = Field(30, ge=15, le=480)
+    description: str | None = Field(None, max_length=1000)
+    price: float | None = Field(None, ge=0)
+
+
+class ServiceTypeUpdate(BaseModel):
+    name: str | None = Field(None, max_length=200)
+    duration_minutes: int | None = Field(None, ge=15, le=480)
+    description: str | None = Field(None, max_length=1000)
+    price: float | None = Field(None, ge=0)
+    is_active: bool | None = None
+
+
+@router.get("/{tenant_id}/service-types")
+async def list_service_types(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """List service types for appointment booking."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_supabase()
+    result = (
+        db.table("service_types")
+        .select("*")
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", True)
+        .order("sort_order")
+        .execute()
+    )
+    return result.data or []
+
+
+@router.post("/{tenant_id}/service-types")
+async def create_service_type(
+    tenant_id: str,
+    req: ServiceTypeCreate,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Create a new service type."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_supabase()
+    data = {
+        "tenant_id": tenant_id,
+        "name": req.name,
+        "duration_minutes": req.duration_minutes,
+    }
+    if req.description:
+        data["description"] = req.description
+    if req.price is not None:
+        data["price"] = float(req.price)
+    result = db.table("service_types").insert(data).execute()
+    return result.data[0] if result.data else {}
+
+
+@router.put("/{tenant_id}/service-types/{service_id}")
+async def update_service_type(
+    tenant_id: str,
+    service_id: str,
+    req: ServiceTypeUpdate,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Update a service type."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    updates = {k: v for k, v in req.model_dump(exclude_none=True).items()}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    db = get_supabase()
+    result = db.table("service_types").update(updates).eq("id", service_id).eq("tenant_id", tenant_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Service type not found")
+    return result.data[0]
+
+
+@router.delete("/{tenant_id}/service-types/{service_id}")
+async def delete_service_type(
+    tenant_id: str,
+    service_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Soft-delete a service type."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_supabase()
+    result = (
+        db.table("service_types")
+        .update({"is_active": False})
+        .eq("id", service_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Service type not found")
+    return {"deleted": True}
+
+
+@router.get("/public/{tenant_id}/service-types")
+@limiter.limit("60/minute")
+async def public_service_types(request: Request, tenant_id: str, api_key: str = Query(...)):
+    """Public endpoint: list active service types for widget booking."""
+    db = get_supabase()
+    # Verify API key
+    wc = db.table("widget_configs").select("tenant_id").eq("api_key", api_key).eq("tenant_id", tenant_id).limit(1).execute()
+    if not wc.data:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+    result = (
+        db.table("service_types")
+        .select("id, name, duration_minutes, description, price")
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", True)
+        .order("sort_order")
+        .execute()
+    )
+    return result.data or []

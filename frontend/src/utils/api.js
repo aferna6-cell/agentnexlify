@@ -279,6 +279,16 @@ export function fetchAvailability(tenantId, token) {
   return request(`/api/v1/appointments/availability/${tenantId}`, { token });
 }
 
+export function fetchServiceTypes(tenantId, token) {
+  return request(`/api/v1/appointments/${tenantId}/service-types`, { token });
+}
+export function createServiceType(tenantId, token, data) {
+  return request(`/api/v1/appointments/${tenantId}/service-types`, { method: "POST", token, body: data });
+}
+export function deleteServiceType(tenantId, token, serviceId) {
+  return request(`/api/v1/appointments/${tenantId}/service-types/${serviceId}`, { method: "DELETE", token });
+}
+
 export function updateAvailability(tenantId, token, data) {
   return request(`/api/v1/appointments/availability/${tenantId}`, {
     method: "PUT",

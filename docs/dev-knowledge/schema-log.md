@@ -362,4 +362,9 @@ Adds 3 TEXT columns to `leads`: insurance_carrier, insurance_member_id, insuranc
 
 **Applied:** 2026-03-21 via Supabase MCP.
 
+### 063 — Service Types for Booking
+New table `service_types` for defining services with custom durations. Columns: tenant_id, name, duration_minutes, description, price, is_active, sort_order. Enables service-based slot duration in appointment booking.
+
+**Applied:** 2026-03-21 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
