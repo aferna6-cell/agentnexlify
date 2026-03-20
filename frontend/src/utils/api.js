@@ -179,6 +179,13 @@ export function assignLead(tenantId, token, leadId, assignedTo) {
   });
 }
 
+export function generateLeadSummary(tenantId, token, leadId) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}/generate-summary`, {
+    method: "POST",
+    token,
+  });
+}
+
 export function findDuplicateLeads(tenantId, token) {
   return request(`/api/v1/leads/${tenantId}/duplicates`, { token });
 }

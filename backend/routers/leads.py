@@ -789,3 +789,62 @@ async def handle_suggestion(
     db.table("activity_log").delete().eq("id", suggestion_id).execute()
 
     return {"success": True, "action": req.action}
+
+
+@router.post("/{tenant_id}/{lead_id}/generate-summary")
+async def generate_lead_summary(
+    tenant_id: str,
+    lead_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Generate an AI summary of a lead's conversation history."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Get the lead's conversation
+    lead = db.table("leads").select("conversation_id, name").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+    if not lead.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    conv_id = lead.data[0].get("conversation_id")
+    if not conv_id:
+        raise HTTPException(status_code=400, detail="Lead has no linked conversation")
+
+    # Fetch messages
+    conv = db.table("conversations").select("messages").eq("id", conv_id).limit(1).execute()
+    if not conv.data or not conv.data[0].get("messages"):
+        raise HTTPException(status_code=400, detail="No conversation messages found")
+
+    messages = conv.data[0]["messages"]
+    if len(messages) < 2:
+        raise HTTPException(status_code=400, detail="Conversation too short to summarize")
+
+    # Build transcript (last 30 messages)
+    transcript = "\n".join(
+        f"{'Visitor' if m['role'] == 'user' else 'Agent'}: {m['content']}"
+        for m in messages[-30:]
+    )
+
+    # Generate AI summary
+    import anthropic
+    from backend.config import settings
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=15.0)
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=150,
+            temperature=0,
+            system="Summarize this customer conversation in 1-2 sentences. Focus on: what the customer needs, any decisions made, and next steps. Be concise.",
+            messages=[{"role": "user", "content": transcript[:3000]}],
+        )
+        summary = resp.content[0].text.strip()
+    except Exception:
+        logger.exception("Failed to generate AI summary for lead %s", lead_id)
+        raise HTTPException(status_code=502, detail="AI summary generation failed")
+
+    # Save the summary
+    db.table("leads").update({"conversation_summary": summary}).eq("id", lead_id).execute()
+
+    return {"summary": summary}

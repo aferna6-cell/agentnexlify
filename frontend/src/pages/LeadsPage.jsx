@@ -57,7 +57,14 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
         <tbody>
           {leads.map((lead) => (
             <tr key={lead.id} onClick={() => onSelectLead(lead)}>
-              <td>{lead.name || "Unknown"}</td>
+              <td>
+                <div>{lead.name || "Unknown"}</div>
+                {lead.conversation_summary && (
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                    {lead.conversation_summary}
+                  </div>
+                )}
+              </td>
               <td>{lead.email || "\u2014"}</td>
               <td>{lead.phone || "\u2014"}</td>
               <td><span className={`stage-badge stage-${lead.status || "new"}`}>{lead.status || "new"}</span></td>

@@ -107,6 +107,14 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | social_posts | Social media post management | tenant_id, platform, content, media_urls (JSONB), hashtags (TEXT[]), status, scheduled_for, engagement_data (JSONB) |
 | marketing_campaigns | Email/SMS blast campaigns | tenant_id, name, type (email/sms), subject, body, target_filter (JSONB), status, total_recipients/sent/opened/clicked |
 | campaign_sends | Campaign send tracking | campaign_id, tenant_id, lead_id, channel, recipient, status, sent_at/opened_at/clicked_at |
+| invoices | Invoicing & text-to-pay | tenant_id, lead_id, invoice_number, items_json, subtotal/tax/total, status, deposit_amount, amount_paid, is_recurring, recurrence_interval |
+| pipeline_stages | Sales pipeline stages | tenant_id, name, sort_order, color, is_won, is_lost |
+| smart_lists | Dynamic lead segments | tenant_id, name, filters_json, cached_lead_count |
+| forms | Form/survey builder | tenant_id, name, fields_json, settings_json, public_token, submission_count |
+| form_submissions | Form submission data | form_id, tenant_id, lead_id, data_json |
+| invoice_item_templates | Reusable invoice line items | tenant_id, description, unit_price, category |
+| documents | Documents & e-signatures | tenant_id, lead_id, title, template_html, rendered_html, status, signer_name/email, signed_at, signature_data, signing_token |
+| document_templates | Reusable document templates | tenant_id, name, category, template_html, variables (TEXT[]) |
 
 > Always verify against live schema — this table may be outdated.
 
