@@ -795,3 +795,116 @@ async def list_submissions(
         "offset": offset,
         "limit": limit,
     }
+
+
+# ---------------------------------------------------------------------------
+# Form Presets — pre-built forms for specific business types
+# ---------------------------------------------------------------------------
+
+_FORM_PRESETS: dict[str, dict] = {
+    "dental_intake": {
+        "name": "New Patient Health History",
+        "description": "Collect essential health information from new dental patients before their first visit.",
+        "fields": [
+            {"id": "full_name", "type": "text", "label": "Full Name", "required": True, "placeholder": "First and Last Name"},
+            {"id": "dob", "type": "date", "label": "Date of Birth", "required": True},
+            {"id": "email", "type": "email", "label": "Email", "required": True, "placeholder": "your@email.com"},
+            {"id": "phone", "type": "phone", "label": "Phone Number", "required": True, "placeholder": "(555) 123-4567"},
+            {"id": "insurance_carrier", "type": "text", "label": "Insurance Carrier", "required": False, "placeholder": "e.g. Delta Dental, Cigna"},
+            {"id": "insurance_member_id", "type": "text", "label": "Insurance Member ID", "required": False},
+            {"id": "allergies", "type": "textarea", "label": "Allergies (medications, latex, etc.)", "required": False, "placeholder": "List any known allergies"},
+            {"id": "medications", "type": "textarea", "label": "Current Medications", "required": False, "placeholder": "List all current medications"},
+            {"id": "conditions", "type": "select", "label": "Do you have any of the following?", "required": False, "options": ["None", "Diabetes", "Heart Disease", "High Blood Pressure", "Bleeding Disorder", "Asthma", "Other"]},
+            {"id": "pregnant", "type": "radio", "label": "Are you currently pregnant?", "required": False, "options": ["No", "Yes", "Not Applicable"]},
+            {"id": "last_dental_visit", "type": "select", "label": "When was your last dental visit?", "required": False, "options": ["Less than 6 months", "6-12 months", "1-2 years", "More than 2 years", "Never"]},
+            {"id": "concerns", "type": "textarea", "label": "What brings you in today?", "required": False, "placeholder": "Describe any dental concerns or symptoms"},
+            {"id": "consent", "type": "checkbox", "label": "I consent to treatment and acknowledge that the information provided is accurate", "required": True},
+        ],
+        "success_message": "Thank you! Your health history has been received. We look forward to seeing you at your appointment.",
+    },
+    "medical_intake": {
+        "name": "Patient Registration Form",
+        "description": "New patient registration and medical history for healthcare practices.",
+        "fields": [
+            {"id": "full_name", "type": "text", "label": "Full Name", "required": True},
+            {"id": "dob", "type": "date", "label": "Date of Birth", "required": True},
+            {"id": "email", "type": "email", "label": "Email", "required": True},
+            {"id": "phone", "type": "phone", "label": "Phone Number", "required": True},
+            {"id": "insurance_carrier", "type": "text", "label": "Insurance Provider", "required": False},
+            {"id": "insurance_id", "type": "text", "label": "Insurance ID / Policy Number", "required": False},
+            {"id": "allergies", "type": "textarea", "label": "Known Allergies", "required": False},
+            {"id": "medications", "type": "textarea", "label": "Current Medications", "required": False},
+            {"id": "medical_history", "type": "textarea", "label": "Relevant Medical History", "required": False},
+            {"id": "reason_for_visit", "type": "textarea", "label": "Reason for Visit", "required": True},
+            {"id": "consent", "type": "checkbox", "label": "I consent to treatment and acknowledge the privacy notice", "required": True},
+        ],
+        "success_message": "Thank you for completing your registration. We'll see you at your appointment.",
+    },
+    "contractor_estimate": {
+        "name": "Request a Free Estimate",
+        "description": "Collect project details for a free estimate.",
+        "fields": [
+            {"id": "name", "type": "text", "label": "Your Name", "required": True},
+            {"id": "email", "type": "email", "label": "Email", "required": True},
+            {"id": "phone", "type": "phone", "label": "Phone", "required": True},
+            {"id": "address", "type": "text", "label": "Property Address", "required": True},
+            {"id": "service_type", "type": "select", "label": "Type of Service", "required": True, "options": ["Repair", "Installation", "Replacement", "Inspection", "Emergency", "Other"]},
+            {"id": "description", "type": "textarea", "label": "Describe the Project", "required": True, "placeholder": "What do you need done?"},
+            {"id": "timeline", "type": "select", "label": "When do you need this done?", "required": False, "options": ["ASAP", "This week", "This month", "Flexible"]},
+            {"id": "photos", "type": "text", "label": "Link to Photos (optional)", "required": False, "placeholder": "Google Drive or Dropbox link"},
+        ],
+        "success_message": "Thanks! We'll review your request and get back to you with an estimate within 24 hours.",
+    },
+}
+
+
+@router.get("/{tenant_id}/presets")
+async def list_form_presets(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """List available form presets for one-click creation."""
+    verify_tenant(claims, tenant_id)
+    return [
+        {"key": key, "name": preset["name"], "description": preset["description"], "field_count": len(preset["fields"])}
+        for key, preset in _FORM_PRESETS.items()
+    ]
+
+
+@router.post("/{tenant_id}/presets/{preset_key}")
+async def create_form_from_preset(
+    tenant_id: str,
+    preset_key: str,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Create a form from a preset template."""
+    verify_tenant(claims, tenant_id)
+
+    if preset_key not in _FORM_PRESETS:
+        raise HTTPException(status_code=404, detail=f"Preset '{preset_key}' not found")
+
+    preset = _FORM_PRESETS[preset_key]
+    public_token = _generate_public_token()
+
+    data = {
+        "tenant_id": tenant_id,
+        "name": preset["name"],
+        "description": preset.get("description"),
+        "fields_json": preset["fields"],
+        "settings_json": {},
+        "is_active": True,
+        "public_token": public_token,
+        "submission_count": 0,
+        "success_message": preset.get("success_message"),
+    }
+
+    db = get_supabase()
+    try:
+        result = db.table("forms").insert(data).execute()
+    except Exception:
+        logger.exception("Failed to create form from preset %s for tenant %s", preset_key, tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to create form")
+
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create form")
+    return result.data[0]

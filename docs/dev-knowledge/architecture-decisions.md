@@ -311,4 +311,19 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** The `POST /reviews/{tenant_id}/request-review/{lead_id}` endpoint sends review requests immediately (no delay_hours check). This is intentional: the automated `send_pending_review_requests` function respects the configured delay, but the manual one-click action represents explicit user intent and should fire instantly.
 **Why:** When a business owner clicks "Request Review" on a lead, they've already decided it's the right time. Adding a delay would be confusing.
 
+### Business-type-aware reminder extras
+**Date:** 2026-03-21
+**Decision:** Appointment reminders include business-type-specific "bring" items via a `_REMINDER_EXTRAS` dict in automation_engine.py. Only 24h reminders get the extras (1h is too late to prepare). Dental root canal/surgery adds "arrange a ride home" dynamically based on notes content.
+**Why:** Generic reminders ("your appointment is tomorrow") miss the chance to reduce no-shows. A dental patient who forgets their insurance card wastes 15 minutes at the front desk.
+
+### Form presets — one-click industry forms
+**Date:** 2026-03-21
+**Decision:** Form presets are hardcoded in `_FORM_PRESETS` dict in forms.py rather than stored in a separate database table. Each preset defines name, description, fields, and success_message. The `POST /presets/{preset_key}` endpoint creates a real form from the preset.
+**Why:** Presets rarely change and don't need per-tenant customization of the template itself. Storing them in code avoids a migration and keeps the system simple. Business owners customize after creation.
+
+### HIPAA-aware AI system prompt for healthcare
+**Date:** 2026-03-21
+**Decision:** For dental/medical business types, the widget AI system prompt includes a HEALTHCARE PRIVACY block that instructs the AI to handle health information professionally, not store or repeat medical details, and recommend patients complete a health history form. This is a system prompt instruction, not a hard filter.
+**Why:** Healthcare businesses need basic privacy awareness in their AI. A full HIPAA compliance implementation would require audit trails, BAAs, and encryption — but prompt-level instructions handle the most common issue: AI casually repeating sensitive health info.
+
 _Add new decisions when significant architectural choices are made._

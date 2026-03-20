@@ -495,6 +495,19 @@ def _build_system_prompt(
             + "\n- Only ask for these when it fits the conversation flow. Don't interrogate the visitor."
         )
 
+    # HIPAA / healthcare compliance block
+    healthcare_block = ""
+    bt_lower = (business_type or "").lower()
+    if bt_lower in ("dental", "medical", "healthcare", "doctor", "clinic"):
+        healthcare_block = (
+            "\n\nHEALTHCARE PRIVACY:"
+            "\n- If someone shares medical or health information, acknowledge it professionally"
+            "\n- Do NOT store, repeat, or reference specific medical conditions in detail"
+            "\n- If asked about privacy, say: 'Your information is kept confidential and handled in accordance with privacy regulations.'"
+            "\n- Recommend patients complete a health history form before their visit"
+            "\n- Never provide medical advice, diagnoses, or treatment recommendations"
+        )
+
     return (
         f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
         f"Rules:\n"
@@ -506,6 +519,7 @@ def _build_system_prompt(
         f"- If you don't know something, say you'll have someone follow up\n"
         f"- Never claim to be human\n"
         f"- ALWAYS respond in the same language the visitor uses. If they write in Spanish, reply in Spanish. If they write in French, reply in French. Match their language exactly."
+        f"{healthcare_block}"
         f"{hours_block}"
         f"{faq_block}"
         f"{website_block}"

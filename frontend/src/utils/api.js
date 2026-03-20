@@ -1223,6 +1223,12 @@ export function fetchForms(tenantId, token) {
 export function createForm(tenantId, token, data) {
   return request(`/api/v1/forms/${tenantId}`, { method: "POST", token, body: data });
 }
+export function fetchFormPresets(tenantId, token) {
+  return request(`/api/v1/forms/${tenantId}/presets`, { token });
+}
+export function createFormFromPreset(tenantId, token, presetKey) {
+  return request(`/api/v1/forms/${tenantId}/presets/${presetKey}`, { method: "POST", token });
+}
 export function fetchForm(tenantId, token, formId) {
   return request(`/api/v1/forms/${tenantId}/${formId}`, { token });
 }
