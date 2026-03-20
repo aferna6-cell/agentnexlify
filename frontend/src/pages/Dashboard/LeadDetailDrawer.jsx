@@ -171,6 +171,9 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     areas_of_interest: "",
     timeline: "",
     budget: "",
+    insurance_carrier: "",
+    insurance_member_id: "",
+    insurance_group: "",
   });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -224,6 +227,9 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
       areas_of_interest: lead.areas_of_interest || "",
       timeline: lead.timeline || "",
       budget: lead.budget || "",
+      insurance_carrier: lead.insurance_carrier || "",
+      insurance_member_id: lead.insurance_member_id || "",
+      insurance_group: lead.insurance_group || "",
     });
     setConfirmDelete(false);
     setBreakdown(null);
@@ -554,6 +560,25 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               <textarea className="drawer-textarea" value={form.conversation_summary} onChange={handleChange("conversation_summary")} placeholder="Add notes..." rows={3} />
             </div>
           </div>
+
+          {/* Insurance (shown for all leads — useful for dental/medical) */}
+          {(form.insurance_carrier || form.insurance_member_id || form.insurance_group || lead.insurance_carrier) ? (
+            <div className="intel-section">
+              <div className="intel-title">Insurance</div>
+              <div className="drawer-field">
+                <label className="drawer-label">Carrier</label>
+                <input className="drawer-input" value={form.insurance_carrier} onChange={handleChange("insurance_carrier")} placeholder="e.g. Delta Dental, Cigna" />
+              </div>
+              <div className="drawer-field">
+                <label className="drawer-label">Member ID</label>
+                <input className="drawer-input" value={form.insurance_member_id} onChange={handleChange("insurance_member_id")} placeholder="Member/Policy ID" />
+              </div>
+              <div className="drawer-field">
+                <label className="drawer-label">Group Number</label>
+                <input className="drawer-input" value={form.insurance_group} onChange={handleChange("insurance_group")} placeholder="Group #" />
+              </div>
+            </div>
+          ) : null}
 
           {/* Custom Fields */}
           {customFieldDefs.length > 0 && (

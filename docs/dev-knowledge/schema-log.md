@@ -357,4 +357,9 @@ Two new tables:
 
 **Applied:** 2026-03-19 via Supabase MCP.
 
+### 062 — Lead Insurance Fields
+Adds 3 TEXT columns to `leads`: insurance_carrier, insurance_member_id, insurance_group. For dental/medical businesses to track patient insurance information.
+
+**Applied:** 2026-03-21 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

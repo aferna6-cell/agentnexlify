@@ -376,6 +376,9 @@ class LeadUpdateRequest(BaseModel):
     budget: str | None = None
     next_steps: str | None = None
     tags: list[str] | None = None
+    insurance_carrier: str | None = None
+    insurance_member_id: str | None = None
+    insurance_group: str | None = None
 
     @field_validator("status")
     @classmethod
