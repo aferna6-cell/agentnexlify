@@ -56,6 +56,41 @@ _INDUSTRY_STAGES: dict[str, list[dict]] = {
         {"name": "Completed", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
         {"name": "Inactive", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
     ],
+    "legal": [
+        {"name": "Inquiry", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Consultation", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Retained", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "Active Case", "sort_order": 3, "color": "#14b8a6", "is_won": False, "is_lost": False},
+        {"name": "Resolved", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "Declined", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
+    "restaurant": [
+        {"name": "Inquiry", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Reservation", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Catering Quoted", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "Booked", "sort_order": 3, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "Cancelled", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
+    "salon": [
+        {"name": "New Client", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Consulted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Booked", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "Regular Client", "sort_order": 3, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "Inactive", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
+}
+
+# Map frontend dropdown values to preset keys (some use different naming)
+_TYPE_ALIASES: dict[str, str] = {
+    "real_estate": "realestate",
+    "home_services": "contractor",
+    "construction": "contractor",
+    "plumbing": "contractor",
+    "beauty": "salon",
+    "medical": "dental",
+    "health_wellness": "dental",
+    "cleaning": "contractor",
+    "landscaping": "contractor",
 }
 
 
@@ -67,8 +102,10 @@ def _seed_default_stages(tenant_id: str, db) -> list[dict]:
         tenant = db.table("tenants").select("business_type").eq("id", tenant_id).limit(1).execute()
         if tenant.data:
             btype = (tenant.data[0].get("business_type") or "").lower()
-            if btype in _INDUSTRY_STAGES:
-                stages = _INDUSTRY_STAGES[btype]
+            # Check direct match, then aliases
+            resolved = _TYPE_ALIASES.get(btype, btype)
+            if resolved in _INDUSTRY_STAGES:
+                stages = _INDUSTRY_STAGES[resolved]
     except Exception:
         pass  # Fall back to defaults
 
