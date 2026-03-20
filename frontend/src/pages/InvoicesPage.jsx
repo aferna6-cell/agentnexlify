@@ -12,6 +12,8 @@ import {
   createInvoiceFromBid,
   fetchLeads,
   fetchBids,
+  fetchItemTemplates,
+  createItemTemplate,
 } from "../utils/api";
 
 const STATUS_FILTERS = ["all", "draft", "sent", "viewed", "paid", "overdue", "cancelled"];
@@ -113,6 +115,10 @@ export default function InvoicesPage() {
   // Copy payment link
   const [copiedId, setCopiedId] = useState(null);
 
+  // Item templates
+  const [itemTemplates, setItemTemplates] = useState([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+
   const loadData = useCallback(async () => {
     if (!user?.tenantId) return;
     try {
@@ -142,12 +148,14 @@ export default function InvoicesPage() {
     if (!user?.tenantId || loadingDropdowns) return;
     setLoadingDropdowns(true);
     try {
-      const [leadsData, bidsData] = await Promise.all([
+      const [leadsData, bidsData, templatesData] = await Promise.all([
         fetchLeads(user.tenantId, token, { per_page: 200 }),
         fetchBids(user.tenantId, token),
+        fetchItemTemplates(user.tenantId, token).catch(() => []),
       ]);
       setLeads(leadsData.leads || []);
       setBids(bidsData.bids || bidsData || []);
+      setItemTemplates(Array.isArray(templatesData) ? templatesData : []);
     } catch (err) {
       console.warn("Failed to load dropdowns:", err.message);
     } finally {
@@ -279,6 +287,27 @@ export default function InvoicesPage() {
   // Line item helpers
   const addItem = () => {
     setForm((f) => ({ ...f, items: [...f.items, { ...emptyItem }] }));
+  };
+
+  const addFromTemplate = (tmpl) => {
+    setForm((f) => ({
+      ...f,
+      items: [...f.items, { description: tmpl.description, quantity: 1, unit_price: Number(tmpl.unit_price) }],
+    }));
+    setShowTemplates(false);
+  };
+
+  const saveAsTemplate = async (item) => {
+    if (!item.description.trim()) return;
+    try {
+      const created = await createItemTemplate(user.tenantId, token, {
+        description: item.description,
+        unit_price: Number(item.unit_price) || 0,
+      });
+      setItemTemplates((prev) => [...prev, created]);
+    } catch (err) {
+      console.warn("Failed to save template:", err.message);
+    }
   };
 
   const removeItem = (idx) => {
@@ -816,16 +845,44 @@ export default function InvoicesPage() {
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Items *</label>
-                  <button
-                    onClick={addItem}
-                    style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px", color: "var(--accent)", cursor: "pointer", fontSize: "0.75rem" }}
-                  >
-                    + Add Item
-                  </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {itemTemplates.length > 0 && (
+                      <div style={{ position: "relative" }}>
+                        <button
+                          onClick={() => setShowTemplates((v) => !v)}
+                          style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px", color: "var(--purple, #8b5cf6)", cursor: "pointer", fontSize: "0.75rem" }}
+                        >
+                          Saved Items
+                        </button>
+                        {showTemplates && (
+                          <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, background: "var(--bg-card, #1e1e2e)", border: "1px solid var(--border-color)", borderRadius: 8, padding: 4, zIndex: 50, minWidth: 220, maxHeight: 200, overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                            {itemTemplates.map((t) => (
+                              <button
+                                key={t.id}
+                                onClick={() => addFromTemplate(t)}
+                                style={{ display: "flex", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "6px 8px", color: "var(--text-primary)", cursor: "pointer", fontSize: "0.8rem", borderRadius: 4, textAlign: "left" }}
+                                onMouseEnter={(e) => { e.target.style.background = "var(--hover-overlay)"; }}
+                                onMouseLeave={(e) => { e.target.style.background = "none"; }}
+                              >
+                                <span>{t.description}</span>
+                                <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>{formatCurrency(t.unit_price)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      onClick={addItem}
+                      style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px", color: "var(--accent)", cursor: "pointer", fontSize: "0.75rem" }}
+                    >
+                      + Add Item
+                    </button>
+                  </div>
                 </div>
 
                 {/* Items header */}
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 20px", gap: 6, marginBottom: 4, fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 40px", gap: 6, marginBottom: 4, fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
                   <span>Description</span>
                   <span style={{ textAlign: "right" }}>Qty</span>
                   <span style={{ textAlign: "right" }}>Unit Price</span>
@@ -834,7 +891,7 @@ export default function InvoicesPage() {
                 </div>
 
                 {form.items.map((item, idx) => (
-                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 20px", gap: 6, marginBottom: 6, alignItems: "center" }}>
+                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 40px", gap: 6, marginBottom: 6, alignItems: "center" }}>
                     <input
                       value={item.description}
                       onChange={(e) => updateItem(idx, "description", e.target.value)}
@@ -860,14 +917,25 @@ export default function InvoicesPage() {
                     <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", textAlign: "right" }}>
                       {formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}
                     </span>
-                    {form.items.length > 1 && (
-                      <button
-                        onClick={() => removeItem(idx)}
-                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.9rem", padding: 0 }}
-                      >
-                        x
-                      </button>
-                    )}
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {item.description.trim() && (
+                        <button
+                          onClick={() => saveAsTemplate(item)}
+                          title="Save as template"
+                          style={{ background: "none", border: "none", color: "var(--purple, #8b5cf6)", cursor: "pointer", fontSize: "0.7rem", padding: 0 }}
+                        >
+                          Save
+                        </button>
+                      )}
+                      {form.items.length > 1 && (
+                        <button
+                          onClick={() => removeItem(idx)}
+                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.9rem", padding: 0 }}
+                        >
+                          x
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
 

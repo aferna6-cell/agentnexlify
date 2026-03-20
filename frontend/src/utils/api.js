@@ -1125,6 +1125,17 @@ export function createInvoiceFromBid(tenantId, token, bidId) {
   return request(`/api/v1/invoices/${tenantId}/from-bid/${bidId}`, { method: "POST", token });
 }
 
+// Invoice Item Templates
+export function fetchItemTemplates(tenantId, token) {
+  return request(`/api/v1/invoices/${tenantId}/item-templates`, { token });
+}
+export function createItemTemplate(tenantId, token, data) {
+  return request(`/api/v1/invoices/${tenantId}/item-templates`, { method: "POST", token, body: data });
+}
+export function deleteItemTemplate(tenantId, token, templateId) {
+  return request(`/api/v1/invoices/${tenantId}/item-templates/${templateId}`, { method: "DELETE", token });
+}
+
 // Pipeline
 export function fetchPipelineStages(tenantId, token) {
   return request(`/api/v1/pipeline/${tenantId}/stages`, { token });
