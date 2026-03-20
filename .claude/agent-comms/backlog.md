@@ -416,13 +416,22 @@ _Inspired by GoHighLevel, Jobber, ServiceTitan, HubSpot, Podium. These close the
 
 _Discovered via dental office customer simulation. Applicable to all healthcare business types._
 
-- [ ] **Dental-aware appointment reminders** — Mention service type + "bring insurance card, photo ID". Business-type-aware reminder templates in automation_engine.py.
-- [ ] **More dental FAQs on signup** — Add: cancellation policy, payment plans, new patient process, cosmetic services, cost ranges.
-- [ ] **Rebook automation** — "Schedule your next cleaning in 6 months" trigger after completed appointment. New automation trigger type.
-- [ ] **Patient intake form preset** — Pre-built health history form template for dental/medical business types using the form builder.
-- [ ] **Insurance fields in leads** — carrier, member_id, group_number columns. Schema change needed.
-- [ ] **HIPAA compliance messaging** — Privacy notice in widget footer for healthcare businesses. Consent acknowledgment step.
+- [x] **Dental-aware appointment reminders** — DONE 2026-03-21 Cycle 117. Business-type-aware "bring" items in 24h reminders for 9 business types.
+- [x] **More dental FAQs on signup** — DONE 2026-03-19 Cycle 115. 4 new dental FAQs added (cancellation, payment plans, first visit, cosmetic).
+- [x] **Rebook automation** — DONE 2026-03-21 Cycle 117. Auto-sends rebook suggestion 24-48h after appointment completion. Dental: 180d, salon: 42d, medical: 365d.
+- [x] **Patient intake form preset** — DONE 2026-03-21 Cycle 118. 3 presets: dental intake (13 fields), medical intake (11 fields), contractor estimate (8 fields).
+- [x] **Insurance fields in leads** — DONE 2026-03-21 Cycle 119. Migration 062: insurance_carrier, insurance_member_id, insurance_group on leads.
+- [x] **HIPAA compliance messaging** — DONE 2026-03-21 Cycle 118. AI system prompt gets healthcare privacy instructions for dental/medical business types.
 - [ ] **Service-based slot duration** — Different services take different times. Currently slot_duration is global.
+
+## Features — Researched Competitive Opportunities (2026-03-21)
+
+- [ ] [RESEARCHED] **Industry-specific pipeline presets** — PARTIALLY DONE (Cycle 121: RE, contractor, dental). Extend to all 14 business types.
+- [ ] [RESEARCHED] **AI conversation summary on lead card** — Auto-generate a 2-sentence summary of the latest conversation for each lead. Saves time scanning conversations.
+- [ ] [RESEARCHED] **Two-way email sync** — When business owner replies to a lead via their regular email, capture it in the conversation thread. Competitors all have this.
+- [ ] [RESEARCHED] **Lead source tracking** — Track where leads come from (widget, form, phone, manual, referral). Critical for marketing ROI.
+- [ ] [RESEARCHED] **Zapier trigger for form submissions** — Fire webhook when a form is submitted, enabling Zapier automations.
+- [ ] [RESEARCHED] **White-label client login** — Let business owners give their clients a login to see their appointments/invoices/documents. Currently client_portal uses magic links.
 
 ## Optimization
 

@@ -29,10 +29,50 @@ DEFAULT_STAGES = [
     {"name": "Lost", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
 ]
 
+# Business-type-specific pipeline presets
+_INDUSTRY_STAGES: dict[str, list[dict]] = {
+    "realestate": [
+        {"name": "New Lead", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Contacted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Showing Scheduled", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "Offer Submitted", "sort_order": 3, "color": "#ec4899", "is_won": False, "is_lost": False},
+        {"name": "Under Contract", "sort_order": 4, "color": "#14b8a6", "is_won": False, "is_lost": False},
+        {"name": "Closed", "sort_order": 5, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "Lost", "sort_order": 6, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
+    "contractor": [
+        {"name": "New Lead", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Estimate Sent", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Approved", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "In Progress", "sort_order": 3, "color": "#14b8a6", "is_won": False, "is_lost": False},
+        {"name": "Completed", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "Lost", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
+    "dental": [
+        {"name": "New Patient", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Consulted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Treatment Planned", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "In Treatment", "sort_order": 3, "color": "#14b8a6", "is_won": False, "is_lost": False},
+        {"name": "Completed", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "Inactive", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
+}
+
 
 def _seed_default_stages(tenant_id: str, db) -> list[dict]:
-    """Insert default pipeline stages for a tenant and return them."""
-    rows = [{"tenant_id": tenant_id, **s} for s in DEFAULT_STAGES]
+    """Insert default pipeline stages for a tenant, using industry-specific presets when available."""
+    # Try to get business_type for industry-specific stages
+    stages = DEFAULT_STAGES
+    try:
+        tenant = db.table("tenants").select("business_type").eq("id", tenant_id).limit(1).execute()
+        if tenant.data:
+            btype = (tenant.data[0].get("business_type") or "").lower()
+            if btype in _INDUSTRY_STAGES:
+                stages = _INDUSTRY_STAGES[btype]
+    except Exception:
+        pass  # Fall back to defaults
+
+    rows = [{"tenant_id": tenant_id, **s} for s in stages]
     try:
         result = db.table("pipeline_stages").insert(rows).execute()
         return result.data or []
