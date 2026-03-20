@@ -1,13 +1,15 @@
 """Reviews management endpoints — Reputation Manager module."""
 
+import html as html_mod
 import logging
 from datetime import datetime, timezone
 
 import anthropic
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import send_email, build_unsubscribe_url
@@ -381,7 +383,9 @@ async def generate_ai_draft(
 
 
 @router.post("/{tenant_id}/request-review/{lead_id}")
+@limiter.limit("10/minute")
 async def send_review_request(
+    request: Request,
     tenant_id: str,
     lead_id: str,
     claims: dict = Depends(_get_current_tenant),
@@ -426,17 +430,19 @@ async def send_review_request(
     # Send email
     if lead.get("email"):
         unsub_url = build_unsubscribe_url(lead_id)
+        safe_name = html_mod.escape(customer_name)
+        safe_biz = html_mod.escape(business_name)
         subject = f"How was your experience with {business_name}?"
         body = (
-            f"<h2>Hi {customer_name},</h2>"
-            f"<p>Thank you for choosing <strong>{business_name}</strong>! "
+            f"<h2>Hi {safe_name},</h2>"
+            f"<p>Thank you for choosing <strong>{safe_biz}</strong>! "
             f"We hope everything went well.</p>"
             f"<p>We'd really appreciate it if you could take a moment to share your experience:</p>"
             f'<p style="text-align:center;margin:20px 0;">'
             f'<a href="{review_link}" style="background:#4f46e5;color:#fff;padding:12px 24px;'
             f'border-radius:6px;text-decoration:none;font-weight:600;">Leave a Review</a></p>'
             f"<p>Your feedback helps us improve and helps others find us. Thank you!</p>"
-            f"<p>Best,<br>The {business_name} Team</p>"
+            f"<p>Best,<br>The {safe_biz} Team</p>"
         )
         try:
             result = await send_email(to=lead["email"], subject=subject, body_html=body, tenant_id=tenant_id, unsubscribe_url=unsub_url)

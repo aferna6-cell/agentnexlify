@@ -8,6 +8,7 @@ import {
   fetchSequences,
   fetchAvailability,
   updateAvailability,
+  updateTenantSettings,
 } from "../../utils/api";
 import { trackEvent } from "../../utils/analytics";
 
@@ -144,8 +145,13 @@ export default function OnboardingChecklist({
   const [sequenceCreated, setSequenceCreated] = useState(false);
   const [sequenceError, setSequenceError] = useState(null);
   const [existingSequences, setExistingSequences] = useState(null);
+  const [textbackEnabled, setTextbackEnabled] = useState(false);
+  const [savingTextback, setSavingTextback] = useState(false);
   const [businessHours, setBusinessHours] = useState(DEFAULT_HOURS);
   const [hoursLoaded, setHoursLoaded] = useState(false);
+  const [newService, setNewService] = useState("");
+  const [services, setServices] = useState([]);
+  const [addingService, setAddingService] = useState(false);
 
   const steps = computeSteps(dashData, stored);
 
@@ -209,7 +215,7 @@ export default function OnboardingChecklist({
     }
   }, [activeStep, tenantId, token, hoursLoaded]);
 
-  // Load existing sequences when automations step opens
+  // Load existing sequences + textback state when automations step opens
   useEffect(() => {
     if (activeStep === "automations" && tenantId && token) {
       fetchSequences(tenantId, token)
@@ -224,8 +230,12 @@ export default function OnboardingChecklist({
           console.warn("Failed to load sequences:", err.message || err);
           setExistingSequences([]);
         });
+      // Load textback state from dashData
+      if (dashData?.textback_enabled !== undefined) {
+        setTextbackEnabled(!!dashData.textback_enabled);
+      }
     }
-  }, [activeStep, tenantId, token]);
+  }, [activeStep, tenantId, token, dashData?.textback_enabled]);
 
   const updateStored = useCallback(
     (patch) => {
@@ -278,6 +288,40 @@ export default function OnboardingChecklist({
       setSaveError(e.body?.detail || e.message || "Failed to save business hours.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleTextback = async (enabled) => {
+    setTextbackEnabled(enabled);
+    setSavingTextback(true);
+    try {
+      await updateTenantSettings(tenantId, token, { textback_enabled: enabled });
+    } catch (e) {
+      setTextbackEnabled(!enabled);
+      console.warn("Failed to toggle textback:", e.message || e);
+    } finally {
+      setSavingTextback(false);
+    }
+  };
+
+  const handleAddService = async () => {
+    if (!newService.trim()) return;
+    setAddingService(true);
+    setFaqError(null);
+    try {
+      const entry = await createFaqEntry(tenantId, token, {
+        question: `Do you offer ${newService.trim()}?`,
+        answer: `Yes, we offer ${newService.trim()}. Contact us for more details or to schedule an appointment.`,
+        category: "services",
+      });
+      setFaqEntries((prev) => [...prev, entry]);
+      setServices((prev) => [...prev, newService.trim()]);
+      setNewService("");
+      onStepComplete?.();
+    } catch (e) {
+      setFaqError(e.body?.detail || e.message || "Failed to add service");
+    } finally {
+      setAddingService(false);
     }
   };
 
@@ -487,6 +531,39 @@ export default function OnboardingChecklist({
             {saveError && (
               <div className="onboarding-error">{saveError}</div>
             )}
+
+            <div className="onboarding-faq-section" style={{ marginTop: 12 }}>
+              <label className="onboarding-field-label">Your Services</label>
+              <p className="onboarding-hint" style={{ marginBottom: 6, fontSize: "0.82rem" }}>
+                Add your services so the AI can answer questions about what you offer.
+              </p>
+              {services.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  {services.map((s, i) => (
+                    <span key={i} style={{ display: "inline-block", padding: "4px 10px", borderRadius: 14, fontSize: "0.78rem", background: "var(--accent-dim, rgba(0,191,255,0.15))", color: "var(--accent, #00BFFF)", border: "1px solid var(--accent-dim, rgba(0,191,255,0.25))" }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  className="onboarding-input"
+                  placeholder="e.g. Plumbing Repair, Drain Cleaning"
+                  value={newService}
+                  onChange={(e) => setNewService(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddService()}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="onboarding-add-btn"
+                  onClick={handleAddService}
+                  disabled={addingService || !newService.trim()}
+                >
+                  {addingService ? "Adding..." : "Add"}
+                </button>
+              </div>
+            </div>
 
             <div className="onboarding-faq-section">
               <label className="onboarding-field-label">
@@ -770,6 +847,28 @@ export default function OnboardingChecklist({
                 </button>
               </>
             )}
+
+            {/* Missed Call Text-Back */}
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--border, #2a2a3e)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>Missed Call Text-Back</div>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>Auto-text callers when you miss their call</div>
+                </div>
+                <button
+                  className={textbackEnabled ? "btn-sm" : "btn-sm"}
+                  onClick={() => handleToggleTextback(!textbackEnabled)}
+                  disabled={savingTextback}
+                  style={{
+                    background: textbackEnabled ? "var(--green, #22c55e)" : "var(--bg-darker, #1a1a2e)",
+                    minWidth: 60,
+                    fontSize: "0.78rem",
+                  }}
+                >
+                  {savingTextback ? "..." : textbackEnabled ? "On" : "Off"}
+                </button>
+              </div>
+            </div>
           </div>
         );
 
