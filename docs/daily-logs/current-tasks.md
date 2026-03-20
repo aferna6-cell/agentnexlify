@@ -2,24 +2,26 @@
 
 Updated by the automated morning/evening routines and interactive sessions.
 
-## Today's Top 3 Priorities (2026-03-20)
+## Tomorrow's Top 3 Priorities (2026-03-20)
 
-1. ~~**Verify migrations 045-058 applied**~~ DONE — all 14 confirmed applied
-2. ~~**Delete `_widget_legacy.py` + fix SettingsPage catches**~~ DONE
-3. ~~**Verify new pages E2E**~~ DONE — 8 bugs found and fixed across Smart Lists, Forms, Invoices, Pipeline
+1. **Verify Cycles 104-108 in production** — 5 feature commits today (phone/website signup, FAQ generation, click-to-call, emergency detection, business hours onboarding) need E2E verification
+2. **Split api.js into domain modules** — 28 touches in 7 days, highest frontend hotspot; continued churn increases merge conflict risk
+3. **Configure Cloudflare Browser Rendering env vars** — auto-crawl feature (Cycle 104) depends on this being configured
 
 ## Active Tasks
 
-### Priority 1 — Remaining from today's verification
-- [ ] Forms embed URL returns JSON not HTML (needs frontend route or backend HTML endpoint)
-- [ ] Pipeline frontend should fetch stages from API instead of using hardcoded values
-- [ ] Pipeline frontend should use `fetchPipelineBoard` instead of `fetchLeads` for grouped data
+### Priority 1 — Verify Recent Features
+- [ ] Verify Cycle 104: phone/website collection at signup + auto-crawl trigger
+- [ ] Verify Cycle 105: industry-specific FAQ auto-generation
+- [ ] Verify Cycle 106: click-to-call + SMS follow-up from lead drawer
+- [ ] Verify Cycle 107: emergency lead detection, email embed, one-click review request
+- [ ] Verify Cycle 108: business hours in onboarding + booking reason field
 
 ### Priority 2 — Quality
 - [ ] Add contract tests for api.js flows
 - [ ] Configure Cloudflare Browser Rendering env vars
-- [ ] Consider splitting api.js into domain modules (hotspot)
-- [ ] Consider splitting main.py router registration (hotspot)
+- [ ] Split api.js into domain modules (28 touches in 7 days — hotspot)
+- [ ] Split main.py router registration (32 touches in 7 days — hotspot)
 - [ ] Verify older features in production
 
 ### Priority 3 — Feature Backlog
@@ -29,29 +31,22 @@ Updated by the automated morning/evening routines and interactive sessions.
 - [ ] Automated social media posting scheduler
 - [ ] Documents & E-Signatures
 
-## Completed Today (2026-03-20)
+## Completed (Recent)
 
-### Verification & Bug Fixes (Cycle 102)
-- [x] Verified all migrations 045-058 applied to live Supabase
-- [x] Deleted `backend/routers/_widget_legacy.py`
-- [x] Fixed SettingsPage.jsx silent catches
-- [x] Fixed Smart Lists filter key mismatch (CRITICAL — filters were silently ignored)
-- [x] Fixed Smart Lists `lead_count` → `cached_lead_count`
-- [x] Removed Smart Lists non-functional preview button
-- [x] Fixed Forms `is_active` read from wrong location
-- [x] Fixed Forms `data` → `data_json` submission field
-- [x] Fixed Pipeline move payload `new_stage` → `status` (CRITICAL — 422 error)
-- [x] Fixed Invoices `markInvoicePaid` empty body (CRITICAL — 422 error)
-- [x] Fixed Invoices `items` → `items_json` field name
-- [x] Fixed Invoices `payment_link` → `stripe_payment_link`
-- [x] Verified CSAT page fully wired
-- [x] Verified public booking page fully wired
-- [x] Verified omnichannel/Facebook fully wired
-- [x] Fixed conversation_inbox.py `tenant_id` → `client_id` (CRITICAL — all inbox ops broken)
-- [x] Fixed auth.py `update_conversation_tags` `tenant_id` → `client_id` (CRITICAL)
-- [x] Fixed inbox session_id vs UUID mismatch — added `_find_conversation()` helper (CRITICAL)
-- [x] Fixed csat.py silent exception — added logging
-- [x] Added 4 new entries to bug-patterns.md
+### 2026-03-19 — Cycles 102-108
+- [x] Verified all migrations 045-058 applied to live Supabase (Cycle 102)
+- [x] Deleted `backend/routers/_widget_legacy.py` (Cycle 102)
+- [x] Fixed SettingsPage.jsx silent catches (Cycle 102)
+- [x] Fixed 12 critical bugs: Smart Lists, Forms, Invoices, Pipeline, Inbox (Cycle 102)
+- [x] Forms HTML embed endpoint + pipeline uses backend API (Cycle 103)
+- [x] Input validation fix (team.py Pydantic model) + N+1 query fix (campaign recovery) (Cycle 104)
+- [x] Collect phone + website at signup, auto-crawl + SMS (Cycle 104)
+- [x] Auto-generate industry-specific FAQs on signup (Cycle 105)
+- [x] Click-to-call + SMS follow-up from lead detail drawer (Cycle 106)
+- [x] Emergency lead detection, email embed, one-click review request (Cycle 107)
+- [x] Business hours in onboarding + booking reason field (Cycle 108)
+- [x] Added 6 new entries to bug-patterns.md (4 morning + 2 evening)
+- [x] Updated architecture-decisions.md (3 new entries from Cycle 104)
 
 ### Previous Completed
 - [x] Custom fields UI, billing matrix, upgrade prompts (Cycle 101)

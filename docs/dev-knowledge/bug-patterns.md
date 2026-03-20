@@ -438,4 +438,28 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+### Team member role update accepted arbitrary dict — validation bypass
+**Date:** 2026-03-19
+**Symptom:** `PUT /team/{tenant_id}/members/{member_id}/role` accepted any JSON dict, allowing callers to set fields beyond just `role`.
+**Root Cause:** The endpoint used a raw `dict` body parameter instead of a Pydantic model. FastAPI doesn't validate dict bodies — any JSON object passes through.
+**Fix:** Replaced `dict` body with `UpdateMemberRoleRequest` Pydantic model that only accepts a `role` field.
+**Files:** `backend/routers/team.py`
+**Prevention:** Never use `dict` as a FastAPI body type. Always use explicit Pydantic models for request bodies. (Commit 0145c60, Cycle 104)
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### Stalled campaign recovery had N+1 UPDATE pattern
+**Date:** 2026-03-19
+**Symptom:** `_recover_stalled_campaigns` in `main.py` issued one UPDATE per stalled campaign, causing up to 50 DB round-trips on each startup.
+**Root Cause:** The recovery loop iterated campaigns and ran individual `.update().eq("id", id)` calls inside the loop.
+**Fix:** Batched into a single `.update().in_("id", stalled_ids)` call.
+**Files:** `backend/main.py`
+**Prevention:** Any for-loop over DB rows that issues writes inside the loop is an N+1 pattern. Collect IDs and batch with `.in_()`. (Commit 0145c60, Cycle 104)
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
