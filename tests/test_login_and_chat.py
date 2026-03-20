@@ -32,8 +32,12 @@ def test_client(mock_settings):
     patches = [
         patch("backend.models.database.get_supabase", return_value=db_mock),
         patch("backend.routers.auth.get_supabase", return_value=db_mock),
-        patch("backend.routers.widget.get_supabase", return_value=db_mock),
-        # Services that widget.py touches at import or call time
+        patch("backend.routers.widget_chat.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_config.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_lead.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_booking.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_helpers.get_supabase", return_value=db_mock),
+        # Services that widget modules touch at import or call time
         patch("backend.services.activity.get_supabase", return_value=db_mock),
         patch("backend.services.webhook_dispatcher.get_supabase", return_value=db_mock),
         patch("backend.services.lead_scoring.get_supabase", return_value=db_mock),
@@ -49,7 +53,7 @@ def test_client(mock_settings):
 
     # Clear widget module in-memory cache between tests
     try:
-        from backend.routers.widget import _cache
+        from backend.routers.widget_helpers import _cache
         _cache.clear()
     except Exception:
         pass
@@ -249,7 +253,7 @@ class TestChatEdgeCases:
             "leads": [],
         }
 
-    @patch("backend.routers.widget.anthropic")
+    @patch("backend.routers.widget_chat.anthropic")
     def test_chat_very_long_message(self, mock_anthropic, test_client):
         """Message at max_length (10000 chars) should be accepted."""
         client, db_mock = test_client

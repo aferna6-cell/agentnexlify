@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from backend.routers.widget import _extract_lead_info, PHONE_RE, EMAIL_RE
+from backend.routers.widget_helpers import _extract_lead_info, PHONE_RE, EMAIL_RE
 
 
 # ── Phone regex tests ────────────────────────────────────────

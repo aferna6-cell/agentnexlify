@@ -24,7 +24,11 @@ def test_client(mock_settings):
     patches = [
         patch("backend.models.database.get_supabase", return_value=db_mock),
         patch("backend.routers.auth.get_supabase", return_value=db_mock),
-        patch("backend.routers.widget.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_chat.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_config.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_lead.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_booking.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_helpers.get_supabase", return_value=db_mock),
     ]
     for p in patches:
         p.start()

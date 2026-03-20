@@ -93,7 +93,11 @@ def test_client(mock_settings):
     patches = [
         patch("backend.models.database.get_supabase", return_value=db_mock),
         patch("backend.routers.auth.get_supabase", return_value=db_mock),
-        patch("backend.routers.widget.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_chat.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_config.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_lead.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_booking.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_helpers.get_supabase", return_value=db_mock),
         patch("backend.routers.appointments.get_supabase", return_value=db_mock),
         patch("backend.services.booking.get_supabase", return_value=db_mock),
         patch("backend.services.activity.get_supabase", return_value=db_mock),
@@ -111,7 +115,7 @@ def test_client(mock_settings):
 
     # Clear widget module in-memory cache between tests
     try:
-        from backend.routers.widget import _cache
+        from backend.routers.widget_helpers import _cache
         _cache.clear()
     except Exception:
         pass
