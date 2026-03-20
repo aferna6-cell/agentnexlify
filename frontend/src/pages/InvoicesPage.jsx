@@ -14,6 +14,7 @@ import {
   fetchBids,
   fetchItemTemplates,
   createItemTemplate,
+  recordPayment,
 } from "../utils/api";
 
 const STATUS_FILTERS = ["all", "draft", "sent", "viewed", "paid", "overdue", "cancelled"];
@@ -35,6 +36,9 @@ const emptyForm = {
   tax_rate: 0,
   due_date: "",
   notes: "",
+  deposit_amount: 0,
+  is_recurring: false,
+  recurrence_interval: "",
 };
 
 function formatCurrency(val) {
@@ -119,6 +123,10 @@ export default function InvoicesPage() {
   const [itemTemplates, setItemTemplates] = useState([]);
   const [showTemplates, setShowTemplates] = useState(false);
 
+  // Partial payment
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [recordingPayment, setRecordingPayment] = useState(false);
+
   const loadData = useCallback(async () => {
     if (!user?.tenantId) return;
     try {
@@ -192,6 +200,9 @@ export default function InvoicesPage() {
       tax_rate: Number(form.tax_rate) || 0,
       due_date: form.due_date || null,
       notes: form.notes.trim() || null,
+      deposit_amount: Number(form.deposit_amount) || 0,
+      is_recurring: form.is_recurring,
+      recurrence_interval: form.is_recurring ? (form.recurrence_interval || null) : null,
     };
     try {
       await createInvoice(user.tenantId, token, body);
@@ -295,6 +306,23 @@ export default function InvoicesPage() {
       items: [...f.items, { description: tmpl.description, quantity: 1, unit_price: Number(tmpl.unit_price) }],
     }));
     setShowTemplates(false);
+  };
+
+  const handleRecordPayment = async (invoiceId) => {
+    const amt = parseFloat(paymentAmount);
+    if (!amt || amt <= 0) return;
+    setRecordingPayment(true);
+    try {
+      await recordPayment(user.tenantId, token, invoiceId, { amount: amt });
+      setPaymentAmount("");
+      loadData();
+      setDetailInvoice(null);
+    } catch (err) {
+      console.warn("Failed to record payment:", err.message);
+      setError(err.body?.detail || err.message || "Failed to record payment");
+    } finally {
+      setRecordingPayment(false);
+    }
   };
 
   const saveAsTemplate = async (item) => {
@@ -740,6 +768,50 @@ export default function InvoicesPage() {
               </div>
             </div>
 
+            {/* Deposit & Payment Progress */}
+            {(Number(detailInvoice.deposit_amount) > 0 || Number(detailInvoice.amount_paid) > 0) && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>Payment Progress</div>
+                {Number(detailInvoice.deposit_amount) > 0 && (
+                  <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: 4 }}>
+                    Deposit required: {formatCurrency(detailInvoice.deposit_amount)}
+                  </div>
+                )}
+                <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: 6 }}>
+                  Paid: {formatCurrency(detailInvoice.amount_paid || 0)} / {formatCurrency(detailInvoice.total)}
+                </div>
+                <div style={{ height: 6, background: "var(--bg-secondary)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(100, ((Number(detailInvoice.amount_paid) || 0) / (Number(detailInvoice.total) || 1)) * 100)}%`, background: "var(--green, #22c55e)", borderRadius: 3, transition: "width 0.3s" }} />
+                </div>
+              </div>
+            )}
+
+            {/* Record Partial Payment */}
+            {detailInvoice.status !== "paid" && detailInvoice.status !== "cancelled" && detailInvoice.status !== "draft" && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Record Payment</div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>$</span>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    min={0}
+                    step="0.01"
+                    placeholder="Amount"
+                    style={{ width: 120 }}
+                  />
+                  <button
+                    onClick={() => handleRecordPayment(detailInvoice.id)}
+                    disabled={recordingPayment || !paymentAmount || Number(paymentAmount) <= 0}
+                    style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 6, padding: "6px 12px", color: "#22c55e", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }}
+                  >
+                    {recordingPayment ? "Recording..." : "Record"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border-color)", paddingTop: 16 }}>
               {(detailInvoice.status === "draft" || detailInvoice.status === "sent") && (
                 <button
@@ -983,6 +1055,51 @@ export default function InvoicesPage() {
                     style={{ width: "100%" }}
                   />
                 </div>
+              </div>
+
+              {/* Deposit */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" }}>
+                  Deposit Required
+                </label>
+                <input
+                  type="number"
+                  value={form.deposit_amount}
+                  onChange={(e) => setForm((f) => ({ ...f, deposit_amount: e.target.value }))}
+                  min={0}
+                  step="0.01"
+                  placeholder="0.00"
+                  style={{ width: 150 }}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: 8 }}>
+                  Leave 0 for no deposit
+                </span>
+              </div>
+
+              {/* Recurring */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text-secondary)", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.is_recurring}
+                    onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.checked }))}
+                    style={{ width: "auto" }}
+                  />
+                  Recurring Invoice
+                </label>
+                {form.is_recurring && (
+                  <select
+                    value={form.recurrence_interval}
+                    onChange={(e) => setForm((f) => ({ ...f, recurrence_interval: e.target.value }))}
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    <option value="">Select interval</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Bi-weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                  </select>
+                )}
               </div>
 
               {/* Notes */}

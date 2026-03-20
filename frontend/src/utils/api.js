@@ -1125,6 +1125,10 @@ export function createInvoiceFromBid(tenantId, token, bidId) {
   return request(`/api/v1/invoices/${tenantId}/from-bid/${bidId}`, { method: "POST", token });
 }
 
+export function recordPayment(tenantId, token, invoiceId, data) {
+  return request(`/api/v1/invoices/${tenantId}/${invoiceId}/record-payment`, { method: "POST", token, body: data });
+}
+
 // Invoice Item Templates
 export function fetchItemTemplates(tenantId, token) {
   return request(`/api/v1/invoices/${tenantId}/item-templates`, { token });

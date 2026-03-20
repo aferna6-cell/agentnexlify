@@ -37,6 +37,9 @@ class InvoiceCreate(BaseModel):
     lead_id: str | None = None
     bid_id: str | None = None
     notes: str | None = Field(None, max_length=5000)
+    deposit_amount: float = Field(0.0, ge=0)
+    is_recurring: bool = False
+    recurrence_interval: str | None = Field(None, pattern="^(weekly|biweekly|monthly|quarterly)$")
 
 
 class InvoiceUpdate(BaseModel):
@@ -52,6 +55,11 @@ class SendInvoiceRequest(BaseModel):
 
 
 class MarkPaidRequest(BaseModel):
+    payment_method: str | None = Field(None, max_length=100)
+
+
+class RecordPaymentRequest(BaseModel):
+    amount: float = Field(..., gt=0)
     payment_method: str | None = Field(None, max_length=100)
 
 
@@ -476,6 +484,16 @@ async def create_invoice(
         data["bid_id"] = req.bid_id
     if req.notes is not None:
         data["notes"] = req.notes
+    if req.deposit_amount > 0:
+        data["deposit_amount"] = req.deposit_amount
+    if req.is_recurring and req.recurrence_interval:
+        data["is_recurring"] = True
+        data["recurrence_interval"] = req.recurrence_interval
+        # Set next invoice date based on interval
+        from dateutil.relativedelta import relativedelta
+        base = req.due_date or date.today()
+        intervals = {"weekly": relativedelta(weeks=1), "biweekly": relativedelta(weeks=2), "monthly": relativedelta(months=1), "quarterly": relativedelta(months=3)}
+        data["next_invoice_date"] = (base + intervals.get(req.recurrence_interval, relativedelta(months=1))).isoformat()
 
     try:
         result = db.table("invoices").insert(data).execute()
@@ -910,6 +928,47 @@ async def mark_invoice_paid(
         "lead_id": paid_invoice.get("lead_id"),
     })
     return paid_invoice
+
+
+@router.post("/{tenant_id}/{invoice_id}/record-payment")
+async def record_partial_payment(
+    tenant_id: str,
+    invoice_id: str,
+    req: RecordPaymentRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Record a partial payment against an invoice."""
+    verify_tenant(claims, tenant_id)
+    db = get_supabase()
+
+    # Load current invoice
+    inv = db.table("invoices").select("total, amount_paid, status").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
+    if not inv.data:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    current = inv.data[0]
+    if current["status"] in ("paid", "cancelled"):
+        raise HTTPException(status_code=400, detail=f"Cannot record payment on {current['status']} invoice")
+
+    new_paid = round(float(current.get("amount_paid") or 0) + req.amount, 2)
+    total = float(current.get("total") or 0)
+
+    update_data = {
+        "amount_paid": new_paid,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    # Auto-mark as paid if fully covered
+    if new_paid >= total:
+        update_data["status"] = "paid"
+        update_data["paid_at"] = datetime.now(timezone.utc).isoformat()
+        if req.payment_method:
+            update_data["payment_method"] = req.payment_method
+
+    result = db.table("invoices").update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to record payment")
+
+    return result.data[0]
 
 
 # ---------------------------------------------------------------------------
