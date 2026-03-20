@@ -2,68 +2,68 @@
 
 Updated by the automated morning/evening routines and interactive sessions.
 
-## Today's Top 3 Priorities (2026-03-20)
+## Tomorrow's Top 3 Priorities (2026-03-21)
 
-1. **Verify Cycles 109-115 in production** — 7 feature commits overnight (services onboarding, invoice library, deposits, documents/e-signatures, dental simulation) need E2E verification
-2. **Split api.js into domain modules** — 30 touches in 7 days, highest frontend hotspot; merge conflict risk continues to grow
-3. **Split main.py router registration** — 32 touches in 7 days, second-highest hotspot
+1. **Verify Cycles 104-115 in production** — 12 feature commits need E2E verification (documents, invoices, onboarding, widget changes)
+2. **Fix test_login_and_chat.py** — 50 test errors from widget module split (pre-existing since Cycle 97)
+3. **Dental-aware appointment reminders** — Highest-impact gap from dental simulation
 
 ## Active Tasks
 
 ### Priority 1 — Verify Recent Features
-- [ ] Verify Cycle 109: services list + textback in onboarding, security hardening
-- [ ] Verify Cycle 110: line item library for invoices
-- [ ] Verify Cycle 111: deposit/partial payments + recurring invoices
-- [ ] Verify Cycle 112: documents & e-signatures backend + migration
-- [ ] Verify Cycle 113: documents page + sidebar + schema docs
-- [ ] Verify Cycle 114: document/invoice tests + route fix + Field import
-- [ ] Verify Cycle 115: dental office simulation + FAQs + dead code sweep
-- [ ] Verify Cycles 104-108 (carried forward from yesterday)
+- [ ] Verify DocumentsPage renders, create/send works
+- [ ] Verify invoice item templates (Saved Items dropdown)
+- [ ] Verify deposit amount + partial payment recording
+- [ ] Verify recurring invoice toggle on create form
+- [ ] Verify onboarding wizard: hours step, services input, textback toggle
+- [ ] Verify widget booking "Reason for Visit" field
+- [ ] Verify "Email to Developer" button on WidgetPage
+- [ ] Verify "Request Review" button on LeadDetailDrawer
+- [ ] Verify emergency lead detection scoring
+- [ ] Verify dental FAQs auto-generated on dental signup
 
 ### Priority 2 — Quality & Refactoring
-- [ ] Split api.js into domain modules (30 touches in 7 days — critical hotspot)
-- [ ] Split main.py router registration (32 touches in 7 days — critical hotspot)
+- [ ] Fix test_login_and_chat.py (50 errors from widget split)
+- [ ] Split api.js into domain modules (critical hotspot)
+- [ ] Split main.py router registration (critical hotspot)
 - [ ] Add contract tests for api.js flows
 - [ ] Configure Cloudflare Browser Rendering env vars
-- [ ] Forms embed URL returns JSON not HTML (feature gap from 2026-03-20 morning)
-- [ ] Pipeline frontend should use backend-driven stages (fetchPipelineBoard/fetchPipelineStages)
 
-### Priority 3 — Feature Backlog
-- [ ] Social media platform OAuth (direct posting)
-- [ ] Real SERP data integration (SEMrush/Ahrefs)
-- [ ] Competitor analysis dashboard
-- [ ] Automated social media posting scheduler
+### Priority 3 — Feature Backlog (from simulations)
 - [ ] Dental-aware appointment reminders
-- [ ] Patient intake forms (dental/healthcare vertical)
-- [ ] Insurance/payment plan custom fields (dental/healthcare)
+- [ ] Rebook automation (6-month dental cleanings)
+- [ ] Patient intake form preset (dental/healthcare)
+- [ ] Insurance fields in leads
+- [ ] HIPAA compliance messaging
+- [ ] Service-based slot duration
+- [ ] Social media platform OAuth (direct posting)
 
-## Completed (Recent)
+## Completed Today (2026-03-20)
 
-### 2026-03-19 Evening — Cycles 109-115
-- [x] Services list input in onboarding wizard (Cycle 109)
-- [x] Missed-call text-back toggle in onboarding (Cycle 109)
-- [x] Rate limiting + HTML escaping on review requests (Cycle 109)
-- [x] Invoice line item library (Cycle 110)
+### Evening Review
+- [x] Bug-patterns.md: added Field import bug entry
+- [x] Health check: all green (0 dangerous imports, 0 bare excepts, widget synced, build passes, 172 tests pass)
+- [x] No new commits today (build loop ran yesterday evening)
+
+### Morning (Automated)
+- [x] Morning startup doc generated
+- [x] 3 new bug-patterns entries from Cycles 114-115
+
+### Yesterday (2026-03-19) — 15 commits, Cycles 102-115
+- [x] 12 critical bug fixes (Cycle 102)
+- [x] Forms embed + pipeline refactor (Cycle 103)
+- [x] Signup phone/website + plumber simulation (Cycle 104)
+- [x] Industry FAQs on signup (Cycle 105)
+- [x] Click-to-call + SMS follow-up (Cycle 106)
+- [x] Emergency detection + email embed + review request (Cycle 107)
+- [x] Business hours in onboarding + booking reason (Cycle 108)
+- [x] Services list + textback + security hardening (Cycle 109)
+- [x] Invoice item library (Cycle 110)
 - [x] Deposit/partial payments + recurring invoices (Cycle 111)
-- [x] Documents & e-signatures backend + migration 061 (Cycle 112)
-- [x] Documents page + sidebar + schema docs (Cycle 113)
-- [x] Document/invoice tests + route fix + Field import fix (Cycle 114)
-- [x] Dental office simulation + 4 new FAQs + dead code sweep (Cycle 115)
-
-### 2026-03-20 Morning (Interactive) — Cycle 102
-- [x] Fixed 12 critical bugs across Smart Lists, Forms, Invoices, Pipeline, Inbox
-- [x] Verified all migrations 045-058 applied to live Supabase
-- [x] Deleted `backend/routers/_widget_legacy.py`
-- [x] Fixed 2 silent catches in SettingsPage.jsx
-- [x] 4 new bug-patterns.md entries
-
-### Previous Completed
-- [x] Custom fields UI, billing matrix, upgrade prompts (Cycle 101)
-- [x] CSAT, booking URL, FK fix, website_url (Cycle 100)
-- [x] Facebook connect, webhook events (Cycle 99)
-- [x] Omnichannel channel manager, inbox filter (Cycle 98)
-- [x] Widget.py split (Cycle 97)
-- [x] Public booking, two-way SMS, review automation (Cycle 96)
+- [x] Documents backend + migration 061 (Cycle 112)
+- [x] Documents frontend + sidebar (Cycle 113)
+- [x] 11 tests + route fix + Field import fix (Cycle 114)
+- [x] Dental simulation + FAQs + dead code (Cycle 115)
 
 ---
 

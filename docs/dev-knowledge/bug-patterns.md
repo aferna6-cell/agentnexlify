@@ -482,4 +482,14 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+### Missing Pydantic Field import in leads.py
+**Date:** 2026-03-19
+**Symptom:** All test suites failed with `NameError: name 'Field' is not defined` at `backend/routers/leads.py:342`.
+**Root Cause:** `QuickSmsRequest` model (added in Cycle 106) uses `Field(...)` but the import was `from pydantic import BaseModel` — missing `Field`. This didn't cause production errors because Python evaluates class bodies lazily when not directly instantiated at import time, but pytest's test collection triggers full module loading.
+**Fix:** Changed import to `from pydantic import BaseModel, Field`.
+**Files:** `backend/routers/leads.py`
+**Prevention:** Always import `Field` alongside `BaseModel` when using field validators or constraints. Pre-commit hook could catch this with a static analysis check. (Commit d81e96e, Cycle 114)
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
