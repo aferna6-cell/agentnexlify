@@ -241,6 +241,13 @@ async def webhook_events_schema():
                 "conversation.message": "Fired on each message exchange in a conversation",
                 "automation.email_sent": "Fired when an automated email is sent via a sequence",
                 "automation.sms_sent": "Fired when an automated SMS is sent via a sequence",
+                "lead.status_changed": "Fired when a lead's status changes (e.g. new → contacted)",
+                "order.created": "Fired when a new order is placed through the chat widget",
+                "call.completed": "Fired when an AI-answered phone call completes",
+                "invoice.created": "Fired when a new invoice is created",
+                "invoice.paid": "Fired when an invoice is marked as paid",
+                "form.submitted": "Fired when a public form receives a submission",
+                "review.received": "Fired when a new customer review is added",
             }.get(event, event),
             "sample_payload": {
                 "event": event,
@@ -306,6 +313,49 @@ def _build_sample_payload(event: str) -> dict:
             "lead_phone": "+1 555-0100",
             "sequence_id": "test-seq-uuid",
             "step_order": 1,
+        },
+        "lead.status_changed": {
+            "lead_id": "test-uuid",
+            "old_status": "new",
+            "new_status": "contacted",
+        },
+        "order.created": {
+            "order_id": "test-uuid",
+            "customer_name": "Test Customer",
+            "items": [{"name": "Item 1", "quantity": 2, "price": 9.99}],
+            "total": 19.98,
+            "order_type": "delivery",
+        },
+        "call.completed": {
+            "call_id": "test-uuid",
+            "caller_phone": "+1 555-0100",
+            "duration_seconds": 120,
+            "summary": "Caller asked about pricing for a repair.",
+        },
+        "invoice.created": {
+            "invoice_id": "test-uuid",
+            "invoice_number": "INV-001",
+            "total": 500.00,
+            "lead_id": "test-uuid",
+        },
+        "invoice.paid": {
+            "invoice_id": "test-uuid",
+            "invoice_number": "INV-001",
+            "total": 500.00,
+            "payment_method": "stripe",
+        },
+        "form.submitted": {
+            "form_id": "test-uuid",
+            "submission_id": "test-uuid",
+            "lead_id": "test-uuid",
+            "data": {"name": "Test User", "email": "test@example.com", "message": "I'm interested"},
+        },
+        "review.received": {
+            "review_id": "test-uuid",
+            "platform": "google",
+            "author_name": "Test Reviewer",
+            "rating": 5,
+            "review_text": "Great service!",
         },
     }
     return samples.get(event, {"message": "Test event", "event_type": event})

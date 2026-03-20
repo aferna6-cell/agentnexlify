@@ -198,11 +198,12 @@ async def twilio_missed_call(
 
     await send_sms(to=From, body=body)
 
-    # 4. Create lead (live schema: client_id, status, no source/notes columns)
+    # 4. Create lead from missed call
     lead_result = db.table("leads").insert({
         "client_id": tenant_id,
         "phone": From,
         "status": "new",
+        "source": "missed_call",
         "conversation_summary": f"Missed call text-back sent (CallSid: {CallSid})",
     }).execute()
 

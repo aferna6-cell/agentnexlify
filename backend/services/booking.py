@@ -287,13 +287,14 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
     if existing.data:
         return existing.data[0]["id"]
 
-    # Create new lead (live schema: client_id, status, no source/notes columns)
+    # Create new lead from appointment booking
     lead = db.table("leads").insert({
         "client_id": tenant_id,
         "name": appointment.get("customer_name"),
         "email": email,
         "phone": appointment.get("customer_phone"),
         "status": "appointment_booked",
+        "source": "booking",
         "conversation_summary": "Created from appointment booking",
     }).execute()
 
