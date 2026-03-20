@@ -462,4 +462,24 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+### FastAPI route shadowing — static paths must come before path params
+**Date:** 2026-03-19
+**Symptom:** `GET /invoices/{tenant_id}/item-templates` returns 404 or matches the wrong handler.
+**Root Cause:** `/{tenant_id}/{invoice_id}` was defined before `/{tenant_id}/item-templates`. FastAPI evaluates routes in definition order — `item-templates` matched as an `{invoice_id}` path param, so the actual item-templates handler was never reached.
+**Fix:** Moved item-templates endpoints above the `/{invoice_id}` catch-all route.
+**Files:** `backend/routers/invoices.py`
+**Prevention:** Always define static path segments (e.g., `/item-templates`, `/stats`) BEFORE parameterized segments (e.g., `/{invoice_id}`) in FastAPI routers. (Commit d81e96e, Cycle 114)
+
+---
+
+### Review request endpoint — missing rate limiting + HTML escaping
+**Date:** 2026-03-19
+**Symptom:** Review request endpoint could be spammed, and customer/business names in review request emails were not HTML-escaped.
+**Root Cause:** The review request endpoint had no rate limiting, and email body construction used raw user-supplied `customer_name` and `business_name` without escaping, creating an XSS-via-email vector.
+**Fix:** Added rate limiting (10/min) on the review request endpoint. Added HTML escaping for `customer_name` and `business_name` in review request email templates.
+**Files:** `backend/routers/reviews.py`
+**Prevention:** All public-facing or user-triggered email endpoints should be rate-limited. All user-supplied values rendered in HTML emails must be escaped. (Commit a63de6d, Cycle 109)
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
