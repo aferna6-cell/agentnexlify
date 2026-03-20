@@ -7,7 +7,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.models.database import get_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
