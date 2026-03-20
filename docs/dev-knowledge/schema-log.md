@@ -340,4 +340,21 @@ Drops and re-creates `conversations.lead_id` FK constraint with `ON DELETE SET N
 
 **Applied:** 2026-03-18 via Supabase MCP.
 
+### 059 — Invoice Item Templates
+New table `invoice_item_templates` for reusable line items in invoices. Columns: tenant_id, description, unit_price, category, sort_order, is_active. GIN index on tenant_id.
+
+**Applied:** 2026-03-19 via Supabase MCP.
+
+### 060 — Invoice Deposits & Recurring
+Adds columns to `invoices`: deposit_amount (NUMERIC), amount_paid (NUMERIC), is_recurring (BOOLEAN), recurrence_interval (TEXT with CHECK), next_invoice_date (DATE), parent_invoice_id (UUID FK→invoices).
+
+**Applied:** 2026-03-19 via Supabase MCP.
+
+### 061 — Documents & E-Signatures
+Two new tables:
+- `documents`: tenant_id, lead_id, title, template_html, rendered_html, status (draft/sent/viewed/signed/expired/cancelled), signer_name/email/phone, signed_at, signature_data, signature_ip, signing_token (unique UUID), expires_at, sent_at/via, viewed_at, notes.
+- `document_templates`: tenant_id, name, category, template_html, variables (TEXT[]), is_active.
+
+**Applied:** 2026-03-19 via Supabase MCP.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

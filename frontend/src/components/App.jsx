@@ -39,6 +39,7 @@ const LocalSEOPage = lazy(() => import("../pages/LocalSEOPage"));
 const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
 const MarketingCampaignsPage = lazy(() => import("../pages/MarketingCampaignsPage"));
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
+const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
 const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
 const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
@@ -77,6 +78,7 @@ const pages = {
   social_media: SocialMediaPage,
   campaigns: MarketingCampaignsPage,
   invoices: InvoicesPage,
+  documents: DocumentsPage,
   pipeline: PipelinePage,
   smart_lists: SmartListsPage,
   form_builder: FormBuilderPage,

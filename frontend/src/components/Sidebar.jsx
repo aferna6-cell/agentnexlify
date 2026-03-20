@@ -54,6 +54,7 @@ const allNavItems = [
   { key: "jobs", icon: <Icon d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />, label: "Job Board", roles: ["owner", "admin"] },
   { key: "bids", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />, label: "Bids", roles: ["owner", "admin"] },
   { key: "invoices", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M12 18v-6M9 15h6" />, label: "Invoices", roles: ["owner", "admin", "member"] },
+  { key: "documents", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15l2 2 4-4" />, label: "Documents", roles: ["owner", "admin"] },
   { key: "smart_lists", icon: <Icon d="M3 6h18M3 12h12M3 18h18M19 12l2 2-2 2" />, label: "Smart Lists", roles: ["owner", "admin", "member"] },
   { key: "form_builder", icon: <Icon d="M9 11H3v10h6V11zM21 3h-6v18h6V3zM15 7H9v4h6V7z" />, label: "Forms", roles: ["owner", "admin"] },
   { key: "client_portal", icon: <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />, label: "Client Portal" },
