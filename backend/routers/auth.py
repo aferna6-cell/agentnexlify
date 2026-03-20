@@ -118,6 +118,10 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
         {"question": "Do you accept dental insurance?", "answer": "Yes, we accept most major dental insurance plans. Contact us with your insurance information and we'll verify your coverage.", "category": "Insurance"},
         {"question": "Do you see new patients?", "answer": "Yes! We are always welcoming new patients. You can book an appointment through our chat or call us directly.", "category": "About"},
         {"question": "Do you offer emergency dental care?", "answer": "Yes, we offer same-day emergency appointments for dental emergencies like toothaches, broken teeth, or dental trauma.", "category": "Services"},
+        {"question": "What is your cancellation policy?", "answer": "We ask for at least 24 hours notice for cancellations. Late cancellations or no-shows may be subject to a fee.", "category": "Policy"},
+        {"question": "Do you offer payment plans?", "answer": "Yes, we offer flexible payment plans for major procedures. We also accept CareCredit and other dental financing options.", "category": "Insurance"},
+        {"question": "What should I bring to my first visit?", "answer": "Please bring your photo ID, insurance card, a list of current medications, and any dental records or X-rays from your previous dentist.", "category": "About"},
+        {"question": "Do you offer cosmetic dentistry?", "answer": "Yes! We offer teeth whitening, veneers, bonding, Invisalign, and other cosmetic procedures to help you achieve your perfect smile.", "category": "Services"},
     ],
     "restaurant": [
         {"question": "What are your hours?", "answer": "Please check our business hours for the most up-to-date schedule. You can also ask us here!", "category": "Hours"},

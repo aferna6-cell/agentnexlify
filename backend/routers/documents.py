@@ -8,7 +8,6 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from backend.config import settings
 from backend.dependencies import verify_tenant
 from backend.limiter import limiter
 from backend.models.database import get_supabase

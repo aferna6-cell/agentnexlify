@@ -407,10 +407,22 @@ _Inspired by GoHighLevel, Jobber, ServiceTitan, HubSpot, Podium. These close the
 - [x] **Backend: form CRUD + public submit** — DONE 2026-03-18 Cycle 93. Auto-creates leads from submissions.
 - [x] **Frontend: FormBuilderPage** — DONE 2026-03-18 Cycle 93. Field builder, live preview, embed code.
 
-### Documents & E-Signatures (Future)
-- [ ] **Migration: documents table** — template_html, signed_at, signature_data
-- [ ] **Backend: document rendering + signature** — PDF generation, signature capture
-- [ ] **Frontend: document builder + signature pad**
+### Documents & E-Signatures
+- [x] **Migration: documents table** — DONE 2026-03-19 Cycle 112. Migration 061: documents + document_templates tables.
+- [x] **Backend: document rendering + signature** — DONE 2026-03-19 Cycle 112. Full CRUD, template system, send for signature, public signing endpoints.
+- [x] **Frontend: document builder + signature pad** — DONE 2026-03-19 Cycle 113. DocumentsPage with create/send/track, template picker, status filters.
+
+## Features — Dental/Healthcare Simulation Gaps (2026-03-19)
+
+_Discovered via dental office customer simulation. Applicable to all healthcare business types._
+
+- [ ] **Dental-aware appointment reminders** — Mention service type + "bring insurance card, photo ID". Business-type-aware reminder templates in automation_engine.py.
+- [ ] **More dental FAQs on signup** — Add: cancellation policy, payment plans, new patient process, cosmetic services, cost ranges.
+- [ ] **Rebook automation** — "Schedule your next cleaning in 6 months" trigger after completed appointment. New automation trigger type.
+- [ ] **Patient intake form preset** — Pre-built health history form template for dental/medical business types using the form builder.
+- [ ] **Insurance fields in leads** — carrier, member_id, group_number columns. Schema change needed.
+- [ ] **HIPAA compliance messaging** — Privacy notice in widget footer for healthcare businesses. Consent acknowledgment step.
+- [ ] **Service-based slot duration** — Different services take different times. Currently slot_duration is global.
 
 ## Optimization
 
