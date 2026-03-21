@@ -925,4 +925,21 @@ _FORM_PRESETS: dict[str, dict] = {
         ],
         "success_message": "Thank you. We'll review your information and contact you within 1 business day to schedule a consultation.",
     },
+    "fitness_waiver": {
+        "name": "Fitness Liability Waiver",
+        "description": "Liability waiver and health screening for new gym members and trial participants.",
+        "fields": [
+            {"id": "full_name", "type": "text", "label": "Full Name", "required": True},
+            {"id": "email", "type": "email", "label": "Email", "required": True},
+            {"id": "phone", "type": "phone", "label": "Phone Number", "required": True},
+            {"id": "dob", "type": "date", "label": "Date of Birth", "required": True},
+            {"id": "emergency_contact", "type": "text", "label": "Emergency Contact Name & Phone", "required": True, "placeholder": "Name: (555) 123-4567"},
+            {"id": "health_conditions", "type": "select", "label": "Do you have any medical conditions?", "required": True, "options": ["None", "Heart Condition", "High Blood Pressure", "Diabetes", "Asthma", "Joint Issues", "Other"]},
+            {"id": "medications", "type": "textarea", "label": "Current Medications (if any)", "required": False},
+            {"id": "fitness_goals", "type": "select", "label": "What are your fitness goals?", "required": False, "options": ["Weight Loss", "Muscle Building", "Endurance", "Flexibility", "General Health", "Sports Performance"]},
+            {"id": "experience", "type": "select", "label": "Fitness Experience Level", "required": False, "options": ["Beginner", "Intermediate", "Advanced"]},
+            {"id": "waiver", "type": "checkbox", "label": "I acknowledge that physical exercise carries inherent risks. I voluntarily assume all risks and release this facility from liability for injuries sustained during exercise.", "required": True},
+        ],
+        "success_message": "Thank you! Your waiver is on file. Welcome to the team — we're excited to help you reach your goals!",
+    },
 }

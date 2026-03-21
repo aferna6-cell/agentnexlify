@@ -78,6 +78,13 @@ _INDUSTRY_STAGES: dict[str, list[dict]] = {
         {"name": "Regular Client", "sort_order": 3, "color": "#10b981", "is_won": True, "is_lost": False},
         {"name": "Inactive", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
     ],
+    "fitness": [
+        {"name": "Trial", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Consulted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Member", "sort_order": 2, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "At Risk", "sort_order": 3, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "Churned", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
 }
 
 # Map frontend dropdown values to preset keys (some use different naming)
