@@ -379,6 +379,7 @@ class LeadUpdateRequest(BaseModel):
     insurance_carrier: str | None = None
     insurance_member_id: str | None = None
     insurance_group: str | None = None
+    date_of_birth: str | None = None
 
     @field_validator("status")
     @classmethod

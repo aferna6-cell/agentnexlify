@@ -174,6 +174,7 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     insurance_carrier: "",
     insurance_member_id: "",
     insurance_group: "",
+    date_of_birth: "",
   });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -230,6 +231,7 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
       insurance_carrier: lead.insurance_carrier || "",
       insurance_member_id: lead.insurance_member_id || "",
       insurance_group: lead.insurance_group || "",
+      date_of_birth: lead.date_of_birth || "",
     });
     setConfirmDelete(false);
     setBreakdown(null);
@@ -442,6 +444,10 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
                   </a>
                 )}
               </div>
+            </div>
+            <div className="drawer-field">
+              <label className="drawer-label">Date of Birth</label>
+              <input className="drawer-input" type="date" value={form.date_of_birth} onChange={handleChange("date_of_birth")} />
             </div>
           </div>
 

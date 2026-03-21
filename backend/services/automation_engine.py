@@ -2337,3 +2337,99 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
             logger.exception("Failed to send weekly brief to %s (tenant %s)", email, tid)
 
     return sent
+
+
+# ---------------------------------------------------------------------------
+# Birthday automation — send birthday greetings to leads
+# ---------------------------------------------------------------------------
+
+
+async def send_birthday_greetings() -> int:
+    """Check for leads with birthdays today and send greeting emails.
+
+    Deduped via activity_log (birthday_greeting_{year} per lead).
+    Runs daily, checks all tenants with paid plans.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    today_mmdd = now.strftime("%m-%d")
+    current_year = now.year
+    sent = 0
+
+    try:
+        leads = (
+            db.table("leads")
+            .select("id, client_id, name, email, date_of_birth")
+            .not_.is_("date_of_birth", "null")
+            .not_.is_("email", "null")
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_birthday_greetings: failed to query leads")
+        return 0
+
+    birthday_leads = [
+        lead for lead in (leads.data or [])
+        if lead.get("date_of_birth", "")[5:10] == today_mmdd
+    ]
+
+    if not birthday_leads:
+        return 0
+
+    tenant_cache: dict[str, dict | None] = {}
+
+    for lead in birthday_leads:
+        tenant_id = lead["client_id"]
+        lead_id = lead["id"]
+
+        # Dedup: check if already sent this year
+        try:
+            tag = f"birthday_greeting_{current_year}"
+            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("lead_id", lead_id).eq("activity_type", tag).limit(1).execute()
+            if existing.data:
+                continue
+        except Exception:
+            pass
+
+        if tenant_id not in tenant_cache:
+            try:
+                t = db.table("tenants").select("business_name, plan").eq("id", tenant_id).limit(1).execute()
+                tenant_cache[tenant_id] = t.data[0] if t.data else None
+            except Exception:
+                tenant_cache[tenant_id] = None
+
+        tenant = tenant_cache.get(tenant_id)
+        if not tenant or tenant.get("plan", "free") == "free":
+            continue
+
+        business_name = tenant.get("business_name") or "Us"
+        customer_name = lead.get("name") or "there"
+
+        subject = f"Happy Birthday from {business_name}!"
+        body = (
+            f"<h2>Happy Birthday, {customer_name}!</h2>"
+            f"<p>Everyone at <strong>{business_name}</strong> wishes you a wonderful birthday!</p>"
+            f"<p>As a special thank you for being a valued client, we'd love to see you soon. "
+            f"Reply to this email or contact us to schedule your next visit.</p>"
+            f"<p>Best wishes,<br>The {business_name} Team</p>"
+        )
+
+        try:
+            result = await send_email(to=lead["email"], subject=subject, body_html=body, tenant_id=tenant_id)
+            if result.get("success"):
+                sent += 1
+        except Exception:
+            logger.exception("Failed to send birthday greeting to lead %s", lead_id)
+
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "lead_id": lead_id,
+                "activity_type": f"birthday_greeting_{current_year}",
+                "description": f"Birthday greeting sent to {customer_name}",
+            }).execute()
+        except Exception:
+            logger.warning("Failed to log birthday greeting for lead %s", lead_id, exc_info=True)
+
+    return sent
