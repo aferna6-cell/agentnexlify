@@ -422,16 +422,19 @@ _Discovered via dental office customer simulation. Applicable to all healthcare 
 - [x] **Patient intake form preset** — DONE 2026-03-21 Cycle 118. 3 presets: dental intake (13 fields), medical intake (11 fields), contractor estimate (8 fields).
 - [x] **Insurance fields in leads** — DONE 2026-03-21 Cycle 119. Migration 062: insurance_carrier, insurance_member_id, insurance_group on leads.
 - [x] **HIPAA compliance messaging** — DONE 2026-03-21 Cycle 118. AI system prompt gets healthcare privacy instructions for dental/medical business types.
-- [ ] **Service-based slot duration** — Different services take different times. Currently slot_duration is global.
+- [x] **Service-based slot duration** — DONE 2026-03-21 Cycle 125. Migration 063: service_types table with name, duration_minutes, price. CRUD + public endpoint.
 
 ## Features — Researched Competitive Opportunities (2026-03-21)
 
-- [ ] [RESEARCHED] **Industry-specific pipeline presets** — PARTIALLY DONE (Cycle 121: RE, contractor, dental). Extend to all 14 business types.
-- [ ] [RESEARCHED] **AI conversation summary on lead card** — Auto-generate a 2-sentence summary of the latest conversation for each lead. Saves time scanning conversations.
+- [x] [RESEARCHED] **Industry-specific pipeline presets** — DONE Cycles 121+124. 6 industry presets + 9 type aliases covering all 14 business types.
+- [x] [RESEARCHED] **AI conversation summary on lead card** — DONE 2026-03-21 Cycle 123. Summary subtitle on LeadsPage + AI generate-summary endpoint.
 - [ ] [RESEARCHED] **Two-way email sync** — When business owner replies to a lead via their regular email, capture it in the conversation thread. Competitors all have this.
-- [ ] [RESEARCHED] **Lead source tracking** — Track where leads come from (widget, form, phone, manual, referral). Critical for marketing ROI.
-- [ ] [RESEARCHED] **Zapier trigger for form submissions** — Fire webhook when a form is submitted, enabling Zapier automations.
+- [x] [RESEARCHED] **Lead source tracking** — DONE 2026-03-21 Cycle 122. Source column already exists (migration 001). Now set correctly: widget, booking, missed_call, csv_import, manual.
+- [x] [RESEARCHED] **Zapier trigger for form submissions** — ALREADY DONE. form.submitted webhook event already fires + now documented in schema.
 - [ ] [RESEARCHED] **White-label client login** — Let business owners give their clients a login to see their appointments/invoices/documents. Currently client_portal uses magic links.
+- [ ] [RESEARCHED] **AI-to-human handoff** — When AI can't answer, seamlessly transfer to a team member with full conversation context. Show "Connecting you with a team member..." in widget. Critical for complex queries across all industries.
+- [ ] [RESEARCHED] **Lead source analytics dashboard** — Visualize lead sources (widget, booking, missed_call, manual, csv_import) in AnalyticsPage. Source column already populated.
+- [ ] [RESEARCHED] **Post-appointment care instructions** — Auto-send service-specific aftercare emails (e.g., "Don't chew on filling for 24h"). Template library by service type.
 
 ## Optimization
 
