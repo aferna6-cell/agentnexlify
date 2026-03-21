@@ -86,6 +86,7 @@ async def _automation_loop():
         send_portal_links,
         send_weekly_intelligence_briefs,
         send_birthday_greetings,
+        send_aftercare_instructions,
     )
 
     tick = 0
@@ -109,6 +110,7 @@ async def _automation_loop():
                 _safe_run("send_csat_surveys", send_csat_surveys),
                 _safe_run("check_new_reviews", check_new_reviews),
                 _safe_run("send_invoice_payment_reminders", send_invoice_payment_reminders),
+                _safe_run("send_aftercare_instructions", send_aftercare_instructions),
             ])
 
         # Every 30 min: heavy/infrequent tasks

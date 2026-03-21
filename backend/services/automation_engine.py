@@ -981,6 +981,135 @@ async def send_rebook_suggestions() -> int:
     return sent
 
 
+# ---------------------------------------------------------------------------
+# Post-appointment aftercare instructions
+# ---------------------------------------------------------------------------
+
+_AFTERCARE_TEMPLATES: dict[str, dict[str, str]] = {
+    "dental": {
+        "default": "Thank you for your visit! Please wait 30 minutes before eating or drinking. If you experience any sensitivity, over-the-counter pain relief should help.",
+        "cleaning": "Your teeth have been professionally cleaned! Avoid dark foods and beverages for 24 hours. Continue brushing twice daily and flossing.",
+        "filling": "Your filling is complete. The numbness should wear off in 2-3 hours. Avoid chewing on the treated side until then. If you experience persistent pain, please contact us.",
+        "extraction": "Please bite on the gauze for 30-45 minutes. Avoid spitting, straws, and hot liquids for 24 hours. Rinse gently with warm salt water after 24 hours.",
+        "root canal": "Some tenderness is normal for a few days. Avoid chewing on the treated tooth until your permanent crown is placed. Take prescribed medications as directed.",
+    },
+    "medical": {
+        "default": "Thank you for your visit. Follow the care plan discussed during your appointment. Contact us if symptoms worsen.",
+    },
+    "salon": {
+        "default": "Thank you for visiting us! To maintain your new look, follow the care tips your stylist shared.",
+        "color": "Avoid washing your hair for 48 hours to let the color set. Use color-safe shampoo and conditioner.",
+    },
+    "fitness": {
+        "default": "Great session! Stay hydrated, stretch, and rest as needed. See you next time!",
+    },
+    "auto_shop": {
+        "default": "Your vehicle service is complete. Please keep your receipt for warranty purposes. If you notice any issues, bring it back and we'll take a look.",
+    },
+}
+
+
+async def send_aftercare_instructions() -> int:
+    """Send aftercare instructions 2-4 hours after appointment completion.
+
+    Deduped via activity_log (aftercare_sent per appointment).
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    sent = 0
+
+    # Check appointments completed 2-4 hours ago
+    window_start = now - timedelta(hours=4)
+    window_end = now - timedelta(hours=2)
+
+    try:
+        appts = (
+            db.table("appointments")
+            .select("id, tenant_id, customer_name, customer_email, notes, updated_at")
+            .eq("status", "completed")
+            .gte("updated_at", window_start.isoformat())
+            .lte("updated_at", window_end.isoformat())
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_aftercare_instructions: failed to query")
+        return 0
+
+    tenant_cache: dict[str, dict | None] = {}
+
+    for appt in appts.data or []:
+        tenant_id = appt["tenant_id"]
+        appt_id = appt["id"]
+
+        # Dedup
+        try:
+            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("activity_type", f"aftercare_sent_{appt_id}").limit(1).execute()
+            if existing.data:
+                continue
+        except Exception:
+            pass
+
+        if tenant_id not in tenant_cache:
+            try:
+                t = db.table("tenants").select("business_name, business_type, plan").eq("id", tenant_id).limit(1).execute()
+                tenant_cache[tenant_id] = t.data[0] if t.data else None
+            except Exception:
+                tenant_cache[tenant_id] = None
+
+        tenant = tenant_cache.get(tenant_id)
+        if not tenant or tenant.get("plan", "free") == "free":
+            continue
+
+        btype = (tenant.get("business_type") or "").lower()
+        templates = _AFTERCARE_TEMPLATES.get(btype)
+        if not templates:
+            continue
+
+        if not appt.get("customer_email"):
+            continue
+
+        # Pick the right template based on notes/service type
+        notes_lower = (appt.get("notes") or "").lower()
+        message = templates.get("default", "")
+        for keyword, template in templates.items():
+            if keyword != "default" and keyword in notes_lower:
+                message = template
+                break
+
+        if not message:
+            continue
+
+        business_name = tenant.get("business_name") or "Us"
+        customer_name = appt.get("customer_name") or "there"
+
+        subject = f"Post-visit care instructions from {business_name}"
+        body = (
+            f"<h2>Hi {customer_name},</h2>"
+            f"<p>{message}</p>"
+            f"<p>If you have any questions or concerns, don't hesitate to reach out.</p>"
+            f"<p>Best,<br>The {business_name} Team</p>"
+        )
+
+        try:
+            result = await send_email(to=appt["customer_email"], subject=subject, body_html=body, tenant_id=tenant_id)
+            if result.get("success"):
+                sent += 1
+        except Exception:
+            logger.exception("Failed to send aftercare for appointment %s", appt_id)
+
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "activity_type": f"aftercare_sent_{appt_id}",
+                "description": f"Aftercare instructions sent to {customer_name}",
+            }).execute()
+        except Exception:
+            logger.warning("Failed to log aftercare for appointment %s", appt_id, exc_info=True)
+
+    return sent
+
+
 async def send_pending_review_requests() -> int:
     """Check for completed appointments that need review requests sent.
 
