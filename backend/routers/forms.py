@@ -566,6 +566,59 @@ async def create_form(
     return result.data[0]
 
 
+# Presets must come before /{tenant_id}/{form_id} to avoid route shadowing
+@router.get("/{tenant_id}/presets")
+async def list_form_presets(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """List available form presets for one-click creation."""
+    verify_tenant(claims, tenant_id)
+    return [
+        {"key": key, "name": preset["name"], "description": preset["description"], "field_count": len(preset["fields"])}
+        for key, preset in _FORM_PRESETS.items()
+    ]
+
+
+@router.post("/{tenant_id}/presets/{preset_key}")
+async def create_form_from_preset(
+    tenant_id: str,
+    preset_key: str,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Create a form from a preset template."""
+    verify_tenant(claims, tenant_id)
+
+    if preset_key not in _FORM_PRESETS:
+        raise HTTPException(status_code=404, detail=f"Preset '{preset_key}' not found")
+
+    preset = _FORM_PRESETS[preset_key]
+    public_token = _generate_public_token()
+
+    data = {
+        "tenant_id": tenant_id,
+        "name": preset["name"],
+        "description": preset.get("description"),
+        "fields_json": preset["fields"],
+        "settings_json": {},
+        "is_active": True,
+        "public_token": public_token,
+        "submission_count": 0,
+        "success_message": preset.get("success_message"),
+    }
+
+    db = get_supabase()
+    try:
+        result = db.table("forms").insert(data).execute()
+    except Exception:
+        logger.exception("Failed to create form from preset %s for tenant %s", preset_key, tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to create form")
+
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create form")
+    return result.data[0]
+
+
 @router.get("/{tenant_id}/{form_id}")
 async def get_form(
     tenant_id: str,
@@ -856,55 +909,3 @@ _FORM_PRESETS: dict[str, dict] = {
         "success_message": "Thanks! We'll review your request and get back to you with an estimate within 24 hours.",
     },
 }
-
-
-@router.get("/{tenant_id}/presets")
-async def list_form_presets(
-    tenant_id: str,
-    claims: dict = Depends(_get_current_tenant),
-):
-    """List available form presets for one-click creation."""
-    verify_tenant(claims, tenant_id)
-    return [
-        {"key": key, "name": preset["name"], "description": preset["description"], "field_count": len(preset["fields"])}
-        for key, preset in _FORM_PRESETS.items()
-    ]
-
-
-@router.post("/{tenant_id}/presets/{preset_key}")
-async def create_form_from_preset(
-    tenant_id: str,
-    preset_key: str,
-    claims: dict = Depends(require_role("owner", "admin")),
-):
-    """Create a form from a preset template."""
-    verify_tenant(claims, tenant_id)
-
-    if preset_key not in _FORM_PRESETS:
-        raise HTTPException(status_code=404, detail=f"Preset '{preset_key}' not found")
-
-    preset = _FORM_PRESETS[preset_key]
-    public_token = _generate_public_token()
-
-    data = {
-        "tenant_id": tenant_id,
-        "name": preset["name"],
-        "description": preset.get("description"),
-        "fields_json": preset["fields"],
-        "settings_json": {},
-        "is_active": True,
-        "public_token": public_token,
-        "submission_count": 0,
-        "success_message": preset.get("success_message"),
-    }
-
-    db = get_supabase()
-    try:
-        result = db.table("forms").insert(data).execute()
-    except Exception:
-        logger.exception("Failed to create form from preset %s for tenant %s", preset_key, tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to create form")
-
-    if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to create form")
-    return result.data[0]
