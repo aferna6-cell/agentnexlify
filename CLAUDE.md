@@ -41,10 +41,10 @@ Dashboard (React/Vite) → FastAPI /api/* → Supabase
 Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant from day one.
 
 ## Key Directories
-- `backend/` — FastAPI service (`main.py`, `routers/` with 52 files, `services/` for business logic)
+- `backend/` — FastAPI service (`main.py`, `routers/` with 53 files, `services/` for business logic)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api.js`)
 - `widget/` + `frontend/public/widget/` — Embeddable chat widget (must be identical)
-- `migrations/` — SQL migration files (001–058, some duplicate numbers at 005/007)
+- `migrations/` — SQL migration files (001–064, some duplicate numbers at 005/007)
 - `chrome-extension/` — AI Review Responder Chrome Extension (manifest v3)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
@@ -148,7 +148,7 @@ Before writing any database query, verify the column exists. When creating a mig
 
 ## Skills & Agents
 
-Skills in `.claude/skills/`: **schema-guard**, **debug-api**, **feature-build**, **widget-test**, **team-orchestration**. Also `.codex/skills/` for repo-native skills.
+Skills in `.claude/skills/`: **schema-guard**, **debug-api**, **feature-build**, **widget-test**, **team-orchestration**, **industry-content**, **ai-feature-pattern**, **migration-workflow**, **build-loop**. Also `.codex/skills/` for repo-native skills.
 
 Agents in `.claude/agents/`: **schema-guardian**, **backend-dev**, **frontend-dev**, **widget-specialist**, **qa-tester**, **devops**. Use `/delegate` to plan delegation. Agents communicate via `.claude/agent-comms/`.
 
@@ -198,7 +198,7 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 
 **New API endpoint:** Check existing routers → schema-guard → Pydantic model → route → register in main.py
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
-**Database migration:** Next numbered file in `migrations/` (after 058) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
+**Database migration:** Next numbered file in `migrations/` (after 064) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
 
 ## Knowledge Base
 
