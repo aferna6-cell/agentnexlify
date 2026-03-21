@@ -1,6 +1,6 @@
 # Test Coverage — AgentNexLiFy
 
-191 tests across 13 test files. All use FastAPI TestClient with mocked Supabase.
+237 tests across 14 test files. All use FastAPI TestClient with mocked Supabase.
 
 ## Test Files
 
@@ -13,12 +13,18 @@
 | test_local_seo.py | 19 | Local SEO — profile analysis, scoring, keywords, dashboard widget |
 | test_booking_overlap.py | 16 | Appointments — overlapping time slots, booking conflicts |
 | test_client_portal.py | 15 | Client Portal — service records CRUD, portal token generation, public portal |
+| test_social_media.py | 12 | Social media posts — CRUD, AI generation, campaign creation |
+| test_documents.py | 11 | Documents — CRUD, signing flow, partial payments, item templates |
 | test_login_and_chat.py | 10 | Auth + chat — login flow, chat edge cases, lead capture edge cases |
+| test_automation_engine.py | 10 | Automation engine — sequence processing, review requests |
 | test_stripe_webhook.py | 7 | Stripe — webhook signature verification, event routing |
 | test_cors_and_rate_limit.py | 7 | CORS headers, rate limit decorators, automation sequences |
 | test_auth_endpoints.py | 6 | Registration — duplicate email, successful register, validation |
 | test_appointments.py | 5 | Appointments — create, past date, list, status update, cancel |
+| test_quick_fixes.py | 5 | Quick regression tests for specific bug fixes |
 | test_google_calendar.py | 3 | Google Calendar OAuth — status, disconnect, connected |
+
+**Note:** 11 test isolation failures remain (mock state leaks between files when running full suite). Tests pass when run individually.
 
 ## What's Tested
 
@@ -33,6 +39,9 @@
 - Client Portal: service records, portal tokens, public portal
 - Rate limiting: decorator verification on public endpoints
 - Automation: sequence creation from templates, stats aggregation
+- Documents: create, delete (draft only), signing flow, partial payments
+- Invoices: item templates CRUD, partial payment recording
+- Social media: posts, AI generation, campaigns
 
 ## What's NOT Tested (Known Gaps)
 
@@ -45,6 +54,8 @@
 - Chrome Extension (needs browser test framework)
 - Performance under load (no k6/locust tests)
 - Cross-worker automation dedup (needs multi-process test)
+- Service types CRUD (new, untested)
+- Form presets endpoint (new, untested)
 
 ## Running Tests
 
@@ -65,14 +76,16 @@ All tests follow the same pattern:
 1. `os.environ["TESTING"] = "1"` to skip automation loop
 2. `mock_settings` fixture for config
 3. `test_client` fixture with patched `get_supabase` in all relevant modules
-4. `_setup_table_mock()` helper for configurable mock responses
-5. `_cache.clear()` in fixture teardown for widget cache isolation
-6. JWT tokens generated via `jose.jwt.encode` with test secret
+4. **CRITICAL:** Patch `get_supabase` in ALL widget modules: `widget_chat`, `widget_config`, `widget_lead`, `widget_booking`, `widget_helpers` (NOT `widget` — the monolith was split in Cycle 97)
+5. `_setup_table_mock()` helper for configurable mock responses
+6. `_cache.clear()` from `widget_helpers` in fixture teardown
+7. JWT tokens generated via `jose.jwt.encode` with test secret
 
 ## Adding Tests
 
 1. Create `tests/test_<module>.py`
-2. Copy fixture pattern from `test_auth_endpoints.py`
+2. Copy fixture pattern from `test_appointments.py` (most up-to-date)
 3. Patch `get_supabase` in every module your endpoint imports from
-4. Clear widget `_cache` in fixture teardown
-5. Run full suite to check for cross-test contamination
+4. Include all 5 widget module patches even if not directly testing widget
+5. Clear widget `_cache` from `widget_helpers` in fixture teardown
+6. Run full suite to check for cross-test contamination
