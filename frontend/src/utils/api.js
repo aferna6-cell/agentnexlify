@@ -502,6 +502,10 @@ export function fetchAnalyticsWidget(tenantId, token, period = "30d") {
   return request(`/api/v1/analytics/${tenantId}/widget?period=${period}`, { token });
 }
 
+export function fetchLeadSources(tenantId, token) {
+  return request(`/api/v1/analytics/${tenantId}/lead-sources`, { token });
+}
+
 // --- Webhooks ---
 
 export function fetchWebhooks(tenantId, token) {

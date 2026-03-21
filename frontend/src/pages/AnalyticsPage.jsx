@@ -9,6 +9,7 @@ import {
   fetchConversations,
   fetchTagDefinitions,
   fetchMissedCallAnalytics,
+  fetchLeadSources,
 } from "../utils/api";
 import {
   LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
@@ -254,6 +255,7 @@ export default function AnalyticsPage() {
   const [tagDistribution, setTagDistribution] = useState([]);
   const [missedCallsData, setMissedCallsData] = useState(null);
   const [missedCallsError, setMissedCallsError] = useState(false);
+  const [leadSources, setLeadSources] = useState([]);
   const [error, setError] = useState(null);
 
   const [currentTheme, setCurrentTheme] = useState(
@@ -275,7 +277,7 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls] = await Promise.allSettled([
+      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources] = await Promise.allSettled([
         fetchAnalyticsOverview(user.tenantId, token, period),
         fetchAnalyticsConversations(user.tenantId, token, period),
         fetchAnalyticsLeads(user.tenantId, token, period),
@@ -284,12 +286,14 @@ export default function AnalyticsPage() {
         fetchConversations(user.tenantId, token),
         fetchTagDefinitions(user.tenantId, token),
         fetchMissedCallAnalytics(user.tenantId, token, period),
+        fetchLeadSources(user.tenantId, token),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
       if (leads.status === "fulfilled") setLeadsData(leads.value);
       if (resp.status === "fulfilled") setResponseTimes(resp.value);
       if (wid.status === "fulfilled") setWidgetData(wid.value);
+      if (sources.status === "fulfilled") setLeadSources(sources.value.breakdown || []);
 
       // Build tag distribution from conversations + tag definitions
       if (convos.status === "fulfilled") {
@@ -794,6 +798,27 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+
+        {/* Lead Sources */}
+        {leadSources.length > 0 && (
+          <div className="analytics-card">
+            <h3 className="analytics-card-title">Lead Sources</h3>
+            <ResponsiveContainer width="100%" height={Math.max(120, leadSources.length * 36)}>
+              <BarChart data={leadSources} layout="vertical" margin={{ left: 80, right: 20, top: 5, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                <XAxis type="number" stroke={chartTheme.text} fontSize={11} />
+                <YAxis dataKey="source" type="category" stroke={chartTheme.text} fontSize={11} width={70} />
+                <Tooltip contentStyle={{ background: chartTheme.tooltipBg, border: "none", borderRadius: 8, color: chartTheme.text }} />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {leadSources.map((entry, i) => {
+                    const colors = { widget: "#3b82f6", booking: "#10b981", missed_call: "#f59e0b", manual: "#8b5cf6", csv_import: "#ec4899", form: "#14b8a6" };
+                    return <Cell key={i} fill={colors[entry.source] || chartTheme.accent} />;
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

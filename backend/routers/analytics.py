@@ -913,3 +913,39 @@ Write 3-4 bullet points: what's going well, what needs attention, one actionable
     # Cache for 1 hour (override default TTL)
     _cache[cache_key] = (time.time() + 3600 - _CACHE_TTL, result)
     return result
+
+
+@router.get("/{tenant_id}/lead-sources")
+async def lead_source_breakdown(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Aggregate leads by source for analytics visualization."""
+    verify_tenant(claims, tenant_id)
+
+    cache_key = f"lead_sources:{tenant_id}"
+    cached = _cache.get(cache_key)
+    if cached and time.time() - cached[0] < _CACHE_TTL:
+        return cached[1]
+
+    db = get_supabase()
+    try:
+        result = db.table("leads").select("source").eq("client_id", tenant_id).execute()
+    except Exception:
+        logger.exception("Failed to fetch lead sources for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to load lead source data")
+
+    counts: dict[str, int] = defaultdict(int)
+    for lead in result.data or []:
+        source = lead.get("source") or "widget"
+        counts[source] += 1
+
+    # Format for charting
+    breakdown = [
+        {"source": source, "count": count}
+        for source, count in sorted(counts.items(), key=lambda x: -x[1])
+    ]
+
+    response = {"breakdown": breakdown, "total": sum(counts.values())}
+    _cache[cache_key] = (time.time(), response)
+    return response
