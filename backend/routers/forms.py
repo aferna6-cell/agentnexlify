@@ -908,4 +908,21 @@ _FORM_PRESETS: dict[str, dict] = {
         ],
         "success_message": "Thanks! We'll review your request and get back to you with an estimate within 24 hours.",
     },
+    "legal_intake": {
+        "name": "New Client Intake Form",
+        "description": "Collect case details and client information for initial consultation.",
+        "fields": [
+            {"id": "full_name", "type": "text", "label": "Full Name", "required": True},
+            {"id": "email", "type": "email", "label": "Email", "required": True},
+            {"id": "phone", "type": "phone", "label": "Phone Number", "required": True},
+            {"id": "case_type", "type": "select", "label": "Type of Legal Matter", "required": True, "options": ["Family Law", "Estate Planning", "Personal Injury", "Criminal Defense", "Business/Corporate", "Real Estate", "Immigration", "Employment", "Other"]},
+            {"id": "description", "type": "textarea", "label": "Brief Description of Your Situation", "required": True, "placeholder": "Please describe your legal matter in a few sentences"},
+            {"id": "opposing_party", "type": "text", "label": "Opposing Party Name (if applicable)", "required": False},
+            {"id": "deadline", "type": "date", "label": "Any Upcoming Court Dates or Deadlines?", "required": False},
+            {"id": "prior_attorney", "type": "radio", "label": "Have you worked with another attorney on this matter?", "required": False, "options": ["No", "Yes"]},
+            {"id": "preferred_contact", "type": "select", "label": "Preferred Contact Method", "required": False, "options": ["Phone", "Email", "Text"]},
+            {"id": "consent", "type": "checkbox", "label": "I understand that submitting this form does not create an attorney-client relationship", "required": True},
+        ],
+        "success_message": "Thank you. We'll review your information and contact you within 1 business day to schedule a consultation.",
+    },
 }

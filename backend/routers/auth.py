@@ -143,6 +143,9 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
         {"question": "What areas of law do you practice?", "answer": "Contact us to learn about our practice areas and how we can help with your legal matter.", "category": "Services"},
         {"question": "Do you offer free consultations?", "answer": "Yes, we offer free initial consultations. Book an appointment to discuss your case.", "category": "Consultations"},
         {"question": "Are consultations confidential?", "answer": "Absolutely. All communications with our firm are protected by attorney-client privilege.", "category": "Privacy"},
+        {"question": "What should I bring to my consultation?", "answer": "Please bring any relevant documents, contracts, court papers, or correspondence related to your matter. A timeline of events is also helpful.", "category": "Consultations"},
+        {"question": "How are your fees structured?", "answer": "We offer various fee arrangements including hourly rates, flat fees, and contingency fees depending on the type of case. We'll discuss fees during your initial consultation.", "category": "Pricing"},
+        {"question": "How long will my case take?", "answer": "Every case is different. During your consultation, we can give you a realistic timeline based on the specifics of your situation.", "category": "Process"},
     ],
     "salon": [
         {"question": "What services do you offer?", "answer": "We offer haircuts, coloring, styling, blowouts, treatments, and more. Contact us for our full service menu.", "category": "Services"},
@@ -156,16 +159,22 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
         {"question": "What services do you offer?", "answer": "We offer oil changes, brake service, tire rotation, engine diagnostics, transmission repair, AC service, and more.", "category": "Services"},
         {"question": "Do you give free estimates?", "answer": "Yes, we provide free estimates for most repair work. Bring your vehicle in or describe the issue and we'll give you a quote.", "category": "Pricing"},
         {"question": "Do you work on all makes and models?", "answer": "Yes, our certified technicians work on all makes and models of cars, trucks, and SUVs.", "category": "Services"},
+        {"question": "How long will my repair take?", "answer": "Repair times vary. Simple services like oil changes take 30-60 minutes. We'll give you an estimated completion time when you drop off your vehicle.", "category": "Process"},
+        {"question": "Do you offer a warranty on repairs?", "answer": "Yes, our repairs come with a warranty on parts and labor. Ask us for specific warranty details.", "category": "Warranty"},
     ],
     "medical": [
         {"question": "Are you accepting new patients?", "answer": "Yes, we are currently accepting new patients. Book an appointment to get started.", "category": "About"},
         {"question": "What insurance do you accept?", "answer": "We accept most major insurance plans. Contact us with your insurance information to verify coverage.", "category": "Insurance"},
         {"question": "Do you offer telehealth appointments?", "answer": "Please ask us about our current telehealth options for virtual visits.", "category": "Services"},
+        {"question": "What should I bring to my first visit?", "answer": "Please bring your photo ID, insurance card, list of current medications, and any relevant medical records.", "category": "About"},
+        {"question": "What is your cancellation policy?", "answer": "We ask for at least 24 hours notice for cancellations. Late cancellations may be subject to a fee.", "category": "Policy"},
     ],
     "fitness": [
         {"question": "What memberships do you offer?", "answer": "We offer a variety of membership options. Contact us to learn about our plans and pricing.", "category": "Memberships"},
         {"question": "Do you offer personal training?", "answer": "Yes! We have certified personal trainers available. Book a consultation to get started.", "category": "Services"},
         {"question": "Do you offer a free trial?", "answer": "Yes, we offer a free trial so you can experience our facility before committing. Ask us to get started!", "category": "Trial"},
+        {"question": "What are your hours?", "answer": "Please check our business hours or ask us here. We're open early mornings through late evenings.", "category": "Hours"},
+        {"question": "Do you offer group classes?", "answer": "Yes! We offer a variety of group fitness classes including yoga, spin, HIIT, and more. Ask about our class schedule.", "category": "Services"},
     ],
 }
 
