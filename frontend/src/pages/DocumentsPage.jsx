@@ -3,8 +3,9 @@ import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import {
   fetchDocuments, createDocument, sendDocument, deleteDocument,
-  fetchDocTemplates, createDocTemplate, fetchLeads,
-} from "../utils/api";
+  fetchDocTemplates, createDocTemplate,
+} from "../utils/api/documents";
+import { fetchLeads } from "../utils/api";
 
 const STATUS_FILTERS = ["all", "draft", "sent", "viewed", "signed", "expired", "cancelled"];
 const STATUS_COLORS = {

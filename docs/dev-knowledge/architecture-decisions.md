@@ -326,4 +326,9 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** For dental/medical business types, the widget AI system prompt includes a HEALTHCARE PRIVACY block that instructs the AI to handle health information professionally, not store or repeat medical details, and recommend patients complete a health history form. This is a system prompt instruction, not a hard filter.
 **Why:** Healthcare businesses need basic privacy awareness in their AI. A full HIPAA compliance implementation would require audit trails, BAAs, and encryption — but prompt-level instructions handle the most common issue: AI casually repeating sensitive health info.
 
+### api.js split into domain modules
+**Date:** 2026-03-21
+**Decision:** Created `frontend/src/utils/api/` directory with domain-specific modules (`invoices.js`, `documents.js`, `_client.js`). The monolithic `api.js` (252 exports, 1343 lines) remains for backwards compatibility. New features should add functions to domain modules. Pages are gradually migrated to import from domain modules.
+**Why:** api.js was the #1 merge conflict hotspot — touched 30+ times in 7 days. Every feature added functions to the same file. Domain modules isolate changes so invoice changes don't conflict with document changes.
+
 _Add new decisions when significant architectural choices are made._

@@ -10,11 +10,13 @@ import {
   markInvoicePaid,
   fetchInvoiceStats,
   createInvoiceFromBid,
-  fetchLeads,
-  fetchBids,
   fetchItemTemplates,
   createItemTemplate,
   recordPayment,
+} from "../utils/api/invoices";
+import {
+  fetchLeads,
+  fetchBids,
 } from "../utils/api";
 
 const STATUS_FILTERS = ["all", "draft", "sent", "viewed", "paid", "overdue", "cancelled"];
