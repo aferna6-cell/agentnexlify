@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, fetchTeamMembers, fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues, requestReviewForLead } from "../../utils/api";
+import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, requestReviewForLead } from "../../utils/api/leads";
+import { fetchTeamMembers, fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },

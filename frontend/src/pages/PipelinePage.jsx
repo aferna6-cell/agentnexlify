@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
-import { fetchPipelineBoard, movePipelineLead, createLead } from "../utils/api";
+import { fetchPipelineBoard, movePipelineLead } from "../utils/api/pipeline";
+import { createLead } from "../utils/api/leads";
 
 const FALLBACK_STAGES = [
   { name: "New Lead", sort_order: 0, color: "#3b82f6", is_won: false, is_lost: false },
