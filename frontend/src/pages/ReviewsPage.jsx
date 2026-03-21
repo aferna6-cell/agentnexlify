@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchReviews, createReview, updateReview, deleteReview, generateAIDraft } from "../utils/api";
+import { fetchReviews, createReview, updateReview, deleteReview, generateAIDraft } from "../utils/api/reviews";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 
 const PLATFORMS = ["google", "yelp", "facebook"];

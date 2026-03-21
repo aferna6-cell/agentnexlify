@@ -13,6 +13,8 @@ export * from "./leads";
 export * from "./invoices";
 export * from "./documents";
 export * from "./pipeline";
+export * from "./reviews";
+export * from "./content";
 
 // Shared client (for advanced usage)
 export { request, BASE, ApiError } from "./_client";

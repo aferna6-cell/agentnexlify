@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchContentItems, createContentItem, deleteContentItem, repurposeContent, fetchContentItem, updateContentItem } from "../utils/api";
+import { fetchContentItems, createContentItem, deleteContentItem, repurposeContent, fetchContentItem, updateContentItem } from "../utils/api/content";
 
 const SOURCE_TYPES = [
   { key: "text", label: "Blog Post / Article", placeholder: "Paste your blog post, article, or any long-form content here..." },
