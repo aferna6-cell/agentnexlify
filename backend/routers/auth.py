@@ -148,6 +148,9 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
         {"question": "What services do you offer?", "answer": "We offer haircuts, coloring, styling, blowouts, treatments, and more. Contact us for our full service menu.", "category": "Services"},
         {"question": "How do I book an appointment?", "answer": "You can book an appointment right here in our chat, call us, or use our online booking system.", "category": "Booking"},
         {"question": "Do you accept walk-ins?", "answer": "We welcome walk-ins based on availability, but we recommend booking an appointment to guarantee your preferred time.", "category": "Booking"},
+        {"question": "What is your cancellation policy?", "answer": "We ask for at least 24 hours notice for cancellations. Late cancellations may be subject to a fee.", "category": "Policy"},
+        {"question": "How much do haircuts cost?", "answer": "Our pricing varies by service and stylist. Contact us or check our service menu for current prices.", "category": "Pricing"},
+        {"question": "Do you do bridal/event styling?", "answer": "Yes! We offer bridal hair, updos, and makeup services for weddings and special events. Book a consultation to discuss your look.", "category": "Services"},
     ],
     "auto_shop": [
         {"question": "What services do you offer?", "answer": "We offer oil changes, brake service, tire rotation, engine diagnostics, transmission repair, AC service, and more.", "category": "Services"},
