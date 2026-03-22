@@ -13,7 +13,7 @@ import {
   fetchGeoScore,
   trackKeywords,
   fetchKeywordRankings,
-} from "../utils/api";
+} from "../utils/api/seo";
 
 /* ──────────────────────────────────────────────────────────
    Constants

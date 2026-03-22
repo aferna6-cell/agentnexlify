@@ -20,5 +20,7 @@ export * from "./forms";
 export * from "./conversations";
 export * from "./analytics";
 export * from "./automations";
+export * from "./menu";
+export * from "./seo";
 
 export { request, BASE, ApiError } from "./_client";

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
-import { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemAvailability, importMenuFromWebsite } from "../utils/api";
+import { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemAvailability, importMenuFromWebsite } from "../utils/api/menu";
 
 export default function MenuPage() {
   const { user, token } = useAuth();
