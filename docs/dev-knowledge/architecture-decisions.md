@@ -326,9 +326,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** For dental/medical business types, the widget AI system prompt includes a HEALTHCARE PRIVACY block that instructs the AI to handle health information professionally, not store or repeat medical details, and recommend patients complete a health history form. This is a system prompt instruction, not a hard filter.
 **Why:** Healthcare businesses need basic privacy awareness in their AI. A full HIPAA compliance implementation would require audit trails, BAAs, and encryption — but prompt-level instructions handle the most common issue: AI casually repeating sensitive health info.
 
-### api.js split into domain modules
-**Date:** 2026-03-21
-**Decision:** Created `frontend/src/utils/api/` directory with domain-specific modules (`invoices.js`, `documents.js`, `_client.js`). The monolithic `api.js` (252 exports, 1343 lines) remains for backwards compatibility. New features should add functions to domain modules. Pages are gradually migrated to import from domain modules.
-**Why:** api.js was the #1 merge conflict hotspot — touched 30+ times in 7 days. Every feature added functions to the same file. Domain modules isolate changes so invoice changes don't conflict with document changes.
+### api.js split into domain modules — COMPLETED
+**Date:** 2026-03-21 (started), 2026-03-22 (completed)
+**Decision:** Split the 1347-line monolithic `api.js` into 35 domain modules in `frontend/src/utils/api/`. The monolith has been deleted. All 257 API functions now live in domain-specific files. A barrel `index.js` re-exports everything for backwards compatibility.
+**Why:** api.js was the #1 merge conflict hotspot. Domain modules isolate changes so invoice changes don't conflict with document changes. Bundle improved -18.3% (113.8 → 93 kB) via better tree-shaking.
+**Modules (35):** leads, invoices, documents, pipeline, reviews, content, appointments, webhooks, team, social, campaigns, jobs, bids, forms, conversations, analytics, automations, menu, seo, calls, portal, smart-lists, dashboard, faq, widget-config, crm, action-items, inbox, snippets, tags, chat-flows, business-page, integrations, phone, misc + _client (shared).
+**Pattern:** Each module imports `request` from `./_client.js` and exports named functions. New API functions go in the appropriate domain module. The barrel `index.js` re-exports all modules.
 
 _Add new decisions when significant architectural choices are made._
