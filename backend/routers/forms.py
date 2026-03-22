@@ -942,4 +942,19 @@ _FORM_PRESETS: dict[str, dict] = {
         ],
         "success_message": "Thank you! Your waiver is on file. Welcome to the team — we're excited to help you reach your goals!",
     },
+    "catering_inquiry": {
+        "name": "Catering & Event Inquiry",
+        "description": "Collect event details for catering quotes and private dining requests.",
+        "fields": [
+            {"id": "name", "type": "text", "label": "Your Name", "required": True},
+            {"id": "email", "type": "email", "label": "Email", "required": True},
+            {"id": "phone", "type": "phone", "label": "Phone", "required": True},
+            {"id": "event_date", "type": "date", "label": "Event Date", "required": True},
+            {"id": "guest_count", "type": "number", "label": "Number of Guests", "required": True},
+            {"id": "event_type", "type": "select", "label": "Type of Event", "required": True, "options": ["Birthday Party", "Corporate Event", "Wedding", "Anniversary", "Holiday Party", "Private Dining", "Other"]},
+            {"id": "budget", "type": "select", "label": "Budget Range (per person)", "required": False, "options": ["Under $25", "$25-$50", "$50-$75", "$75-$100", "Over $100"]},
+            {"id": "dietary", "type": "textarea", "label": "Dietary Restrictions or Special Requests", "required": False, "placeholder": "Allergies, vegetarian, gluten-free, etc."},
+        ],
+        "success_message": "Thank you for your inquiry! We'll reach out within 24 hours with a custom catering proposal.",
+    },
 }

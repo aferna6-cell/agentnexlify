@@ -128,6 +128,8 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
         {"question": "Do you offer delivery?", "answer": "Please ask us about our current delivery options and delivery area.", "category": "Orders"},
         {"question": "Can I make a reservation?", "answer": "Yes! You can book a table through our chat widget or call us directly.", "category": "Reservations"},
         {"question": "Do you cater events?", "answer": "Yes, we offer catering services for events of all sizes. Contact us for a custom quote.", "category": "Catering"},
+        {"question": "Do you accommodate dietary restrictions?", "answer": "Yes! We can accommodate vegetarian, vegan, gluten-free, and allergy-specific requests. Please let us know when ordering or making a reservation.", "category": "Dietary"},
+        {"question": "Do you have a private dining room?", "answer": "Please ask us about our private dining and event space options. We'd love to host your special occasion.", "category": "Events"},
     ],
     "realestate": [
         {"question": "What areas do you cover?", "answer": "We serve the local real estate market. Contact us to discuss your specific area of interest.", "category": "Areas"},
