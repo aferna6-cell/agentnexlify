@@ -150,6 +150,7 @@ async def get_config(request: Request, api_key: str):
         is_online=widget.get("is_online", True),
         offline_message=widget.get("offline_message"),
         menu_items=menu_items,
+        business_type=tenant.get("business_type"),
     )
 
 

@@ -763,6 +763,7 @@
 
   // Menu state
   let menuItems = null; // Array of {name, description, price, category} or null
+  let businessType = ""; // e.g. "legal", "restaurant", "dental"
 
   // Booking state
   let tenantId = "";
@@ -785,6 +786,7 @@
       agentName = data.agent_name || "Agent";
       tenantId = data.tenant_id || "";
       bookingEnabled = data.booking_enabled || false;
+      businessType = (data.business_type || "").toLowerCase();
       widgetIsOnline = data.is_online !== false;
       if (data.offline_message) offlineMessage = data.offline_message;
       if (data.menu_items && data.menu_items.length > 0) {
@@ -1293,7 +1295,15 @@
     html += `<div class="anx-form-group"><label class="anx-form-label">Name *</label><input class="anx-form-input" id="anx-book-name" placeholder="Your name" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Email *</label><input class="anx-form-input" id="anx-book-email" type="email" placeholder="your@email.com" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Phone</label><input class="anx-form-input" id="anx-book-phone" type="tel" placeholder="(optional)"></div>`;
-    html += `<div class="anx-form-group"><label class="anx-form-label">Reason for Visit</label><input class="anx-form-input" id="anx-book-reason" placeholder="e.g. Consultation, Repair, Checkup"></div>`;
+    const reasonPlaceholder = {
+      legal: "e.g. Initial Consultation, Case Review, Document Review",
+      dental: "e.g. Cleaning, Checkup, Consultation",
+      medical: "e.g. Annual Physical, Follow-up, Consultation",
+      salon: "e.g. Haircut, Coloring, Styling",
+      restaurant: "e.g. Reservation, Private Event",
+      contractor: "e.g. Estimate, Inspection, Repair",
+    }[businessType] || "e.g. Consultation, Service, Follow-up";
+    html += `<div class="anx-form-group"><label class="anx-form-label">Reason for Visit</label><input class="anx-form-input" id="anx-book-reason" placeholder="${reasonPlaceholder}"></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Notes</label><input class="anx-form-input" id="anx-book-notes" placeholder="(optional)"></div>`;
     html += `<button class="anx-book-submit" id="anx-book-confirm">Confirm Appointment</button>`;
     html += `<div id="anx-book-error" style="color:#ff4444;font-size:12px;text-align:center;display:none;"></div>`;

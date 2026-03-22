@@ -304,6 +304,7 @@ class WidgetConfigResponse(BaseModel):
     is_online: bool = True
     offline_message: str | None = None
     menu_items: list[dict] | None = None
+    business_type: str | None = None
 
 
 class WidgetLeadRequest(BaseModel):
