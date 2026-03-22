@@ -335,7 +335,7 @@ async def get_portal_data(token: str, request: Request):
     try:
         tok_result = (
             db.table("portal_tokens")
-            .select("*")
+            .select("tenant_id, lead_id")
             .eq("token", token)
             .limit(1)
             .execute()
@@ -382,11 +382,11 @@ async def get_portal_data(token: str, request: Request):
 
     customer = lead_result.data[0] if lead_result.data else {}
 
-    # Fetch service records for this lead + tenant
+    # Fetch service records for this lead + tenant (only public-safe columns)
     try:
         records_result = (
             db.table("service_records")
-            .select("*")
+            .select("id, title, description, service_date, photos_json, documents_json, invoice_amount, created_at")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
             .order("service_date", desc=True)
@@ -613,6 +613,8 @@ async def client_login(req: ClientLoginRequest, request: Request):
         raise HTTPException(status_code=500, detail="Login failed")
 
     if not account_result.data:
+        # Constant-time: always hash to prevent timing-based email enumeration
+        _hash_client_password(req.password)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     account = account_result.data[0]
@@ -661,11 +663,11 @@ async def client_me(claims: dict = Depends(_get_current_client)):
 
     customer = lead_result.data[0] if lead_result.data else {}
 
-    # Fetch service records
+    # Fetch service records (client-facing columns only)
     try:
         records_result = (
             db.table("service_records")
-            .select("*")
+            .select("id, title, description, service_date, photos_json, documents_json, invoice_amount, created_at")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
             .order("service_date", desc=True)

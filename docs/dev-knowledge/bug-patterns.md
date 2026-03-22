@@ -511,4 +511,18 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 **Fix:** Changed all 6 locations from `tenant_id` to `client_id`. Also added input validation to `AIFeedbackRequest` model (missing `max_length` on public endpoint).
 **Prevention:** EVERY file that touches the `conversations` table must use `client_id`. Run `grep -n 'conversations.*tenant_id' backend/routers/*.py` before committing. (Cycle 154)
 
+### 26. Form submission DoS via oversized data_json
+**Date:** 2026-03-22 (Cycle 164)
+**Symptom:** Public form submission endpoint accepts arbitrarily large `data_json` dictionaries with no size limit, enabling memory exhaustion attacks.
+**Root Cause:** `PublicFormSubmission` Pydantic model had `data_json: dict = Field(default_factory=dict)` with no validation on dictionary size or total payload.
+**Fix:** Added `model_post_init` validation: max 100 keys, max 50KB serialized JSON.
+**Prevention:** All public endpoints accepting dict/JSON body fields should have size limits. (Cycle 164)
+
+### 27. Client login timing attack — email enumeration
+**Date:** 2026-03-22 (Cycle 164)
+**Symptom:** Client login endpoint returns faster when email doesn't exist (skips password hash), allowing attackers to enumerate which emails are registered.
+**Root Cause:** Early return on "account not found" without performing any hash operation. Password hashing takes ~100ms, making the timing difference detectable.
+**Fix:** Added dummy `_hash_client_password()` call when account not found, ensuring constant response time regardless of email validity.
+**Prevention:** Login endpoints should always perform a hash operation before returning error. (Cycle 164)
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

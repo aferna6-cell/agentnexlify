@@ -60,8 +60,17 @@ class FormUpdate(BaseModel):
 
 
 class PublicFormSubmission(BaseModel):
-    data_json: dict = Field(default_factory=dict)
+    data_json: dict = Field(default_factory=dict, max_length=100)
     source_url: str | None = Field(None, max_length=2000)
+
+    def model_post_init(self, __context):
+        """Validate data_json size to prevent DoS via oversized payloads."""
+        import json
+        serialized = json.dumps(self.data_json)
+        if len(serialized) > 50_000:  # 50KB max
+            raise ValueError("Form submission data too large (max 50KB)")
+        if len(self.data_json) > 100:
+            raise ValueError("Form submission has too many fields (max 100)")
 
 
 # ---------------------------------------------------------------------------
