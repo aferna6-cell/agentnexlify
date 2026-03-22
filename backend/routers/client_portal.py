@@ -1,10 +1,13 @@
-"""Client Portal endpoints — service records, portal tokens, photo upload, and public portal view."""
+"""Client Portal endpoints — service records, portal tokens, photo upload, public portal view, and client login."""
 
 import logging
 import secrets
 import uuid
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
+import bcrypt
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, UploadFile
+from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 
 from backend.config import settings
@@ -17,6 +20,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/portal", tags=["client-portal"])
 
 _PORTAL_BASE_URL = "https://agentnexlify.vercel.app/client"
+_JWT_ALGORITHM = "HS256"
+_CLIENT_JWT_EXPIRE_DAYS = 30
 
 
 # ── Pydantic models ──────────────────────────────────────────
@@ -410,6 +415,21 @@ async def get_portal_data(token: str, request: Request):
     except Exception:
         logger.warning("Failed to check widget config for tenant %s", tenant_id)
 
+    # Check if client login is enabled for this tenant
+    client_login_enabled = False
+    try:
+        tenant_full = (
+            db.table("tenants")
+            .select("client_login_enabled")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if tenant_full.data:
+            client_login_enabled = bool(tenant_full.data[0].get("client_login_enabled"))
+    except Exception:
+        logger.warning("Failed to check client_login_enabled for tenant %s", tenant_id)
+
     return {
         "business": business,
         "customer": customer,
@@ -417,4 +437,345 @@ async def get_portal_data(token: str, request: Request):
         "rebook_enabled": rebook_enabled,
         "widget_api_key": widget_api_key,
         "api_base": "https://agentnexlify-production.up.railway.app",
+        "client_login_enabled": client_login_enabled,
     }
+
+
+# ── Client Login System ──────────────────────────────────────
+
+
+class ClientRegisterRequest(BaseModel):
+    portal_token: str = Field(..., description="Portal token proving client identity")
+    email: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=6, max_length=128)
+
+
+class ClientLoginRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=1, max_length=128)
+    business_slug: str = Field(..., min_length=1, max_length=100)
+
+
+def _hash_client_password(plain: str) -> str:
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+
+
+def _verify_client_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
+
+
+def _create_client_token(tenant_id: str, lead_id: str, email: str) -> str:
+    payload = {
+        "tenant_id": tenant_id,
+        "lead_id": lead_id,
+        "email": email,
+        "scope": "client",
+        "exp": datetime.now(timezone.utc) + timedelta(days=_CLIENT_JWT_EXPIRE_DAYS),
+    }
+    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+
+
+def _get_current_client(authorization: str = Header(...)) -> dict:
+    """Decode and validate a client JWT token."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    token = authorization[7:]
+    try:
+        payload = jwt.decode(token, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if payload.get("scope") != "client":
+        raise HTTPException(status_code=403, detail="Not a client token")
+    return payload
+
+
+@router.post("/client/register")
+@limiter.limit("10/minute")
+async def client_register(req: ClientRegisterRequest, request: Request):
+    """Register a client account using a portal token as proof of identity.
+
+    The portal token validates the client is a real lead for a real business.
+    After registration, the client can log in with email + password.
+    """
+    db = get_supabase()
+
+    # Validate the portal token
+    try:
+        tok_result = (
+            db.table("portal_tokens")
+            .select("tenant_id, lead_id")
+            .eq("token", req.portal_token)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to look up portal token during client registration")
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+    if not tok_result.data:
+        raise HTTPException(status_code=404, detail="Invalid portal token")
+
+    tenant_id = tok_result.data[0]["tenant_id"]
+    lead_id = tok_result.data[0]["lead_id"]
+
+    # Check if client login is enabled for this tenant
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("client_login_enabled")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not tenant_result.data or not tenant_result.data[0].get("client_login_enabled"):
+            raise HTTPException(status_code=403, detail="Client login is not enabled for this business")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to check client_login_enabled for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+    # Check if account already exists
+    try:
+        existing = (
+            db.table("client_accounts")
+            .select("id")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            raise HTTPException(status_code=409, detail="Account already exists for this client")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to check existing client account")
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+    # Create the account
+    password_hash = _hash_client_password(req.password)
+    try:
+        db.table("client_accounts").insert({
+            "tenant_id": tenant_id,
+            "lead_id": lead_id,
+            "email": req.email,
+            "password_hash": password_hash,
+        }).execute()
+    except Exception:
+        logger.exception("Failed to create client account for lead %s", lead_id)
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+    token = _create_client_token(tenant_id, lead_id, req.email)
+    return {"token": token, "message": "Account created successfully"}
+
+
+@router.post("/client/login")
+@limiter.limit("10/minute")
+async def client_login(req: ClientLoginRequest, request: Request):
+    """Log in as a client using email + password, scoped to a business by slug."""
+    db = get_supabase()
+
+    # Find the tenant by business_slug
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("id, client_login_enabled")
+            .eq("business_slug", req.business_slug)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to look up tenant by slug %s", req.business_slug)
+        raise HTTPException(status_code=500, detail="Login failed")
+
+    if not tenant_result.data:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    tenant = tenant_result.data[0]
+    if not tenant.get("client_login_enabled"):
+        raise HTTPException(status_code=403, detail="Client login is not enabled for this business")
+
+    tenant_id = tenant["id"]
+
+    # Find the client account
+    try:
+        account_result = (
+            db.table("client_accounts")
+            .select("id, lead_id, email, password_hash")
+            .eq("tenant_id", tenant_id)
+            .eq("email", req.email)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to look up client account for %s", req.email)
+        raise HTTPException(status_code=500, detail="Login failed")
+
+    if not account_result.data:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    account = account_result.data[0]
+    if not _verify_client_password(req.password, account["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = _create_client_token(tenant_id, account["lead_id"], account["email"])
+    return {"token": token}
+
+
+@router.get("/client/me")
+async def client_me(claims: dict = Depends(_get_current_client)):
+    """Get the authenticated client's portal data — same as the public portal but via JWT."""
+    db = get_supabase()
+    tenant_id = claims["tenant_id"]
+    lead_id = claims["lead_id"]
+
+    # Fetch business info
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("id, business_name, owner_email, industry, city, business_slug")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch tenant %s for client portal", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to load portal")
+
+    business = tenant_result.data[0] if tenant_result.data else {}
+
+    # Fetch customer (lead) info — leads table uses client_id
+    try:
+        lead_result = (
+            db.table("leads")
+            .select("id, name, email, phone")
+            .eq("id", lead_id)
+            .eq("client_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch lead %s for client portal", lead_id)
+        raise HTTPException(status_code=500, detail="Failed to load portal")
+
+    customer = lead_result.data[0] if lead_result.data else {}
+
+    # Fetch service records
+    try:
+        records_result = (
+            db.table("service_records")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("service_date", desc=True)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch service records for client %s", lead_id)
+        raise HTTPException(status_code=500, detail="Failed to load portal")
+
+    # Fetch appointments
+    try:
+        appt_result = (
+            db.table("appointments")
+            .select("id, customer_name, start_time, end_time, status, notes")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("start_time", desc=True)
+            .limit(20)
+            .execute()
+        )
+    except Exception:
+        logger.warning("Failed to fetch appointments for client %s", lead_id)
+        appt_result = type("R", (), {"data": []})()
+
+    # Fetch invoices
+    try:
+        inv_result = (
+            db.table("invoices")
+            .select("id, invoice_number, items_json, subtotal, tax, total, status, created_at, due_date")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+    except Exception:
+        logger.warning("Failed to fetch invoices for client %s", lead_id)
+        inv_result = type("R", (), {"data": []})()
+
+    # Fetch documents
+    try:
+        doc_result = (
+            db.table("documents")
+            .select("id, title, status, created_at, signed_at")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+    except Exception:
+        logger.warning("Failed to fetch documents for client %s", lead_id)
+        doc_result = type("R", (), {"data": []})()
+
+    # Check rebook status
+    rebook_enabled = False
+    widget_api_key = None
+    try:
+        wc_result = (
+            db.table("widget_configs")
+            .select("booking_enabled, api_key")
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if wc_result.data:
+            rebook_enabled = bool(wc_result.data[0].get("booking_enabled"))
+            widget_api_key = wc_result.data[0].get("api_key")
+    except Exception:
+        logger.warning("Failed to check widget config for tenant %s", tenant_id)
+
+    return {
+        "business": business,
+        "customer": customer,
+        "service_records": records_result.data or [],
+        "appointments": appt_result.data or [],
+        "invoices": inv_result.data or [],
+        "documents": doc_result.data or [],
+        "rebook_enabled": rebook_enabled,
+        "widget_api_key": widget_api_key,
+        "api_base": "https://agentnexlify-production.up.railway.app",
+    }
+
+
+@router.put("/{tenant_id}/client-login")
+async def toggle_client_login(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Enable or disable client login for a tenant (toggle)."""
+    _verify_tenant(claims, tenant_id)
+
+    db = get_supabase()
+    try:
+        # Get current state
+        current = (
+            db.table("tenants")
+            .select("client_login_enabled")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not current.data:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+
+        new_value = not bool(current.data[0].get("client_login_enabled"))
+        db.table("tenants").update({"client_login_enabled": new_value}).eq("id", tenant_id).execute()
+        return {"client_login_enabled": new_value}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to toggle client login for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to update setting")

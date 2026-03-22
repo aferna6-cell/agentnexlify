@@ -167,6 +167,9 @@ export default function ClientPortalPublicPage() {
                 </>
               )}
             </button>
+            {data.client_login_enabled && (
+              <CreateAccountSection portalToken={token} businessSlug={data.business?.business_slug} />
+            )}
           </div>
 
           {/* Service Records */}
@@ -233,6 +236,113 @@ export default function ClientPortalPublicPage() {
         </footer>
       </div>
     </>
+  );
+}
+
+function CreateAccountSection({ portalToken, businessSlug }) {
+  const [show, setShow] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const API = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch(`${API}/api/v1/portal/client/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portal_token: portalToken, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Registration failed");
+      setResult({ success: true, message: "Account created! You can now log in anytime." });
+    } catch (err) {
+      setResult({ success: false, message: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!show) {
+    return (
+      <div style={{ textAlign: "center", marginTop: 16 }}>
+        <button
+          onClick={() => setShow(true)}
+          style={{
+            background: "none", border: "none", color: "#00bfff",
+            fontSize: 13, cursor: "pointer", textDecoration: "underline",
+          }}
+        >
+          Create an account to log in anytime
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      marginTop: 20, padding: 20, background: "rgba(0,191,255,0.05)",
+      border: "1px solid rgba(0,191,255,0.15)", borderRadius: 12,
+    }}>
+      <h4 style={{ margin: "0 0 12px", fontSize: 15, color: "#f0f0f5" }}>Create Your Account</h4>
+      <p style={{ margin: "0 0 16px", fontSize: 13, color: "#9494a8" }}>
+        Set up a login so you can access your portal anytime without a link.
+      </p>
+      {result && (
+        <div style={{
+          padding: "8px 12px", borderRadius: 8, marginBottom: 12, fontSize: 13,
+          background: result.success ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+          color: result.success ? "#6ee7b7" : "#fca5a5",
+          border: `1px solid ${result.success ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`,
+        }}>
+          {result.message}
+          {result.success && businessSlug && (
+            <div style={{ marginTop: 8 }}>
+              <a href={`/client/login/${businessSlug}`} style={{ color: "#00bfff" }}>
+                Go to login page
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+      {!result?.success && (
+        <form onSubmit={handleRegister}>
+          <input
+            type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email" required
+            style={{
+              width: "100%", padding: "10px 12px", background: "rgba(10,10,15,0.8)",
+              border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+              color: "#f0f0f5", fontSize: 14, marginBottom: 10, boxSizing: "border-box",
+            }}
+          />
+          <input
+            type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+            placeholder="Choose a password (min 6 chars)" required minLength={6}
+            style={{
+              width: "100%", padding: "10px 12px", background: "rgba(10,10,15,0.8)",
+              border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+              color: "#f0f0f5", fontSize: 14, marginBottom: 12, boxSizing: "border-box",
+            }}
+          />
+          <button
+            type="submit" disabled={loading}
+            style={{
+              width: "100%", padding: "10px", background: "#00bfff", border: "none",
+              borderRadius: 8, color: "#0a0a0f", fontWeight: 600, fontSize: 14, cursor: "pointer",
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? "Creating..." : "Create Account"}
+          </button>
+        </form>
+      )}
+    </div>
   );
 }
 

@@ -367,4 +367,12 @@ New table `service_types` for defining services with custom durations. Columns: 
 
 **Applied:** 2026-03-21 via Supabase MCP.
 
+### 064 — Lead Date of Birth
+Adds `date_of_birth DATE` to leads table for birthday greetings automation.
+
+### 065 — Client Accounts (White-Label Login)
+New table `client_accounts` for client portal authentication. Columns: tenant_id, lead_id, email, password_hash, created_at. Unique constraints on (tenant_id, email) and (tenant_id, lead_id). Also adds `client_login_enabled BOOLEAN DEFAULT false` to tenants table.
+
+**Applied:** Pending — must be run on live Supabase manually.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._

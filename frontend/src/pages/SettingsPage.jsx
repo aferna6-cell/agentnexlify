@@ -34,6 +34,8 @@ export default function SettingsPage({ onNavigate }) {
   const [crawling, setCrawling] = useState(false);
   const [businessSlug, setBusinessSlug] = useState(null);
   const [businessPageEnabled, setBusinessPageEnabled] = useState(false);
+  const [clientLoginEnabled, setClientLoginEnabled] = useState(false);
+  const [togglingClientLogin, setTogglingClientLogin] = useState(false);
   const [tagDefs, setTagDefs] = useState([]);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#6b7280");
@@ -82,6 +84,7 @@ export default function SettingsPage({ onNavigate }) {
       setEmail(tenant.owner_email || "");
       setBusinessSlug(tenant.business_slug || null);
       setBusinessPageEnabled(!!tenant.business_page_enabled);
+      setClientLoginEnabled(!!tenant.client_login_enabled);
       if (tenant.plan) setLivePlan(tenant.plan);
       // phone_number is stored in notification_phone; only track it as "provisioned"
       // if it was set via Twilio (starts with + international format)
@@ -302,6 +305,23 @@ export default function SettingsPage({ onNavigate }) {
   const handleChange = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
     setSaved(false);
+  };
+
+  const handleToggleClientLogin = async () => {
+    if (!user?.tenantId || togglingClientLogin) return;
+    setTogglingClientLogin(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app"}/api/v1/portal/${user.tenantId}/client-login`,
+        { method: "PUT", headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (res.ok) setClientLoginEnabled(data.client_login_enabled);
+    } catch (err) {
+      console.error("Failed to toggle client login", err);
+    } finally {
+      setTogglingClientLogin(false);
+    }
   };
 
   const handleSave = async () => {
@@ -1242,6 +1262,38 @@ export default function SettingsPage({ onNavigate }) {
                   }}>dismiss</button>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Client Portal Login */}
+        <div className="settings-card">
+          <h3>Client Portal Login</h3>
+          <p className="settings-card-desc">
+            Allow your clients to create an account and log in to see their appointments, invoices, documents, and service history.
+            Clients register through their portal link and can then access their account anytime.
+          </p>
+          <div className="settings-field" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input
+              type="checkbox"
+              checked={clientLoginEnabled}
+              onChange={handleToggleClientLogin}
+              disabled={togglingClientLogin}
+              style={{ width: 18, height: 18, cursor: "pointer" }}
+            />
+            <label style={{ cursor: "pointer" }} onClick={handleToggleClientLogin}>
+              {togglingClientLogin ? "Updating..." : clientLoginEnabled ? "Client login enabled" : "Client login disabled"}
+            </label>
+          </div>
+          {clientLoginEnabled && businessSlug && (
+            <div style={{
+              marginTop: 10, padding: "10px 14px", borderRadius: 8, fontSize: "0.83rem",
+              background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)",
+              color: "var(--text-secondary)",
+            }}>
+              Your clients can log in at: <strong style={{ color: "var(--text-primary)" }}>
+                {window.location.origin}/client/login/{businessSlug}
+              </strong>
             </div>
           )}
         </div>

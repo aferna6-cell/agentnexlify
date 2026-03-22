@@ -24,6 +24,8 @@ const TidioAlternative = lazy(() => import("./pages/TidioAlternative"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 const BusinessPage = lazy(() => import("./pages/BusinessPage"));
 const ClientPortalPublicPage = lazy(() => import("./pages/ClientPortalPublicPage"));
+const ClientLoginPage = lazy(() => import("./pages/ClientLoginPage"));
+const ClientDashboardPage = lazy(() => import("./pages/ClientDashboardPage"));
 
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
@@ -113,7 +115,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/compare/:competitor" element={<CompareRoute />} />
             {/* Team invite accept page (public, no auth) */}
             <Route path="/invite/:token" element={<AcceptInvitePage />} />
-            {/* Public client portal — no auth, standalone */}
+            {/* Client portal — login, dashboard, and magic-link portal */}
+            <Route path="/client/login/:slug" element={<ClientLoginPage />} />
+            <Route path="/client/dashboard/:slug" element={<ClientDashboardPage />} />
             <Route path="/client/:token" element={<ClientPortalPublicPage />} />
             {/* Public business pages — no auth, standalone */}
             <Route path="/biz/:slug" element={<BusinessPage />} />

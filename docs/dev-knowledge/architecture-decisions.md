@@ -338,4 +338,9 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** Social media posts and marketing campaigns with `scheduled_for <= now()` are automatically processed by two new functions in the main.py automation loop (`_process_scheduled_posts`, `_process_scheduled_campaigns`). Posts get status updated to 'published'. Campaigns go through the same send flow as manual sends. Both run every 5 minutes (tick % 5).
 **Why:** Previously, scheduling was UI-only — setting `scheduled_for` just stored a timestamp but nothing ever checked it. Users had to manually click Send/Publish. The automation loop already runs dozens of background tasks on tiered schedules, so this fits the existing pattern. When platform OAuth is added later, `_process_scheduled_posts` is the hook point for actual API publishing.
 
+### White-label client login — portal tokens as proof of identity
+**Date:** 2026-03-22
+**Decision:** Clients register for a login using their existing portal token as proof they're a real customer. The portal token (magic link) validates their identity once, then they create email+password credentials stored in `client_accounts`. Login is scoped by `business_slug` so clients of different businesses have separate namespaces. Client JWTs use `scope: "client"` to distinguish from tenant JWTs. The `/client/me` endpoint returns a richer dataset than the public portal (includes appointments, invoices, documents in addition to service records).
+**Why:** Magic links are one-time use and inconvenient for repeat access. Clients need persistent login to check appointments, pay invoices, and sign documents. Using the portal token for registration avoids needing a separate verification flow. The business_slug scoping ensures email uniqueness is per-business, not global.
+
 _Add new decisions when significant architectural choices are made._

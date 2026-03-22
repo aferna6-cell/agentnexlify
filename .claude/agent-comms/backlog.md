@@ -431,7 +431,7 @@ _Discovered via dental office customer simulation. Applicable to all healthcare 
 - [ ] [RESEARCHED] **Two-way email sync** — When business owner replies to a lead via their regular email, capture it in the conversation thread. Competitors all have this.
 - [x] [RESEARCHED] **Lead source tracking** — DONE 2026-03-21 Cycle 122. Source column already exists (migration 001). Now set correctly: widget, booking, missed_call, csv_import, manual.
 - [x] [RESEARCHED] **Zapier trigger for form submissions** — ALREADY DONE. form.submitted webhook event already fires + now documented in schema.
-- [ ] [RESEARCHED] **White-label client login** — Let business owners give their clients a login to see their appointments/invoices/documents. Currently client_portal uses magic links.
+- [x] [RESEARCHED] **White-label client login** — DONE 2026-03-22 Cycle 163. Migration 065 (client_accounts), register via portal token, login via email+password+slug, client JWT, rich portal dashboard with appointments/invoices/documents.
 - [x] [RESEARCHED] **AI-to-human handoff** — DONE 2026-03-22 Cycle 161. AI detects user request for human, tags conversation "handoff", notifies team, skips Claude on subsequent messages, shows team replies.
 - [x] [RESEARCHED] **Lead source analytics dashboard** — DONE 2026-03-21 Cycle 134. Horizontal bar chart on AnalyticsPage with color-coded sources.
 - [x] [RESEARCHED] **Post-appointment care instructions** — DONE 2026-03-21 Cycle 135. Aftercare templates for 5 business types, dental has procedure-specific instructions.
