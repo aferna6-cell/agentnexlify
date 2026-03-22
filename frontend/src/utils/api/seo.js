@@ -46,3 +46,8 @@ export function trackKeywords(tenantId, token, keywords) {
 export function fetchKeywordRankings(tenantId, token) {
   return request(`/api/v1/seo/${tenantId}/keywords/rankings`, { token });
 }
+
+// Competitor Analysis
+export function runCompetitorAnalysis(tenantId, token, competitors) {
+  return request(`/api/v1/seo/${tenantId}/competitor-analysis`, { method: "POST", token, body: { competitors } });
+}

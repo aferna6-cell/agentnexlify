@@ -372,7 +372,7 @@ _Added 2026-03-17 to close competitive gaps with Okara AI's CMO product._
 - [x] **Pricing Restructure** — DONE 2026-03-17 Cycle 88. Growth $249, Professional $499, Enterprise $899. Marketing/SEO features included per tier.
 - [ ] **Social media platform OAuth** — Connect to Facebook/Twitter/LinkedIn APIs for direct posting (currently create-and-copy)
 - [ ] **Real SERP data integration** — Connect to SEMrush/Ahrefs API for actual keyword position data
-- [ ] **Competitor analysis dashboard** — Track competitor SEO scores and compare
+- [x] **Competitor analysis dashboard** — DONE 2026-03-22 Cycle 167. AI-powered comparison with score cards, gaps, advantages, recommendations
 - [x] **Automated social media posting scheduler** — DONE 2026-03-22 Cycle 162. Background jobs auto-publish scheduled posts + auto-send scheduled campaigns every 5 min.
 
 ## Features — Tier 6: GoHighLevel/Jobber Competitive Response (BUILD NEXT)
@@ -453,4 +453,4 @@ _The continuous loop works through this backlog using the work hierarchy: Featur
 ## Features — Researched Competitive Opportunities (2026-03-22)
 
 - [x] [RESEARCHED] **QR code generator for widget + review links** — Generate QR codes on the dashboard that open the chat widget or Google review page when scanned. Podium uses QR codes heavily for in-store review collection. Physical businesses (restaurants, salons, contractors) can print and display them.
-- [ ] [RESEARCHED] **Competitor analysis dashboard** — Enter competitor business names and get AI-powered comparison of SEO scores, review ratings, and visibility. Uses existing AI audit engine to analyze competitors. Fully buildable without external APIs.
+- [x] [RESEARCHED] **Competitor analysis dashboard** — DONE 2026-03-22 Cycle 167. Enter competitor names, get AI comparison of SEO scores, strengths, gaps, recommendations of SEO scores, review ratings, and visibility. Uses existing AI audit engine to analyze competitors. Fully buildable without external APIs.

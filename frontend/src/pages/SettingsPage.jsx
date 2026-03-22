@@ -5,6 +5,7 @@ import { fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus } 
 import { fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition } from "../utils/api/tags";
 import { searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber } from "../utils/api/phone";
 import { fetchFieldDefinitions, createFieldDefinition, deleteFieldDefinition } from "../utils/api/misc";
+import { toggleClientLogin } from "../utils/api/portal";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
@@ -311,12 +312,8 @@ export default function SettingsPage({ onNavigate }) {
     if (!user?.tenantId || togglingClientLogin) return;
     setTogglingClientLogin(true);
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app"}/api/v1/portal/${user.tenantId}/client-login`,
-        { method: "PUT", headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      if (res.ok) setClientLoginEnabled(data.client_login_enabled);
+      const data = await toggleClientLogin(user.tenantId, token);
+      setClientLoginEnabled(data.client_login_enabled);
     } catch (err) {
       console.error("Failed to toggle client login", err);
     } finally {

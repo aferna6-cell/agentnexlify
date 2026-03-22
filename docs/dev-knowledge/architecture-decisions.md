@@ -343,4 +343,14 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** Clients register for a login using their existing portal token as proof they're a real customer. The portal token (magic link) validates their identity once, then they create email+password credentials stored in `client_accounts`. Login is scoped by `business_slug` so clients of different businesses have separate namespaces. Client JWTs use `scope: "client"` to distinguish from tenant JWTs. The `/client/me` endpoint returns a richer dataset than the public portal (includes appointments, invoices, documents in addition to service records).
 **Why:** Magic links are one-time use and inconvenient for repeat access. Clients need persistent login to check appointments, pay invoices, and sign documents. Using the portal token for registration avoids needing a separate verification flow. The business_slug scoping ensures email uniqueness is per-business, not global.
 
+### Competitor analysis — AI-estimated scores, no external APIs
+**Date:** 2026-03-22
+**Decision:** Competitor analysis uses Claude to estimate SEO scores and compare businesses rather than pulling real data from SEMrush/Ahrefs APIs. The endpoint accepts up to 5 competitor names, fetches the tenant's existing SEO audit score for context, and asks Claude to provide estimated scores, strengths, weaknesses, threat levels, gaps, advantages, and recommendations. JSON response format with markdown fence stripping.
+**Why:** External SEO APIs cost per-query and require API keys most small businesses won't have. Claude's general knowledge provides useful directional analysis. If real SERP data is added later (backlog item), it can supplement the AI analysis rather than replace it.
+
+### API call consistency — all page components should use API utility modules
+**Date:** 2026-03-22
+**Decision:** Frontend pages must use the centralized API utility functions from `frontend/src/utils/api/` rather than raw `fetch()` calls. Exception: endpoints returning non-JSON responses (blobs, streams) may use raw fetch since the `request()` client always parses JSON.
+**Why:** Raw fetch scattered across pages duplicates the base URL, auth header, and error handling logic. Using the API utils ensures consistent error handling via `ApiError`, avoids hardcoded URLs, and makes it easy to add auth token refresh or request interceptors later.
+
 _Add new decisions when significant architectural choices are made._

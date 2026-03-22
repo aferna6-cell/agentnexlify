@@ -1423,3 +1423,115 @@ async def get_keyword_rankings(
         tenant_id=tenant_id,
         keywords=keywords,
     )
+
+
+# ---------------------------------------------------------------------------
+# Competitor Analysis
+# ---------------------------------------------------------------------------
+
+
+class CompetitorRequest(BaseModel):
+    competitors: List[str] = Field(..., min_length=1, max_length=5, description="Competitor business names (1-5)")
+
+
+@router.post("/{tenant_id}/competitor-analysis")
+async def run_competitor_analysis(
+    tenant_id: str,
+    req: CompetitorRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """AI-powered competitor comparison. Analyzes your business against up to 5 competitors."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Get your business context
+    tenant_result = (
+        db.table("tenants")
+        .select("business_name, business_type, city, website_url")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not tenant_result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant = tenant_result.data[0]
+    business_name = tenant.get("business_name", "Your business")
+    business_type = tenant.get("business_type", "business")
+    city = tenant.get("city", "")
+
+    # Get your latest SEO audit score if available
+    your_score = None
+    try:
+        audit_result = (
+            db.table("seo_audits")
+            .select("overall_score, categories")
+            .eq("tenant_id", tenant_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if audit_result.data:
+            your_score = audit_result.data[0].get("overall_score")
+    except Exception:
+        logger.warning("Failed to fetch SEO audit for competitor analysis")
+
+    competitors_text = "\n".join(f"- {c}" for c in req.competitors)
+    location_context = f" in {city}" if city else ""
+
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0)
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=3000,
+            temperature=0.3,
+            system=(
+                "You are a local SEO and business competitive analysis expert. "
+                "Analyze a business against its competitors based on your knowledge. "
+                "Be specific, actionable, and honest. Use realistic scores.\n\n"
+                "Return ONLY valid JSON in this exact format:\n"
+                "{\n"
+                '  "your_business": {"name": "...", "estimated_score": 0-100, "strengths": ["..."], "weaknesses": ["..."]},\n'
+                '  "competitors": [\n'
+                '    {"name": "...", "estimated_score": 0-100, "strengths": ["..."], "weaknesses": ["..."], "threat_level": "high|medium|low"}\n'
+                "  ],\n"
+                '  "gaps": ["actionable gap you should close"],\n'
+                '  "advantages": ["things you do better than competitors"],\n'
+                '  "recommendations": ["top 3-5 specific actions to outrank competitors"]\n'
+                "}"
+            ),
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Analyze {business_name} ({business_type}{location_context}) against these competitors:\n"
+                    f"{competitors_text}\n\n"
+                    f"{'My current SEO score is ' + str(your_score) + '/100. ' if your_score else ''}"
+                    f"Compare online presence, likely SEO performance, review reputation, "
+                    f"and local search visibility. Score each business 0-100."
+                ),
+            }],
+        )
+        raw = resp.content[0].text.strip()
+    except anthropic.RateLimitError:
+        raise HTTPException(status_code=429, detail="AI service rate limited")
+    except anthropic.AuthenticationError:
+        logger.error("Anthropic API auth failure during competitor analysis")
+        raise HTTPException(status_code=502, detail="AI service configuration error")
+    except Exception:
+        logger.exception("Competitor analysis AI call failed for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Competitor analysis failed")
+
+    # Parse JSON response
+    try:
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0].strip()
+        result = json.loads(raw)
+    except (json.JSONDecodeError, IndexError):
+        logger.error("Failed to parse competitor analysis JSON: %s", raw[:500])
+        raise HTTPException(status_code=500, detail="Failed to parse competitor analysis")
+
+    return result

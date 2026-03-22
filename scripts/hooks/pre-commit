@@ -113,6 +113,9 @@ fi
 echo -n "Checking for .env files... "
 ENV_FILES=""
 for file in $STAGED_FILES; do
+    if [[ "$file" == .env.example || "$file" == */.env.example ]]; then
+        continue
+    fi
     if [[ "$file" == .env* || "$file" == */.env* ]]; then
         ENV_FILES="$ENV_FILES $file"
     fi
