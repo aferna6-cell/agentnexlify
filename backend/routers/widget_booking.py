@@ -260,7 +260,7 @@ def _process_bid_request_from_chat(
         conv_result = (
             db.table("conversations")
             .select("id")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .eq("session_id", session_id)
             .limit(1)
             .execute()

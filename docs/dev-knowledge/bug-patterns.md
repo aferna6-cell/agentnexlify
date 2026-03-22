@@ -502,4 +502,13 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+---
+
+### conversations table client_id regression #2 — widget helpers
+**Date:** 2026-03-22
+**Symptom:** Widget conversation auto-tagging, action item extraction, and bid request linking silently fail. Conversations are not found/created properly from widget chat flow.
+**Root Cause:** `widget_helpers.py` (5 locations) and `widget_booking.py` (1 location) queried the `conversations` table with `tenant_id` instead of `client_id`. This is the 4th occurrence of this pattern — the fix in Cycle 71 covered `conversation_inbox.py` and `auth.py` but missed the widget module files.
+**Fix:** Changed all 6 locations from `tenant_id` to `client_id`. Also added input validation to `AIFeedbackRequest` model (missing `max_length` on public endpoint).
+**Prevention:** EVERY file that touches the `conversations` table must use `client_id`. Run `grep -n 'conversations.*tenant_id' backend/routers/*.py` before committing. (Cycle 154)
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

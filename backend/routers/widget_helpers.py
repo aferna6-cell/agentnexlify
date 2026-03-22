@@ -210,7 +210,7 @@ def _get_or_create_conversation(
         result = (
             db.table("conversations")
             .select("id")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .eq("session_id", session_id)
             .limit(1)
             .execute()
@@ -224,7 +224,7 @@ def _get_or_create_conversation(
     try:
         new_conv = (
             db.table("conversations")
-            .insert({"tenant_id": tenant_id, "session_id": session_id})
+            .insert({"client_id": tenant_id, "session_id": session_id})
             .execute()
         )
         if new_conv.data:
@@ -826,7 +826,7 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
         conv = (
             db.table("conversations")
             .select("tags")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .eq("session_id", session_id)
             .limit(1)
             .execute()
@@ -837,7 +837,7 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
 
         merged = list(set(existing + valid_tags))
         db.table("conversations").update({"tags": merged}).eq(
-            "tenant_id", tenant_id
+            "client_id", tenant_id
         ).eq("session_id", session_id).execute()
 
     except json.JSONDecodeError:
@@ -890,7 +890,7 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
         conv = (
             db.table("conversations")
             .select("id")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .eq("session_id", session_id)
             .limit(1)
             .execute()

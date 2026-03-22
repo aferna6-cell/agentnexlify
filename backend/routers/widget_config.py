@@ -12,7 +12,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
@@ -83,11 +83,11 @@ def _get_jwt_claims(authorization: str = Header(...)) -> dict:
 
 
 class AIFeedbackRequest(BaseModel):
-    api_key: str
-    session_id: str
-    message_index: int
-    rating: str  # "thumbs_up" or "thumbs_down"
-    correction: str | None = None
+    api_key: str = Field(..., max_length=100)
+    session_id: str = Field(..., max_length=200)
+    message_index: int = Field(..., ge=0)
+    rating: str = Field(..., max_length=20)  # "thumbs_up" or "thumbs_down"
+    correction: str | None = Field(None, max_length=2000)
 
 
 # ---------------------------------------------------------------------------
