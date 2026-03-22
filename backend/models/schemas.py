@@ -288,6 +288,7 @@ class WidgetChatResponse(BaseModel):
     lead_captured: bool
     show_watermark: bool
     trial_expired: bool = False
+    handoff: bool = False
 
 
 class WidgetConfigResponse(BaseModel):

@@ -107,6 +107,62 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         except Exception:
             logger.warning("Failed to increment usage counter for tenant %s", tenant["id"], exc_info=True)
 
+    # 4b. Check if conversation is in handoff mode (team member handling)
+    handoff_active = False
+    try:
+        conv_tags = (
+            db.table("conversations")
+            .select("tags")
+            .eq("client_id", tenant["id"])
+            .eq("session_id", req.session_id)
+            .limit(1)
+            .execute()
+        )
+        if conv_tags.data:
+            tags = conv_tags.data[0].get("tags") or []
+            handoff_active = "handoff" in tags
+    except Exception:
+        logger.warning("handoff check failed for session %s", req.session_id, exc_info=True)
+
+    if handoff_active:
+        # Save user message, skip Claude, return waiting message
+        _save_chat_messages(tenant["id"], req.session_id, req.message, None)
+        # Check for any team replies since last user message
+        try:
+            recent = (
+                db.table("chat_messages")
+                .select("content, created_at")
+                .eq("tenant_id", tenant["id"])
+                .eq("session_id", req.session_id)
+                .eq("role", "assistant")
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if recent.data:
+                last_reply = recent.data[0]["content"]
+                # If the last assistant message is NOT the handoff message, it's a team reply
+                if last_reply and "team member" not in last_reply.lower():
+                    return WidgetChatResponse(
+                        response=last_reply,
+                        session_id=req.session_id,
+                        lead_captured=False,
+                        show_watermark=widget.get("show_watermark", True),
+                        handoff=True,
+                    )
+        except Exception:
+            pass
+
+        waiting_msg = "A team member is reviewing your conversation and will respond shortly. Thank you for your patience."
+        _save_chat_messages(tenant["id"], req.session_id, None, waiting_msg)
+        return WidgetChatResponse(
+            response=waiting_msg,
+            session_id=req.session_id,
+            lead_captured=False,
+            show_watermark=widget.get("show_watermark", True),
+            handoff=True,
+        )
+
     # 5. Load message history from chat_messages table (last 20 messages)
     messages = _load_chat_history(tenant["id"], req.session_id)
     logger.info(
@@ -366,6 +422,48 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             _process_bid_request_from_chat, tenant["id"], req.session_id, bid_request_data,
         )
 
+    # 9c. Detect handoff request from AI response
+    handoff_triggered = False
+    if "HANDOFF_REQUESTED" in assistant_text:
+        handoff_triggered = True
+        assistant_text = assistant_text.replace("HANDOFF_REQUESTED", "").strip()
+        # Tag conversation as handoff
+        try:
+            conv_result = (
+                db.table("conversations")
+                .select("id, tags")
+                .eq("client_id", tenant["id"])
+                .eq("session_id", req.session_id)
+                .limit(1)
+                .execute()
+            )
+            if conv_result.data:
+                existing_tags = conv_result.data[0].get("tags") or []
+                if "handoff" not in existing_tags:
+                    updated_tags = existing_tags + ["handoff"]
+                    db.table("conversations").update({"tags": updated_tags}).eq(
+                        "id", conv_result.data[0]["id"]
+                    ).execute()
+        except Exception:
+            logger.warning("Failed to tag conversation as handoff for session %s", req.session_id, exc_info=True)
+
+        # Send notification to team (SMS + webhook)
+        try:
+            owner_phone = tenant.get("notification_phone")
+            if owner_phone and tenant.get("sms_notifications_enabled"):
+                from backend.services.sms import send_sms_notification
+                send_sms_notification(
+                    owner_phone,
+                    f"[{tenant.get('business_name', 'Business')}] A customer requested to speak with a team member. Check your inbox.",
+                )
+        except Exception:
+            logger.warning("Failed to send handoff SMS notification", exc_info=True)
+
+        fire_event_background(tenant["id"], "conversation.handoff", {
+            "session_id": req.session_id,
+            "conversation_id": conversation_id,
+        })
+
     # 10. Save user + assistant messages to chat_messages table
     _save_chat_messages(tenant["id"], req.session_id, req.message, assistant_text)
 
@@ -415,4 +513,5 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         session_id=req.session_id,
         lead_captured=False,  # Actual capture runs in background task
         show_watermark=show_watermark,
+        handoff=handoff_triggered,
     )

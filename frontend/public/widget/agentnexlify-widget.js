@@ -1086,6 +1086,12 @@
       hideTyping();
       addMessage("assistant", data.response);
 
+      // Handle handoff to team member
+      if (data.handoff) {
+        const input = document.getElementById("anx-input");
+        if (input) input.placeholder = "A team member will respond...";
+      }
+
       // Handle trial expiry
       if (data.trial_expired) {
         disableWidgetInput("Your free trial has expired.");

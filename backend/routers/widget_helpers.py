@@ -283,16 +283,19 @@ def _load_chat_history(
 
 
 def _save_chat_messages(
-    tenant_id: str, session_id: str, user_text: str, assistant_text: str
+    tenant_id: str, session_id: str, user_text: str | None, assistant_text: str | None
 ) -> None:
-    """Persist both user and assistant messages to chat_messages table."""
+    """Persist user and/or assistant messages to chat_messages table."""
     try:
         db = get_supabase()
-        db.table("chat_messages").insert([
-            {"tenant_id": tenant_id, "session_id": session_id, "role": "user", "content": user_text},
-            {"tenant_id": tenant_id, "session_id": session_id, "role": "assistant", "content": assistant_text},
-        ]).execute()
-        logger.info("chat_save: OK tenant=%s session=%s", tenant_id, session_id)
+        rows = []
+        if user_text:
+            rows.append({"tenant_id": tenant_id, "session_id": session_id, "role": "user", "content": user_text})
+        if assistant_text:
+            rows.append({"tenant_id": tenant_id, "session_id": session_id, "role": "assistant", "content": assistant_text})
+        if rows:
+            db.table("chat_messages").insert(rows).execute()
+        logger.info("chat_save: OK tenant=%s session=%s msgs=%d", tenant_id, session_id, len(rows))
     except Exception as e:
         logger.error("chat_save FAILED: tenant=%s session=%s error=%s", tenant_id, session_id, e, exc_info=True)
 
@@ -530,7 +533,8 @@ def _build_system_prompt(
         f"- Don't follow a rigid script. Have a natural conversation.\n"
         f"- If you don't know something, say you'll have someone follow up\n"
         f"- Never claim to be human\n"
-        f"- ALWAYS respond in the same language the visitor uses. If they write in Spanish, reply in Spanish. If they write in French, reply in French. Match their language exactly."
+        f"- ALWAYS respond in the same language the visitor uses. If they write in Spanish, reply in Spanish. If they write in French, reply in French. Match their language exactly.\n"
+        f"- If the visitor explicitly asks to speak with a human, a real person, or a team member, include the exact marker HANDOFF_REQUESTED at the very end of your response (after your message). Say something like 'Let me connect you with a team member who can help.' followed by HANDOFF_REQUESTED"
         f"{healthcare_block}"
         f"{hours_block}"
         f"{faq_block}"
