@@ -67,7 +67,8 @@ async def _automation_loop():
 
     Tiers:
       - Every 60s  (every tick): core sequences, no-response leads, reminders
-      - Every 5min (tick % 5):   notifications, review requests, onboarding, CSAT
+      - Every 5min (tick % 5):   notifications, review requests, onboarding, CSAT,
+                                  scheduled post publishing, scheduled campaign sending
       - Every 30min (tick % 30): heavy/infrequent tasks (monthly reports, briefs)
     """
     import random
@@ -100,7 +101,7 @@ async def _automation_loop():
             _safe_run("send_appointment_reminders", send_appointment_reminders),
         ]
 
-        # Every 5 min: notification/reminder functions
+        # Every 5 min: notifications, reminders, scheduled content, campaign recovery
         if tick % 5 == 0:
             core_tasks.extend([
                 _safe_run("send_pending_review_requests", send_pending_review_requests),
@@ -111,6 +112,9 @@ async def _automation_loop():
                 _safe_run("check_new_reviews", check_new_reviews),
                 _safe_run("send_invoice_payment_reminders", send_invoice_payment_reminders),
                 _safe_run("send_aftercare_instructions", send_aftercare_instructions),
+                _safe_run("process_scheduled_posts", _process_scheduled_posts),
+                _safe_run("process_scheduled_campaigns", _process_scheduled_campaigns),
+                _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
             ])
 
         # Every 30 min: heavy/infrequent tasks
@@ -120,10 +124,6 @@ async def _automation_loop():
                 _safe_run("send_weekly_intelligence_briefs", send_weekly_intelligence_briefs),
                 _safe_run("send_birthday_greetings", send_birthday_greetings),
             ])
-
-        # Stalled campaign recovery: find campaigns stuck in 'sending' for >30 min
-        if tick % 5 == 0:
-            core_tasks.append(_safe_run("recover_stalled_campaigns", _recover_stalled_campaigns))
 
         await asyncio.gather(*core_tasks)
         await asyncio.sleep(60)
@@ -154,6 +154,121 @@ async def _recover_stalled_campaigns():
         return len(stalled_ids)
     except Exception:
         logger.exception("_recover_stalled_campaigns failed")
+        return 0
+
+
+async def _process_scheduled_posts():
+    """Auto-publish social media posts whose scheduled_for has passed.
+
+    Posts with status='scheduled' and scheduled_for <= now() are updated to
+    status='published' with published_at set. When platform OAuth is connected
+    in the future, this is where the actual API publish call will go.
+    """
+    from datetime import datetime, timezone
+    from backend.models.database import get_supabase
+
+    db = get_supabase()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        due_posts = (
+            db.table("social_posts")
+            .select("id, tenant_id, platform, content")
+            .eq("status", "scheduled")
+            .lte("scheduled_for", now_iso)
+            .limit(100)
+            .execute()
+        )
+        if not due_posts.data:
+            return 0
+
+        published = 0
+        for post in due_posts.data:
+            try:
+                db.table("social_posts").update({
+                    "status": "published",
+                    "published_at": now_iso,
+                }).eq("id", post["id"]).execute()
+                published += 1
+                logger.info(
+                    "Auto-published scheduled social post %s (%s) for tenant %s",
+                    post["id"], post["platform"], post["tenant_id"],
+                )
+            except Exception:
+                logger.exception("Failed to auto-publish social post %s", post["id"])
+
+        return published
+    except Exception:
+        logger.exception("_process_scheduled_posts failed")
+        return 0
+
+
+async def _process_scheduled_campaigns():
+    """Auto-send marketing campaigns whose scheduled_for has passed.
+
+    Campaigns with status='scheduled' and scheduled_for <= now() are picked up,
+    their target leads queried, and the send dispatched as a background task —
+    identical to the manual send flow.
+    """
+    from datetime import datetime, timezone
+    from backend.models.database import get_supabase
+    from backend.routers.marketing_campaigns import (
+        _query_target_leads,
+        _send_campaign_background,
+    )
+
+    db = get_supabase()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        due_campaigns = (
+            db.table("marketing_campaigns")
+            .select("*")
+            .eq("status", "scheduled")
+            .lte("scheduled_for", now_iso)
+            .limit(20)
+            .execute()
+        )
+        if not due_campaigns.data:
+            return 0
+
+        dispatched = 0
+        for campaign in due_campaigns.data:
+            campaign_id = campaign["id"]
+            tenant_id = campaign["tenant_id"]
+            target_filter = campaign.get("target_filter") or {}
+
+            leads = _query_target_leads(db, tenant_id, target_filter)
+            if not leads:
+                # No matching leads — mark as sent with zero recipients
+                db.table("marketing_campaigns").update({
+                    "status": "sent",
+                    "sent_at": now_iso,
+                    "total_recipients": 0,
+                    "total_sent": 0,
+                }).eq("id", campaign_id).execute()
+                logger.info(
+                    "Scheduled campaign %s had no matching leads — marked as sent",
+                    campaign_id,
+                )
+                continue
+
+            # Mark as sending and dispatch background task
+            db.table("marketing_campaigns").update({
+                "status": "sending",
+                "sending_started_at": now_iso,
+            }).eq("id", campaign_id).execute()
+
+            asyncio.create_task(
+                _send_campaign_background(campaign_id, tenant_id, leads, campaign)
+            )
+            dispatched += 1
+            logger.info(
+                "Auto-dispatched scheduled campaign %s for tenant %s (%d leads)",
+                campaign_id, tenant_id, len(leads),
+            )
+
+        return dispatched
+    except Exception:
+        logger.exception("_process_scheduled_campaigns failed")
         return 0
 
 

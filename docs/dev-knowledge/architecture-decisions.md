@@ -333,4 +333,9 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Modules (35):** leads, invoices, documents, pipeline, reviews, content, appointments, webhooks, team, social, campaigns, jobs, bids, forms, conversations, analytics, automations, menu, seo, calls, portal, smart-lists, dashboard, faq, widget-config, crm, action-items, inbox, snippets, tags, chat-flows, business-page, integrations, phone, misc + _client (shared).
 **Pattern:** Each module imports `request` from `./_client.js` and exports named functions. New API functions go in the appropriate domain module. The barrel `index.js` re-exports all modules.
 
+### Scheduled content auto-execution via automation loop
+**Date:** 2026-03-22
+**Decision:** Social media posts and marketing campaigns with `scheduled_for <= now()` are automatically processed by two new functions in the main.py automation loop (`_process_scheduled_posts`, `_process_scheduled_campaigns`). Posts get status updated to 'published'. Campaigns go through the same send flow as manual sends. Both run every 5 minutes (tick % 5).
+**Why:** Previously, scheduling was UI-only — setting `scheduled_for` just stored a timestamp but nothing ever checked it. Users had to manually click Send/Publish. The automation loop already runs dozens of background tasks on tiered schedules, so this fits the existing pattern. When platform OAuth is added later, `_process_scheduled_posts` is the hook point for actual API publishing.
+
 _Add new decisions when significant architectural choices are made._

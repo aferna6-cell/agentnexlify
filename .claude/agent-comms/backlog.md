@@ -373,7 +373,7 @@ _Added 2026-03-17 to close competitive gaps with Okara AI's CMO product._
 - [ ] **Social media platform OAuth** — Connect to Facebook/Twitter/LinkedIn APIs for direct posting (currently create-and-copy)
 - [ ] **Real SERP data integration** — Connect to SEMrush/Ahrefs API for actual keyword position data
 - [ ] **Competitor analysis dashboard** — Track competitor SEO scores and compare
-- [ ] **Automated social media posting scheduler** — Background job that publishes scheduled posts to connected platforms
+- [x] **Automated social media posting scheduler** — DONE 2026-03-22 Cycle 162. Background jobs auto-publish scheduled posts + auto-send scheduled campaigns every 5 min.
 
 ## Features — Tier 6: GoHighLevel/Jobber Competitive Response (BUILD NEXT)
 
@@ -432,9 +432,9 @@ _Discovered via dental office customer simulation. Applicable to all healthcare 
 - [x] [RESEARCHED] **Lead source tracking** — DONE 2026-03-21 Cycle 122. Source column already exists (migration 001). Now set correctly: widget, booking, missed_call, csv_import, manual.
 - [x] [RESEARCHED] **Zapier trigger for form submissions** — ALREADY DONE. form.submitted webhook event already fires + now documented in schema.
 - [ ] [RESEARCHED] **White-label client login** — Let business owners give their clients a login to see their appointments/invoices/documents. Currently client_portal uses magic links.
-- [ ] [RESEARCHED] **AI-to-human handoff** — When AI can't answer, seamlessly transfer to a team member with full conversation context. Show "Connecting you with a team member..." in widget. Critical for complex queries across all industries.
-- [ ] [RESEARCHED] **Lead source analytics dashboard** — Visualize lead sources (widget, booking, missed_call, manual, csv_import) in AnalyticsPage. Source column already populated.
-- [ ] [RESEARCHED] **Post-appointment care instructions** — Auto-send service-specific aftercare emails (e.g., "Don't chew on filling for 24h"). Template library by service type.
+- [x] [RESEARCHED] **AI-to-human handoff** — DONE 2026-03-22 Cycle 161. AI detects user request for human, tags conversation "handoff", notifies team, skips Claude on subsequent messages, shows team replies.
+- [x] [RESEARCHED] **Lead source analytics dashboard** — DONE 2026-03-21 Cycle 134. Horizontal bar chart on AnalyticsPage with color-coded sources.
+- [x] [RESEARCHED] **Post-appointment care instructions** — DONE 2026-03-21 Cycle 135. Aftercare templates for 5 business types, dental has procedure-specific instructions.
 
 ## Optimization
 
