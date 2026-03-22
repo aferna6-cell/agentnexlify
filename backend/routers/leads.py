@@ -593,6 +593,8 @@ async def import_leads_csv(
     updated = 0
     errors = []
 
+    # Pre-parse all rows and collect emails for batch dedup (avoids N+1 queries)
+    parsed_rows = []
     for i, row in enumerate(reader, start=2):
         if i - 1 > _MAX_IMPORT_ROWS:
             errors.append({"row": i, "error": f"Stopped at {_MAX_IMPORT_ROWS} rows"})
@@ -608,36 +610,48 @@ async def import_leads_csv(
             errors.append({"row": i, "error": "No name, email, or phone"})
             continue
 
-        # Validate status
         if lead_data.get("status") and lead_data["status"] not in _VALID_STATUSES:
             lead_data["status"] = "new"
 
-        # Validate lead_score
         if lead_data.get("lead_score"):
             try:
                 lead_data["lead_score"] = int(lead_data["lead_score"])
             except ValueError:
                 del lead_data["lead_score"]
 
-        # Dedup by email if available
-        if lead_data.get("email"):
-            try:
-                existing = (
-                    db.table("leads")
-                    .select("id")
-                    .eq("client_id", tenant_id)
-                    .eq("email", lead_data["email"])
-                    .limit(1)
-                    .execute()
-                )
-                if existing.data:
-                    updates = {k: v for k, v in lead_data.items() if k != "email"}
-                    if updates:
-                        db.table("leads").update(updates).eq("id", existing.data[0]["id"]).execute()
-                    updated += 1
+        parsed_rows.append((i, lead_data))
+
+    # Batch-fetch existing leads by email (single query instead of N queries)
+    all_emails = [ld.get("email") for _, ld in parsed_rows if ld.get("email")]
+    existing_by_email = {}
+    if all_emails:
+        try:
+            existing_result = (
+                db.table("leads")
+                .select("id, email")
+                .eq("client_id", tenant_id)
+                .in_("email", list(set(all_emails)))
+                .execute()
+            )
+            for lead in (existing_result.data or []):
+                if lead.get("email"):
+                    existing_by_email[lead["email"].lower()] = lead["id"]
+        except Exception as e:
+            logger.warning("Import batch dedup query failed: %s", e)
+
+    # Process rows with dedup lookup from cache
+    for i, lead_data in parsed_rows:
+        email = (lead_data.get("email") or "").lower()
+        if email and email in existing_by_email:
+            updates = {k: v for k, v in lead_data.items() if k != "email"}
+            if updates:
+                try:
+                    db.table("leads").update(updates).eq("id", existing_by_email[email]).execute()
+                except Exception as e:
+                    errors.append({"row": i, "error": str(e)[:100]})
                     continue
-            except Exception as e:
-                logger.warning("Import dedup check failed row %d: %s", i, e)
+            updated += 1
+            continue
 
         # Insert new lead
         lead_data["client_id"] = tenant_id
