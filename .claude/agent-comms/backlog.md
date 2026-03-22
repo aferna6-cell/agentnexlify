@@ -449,3 +449,8 @@ _Discovered via dental office customer simulation. Applicable to all healthcare 
 ---
 
 _The continuous loop works through this backlog using the work hierarchy: Features → Bugs → Tests → Content → Optimization. Add tasks anytime. Mark tasks `[x]` when complete._
+
+## Features — Researched Competitive Opportunities (2026-03-22)
+
+- [ ] [RESEARCHED] **QR code generator for widget + review links** — Generate QR codes on the dashboard that open the chat widget or Google review page when scanned. Podium uses QR codes heavily for in-store review collection. Physical businesses (restaurants, salons, contractors) can print and display them.
+- [ ] [RESEARCHED] **Competitor analysis dashboard** — Enter competitor business names and get AI-powered comparison of SEO scores, review ratings, and visibility. Uses existing AI audit engine to analyze competitors. Fully buildable without external APIs.
