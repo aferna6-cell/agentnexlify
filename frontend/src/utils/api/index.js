@@ -28,5 +28,9 @@ export * from "./smart-lists";
 export * from "./dashboard";
 export * from "./faq";
 export * from "./widget-config";
+export * from "./crm";
+export * from "./action-items";
+export * from "./inbox";
+export * from "./snippets";
 
 export { request, BASE, ApiError } from "./_client";

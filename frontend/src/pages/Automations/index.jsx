@@ -1,16 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import {
-  fetchSequences,
-  createSequence,
-  updateSequence,
-  deleteSequence,
-  toggleSequence,
-  fetchSequenceDetail,
-  createFromTemplate,
-  sendCampaign,
-  fetchSequenceStats,
-} from "../../utils/api";
+  fetchSequences, createSequence, updateSequence, deleteSequence,
+  toggleSequence, fetchSequenceDetail, createFromTemplate,
+  sendCampaign, fetchSequenceStats,
+} from "../../utils/api/automations";
 import SequenceBuilder from "./SequenceBuilder";
 import SequenceDetail from "./SequenceDetail";
 import TemplateGallery from "./TemplateGallery";

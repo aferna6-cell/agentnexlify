@@ -3,15 +3,11 @@ import { useAuth } from "../context/AuthContext";
 import { fetchConversations, fetchConversationMessages, updateConversationTags } from "../utils/api/conversations";
 import { fetchTeamMembers } from "../utils/api/team";
 import {
-  fetchTagDefinitions,
-  assignConversation,
-  fetchConversationNotes,
-  createConversationNote,
-  deleteConversationNote,
-  fetchSnippets,
-  replyToConversation,
-  sendSms,
-} from "../utils/api";
+  assignConversation, fetchConversationNotes,
+  createConversationNote, deleteConversationNote, replyToConversation,
+} from "../utils/api/inbox";
+import { fetchSnippets } from "../utils/api/snippets";
+import { fetchTagDefinitions, sendSms } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const SNIPPET_CATEGORY_COLORS = {

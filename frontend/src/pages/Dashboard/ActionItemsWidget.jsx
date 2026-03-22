@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchActionItemsSummary, fetchActionItems, updateActionItem } from "../../utils/api";
+import { fetchActionItemsSummary, fetchActionItems, updateActionItem } from "../../utils/api/action-items";
 
 function formatDueDate(dateStr) {
   if (!dateStr) return null;

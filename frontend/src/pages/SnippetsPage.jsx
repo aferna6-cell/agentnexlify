@@ -2,11 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import {
-  fetchSnippets,
-  createSnippet,
-  updateSnippet,
-  deleteSnippet,
-} from "../utils/api";
+  fetchSnippets, createSnippet, updateSnippet, deleteSnippet,
+} from "../utils/api/snippets";
 
 const CATEGORIES = ["All", "General", "Pricing", "Hours", "Services", "Custom"];
 

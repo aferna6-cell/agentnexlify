@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchClients, changeClientStage } from "../../utils/api";
+import { fetchClients, changeClientStage } from "../../utils/api/crm";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 const STAGES = ["new", "contacted", "appointment_booked", "closed", "lost"];

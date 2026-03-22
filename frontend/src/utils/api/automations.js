@@ -34,3 +34,31 @@ export function fetchSequenceStats(tenantId, token) {
 export function createFromTemplate(tenantId, token, templateId) {
   return request(`/api/v1/sequences/${tenantId}/templates`, { method: "POST", token, body: { template_id: templateId } });
 }
+
+export function fetchAutomations(tenantId, token) {
+  return request(`/api/v1/automations/${tenantId}`, { token });
+}
+
+export function sendCampaign(tenantId, token, { subject, body_html, channel, filters }) {
+  return request(`/api/v1/sequences/${tenantId}/campaigns/send`, {
+    method: "POST",
+    token,
+    body: { subject, body_html, channel, filters },
+  });
+}
+
+export function fetchEmailTemplates(tenantId, token) {
+  return request(`/api/v1/email-templates/${tenantId}`, { token });
+}
+
+export function createEmailTemplate(tenantId, token, data) {
+  return request(`/api/v1/email-templates/${tenantId}`, { method: "POST", token, body: data });
+}
+
+export function updateEmailTemplate(tenantId, token, templateId, data) {
+  return request(`/api/v1/email-templates/${tenantId}/${templateId}`, { method: "PUT", token, body: data });
+}
+
+export function deleteEmailTemplate(tenantId, token, templateId) {
+  return request(`/api/v1/email-templates/${tenantId}/${templateId}`, { method: "DELETE", token });
+}

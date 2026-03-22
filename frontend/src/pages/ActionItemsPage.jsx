@@ -2,12 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import {
-  fetchActionItems,
-  fetchActionItemsSummary,
-  createActionItem,
-  updateActionItem,
-  deleteActionItem,
-} from "../utils/api";
+  fetchActionItems, fetchActionItemsSummary,
+  createActionItem, updateActionItem, deleteActionItem,
+} from "../utils/api/action-items";
 
 const PRIORITY_COLORS = {
   high: { dot: "#ef4444", bg: "rgba(239,68,68,0.1)", text: "#ef4444" },

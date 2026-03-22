@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchEmailTemplates, createEmailTemplate } from "../../utils/api";
+import { fetchEmailTemplates, createEmailTemplate } from "../../utils/api/automations";
 
 const TRIGGER_OPTIONS = [
   { value: "new_lead", label: "New Lead Created" },
