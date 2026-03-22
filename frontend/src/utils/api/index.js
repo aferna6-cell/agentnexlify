@@ -22,5 +22,8 @@ export * from "./analytics";
 export * from "./automations";
 export * from "./menu";
 export * from "./seo";
+export * from "./calls";
+export * from "./portal";
+export * from "./smart-lists";
 
 export { request, BASE, ApiError } from "./_client";

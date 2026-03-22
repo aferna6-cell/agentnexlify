@@ -9,7 +9,7 @@ import {
   fetchSmartListLeads,
   refreshSmartList,
   exportSmartList,
-} from "../utils/api";
+} from "../utils/api/smart-lists";
 
 const STATUS_OPTIONS = [
   { value: "new", label: "New" },

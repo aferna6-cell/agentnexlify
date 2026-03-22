@@ -5,7 +5,7 @@ import {
   fetchCalls,
   fetchCallDetail,
   fetchCallStats,
-} from "../utils/api";
+} from "../utils/api/calls";
 
 const STATUS_FILTERS = ["all", "completed", "missed", "voicemail", "in_progress"];
 
