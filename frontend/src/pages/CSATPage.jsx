@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchCSATStats, fetchCSATResponses } from "../utils/api";
+import { fetchCSATStats, fetchCSATResponses } from "../utils/api/misc";
 import {
   BarChart,
   Bar,

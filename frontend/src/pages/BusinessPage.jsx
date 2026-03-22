@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { fetchBusinessPagePublic } from "../utils/api";
+import { fetchBusinessPagePublic } from "../utils/api/business-page";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||

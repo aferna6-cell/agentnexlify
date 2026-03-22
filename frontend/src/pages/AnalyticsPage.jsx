@@ -10,7 +10,7 @@ import {
   fetchLeadSources,
 } from "../utils/api/analytics";
 import { fetchConversations } from "../utils/api/conversations";
-import { fetchTagDefinitions } from "../utils/api";
+import { fetchTagDefinitions } from "../utils/api/tags";
 import {
   LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Area, AreaChart,

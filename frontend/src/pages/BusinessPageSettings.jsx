@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchBusinessPageSettings, updateBusinessPageSettings } from "../utils/api";
+import { fetchBusinessPageSettings, updateBusinessPageSettings } from "../utils/api/business-page";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const SITE_URL = "https://agentnexlify.com";

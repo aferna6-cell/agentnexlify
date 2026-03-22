@@ -4,7 +4,7 @@ import {
   fetchClientProfile, fetchClientTimeline, addClientNote,
   changeClientStage, updateClient,
 } from "../../utils/api/crm";
-import { sendSms } from "../../utils/api";
+import { sendSms } from "../../utils/api/misc";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 const STAGES = ["new", "contacted", "appointment_booked", "closed", "lost"];

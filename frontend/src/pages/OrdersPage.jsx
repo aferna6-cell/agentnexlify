@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
-import { fetchOrders, fetchOrderStats, updateOrderStatus } from "../utils/api";
+import { fetchOrders, fetchOrderStats, updateOrderStatus } from "../utils/api/misc";
 
 const STATUS_LABELS = {
   new: "New",

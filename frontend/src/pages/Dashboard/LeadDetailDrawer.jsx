@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, requestReviewForLead } from "../../utils/api/leads";
 import { fetchTeamMembers } from "../../utils/api/team";
-import { fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api";
+import { fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api/misc";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },

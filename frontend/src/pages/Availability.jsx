@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchAvailability, updateAvailability, fetchGoogleCalendarStatus } from "../utils/api";
+import { fetchAvailability, updateAvailability } from "../utils/api/appointments";
+import { fetchGoogleCalendarStatus } from "../utils/api/integrations";
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const DAY_LABELS = { monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday", saturday: "Saturday", sunday: "Sunday" };

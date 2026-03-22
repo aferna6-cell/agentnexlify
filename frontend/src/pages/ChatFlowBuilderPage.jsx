@@ -14,13 +14,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
-  fetchChatFlows,
-  fetchFlowTemplates,
-  createChatFlow,
-  createFlowFromTemplate,
-  updateChatFlow,
-  deleteChatFlow,
-} from "../utils/api";
+  fetchChatFlows, fetchFlowTemplates, createChatFlow,
+  createFlowFromTemplate, updateChatFlow, deleteChatFlow,
+} from "../utils/api/chat-flows";
 
 // --- Custom Node Components ---
 

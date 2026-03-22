@@ -7,7 +7,7 @@ import {
 import {
   fetchGoogleCalendarStatus, startGoogleCalendarAuth, disconnectGoogleCalendar,
   fetchFacebookStatus, getFacebookAuthUrl, disconnectFacebook,
-} from "../utils/api";
+} from "../utils/api/integrations";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 /* ── Inline SVG: Google Calendar logo ── */

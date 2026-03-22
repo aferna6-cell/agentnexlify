@@ -9,7 +9,7 @@ import {
   generateCampaignContent,
   estimateCampaignRecipients,
 } from "../utils/api/campaigns";
-import { fetchTagDefinitions } from "../utils/api";
+import { fetchTagDefinitions } from "../utils/api/tags";
 import SkeletonLoader from "../components/SkeletonLoader";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import UpgradePrompt, { planBelowRequired } from "../components/UpgradePrompt";

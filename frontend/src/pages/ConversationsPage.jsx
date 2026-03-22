@@ -7,7 +7,8 @@ import {
   createConversationNote, deleteConversationNote, replyToConversation,
 } from "../utils/api/inbox";
 import { fetchSnippets } from "../utils/api/snippets";
-import { fetchTagDefinitions, sendSms } from "../utils/api";
+import { fetchTagDefinitions } from "../utils/api/tags";
+import { sendSms } from "../utils/api/misc";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const SNIPPET_CATEGORY_COLORS = {

@@ -32,5 +32,11 @@ export * from "./crm";
 export * from "./action-items";
 export * from "./inbox";
 export * from "./snippets";
+export * from "./tags";
+export * from "./chat-flows";
+export * from "./business-page";
+export * from "./integrations";
+export * from "./phone";
+export * from "./misc";
 
 export { request, BASE, ApiError } from "./_client";
