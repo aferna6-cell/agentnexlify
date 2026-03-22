@@ -2,46 +2,40 @@
 
 Updated by the automated morning/evening routines and interactive sessions.
 
-## Tomorrow's Top 3 Priorities (2026-03-23)
+## Top 3 Priorities
 
-1. **Verify Cycles 126-140 in production** — 15 feature commits need E2E verification
-2. **Continue api.js split** — 6/~40 domains extracted, target: 10+
+1. **Continue api.js split** — 17/~25 domains done (54%), push to 70%+
+2. **Verify features in production** — 30+ commits since last verification
 3. **AI-to-human handoff** — Cross-industry critical feature from research
 
 ## Active Tasks
 
-### Priority 1 — Verification
-- [ ] Verify all 15 features from Cycles 126-140 in production
+### Priority 1 — api.js Split (54% done)
+- [x] Extracted: leads, invoices, documents, pipeline, reviews, content
+- [x] Extracted: appointments, webhooks, team, social, campaigns
+- [x] Extracted: jobs, bids, forms, conversations, analytics, automations
+- [ ] Remaining: ~115 functions in ~20 small sections (dashboard, settings, billing, etc.)
 
-### Priority 2 — Optimization
-- [ ] Continue api.js domain split (6 done, ~196 functions in monolith)
+### Priority 2 — Features
+- [ ] AI-to-human handoff (widget → team member)
+- [ ] Two-way email sync
+- [ ] White-label client login
+
+### Priority 3 — Quality
 - [ ] Fix 16 test isolation failures
+- [ ] Verify 30+ features in production
 
-### Priority 3 — Features
-- [ ] AI-to-human handoff (widget → team member with context)
-- [ ] Two-way email sync (large)
-- [ ] White-label client login (large)
+## Session Progress (Cycles 141-146)
+- [x] api.js split: 17 domains, 16 pages migrated, bundle 114→106 kB
+- [x] Restaurant simulation + catering form preset + 2 FAQs
+- [x] Demo script for client presentations
 
-### Priority 4 — Simulations
-- [ ] Restaurant owner (full walkthrough with orders)
-- [ ] Junk removal company
-
-## Completed This Session (Cycles 126-140)
-
-- [x] api.js domain split: reviews + content modules (Cycle 137)
-- [x] api.js domain split: leads + pipeline modules (Cycle 130)
-- [x] api.js domain split: invoices + documents modules (Cycle 126)
-- [x] Fitness simulation + pipeline + waiver form (Cycle 139)
-- [x] Industry-content skill created (Cycle 138)
-- [x] Lawyer simulation + legal intake + FAQ consistency (Cycle 132)
-- [x] Birthday help article + customer gaps + research (Cycle 133)
-- [x] Lead source analytics chart (Cycle 134)
-- [x] Post-appointment aftercare emails (Cycle 135)
-- [x] 20 new tests (aftercare, rebook, reminders, service types, forms) (Cycles 131, 136)
-- [x] Salon simulation + FAQs (Cycle 127)
-- [x] Help articles: documents, service types, pipeline, form presets (Cycles 128, 140)
-- [x] Birthday automation + date_of_birth (Cycle 129)
-- [x] Form preset route fix (Cycle 131)
+## Overall Progress (Cycles 116-146)
+- 31 commits, 85 tests added (172→257)
+- 6 migrations (059-064), 7 simulations
+- 17 api domain modules, 11 help articles, 1 demo script
+- 7 form presets, 7 pipeline presets, 9 skills
+- Complete automation pipeline (reminders → aftercare → rebook → review → birthday)
 
 ---
 
