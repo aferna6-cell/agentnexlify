@@ -2,44 +2,46 @@
 
 Updated by the automated morning/evening routines and interactive sessions.
 
-## Top 3 Priorities
+## Tomorrow's Top 3 Priorities (2026-03-23)
 
-1. **Continue api.js domain split** — 6 modules extracted, ~196 functions remaining. Target: 10+ modules.
-2. **AI-to-human handoff** — Cross-industry critical feature from research backlog.
-3. **Simulate more business types** — Fitness studio, restaurant (full walkthrough) remaining.
+1. **Verify Cycles 126-140 in production** — 15 feature commits need E2E verification
+2. **Continue api.js split** — 6/~40 domains extracted, target: 10+
+3. **AI-to-human handoff** — Cross-industry critical feature from research
 
 ## Active Tasks
 
-### Priority 1 — Optimization
-- [ ] Continue api.js domain split (6/~40 domains done)
-- [ ] Fix 16 test isolation failures (mock state leaks between files)
+### Priority 1 — Verification
+- [ ] Verify all 15 features from Cycles 126-140 in production
 
-### Priority 2 — Features (from research)
+### Priority 2 — Optimization
+- [ ] Continue api.js domain split (6 done, ~196 functions in monolith)
+- [ ] Fix 16 test isolation failures
+
+### Priority 3 — Features
 - [ ] AI-to-human handoff (widget → team member with context)
-- [ ] Custom automation templates (birthday message customization)
-- [ ] Two-way email sync (large feature)
-- [ ] White-label client login (large feature)
+- [ ] Two-way email sync (large)
+- [ ] White-label client login (large)
 
-### Priority 3 — Simulations
-- [ ] Simulate fitness studio owner
-- [ ] Simulate restaurant owner (full walkthrough with orders)
-- [ ] Simulate junk removal company
+### Priority 4 — Simulations
+- [ ] Restaurant owner (full walkthrough with orders)
+- [ ] Junk removal company
 
-### Priority 4 — External API Integrations (blocked)
-- [ ] Social media platform OAuth
-- [ ] Real SERP data integration
-- [ ] Competitor analysis dashboard
+## Completed This Session (Cycles 126-140)
 
-## Session Progress (Cycles 116-138)
-
-### Highlights
-- 85 tests added (172→257)
-- 6 migrations applied (059-064)
-- 5 customer simulations completed
-- 9 help articles, 4 form presets, 6 pipeline presets
-- 6 api domain modules, 7 pages migrated
-- Automation pipeline: reminders → aftercare → rebook → review → birthday
-- New skill: industry-content
+- [x] api.js domain split: reviews + content modules (Cycle 137)
+- [x] api.js domain split: leads + pipeline modules (Cycle 130)
+- [x] api.js domain split: invoices + documents modules (Cycle 126)
+- [x] Fitness simulation + pipeline + waiver form (Cycle 139)
+- [x] Industry-content skill created (Cycle 138)
+- [x] Lawyer simulation + legal intake + FAQ consistency (Cycle 132)
+- [x] Birthday help article + customer gaps + research (Cycle 133)
+- [x] Lead source analytics chart (Cycle 134)
+- [x] Post-appointment aftercare emails (Cycle 135)
+- [x] 20 new tests (aftercare, rebook, reminders, service types, forms) (Cycles 131, 136)
+- [x] Salon simulation + FAQs (Cycle 127)
+- [x] Help articles: documents, service types, pipeline, form presets (Cycles 128, 140)
+- [x] Birthday automation + date_of_birth (Cycle 129)
+- [x] Form preset route fix (Cycle 131)
 
 ---
 

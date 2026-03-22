@@ -492,4 +492,14 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+### FastAPI route shadowing (forms.py) — presets caught by /{form_id}
+**Date:** 2026-03-21
+**Symptom:** `GET /forms/{tenant_id}/presets` returns 404. `POST /forms/{tenant_id}/presets/dental_intake` also 404.
+**Root Cause:** Same pattern as invoices.py (Cycle 114): preset endpoints were defined AFTER `/{tenant_id}/{form_id}`, so "presets" matched as a form_id parameter.
+**Fix:** Moved preset endpoints above the `/{form_id}` catch-all. Removed duplicate endpoints left at original location.
+**Files:** `backend/routers/forms.py`
+**Prevention:** This is the second occurrence of this exact bug. **Any FastAPI router with both static paths and parameterized paths MUST define static paths first.** Consider a pre-commit check for this pattern. (Commit 28b5e8e, Cycle 131)
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
