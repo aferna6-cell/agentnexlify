@@ -6,7 +6,7 @@ import {
   updateTeamMemberRole,
   removeTeamMember,
   resendInvite,
-} from "../utils/api";
+} from "../utils/api/team";
 
 const roleOptions = [
   { value: "admin", label: "Admin", desc: "Can manage team & settings" },

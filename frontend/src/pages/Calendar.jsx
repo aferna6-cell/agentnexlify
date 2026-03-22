@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence } from "../utils/api";
+import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence } from "../utils/api/appointments";
 
 const STATUS_COLORS = {
   confirmed: { bg: "var(--accent-dim)", border: "var(--accent)", text: "var(--accent)" },

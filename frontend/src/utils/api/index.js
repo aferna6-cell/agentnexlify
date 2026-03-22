@@ -15,6 +15,9 @@ export * from "./documents";
 export * from "./pipeline";
 export * from "./reviews";
 export * from "./content";
+export * from "./appointments";
+export * from "./webhooks";
+export * from "./team";
 
 // Shared client (for advanced usage)
 export { request, BASE, ApiError } from "./_client";
