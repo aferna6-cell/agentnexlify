@@ -355,3 +355,39 @@ async def delete_ai_feedback(
     db = get_supabase()
     db.table("ai_feedback").delete().eq("id", feedback_id).eq("tenant_id", tenant_id).execute()
     return {"status": "deleted"}
+
+
+# ── QR Code Generation ──────────────────────────────────────
+
+
+@router.get("/{tenant_id}/qr")
+async def generate_qr_code(
+    tenant_id: str,
+    url: str = Query(..., min_length=5, max_length=2000, description="URL to encode in the QR code"),
+    size: int = Query(300, ge=100, le=1000, description="QR code image size in pixels"),
+    claims: dict = Depends(_auth_get_tenant),
+):
+    """Generate a QR code PNG for a given URL (widget link, review link, etc.)."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    import io
+    import qrcode
+    from fastapi.responses import StreamingResponse
+
+    qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    # Resize to requested size
+    img = img.resize((size, size))
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    return StreamingResponse(buf, media_type="image/png", headers={
+        "Content-Disposition": f"inline; filename=qr-code-{size}.png",
+        "Cache-Control": "public, max-age=3600",
+    })

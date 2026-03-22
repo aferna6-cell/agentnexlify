@@ -423,6 +423,15 @@ export default function WidgetPage() {
           </button>
         </div>
 
+        {/* QR Code Generator */}
+        <div className="settings-card">
+          <h3>QR Codes</h3>
+          <p className="settings-card-desc">
+            Generate QR codes for your chat widget or review page. Print and display them in your business.
+          </p>
+          <QRCodeSection tenantId={user?.tenantId} token={token} apiKey={form.api_key} />
+        </div>
+
         {/* Live Preview */}
         <div className="settings-card widget-preview-card">
           <h3>Preview</h3>
@@ -464,6 +473,127 @@ export default function WidgetPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function QRCodeSection({ tenantId, token }) {
+  const [qrType, setQrType] = useState("widget");
+  const [customUrl, setCustomUrl] = useState("");
+  const [qrBlobUrl, setQrBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+  const FRONTEND_BASE = window.location.origin;
+
+  const getQrUrl = () => {
+    switch (qrType) {
+      case "widget":
+        return `${FRONTEND_BASE}/biz${tenantId}`;
+      case "booking":
+        return `${FRONTEND_BASE}/book/${tenantId}`;
+      case "custom":
+        return customUrl;
+      default:
+        return "";
+    }
+  };
+
+  const qrUrl = getQrUrl();
+
+  const generateQR = useCallback(async () => {
+    if (!qrUrl || !tenantId || !token) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/v1/widget/${tenantId}/qr?url=${encodeURIComponent(qrUrl)}&size=300`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) return;
+      const blob = await res.blob();
+      if (qrBlobUrl) URL.revokeObjectURL(qrBlobUrl);
+      setQrBlobUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      console.error("QR generation failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [qrUrl, tenantId, token, API_BASE]);
+
+  // Auto-generate when type or URL changes
+  useEffect(() => {
+    if (qrUrl) generateQR();
+    return () => { if (qrBlobUrl) URL.revokeObjectURL(qrBlobUrl); };
+  }, [qrType, customUrl]);
+
+  const handleDownload = () => {
+    if (!qrBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = qrBlobUrl;
+    a.download = `qr-${qrType}-${Date.now()}.png`;
+    a.click();
+  };
+
+  const qrTypes = [
+    { value: "widget", label: "Business Page" },
+    { value: "booking", label: "Booking Page" },
+    { value: "custom", label: "Custom URL" },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {qrTypes.map((t) => (
+          <button
+            key={t.value}
+            onClick={() => setQrType(t.value)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 6,
+              border: qrType === t.value ? "1px solid var(--accent)" : "1px solid var(--border)",
+              background: qrType === t.value ? "rgba(99,102,241,0.15)" : "var(--bg-secondary)",
+              color: qrType === t.value ? "var(--accent)" : "var(--text-secondary)",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {qrType === "custom" && (
+        <input
+          type="url"
+          value={customUrl}
+          onChange={(e) => setCustomUrl(e.target.value)}
+          placeholder="https://your-url.com"
+          className="settings-input"
+          style={{ marginBottom: 16, width: "100%" }}
+        />
+      )}
+
+      {qrUrl && (
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+          <div style={{
+            width: 160, height: 160, background: "#fff", borderRadius: 8,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            overflow: "hidden",
+          }}>
+            {loading && <span style={{ color: "#666", fontSize: 12 }}>Generating...</span>}
+            {qrBlobUrl && !loading && (
+              <img src={qrBlobUrl} alt="QR Code" style={{ width: 150, height: 150 }} />
+            )}
+          </div>
+          <div>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 8px" }}>
+              Points to: <code style={{ fontSize: 12, color: "var(--accent)" }}>{qrUrl}</code>
+            </p>
+            <button className="btn-primary" onClick={handleDownload} disabled={!qrBlobUrl} style={{ fontSize: 13, padding: "6px 14px" }}>
+              Download PNG
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
