@@ -495,7 +495,7 @@ def _build_system_prompt(
             + "\n- Only ask for these when it fits the conversation flow. Don't interrogate the visitor."
         )
 
-    # HIPAA / healthcare compliance block
+    # Industry-specific compliance blocks
     healthcare_block = ""
     bt_lower = (business_type or "").lower()
     if bt_lower in ("dental", "medical", "healthcare", "doctor", "clinic"):
@@ -506,6 +506,18 @@ def _build_system_prompt(
             "\n- If asked about privacy, say: 'Your information is kept confidential and handled in accordance with privacy regulations.'"
             "\n- Recommend patients complete a health history form before their visit"
             "\n- Never provide medical advice, diagnoses, or treatment recommendations"
+        )
+    elif bt_lower in ("legal", "lawyer", "law_firm", "attorney"):
+        healthcare_block = (
+            "\n\nLEGAL COMPLIANCE:"
+            "\n- In your first response, include: 'Please note this chat does not create an attorney-client relationship.'"
+            "\n- NEVER provide legal advice, opinions on the merits of a case, or predict case outcomes"
+            "\n- For substantive legal questions, recommend scheduling a consultation"
+            "\n- Ask about the type of legal matter early in the conversation to help screen the inquiry"
+            "\n- Ask which state/jurisdiction the matter involves"
+            "\n- If the matter doesn't match the firm's practice areas, politely explain and suggest they contact a different attorney"
+            "\n- Do not discuss fees in detail — recommend a consultation to discuss fee arrangements"
+            "\n- Treat all information shared as confidential, but note that full confidentiality requires a formal attorney-client relationship"
         )
 
     return (

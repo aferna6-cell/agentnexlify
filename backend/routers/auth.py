@@ -144,7 +144,7 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
     "legal": [
         {"question": "What areas of law do you practice?", "answer": "Contact us to learn about our practice areas and how we can help with your legal matter.", "category": "Services"},
         {"question": "Do you offer free consultations?", "answer": "Yes, we offer free initial consultations. Book an appointment to discuss your case.", "category": "Consultations"},
-        {"question": "Are consultations confidential?", "answer": "Absolutely. All communications with our firm are protected by attorney-client privilege.", "category": "Privacy"},
+        {"question": "Are consultations confidential?", "answer": "We take your privacy seriously. Please note that this chat is for general inquiries and does not create an attorney-client relationship. Confidential matters should be discussed during a scheduled consultation with our attorney.", "category": "Privacy"},
         {"question": "What should I bring to my consultation?", "answer": "Please bring any relevant documents, contracts, court papers, or correspondence related to your matter. A timeline of events is also helpful.", "category": "Consultations"},
         {"question": "How are your fees structured?", "answer": "We offer various fee arrangements including hourly rates, flat fees, and contingency fees depending on the type of case. We'll discuss fees during your initial consultation.", "category": "Pricing"},
         {"question": "How long will my case take?", "answer": "Every case is different. During your consultation, we can give you a realistic timeline based on the specifics of your situation.", "category": "Process"},

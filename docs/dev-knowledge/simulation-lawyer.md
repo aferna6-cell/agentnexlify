@@ -15,11 +15,17 @@ Jennifer Park, managing partner at a 3-attorney family law firm. Handles divorce
 8. **Invoicing** — Can create invoices for legal fees with deposit required. Partial payments work.
 
 ## Gaps Found
-1. **No legal intake form preset** — Need case type, opposing party, jurisdiction fields. Minor (can use form builder).
+1. **No legal intake form preset** — Need case type, opposing party, jurisdiction fields. Minor (can use form builder). UPDATE: legal_intake preset added in Cycle 118.
 2. **No conflict check** — When a new lead comes in, should check if opposing party is already a client. Feature gap.
 3. **No matter/case number tracking** — Custom fields exist but no dedicated case management. Could use pipeline + custom fields.
 4. **No billable hours tracking** — Lawyers track time per task. Would need a time tracking module.
 5. **No retainer balance tracking** — Track how much of the retainer has been used. Could extend invoicing.
+
+### Gaps Found in Re-Simulation (Cycle 158, 2026-03-22)
+6. **CRITICAL (FIXED): No legal compliance block in AI system prompt** — AI had no disclaimers, no instruction to avoid legal advice, no case-type screening. Fixed: added `legal_block` paralleling the `healthcare_block`.
+7. **CRITICAL (FIXED): Misleading privilege FAQ** — FAQ claimed "all communications protected by attorney-client privilege" which is false for AI chat. Fixed: updated to accurate disclaimer language.
+8. **Widget booking placeholder shows non-legal examples** — "Repair, Checkup" visible on law firm widget. Noted for future fix.
+9. **No pre-built legal document templates** — Engagement letters, retainer agreements need to be built from scratch.
 
 ## Strengths
 - Confidentiality FAQ establishes trust immediately
