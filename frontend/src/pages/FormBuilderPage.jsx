@@ -8,7 +8,7 @@ import {
   deleteForm,
   fetchFormSubmissions,
   fetchFormStats,
-} from "../utils/api";
+} from "../utils/api/forms";
 
 const FIELD_TYPES = [
   { value: "text", label: "Text" },

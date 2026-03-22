@@ -9,7 +9,7 @@ import {
   fetchJobApplications,
   updateApplicationStatus,
   aiWriteJobDescription,
-} from "../utils/api";
+} from "../utils/api/jobs";
 
 const APP_STATUS_LABELS = {
   new: "New",

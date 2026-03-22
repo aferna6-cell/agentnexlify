@@ -1,6 +1,5 @@
 /**
  * API barrel export — re-exports all domain modules.
- *
  * New features should add functions to domain modules, not the monolith api.js.
  */
 
@@ -15,5 +14,8 @@ export * from "./webhooks";
 export * from "./team";
 export * from "./social";
 export * from "./campaigns";
+export * from "./jobs";
+export * from "./bids";
+export * from "./forms";
 
 export { request, BASE, ApiError } from "./_client";

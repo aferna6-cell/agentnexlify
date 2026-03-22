@@ -12,7 +12,7 @@ import {
   createBidTemplate,
   deleteBidTemplate,
   aiGenerateBid,
-} from "../utils/api";
+} from "../utils/api/bids";
 
 const STATUS_FILTERS = ["all", "draft", "sent", "viewed", "accepted", "rejected"];
 
