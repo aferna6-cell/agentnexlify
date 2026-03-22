@@ -62,6 +62,20 @@ Gaps discovered across all customer simulations. Prioritized by cross-industry i
 | Retainer balance tracking | Medium | Medium |
 | Matter/case number generation | Low | Low |
 
+### Fitness
+| Gap | Impact | Effort |
+|-----|--------|--------|
+| Class schedule integration | Medium | High |
+| Member retention tracking (30-day inactive alert) | Medium | Medium |
+| Trial-to-member conversion tracking | Medium | Low |
+
+### Restaurant
+| Gap | Impact | Effort |
+|-----|--------|--------|
+| Table/reservation management (not just time slots) | Medium | High |
+| Post-dining aftercare ("Thank you, leave a review") | Low | Low |
+| POS integration | Low | Very High (external API) |
+
 ## Product-Market Fit by Industry
 
 | Industry | Fit Score | Key Strength | Missing Piece |
@@ -69,8 +83,9 @@ Gaps discovered across all customer simulations. Prioritized by cross-industry i
 | Salon/Spa | 9/10 | Service types + rebook + reminders | Waitlist |
 | Plumber/HVAC | 8/10 | Emergency detection + bids + invoices | Before/after photos |
 | Dental | 8/10 | Intake forms + insurance + HIPAA AI | Provider scheduling |
+| Restaurant | 8/10 | Menu + orders + chat ordering | POS integration |
+| Fitness | 7/10 | Waiver form + rebook + pipeline | Class scheduling |
 | Lawyer | 7/10 | Intake forms + documents + pipeline | Billable hours |
 | Real Estate | 6/10 | Pipeline + documents | Property tracking |
-| Restaurant | 8/10 | Menu + orders + reservations | POS integration |
 
-_Updated: 2026-03-21. Review after each new simulation._
+_Updated: 2026-03-22. Review after each new simulation._

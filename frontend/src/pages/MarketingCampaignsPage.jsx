@@ -8,8 +8,8 @@ import {
   fetchCampaignAnalytics,
   generateCampaignContent,
   estimateCampaignRecipients,
-  fetchTagDefinitions,
-} from "../utils/api";
+} from "../utils/api/campaigns";
+import { fetchTagDefinitions } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import UpgradePrompt, { planBelowRequired } from "../components/UpgradePrompt";

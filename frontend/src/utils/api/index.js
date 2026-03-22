@@ -1,14 +1,9 @@
 /**
  * API barrel export — re-exports all domain modules.
  *
- * Components can import from either:
- *   import { fetchLeads } from "../utils/api"           (legacy, still works)
- *   import { fetchLeads } from "../utils/api/leads"     (new, domain-specific)
- *
- * New features should add functions to domain modules, not the monolith.
+ * New features should add functions to domain modules, not the monolith api.js.
  */
 
-// Domain modules (extracted from api.js)
 export * from "./leads";
 export * from "./invoices";
 export * from "./documents";
@@ -18,6 +13,7 @@ export * from "./content";
 export * from "./appointments";
 export * from "./webhooks";
 export * from "./team";
+export * from "./social";
+export * from "./campaigns";
 
-// Shared client (for advanced usage)
 export { request, BASE, ApiError } from "./_client";

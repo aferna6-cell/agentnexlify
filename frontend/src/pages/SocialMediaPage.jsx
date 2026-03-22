@@ -8,7 +8,7 @@ import {
   generateSocialContent,
   generateSocialCampaign,
   fetchSocialAnalytics,
-} from "../utils/api";
+} from "../utils/api/social";
 import SkeletonLoader from "../components/SkeletonLoader";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
