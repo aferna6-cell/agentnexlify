@@ -17,5 +17,8 @@ export * from "./campaigns";
 export * from "./jobs";
 export * from "./bids";
 export * from "./forms";
+export * from "./conversations";
+export * from "./analytics";
+export * from "./automations";
 
 export { request, BASE, ApiError } from "./_client";

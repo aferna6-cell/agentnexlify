@@ -6,11 +6,11 @@ import {
   fetchAnalyticsLeads,
   fetchAnalyticsResponseTimes,
   fetchAnalyticsWidget,
-  fetchConversations,
-  fetchTagDefinitions,
   fetchMissedCallAnalytics,
   fetchLeadSources,
-} from "../utils/api";
+} from "../utils/api/analytics";
+import { fetchConversations } from "../utils/api/conversations";
+import { fetchTagDefinitions } from "../utils/api";
 import {
   LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Area, AreaChart,

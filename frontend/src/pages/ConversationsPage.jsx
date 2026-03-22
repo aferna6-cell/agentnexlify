@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { fetchConversations, fetchConversationMessages, updateConversationTags } from "../utils/api/conversations";
+import { fetchTeamMembers } from "../utils/api/team";
 import {
-  fetchConversations,
-  fetchConversationMessages,
-  updateConversationTags,
   fetchTagDefinitions,
-  fetchTeamMembers,
   assignConversation,
   fetchConversationNotes,
   createConversationNote,
