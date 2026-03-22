@@ -114,7 +114,7 @@ def _seed_default_stages(tenant_id: str, db) -> list[dict]:
             if resolved in _INDUSTRY_STAGES:
                 stages = _INDUSTRY_STAGES[resolved]
     except Exception:
-        pass  # Fall back to defaults
+        logger.warning("Failed to look up business_type for pipeline preset, using defaults", exc_info=True)
 
     rows = [{"tenant_id": tenant_id, **s} for s in stages]
     try:
