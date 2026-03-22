@@ -25,5 +25,8 @@ export * from "./seo";
 export * from "./calls";
 export * from "./portal";
 export * from "./smart-lists";
+export * from "./dashboard";
+export * from "./faq";
+export * from "./widget-config";
 
 export { request, BASE, ApiError } from "./_client";

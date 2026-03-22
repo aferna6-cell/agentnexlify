@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchNotifications } from "../utils/api";
+import { fetchNotifications } from "../utils/api/dashboard";
 
 export default function NotificationBell({ onNavigate }) {
   const { user, token } = useAuth();

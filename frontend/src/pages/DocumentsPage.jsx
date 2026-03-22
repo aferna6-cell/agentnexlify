@@ -5,7 +5,7 @@ import {
   fetchDocuments, createDocument, sendDocument, deleteDocument,
   fetchDocTemplates, createDocTemplate,
 } from "../utils/api/documents";
-import { fetchLeads } from "../utils/api";
+import { fetchLeads } from "../utils/api/leads";
 
 const STATUS_FILTERS = ["all", "draft", "sent", "viewed", "signed", "expired", "cancelled"];
 const STATUS_COLORS = {

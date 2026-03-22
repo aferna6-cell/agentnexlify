@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, changePlan, cancelSubscription } from "../utils/api";
+import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, changePlan, cancelSubscription } from "../utils/api/dashboard";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const PLANS = [

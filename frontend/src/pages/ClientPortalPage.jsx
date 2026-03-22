@@ -2,14 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import {
-  fetchServiceRecords,
-  createServiceRecord,
-  updateServiceRecord,
-  deleteServiceRecord,
-  generatePortalLink,
-  fetchLeads,
-  sendLeadEmail,
-} from "../utils/api";
+  fetchServiceRecords, createServiceRecord, updateServiceRecord,
+  deleteServiceRecord, generatePortalLink,
+} from "../utils/api/portal";
+import { fetchLeads, sendLeadEmail } from "../utils/api/leads";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";

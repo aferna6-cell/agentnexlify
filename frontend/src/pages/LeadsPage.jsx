@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads } from "../utils/api/leads";
-import { fetchTeamMembers, fetchLeadSuggestions, handleLeadSuggestion } from "../utils/api";
+import { fetchLeadSuggestions, handleLeadSuggestion } from "../utils/api/leads";
+import { fetchTeamMembers } from "../utils/api/team";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
 import LeadDetailDrawer from "./Dashboard/LeadDetailDrawer";
 

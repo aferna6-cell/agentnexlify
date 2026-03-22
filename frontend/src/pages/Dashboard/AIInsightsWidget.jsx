@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchAIInsights } from "../../utils/api";
+import { fetchAIInsights } from "../../utils/api/dashboard";
 
 export default function AIInsightsWidget({ tenantId, token }) {
   const [data, setData] = useState(null);

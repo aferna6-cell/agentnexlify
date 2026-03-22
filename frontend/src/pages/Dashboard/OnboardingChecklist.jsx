@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  updateWidgetConfig,
-  fetchFaqEntries,
-  createFaqEntry,
-  deleteFaqEntry,
-  createFromTemplate,
-  fetchSequences,
-  fetchAvailability,
-  updateAvailability,
-  updateTenantSettings,
-} from "../../utils/api";
+import { updateWidgetConfig } from "../../utils/api/widget-config";
+import { fetchFaqEntries, createFaqEntry, deleteFaqEntry } from "../../utils/api/faq";
+import { fetchAvailability, updateAvailability } from "../../utils/api/appointments";
+import { updateTenantSettings } from "../../utils/api/dashboard";
+import { createFromTemplate, fetchSequences } from "../../utils/api";
 import { trackEvent } from "../../utils/analytics";
 
 const STORAGE_KEY_PREFIX = "anx_onboarding_";

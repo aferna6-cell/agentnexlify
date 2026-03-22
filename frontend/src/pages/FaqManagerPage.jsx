@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchFaqEntries, createFaqEntry, deleteFaqEntry } from "../utils/api";
+import { fetchFaqEntries, createFaqEntry, deleteFaqEntry } from "../utils/api/faq";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function FaqManagerPage() {

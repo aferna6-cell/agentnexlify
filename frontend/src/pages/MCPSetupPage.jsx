@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard } from "../utils/api";
+import { fetchDashboard } from "../utils/api/dashboard";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const MCP_TOOLS = [

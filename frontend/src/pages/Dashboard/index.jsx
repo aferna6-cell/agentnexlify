@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchDashboard, fetchLeads, fetchAutomations, fetchActivity, updateLead, deleteLead, fetchCrmDashboardWidgets, fetchSequenceStats, fetchOnboardingStatus } from "../../utils/api";
+import { fetchDashboard, fetchActivity, fetchOnboardingStatus } from "../../utils/api/dashboard";
+import { fetchLeads, updateLead, deleteLead } from "../../utils/api/leads";
+import { fetchSequenceStats } from "../../utils/api/automations";
+import { fetchAutomations, fetchCrmDashboardWidgets } from "../../utils/api";
 import OverviewCards from "./OverviewCards";
 import LeadPipeline from "./LeadPipeline";
 import ActivityFeed from "./ActivityFeed";

@@ -78,3 +78,11 @@ export function findDuplicateLeads(tenantId, token) {
 export function mergeLeads(tenantId, token, keepId, mergeId) {
   return request(`/api/v1/leads/${tenantId}/merge`, { method: "POST", token, body: { keep_id: keepId, merge_id: mergeId } });
 }
+
+export function fetchLeadSuggestions(tenantId, token) {
+  return request(`/api/v1/leads/${tenantId}/suggestions`, { token });
+}
+
+export function handleLeadSuggestion(tenantId, token, suggestionId, action) {
+  return request(`/api/v1/leads/${tenantId}/suggestions/${suggestionId}`, { method: "POST", token, body: { action } });
+}

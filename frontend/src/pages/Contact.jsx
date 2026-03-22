@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { submitContactForm } from "../utils/api";
+import { submitContactForm } from "../utils/api/dashboard";
 import "../styles/legal.css";
 import "../styles/contact.css";
 

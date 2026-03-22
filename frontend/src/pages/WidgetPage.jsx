@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard, updateWidgetConfig, toggleWidgetOnlineStatus } from "../utils/api";
+import { fetchDashboard } from "../utils/api/dashboard";
+import { updateWidgetConfig, toggleWidgetOnlineStatus } from "../utils/api/widget-config";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const POSITIONS = [

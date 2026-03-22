@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTenant, updateTenantSettings, fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus, fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition, searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber, fetchFieldDefinitions, createFieldDefinition, deleteFieldDefinition } from "../utils/api";
+import { fetchTenant, updateTenantSettings } from "../utils/api/dashboard";
+import { fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus } from "../utils/api/widget-config";
+import { fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition, searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber, fetchFieldDefinitions, createFieldDefinition, deleteFieldDefinition } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {

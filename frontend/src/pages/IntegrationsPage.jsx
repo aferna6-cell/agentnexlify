@@ -1,19 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
-  fetchWebhooks,
-  createWebhook,
-  updateWebhook,
-  toggleWebhook,
-  deleteWebhook,
-  fetchWebhookLogs,
-  testWebhook,
-  fetchGoogleCalendarStatus,
-  startGoogleCalendarAuth,
-  disconnectGoogleCalendar,
-  fetchFacebookStatus,
-  getFacebookAuthUrl,
-  disconnectFacebook,
+  fetchWebhooks, createWebhook, updateWebhook, toggleWebhook,
+  deleteWebhook, fetchWebhookLogs, testWebhook,
+} from "../utils/api/webhooks";
+import {
+  fetchGoogleCalendarStatus, startGoogleCalendarAuth, disconnectGoogleCalendar,
+  fetchFacebookStatus, getFacebookAuthUrl, disconnectFacebook,
 } from "../utils/api";
 import SkeletonLoader from "../components/SkeletonLoader";
 

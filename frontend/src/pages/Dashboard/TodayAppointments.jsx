@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchAppointments } from "../../utils/api";
+import { fetchAppointments } from "../../utils/api/appointments";
 
 function formatTime(isoStr, tz) {
   try {

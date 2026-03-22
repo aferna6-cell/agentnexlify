@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { validateInvite, acceptInvite } from "../utils/api";
+import { validateInvite, acceptInvite } from "../utils/api/team";
 
 export default function AcceptInvitePage() {
   const { token: inviteToken } = useParams();

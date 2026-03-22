@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTrialStatus } from "../utils/api";
+import { fetchTrialStatus } from "../utils/api/dashboard";
 import LoginPage from "./LoginPage";
 import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
