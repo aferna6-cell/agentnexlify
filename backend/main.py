@@ -89,6 +89,7 @@ async def _automation_loop():
         send_birthday_greetings,
         send_aftercare_instructions,
         generate_recurring_invoices,
+        detect_appointment_no_shows,
     )
 
     tick = 0
@@ -117,6 +118,7 @@ async def _automation_loop():
                 _safe_run("process_scheduled_campaigns", _process_scheduled_campaigns),
                 _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
                 _safe_run("generate_recurring_invoices", generate_recurring_invoices),
+                _safe_run("detect_appointment_no_shows", detect_appointment_no_shows),
             ])
 
         # Every 30 min: heavy/infrequent tasks

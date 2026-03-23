@@ -2739,3 +2739,72 @@ async def generate_recurring_invoices() -> int:
         )
 
     return generated
+
+
+# ---------------------------------------------------------------------------
+# Appointment No-Show Auto-Detection
+# ---------------------------------------------------------------------------
+
+async def detect_appointment_no_shows() -> int:
+    """Auto-mark confirmed appointments as no_show if they started >30 minutes
+    ago and were never marked completed or cancelled.
+
+    Logic:
+    - Status = 'confirmed' AND start_time < now() - 30min
+    - Updates to 'no_show'
+    - Logs activity for each no-show
+
+    Returns count of appointments marked as no_show.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(minutes=30)).isoformat()
+    marked = 0
+
+    try:
+        overdue_appts = (
+            db.table("appointments")
+            .select("id, tenant_id, lead_id, customer_name, start_time")
+            .eq("status", "confirmed")
+            .lt("start_time", cutoff)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("detect_appointment_no_shows: failed to query overdue appointments")
+        return 0
+
+    if not overdue_appts.data:
+        return 0
+
+    # Batch update all overdue IDs
+    overdue_ids = [a["id"] for a in overdue_appts.data]
+    try:
+        db.table("appointments").update({
+            "status": "no_show",
+            "updated_at": now.isoformat(),
+        }).in_("id", overdue_ids).execute()
+        marked = len(overdue_ids)
+    except Exception:
+        logger.exception("detect_appointment_no_shows: batch update failed")
+        return 0
+
+    # Log activity for each no-show
+    for appt in overdue_appts.data:
+        tid = appt.get("tenant_id")
+        lid = appt.get("lead_id")
+        cname = appt.get("customer_name") or "Unknown"
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": tid,
+                "lead_id": lid,
+                "activity_type": "appointment_no_show",
+                "description": f"No-show: {cname} missed their appointment at {appt.get('start_time', '')}",
+            }).execute()
+        except Exception:
+            logger.warning("detect_appointment_no_shows: failed to log no-show for %s", appt["id"])
+
+    if marked > 0:
+        logger.info("detect_appointment_no_shows: marked %d appointments as no_show", marked)
+
+    return marked

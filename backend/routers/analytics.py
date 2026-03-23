@@ -949,3 +949,75 @@ async def lead_source_breakdown(
     response = {"breakdown": breakdown, "total": sum(counts.values())}
     _cache[cache_key] = (time.time(), response)
     return response
+
+
+# ---------------------------------------------------------------------------
+# Appointment No-Show Analytics
+# ---------------------------------------------------------------------------
+
+@router.get("/{tenant_id}/no-show-stats")
+async def no_show_stats(
+    tenant_id: str,
+    days: int = Query(30, ge=7, le=365),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Get appointment no-show statistics for the specified period.
+
+    Returns:
+    - no_show_count: Total no-shows in period
+    - total_appointments: Total appointments (excluding cancelled) in period
+    - no_show_rate: Percentage of no-shows
+    - repeat_no_shows: Leads with 2+ no-shows (chronic no-showers)
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    start = (now - timedelta(days=days)).isoformat()
+
+    # Get all non-cancelled appointments in period
+    try:
+        appts = (
+            db.table("appointments")
+            .select("id, status, lead_id, customer_name, start_time")
+            .eq("tenant_id", tenant_id)
+            .gte("start_time", start)
+            .neq("status", "cancelled")
+            .limit(2000)
+            .execute()
+        )
+    except Exception:
+        logger.exception("no_show_stats: failed to query appointments for %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch appointment data")
+
+    all_appts = appts.data or []
+    total = len(all_appts)
+    no_shows = [a for a in all_appts if a.get("status") == "no_show"]
+    no_show_count = len(no_shows)
+    no_show_rate = round((no_show_count / total * 100), 1) if total > 0 else 0
+
+    # Find repeat no-show leads
+    lead_no_show_counts = {}
+    for ns in no_shows:
+        lid = ns.get("lead_id")
+        if lid:
+            if lid not in lead_no_show_counts:
+                lead_no_show_counts[lid] = {"count": 0, "name": ns.get("customer_name") or "Unknown"}
+            lead_no_show_counts[lid]["count"] += 1
+
+    repeat_no_shows = [
+        {"lead_id": lid, "name": info["name"], "no_show_count": info["count"]}
+        for lid, info in lead_no_show_counts.items()
+        if info["count"] >= 2
+    ]
+    repeat_no_shows.sort(key=lambda x: -x["no_show_count"])
+
+    return {
+        "period_days": days,
+        "total_appointments": total,
+        "no_show_count": no_show_count,
+        "no_show_rate": no_show_rate,
+        "completed_count": len([a for a in all_appts if a.get("status") == "completed"]),
+        "repeat_no_shows": repeat_no_shows[:20],
+    }
