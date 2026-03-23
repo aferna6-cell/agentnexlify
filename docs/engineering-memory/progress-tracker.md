@@ -76,3 +76,26 @@ _What was built each session. Proves velocity, prevents re-doing work._
 ### Backlog
 - Marked 8 items as complete
 - Added 18 new backlog items (total unchecked: 26)
+
+## 2026-03-23 Session 3
+
+### Bugs Fixed (Phase A)
+1. **NULL-safe defaults round 2** — Fixed 15 instances of `.get("business_name", default)` pattern across 12 files (dependencies.py, local_seo.py, calls.py, widget_booking.py, widget_helpers.py, invoices.py, billing.py, automations.py, business_page.py, twilio_webhooks.py, jobs.py, auth.py)
+2. **NULL-safe defaults for business_type** — Fixed 3 instances in local_seo.py, widget_config.py, widget_chat.py
+3. **NULL-safe defaults for owner_email** — Fixed 2 instances in billing.py, auth.py (Stripe customer creation)
+4. **Route shadowing: client portal** — client_router for /client/* static routes, included before parameterized /{tenant_id}/* routes
+5. **Route shadowing: GBP** — callback_router for /callback static route, included before parameterized routes
+6. Total: 20+ individual code fixes across 17 files
+
+### Features Built (Phase B)
+1. **Appointment check-in** — POST /check-in, Calendar UI button, activity log, webhook
+2. **Stripe invoice payment webhook** — _handle_invoice_payment() in billing.py, auto-updates invoice to paid, owner email, activity log, webhook
+3. **Appointment buffer zones** — Fixed conflict detection to extend booked ranges by buffer_minutes
+4. **Conversation auto-close** — auto_close_inactive_conversations() in automation engine, 24h timeout, runs every 5 min
+5. **Lead export to CSV** — GET /export endpoint with 15 columns, frontend Export CSV button
+6. **AI FAQ suggestions** — POST /faq/suggest analyzes 50 conversations via Claude, frontend suggestion cards with Add/Dismiss
+7. **Appointment reschedule** — POST /reschedule with email+SMS notifications, activity log, webhook, Calendar UI
+
+### Backlog
+- Marked 8 items as complete
+- 18 unchecked items remaining

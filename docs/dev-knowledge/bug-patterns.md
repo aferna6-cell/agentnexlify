@@ -551,3 +551,15 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 **Prevention:** NEVER use `.get(key, default)` for Supabase data that can be NULL. Always use `.get(key) or default`.
 
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
+
+## 2026-03-23 Session 3
+
+### Route shadowing in client_portal.py (NEW PATTERN)
+**Problem:** Static routes like `/client/register`, `/client/login`, `/client/me` were unreachable because parameterized route `/{tenant_id}/service-records` was defined first. FastAPI matches `tenant_id="client"` before reaching the static routes.
+**Solution:** Created separate `client_router` for static `/client/*` paths. Included before `router` in main.py. Same fix applied to GBP `callback_router`.
+**Prevention:** Run the route shadow detection script before each session (check for parameterized routes before static routes with matching methods).
+
+### .get("key", default) round 3
+**Problem:** 15 more instances of `.get("business_name", "default")` found in files not previously checked. When Supabase returns `{"business_name": null}`, `.get()` returns `None` (key exists with null value), not the default.
+**Affected files:** dependencies.py, billing.py, auth.py, local_seo.py, calls.py, widget_booking.py, widget_helpers.py, invoices.py, automations.py, business_page.py, twilio_webhooks.py, jobs.py, widget_config.py, widget_chat.py
+**Fix:** Replace `.get("key", "default")` with `.get("key") or "default"` everywhere.

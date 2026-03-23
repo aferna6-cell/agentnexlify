@@ -479,7 +479,7 @@ _Added during session 2026-03-23 code audit. Focused on reliability, engagement,
 
 _Added during second session on 2026-03-23. Thinking like a small business owner using AgentNexLiFy daily._
 
-- [ ] **Appointment check-in system** — When a customer arrives for their appointment, staff marks them as "checked in" on the dashboard. Ties into no-show detection. Simple status button on Calendar page.
+- [x] **Appointment check-in system** — DONE 2026-03-23. POST /{tenant_id}/{appointment_id}/check-in endpoint + Calendar UI Check In button.
 - [ ] **Customer birthday automation** — Auto-send birthday email/SMS with a special offer or greeting. Uses leads.date_of_birth. Configurable message template on Settings page. Great retention tool for salons and dental offices.
 - [ ] **Team member performance dashboard** — Per-team-member metrics: conversations handled, average response time, leads assigned, appointments booked. Helps business owners see who's contributing. Tab on Analytics page.
 - [ ] **Lead source UTM tracking** — Capture UTM parameters from the widget embed page URL. Store utm_source, utm_medium, utm_campaign on leads. Analytics breakdown by campaign. Help businesses know which ads drive leads.
@@ -488,12 +488,12 @@ _Added during second session on 2026-03-23. Thinking like a small business owner
 - [ ] **Bulk invoice generation** — Select multiple leads and generate invoices for all of them at once. Useful for monthly service businesses (lawn care, cleaning) that bill the same amount to many clients.
 - [ ] **Lead nurture score** — Track how engaged a lead is with automated emails. Opens = +1, clicks = +3, replies = +5. Separate from the main lead score. Shows which leads are warming up or going cold.
 - [ ] **Dashboard mobile responsive** — The dashboard currently doesn't look great on phones. Add responsive breakpoints, collapsible sidebar, touch-friendly controls. Business owners check their dashboard on their phone between jobs.
-- [ ] **Appointment buffer zones** — Allow configuring buffer time between appointments (e.g., 15 min). Already has buffer_minutes in business_hours but not enforced in slot generation. Critical for service businesses that need travel time.
+- [x] **Appointment buffer zones** — DONE 2026-03-23. Fixed conflict detection in booking.py to extend booked ranges by buffer_minutes.
 - [ ] **Conversation sentiment analysis** — After each conversation ends, Claude analyzes overall sentiment (positive/neutral/negative). Store on conversations table. Dashboard shows sentiment distribution. Alerts on negative conversations.
 - [ ] **Quick actions from notification bell** — Currently notifications just show info. Add action buttons: "Reply" to a conversation, "Call back" for missed calls, "View lead" for new leads. Reduces clicks to take action.
-- [ ] **Stripe payment webhook for invoices** — When a customer pays via Stripe Payment Link, auto-update invoice status to "paid". Currently requires manual update. Listen for checkout.session.completed webhook.
-- [ ] **Widget typing indicator** — Show "typing..." animation in the chat widget while waiting for AI response. Currently there's no feedback between sending a message and getting a response. Reduces perceived latency.
-- [ ] **Lead export to CSV** — Download all leads (or filtered leads) as a CSV file from the dashboard. Currently only import exists. Business owners need this for tax prep, switching CRMs, or mail merges.
-- [ ] **Conversation auto-close** — Auto-close conversations that have been inactive for 24+ hours. Move from "active" to "closed" status. Keeps the inbox clean. Configurable timeout on Settings page.
-- [ ] **AI-generated FAQ suggestions** — After analyzing the first 20 conversations, suggest FAQ entries that would help the AI answer better. Shows "Suggested FAQs" section on FAQ Manager page with one-click add.
-- [ ] **Appointment reschedule (not just cancel)** — Currently appointments can only be cancelled and re-created. Add a "Reschedule" action that preserves the lead link, sends update notifications, and shows the change in activity log.
+- [x] **Stripe payment webhook for invoices** — DONE 2026-03-23. Auto-updates invoice to paid via checkout.session.completed metadata.
+- [x] **Widget typing indicator** — ALREADY DONE. showTyping()/hideTyping() with bouncing dots already exists in widget JS.
+- [x] **Lead export to CSV** — DONE 2026-03-23. GET /leads/{tenant_id}/export returns CSV download. Frontend Export CSV button on LeadsPage.
+- [x] **Conversation auto-close** — DONE 2026-03-23. auto_close_inactive_conversations() runs every 5 min, closes conversations inactive >24h.
+- [x] **AI-generated FAQ suggestions** — DONE 2026-03-23. POST /faq/{tenant_id}/suggest analyzes conversations via Claude, suggests Q&A pairs.
+- [x] **Appointment reschedule (not just cancel)** — DONE 2026-03-23. POST /reschedule endpoint with email+SMS notifications, activity log, webhook. Calendar UI.
