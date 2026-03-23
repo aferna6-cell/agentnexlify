@@ -170,17 +170,20 @@ def generate_available_slots(
         db.table("appointments")
         .select("start_time, end_time")
         .eq("tenant_id", tenant_id)
-        .eq("status", "confirmed")
+        .in_("status", ["confirmed", "checked_in", "pending"])
         .gte("start_time", day_start_utc.isoformat())
         .lte("start_time", day_end_utc.isoformat())
         .execute()
     )
 
     booked_ranges = []
+    buffer_td = timedelta(minutes=buffer)
     for appt in booked.data or []:
         b_start = datetime.fromisoformat(appt["start_time"])
         b_end = datetime.fromisoformat(appt["end_time"])
-        booked_ranges.append((b_start, b_end))
+        # Extend booked range by buffer_minutes after end to prevent
+        # scheduling too close together (travel time, cleanup, etc.)
+        booked_ranges.append((b_start, b_end + buffer_td))
 
     # Fetch Google Calendar busy times (best-effort)
     try:
