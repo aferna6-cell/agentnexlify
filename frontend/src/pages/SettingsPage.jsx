@@ -6,6 +6,7 @@ import { fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTa
 import { searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber } from "../utils/api/phone";
 import { fetchFieldDefinitions, createFieldDefinition, deleteFieldDefinition } from "../utils/api/misc";
 import { toggleClientLogin } from "../utils/api/portal";
+import { request } from "../utils/api/_client";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
@@ -41,6 +42,10 @@ export default function SettingsPage({ onNavigate }) {
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#6b7280");
   const [savingTag, setSavingTag] = useState(false);
+  const [scoringFactors, setScoringFactors] = useState([]);
+  const [scoringCustom, setScoringCustom] = useState(false);
+  const [savingScoring, setSavingScoring] = useState(false);
+  const [scoringStatus, setScoringStatus] = useState(null);
 
   // Custom Fields state
   const [customFieldDefs, setCustomFieldDefs] = useState([]);
@@ -138,6 +143,49 @@ export default function SettingsPage({ onNavigate }) {
         });
     }
   }, [user?.tenantId, token]);
+
+  // Load scoring config
+  useEffect(() => {
+    if (user?.tenantId && token) {
+      request(`/api/v1/leads/${user.tenantId}/scoring-config`, { token })
+        .then((data) => {
+          setScoringFactors(data.factors || []);
+          setScoringCustom(data.is_custom || false);
+        })
+        .catch((err) => console.warn("Scoring config fetch failed:", err.message));
+    }
+  }, [user?.tenantId, token]);
+
+  const handleSaveScoring = async () => {
+    setSavingScoring(true);
+    setScoringStatus(null);
+    try {
+      await request(`/api/v1/leads/${user.tenantId}/scoring-config`, {
+        method: "PUT",
+        token,
+        body: scoringFactors,
+      });
+      setScoringStatus("saved");
+      setScoringCustom(true);
+    } catch (err) {
+      setScoringStatus("error");
+    } finally {
+      setSavingScoring(false);
+    }
+  };
+
+  const handleResetScoring = async () => {
+    if (!confirm("Reset lead scoring to defaults?")) return;
+    try {
+      await request(`/api/v1/leads/${user.tenantId}/scoring-config/reset`, { method: "POST", token });
+      const data = await request(`/api/v1/leads/${user.tenantId}/scoring-config`, { token });
+      setScoringFactors(data.factors || []);
+      setScoringCustom(false);
+      setScoringStatus("reset");
+    } catch (err) {
+      console.warn("Reset scoring failed:", err.message);
+    }
+  };
 
   const handleAddCustomField = async () => {
     if (!newFieldName.trim()) return;
@@ -1224,6 +1272,91 @@ export default function SettingsPage({ onNavigate }) {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Lead Scoring Config */}
+        <div className="settings-card">
+          <h3>Lead Scoring Weights</h3>
+          <p className="settings-card-desc">
+            Customize how leads are scored. Adjust weights for each scoring factor to match your business priorities.
+            {scoringCustom ? " (Custom config active)" : " (Using defaults)"}
+          </p>
+          {scoringFactors.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+              {scoringFactors.map((f, i) => (
+                <div key={f.factor} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                  <input
+                    type="checkbox"
+                    checked={f.is_enabled !== false}
+                    onChange={(e) => {
+                      const updated = [...scoringFactors];
+                      updated[i] = { ...updated[i], is_enabled: e.target.checked };
+                      setScoringFactors(updated);
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: 500 }}>
+                      {f.factor.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </div>
+                    {f.description && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{f.description}</div>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={f.weight}
+                    onChange={(e) => {
+                      const updated = [...scoringFactors];
+                      updated[i] = { ...updated[i], weight: parseInt(e.target.value) || 0 };
+                      setScoringFactors(updated);
+                    }}
+                    style={{
+                      width: 60,
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                      background: "var(--surface)",
+                      color: "var(--text-primary)",
+                      textAlign: "center",
+                    }}
+                  />
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button
+                  className="settings-save-btn"
+                  onClick={handleSaveScoring}
+                  disabled={savingScoring}
+                  style={{ padding: "8px 16px" }}
+                >
+                  {savingScoring ? "Saving..." : "Save Scoring Config"}
+                </button>
+                {scoringCustom && (
+                  <button
+                    onClick={handleResetScoring}
+                    style={{
+                      padding: "8px 16px",
+                      background: "transparent",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reset to Defaults
+                  </button>
+                )}
+              </div>
+              {scoringStatus === "saved" && (
+                <div style={{ color: "var(--green)", fontSize: "0.85rem" }}>Scoring config saved!</div>
+              )}
+              {scoringStatus === "reset" && (
+                <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Reset to defaults.</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* AI Feedback */}

@@ -1179,3 +1179,119 @@ async def get_lead_timeline(
     events = events[:limit]
 
     return {"lead_id": lead_id, "events": events, "count": len(events)}
+
+
+# ---------------------------------------------------------------------------
+# Lead Scoring Config — configurable weights per tenant
+# ---------------------------------------------------------------------------
+
+DEFAULT_SCORING_FACTORS = [
+    {"factor": "has_email", "weight": 15, "description": "Lead has an email address"},
+    {"factor": "has_phone", "weight": 15, "description": "Lead has a phone number"},
+    {"factor": "has_name", "weight": 5, "description": "Lead has a name"},
+    {"factor": "message_volume", "weight": 10, "description": "Number of chat messages"},
+    {"factor": "pricing_intent", "weight": 15, "description": "Asked about pricing or costs"},
+    {"factor": "availability_intent", "weight": 15, "description": "Asked about availability or scheduling"},
+    {"factor": "service_interest", "weight": 10, "description": "Asked about specific services"},
+    {"factor": "urgency_keywords", "weight": 10, "description": "Used urgency language (ASAP, today, etc.)"},
+    {"factor": "emergency_keywords", "weight": 15, "description": "Used emergency language (leak, flood, etc.)"},
+    {"factor": "recency_1h", "weight": 20, "description": "Active in the last hour"},
+    {"factor": "recency_24h", "weight": 15, "description": "Active in the last 24 hours"},
+    {"factor": "insurance_mentioned", "weight": 10, "description": "Mentioned insurance (dental/medical)"},
+    {"factor": "budget_mentioned", "weight": 10, "description": "Mentioned a budget or price range"},
+]
+
+
+class ScoringFactorUpdate(BaseModel):
+    weight: int = Field(..., ge=0, le=100)
+    is_enabled: bool | None = None
+
+
+@router.get("/{tenant_id}/scoring-config")
+async def get_scoring_config(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Get the tenant's lead scoring configuration. Returns defaults if none set."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    result = (
+        db.table("scoring_configs")
+        .select("*")
+        .eq("tenant_id", tenant_id)
+        .order("created_at")
+        .execute()
+    )
+
+    if result.data:
+        return {"factors": result.data, "is_custom": True}
+
+    # Return defaults (not yet saved)
+    defaults = [
+        {**f, "tenant_id": tenant_id, "is_enabled": True, "id": None}
+        for f in DEFAULT_SCORING_FACTORS
+    ]
+    return {"factors": defaults, "is_custom": False}
+
+
+@router.put("/{tenant_id}/scoring-config")
+async def save_scoring_config(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    factors: list[dict] = [],
+):
+    """Save the tenant's lead scoring configuration (upsert all factors)."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Delete existing config
+    try:
+        db.table("scoring_configs").delete().eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.warning("Failed to clear scoring config for %s", tenant_id, exc_info=True)
+
+    # Insert new factors
+    saved = []
+    for f in factors:
+        if not f.get("factor"):
+            continue
+        row = {
+            "tenant_id": tenant_id,
+            "factor": f["factor"],
+            "weight": max(0, min(100, int(f.get("weight", 10)))),
+            "description": f.get("description", ""),
+            "is_enabled": f.get("is_enabled", True),
+        }
+        try:
+            result = db.table("scoring_configs").insert(row).execute()
+            if result.data:
+                saved.append(result.data[0])
+        except Exception:
+            logger.warning("Failed to save scoring factor %s for %s", f["factor"], tenant_id, exc_info=True)
+
+    log_activity(db, tenant_id, None, "scoring_config_updated", f"Updated {len(saved)} scoring factors")
+
+    return {"factors": saved, "count": len(saved)}
+
+
+@router.post("/{tenant_id}/scoring-config/reset")
+async def reset_scoring_config(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Reset scoring config to defaults (deletes custom config)."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    try:
+        db.table("scoring_configs").delete().eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.warning("Failed to reset scoring config for %s", tenant_id, exc_info=True)
+
+    return {"reset": True, "message": "Scoring config reset to defaults"}
