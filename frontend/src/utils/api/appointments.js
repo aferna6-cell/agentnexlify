@@ -47,3 +47,10 @@ export function setAppointmentRecurrence(tenantId, token, appointmentId, rule, e
 export function checkInAppointment(tenantId, token, appointmentId) {
   return request(`/api/v1/appointments/${tenantId}/${appointmentId}/check-in`, { method: "POST", token });
 }
+
+export function rescheduleAppointment(tenantId, token, appointmentId, startTime, endTime) {
+  return request(`/api/v1/appointments/${tenantId}/${appointmentId}/reschedule`, {
+    method: "POST", token,
+    body: { start_time: startTime, end_time: endTime },
+  });
+}

@@ -325,6 +325,124 @@ async def check_in_appointment(
     }
 
 
+@router.post("/{tenant_id}/{appointment_id}/reschedule")
+async def reschedule_appointment(
+    tenant_id: str,
+    appointment_id: str,
+    req: AppointmentUpdateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Reschedule an appointment to a new time.
+
+    Preserves the lead link, sends notification emails/SMS to the customer,
+    logs the change in activity_log, and fires a webhook event.
+    """
+    _verify_tenant(claims, tenant_id)
+
+    if not req.start_time or not req.end_time:
+        raise HTTPException(status_code=400, detail="start_time and end_time are required for rescheduling")
+
+    db = get_supabase()
+
+    # Fetch existing appointment
+    result = db.table("appointments").select("*").eq("id", appointment_id).eq("tenant_id", tenant_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    appointment = result.data[0]
+    old_start = appointment.get("start_time", "")
+    old_end = appointment.get("end_time", "")
+    customer_name = appointment.get("customer_name") or "Customer"
+    customer_email = appointment.get("customer_email")
+    customer_phone = appointment.get("customer_phone")
+
+    from datetime import datetime, timezone as tz
+    now = datetime.now(tz.utc).isoformat()
+
+    # Update the appointment
+    update_data = {
+        "start_time": req.start_time,
+        "end_time": req.end_time,
+        "status": "confirmed",  # Reset to confirmed on reschedule
+        "updated_at": now,
+    }
+    if req.notes:
+        existing_notes = appointment.get("notes") or ""
+        update_data["notes"] = f"{existing_notes}\n[Rescheduled at {now}]".strip()
+
+    db.table("appointments").update(update_data).eq("id", appointment_id).execute()
+
+    # Log activity
+    try:
+        db.table("activity_log").insert({
+            "tenant_id": tenant_id,
+            "lead_id": appointment.get("lead_id"),
+            "activity_type": "appointment_rescheduled",
+            "description": f"Appointment for {customer_name} rescheduled from {old_start} to {req.start_time}",
+        }).execute()
+    except Exception:
+        logger.warning("Failed to log reschedule activity for appointment %s", appointment_id, exc_info=True)
+
+    # Send notification email to customer
+    if customer_email:
+        try:
+            tenant_result = db.table("tenants").select("business_name").eq("id", tenant_id).execute()
+            biz_name = "the business"
+            if tenant_result.data:
+                biz_name = tenant_result.data[0].get("business_name") or "the business"
+
+            from backend.services.email_sender import send_email
+            new_dt = datetime.fromisoformat(req.start_time)
+            formatted_time = new_dt.strftime("%A, %B %d at %I:%M %p")
+
+            send_email(
+                to=customer_email,
+                subject=f"Your appointment with {biz_name} has been rescheduled",
+                html=f"""
+                <h2>Appointment Rescheduled</h2>
+                <p>Hi {customer_name},</p>
+                <p>Your appointment with <strong>{biz_name}</strong> has been rescheduled to:</p>
+                <p style="font-size:18px;font-weight:bold;color:#2563eb;margin:16px 0;">{formatted_time}</p>
+                <p>If this time doesn't work for you, please contact us to find a better time.</p>
+                <p style="color:#666;margin-top:24px;">— {biz_name}</p>
+                """,
+            )
+        except Exception:
+            logger.warning("Failed to send reschedule email for appointment %s", appointment_id, exc_info=True)
+
+    # Send SMS notification
+    if customer_phone:
+        try:
+            from backend.services.sms_sender import send_sms
+            tenant_result = db.table("tenants").select("business_name").eq("id", tenant_id).execute()
+            biz_name = "us"
+            if tenant_result.data:
+                biz_name = tenant_result.data[0].get("business_name") or "us"
+
+            new_dt = datetime.fromisoformat(req.start_time)
+            formatted_time = new_dt.strftime("%a %b %d at %I:%M %p")
+            send_sms(customer_phone, f"Hi {customer_name}, your appointment with {biz_name} has been rescheduled to {formatted_time}. Reply if you need to change.")
+        except Exception:
+            logger.warning("Failed to send reschedule SMS for appointment %s", appointment_id, exc_info=True)
+
+    # Fire webhook
+    fire_event_background(tenant_id, "appointment.rescheduled", {
+        "appointment_id": appointment_id,
+        "customer_name": customer_name,
+        "old_start_time": old_start,
+        "new_start_time": req.start_time,
+        "new_end_time": req.end_time,
+    })
+
+    return {
+        "id": appointment_id,
+        "status": "confirmed",
+        "start_time": req.start_time,
+        "end_time": req.end_time,
+        "message": f"Appointment for {customer_name} has been rescheduled.",
+    }
+
+
 @router.post("/{tenant_id}/{appointment_id}/recur")
 async def set_recurrence(
     tenant_id: str,

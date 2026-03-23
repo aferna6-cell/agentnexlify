@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence, checkInAppointment } from "../utils/api/appointments";
+import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence, checkInAppointment, rescheduleAppointment } from "../utils/api/appointments";
 
 const STATUS_COLORS = {
   confirmed: { bg: "var(--accent-dim)", border: "var(--accent)", text: "var(--accent)" },
@@ -58,6 +58,10 @@ export default function Calendar({ onNavigate }) {
   const [recurRule, setRecurRule] = useState("");
   const [recurEndDate, setRecurEndDate] = useState("");
   const [recurSaving, setRecurSaving] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleStart, setRescheduleStart] = useState("");
+  const [rescheduleEnd, setRescheduleEnd] = useState("");
 
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -91,6 +95,10 @@ export default function Calendar({ onNavigate }) {
     setRecurRule(appt.recurrence_rule || "");
     setRecurEndDate(appt.recurrence_end_date || "");
     setRecurSaving(false);
+    setShowReschedule(false);
+    setRescheduleDate("");
+    setRescheduleStart("");
+    setRescheduleEnd("");
     setError(null);
   };
 
@@ -146,6 +154,20 @@ export default function Calendar({ onNavigate }) {
       loadAppointments();
     } catch (err) {
       setError(err.body?.detail || err.message || "Failed to check in.");
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedAppt || !rescheduleDate || !rescheduleStart || !rescheduleEnd) return;
+    const startISO = new Date(`${rescheduleDate}T${rescheduleStart}`).toISOString();
+    const endISO = new Date(`${rescheduleDate}T${rescheduleEnd}`).toISOString();
+    try {
+      await rescheduleAppointment(user.tenantId, token, selectedAppt.id, startISO, endISO);
+      setError(null);
+      setSelectedAppt(null);
+      loadAppointments();
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to reschedule.");
     }
   };
 
@@ -354,6 +376,36 @@ export default function Calendar({ onNavigate }) {
             {selectedAppt.recurrence_parent_id && (
               <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: 8 }}>
                 &#x21bb; Part of a recurring series
+              </div>
+            )}
+
+            {/* Reschedule section */}
+            {(selectedAppt.status === "confirmed" || selectedAppt.status === "pending") && (
+              <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: 12, marginTop: 8 }}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setShowReschedule((s) => !s)}
+                  style={{ fontSize: "0.85rem", marginBottom: showReschedule ? 8 : 0 }}
+                >
+                  {showReschedule ? "Hide Reschedule" : "Reschedule"}
+                </button>
+                {showReschedule && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
+                    <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)}
+                      min={formatDate(new Date())}
+                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+                    <input type="time" value={rescheduleStart} onChange={(e) => setRescheduleStart(e.target.value)}
+                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+                    <span style={{ color: "var(--text-muted)" }}>to</span>
+                    <input type="time" value={rescheduleEnd} onChange={(e) => setRescheduleEnd(e.target.value)}
+                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+                    <button className="btn-primary" onClick={handleReschedule}
+                      disabled={!rescheduleDate || !rescheduleStart || !rescheduleEnd}
+                      style={{ whiteSpace: "nowrap" }}>
+                      Confirm Reschedule
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
