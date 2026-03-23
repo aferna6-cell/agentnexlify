@@ -234,6 +234,109 @@ def _resolve_tenant_id(db, session: dict) -> str | None:
     return None
 
 
+def _handle_invoice_payment(db, session: dict, invoice_id: str, tenant_id: str | None) -> None:
+    """Handle payment for an AgentNexLiFy invoice via Stripe Payment Link.
+
+    When a customer pays via a Stripe Payment Link created from our invoice system,
+    the checkout.session.completed event contains invoice_id + tenant_id in metadata.
+    This function marks the invoice as paid and logs the activity.
+    """
+    from datetime import datetime, timezone
+    from backend.services.webhook_dispatcher import fire_event_background
+
+    now = datetime.now(timezone.utc).isoformat()
+    amount_total = session.get("amount_total", 0)
+    amount_paid = amount_total / 100.0 if amount_total else 0  # cents to dollars
+    payment_intent = session.get("payment_intent")
+    customer_email = session.get("customer_details", {}).get("email") or session.get("customer_email")
+
+    logger.info(
+        "Invoice payment received: invoice_id=%s, tenant_id=%s, amount=%s, payment_intent=%s",
+        invoice_id, tenant_id, amount_paid, payment_intent,
+    )
+
+    # Fetch the invoice to verify it exists and isn't already paid
+    try:
+        inv_result = db.table("invoices").select("*").eq("id", invoice_id).execute()
+    except Exception:
+        logger.exception("Failed to fetch invoice %s for payment update", invoice_id)
+        return
+
+    if not inv_result.data:
+        logger.warning("Invoice %s not found in database — cannot mark as paid", invoice_id)
+        return
+
+    invoice = inv_result.data[0]
+    if invoice.get("status") == "paid":
+        logger.info("Invoice %s already marked as paid — skipping", invoice_id)
+        return
+
+    # Update invoice to paid
+    update_data = {
+        "status": "paid",
+        "paid_at": now,
+        "amount_paid": amount_paid or invoice.get("total", 0),
+        "payment_method": "stripe",
+        "stripe_payment_id": payment_intent or "",
+        "updated_at": now,
+    }
+
+    try:
+        db.table("invoices").update(update_data).eq("id", invoice_id).execute()
+        logger.info("Invoice %s marked as paid (amount: $%.2f)", invoice_id, amount_paid)
+    except Exception:
+        logger.exception("Failed to update invoice %s to paid", invoice_id)
+        return
+
+    # Log activity
+    resolved_tenant_id = tenant_id or invoice.get("tenant_id")
+    if resolved_tenant_id:
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": resolved_tenant_id,
+                "lead_id": invoice.get("lead_id"),
+                "activity_type": "invoice_paid",
+                "description": f"Invoice {invoice.get('invoice_number', '')} paid via Stripe (${amount_paid:.2f})",
+            }).execute()
+        except Exception:
+            logger.warning("Failed to log activity for invoice %s payment", invoice_id, exc_info=True)
+
+        # Fire webhook event
+        fire_event_background(resolved_tenant_id, "invoice.paid", {
+            "invoice_id": invoice_id,
+            "invoice_number": invoice.get("invoice_number", ""),
+            "amount": amount_paid,
+            "payment_method": "stripe",
+            "customer_email": customer_email or "",
+            "paid_at": now,
+        })
+
+    # Send payment confirmation email to business owner
+    try:
+        tenant_result = db.table("tenants").select("owner_email, business_name").eq("id", resolved_tenant_id).execute()
+        if tenant_result.data:
+            owner_email = tenant_result.data[0].get("owner_email")
+            biz_name = tenant_result.data[0].get("business_name") or "Your Business"
+            if owner_email:
+                from backend.services.email_sender import send_email
+                send_email(
+                    to=owner_email,
+                    subject=f"Payment received: Invoice {invoice.get('invoice_number', '')}",
+                    html=f"""
+                    <h2>Payment Received</h2>
+                    <p>Invoice <strong>{invoice.get('invoice_number', '')}</strong> has been paid.</p>
+                    <table style="border-collapse:collapse;margin:16px 0;">
+                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Amount:</td><td><strong>${amount_paid:.2f}</strong></td></tr>
+                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Customer:</td><td>{customer_email or 'N/A'}</td></tr>
+                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Method:</td><td>Stripe</td></tr>
+                    </table>
+                    <p style="color:#666;font-size:13px;">— {biz_name} via AgentNexLiFy</p>
+                    """,
+                )
+    except Exception:
+        logger.warning("Failed to send payment notification email for invoice %s", invoice_id, exc_info=True)
+
+
 def _handle_checkout_completed(db, session: dict) -> None:
     logger.info(
         "checkout.session.completed: customer_email=%s, customer=%s, "
@@ -246,6 +349,15 @@ def _handle_checkout_completed(db, session: dict) -> None:
         session.get("mode"),
         session.get("status"),
     )
+
+    # ── Invoice payment via Stripe Payment Link ──
+    metadata = session.get("metadata") or {}
+    invoice_id = metadata.get("invoice_id")
+    if invoice_id:
+        _handle_invoice_payment(db, session, invoice_id, metadata.get("tenant_id"))
+        # If this is purely an invoice payment (no subscription), stop here
+        if not session.get("subscription"):
+            return
 
     tenant_id = _resolve_tenant_id(db, session)
     plan = _resolve_plan(session)
