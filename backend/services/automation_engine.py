@@ -2562,3 +2562,180 @@ async def send_birthday_greetings() -> int:
             logger.warning("Failed to log birthday greeting for lead %s", lead_id, exc_info=True)
 
     return sent
+
+
+# ---------------------------------------------------------------------------
+# Recurring Invoice Auto-Generation
+# ---------------------------------------------------------------------------
+
+_RECURRENCE_DAYS = {
+    "weekly": 7,
+    "biweekly": 14,
+    "monthly": 30,
+    "quarterly": 90,
+}
+
+
+async def generate_recurring_invoices() -> int:
+    """Auto-generate invoices for recurring billing schedules.
+
+    Queries invoices where:
+    - is_recurring = true
+    - next_invoice_date <= today
+    - status is 'paid' (only generate next invoice after previous is paid)
+
+    For each, creates a new invoice cloning items/tax/amounts, advances
+    next_invoice_date on the parent, and logs activity. Uses activity_log
+    for dedup (one generation per parent invoice per date).
+
+    Returns count of invoices generated.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    today = now.date().isoformat()
+    generated = 0
+
+    try:
+        due_invoices = (
+            db.table("invoices")
+            .select("id, tenant_id, lead_id, invoice_number, items_json, subtotal, tax_amount, tax_rate, total, "
+                    "notes, is_recurring, recurrence_interval, next_invoice_date, deposit_amount")
+            .eq("is_recurring", True)
+            .eq("status", "paid")
+            .lte("next_invoice_date", today)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("generate_recurring_invoices: failed to query due invoices")
+        return 0
+
+    if not due_invoices.data:
+        return 0
+
+    for parent in due_invoices.data:
+        parent_id = parent["id"]
+        tenant_id = parent.get("tenant_id")
+        lead_id = parent.get("lead_id")
+        interval = parent.get("recurrence_interval") or "monthly"
+
+        if not tenant_id:
+            continue
+
+        # Dedup: check if we already generated for this parent today
+        dedup_tag = f"recurring_invoice_{parent_id}_{today}"
+        try:
+            existing = (
+                db.table("activity_log")
+                .select("id", count="exact")
+                .eq("tenant_id", tenant_id)
+                .eq("activity_type", dedup_tag)
+                .limit(1)
+                .execute()
+            )
+            if existing.count and existing.count > 0:
+                continue
+        except Exception:
+            logger.warning("generate_recurring_invoices: dedup check failed for %s", parent_id)
+            continue
+
+        # Generate next invoice number
+        try:
+            last_result = (
+                db.table("invoices")
+                .select("invoice_number")
+                .eq("tenant_id", tenant_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if last_result.data:
+                last_num = last_result.data[0].get("invoice_number") or "INV-XXXX-000"
+                parts = last_num.rsplit("-", 1)
+                try:
+                    next_seq = int(parts[-1]) + 1
+                except (ValueError, IndexError):
+                    next_seq = 1
+                new_number = f"{parts[0]}-{next_seq:03d}"
+            else:
+                prefix = tenant_id[:4].upper() if tenant_id else "XXXX"
+                new_number = f"INV-{prefix}-001"
+        except Exception:
+            logger.warning("generate_recurring_invoices: failed to generate invoice number for tenant %s", tenant_id)
+            prefix = tenant_id[:4].upper() if tenant_id else "XXXX"
+            new_number = f"INV-{prefix}-001"
+
+        # Calculate next due date from recurrence interval
+        interval_days = _RECURRENCE_DAYS.get(interval, 30)
+        next_due = (now.date() + timedelta(days=interval_days)).isoformat()
+
+        # Create new invoice
+        new_invoice_data = {
+            "tenant_id": tenant_id,
+            "lead_id": lead_id,
+            "invoice_number": new_number,
+            "items_json": parent.get("items_json") or [],
+            "subtotal": parent.get("subtotal", 0),
+            "tax_amount": parent.get("tax_amount", 0),
+            "tax_rate": parent.get("tax_rate", 0),
+            "total": parent.get("total", 0),
+            "deposit_amount": parent.get("deposit_amount", 0),
+            "notes": parent.get("notes"),
+            "status": "draft",
+            "due_date": next_due,
+            "is_recurring": True,
+            "recurrence_interval": interval,
+            "parent_invoice_id": parent_id,
+        }
+
+        try:
+            result = db.table("invoices").insert(new_invoice_data).execute()
+            if not result.data:
+                logger.warning("generate_recurring_invoices: insert returned no data for parent %s", parent_id)
+                continue
+        except Exception:
+            logger.exception("generate_recurring_invoices: failed to create invoice for parent %s", parent_id)
+            continue
+
+        new_invoice = result.data[0]
+        generated += 1
+
+        # Advance next_invoice_date on the parent
+        next_generation_date = (now.date() + timedelta(days=interval_days)).isoformat()
+        try:
+            db.table("invoices").update({
+                "next_invoice_date": next_generation_date,
+            }).eq("id", parent_id).execute()
+        except Exception:
+            logger.warning("generate_recurring_invoices: failed to advance next_invoice_date for %s", parent_id)
+
+        # Log activity for dedup and audit trail
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "lead_id": lead_id,
+                "activity_type": dedup_tag,
+                "description": f"Auto-generated recurring invoice {new_number} from parent {parent.get('invoice_number', parent_id)}",
+            }).execute()
+        except Exception:
+            logger.warning("generate_recurring_invoices: failed to log activity for %s", parent_id)
+
+        # Fire webhook
+        try:
+            fire_event_background(tenant_id, "invoice.created", {
+                "invoice_id": new_invoice.get("id"),
+                "invoice_number": new_number,
+                "total": new_invoice.get("total"),
+                "status": "draft",
+                "recurring": True,
+                "parent_invoice_id": parent_id,
+            })
+        except Exception:
+            pass  # Non-critical
+
+        logger.info(
+            "generate_recurring_invoices: created %s for tenant %s (parent=%s, interval=%s)",
+            new_number, tenant_id, parent.get("invoice_number"), interval,
+        )
+
+    return generated

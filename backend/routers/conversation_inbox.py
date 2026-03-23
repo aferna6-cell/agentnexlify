@@ -390,3 +390,119 @@ async def get_presence(
         .execute()
     )
     return {"active_members": result.data or []}
+
+
+# ---------------------------------------------------------------------------
+# Conversation Search
+# ---------------------------------------------------------------------------
+
+@router.get("/{tenant_id}/search")
+async def search_conversations(
+    tenant_id: str,
+    q: str = "",
+    limit: int = 50,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Full-text search across chat_messages for a tenant.
+
+    Searches message content using Supabase ilike (case-insensitive).
+    Returns matching conversations with the matching message snippets.
+    """
+    _verify_tenant(claims, tenant_id)
+    if not q or len(q.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Search query must be at least 2 characters")
+
+    q = q.strip()
+    if limit > 200:
+        limit = 200
+
+    db = get_supabase()
+
+    # Search chat_messages for matching content
+    try:
+        messages_result = (
+            db.table("chat_messages")
+            .select("session_id, role, content, created_at")
+            .eq("tenant_id", tenant_id)
+            .ilike("content", f"%{q}%")
+            .order("created_at", desc=True)
+            .limit(limit * 2)  # Over-fetch since we'll group by session
+            .execute()
+        )
+    except Exception:
+        logger.exception("search_conversations: chat_messages search failed for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Search failed")
+
+    if not messages_result.data:
+        return {"results": [], "query": q, "total": 0}
+
+    # Group by session_id, keep first matching message per session
+    seen_sessions = {}
+    for msg in messages_result.data:
+        sid = msg.get("session_id")
+        if not sid or sid in seen_sessions:
+            continue
+        # Extract snippet around the match
+        content = msg.get("content") or ""
+        lower_content = content.lower()
+        lower_q = q.lower()
+        idx = lower_content.find(lower_q)
+        if idx >= 0:
+            start = max(0, idx - 60)
+            end = min(len(content), idx + len(q) + 60)
+            snippet = ("..." if start > 0 else "") + content[start:end] + ("..." if end < len(content) else "")
+        else:
+            snippet = content[:120] + ("..." if len(content) > 120 else "")
+
+        seen_sessions[sid] = {
+            "session_id": sid,
+            "snippet": snippet,
+            "role": msg.get("role"),
+            "matched_at": msg.get("created_at"),
+        }
+
+        if len(seen_sessions) >= limit:
+            break
+
+    # Enrich with conversation metadata (lead info, tags)
+    session_ids = list(seen_sessions.keys())
+    if session_ids:
+        try:
+            convos = (
+                db.table("conversations")
+                .select("session_id, lead_id, tags, assigned_to")
+                .eq("client_id", tenant_id)
+                .in_("session_id", session_ids[:100])
+                .execute()
+            )
+            conv_by_session = {c["session_id"]: c for c in (convos.data or [])}
+        except Exception:
+            logger.warning("search_conversations: failed to enrich with conversation data")
+            conv_by_session = {}
+
+        # Get lead names for conversations with lead_id
+        lead_ids = [c.get("lead_id") for c in conv_by_session.values() if c.get("lead_id")]
+        lead_names = {}
+        if lead_ids:
+            try:
+                leads = (
+                    db.table("leads")
+                    .select("id, name, email")
+                    .in_("id", lead_ids[:100])
+                    .execute()
+                )
+                lead_names = {l["id"]: l for l in (leads.data or [])}
+            except Exception:
+                logger.warning("search_conversations: failed to fetch lead names")
+
+        for sid, result in seen_sessions.items():
+            conv = conv_by_session.get(sid, {})
+            result["tags"] = conv.get("tags") or []
+            result["assigned_to"] = conv.get("assigned_to")
+            lead_id = conv.get("lead_id")
+            if lead_id and lead_id in lead_names:
+                result["lead_name"] = lead_names[lead_id].get("name")
+                result["lead_email"] = lead_names[lead_id].get("email")
+
+    results = list(seen_sessions.values())
+    return {"results": results, "query": q, "total": len(results)}

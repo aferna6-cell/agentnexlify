@@ -5,6 +5,7 @@ import { fetchTeamMembers } from "../utils/api/team";
 import {
   assignConversation, fetchConversationNotes,
   createConversationNote, deleteConversationNote, replyToConversation,
+  searchConversations,
 } from "../utils/api/inbox";
 import { fetchSnippets } from "../utils/api/snippets";
 import { fetchTagDefinitions } from "../utils/api/tags";
@@ -91,6 +92,11 @@ export default function ConversationsPage() {
   const [snippetsCache, setSnippetsCache] = useState(null); // null = not loaded yet
   const [snippetsLoading, setSnippetsLoading] = useState(false);
   const [snippetSearch, setSnippetSearch] = useState("");
+  // Server-side search state
+  const [serverSearchResults, setServerSearchResults] = useState(null);
+  const [serverSearching, setServerSearching] = useState(false);
+  const searchTimerRef = useRef(null);
+
   const snippetPickerRef = useRef(null);
   const replyTextareaRef = useRef(null);
   const snippetSearchRef = useRef(null);
@@ -669,10 +675,33 @@ export default function ConversationsPage() {
 
             <input
               className="conv-search"
-              placeholder="Search conversations..."
+              placeholder="Search conversations... (3+ chars for deep search)"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearch(val);
+                // Debounced server-side search for 3+ char queries
+                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                if (val.trim().length >= 3) {
+                  searchTimerRef.current = setTimeout(async () => {
+                    setServerSearching(true);
+                    try {
+                      const res = await searchConversations(user.tenantId, token, val.trim());
+                      setServerSearchResults(res.results || []);
+                    } catch { setServerSearchResults(null); }
+                    setServerSearching(false);
+                  }, 400);
+                } else {
+                  setServerSearchResults(null);
+                  setServerSearching(false);
+                }
+              }}
             />
+            {serverSearching && (
+              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", padding: "2px 8px" }}>
+                Searching message history...
+              </div>
+            )}
             <select
               value={channelFilter}
               onChange={(e) => { setChannelFilter(e.target.value); setSelected(null); }}
@@ -695,6 +724,56 @@ export default function ConversationsPage() {
                 ))}
               </select>
             )}
+            {/* Server search results overlay */}
+            {serverSearchResults && serverSearchResults.length > 0 && (
+              <div style={{
+                background: "var(--bg-tertiary, rgba(30,58,95,0.3))",
+                borderRadius: 8,
+                padding: "8px",
+                marginBottom: 8,
+                border: "1px solid var(--accent, #00BFFF)",
+              }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--accent, #00BFFF)", fontWeight: 600, marginBottom: 6 }}>
+                  Message Search Results ({serverSearchResults.length})
+                </div>
+                {serverSearchResults.slice(0, 20).map((r, idx) => (
+                  <div
+                    key={r.session_id + idx}
+                    style={{
+                      padding: "6px 8px",
+                      marginBottom: 4,
+                      borderRadius: 6,
+                      background: selected === r.session_id ? "var(--accent-bg, rgba(0,191,255,0.1))" : "var(--bg-secondary)",
+                      cursor: "pointer",
+                      fontSize: "0.78rem",
+                    }}
+                    onClick={() => {
+                      setSelected(r.session_id);
+                      const conv = conversations.find((c) => c.session_id === r.session_id);
+                      if (conv) handleSelect(conv);
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                      {r.lead_name || "Visitor"}
+                      {r.tags && r.tags.length > 0 && (
+                        <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginLeft: 6 }}>
+                          {r.tags.slice(0, 2).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ color: "var(--text-secondary)", fontSize: "0.72rem", marginTop: 2 }}>
+                      {r.snippet}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {serverSearchResults && serverSearchResults.length === 0 && search.trim().length >= 3 && !serverSearching && (
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", padding: "8px", textAlign: "center" }}>
+                No messages found for "{search.trim()}"
+              </div>
+            )}
+
             <div className="conv-list">
               {filtered.map((c) => {
                 const assigneeName = getAssigneeName(c.assigned_to);

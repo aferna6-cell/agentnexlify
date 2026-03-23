@@ -454,3 +454,23 @@ _The continuous loop works through this backlog using the work hierarchy: Featur
 
 - [x] [RESEARCHED] **QR code generator for widget + review links** — Generate QR codes on the dashboard that open the chat widget or Google review page when scanned. Podium uses QR codes heavily for in-store review collection. Physical businesses (restaurants, salons, contractors) can print and display them.
 - [x] [RESEARCHED] **Competitor analysis dashboard** — DONE 2026-03-22 Cycle 167. Enter competitor names, get AI comparison of SEO scores, strengths, gaps, recommendations of SEO scores, review ratings, and visibility. Uses existing AI audit engine to analyze competitors. Fully buildable without external APIs.
+
+## Features — New Opportunities (2026-03-23)
+
+_Added during session 2026-03-23 code audit. Focused on reliability, engagement, and monetization._
+
+- [ ] **Appointment waitlist** — When all slots are booked, let visitors join a waitlist. When a cancellation opens a slot, auto-notify waitlisted leads. Table: waitlist_entries (tenant_id, lead_id, preferred_date, preferred_time, service_type_id, status, notified_at). Widget booking flow shows "Join Waitlist" when no slots available.
+- [ ] **Lead activity timeline on dashboard** — A unified chronological timeline on the LeadDetailDrawer showing all interactions: chat messages, emails sent, SMS sent/received, appointments booked/completed, invoices sent/paid, documents signed, notes added. Currently data is scattered across tables.
+- [ ] **Bulk lead actions** — Select multiple leads on LeadsPage and perform bulk: assign to team member, change status, add tag, send campaign, delete. Currently all actions are single-lead only.
+- [ ] **Dashboard quick stats email digest** — Daily morning email to business owner with yesterday's key metrics: new leads, conversations, appointments booked, revenue collected. Lighter than the weekly AI insights brief.
+- [ ] **Webhook retry with exponential backoff** — Currently webhook delivery attempts once. Add retry logic: 3 attempts with exponential backoff (1min, 5min, 30min). Track retry count in webhook_logs. Disable webhook after 10 consecutive failures.
+- [ ] **Conversation search** — Full-text search across chat_messages for a tenant. Business owners need to find "that conversation where someone asked about roof repair". Backend: GET /conversations/search?q=keyword. Frontend: search input on ConversationsPage.
+- [ ] **Lead scoring v2 — configurable weights** — Let business owners customize lead scoring weights per business type. Dental offices might weight "insurance mentioned" higher. Table: scoring_config (tenant_id, factor, weight). UI on settings page.
+- [ ] **Multi-location support** — Some businesses have multiple locations. Each location gets its own widget config, business hours, and team. Table: locations (tenant_id, name, address, timezone, business_hours). Widget scoped by location_id.
+- [ ] **Email template visual editor** — Replace the plain textarea email editor with a visual block editor (heading, paragraph, image, button, divider). Store as HTML. Preview panel. Currently email templates are raw text.
+- [ ] **Appointment no-show tracking** — Add "no_show" status to appointments. Auto-mark no-shows for appointments with no check-in 30 min after start time. Analytics: no-show rate, repeat no-show leads. Trigger sequence for no-show follow-up.
+- [ ] **Client portal appointment self-scheduling** — Clients with portal login can view available slots and book their own appointments. Currently booking is only through the widget or dashboard.
+- [ ] **Voice message transcription in widget** — Allow widget visitors to record voice messages. Transcribe via Whisper API and save as text in chat_messages. Business owner sees both transcript and audio player.
+- [ ] **Invoice recurring auto-generation** — For leads with is_recurring invoices, auto-generate the next invoice on next_invoice_date. Background task in automation loop. Currently the fields exist but nothing processes them.
+- [ ] **Lead import from Google Contacts** — OAuth to Google Contacts, import contacts as leads with name/email/phone. One-click import for businesses switching from paper/spreadsheet tracking.
+- [ ] **Dashboard customizable widgets** — Let business owners rearrange and show/hide dashboard widgets (stats cards, recent leads, today's appointments, AI insights). Store layout preference in tenants table as JSONB.

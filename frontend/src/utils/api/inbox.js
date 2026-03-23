@@ -38,3 +38,7 @@ export function updatePresence(tenantId, token, conversationId) {
 export function getPresence(tenantId, token) {
   return request(`/api/v1/inbox/${tenantId}/presence`, { token });
 }
+
+export function searchConversations(tenantId, token, query, limit = 50) {
+  return request(`/api/v1/inbox/${tenantId}/search?q=${encodeURIComponent(query)}&limit=${limit}`, { token });
+}
