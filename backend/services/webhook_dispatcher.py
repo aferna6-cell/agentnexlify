@@ -33,7 +33,8 @@ SUPPORTED_EVENTS = {
 }
 
 _TIMEOUT = 10.0
-_RETRY_DELAY = 30
+_MAX_RETRIES = 3
+_RETRY_DELAYS = [60, 300, 1800]  # 1min, 5min, 30min exponential backoff
 _MAX_FAILURES = 10
 _DAILY_LIMIT = 1000
 
@@ -106,9 +107,9 @@ async def _deliver(
     tenant_id: str,
     webhook: dict,
     payload: dict,
-    is_retry: bool = False,
+    attempt: int = 0,
 ) -> None:
-    """POST payload to a single webhook URL. Log result. Retry once on failure."""
+    """POST payload to a single webhook URL. Log result. Retry with exponential backoff on failure."""
     webhook_id = webhook["id"]
     url = webhook["url"]
     payload_bytes = json.dumps(payload, default=str).encode()
@@ -135,14 +136,14 @@ async def _deliver(
 
     _increment_daily(tenant_id)
 
-    # Log delivery
+    # Log delivery attempt
     try:
         db.table("webhook_logs").insert({
             "webhook_id": webhook_id,
             "event": payload.get("event", ""),
             "payload": payload,
             "response_status": status_code,
-            "response_body": response_body,
+            "response_body": response_body if attempt == 0 else f"[retry {attempt}] {response_body}",
             "success": success,
         }).execute()
     except Exception:
@@ -157,6 +158,8 @@ async def _deliver(
             }).eq("id", webhook_id).execute()
         except Exception:
             logger.warning("Failed to reset failure count for webhook %s", webhook_id, exc_info=True)
+        if attempt > 0:
+            logger.info("Webhook %s delivery succeeded on retry %d", webhook_id, attempt)
     else:
         # Increment failure count
         try:
@@ -179,10 +182,20 @@ async def _deliver(
         except Exception:
             logger.exception("Failed to update failure count for webhook %s", webhook_id)
 
-        # Retry once after delay
-        if not is_retry:
-            await asyncio.sleep(_RETRY_DELAY)
-            await _deliver(tenant_id, webhook, payload, is_retry=True)
+        # Retry with exponential backoff (1min, 5min, 30min)
+        if attempt < _MAX_RETRIES:
+            delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
+            logger.info(
+                "Webhook %s delivery failed (attempt %d/%d), retrying in %ds",
+                webhook_id, attempt + 1, _MAX_RETRIES + 1, delay,
+            )
+            await asyncio.sleep(delay)
+            await _deliver(tenant_id, webhook, payload, attempt=attempt + 1)
+        else:
+            logger.warning(
+                "Webhook %s delivery failed after %d attempts, giving up",
+                webhook_id, attempt + 1,
+            )
 
 
 def fire_event_background(tenant_id: str, event: str, data: dict[str, Any]) -> None:

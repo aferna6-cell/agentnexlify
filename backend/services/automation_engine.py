@@ -2808,3 +2808,185 @@ async def detect_appointment_no_shows() -> int:
         logger.info("detect_appointment_no_shows: marked %d appointments as no_show", marked)
 
     return marked
+
+
+# ---------------------------------------------------------------------------
+# Daily Quick Stats Email Digest
+# ---------------------------------------------------------------------------
+
+
+async def send_daily_digest_emails() -> int:
+    """
+    Send a morning email digest to paid-plan business owners with yesterday's key metrics.
+    Runs once daily (dedup via activity_log). Lighter than the weekly AI insights brief.
+    """
+    db = get_supabase()
+
+    # Only send to paid tenants
+    try:
+        tenants = (
+            db.table("tenants")
+            .select("id, business_name, owner_email, plan")
+            .in_("plan", ["growth", "professional", "autopilot", "enterprise"])
+            .eq("plan_status", "active")
+            .limit(500)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_daily_digest_emails: failed to fetch tenants")
+        return 0
+
+    if not tenants.data:
+        return 0
+
+    now = datetime.now(timezone.utc)
+    today_str = now.strftime("%Y-%m-%d")
+    yesterday = now - timedelta(days=1)
+    yesterday_str = yesterday.strftime("%Y-%m-%d")
+    yesterday_end = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    yesterday_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+    sent = 0
+    for tenant in tenants.data:
+        tenant_id = tenant["id"]
+        owner_email = tenant.get("owner_email")
+        business_name = tenant.get("business_name") or "Your Business"
+
+        if not owner_email:
+            continue
+
+        # Dedup: check if we already sent today
+        try:
+            dedup = (
+                db.table("activity_log")
+                .select("id")
+                .eq("tenant_id", tenant_id)
+                .eq("activity_type", "daily_digest_sent")
+                .gte("created_at", f"{today_str}T00:00:00Z")
+                .limit(1)
+                .execute()
+            )
+            if dedup.data:
+                continue
+        except Exception:
+            continue
+
+        # Gather yesterday's metrics
+        try:
+            # New leads
+            new_leads = (
+                db.table("leads")
+                .select("id", count="exact")
+                .eq("client_id", tenant_id)
+                .gte("created_at", yesterday_start)
+                .lt("created_at", yesterday_end)
+                .limit(1)
+                .execute()
+            )
+            lead_count = new_leads.count or 0
+
+            # New conversations
+            new_convos = (
+                db.table("conversations")
+                .select("id", count="exact")
+                .eq("client_id", tenant_id)
+                .gte("created_at", yesterday_start)
+                .lt("created_at", yesterday_end)
+                .limit(1)
+                .execute()
+            )
+            convo_count = new_convos.count or 0
+
+            # Appointments booked
+            new_appts = (
+                db.table("appointments")
+                .select("id", count="exact")
+                .eq("tenant_id", tenant_id)
+                .gte("created_at", yesterday_start)
+                .lt("created_at", yesterday_end)
+                .limit(1)
+                .execute()
+            )
+            appt_count = new_appts.count or 0
+
+            # Invoices paid
+            paid_invoices = (
+                db.table("invoices")
+                .select("total")
+                .eq("tenant_id", tenant_id)
+                .eq("status", "paid")
+                .gte("paid_at", yesterday_start)
+                .lt("paid_at", yesterday_end)
+                .limit(100)
+                .execute()
+            )
+            revenue = sum(float(inv.get("total") or 0) for inv in (paid_invoices.data or []))
+
+        except Exception:
+            logger.warning("send_daily_digest_emails: failed to gather metrics for %s", tenant_id, exc_info=True)
+            continue
+
+        # Build email
+        yesterday_display = yesterday.strftime("%A, %B %d")
+        revenue_str = f"${revenue:,.2f}" if revenue > 0 else "$0"
+
+        email_html = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #1a1a2e; margin-bottom: 4px;">{business_name} — Daily Recap</h2>
+            <p style="color: #666; margin-top: 0; font-size: 14px;">{yesterday_display}</p>
+
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px 0; color: #333; font-weight: 600;">New Leads</td>
+                    <td style="padding: 12px 0; text-align: right; font-size: 20px; font-weight: 700; color: #6C5CE7;">{lead_count}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px 0; color: #333; font-weight: 600;">Conversations</td>
+                    <td style="padding: 12px 0; text-align: right; font-size: 20px; font-weight: 700; color: #6C5CE7;">{convo_count}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px 0; color: #333; font-weight: 600;">Appointments Booked</td>
+                    <td style="padding: 12px 0; text-align: right; font-size: 20px; font-weight: 700; color: #6C5CE7;">{appt_count}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 0; color: #333; font-weight: 600;">Revenue Collected</td>
+                    <td style="padding: 12px 0; text-align: right; font-size: 20px; font-weight: 700; color: #27ae60;">{revenue_str}</td>
+                </tr>
+            </table>
+
+            <p style="text-align: center; margin-top: 24px;">
+                <a href="https://app.agentnexlify.com/dashboard"
+                   style="display: inline-block; padding: 12px 24px; background: #6C5CE7; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    Open Dashboard
+                </a>
+            </p>
+
+            <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
+                You're receiving this because you're on the {tenant.get('plan', 'paid')} plan.
+                Manage notifications in your dashboard settings.
+            </p>
+        </div>
+        """
+
+        try:
+            await asyncio.to_thread(
+                send_email,
+                to=owner_email,
+                subject=f"{business_name} — Yesterday: {lead_count} leads, {convo_count} chats, {appt_count} appointments",
+                html=email_html,
+                from_name=business_name,
+            )
+            sent += 1
+
+            # Mark as sent (dedup)
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "activity_type": "daily_digest_sent",
+                "description": f"Daily digest sent: {lead_count} leads, {convo_count} convos, {appt_count} appts, {revenue_str} revenue",
+            }).execute()
+        except Exception:
+            logger.warning("send_daily_digest_emails: failed to send to %s for tenant %s", owner_email, tenant_id, exc_info=True)
+
+    if sent > 0:
+        logger.info("send_daily_digest_emails: sent %d digest emails", sent)
+    return sent
