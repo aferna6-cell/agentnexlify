@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, reviews, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhooks, widget_chat, widget_config, widget_lead
+from backend.routers import action_items, analytics, analytics_team, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, reviews, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhooks, widget_chat, widget_config, widget_lead
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -407,6 +407,7 @@ async def log_requests(request: Request, call_next):
 
 # --- Routers ---
 app.include_router(analytics.router)
+app.include_router(analytics_team.router)  # Team performance + UTM analytics
 app.include_router(appointments.router)
 app.include_router(auth.router)
 app.include_router(automations.router)
