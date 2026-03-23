@@ -215,6 +215,7 @@ def create_appointment(
     end_time: str,
     customer_phone: str | None = None,
     notes: str | None = None,
+    lead_id: str | None = None,
 ) -> dict:
     """Create a new appointment. Raises on double-booking (DB constraint)."""
     db = get_supabase()
@@ -229,18 +230,21 @@ def create_appointment(
         "status": "confirmed",
         "notes": notes,
     }
+    if lead_id:
+        payload["lead_id"] = lead_id
 
     result = db.table("appointments").insert(payload).execute()
     appointment = result.data[0]
 
-    # Link to lead
-    try:
-        lead_id = link_appointment_to_lead(tenant_id, appointment)
-        if lead_id:
-            db.table("appointments").update({"lead_id": lead_id}).eq("id", appointment["id"]).execute()
-            appointment["lead_id"] = lead_id
-    except Exception:
-        logger.warning("Failed to link appointment %s to lead", appointment["id"], exc_info=True)
+    # Link to lead (if not already linked)
+    if not lead_id:
+        try:
+            lead_id = link_appointment_to_lead(tenant_id, appointment)
+            if lead_id:
+                db.table("appointments").update({"lead_id": lead_id}).eq("id", appointment["id"]).execute()
+                appointment["lead_id"] = lead_id
+        except Exception:
+            logger.warning("Failed to link appointment %s to lead", appointment["id"], exc_info=True)
 
     # Sync to Google Calendar (best-effort)
     try:

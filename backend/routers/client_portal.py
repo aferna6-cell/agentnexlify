@@ -781,3 +781,194 @@ async def toggle_client_login(
     except Exception:
         logger.exception("Failed to toggle client login for tenant %s", tenant_id)
         raise HTTPException(status_code=500, detail="Failed to update setting")
+
+
+# ---------------------------------------------------------------------------
+# Client Self-Scheduling — clients can view available slots and book
+# ---------------------------------------------------------------------------
+
+
+class ClientBookingRequest(BaseModel):
+    date: str  # YYYY-MM-DD
+    start_time: str  # ISO 8601
+    end_time: str  # ISO 8601
+    service_type_id: str | None = None
+    notes: str | None = None
+
+
+@router.get("/client/slots")
+@limiter.limit("30/minute")
+async def client_available_slots(
+    request: Request,
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    claims: dict = Depends(_get_current_client),
+):
+    """Get available appointment slots for a date. Authenticated client endpoint."""
+    from datetime import date as date_type
+    from backend.services.booking import generate_available_slots, get_business_hours
+
+    tenant_id = claims["tenant_id"]
+
+    try:
+        parsed_date = date_type.fromisoformat(date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    config = get_business_hours(tenant_id)
+    tz = config["timezone"] if config else "America/New_York"
+
+    slots = generate_available_slots(tenant_id, parsed_date)
+
+    # Fetch service types if available
+    service_types = []
+    try:
+        st_result = (
+            get_supabase()
+            .table("service_types")
+            .select("id, name, duration_minutes, price, description")
+            .eq("tenant_id", tenant_id)
+            .eq("is_active", True)
+            .order("sort_order")
+            .execute()
+        )
+        service_types = st_result.data or []
+    except Exception:
+        logger.warning("Failed to fetch service types for tenant %s", tenant_id)
+
+    return {
+        "date": date,
+        "timezone": tz,
+        "slots": slots,
+        "service_types": service_types,
+    }
+
+
+@router.post("/client/book")
+@limiter.limit("5/minute")
+async def client_book_appointment(
+    request: Request,
+    req: ClientBookingRequest,
+    claims: dict = Depends(_get_current_client),
+):
+    """Book an appointment as an authenticated client."""
+    from backend.services.booking import create_appointment
+    from backend.services.webhook_dispatcher import fire_event_background
+
+    tenant_id = claims["tenant_id"]
+    lead_id = claims["lead_id"]
+    db = get_supabase()
+
+    # Get client info
+    lead_result = (
+        db.table("leads")
+        .select("name, email, phone")
+        .eq("id", lead_id)
+        .eq("client_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not lead_result.data:
+        raise HTTPException(status_code=404, detail="Client record not found")
+
+    lead = lead_result.data[0]
+
+    # Check if booking is enabled
+    wc_result = (
+        db.table("widget_configs")
+        .select("booking_enabled")
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not wc_result.data or not wc_result.data[0].get("booking_enabled"):
+        raise HTTPException(status_code=400, detail="Online booking is not enabled")
+
+    try:
+        appointment = create_appointment(
+            tenant_id=tenant_id,
+            customer_name=lead.get("name") or "Client",
+            customer_email=lead.get("email"),
+            customer_phone=lead.get("phone"),
+            start_time=req.start_time,
+            end_time=req.end_time,
+            notes=req.notes or "Booked via Client Portal",
+            lead_id=lead_id,
+        )
+    except Exception as exc:
+        err_msg = str(exc)
+        if "exclusion" in err_msg.lower() or "conflicting" in err_msg.lower():
+            raise HTTPException(status_code=409, detail="This time slot is no longer available")
+        logger.exception("Client portal booking failed for tenant %s, lead %s", tenant_id, lead_id)
+        raise HTTPException(status_code=500, detail="Failed to create appointment")
+
+    fire_event_background(tenant_id, "appointment.booked", {
+        "appointment_id": appointment["id"],
+        "customer_name": appointment["customer_name"],
+        "customer_email": appointment.get("customer_email"),
+        "start_time": appointment["start_time"],
+        "end_time": appointment["end_time"],
+        "source": "client_portal",
+    })
+
+    # Log activity
+    try:
+        db.table("activity_log").insert({
+            "tenant_id": tenant_id,
+            "lead_id": lead_id,
+            "activity_type": "appointment_booked",
+            "description": f"Self-scheduled via Client Portal: {appointment['start_time'][:16]}",
+        }).execute()
+    except Exception:
+        logger.warning("Failed to log client portal booking activity")
+
+    return {
+        "id": appointment["id"],
+        "start_time": appointment["start_time"],
+        "end_time": appointment["end_time"],
+        "status": appointment["status"],
+        "message": "Appointment booked successfully!",
+    }
+
+
+@router.delete("/client/appointments/{appointment_id}")
+@limiter.limit("5/minute")
+async def client_cancel_appointment(
+    request: Request,
+    appointment_id: str,
+    claims: dict = Depends(_get_current_client),
+):
+    """Cancel an appointment as an authenticated client."""
+    tenant_id = claims["tenant_id"]
+    lead_id = claims["lead_id"]
+    db = get_supabase()
+
+    # Verify appointment belongs to this client
+    appt = (
+        db.table("appointments")
+        .select("id, tenant_id, lead_id, status, start_time")
+        .eq("id", appointment_id)
+        .eq("tenant_id", tenant_id)
+        .eq("lead_id", lead_id)
+        .limit(1)
+        .execute()
+    )
+    if not appt.data:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    if appt.data[0].get("status") in ("cancelled", "completed", "no_show"):
+        raise HTTPException(status_code=400, detail=f"Cannot cancel appointment with status: {appt.data[0]['status']}")
+
+    # Cancel
+    db.table("appointments").update({"status": "cancelled"}).eq("id", appointment_id).execute()
+
+    # Notify waitlist
+    try:
+        from backend.routers.waitlist import notify_waitlist_for_cancellation
+        start_time = appt.data[0].get("start_time", "")
+        if start_time and "T" in start_time:
+            cancelled_date = start_time[:10]
+            notify_waitlist_for_cancellation(tenant_id, cancelled_date, start_time, "")
+    except Exception:
+        logger.warning("Failed to trigger waitlist notifications from client cancel")
+
+    return {"status": "cancelled", "id": appointment_id}

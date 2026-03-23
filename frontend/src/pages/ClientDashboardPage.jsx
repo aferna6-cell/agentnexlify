@@ -83,7 +83,7 @@ export default function ClientDashboardPage() {
         {/* Tab Content */}
         <div style={s.content}>
           {activeTab === "overview" && <OverviewTab data={data} />}
-          {activeTab === "appointments" && <AppointmentsTab items={appointments || []} />}
+          {activeTab === "appointments" && <AppointmentsTab items={appointments || []} slug={slug} rebookEnabled={data.rebook_enabled} onRefresh={() => window.location.reload()} />}
           {activeTab === "invoices" && <InvoicesTab items={invoices || []} />}
           {activeTab === "services" && <ServicesTab items={service_records || []} />}
           {activeTab === "documents" && <DocumentsTab items={documents || []} />}
@@ -146,25 +146,191 @@ function StatCard({ label, value, color }) {
   );
 }
 
-function AppointmentsTab({ items }) {
-  if (!items.length) return <EmptyState text="No appointments yet." />;
+function AppointmentsTab({ items, slug, rebookEnabled, onRefresh }) {
+  const [showBooking, setShowBooking] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [bookingMsg, setBookingMsg] = useState(null);
+  const [cancelling, setCancelling] = useState(null);
+
+  const token = sessionStorage.getItem(`client_token_${slug}`);
+
+  const loadSlots = async (date) => {
+    if (!date || !token) return;
+    setLoadingSlots(true);
+    setSlots([]);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/portal/client/slots?date=${date}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to load slots");
+      const data = await res.json();
+      setSlots(data.slots || []);
+    } catch (err) {
+      setBookingMsg(err.message);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const handleDateChange = (e) => {
+    const d = e.target.value;
+    setSelectedDate(d);
+    setBookingMsg(null);
+    if (d) loadSlots(d);
+  };
+
+  const handleBook = async (slot) => {
+    if (!token) return;
+    setBooking(true);
+    setBookingMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/portal/client/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ date: selectedDate, start_time: slot.start, end_time: slot.end }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Booking failed");
+      setBookingMsg("Appointment booked successfully!");
+      setShowBooking(false);
+      setTimeout(() => onRefresh(), 1500);
+    } catch (err) {
+      setBookingMsg(err.message);
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  const handleCancel = async (apptId) => {
+    if (!token || !confirm("Cancel this appointment?")) return;
+    setCancelling(apptId);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/portal/client/appointments/${apptId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Cancel failed");
+      }
+      setTimeout(() => onRefresh(), 500);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCancelling(null);
+    }
+  };
+
+  // Today's date for min attribute
+  const today = new Date().toISOString().split("T")[0];
+
   return (
     <div>
-      {items.map((a) => (
-        <div key={a.id} style={s.card}>
-          <div style={s.cardRow}>
-            <span style={s.cardTitle}>{a.customer_name || "Appointment"}</span>
-            <StatusBadge status={a.status} />
-          </div>
-          <div style={s.cardMeta}>
-            {new Date(a.start_time).toLocaleDateString()} at{" "}
-            {new Date(a.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            {" — "}
-            {new Date(a.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </div>
-          {a.notes && <div style={s.cardNotes}>{a.notes}</div>}
+      {rebookEnabled && (
+        <div style={{ marginBottom: 16 }}>
+          {!showBooking ? (
+            <button
+              onClick={() => setShowBooking(true)}
+              style={{
+                padding: "10px 20px",
+                background: "#6C5CE7",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Book New Appointment
+            </button>
+          ) : (
+            <div style={{ ...s.card, borderLeft: "3px solid #6C5CE7" }}>
+              <div style={{ fontWeight: 600, marginBottom: 12 }}>Select a Date</div>
+              <input
+                type="date"
+                value={selectedDate}
+                min={today}
+                onChange={handleDateChange}
+                style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #ddd", fontSize: "1rem" }}
+              />
+              {loadingSlots && <div style={{ marginTop: 8, color: "#888" }}>Loading available slots...</div>}
+              {!loadingSlots && selectedDate && slots.length === 0 && (
+                <div style={{ marginTop: 8, color: "#888" }}>No available slots on this date.</div>
+              )}
+              {slots.length > 0 && (
+                <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {slots.map((slot, i) => {
+                    const startTime = new Date(slot.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleBook(slot)}
+                        disabled={booking}
+                        style={{
+                          padding: "8px 16px",
+                          borderRadius: 6,
+                          border: "1px solid #6C5CE7",
+                          background: "transparent",
+                          color: "#6C5CE7",
+                          cursor: booking ? "wait" : "pointer",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {startTime}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <button
+                onClick={() => { setShowBooking(false); setSlots([]); setSelectedDate(""); setBookingMsg(null); }}
+                style={{ marginTop: 12, background: "none", border: "none", color: "#888", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          {bookingMsg && (
+            <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: bookingMsg.includes("success") ? "#e8f5e9" : "#ffebee", color: bookingMsg.includes("success") ? "#2e7d32" : "#c62828", fontSize: "0.9rem" }}>
+              {bookingMsg}
+            </div>
+          )}
         </div>
-      ))}
+      )}
+
+      {!items.length && !showBooking ? (
+        <EmptyState text="No appointments yet." />
+      ) : (
+        items.map((a) => (
+          <div key={a.id} style={s.card}>
+            <div style={s.cardRow}>
+              <span style={s.cardTitle}>{a.customer_name || "Appointment"}</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <StatusBadge status={a.status} />
+                {a.status === "confirmed" && (
+                  <button
+                    onClick={() => handleCancel(a.id)}
+                    disabled={cancelling === a.id}
+                    style={{ padding: "2px 8px", borderRadius: 4, border: "1px solid #e57373", background: "transparent", color: "#e57373", fontSize: "0.75rem", cursor: "pointer" }}
+                  >
+                    {cancelling === a.id ? "..." : "Cancel"}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div style={s.cardMeta}>
+              {new Date(a.start_time).toLocaleDateString()} at{" "}
+              {new Date(a.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {" — "}
+              {new Date(a.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </div>
+            {a.notes && <div style={s.cardNotes}>{a.notes}</div>}
+          </div>
+        ))
+      )}
     </div>
   );
 }
