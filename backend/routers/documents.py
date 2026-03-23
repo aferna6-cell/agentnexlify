@@ -186,6 +186,106 @@ async def create_from_template(
     return result.data[0]
 
 
+# ---------------------------------------------------------------------------
+# Templates CRUD — MUST be defined before /{tenant_id}/{document_id} to
+# prevent FastAPI route shadowing (static "templates" caught by {document_id})
+# ---------------------------------------------------------------------------
+
+@router.get("/{tenant_id}/templates")
+async def list_templates(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """List document templates."""
+    verify_tenant(claims, tenant_id)
+    db = get_supabase()
+    result = (
+        db.table("document_templates")
+        .select("id, name, category, variables, is_active, created_at")
+        .eq("tenant_id", tenant_id)
+        .eq("is_active", True)
+        .order("name")
+        .execute()
+    )
+    return result.data or []
+
+
+@router.post("/{tenant_id}/templates")
+async def create_template(
+    tenant_id: str,
+    req: TemplateCreate,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Create a reusable document template."""
+    verify_tenant(claims, tenant_id)
+    db = get_supabase()
+
+    # Auto-detect variables in template: {{variable_name}}
+    detected = re.findall(r"\{\{(\w+)\}\}", req.template_html)
+    variables = list(set(req.variables + detected))
+
+    result = db.table("document_templates").insert({
+        "tenant_id": tenant_id,
+        "name": req.name,
+        "category": req.category,
+        "template_html": req.template_html,
+        "variables": variables,
+    }).execute()
+
+    return result.data[0] if result.data else {}
+
+
+@router.put("/{tenant_id}/templates/{template_id}")
+async def update_template(
+    tenant_id: str,
+    template_id: str,
+    req: TemplateUpdate,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Update a document template."""
+    verify_tenant(claims, tenant_id)
+    updates = {k: v for k, v in req.model_dump(exclude_none=True).items()}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    # Re-detect variables if template changed
+    if "template_html" in updates:
+        detected = re.findall(r"\{\{(\w+)\}\}", updates["template_html"])
+        updates["variables"] = list(set(updates.get("variables", []) + detected))
+
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    result = db.table("document_templates").update(updates).eq("id", template_id).eq("tenant_id", tenant_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return result.data[0]
+
+
+@router.delete("/{tenant_id}/templates/{template_id}")
+async def delete_template(
+    tenant_id: str,
+    template_id: str,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Soft-delete a document template."""
+    verify_tenant(claims, tenant_id)
+    db = get_supabase()
+    result = (
+        db.table("document_templates")
+        .update({"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", template_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"deleted": True}
+
+
+# ---------------------------------------------------------------------------
+# Document detail — catch-all {document_id} MUST come AFTER static paths
+# ---------------------------------------------------------------------------
+
 @router.get("/{tenant_id}/{document_id}")
 async def get_document(
     tenant_id: str,
@@ -404,98 +504,3 @@ async def sign_document(request: Request, token: str, req: SignDocumentRequest):
         logger.warning("Failed to log document signing activity", exc_info=True)
 
     return {"status": "signed", "signed_at": datetime.now(timezone.utc).isoformat()}
-
-
-# ---------------------------------------------------------------------------
-# Templates CRUD
-# ---------------------------------------------------------------------------
-
-@router.get("/{tenant_id}/templates")
-async def list_templates(
-    tenant_id: str,
-    claims: dict = Depends(_get_current_tenant),
-):
-    """List document templates."""
-    verify_tenant(claims, tenant_id)
-    db = get_supabase()
-    result = (
-        db.table("document_templates")
-        .select("id, name, category, variables, is_active, created_at")
-        .eq("tenant_id", tenant_id)
-        .eq("is_active", True)
-        .order("name")
-        .execute()
-    )
-    return result.data or []
-
-
-@router.post("/{tenant_id}/templates")
-async def create_template(
-    tenant_id: str,
-    req: TemplateCreate,
-    claims: dict = Depends(require_role("owner", "admin")),
-):
-    """Create a reusable document template."""
-    verify_tenant(claims, tenant_id)
-    db = get_supabase()
-
-    # Auto-detect variables in template: {{variable_name}}
-    detected = re.findall(r"\{\{(\w+)\}\}", req.template_html)
-    variables = list(set(req.variables + detected))
-
-    result = db.table("document_templates").insert({
-        "tenant_id": tenant_id,
-        "name": req.name,
-        "category": req.category,
-        "template_html": req.template_html,
-        "variables": variables,
-    }).execute()
-
-    return result.data[0] if result.data else {}
-
-
-@router.put("/{tenant_id}/templates/{template_id}")
-async def update_template(
-    tenant_id: str,
-    template_id: str,
-    req: TemplateUpdate,
-    claims: dict = Depends(require_role("owner", "admin")),
-):
-    """Update a document template."""
-    verify_tenant(claims, tenant_id)
-    updates = {k: v for k, v in req.model_dump(exclude_none=True).items()}
-    if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
-
-    # Re-detect variables if template changed
-    if "template_html" in updates:
-        detected = re.findall(r"\{\{(\w+)\}\}", updates["template_html"])
-        updates["variables"] = list(set(updates.get("variables", []) + detected))
-
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    db = get_supabase()
-    result = db.table("document_templates").update(updates).eq("id", template_id).eq("tenant_id", tenant_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return result.data[0]
-
-
-@router.delete("/{tenant_id}/templates/{template_id}")
-async def delete_template(
-    tenant_id: str,
-    template_id: str,
-    claims: dict = Depends(require_role("owner", "admin")),
-):
-    """Soft-delete a document template."""
-    verify_tenant(claims, tenant_id)
-    db = get_supabase()
-    result = (
-        db.table("document_templates")
-        .update({"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()})
-        .eq("id", template_id)
-        .eq("tenant_id", tenant_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return {"deleted": True}

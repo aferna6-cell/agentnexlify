@@ -99,7 +99,7 @@ def _get_or_create_sms_conversation(db, tenant_id: str, session_id: str) -> str:
         result = (
             db.table("conversations")
             .select("id")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .eq("session_id", session_id)
             .limit(1)
             .execute()
@@ -117,7 +117,7 @@ def _get_or_create_sms_conversation(db, tenant_id: str, session_id: str) -> str:
     try:
         new_conv = (
             db.table("conversations")
-            .insert({"tenant_id": tenant_id, "session_id": session_id})
+            .insert({"client_id": tenant_id, "session_id": session_id, "channel": "sms"})
             .execute()
         )
         if new_conv.data:

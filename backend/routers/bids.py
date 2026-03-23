@@ -318,7 +318,7 @@ async def ai_generate_bid(
             .execute()
         )
         if tenant_result.data:
-            biz_name = tenant_result.data[0].get("business_name", "")
+            biz_name = tenant_result.data[0].get("business_name") or ""
             biz_type = tenant_result.data[0].get("business_type", "")
             city = tenant_result.data[0].get("city", "")
     except Exception:

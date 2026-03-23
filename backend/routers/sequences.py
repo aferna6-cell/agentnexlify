@@ -302,7 +302,8 @@ async def get_sequence_stats(tenant_id: str, claims: dict = Depends(_get_current
         )
         opens_today = opens.count or 0
     except Exception:
-        opens_today = 0  # Table may not exist yet
+        logger.warning("Failed to fetch opens_today for %s", tenant_id, exc_info=True)
+        opens_today = 0
 
     # Total opens (all time)
     try:
@@ -315,6 +316,7 @@ async def get_sequence_stats(tenant_id: str, claims: dict = Depends(_get_current
         )
         total_open_count = total_opens.count or 0
     except Exception:
+        logger.warning("Failed to fetch total_open_count for %s", tenant_id, exc_info=True)
         total_open_count = 0
 
     return {
@@ -658,7 +660,7 @@ async def send_campaign(
             if not lead.get("phone"):
                 skipped += 1
                 continue
-            plan = tenant.get("plan", "free")
+            plan = tenant.get("plan") or "free"
             if not check_sms_rate_limit(tenant_id, plan):
                 skipped += 1
                 continue

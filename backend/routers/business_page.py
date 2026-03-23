@@ -206,11 +206,11 @@ async def get_business_page(request: Request, slug: str):
     widget = widget_result.data[0] if widget_result.data else {}
 
     # Only expose tier fields the plan actually allows
-    plan = tenant.get("plan", "free")
+    plan = tenant.get("plan") or "free"
     allowed = _allowed_tier_fields(plan)
 
     return BusinessPagePublic(
-        business_name=tenant.get("business_name", ""),
+        business_name=tenant.get("business_name") or "",
         description=tenant.get("business_description"),
         phone=tenant.get("business_phone"),
         address=tenant.get("business_address"),
@@ -302,7 +302,7 @@ async def update_business_page(
 
     # Fetch tenant plan for tier enforcement
     tenant_row = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()
-    plan = tenant_row.data[0].get("plan", "free") if tenant_row.data else "free"
+    plan = tenant_row.data[0].get("plan") or "free" if tenant_row.data else "free"
 
     updates: dict = {}
 

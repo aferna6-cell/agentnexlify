@@ -33,6 +33,51 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+# ---------------------------------------------------------------------------
+# Static paths — MUST be defined before /{tenant_id} to prevent route shadow
+# ---------------------------------------------------------------------------
+
+@router.get("/schema/events")
+async def webhook_events_schema():
+    """Public endpoint: returns all webhook events with sample payloads for Zapier/integration setup."""
+    now = datetime.now(timezone.utc)
+    tomorrow = now + timedelta(days=1)
+    tomorrow_end = tomorrow + timedelta(hours=1)
+
+    schema = {}
+    for event in sorted(SUPPORTED_EVENTS):
+        sample = _build_sample_payload(event)
+        schema[event] = {
+            "description": {
+                "lead.created": "Fired when a new lead is captured (from widget, CSV import, or offline form)",
+                "lead.updated": "Fired when a lead's details or stage change",
+                "appointment.booked": "Fired when a new appointment is booked",
+                "appointment.cancelled": "Fired when an appointment is cancelled",
+                "conversation.started": "Fired when a new chat conversation begins",
+                "conversation.message": "Fired on each message exchange in a conversation",
+                "automation.email_sent": "Fired when an automated email is sent via a sequence",
+                "automation.sms_sent": "Fired when an automated SMS is sent via a sequence",
+                "lead.status_changed": "Fired when a lead's status changes (e.g. new → contacted)",
+                "order.created": "Fired when a new order is placed through the chat widget",
+                "call.completed": "Fired when an AI-answered phone call completes",
+                "invoice.created": "Fired when a new invoice is created",
+                "invoice.paid": "Fired when an invoice is marked as paid",
+                "form.submitted": "Fired when a public form receives a submission",
+                "review.received": "Fired when a new customer review is added",
+            }.get(event, event),
+            "sample_payload": {
+                "event": event,
+                "timestamp": now.isoformat(),
+                "data": sample,
+            },
+        }
+    return {"events": schema}
+
+
+# ---------------------------------------------------------------------------
+# Tenant-scoped CRUD
+# ---------------------------------------------------------------------------
+
 @router.get("/{tenant_id}", response_model=list[WebhookListResponse])
 async def list_webhooks(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     _verify_tenant(claims, tenant_id)
@@ -219,43 +264,6 @@ async def list_events(tenant_id: str, claims: dict = Depends(_get_current_tenant
     """Return all supported webhook events."""
     _verify_tenant(claims, tenant_id)
     return {"events": sorted(SUPPORTED_EVENTS)}
-
-
-@router.get("/schema/events")
-async def webhook_events_schema():
-    """Public endpoint: returns all webhook events with sample payloads for Zapier/integration setup."""
-    now = datetime.now(timezone.utc)
-    tomorrow = now + timedelta(days=1)
-    tomorrow_end = tomorrow + timedelta(hours=1)
-
-    schema = {}
-    for event in sorted(SUPPORTED_EVENTS):
-        sample = _build_sample_payload(event)
-        schema[event] = {
-            "description": {
-                "lead.created": "Fired when a new lead is captured (from widget, CSV import, or offline form)",
-                "lead.updated": "Fired when a lead's details or stage change",
-                "appointment.booked": "Fired when a new appointment is booked",
-                "appointment.cancelled": "Fired when an appointment is cancelled",
-                "conversation.started": "Fired when a new chat conversation begins",
-                "conversation.message": "Fired on each message exchange in a conversation",
-                "automation.email_sent": "Fired when an automated email is sent via a sequence",
-                "automation.sms_sent": "Fired when an automated SMS is sent via a sequence",
-                "lead.status_changed": "Fired when a lead's status changes (e.g. new → contacted)",
-                "order.created": "Fired when a new order is placed through the chat widget",
-                "call.completed": "Fired when an AI-answered phone call completes",
-                "invoice.created": "Fired when a new invoice is created",
-                "invoice.paid": "Fired when an invoice is marked as paid",
-                "form.submitted": "Fired when a public form receives a submission",
-                "review.received": "Fired when a new customer review is added",
-            }.get(event, event),
-            "sample_payload": {
-                "event": event,
-                "timestamp": now.isoformat(),
-                "data": sample,
-            },
-        }
-    return {"events": schema}
 
 
 def _build_sample_payload(event: str) -> dict:

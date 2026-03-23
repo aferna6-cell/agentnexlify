@@ -109,7 +109,7 @@ async def get_config(request: Request, api_key: str):
         show_watermark = widget.get("show_watermark", True)
 
     # Branding: filter by plan
-    plan = tenant.get("plan", "free")
+    plan = tenant.get("plan") or "free"
     raw_branding = widget.get("branding") or {}
     branding = _filter_branding_for_plan(raw_branding, plan)
     # Free/growth: enforce powered-by defaults

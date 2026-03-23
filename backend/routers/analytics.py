@@ -90,7 +90,7 @@ async def get_overview(
         curr_conv_result = (
             db.table("conversations")
             .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .gte("created_at", start)
             .lt("created_at", now_iso)
             .limit(1)
@@ -124,7 +124,7 @@ async def get_overview(
         prev_conv_result = (
             db.table("conversations")
             .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .gte("created_at", prev_start)
             .lt("created_at", start)
             .limit(1)
@@ -282,7 +282,7 @@ async def get_conversations_trend(
         convos = (
             db.table("conversations")
             .select("created_at")
-            .eq("tenant_id", tenant_id)
+            .eq("client_id", tenant_id)
             .gte("created_at", start)
             .lt("created_at", now_iso)
             .order("created_at")
@@ -628,7 +628,7 @@ async def get_missed_opportunities(
             convos_res = (
                 db.table("conversations")
                 .select("session_id, lead_id")
-                .eq("tenant_id", tenant_id)
+                .eq("client_id", tenant_id)
                 .in_("session_id", chunk)
                 .execute()
             )

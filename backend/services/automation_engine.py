@@ -230,7 +230,7 @@ async def execute_step(execution_id: str) -> None:
             _advance_execution(db, execution, step)
             return
 
-        plan = tenant.get("plan", "free")
+        plan = tenant.get("plan") or "free"
         if not check_sms_rate_limit(execution["tenant_id"], plan):
             db.table("automation_logs").insert({
                 "execution_id": execution_id,
@@ -279,13 +279,13 @@ async def execute_step(execution_id: str) -> None:
 
         ai_body = await _generate_ai_email(
             db, execution["tenant_id"], execution["lead_id"],
-            tenant.get("business_name", ""), step.get("body_template"),
+            tenant.get("business_name") or "", step.get("body_template"),
         )
 
         subject = render_template(step["subject_template"], context)
 
         # Branded wrapping
-        plan = tenant.get("plan", "free")
+        plan = tenant.get("plan") or "free"
         if plan in ("professional", "enterprise"):
             try:
                 wc_result = (
@@ -297,7 +297,7 @@ async def execute_step(execution_id: str) -> None:
                 )
                 wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
                 if wc_branding:
-                    ai_body = build_branded_email_html(ai_body, wc_branding, tenant.get("business_name", ""))
+                    ai_body = build_branded_email_html(ai_body, wc_branding, tenant.get("business_name") or "")
             except Exception:
                 logger.debug("Failed to load branding for AI email, sending plain", exc_info=True)
 
@@ -350,7 +350,7 @@ async def execute_step(execution_id: str) -> None:
         body = render_template(step["body_template"], context)
 
         # Branded email wrapping for Professional/Enterprise plans
-        plan = tenant.get("plan", "free")
+        plan = tenant.get("plan") or "free"
         if plan in ("professional", "enterprise"):
             try:
                 wc_result = (
@@ -362,7 +362,7 @@ async def execute_step(execution_id: str) -> None:
                 )
                 wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
                 if wc_branding:
-                    body = build_branded_email_html(body, wc_branding, tenant.get("business_name", ""))
+                    body = build_branded_email_html(body, wc_branding, tenant.get("business_name") or "")
             except Exception:
                 logger.debug("Failed to load branding for email, sending plain", exc_info=True)
 
@@ -853,7 +853,7 @@ async def send_appointment_reminders() -> int:
                     ),
                 }
                 try:
-                    if check_sms_rate_limit(tenant_id, tenant_data.get("plan", "free")):
+                    if check_sms_rate_limit(tenant_id, tenant_data.get("plan") or "free"):
                         await asyncio.get_event_loop().run_in_executor(
                             None,
                             partial(send_sms, to=customer_phone, body=sms_map[window["label"]]),
@@ -1058,7 +1058,7 @@ async def send_aftercare_instructions() -> int:
                 tenant_cache[tenant_id] = None
 
         tenant = tenant_cache.get(tenant_id)
-        if not tenant or tenant.get("plan", "free") == "free":
+        if not tenant or tenant.get("plan") or "free" == "free":
             continue
 
         btype = (tenant.get("business_type") or "").lower()
@@ -1240,7 +1240,7 @@ async def send_pending_review_requests() -> int:
                 f"We'd love your feedback. Leave a review here: {review_link}"
             )
             try:
-                plan = tenant.get("plan", "free")
+                plan = tenant.get("plan") or "free"
                 if check_sms_rate_limit(tenant_id, plan):
                     sms_ok = await send_sms(to=appt["customer_phone"], body=sms_body)
                     if sms_ok:
@@ -1404,7 +1404,7 @@ async def _send_review_followups(
                 f"we'd love your review! {review_link}"
             )
             try:
-                plan = tenant.get("plan", "free")
+                plan = tenant.get("plan") or "free"
                 if check_sms_rate_limit(tenant_id, plan):
                     sms_ok = await send_sms(to=appt["customer_phone"], body=sms_body)
                     if sms_ok:
@@ -2529,7 +2529,7 @@ async def send_birthday_greetings() -> int:
                 tenant_cache[tenant_id] = None
 
         tenant = tenant_cache.get(tenant_id)
-        if not tenant or tenant.get("plan", "free") == "free":
+        if not tenant or tenant.get("plan") or "free" == "free":
             continue
 
         business_name = tenant.get("business_name") or "Us"
