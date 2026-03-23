@@ -525,4 +525,22 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 **Fix:** Added dummy `_hash_client_password()` call when account not found, ensuring constant response time regardless of email validity.
 **Prevention:** Login endpoints should always perform a hash operation before returning error. (Cycle 164)
 
+### 28. Silent except-pass in pipeline stage seeding
+**Date:** 2026-03-22 (Cycle 156)
+**Symptom:** Pipeline stage seeding silently swallows errors when looking up business_type for industry-specific defaults.
+**Root Cause:** `pipeline.py` had a bare `except: pass` block around the business_type lookup during auto-seeding of pipeline stages. If the tenant query failed, the function silently fell back to generic defaults with no logging.
+**Fix:** Replaced `except: pass` with `except Exception:` + `logger.warning(...)`.
+**Files:** `backend/routers/pipeline.py`
+**Prevention:** Never use bare `except: pass`. All except blocks must either log, re-raise, or have an explicit comment justifying silence. (Cycle 156)
+
+---
+
+### 29. N+1 query in CSV lead import — per-row email dedup
+**Date:** 2026-03-22 (Cycle 159)
+**Symptom:** CSV lead imports with 500 rows issue ~500 individual DB queries for email dedup, causing slow imports.
+**Root Cause:** The import loop checked for existing leads one email at a time inside the per-row processing loop, issuing a `.eq("email", email)` query for each row.
+**Fix:** Pre-parse all CSV rows, collect unique emails, fetch existing leads in one `.in_("email", all_emails)` batch query, then process with in-memory lookup. 500 queries → 1 query.
+**Files:** `backend/routers/leads.py` (CSV import endpoint)
+**Prevention:** Any import/batch operation that checks for existing records must use `.in_()` batch queries, not per-row lookups. Same N+1 pattern as check_no_response_leads (Cycle 82). (Cycle 159)
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._

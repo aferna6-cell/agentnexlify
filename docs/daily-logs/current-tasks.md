@@ -1,41 +1,57 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated by the automated morning/evening routines and interactive sessions.
+Updated: 2026-03-23 (automated morning routine)
 
 ## Top 3 Priorities
 
-1. **Continue api.js split** — 17/~25 domains done (54%), push to 70%+
-2. **Verify features in production** — 30+ commits since last verification
-3. **AI-to-human handoff** — Cross-industry critical feature from research
+1. **Apply migration 065 to live Supabase** — client_accounts table blocking client login in production
+2. **Silent frontend catch in ClientLoginPage.jsx** — `.catch(() => {})` hides errors on business name fetch
+3. **Verify 30+ features in production** — massive feature velocity (Cycles 154-167) needs production validation
 
 ## Active Tasks
 
-### Priority 1 — api.js Split (54% done)
-- [x] Extracted: leads, invoices, documents, pipeline, reviews, content
-- [x] Extracted: appointments, webhooks, team, social, campaigns
-- [x] Extracted: jobs, bids, forms, conversations, analytics, automations
-- [ ] Remaining: ~115 functions in ~20 small sections (dashboard, settings, billing, etc.)
+### Priority 1 — Critical / Blocking
 
-### Priority 2 — Features
-- [ ] AI-to-human handoff (widget → team member)
-- [ ] Two-way email sync
-- [ ] White-label client login
+- [ ] **Apply migration 065 (client_accounts)** — white-label client login (Cycle 163) depends on this table existing in production. Schema-log.md shows "Pending". Use Supabase MCP or SQL editor.
+  - Agent: **schema-guardian** → manual apply
 
-### Priority 3 — Quality
-- [ ] Fix 16 test isolation failures
-- [ ] Verify 30+ features in production
+### Priority 2 — Code Quality
 
-## Session Progress (Cycles 141-146)
-- [x] api.js split: 17 domains, 16 pages migrated, bundle 114→106 kB
-- [x] Restaurant simulation + catering form preset + 2 FAQs
-- [x] Demo script for client presentations
+- [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Should at minimum log the error. Health check script doesn't catch this (regex difference).
+  - Agent: **frontend-dev**
+- [ ] **Production feature verification** — Cycles 154-167 added: client login, AI-to-human handoff, QR codes, competitor analysis, scheduled post auto-publish, dynamic booking placeholders. None verified in production.
+  - Agent: **qa-tester**
 
-## Overall Progress (Cycles 116-146)
-- 31 commits, 85 tests added (172→257)
-- 6 migrations (059-064), 7 simulations
-- 17 api domain modules, 11 help articles, 1 demo script
-- 7 form presets, 7 pipeline presets, 9 skills
-- Complete automation pipeline (reminders → aftercare → rebook → review → birthday)
+### Priority 3 — Documentation Gaps
+
+- [x] Document Cycle 156 bug fix (silent except-pass in pipeline seeding) — added to bug-patterns.md
+- [x] Document Cycle 159 bug fix (N+1 in CSV import) — added to bug-patterns.md
+
+### Priority 4 — Improvements
+
+- [ ] **Two-way email sync** — still pending from previous backlog
+- [ ] **Fix 16 test isolation failures** — carried forward from previous backlog
+
+## Completed Since Last Update (Cycles 147-167)
+
+- [x] **api.js split: 100% complete** — all 257 functions in 35 domain modules, monolith deleted (Cycles 147-153)
+- [x] **White-label client login** — client registration + login with portal token verification (Cycle 163)
+- [x] **AI-to-human handoff** — seamless widget-to-team transfer (Cycle 161)
+- [x] **Auto-publish scheduled posts/campaigns** — automation loop integration (Cycle 162)
+- [x] **QR code generator** — downloadable QR codes for business page + booking links (Cycle 166)
+- [x] **Competitor analysis dashboard** — AI-estimated SEO comparison (Cycle 167)
+- [x] **Dynamic booking placeholder** — business-type-aware booking text (Cycle 160)
+- [x] **Security hardening** — timing attack fix, form DoS protection, narrow public selects (Cycle 164)
+- [x] **Performance** — N+1 fix in CSV import (Cycle 159), dead code sweeps (Cycles 155, 165)
+- [x] **Legal compliance** — AI system prompt compliance block (Cycle 158)
+- [x] **API consistency** — all pages using centralized API utils (Cycle 167)
+
+## Overall Progress (Cycles 116-167)
+
+- 52 commits, 85+ tests
+- 7 migrations (059-065), 7 simulations
+- 35 api domain modules (100% split complete)
+- 15+ features shipped, 10+ bug fixes, 5+ security patches
 
 ---
 
