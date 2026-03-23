@@ -8,6 +8,16 @@ _Things that need human intervention. Don't waste cycles retrying these._
 - Client portal login endpoints will error until this is applied to live Supabase
 - **Action needed:** Run migration 065 in Supabase SQL editor
 
+### Migration 066 (waitlist_entries) not applied
+- The `waitlist_entries` table for appointment waitlist exists as a migration file
+- Waitlist endpoints will error until this is applied to live Supabase
+- **Action needed:** Run migration 066 in Supabase SQL editor
+
+### Migration 067 (scoring_configs) not applied
+- The `scoring_configs` table for configurable lead scoring exists as a migration file
+- Scoring config endpoints will error until this is applied to live Supabase
+- **Action needed:** Run migration 067 in Supabase SQL editor
+
 ### Migration 064 (lead date_of_birth) application status unknown
 - No "Applied" note in schema-log.md for migration 064
 - Birthday greetings automation depends on this column existing

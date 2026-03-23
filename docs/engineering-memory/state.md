@@ -1,8 +1,8 @@
 # Engineering State
-## Last Session — 2026-03-23
-- Built: Recurring invoice auto-generation, conversation search, bulk lead actions, no-show detection
-- Fixed: 6 bug classes (conversations client_id x8, route shadowing x2, NULL defaults x36, silent excepts x2)
+## Last Session — 2026-03-23 (Session 2)
+- Built: Appointment waitlist, lead activity timeline, webhook retry backoff, daily email digest, client portal self-scheduling, configurable lead scoring
+- Fixed: No bugs found (codebase clean from previous session)
 - In progress: None
-- Next up: Appointment waitlist, lead activity timeline, webhook retry, conversation search frontend polish
+- Next up: Appointment check-in, birthday automation, team performance dashboard, lead source UTM tracking
 - Build status: GREEN (backend + frontend build passing)
-- Blockers: Migration 065 (client_accounts) not applied to live Supabase
+- Blockers: Migration 065 (client_accounts) + 066 (waitlist) + 067 (scoring_config) not applied to live Supabase
