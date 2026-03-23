@@ -181,7 +181,7 @@ async def initiate_sms_conversation(
     normalized = _normalize_phone_for_session(req.phone)
     session_id = f"sms_{normalized}"
 
-    # Find or create conversation record (conversations table uses tenant_id)
+    # Find or create conversation record (conversations table uses client_id, NOT tenant_id)
     conversation_id = _get_or_create_sms_conversation(db, tenant_id, session_id)
 
     # Store the outbound message in chat_messages (role=assistant: business is speaking)
