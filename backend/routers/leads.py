@@ -862,3 +862,122 @@ async def generate_lead_summary(
     db.table("leads").update({"conversation_summary": summary}).eq("id", lead_id).execute()
 
     return {"summary": summary}
+
+
+# ---------------------------------------------------------------------------
+# Bulk Actions
+# ---------------------------------------------------------------------------
+
+class BulkActionRequest(BaseModel):
+    lead_ids: list[str] = Field(..., min_length=1, max_length=200)
+    action: str = Field(..., pattern="^(assign|change_status|add_tag|delete)$")
+    # Parameters for specific actions
+    assigned_to: str | None = None       # For 'assign' action
+    status: str | None = None            # For 'change_status' action
+    tag: str | None = Field(None, max_length=100)  # For 'add_tag' action
+
+
+@router.post("/{tenant_id}/bulk")
+async def bulk_action(
+    tenant_id: str,
+    req: BulkActionRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Perform a bulk action on multiple leads at once.
+
+    Supported actions:
+    - assign: Set assigned_to on all leads (pass assigned_to field)
+    - change_status: Update status on all leads (pass status field)
+    - add_tag: Append a tag to all leads (pass tag field)
+    - delete: Permanently delete all specified leads
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    action = req.action
+    lead_ids = req.lead_ids
+    affected = 0
+
+    if action == "assign":
+        if req.assigned_to is None:
+            raise HTTPException(status_code=400, detail="assigned_to is required for assign action")
+        try:
+            result = (
+                db.table("leads")
+                .update({"assigned_to": req.assigned_to})
+                .eq("client_id", tenant_id)
+                .in_("id", lead_ids)
+                .execute()
+            )
+            affected = len(result.data) if result.data else 0
+        except Exception:
+            logger.exception("Bulk assign failed for tenant %s", tenant_id)
+            raise HTTPException(status_code=500, detail="Bulk assign failed")
+
+    elif action == "change_status":
+        if not req.status:
+            raise HTTPException(status_code=400, detail="status is required for change_status action")
+        valid_statuses = {"new", "contacted", "appointment_booked", "closed", "lost"}
+        if req.status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(sorted(valid_statuses))}")
+        try:
+            result = (
+                db.table("leads")
+                .update({"status": req.status})
+                .eq("client_id", tenant_id)
+                .in_("id", lead_ids)
+                .execute()
+            )
+            affected = len(result.data) if result.data else 0
+        except Exception:
+            logger.exception("Bulk status change failed for tenant %s", tenant_id)
+            raise HTTPException(status_code=500, detail="Bulk status change failed")
+
+    elif action == "add_tag":
+        if not req.tag:
+            raise HTTPException(status_code=400, detail="tag is required for add_tag action")
+        # Fetch existing tags and append
+        try:
+            leads_result = (
+                db.table("leads")
+                .select("id, tags")
+                .eq("client_id", tenant_id)
+                .in_("id", lead_ids)
+                .execute()
+            )
+            for lead in (leads_result.data or []):
+                existing_tags = lead.get("tags") or []
+                if req.tag not in existing_tags:
+                    updated_tags = existing_tags + [req.tag]
+                    db.table("leads").update({"tags": updated_tags}).eq("id", lead["id"]).execute()
+                    affected += 1
+        except Exception:
+            logger.exception("Bulk add_tag failed for tenant %s", tenant_id)
+            raise HTTPException(status_code=500, detail="Bulk add tag failed")
+
+    elif action == "delete":
+        try:
+            result = (
+                db.table("leads")
+                .delete()
+                .eq("client_id", tenant_id)
+                .in_("id", lead_ids)
+                .execute()
+            )
+            affected = len(result.data) if result.data else 0
+        except Exception:
+            logger.exception("Bulk delete failed for tenant %s", tenant_id)
+            raise HTTPException(status_code=500, detail="Bulk delete failed")
+
+    # Log the bulk action
+    try:
+        log_activity(
+            db, tenant_id, None,
+            f"bulk_{action}",
+            f"Bulk {action} on {affected} leads (requested {len(lead_ids)})",
+        )
+    except Exception:
+        pass  # Non-critical
+
+    return {"action": action, "requested": len(lead_ids), "affected": affected}

@@ -86,3 +86,10 @@ export function fetchLeadSuggestions(tenantId, token) {
 export function handleLeadSuggestion(tenantId, token, suggestionId, action) {
   return request(`/api/v1/leads/${tenantId}/suggestions/${suggestionId}`, { method: "POST", token, body: { action } });
 }
+
+export function bulkLeadAction(tenantId, token, leadIds, action, params = {}) {
+  return request(`/api/v1/leads/${tenantId}/bulk`, {
+    method: "POST", token,
+    body: { lead_ids: leadIds, action, ...params },
+  });
+}

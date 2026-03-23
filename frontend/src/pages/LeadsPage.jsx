@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads } from "../utils/api/leads";
+import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads, bulkLeadAction } from "../utils/api/leads";
 import { fetchLeadSuggestions, handleLeadSuggestion } from "../utils/api/leads";
 import { fetchTeamMembers } from "../utils/api/team";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
@@ -25,7 +25,7 @@ function scoreLabel(score) {
   return "Cold";
 }
 
-function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
+function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead, selectedIds, onToggleSelect, onToggleAll }) {
   const columns = [
     { key: "name", label: "Name" },
     { key: "email", label: "Email" },
@@ -36,11 +36,21 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
     { key: "created_at", label: "Created" },
   ];
 
+  const allSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l.id));
+
   return (
     <div className="leads-table-wrapper">
       <table className="leads-table">
         <thead>
           <tr>
+            <th style={{ width: 36, cursor: "default" }}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={(e) => onToggleAll(e.target.checked)}
+                style={{ cursor: "pointer" }}
+              />
+            </th>
             {columns.map((col) => (
               <th
                 key={col.key}
@@ -58,7 +68,15 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead }) {
         </thead>
         <tbody>
           {leads.map((lead) => (
-            <tr key={lead.id} onClick={() => onSelectLead(lead)}>
+            <tr key={lead.id} onClick={() => onSelectLead(lead)} style={{ background: selectedIds.has(lead.id) ? "rgba(0,191,255,0.06)" : undefined }}>
+              <td onClick={(e) => e.stopPropagation()} style={{ width: 36 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(lead.id)}
+                  onChange={() => onToggleSelect(lead.id)}
+                  style={{ cursor: "pointer" }}
+                />
+              </td>
               <td>
                 <div>{lead.name || "Unknown"}</div>
                 {lead.conversation_summary && (
@@ -166,6 +184,49 @@ export default function LeadsPage() {
   const [totalLeads, setTotalLeads] = useState(0);
   const fileInputRef = useRef(null);
   const debounceRef = useRef(null);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState("");
+  const [bulkParam, setBulkParam] = useState("");
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = (checked) => {
+    if (checked) {
+      setSelectedIds(new Set(leads.map((l) => l.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+  const handleBulkAction = async () => {
+    if (!bulkAction || selectedIds.size === 0) return;
+    setBulkProcessing(true);
+    setBulkResult(null);
+    try {
+      const params = {};
+      if (bulkAction === "assign") params.assigned_to = bulkParam || null;
+      if (bulkAction === "change_status") params.status = bulkParam;
+      if (bulkAction === "add_tag") params.tag = bulkParam;
+      const res = await bulkLeadAction(user.tenantId, token, [...selectedIds], bulkAction, params);
+      setBulkResult({ success: true, message: `${res.affected} lead(s) updated` });
+      setSelectedIds(new Set());
+      setBulkAction("");
+      setBulkParam("");
+      loadLeads({ stage: stageFilter, search, sort: sortField, order: sortOrder, page, assigned_to: assignedFilter });
+    } catch (err) {
+      setBulkResult({ success: false, message: err.message || "Bulk action failed" });
+    }
+    setBulkProcessing(false);
+  };
 
   const loadLeads = useCallback(async (params = {}) => {
     if (!user?.tenantId) return;
@@ -453,13 +514,86 @@ export default function LeadsPage() {
           onStageDrop={handleStageDrop}
         />
       ) : (
+        <>
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
+            background: "rgba(0,191,255,0.08)", borderRadius: 8, marginBottom: 12,
+            border: "1px solid var(--accent, #00BFFF)",
+          }}>
+            <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>{selectedIds.size} selected</span>
+            <select
+              value={bulkAction}
+              onChange={(e) => { setBulkAction(e.target.value); setBulkParam(""); }}
+              style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
+            >
+              <option value="">Choose action...</option>
+              <option value="change_status">Change Status</option>
+              <option value="add_tag">Add Tag</option>
+              <option value="assign">Assign To</option>
+              <option value="delete">Delete</option>
+            </select>
+            {bulkAction === "change_status" && (
+              <select value={bulkParam} onChange={(e) => setBulkParam(e.target.value)}
+                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}>
+                <option value="">Select status...</option>
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="appointment_booked">Appointment Booked</option>
+                <option value="closed">Closed</option>
+                <option value="lost">Lost</option>
+              </select>
+            )}
+            {bulkAction === "add_tag" && (
+              <input
+                placeholder="Tag name..."
+                value={bulkParam}
+                onChange={(e) => setBulkParam(e.target.value)}
+                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem", width: 140 }}
+              />
+            )}
+            {bulkAction === "assign" && teamMembers.length > 0 && (
+              <select value={bulkParam} onChange={(e) => setBulkParam(e.target.value)}
+                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}>
+                <option value="">Select team member...</option>
+                {teamMembers.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name || m.email}</option>
+                ))}
+              </select>
+            )}
+            <button
+              className="btn-primary"
+              onClick={handleBulkAction}
+              disabled={bulkProcessing || !bulkAction || (bulkAction !== "delete" && !bulkParam)}
+              style={{ fontSize: "0.8rem", padding: "4px 14px" }}
+            >
+              {bulkProcessing ? "Processing..." : bulkAction === "delete" ? "Delete Selected" : "Apply"}
+            </button>
+            <button
+              onClick={() => { setSelectedIds(new Set()); setBulkAction(""); setBulkParam(""); }}
+              style={{ fontSize: "0.8rem", padding: "4px 10px", background: "transparent", border: "1px solid var(--border-color)", borderRadius: 6, color: "var(--text-secondary)", cursor: "pointer" }}
+            >
+              Clear
+            </button>
+            {bulkResult && (
+              <span style={{ fontSize: "0.78rem", color: bulkResult.success ? "#22c55e" : "#ef4444" }}>
+                {bulkResult.message}
+              </span>
+            )}
+          </div>
+        )}
         <LeadTable
           leads={leads}
           sortField={sortField}
           sortOrder={sortOrder}
           onSort={handleSort}
           onSelectLead={setSelectedLead}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleAll={toggleAll}
         />
+        </>
       )}
 
       {/* Pagination */}
