@@ -97,3 +97,24 @@ export function bulkLeadAction(tenantId, token, leadIds, action, params = {}) {
 export function fetchLeadTimeline(tenantId, token, leadId, limit = 50) {
   return request(`/api/v1/leads/${tenantId}/${leadId}/timeline?limit=${limit}`, { token });
 }
+
+export async function exportLeadsCSV(tenantId, token, { status } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  const headers = { "Authorization": `Bearer ${token}` };
+  const res = await fetch(`${BASE}/api/v1/leads/${tenantId}/export${qs ? `?${qs}` : ""}`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, err);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `leads-export.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

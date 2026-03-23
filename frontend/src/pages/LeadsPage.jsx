@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads, bulkLeadAction } from "../utils/api/leads";
+import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads, bulkLeadAction, exportLeadsCSV } from "../utils/api/leads";
 import { fetchLeadSuggestions, handleLeadSuggestion } from "../utils/api/leads";
 import { fetchTeamMembers } from "../utils/api/team";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
@@ -491,6 +491,18 @@ export default function LeadsPage() {
           style={{ display: "none" }}
           onChange={handleImportCSV}
         />
+        <button
+          className="leads-export-btn"
+          onClick={async () => {
+            try {
+              await exportLeadsCSV(user.tenantId, token, { status: stageFilter !== "all" ? stageFilter : undefined });
+            } catch (err) {
+              console.error("Export failed", err);
+            }
+          }}
+        >
+          Export CSV
+        </button>
         <button className="leads-export-btn" onClick={handleFindDuplicates}>
           Find Duplicates
         </button>

@@ -115,6 +115,78 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
         return {"total": 0, "new": 0, "contacted": 0, "appointment_booked": 0, "closed": 0, "lost": 0}
 
 
+@router.get("/{tenant_id}/export")
+async def export_leads_csv(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    status: str | None = Query(None),
+    assigned_to: str | None = Query(None),
+):
+    """Export all leads (or filtered) as a CSV file download.
+
+    Supports optional filters: status, assigned_to.
+    Returns CSV with headers: name, email, phone, status, lead_score,
+    lead_temperature, areas_of_interest, tags, source, assigned_to, created_at.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    query = (
+        db.table("leads")
+        .select("name, email, phone, status, lead_score, lead_temperature, areas_of_interest, tags, source, assigned_to, conversation_summary, created_at, insurance_carrier, date_of_birth, deal_value")
+        .eq("client_id", tenant_id)
+        .order("created_at", desc=True)
+        .limit(5000)
+    )
+    if status:
+        query = query.eq("status", status)
+    if assigned_to:
+        query = query.eq("assigned_to", assigned_to)
+
+    result = query.execute()
+    leads = result.data or []
+
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    headers = ["Name", "Email", "Phone", "Status", "Lead Score", "Temperature",
+               "Areas of Interest", "Tags", "Source", "Conversation Summary",
+               "Insurance Carrier", "Date of Birth", "Deal Value", "Created At"]
+    writer.writerow(headers)
+
+    for lead in leads:
+        tags = lead.get("tags") or []
+        writer.writerow([
+            lead.get("name") or "",
+            lead.get("email") or "",
+            lead.get("phone") or "",
+            lead.get("status") or "",
+            lead.get("lead_score") or 0,
+            lead.get("lead_temperature") or "",
+            lead.get("areas_of_interest") or "",
+            ", ".join(tags) if tags else "",
+            lead.get("source") or "",
+            lead.get("conversation_summary") or "",
+            lead.get("insurance_carrier") or "",
+            lead.get("date_of_birth") or "",
+            lead.get("deal_value") or "",
+            lead.get("created_at") or "",
+        ])
+
+    from fastapi.responses import StreamingResponse
+    csv_content = output.getvalue()
+    output.close()
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=leads-export-{tenant_id[:8]}.csv"},
+    )
+
+
 @router.post("/{tenant_id}/score-all", response_model=ScoreAllResponse)
 async def rescore_all(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """Re-score all leads for a tenant."""
