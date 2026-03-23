@@ -981,3 +981,201 @@ async def bulk_action(
         pass  # Non-critical
 
     return {"action": action, "requested": len(lead_ids), "affected": affected}
+
+
+# ---------------------------------------------------------------------------
+# Lead Activity Timeline — unified chronological view of all interactions
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/{lead_id}/timeline")
+async def get_lead_timeline(
+    tenant_id: str,
+    lead_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """
+    Get a unified activity timeline for a lead.
+    Aggregates: activity_log, chat_messages, appointments, invoices, documents, email_events.
+    Returns chronologically sorted list of events.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Verify lead exists
+    lead_result = db.table("leads").select("id, name, email, session_id, conversation_id").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+    if not lead_result.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    lead = lead_result.data[0]
+    events = []
+
+    # 1. Activity log entries
+    try:
+        activities = (
+            db.table("activity_log")
+            .select("id, activity_type, description, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+        for a in (activities.data or []):
+            events.append({
+                "id": f"activity_{a['id']}",
+                "type": "activity",
+                "subtype": a.get("activity_type", ""),
+                "description": a.get("description", ""),
+                "timestamp": a["created_at"],
+            })
+    except Exception:
+        logger.warning("Timeline: failed to fetch activities for lead %s", lead_id, exc_info=True)
+
+    # 2. Chat messages (if lead has a session)
+    session_id = lead.get("session_id")
+    if session_id:
+        try:
+            messages = (
+                db.table("chat_messages")
+                .select("id, role, content, created_at")
+                .eq("tenant_id", tenant_id)
+                .eq("session_id", session_id)
+                .order("created_at", desc=True)
+                .limit(30)
+                .execute()
+            )
+            for m in (messages.data or []):
+                content_preview = (m.get("content") or "")[:150]
+                if len(m.get("content", "")) > 150:
+                    content_preview += "..."
+                events.append({
+                    "id": f"msg_{m['id']}",
+                    "type": "message",
+                    "subtype": m.get("role", "user"),
+                    "description": content_preview,
+                    "timestamp": m["created_at"],
+                })
+        except Exception:
+            logger.warning("Timeline: failed to fetch messages for lead %s", lead_id, exc_info=True)
+
+    # 3. Appointments
+    try:
+        appointments = (
+            db.table("appointments")
+            .select("id, customer_name, start_time, end_time, status, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        for a in (appointments.data or []):
+            events.append({
+                "id": f"appt_{a['id']}",
+                "type": "appointment",
+                "subtype": a.get("status", "confirmed"),
+                "description": f"Appointment {a.get('status', '')} — {a.get('start_time', '')[:16]}",
+                "timestamp": a["created_at"],
+            })
+    except Exception:
+        logger.warning("Timeline: failed to fetch appointments for lead %s", lead_id, exc_info=True)
+
+    # 4. Invoices
+    try:
+        invoices = (
+            db.table("invoices")
+            .select("id, invoice_number, total, status, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        for inv in (invoices.data or []):
+            total_str = f"${float(inv.get('total', 0)):,.2f}" if inv.get("total") else ""
+            events.append({
+                "id": f"inv_{inv['id']}",
+                "type": "invoice",
+                "subtype": inv.get("status", "draft"),
+                "description": f"Invoice #{inv.get('invoice_number', '')} {total_str} — {inv.get('status', '')}",
+                "timestamp": inv["created_at"],
+            })
+    except Exception:
+        logger.warning("Timeline: failed to fetch invoices for lead %s", lead_id, exc_info=True)
+
+    # 5. Documents
+    try:
+        documents = (
+            db.table("documents")
+            .select("id, title, status, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        for doc in (documents.data or []):
+            events.append({
+                "id": f"doc_{doc['id']}",
+                "type": "document",
+                "subtype": doc.get("status", "draft"),
+                "description": f"Document: {doc.get('title', 'Untitled')} — {doc.get('status', '')}",
+                "timestamp": doc["created_at"],
+            })
+    except Exception:
+        logger.warning("Timeline: failed to fetch documents for lead %s", lead_id, exc_info=True)
+
+    # 6. Email events (opens, clicks)
+    try:
+        email_events = (
+            db.table("email_events")
+            .select("id, event_type, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        for ev in (email_events.data or []):
+            events.append({
+                "id": f"email_{ev['id']}",
+                "type": "email_event",
+                "subtype": ev.get("event_type", "open"),
+                "description": f"Email {ev.get('event_type', 'event')}",
+                "timestamp": ev["created_at"],
+            })
+    except Exception:
+        logger.warning("Timeline: failed to fetch email events for lead %s", lead_id, exc_info=True)
+
+    # 7. Client notes
+    try:
+        notes = (
+            db.table("client_notes")
+            .select("id, content, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("lead_id", lead_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        for n in (notes.data or []):
+            content_preview = (n.get("content") or "")[:150]
+            events.append({
+                "id": f"note_{n['id']}",
+                "type": "note",
+                "subtype": "internal",
+                "description": content_preview,
+                "timestamp": n["created_at"],
+            })
+    except Exception:
+        logger.warning("Timeline: failed to fetch notes for lead %s", lead_id, exc_info=True)
+
+    # Sort all events chronologically (newest first) and limit
+    events.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
+    events = events[:limit]
+
+    return {"lead_id": lead_id, "events": events, "count": len(events)}

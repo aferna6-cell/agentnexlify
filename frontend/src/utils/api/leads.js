@@ -93,3 +93,7 @@ export function bulkLeadAction(tenantId, token, leadIds, action, params = {}) {
     body: { lead_ids: leadIds, action, ...params },
   });
 }
+
+export function fetchLeadTimeline(tenantId, token, leadId, limit = 50) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}/timeline?limit=${limit}`, { token });
+}

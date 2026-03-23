@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, requestReviewForLead } from "../../utils/api/leads";
+import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, requestReviewForLead, fetchLeadTimeline } from "../../utils/api/leads";
 import { fetchTeamMembers } from "../../utils/api/team";
 import { fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api/misc";
 
@@ -194,6 +194,11 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   const [sendingReview, setSendingReview] = useState(false);
   const [reviewStatus, setReviewStatus] = useState(null);
 
+  // Timeline state
+  const [timelineEvents, setTimelineEvents] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+
   // Custom Fields state
   const [customFieldDefs, setCustomFieldDefs] = useState([]);
   const [customFieldValues, setCustomFieldValues] = useState({});
@@ -244,6 +249,8 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     setEmailStatus(null);
     setCustomFieldValues({});
     setCustomFieldStatus(null);
+    setTimelineEvents([]);
+    setShowTimeline(false);
     if (user?.tenantId && lead.id && token) {
       fetchLeadScore(user.tenantId, lead.id, token)
         .then((data) => setBreakdown(data.breakdown))
@@ -678,6 +685,111 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               </button>
             </div>
           )}
+
+          {/* Activity Timeline */}
+          <div className="intel-section">
+            <div
+              className="intel-title"
+              style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              onClick={async () => {
+                const next = !showTimeline;
+                setShowTimeline(next);
+                if (next && timelineEvents.length === 0 && user?.tenantId && token && lead.id) {
+                  setTimelineLoading(true);
+                  try {
+                    const data = await fetchLeadTimeline(user.tenantId, token, lead.id);
+                    setTimelineEvents(data.events || []);
+                  } catch (err) {
+                    console.warn("Timeline fetch failed:", err.message);
+                  } finally {
+                    setTimelineLoading(false);
+                  }
+                }
+              }}
+            >
+              <span>Activity Timeline</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                {showTimeline ? "Hide" : "Show"}
+              </span>
+            </div>
+            {showTimeline && (
+              <div style={{ maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
+                {timelineLoading ? (
+                  <div style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                    Loading timeline...
+                  </div>
+                ) : timelineEvents.length === 0 ? (
+                  <div style={{ padding: "0.75rem 0", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                    No activity recorded yet.
+                  </div>
+                ) : (
+                  timelineEvents.map((ev) => {
+                    const typeIcons = {
+                      activity: { icon: "A", color: "var(--accent)" },
+                      message: { icon: ev.subtype === "assistant" ? "AI" : "U", color: ev.subtype === "assistant" ? "var(--accent)" : "var(--green)" },
+                      appointment: { icon: "C", color: "var(--yellow)" },
+                      invoice: { icon: "$", color: "var(--green)" },
+                      document: { icon: "D", color: "var(--accent)" },
+                      email_event: { icon: "E", color: "var(--text-muted)" },
+                      note: { icon: "N", color: "var(--text-secondary)" },
+                    };
+                    const ti = typeIcons[ev.type] || typeIcons.activity;
+                    const timeStr = ev.timestamp
+                      ? new Date(ev.timestamp).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                      : "";
+                    return (
+                      <div
+                        key={ev.id}
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          padding: "0.4rem 0",
+                          borderBottom: "1px solid var(--border)",
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            background: "var(--hover-overlay)",
+                            color: ti.color,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        >
+                          {ti.icon}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "var(--text-primary)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                            title={ev.description}
+                          >
+                            {ev.description}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                            {timeStr}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Read-only metadata */}
           <div className="intel-section">
