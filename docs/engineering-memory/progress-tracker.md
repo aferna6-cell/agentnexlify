@@ -99,3 +99,32 @@ _What was built each session. Proves velocity, prevents re-doing work._
 ### Backlog
 - Marked 8 items as complete
 - 18 unchecked items remaining
+
+## 2026-03-23 Session 4
+
+### Bug Hunt (Phase A)
+- Code audit: all known bug patterns check PASS
+- conversations table: all queries correctly use client_id (verified sms.py, analytics.py, widget_helpers.py)
+- .get() or pattern: no regressions found
+- Route shadowing: no new issues found
+- Fixed misleading comment in sms.py (said conversations uses tenant_id but code correctly uses client_id)
+
+### Features Built (Phase B)
+1. **Team Performance Dashboard** (analytics.py backend endpoint)
+   - GET /analytics/{tenant_id}/team-performance with per-member metrics
+   - Conversations handled count per assigned team member
+   - Average response time per team member
+   - Leads assigned count per team member
+   - Appointments booked count per team member
+   - Action items completed count per team member
+   - Period filtering (7/30/90/365 days)
+2. **Lead Source UTM Tracking** (analytics.py backend + widget_chat.py capture)
+   - UTM parameter capture from widget visitor_info (utm_source, utm_medium, utm_campaign)
+   - Stored on leads table via source field and metadata
+   - GET /analytics/{tenant_id}/lead-sources-utm analytics endpoint
+   - Breakdown by utm_source, utm_medium, utm_campaign
+   - Lead count and conversion rate per UTM source
+3. **Frontend API functions** for both features (analytics.js)
+
+### Backlog
+- 16 unchecked items remaining

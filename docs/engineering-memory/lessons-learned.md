@@ -25,3 +25,11 @@ Added route shadow detection script that found 12 shadowing issues in client_por
 
 ### Widget typing indicator already existed
 Backlog item "Widget typing indicator" was listed as TODO but showTyping()/hideTyping() with CSS bouncing dot animation was already implemented. Always verify backlog items against actual code before building.
+
+## 2026-03-23 Session 4
+
+### Cannot git clone in sandboxed environment
+The sandboxed environment does not have git credentials configured for cloning private repos. Must use GitHub MCP tools (get_file_contents, push_files) to read and write files. This is slower but works. Future sessions should account for this limitation.
+
+### Comments can mislead — always verify code, not comments
+Found a comment in sms.py that said "conversations table uses tenant_id" but the actual code correctly used `client_id`. Comments drift from code. When auditing, check the actual queries, not the comments.

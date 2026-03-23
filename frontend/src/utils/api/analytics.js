@@ -30,3 +30,11 @@ export function fetchLeadSources(tenantId, token) {
 export function fetchMissedCallAnalytics(tenantId, token, period = "30d") {
   return request(`/api/v1/analytics/${tenantId}/missed-calls?period=${period}`, { token });
 }
+
+export function fetchTeamPerformance(tenantId, token, days = 30) {
+  return request(`/api/v1/analytics/${tenantId}/team-performance?days=${days}`, { token });
+}
+
+export function fetchLeadSourcesUtm(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/lead-sources-utm?period=${period}`, { token });
+}

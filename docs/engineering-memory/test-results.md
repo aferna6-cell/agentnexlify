@@ -87,3 +87,28 @@ _Track what features have been tested, what passed, what failed._
 - Appointment reschedule email/SMS (needs Resend + Twilio configured)
 - Conversation auto-close (needs conversations with updated_at > 24h ago)
 - Lead CSV export download (needs leads in DB)
+
+## 2026-03-23 Session 4
+
+### Build Tests
+- Code audit: PASS (all known bug patterns clean)
+- sms.py comment fix: verified code uses client_id correctly, only comment was wrong
+
+### Code Audit Results
+- `from __future__ import annotations`: 0 occurrences (PASS)
+- `except:` (bare): 0 occurrences (PASS)
+- `table("leads").eq("tenant_id"`: 0 occurrences (PASS)
+- `table("conversations").eq("tenant_id"`: 0 occurrences (PASS)
+- Invalid Claude model IDs: 0 occurrences (PASS)
+- `.get("key", default)` pattern: 0 regressions (PASS)
+- Route shadowing: 0 issues (PASS)
+
+### New Features (static analysis)
+- Team performance endpoint: aggregates 5 tables (team_members, conversations, response_metrics, leads, appointments, action_items), proper client_id usage for conversations/leads (PASS)
+- UTM analytics endpoint: reads source/metadata fields from leads, proper client_id usage (PASS)
+- UTM capture in widget_chat: extracts from visitor_info dict, stores on lead via activity_log metadata (PASS)
+- Frontend API functions: follow existing patterns, correct URL construction (PASS)
+
+### Features Not Tested (need live environment)
+- Team performance with real team data (needs team_members + assigned conversations)
+- UTM tracking end-to-end (needs widget with UTM params + leads in DB)
