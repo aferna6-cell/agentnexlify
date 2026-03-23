@@ -525,4 +525,29 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 **Fix:** Added dummy `_hash_client_password()` call when account not found, ensuring constant response time regardless of email validity.
 **Prevention:** Login endpoints should always perform a hash operation before returning error. (Cycle 164)
 
+### 28. conversations table client_id regression #3 — sms.py + analytics.py + conversation.py
+**Date:** 2026-03-23
+**Symptom:** SMS conversations never created/found. Analytics dashboard shows 0 conversations. Conversation service silently fails.
+**Root Cause:** sms.py (2 locations), analytics.py (4 locations), and services/conversation.py (2 locations) queried the conversations table with `tenant_id` instead of `client_id`. This is the 5th occurrence of this bug pattern — previous fixes covered widget_helpers.py, conversation_inbox.py, auth.py, and widget_booking.py but missed these files.
+**Fix:** Changed all 8 locations from `tenant_id` to `client_id`. Also fixed sms.py insert to use `client_id` and include `channel: "sms"`.
+**Prevention:** Run `grep -rn 'conversations.*tenant_id' backend/ --include='*.py'` before every commit. Consider a pre-commit hook for this pattern.
+
+---
+
+### 29. Route shadowing — documents.py templates + webhooks.py schema
+**Date:** 2026-03-23
+**Symptom:** GET /documents/{tenant_id}/templates returns a single document (or 404) instead of template list. GET /webhooks/schema/events returns 404 or wrong data.
+**Root Cause:** Same pattern as invoices.py (Cycle 114) and forms.py (Cycle 131): parameterized routes `/{tenant_id}/{document_id}` and `/{tenant_id}/events` were defined before static routes `/{tenant_id}/templates` and `/schema/events`. FastAPI matches first definition.
+**Fix:** Moved static-path endpoints before parameterized catch-all routes in both files.
+**Prevention:** This is the 4th occurrence. **Pre-commit check needed**: any FastAPI router with `{param}` paths must define static paths first.
+
+---
+
+### 30. NULL plan defaults — .get("plan", "free") returns None not "free"
+**Date:** 2026-03-23
+**Symptom:** Tenants with NULL plan in database get treated as having no plan (None) instead of defaulting to "free". Affects billing gating, branding, SMS limits.
+**Root Cause:** Python `dict.get("key", default)` returns None (not the default) when the key exists but the value is explicitly None/NULL from Supabase. 23 occurrences across 6 files, plus 13 occurrences of the same pattern for business_name.
+**Fix:** Changed `.get("plan", "free")` to `.get("plan") or "free"` and `.get("business_name", "")` to `.get("business_name") or ""` across all affected files.
+**Prevention:** NEVER use `.get(key, default)` for Supabase data that can be NULL. Always use `.get(key) or default`.
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
