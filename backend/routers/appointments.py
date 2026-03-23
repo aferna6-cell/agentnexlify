@@ -253,6 +253,78 @@ async def patch_appointment(
     return updated
 
 
+@router.post("/{tenant_id}/{appointment_id}/check-in")
+async def check_in_appointment(
+    tenant_id: str,
+    appointment_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Mark a customer as checked in for their appointment.
+
+    Sets status to 'checked_in' and records check-in time in notes.
+    Only works for 'confirmed' appointments. Prevents no-show auto-detection
+    since the customer has arrived.
+    """
+    _verify_tenant(claims, tenant_id)
+    db = get_supabase()
+
+    # Fetch the appointment
+    result = db.table("appointments").select("*").eq("id", appointment_id).eq("tenant_id", tenant_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    appointment = result.data[0]
+    current_status = appointment.get("status")
+
+    if current_status not in ("confirmed", "pending"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot check in an appointment with status '{current_status}'. Must be 'confirmed' or 'pending'.",
+        )
+
+    from datetime import datetime, timezone
+    check_in_time = datetime.now(timezone.utc).isoformat()
+
+    # Update status and record check-in time
+    existing_notes = appointment.get("notes") or ""
+    check_in_note = f"[Checked in at {check_in_time}]"
+    updated_notes = f"{existing_notes}\n{check_in_note}".strip()
+
+    update_data = {
+        "status": "checked_in",
+        "notes": updated_notes,
+        "updated_at": check_in_time,
+    }
+
+    db.table("appointments").update(update_data).eq("id", appointment_id).execute()
+
+    # Log activity
+    try:
+        customer_name = appointment.get("customer_name") or "Customer"
+        db.table("activity_log").insert({
+            "tenant_id": tenant_id,
+            "lead_id": appointment.get("lead_id"),
+            "activity_type": "appointment_check_in",
+            "description": f"{customer_name} checked in for appointment",
+        }).execute()
+    except Exception:
+        logger.warning("Failed to log check-in activity for appointment %s", appointment_id, exc_info=True)
+
+    # Fire webhook
+    fire_event_background(tenant_id, "appointment.checked_in", {
+        "appointment_id": appointment_id,
+        "customer_name": appointment.get("customer_name") or "",
+        "check_in_time": check_in_time,
+    })
+
+    return {
+        "id": appointment_id,
+        "status": "checked_in",
+        "check_in_time": check_in_time,
+        "message": f"{appointment.get('customer_name') or 'Customer'} has been checked in.",
+    }
+
+
 @router.post("/{tenant_id}/{appointment_id}/recur")
 async def set_recurrence(
     tenant_id: str,

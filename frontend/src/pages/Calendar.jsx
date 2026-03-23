@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence } from "../utils/api/appointments";
+import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence, checkInAppointment } from "../utils/api/appointments";
 
 const STATUS_COLORS = {
   confirmed: { bg: "var(--accent-dim)", border: "var(--accent)", text: "var(--accent)" },
+  checked_in: { bg: "var(--green-dim)", border: "var(--green)", text: "var(--green)" },
   cancelled: { bg: "var(--hover-overlay)", border: "var(--text-muted)", text: "var(--text-muted)" },
   completed: { bg: "var(--green-dim)", border: "var(--green)", text: "var(--green)" },
   no_show: { bg: "var(--yellow-dim)", border: "var(--yellow)", text: "var(--yellow)" },
+  pending: { bg: "var(--accent-dim)", border: "var(--accent)", text: "var(--accent)" },
 };
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am - 8pm
@@ -132,6 +134,18 @@ export default function Calendar({ onNavigate }) {
       loadAppointments();
     } catch (err) {
       setError(err.body?.detail || err.message || "Failed to cancel appointment.");
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (!selectedAppt) return;
+    try {
+      await checkInAppointment(user.tenantId, token, selectedAppt.id);
+      setError(null);
+      setSelectedAppt(null);
+      loadAppointments();
+    } catch (err) {
+      setError(err.body?.detail || err.message || "Failed to check in.");
     }
   };
 
@@ -298,7 +312,9 @@ export default function Calendar({ onNavigate }) {
             <div className="modal-field">
               <label>Status</label>
               <select value={editStatus} onChange={e => setEditStatus(e.target.value)} className="modal-select">
+                <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
+                <option value="checked_in">Checked In</option>
                 <option value="completed">Completed</option>
                 <option value="no_show">No Show</option>
                 <option value="cancelled">Cancelled</option>
@@ -343,6 +359,11 @@ export default function Calendar({ onNavigate }) {
 
             <div className="modal-actions">
               <button className="btn-primary" onClick={handleSave}>Save</button>
+              {(selectedAppt.status === "confirmed" || selectedAppt.status === "pending") && (
+                <button className="btn-secondary" onClick={handleCheckIn} style={{ background: "var(--green)", color: "#fff", border: "none" }}>
+                  Check In
+                </button>
+              )}
               <button className="btn-danger" onClick={handleCancel}>Cancel Appointment</button>
               <button className="btn-secondary" onClick={() => setSelectedAppt(null)}>Close</button>
             </div>

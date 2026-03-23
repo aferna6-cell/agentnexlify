@@ -2747,12 +2747,13 @@ async def generate_recurring_invoices() -> int:
 
 async def detect_appointment_no_shows() -> int:
     """Auto-mark confirmed appointments as no_show if they started >30 minutes
-    ago and were never marked completed or cancelled.
+    ago and were never marked completed, cancelled, or checked in.
 
     Logic:
     - Status = 'confirmed' AND start_time < now() - 30min
     - Updates to 'no_show'
     - Logs activity for each no-show
+    - Appointments with status 'checked_in' are excluded (customer arrived)
 
     Returns count of appointments marked as no_show.
     """

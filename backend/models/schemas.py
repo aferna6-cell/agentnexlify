@@ -542,8 +542,8 @@ class AppointmentUpdateRequest(BaseModel):
     @field_validator("status")
     @classmethod
     def validate_appt_status(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"confirmed", "cancelled", "completed", "no_show"}:
-            raise ValueError("status must be one of: confirmed, cancelled, completed, no_show")
+        if v is not None and v not in {"confirmed", "cancelled", "completed", "no_show", "checked_in", "pending"}:
+            raise ValueError("status must be one of: confirmed, cancelled, completed, no_show, checked_in, pending")
         return v
 
 
