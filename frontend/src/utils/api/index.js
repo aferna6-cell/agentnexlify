@@ -36,6 +36,7 @@ export * from "./snippets";
 export * from "./social";
 export * from "./tags";
 export * from "./team";
+export * from "./waitlist";
 export * from "./webhooks";
 export * from "./widget-config";
 

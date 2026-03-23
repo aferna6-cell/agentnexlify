@@ -304,6 +304,21 @@ async def delete_appointment(
         "end_time": appt_data.get("end_time"),
     })
 
+    # Notify waitlisted customers about the opened slot
+    if appt_data.get("start_time"):
+        try:
+            from backend.routers.waitlist import notify_waitlist_for_cancellation
+            cancelled_date = appt_data["start_time"][:10] if "T" in appt_data["start_time"] else appt_data["start_time"]
+            asyncio.create_task(asyncio.to_thread(
+                notify_waitlist_for_cancellation,
+                tenant_id,
+                cancelled_date,
+                appt_data.get("start_time", ""),
+                appt_data.get("end_time", ""),
+            ))
+        except Exception:
+            logger.warning("Failed to trigger waitlist notifications for cancelled appointment %s", appointment_id, exc_info=True)
+
     return {"status": "cancelled", "id": appointment_id}
 
 
