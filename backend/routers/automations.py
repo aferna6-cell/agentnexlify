@@ -194,7 +194,7 @@ async def twilio_missed_call(
     # 3. Send SMS
     config = automation.get("config") or {}
     template = config.get("message_template", DEFAULT_TEXTBACK_TEMPLATE)
-    body = format_textback_message(template, tenant.get("business_name", "us"))
+    body = format_textback_message(template, tenant.get("business_name") or "us")
 
     await send_sms(to=From, body=body)
 

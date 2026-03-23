@@ -20,6 +20,9 @@ from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
 
+# callback_router handles static /callback path and MUST be included before router
+# to avoid route shadowing by /{tenant_id}/* parameterized routes
+callback_router = APIRouter(prefix="/api/v1/gbp", tags=["google-business-profile"])
 router = APIRouter(prefix="/api/v1/gbp", tags=["google-business-profile"])
 
 
@@ -60,7 +63,7 @@ async def get_gbp_auth_url(
     return {"auth_url": auth_url}
 
 
-@router.get("/callback")
+@callback_router.get("/callback")
 async def gbp_oauth_callback(code: str = Query(...), state: str = Query(...)):
     """Handle Google OAuth callback — exchange code for tokens."""
     tenant_id = state

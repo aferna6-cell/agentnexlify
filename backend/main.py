@@ -438,13 +438,15 @@ app.include_router(action_items.router)
 app.include_router(conversation_inbox.router)
 app.include_router(snippets.router)
 app.include_router(chat_flows.router)
-app.include_router(client_portal.router)
+app.include_router(client_portal.client_router)  # Static /client/* routes first
+app.include_router(client_portal.router)  # Then /{tenant_id}/* parameterized routes
 app.include_router(bids.router)
 app.include_router(calls.router)
 app.include_router(local_seo.router)
 app.include_router(onboarding.router)
 app.include_router(phone.router)
-app.include_router(gbp.router)
+app.include_router(gbp.callback_router)  # Static /callback route first
+app.include_router(gbp.router)  # Then /{tenant_id}/* parameterized routes
 app.include_router(csat.router)
 app.include_router(custom_fields.router)
 app.include_router(social_media.router)

@@ -246,7 +246,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
     # Load menu items for restaurant tenants
     menu_items = None
-    if tenant.get("business_type", "").lower() == "restaurant":
+    if (tenant.get("business_type") or "").lower() == "restaurant":
         try:
             menu_result = (
                 db.table("menu_items")

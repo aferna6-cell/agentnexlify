@@ -111,7 +111,7 @@ async def handle_missed_call(request: Request):
         logger.warning("Missed call to %s — no matching tenant found", called)
         return PlainTextResponse("OK")
 
-    business_name = tenant.get("business_name", "us")
+    business_name = tenant.get("business_name") or "us"
     tenant_id = tenant["id"]
 
     # Check if text-back is enabled for this tenant

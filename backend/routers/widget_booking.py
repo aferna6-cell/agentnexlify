@@ -93,7 +93,7 @@ async def _process_order_from_chat(
         logger.exception("order_notify: failed to fetch tenant %s", tenant_id)
         return
 
-    business_name = tenant.get("business_name", "Your Business")
+    business_name = tenant.get("business_name") or "Your Business"
     customer_name = record["customer_name"] or "Customer"
     items_summary = ", ".join(
         f"{i.get('name', 'item')} x{i.get('quantity', 1)}"

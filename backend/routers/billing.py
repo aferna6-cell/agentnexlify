@@ -48,9 +48,9 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
     tenant = result.data[0]
 
     customer = get_or_create_customer(
-        email=tenant.get("owner_email", ""),
+        email=tenant.get("owner_email") or "",
         tenant_id=req.tenant_id,
-        business_name=tenant.get("business_name"),
+        business_name=tenant.get("business_name") or "",
     )
 
     # Build line items — plans may have setup fee + monthly
@@ -357,7 +357,7 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
     if owner_email:
         try:
             from backend.services.email_sender import send_email
-            business_name = tenant.get("business_name", "your business")
+            business_name = tenant.get("business_name") or "your business"
             await send_email(
                 to=owner_email,
                 subject="Payment failed — your AgentNexLiFy subscription is paused",

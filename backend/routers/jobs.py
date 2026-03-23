@@ -373,7 +373,7 @@ async def public_apply(
         )
         if tenant_result.data:
             owner_phone = tenant_result.data[0].get("business_phone")
-            biz_name = tenant_result.data[0].get("business_name", "your business")
+            biz_name = tenant_result.data[0].get("business_name") or "your business"
             if owner_phone:
                 from backend.services.twilio_service import send_sms
                 sms_body = (

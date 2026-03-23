@@ -358,7 +358,7 @@ def _build_system_prompt(
     bid_templates: list[dict] | None = None,
     custom_field_defs: list[dict] | None = None,
 ) -> str:
-    business_name = tenant.get("business_name", "our company")
+    business_name = tenant.get("business_name") or "our company"
     business_type = tenant.get("business_type", "")
     city = tenant.get("city", "")
 
@@ -1226,7 +1226,7 @@ async def _send_new_lead_email_notification(
     if not owner_email:
         return
 
-    raw_business_name = tenant.get("business_name", "your business")
+    raw_business_name = tenant.get("business_name") or "your business"
     business_name = html_mod.escape(raw_business_name)
     safe_name = html_mod.escape(lead_name)
     safe_email = html_mod.escape(lead_info.get("email", "not provided"))

@@ -17,6 +17,9 @@ from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
 
+# client_router handles static paths and MUST be included before router
+# to avoid route shadowing by /{tenant_id}/* parameterized routes
+client_router = APIRouter(prefix="/api/v1/portal", tags=["client-portal"])
 router = APIRouter(prefix="/api/v1/portal", tags=["client-portal"])
 
 _PORTAL_BASE_URL = "https://agentnexlify.vercel.app/client"
@@ -489,7 +492,7 @@ def _get_current_client(authorization: str = Header(...)) -> dict:
     return payload
 
 
-@router.post("/client/register")
+@client_router.post("/client/register")
 @limiter.limit("10/minute")
 async def client_register(req: ClientRegisterRequest, request: Request):
     """Register a client account using a portal token as proof of identity.
@@ -570,7 +573,7 @@ async def client_register(req: ClientRegisterRequest, request: Request):
     return {"token": token, "message": "Account created successfully"}
 
 
-@router.post("/client/login")
+@client_router.post("/client/login")
 @limiter.limit("10/minute")
 async def client_login(req: ClientLoginRequest, request: Request):
     """Log in as a client using email + password, scoped to a business by slug."""
@@ -625,7 +628,7 @@ async def client_login(req: ClientLoginRequest, request: Request):
     return {"token": token}
 
 
-@router.get("/client/me")
+@client_router.get("/client/me")
 async def client_me(claims: dict = Depends(_get_current_client)):
     """Get the authenticated client's portal data — same as the public portal but via JWT."""
     db = get_supabase()
@@ -796,7 +799,7 @@ class ClientBookingRequest(BaseModel):
     notes: str | None = None
 
 
-@router.get("/client/slots")
+@client_router.get("/client/slots")
 @limiter.limit("30/minute")
 async def client_available_slots(
     request: Request,
@@ -843,7 +846,7 @@ async def client_available_slots(
     }
 
 
-@router.post("/client/book")
+@client_router.post("/client/book")
 @limiter.limit("5/minute")
 async def client_book_appointment(
     request: Request,
@@ -930,7 +933,7 @@ async def client_book_appointment(
     }
 
 
-@router.delete("/client/appointments/{appointment_id}")
+@client_router.delete("/client/appointments/{appointment_id}")
 @limiter.limit("5/minute")
 async def client_cancel_appointment(
     request: Request,
