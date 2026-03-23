@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchFaqEntries, createFaqEntry, deleteFaqEntry } from "../utils/api/faq";
+import { fetchFaqEntries, createFaqEntry, deleteFaqEntry, suggestFaqEntries } from "../utils/api/faq";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function FaqManagerPage() {
@@ -11,6 +11,9 @@ export default function FaqManagerPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ question: "", answer: "", category: "" });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestMessage, setSuggestMessage] = useState("");
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -56,6 +59,33 @@ export default function FaqManagerPage() {
     }
   };
 
+  const handleSuggest = async () => {
+    setSuggestLoading(true);
+    setSuggestMessage("");
+    setSuggestions([]);
+    try {
+      const data = await suggestFaqEntries(user.tenantId, token);
+      setSuggestions(data.suggestions || []);
+      if (data.message) setSuggestMessage(data.message);
+      else if (!data.suggestions?.length) setSuggestMessage("No new suggestions found.");
+    } catch (err) {
+      setSuggestMessage("Failed to generate suggestions. Please try again.");
+      console.error("FAQ suggest failed", err);
+    } finally {
+      setSuggestLoading(false);
+    }
+  };
+
+  const handleAddSuggestion = async (suggestion, index) => {
+    try {
+      const entry = await createFaqEntry(user.tenantId, token, suggestion);
+      setFaqs((prev) => [...prev, entry]);
+      setSuggestions((prev) => prev.filter((_, i) => i !== index));
+    } catch (err) {
+      console.error("Failed to add suggested FAQ", err);
+    }
+  };
+
   if (loading) return <SkeletonLoader />;
 
   return (
@@ -65,11 +95,65 @@ export default function FaqManagerPage() {
         <p>Manage the knowledge base your AI widget uses to answer questions</p>
       </div>
 
-      <div style={{ marginBottom: "1rem" }}>
+      <div style={{ marginBottom: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
         <button className="btn-primary" onClick={() => setShowForm((s) => !s)}>
           {showForm ? "Cancel" : "+ Add FAQ"}
         </button>
+        <button
+          className="btn-secondary"
+          onClick={handleSuggest}
+          disabled={suggestLoading}
+          style={{ background: "var(--accent-dim)", border: "1px solid var(--accent)", color: "var(--accent)" }}
+        >
+          {suggestLoading ? "Analyzing conversations..." : "AI Suggest FAQs"}
+        </button>
       </div>
+
+      {suggestMessage && !suggestions.length && (
+        <div className="settings-card" style={{ marginBottom: "1rem", color: "var(--text-secondary)" }}>
+          {suggestMessage}
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <div className="settings-card" style={{ marginBottom: "1rem", borderColor: "var(--accent)" }}>
+          <h3 style={{ color: "var(--accent)", marginBottom: "0.75rem" }}>Suggested FAQs</h3>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1rem" }}>
+            Based on your recent conversations. Click "Add" to include in your knowledge base.
+          </p>
+          {suggestions.map((s, i) => (
+            <div key={i} style={{
+              padding: "0.75rem", marginBottom: "0.5rem",
+              background: "var(--bg-secondary)", borderRadius: 8,
+              border: "1px solid var(--border-color)",
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>{s.question}</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: 8 }}>{s.answer}</div>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                {s.category && (
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", background: "var(--hover-overlay)", padding: "2px 8px", borderRadius: 4 }}>
+                    {s.category}
+                  </span>
+                )}
+                <button
+                  className="btn-primary"
+                  style={{ fontSize: "0.8rem", padding: "4px 12px" }}
+                  onClick={() => handleAddSuggestion(s, i)}
+                >
+                  Add
+                </button>
+                <button
+                  className="btn-secondary"
+                  style={{ fontSize: "0.8rem", padding: "4px 12px" }}
+                  onClick={() => setSuggestions((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {showForm && (
         <div className="settings-card" style={{ marginBottom: "1rem" }}>

@@ -706,6 +706,140 @@ async def delete_faq(
     db.table("faq_entries").update({"is_active": False}).eq("id", faq_id).eq("tenant_id", tenant_id).execute()
 
 
+# ── AI FAQ Suggestions ────────────────────────────────────────
+
+
+@router.post("/faq/{tenant_id}/suggest")
+async def suggest_faq_entries(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Analyze recent conversations and suggest FAQ entries that would
+    help the AI answer questions better.
+
+    Looks at the last 50 conversations, identifies recurring questions or
+    topics the AI struggled with, and suggests Q&A pairs. Excludes topics
+    already covered by existing FAQ entries.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Fetch existing FAQ entries to avoid duplicates
+    existing_faqs = db.table("faq_entries").select("question, answer").eq("tenant_id", tenant_id).execute()
+    existing_questions = [f.get("question", "") for f in (existing_faqs.data or [])]
+    existing_text = "\n".join([f"Q: {q}" for q in existing_questions]) if existing_questions else "None"
+
+    # Fetch recent conversations (user messages only — we want to see what visitors asked)
+    messages_result = (
+        db.table("chat_messages")
+        .select("content, role, session_id")
+        .eq("tenant_id", tenant_id)
+        .eq("role", "user")
+        .order("created_at", desc=True)
+        .limit(200)
+        .execute()
+    )
+    user_messages = messages_result.data or []
+
+    if len(user_messages) < 5:
+        return {
+            "suggestions": [],
+            "message": "Need at least 5 conversations to generate suggestions. Keep chatting!",
+        }
+
+    # Get tenant business info for context
+    tenant_result = db.table("tenants").select("business_name, business_type").eq("id", tenant_id).execute()
+    business_name = "the business"
+    business_type = "local business"
+    if tenant_result.data:
+        business_name = tenant_result.data[0].get("business_name") or "the business"
+        business_type = tenant_result.data[0].get("business_type") or "local business"
+
+    # Deduplicate by session to get unique questions
+    seen_sessions = set()
+    unique_messages = []
+    for msg in user_messages:
+        sid = msg.get("session_id", "")
+        if sid not in seen_sessions:
+            seen_sessions.add(sid)
+            unique_messages.append(msg.get("content", ""))
+        if len(unique_messages) >= 50:
+            break
+
+    # Build prompt for Claude
+    conversation_sample = "\n".join([f"- {m[:200]}" for m in unique_messages])
+
+    import anthropic
+    from backend.config import settings
+
+    if not settings.anthropic_api_key:
+        raise HTTPException(status_code=503, detail="AI service not configured")
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
+
+    prompt = f"""You are analyzing chat conversations for a {business_type} called "{business_name}".
+
+Here are recent visitor questions/messages:
+{conversation_sample}
+
+Here are existing FAQ entries (do NOT suggest duplicates):
+{existing_text}
+
+Based on the conversation patterns, suggest 3-6 FAQ entries that would help the AI chatbot answer visitors better. Focus on:
+1. Questions asked repeatedly that aren't covered by existing FAQs
+2. Topics where visitors seemed confused or needed more info
+3. Common business-specific questions for a {business_type}
+
+Return ONLY a JSON array of objects with "question", "answer", and "category" fields. Keep answers concise (1-3 sentences). Example:
+[{{"question": "What are your hours?", "answer": "We are open Monday-Friday 9am-5pm.", "category": "General"}}]
+
+Return ONLY the JSON array, no other text."""
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text.strip()
+
+        # Parse JSON from response
+        import json
+        # Handle markdown code blocks
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        suggestions = json.loads(raw)
+
+        if not isinstance(suggestions, list):
+            suggestions = []
+
+        # Validate each suggestion has required fields
+        valid_suggestions = []
+        for s in suggestions:
+            if isinstance(s, dict) and s.get("question") and s.get("answer"):
+                valid_suggestions.append({
+                    "question": s["question"],
+                    "answer": s["answer"],
+                    "category": s.get("category", "General"),
+                })
+
+        return {
+            "suggestions": valid_suggestions,
+            "analyzed_conversations": len(unique_messages),
+            "existing_faq_count": len(existing_questions),
+        }
+    except json.JSONDecodeError:
+        logger.warning("Failed to parse AI FAQ suggestions for tenant %s", tenant_id, exc_info=True)
+        return {"suggestions": [], "message": "AI generated invalid response. Please try again."}
+    except Exception:
+        logger.exception("AI FAQ suggestion failed for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to generate FAQ suggestions")
+
+
 # ── Conversations ────────────────────────────────────────────
 
 
