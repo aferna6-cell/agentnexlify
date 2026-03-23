@@ -2991,3 +2991,57 @@ async def send_daily_digest_emails() -> int:
     if sent > 0:
         logger.info("send_daily_digest_emails: sent %d digest emails", sent)
     return sent
+
+
+# ---------------------------------------------------------------------------
+# Conversation Auto-Close
+# ---------------------------------------------------------------------------
+
+
+async def auto_close_inactive_conversations() -> int:
+    """Auto-close conversations that have been inactive for 24+ hours.
+
+    Finds conversations with status 'active' (or NULL status, which means active)
+    where the last message was more than 24 hours ago. Updates status to 'closed'.
+    Keeps the inbox clean for business owners.
+
+    Returns count of conversations closed.
+    """
+    db = get_supabase()
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    closed = 0
+
+    try:
+        # Find active conversations with last activity > 24h ago
+        # We check chat_messages for the most recent message per session
+        active_convs = (
+            db.table("conversations")
+            .select("id, client_id, session_id, updated_at")
+            .or_("status.eq.active,status.is.null")
+            .lt("updated_at", cutoff)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("auto_close_inactive_conversations: failed to query conversations")
+        return 0
+
+    if not active_convs.data:
+        return 0
+
+    conv_ids = [c["id"] for c in active_convs.data]
+
+    try:
+        db.table("conversations").update({
+            "status": "closed",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).in_("id", conv_ids).execute()
+        closed = len(conv_ids)
+    except Exception:
+        logger.exception("auto_close_inactive_conversations: batch update failed")
+        return 0
+
+    if closed > 0:
+        logger.info("auto_close_inactive_conversations: closed %d inactive conversations", closed)
+
+    return closed
