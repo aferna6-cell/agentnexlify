@@ -64,6 +64,7 @@ const allNavItems = [
   { key: "social_media", icon: <Icon d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />, label: "Social Media" },
   { key: "campaigns", icon: <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6" />, label: "Campaigns" },
   { key: "team", icon: <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" />, label: "Team", roles: ["owner", "admin"] },
+  { key: "team_activity", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />, label: "Team Activity", roles: ["owner", "admin"] },
   { key: "billing", icon: <Icon d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM1 10h22" />, label: "Billing", roles: ["owner"] },
   { key: "business_page", icon: <Icon d="M3 3h18v18H3zM3 9h18M9 21V9" />, label: "Business Page", roles: ["owner", "admin"] },
   { key: "integrations", icon: <Icon d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />, label: "Integrations" },

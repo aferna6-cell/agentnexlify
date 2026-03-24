@@ -187,7 +187,9 @@ async def create_lead(
 
     lead = result.data[0]
     log_activity(tenant_id=tenant_id, lead_id=lead["id"], activity_type="lead_created",
-                 description=f"Lead created manually: {req.name or req.email or req.phone}")
+                 description=f"Lead created manually: {req.name or req.email or req.phone}",
+                 metadata={"performed_by": claims.get("team_member_id") or claims.get("tenant_id"),
+                           "performed_by_name": claims.get("name") or claims.get("email") or "Owner"})
     fire_event_background(tenant_id, "lead.created", {"lead_id": lead["id"], "name": req.name, "source": "manual"})
 
     return lead
@@ -719,12 +721,22 @@ async def assign_lead(
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    # Log the assignment
+    # Log the assignment with performing user info
     member_name = member.data[0]["name"] if req.assigned_to and member.data else "nobody"
+    performer_id = claims.get("team_member_id") or claims.get("tenant_id")
+    performer_name = claims.get("name") or claims.get("email") or "Owner"
     try:
         log_activity(
-            db, tenant_id, lead_id, "assignment",
-            f"Lead assigned to {member_name}",
+            tenant_id=tenant_id,
+            activity_type="assignment",
+            description=f"Lead assigned to {member_name}",
+            lead_id=lead_id,
+            metadata={
+                "assigned_to": req.assigned_to,
+                "assigned_to_name": member_name,
+                "performed_by": performer_id,
+                "performed_by_name": performer_name,
+            },
         )
     except Exception:
         logger.warning("Failed to log assignment activity", exc_info=True)

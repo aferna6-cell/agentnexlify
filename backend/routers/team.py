@@ -466,3 +466,72 @@ async def resend_invite(
         )
 
     return {"status": "resent"}
+
+
+# ---------------------------------------------------------------------------
+# Team Member Activity Log
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/activity")
+async def get_team_activity(
+    tenant_id: str,
+    member_id: str | None = None,
+    days: int = 7,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Get activity log entries that have a team member (performed_by) in metadata.
+
+    Optionally filter by member_id. Returns up to 200 entries from the last N days.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    from datetime import datetime, timedelta, timezone
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    db = get_supabase()
+    query = (
+        db.table("activity_log")
+        .select("id, activity_type, description, lead_id, metadata, created_at")
+        .eq("tenant_id", tenant_id)
+        .gte("created_at", since)
+        .order("created_at", desc=True)
+        .limit(200)
+    )
+
+    try:
+        result = query.execute()
+    except Exception:
+        logger.exception("Failed to fetch team activity for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch activity")
+
+    entries = result.data or []
+
+    # Filter to entries that have a performed_by in metadata
+    team_entries = []
+    for entry in entries:
+        meta = entry.get("metadata") or {}
+        performed_by = meta.get("performed_by")
+        if performed_by:
+            if member_id and performed_by != member_id:
+                continue
+            entry["performed_by"] = performed_by
+            entry["performed_by_name"] = meta.get("performed_by_name", "")
+            team_entries.append(entry)
+
+    # Also fetch team member names for display
+    team_map = {}
+    try:
+        members = db.table("team_members").select("id, name, email").eq("tenant_id", tenant_id).execute()
+        for m in (members.data or []):
+            team_map[m["id"]] = m.get("name") or m.get("email") or "Unknown"
+    except Exception:
+        pass
+
+    # Enrich entries with member names
+    for entry in team_entries:
+        if not entry.get("performed_by_name") and entry.get("performed_by") in team_map:
+            entry["performed_by_name"] = team_map[entry["performed_by"]]
+
+    return {"activity": team_entries, "team_members": team_map}

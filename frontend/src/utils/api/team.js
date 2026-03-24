@@ -30,3 +30,11 @@ export function validateInvite(inviteToken) {
 export function acceptInvite(inviteToken, { name, password }) {
   return request("/api/v1/team/accept-invite", { method: "POST", body: { token: inviteToken, name, password } });
 }
+
+export function fetchTeamActivity(tenantId, token, { memberId, days } = {}) {
+  const params = new URLSearchParams();
+  if (memberId) params.set("member_id", memberId);
+  if (days) params.set("days", days);
+  const qs = params.toString();
+  return request(`/api/v1/team/${tenantId}/activity${qs ? `?${qs}` : ""}`, { token });
+}
