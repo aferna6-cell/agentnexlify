@@ -1971,6 +1971,47 @@ async def check_new_reviews() -> int:
             },
         )
 
+        # Auto-generate AI draft response if no draft exists yet
+        review_id = review.get("id")
+        if review_id and review_text and not review.get("ai_draft_response"):
+            try:
+                import httpx
+                from backend.config import settings as _settings
+
+                biz_name = tenant.get("business_name") or "our business"
+                prompt = (
+                    f"Write a professional, friendly response to this {rating}-star "
+                    f"review for {biz_name}.\n\n"
+                    f"Reviewer: {author_name}\n"
+                    f"Review: {review_text}\n\n"
+                    f"Guidelines:\n"
+                    f"- Thank the reviewer by name\n"
+                    f"- If positive (4-5 stars), express gratitude and invite them back\n"
+                    f"- If negative (1-2 stars), apologize, acknowledge concerns, offer to make it right\n"
+                    f"- Keep it under 100 words\n"
+                    f"- Be genuine, not corporate-sounding"
+                )
+                client = httpx.Client(timeout=30)
+                resp = client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": _settings.anthropic_api_key,
+                        "content-type": "application/json",
+                        "anthropic-version": "2023-06-01",
+                    },
+                    json={
+                        "model": "claude-haiku-4-5-20251001",
+                        "max_tokens": 300,
+                        "messages": [{"role": "user", "content": prompt}],
+                    },
+                )
+                if resp.status_code == 200:
+                    ai_draft = resp.json()["content"][0]["text"].strip()
+                    db.table("reviews").update({"ai_draft_response": ai_draft}).eq("id", review_id).execute()
+                    logger.info("Auto-generated AI draft response for review %s", review_id)
+            except Exception:
+                logger.warning("check_new_reviews: failed to auto-generate AI draft for review %s", review_id, exc_info=True)
+
         # Send SMS if phone is configured
         if notification_phone:
             sms_body = (

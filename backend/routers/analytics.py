@@ -1132,3 +1132,123 @@ async def get_appointment_type_analytics(
     }
     _set_cached(cache_key, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Widget Visitor Funnel Analytics
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/widget-funnel")
+async def get_widget_funnel(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    days: int = Query(30, ge=7, le=365),
+):
+    """Widget conversion funnel: sessions started -> leads captured -> appointments booked.
+
+    Since we don't track raw widget impressions (page loads without interaction),
+    we measure from the first interaction point: unique session_ids in chat_messages.
+    """
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    cache_key = f"widget_funnel:{tenant_id}:{days}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    db = get_supabase()
+    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    # 1. Unique chat sessions (conversations started)
+    sessions_started = 0
+    daily_sessions: dict[str, int] = defaultdict(int)
+    try:
+        msgs = (
+            db.table("chat_messages")
+            .select("session_id, created_at")
+            .eq("tenant_id", tenant_id)
+            .eq("role", "user")
+            .gte("created_at", start)
+            .limit(_QUERY_LIMIT)
+            .execute()
+        )
+        session_dates: dict[str, str] = {}
+        for m in (msgs.data or []):
+            sid = m.get("session_id")
+            if sid and sid not in session_dates:
+                session_dates[sid] = (m.get("created_at") or "")[:10]
+        sessions_started = len(session_dates)
+        for date_str in session_dates.values():
+            if date_str:
+                daily_sessions[date_str] += 1
+    except Exception:
+        logger.warning("widget_funnel: failed to count sessions for %s", tenant_id, exc_info=True)
+
+    # 2. Leads captured (from widget source)
+    leads_captured = 0
+    try:
+        leads_r = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("client_id", tenant_id)
+            .eq("source", "widget")
+            .gte("created_at", start)
+            .limit(1)
+            .execute()
+        )
+        leads_captured = leads_r.count or 0
+    except Exception:
+        # Fallback: count all leads in period
+        try:
+            leads_r2 = (
+                db.table("leads")
+                .select("id", count="exact")
+                .eq("client_id", tenant_id)
+                .gte("created_at", start)
+                .limit(1)
+                .execute()
+            )
+            leads_captured = leads_r2.count or 0
+        except Exception:
+            logger.warning("widget_funnel: failed to count leads for %s", tenant_id, exc_info=True)
+
+    # 3. Appointments booked in period
+    appts_booked = 0
+    try:
+        appts_r = (
+            db.table("appointments")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .gte("created_at", start)
+            .limit(1)
+            .execute()
+        )
+        appts_booked = appts_r.count or 0
+    except Exception:
+        logger.warning("widget_funnel: failed to count appointments for %s", tenant_id, exc_info=True)
+
+    # Compute conversion rates
+    session_to_lead = round(leads_captured / sessions_started * 100, 1) if sessions_started > 0 else 0
+    lead_to_appt = round(appts_booked / leads_captured * 100, 1) if leads_captured > 0 else 0
+    session_to_appt = round(appts_booked / sessions_started * 100, 1) if sessions_started > 0 else 0
+
+    # Daily trend (last 14 days)
+    daily_trend = sorted(
+        [{"date": d, "sessions": c} for d, c in daily_sessions.items()],
+        key=lambda x: x["date"],
+    )[-14:]
+
+    result = {
+        "period_days": days,
+        "sessions_started": sessions_started,
+        "leads_captured": leads_captured,
+        "appointments_booked": appts_booked,
+        "session_to_lead_rate": session_to_lead,
+        "lead_to_appointment_rate": lead_to_appt,
+        "session_to_appointment_rate": session_to_appt,
+        "daily_trend": daily_trend,
+    }
+    _set_cached(cache_key, result)
+    return result
