@@ -73,6 +73,8 @@ const PipelinePage = lazy(() => import("../pages/PipelinePage"));
 const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
 const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
 const CSATPage = lazy(() => import("../pages/CSATPage"));
+const WaitlistPage = lazy(() => import("../pages/WaitlistPage"));
+const ScoringConfigPage = lazy(() => import("../pages/ScoringConfigPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -112,6 +114,8 @@ const pages = {
   smart_lists: SmartListsPage,
   form_builder: FormBuilderPage,
   csat: CSATPage,
+  waitlist: WaitlistPage,
+  scoring_config: ScoringConfigPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {
