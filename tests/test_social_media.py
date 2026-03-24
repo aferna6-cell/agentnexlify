@@ -185,8 +185,9 @@ class TestMarketingCampaigns:
         assert resp.status_code == 400
 
     @patch("backend.routers.auth.settings")
+    @patch("backend.routers.marketing_campaigns.get_supabase")
     @patch("backend.routers.marketing_campaigns._query_target_leads")
-    def test_estimate_recipients(self, mock_query, mock_settings):
+    def test_estimate_recipients(self, mock_query, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         mock_query.return_value = [
             {"id": "lead-1", "email": "a@b.com"},

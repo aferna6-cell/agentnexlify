@@ -133,7 +133,10 @@ class TestVoiceIncoming:
         assert "<Response>" in resp.text
         assert "unable to take your call" in resp.text
 
-    def test_incoming_call_empty_body(self):
+    @patch("backend.routers.calls._find_tenant_by_phone")
+    def test_incoming_call_empty_body(self, mock_find):
+        mock_find.return_value = None
+
         resp = client.post(
             "/api/v1/calls/voice/incoming",
             content="",

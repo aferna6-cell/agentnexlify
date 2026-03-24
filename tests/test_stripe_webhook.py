@@ -3,7 +3,7 @@
 import json
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -169,7 +169,7 @@ class TestStripeEventRouting:
         mock_handler.assert_called_once()
 
     @patch("backend.routers.stripe_webhooks.get_supabase")
-    @patch("backend.routers.stripe_webhooks._handle_payment_failed")
+    @patch("backend.routers.stripe_webhooks._handle_payment_failed", new_callable=AsyncMock)
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
     async def test_payment_failed_routed(
