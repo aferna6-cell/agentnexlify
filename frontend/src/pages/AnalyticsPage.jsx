@@ -11,6 +11,7 @@ import {
   fetchTeamPerformance,
   fetchLeadSourcesUtm,
   fetchConversationSentiment,
+  fetchCustomerLifetimeValue,
 } from "../utils/api/analytics";
 import { fetchConversations } from "../utils/api/conversations";
 import { fetchTagDefinitions } from "../utils/api/tags";
@@ -262,6 +263,7 @@ export default function AnalyticsPage() {
   const [teamPerformance, setTeamPerformance] = useState(null);
   const [utmData, setUtmData] = useState(null);
   const [sentimentData, setSentimentData] = useState(null);
+  const [clvData, setClvData] = useState(null);
   const [error, setError] = useState(null);
 
   const [currentTheme, setCurrentTheme] = useState(
@@ -284,7 +286,7 @@ export default function AnalyticsPage() {
     setError(null);
     try {
       const periodDays = { "7d": 7, "30d": 30, "90d": 90 }[period] || 30;
-      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources, teamPerf, utm, sentiment] = await Promise.allSettled([
+      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources, teamPerf, utm, sentiment, clv] = await Promise.allSettled([
         fetchAnalyticsOverview(user.tenantId, token, period),
         fetchAnalyticsConversations(user.tenantId, token, period),
         fetchAnalyticsLeads(user.tenantId, token, period),
@@ -297,6 +299,7 @@ export default function AnalyticsPage() {
         fetchTeamPerformance(user.tenantId, token, periodDays),
         fetchLeadSourcesUtm(user.tenantId, token, period),
         fetchConversationSentiment(user.tenantId, token, period),
+        fetchCustomerLifetimeValue(user.tenantId, token),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
@@ -349,6 +352,8 @@ export default function AnalyticsPage() {
       if (utm.status === "fulfilled") setUtmData(utm.value);
       // Sentiment analytics
       if (sentiment.status === "fulfilled") setSentimentData(sentiment.value);
+      // Customer lifetime value
+      if (clv.status === "fulfilled") setClvData(clv.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1056,6 +1061,55 @@ export default function AnalyticsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Customer Lifetime Value */}
+      <div className="analytics-section" style={{ marginTop: "24px" }}>
+        <h2 className="analytics-section-title">Customer Lifetime Value</h2>
+        {clvData && clvData.total_paying_customers > 0 ? (
+          <div>
+            <div className="analytics-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginBottom: "16px" }}>
+              <StatCard label="Total Revenue" value={`$${clvData.total_revenue.toLocaleString()}`} />
+              <StatCard label="Avg CLV" value={`$${clvData.avg_clv.toLocaleString()}`} />
+              <StatCard label="Median CLV" value={`$${clvData.median_clv.toLocaleString()}`} />
+              <StatCard label="Paying Customers" value={clvData.total_paying_customers} />
+            </div>
+            <div style={{ background: "var(--bg-secondary)", borderRadius: "8px", padding: "16px" }}>
+              <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>Top Customers by Revenue</div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                      <th style={{ textAlign: "left", padding: "8px 12px", color: "var(--text-secondary)", fontWeight: 500 }}>Customer</th>
+                      <th style={{ textAlign: "right", padding: "8px 12px", color: "var(--text-secondary)", fontWeight: 500 }}>Revenue</th>
+                      <th style={{ textAlign: "right", padding: "8px 12px", color: "var(--text-secondary)", fontWeight: 500 }}>Invoices</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", color: "var(--text-secondary)", fontWeight: 500 }}>First Payment</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", color: "var(--text-secondary)", fontWeight: 500 }}>Last Payment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(clvData.top_customers || []).map((c, i) => (
+                      <tr key={c.lead_id || i} style={{ borderBottom: "1px solid var(--border)" }}>
+                        <td style={{ padding: "8px 12px", fontWeight: 500 }}>{c.customer_name}</td>
+                        <td style={{ padding: "8px 12px", textAlign: "right", color: "var(--green)", fontWeight: 600 }}>${c.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style={{ padding: "8px 12px", textAlign: "right" }}>{c.invoice_count}</td>
+                        <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{c.first_payment ? new Date(c.first_payment).toLocaleDateString() : "-"}</td>
+                        <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{c.last_payment ? new Date(c.last_payment).toLocaleDateString() : "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: "16px", marginBottom: "8px" }}>No paid invoices yet</div>
+            <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+              Customer lifetime value is calculated from paid invoices. Create and send invoices to start tracking revenue per customer.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

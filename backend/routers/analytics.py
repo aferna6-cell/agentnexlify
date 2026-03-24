@@ -1252,3 +1252,108 @@ async def get_widget_funnel(
     }
     _set_cached(cache_key, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Customer Lifetime Value (CLV)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/customer-lifetime-value")
+async def get_customer_lifetime_value(
+    tenant_id: str,
+    top_n: int = Query(default=20, ge=1, le=100),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Calculate customer lifetime value from paid invoices per lead.
+
+    Returns top N customers by total revenue, plus aggregate CLV stats.
+    No migration needed — computed from existing invoices table.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    cache_key = f"clv:{tenant_id}:{top_n}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    db = get_supabase()
+
+    try:
+        invoices = (
+            db.table("invoices")
+            .select("lead_id, total, paid_at, status")
+            .eq("tenant_id", tenant_id)
+            .eq("status", "paid")
+            .not_.is_("lead_id", "null")
+            .limit(_QUERY_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("CLV: failed to query invoices for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to query invoices")
+
+    if not invoices.data:
+        result = {
+            "top_customers": [],
+            "total_revenue": 0,
+            "avg_clv": 0,
+            "median_clv": 0,
+            "total_paying_customers": 0,
+        }
+        _set_cached(cache_key, result)
+        return result
+
+    # Aggregate by lead_id
+    clv_by_lead: dict[str, dict] = {}
+    for inv in invoices.data:
+        lid = inv["lead_id"]
+        total = float(inv.get("total") or 0)
+        if lid not in clv_by_lead:
+            clv_by_lead[lid] = {"lead_id": lid, "total_revenue": 0, "invoice_count": 0, "first_payment": None, "last_payment": None}
+        clv_by_lead[lid]["total_revenue"] += total
+        clv_by_lead[lid]["invoice_count"] += 1
+        paid_at = inv.get("paid_at") or ""
+        if paid_at:
+            if not clv_by_lead[lid]["first_payment"] or paid_at < clv_by_lead[lid]["first_payment"]:
+                clv_by_lead[lid]["first_payment"] = paid_at
+            if not clv_by_lead[lid]["last_payment"] or paid_at > clv_by_lead[lid]["last_payment"]:
+                clv_by_lead[lid]["last_payment"] = paid_at
+
+    # Enrich with lead names
+    lead_ids = list(clv_by_lead.keys())
+    lead_names: dict[str, str] = {}
+    try:
+        for i in range(0, len(lead_ids), 50):
+            batch = lead_ids[i : i + 50]
+            leads_result = db.table("leads").select("id, name, email").in_("id", batch).execute()
+            for l in (leads_result.data or []):
+                lead_names[l["id"]] = l.get("name") or l.get("email") or "Unknown"
+    except Exception:
+        logger.warning("CLV: failed to fetch lead names", exc_info=True)
+
+    for lid, data in clv_by_lead.items():
+        data["customer_name"] = lead_names.get(lid, "Unknown")
+
+    # Sort by total revenue descending
+    sorted_customers = sorted(clv_by_lead.values(), key=lambda x: x["total_revenue"], reverse=True)
+    top_customers = sorted_customers[:top_n]
+
+    # Aggregate stats
+    all_revenues = [c["total_revenue"] for c in sorted_customers]
+    total_revenue = sum(all_revenues)
+    total_customers = len(all_revenues)
+    avg_clv = total_revenue / total_customers if total_customers > 0 else 0
+    sorted_revs = sorted(all_revenues)
+    median_clv = sorted_revs[len(sorted_revs) // 2] if sorted_revs else 0
+
+    result = {
+        "top_customers": top_customers,
+        "total_revenue": round(total_revenue, 2),
+        "avg_clv": round(avg_clv, 2),
+        "median_clv": round(median_clv, 2),
+        "total_paying_customers": total_customers,
+    }
+    _set_cached(cache_key, result)
+    return result

@@ -42,3 +42,7 @@ export function fetchLeadSourcesUtm(tenantId, token, period = "30d") {
 export function fetchConversationSentiment(tenantId, token, period = "30d") {
   return request(`/api/v1/analytics/${tenantId}/conversation-sentiment?period=${period}`, { token });
 }
+
+export function fetchCustomerLifetimeValue(tenantId, token, topN = 20) {
+  return request(`/api/v1/analytics/${tenantId}/customer-lifetime-value?top_n=${topN}`, { token });
+}
