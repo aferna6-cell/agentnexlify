@@ -3345,6 +3345,148 @@ async def decay_stale_lead_scores() -> int:
 
 
 # ---------------------------------------------------------------------------
+# Lead Aging Alerts
+# ---------------------------------------------------------------------------
+
+
+async def send_lead_aging_alerts() -> int:
+    """
+    Alert business owners when leads sit in 'new' status for 48+ hours
+    without being contacted. Prevents leads falling through the cracks.
+
+    Sends one digest email per tenant per day with all stale leads listed.
+    Dedup via activity_log ('lead_aging_alert' per tenant per day).
+    Only runs for paid tenants.
+    """
+    db = get_supabase()
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    alerted = 0
+
+    try:
+        # Get all 'new' leads older than 48h
+        stale_leads = (
+            db.table("leads")
+            .select("id, client_id, name, email, phone, created_at")
+            .eq("status", "new")
+            .lt("created_at", cutoff)
+            .limit(BATCH_LIMIT * 5)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_lead_aging_alerts: failed to query stale leads")
+        return 0
+
+    if not stale_leads.data:
+        return 0
+
+    # Group by tenant
+    tenant_leads: dict[str, list[dict]] = {}
+    for lead in stale_leads.data:
+        tid = lead.get("client_id")
+        if tid:
+            tenant_leads.setdefault(tid, []).append(lead)
+
+    for tenant_id, leads_list in tenant_leads.items():
+        # Dedup: one alert per tenant per day
+        try:
+            dedup = (
+                db.table("activity_log")
+                .select("id")
+                .eq("tenant_id", tenant_id)
+                .eq("activity_type", "lead_aging_alert")
+                .gte("created_at", f"{today_str}T00:00:00Z")
+                .limit(1)
+                .execute()
+            )
+            if dedup.data:
+                continue
+        except Exception:
+            continue
+
+        # Get tenant info
+        try:
+            t = db.table("tenants").select("owner_email, business_name, plan").eq("id", tenant_id).limit(1).execute()
+            if not t.data:
+                continue
+            tenant = t.data[0]
+            if (tenant.get("plan") or "free") == "free":
+                continue
+            owner_email = tenant.get("owner_email")
+            if not owner_email:
+                continue
+            biz_name = tenant.get("business_name") or "Your Business"
+        except Exception:
+            continue
+
+        # Build digest email
+        import html as _html3
+        safe_biz = _html3.escape(biz_name)
+        rows_html = ""
+        for lead in leads_list[:20]:  # Max 20 leads per email
+            safe_name = _html3.escape(lead.get("name") or "Unknown")
+            lead_email = _html3.escape(lead.get("email") or "N/A")
+            lead_phone = _html3.escape(lead.get("phone") or "N/A")
+            created = lead.get("created_at", "")[:10]
+            try:
+                age_hours = int((datetime.now(timezone.utc) - datetime.fromisoformat(lead["created_at"].replace("Z", "+00:00"))).total_seconds() / 3600)
+                age_str = f"{age_hours}h"
+            except (ValueError, TypeError):
+                age_str = "48h+"
+            rows_html += f"""
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:8px 12px;">{safe_name}</td>
+                <td style="padding:8px 12px;">{lead_email}</td>
+                <td style="padding:8px 12px;">{lead_phone}</td>
+                <td style="padding:8px 12px;color:#dc2626;font-weight:500;">{age_str}</td>
+            </tr>"""
+
+        try:
+            send_email(
+                to=owner_email,
+                subject=f"Action needed: {len(leads_list)} lead{'s' if len(leads_list) != 1 else ''} waiting for contact — {biz_name}",
+                html=f"""
+                <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+                    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <h2 style="color:#92400e;margin:0;">Leads Waiting for Contact</h2>
+                    </div>
+                    <p>Hi! You have <strong>{len(leads_list)}</strong> lead{'s' if len(leads_list) != 1 else ''} that {'have' if len(leads_list) != 1 else 'has'} been in "new" status for over 48 hours without being contacted.</p>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+                        <thead>
+                            <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:8px 12px;text-align:left;">Name</th>
+                                <th style="padding:8px 12px;text-align:left;">Email</th>
+                                <th style="padding:8px 12px;text-align:left;">Phone</th>
+                                <th style="padding:8px 12px;text-align:left;">Age</th>
+                            </tr>
+                        </thead>
+                        <tbody>{rows_html}</tbody>
+                    </table>
+                    {f'<p style="color:#666;font-size:12px;">Showing 20 of {len(leads_list)} stale leads.</p>' if len(leads_list) > 20 else ''}
+                    <p>Log in to your dashboard to follow up with these leads before they go cold.</p>
+                    <p style="margin-top:24px;color:#666;font-size:12px;">{safe_biz} — Powered by AgentNexLiFy</p>
+                </div>
+                """,
+            )
+            alerted += 1
+
+            # Log dedup marker
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "activity_type": "lead_aging_alert",
+                "description": f"Lead aging alert sent: {len(leads_list)} stale leads",
+            }).execute()
+
+        except Exception:
+            logger.warning("send_lead_aging_alerts: failed for tenant %s", tenant_id, exc_info=True)
+
+    if alerted > 0:
+        logger.info("send_lead_aging_alerts: alerted %d tenants", alerted)
+
+    return alerted
+
+
+# ---------------------------------------------------------------------------
 # Automated Lead Re-engagement
 # ---------------------------------------------------------------------------
 

@@ -94,6 +94,7 @@ async def _automation_loop():
         auto_close_inactive_conversations,
         analyze_conversation_sentiment,
         decay_stale_lead_scores,
+        send_lead_aging_alerts,
         send_lead_reengagement_emails,
         escalate_overdue_invoices,
     )
@@ -138,6 +139,7 @@ async def _automation_loop():
                 _safe_run("send_daily_digest_emails", send_daily_digest_emails),
                 _safe_run("analyze_conversation_sentiment", analyze_conversation_sentiment),
                 _safe_run("decay_stale_lead_scores", decay_stale_lead_scores),
+                _safe_run("send_lead_aging_alerts", send_lead_aging_alerts),
                 _safe_run("send_lead_reengagement_emails", send_lead_reengagement_emails),
             ])
 

@@ -46,3 +46,7 @@ export function fetchConversationSentiment(tenantId, token, period = "30d") {
 export function fetchCustomerLifetimeValue(tenantId, token, topN = 20) {
   return request(`/api/v1/analytics/${tenantId}/customer-lifetime-value?top_n=${topN}`, { token });
 }
+
+export function fetchAppointmentUtilization(tenantId, token, days = 30) {
+  return request(`/api/v1/analytics/${tenantId}/appointment-utilization?days=${days}`, { token });
+}

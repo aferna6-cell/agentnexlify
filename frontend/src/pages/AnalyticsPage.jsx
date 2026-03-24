@@ -12,6 +12,7 @@ import {
   fetchLeadSourcesUtm,
   fetchConversationSentiment,
   fetchCustomerLifetimeValue,
+  fetchAppointmentUtilization,
 } from "../utils/api/analytics";
 import { fetchConversations } from "../utils/api/conversations";
 import { fetchTagDefinitions } from "../utils/api/tags";
@@ -264,6 +265,7 @@ export default function AnalyticsPage() {
   const [utmData, setUtmData] = useState(null);
   const [sentimentData, setSentimentData] = useState(null);
   const [clvData, setClvData] = useState(null);
+  const [utilizationData, setUtilizationData] = useState(null);
   const [error, setError] = useState(null);
 
   const [currentTheme, setCurrentTheme] = useState(
@@ -286,7 +288,7 @@ export default function AnalyticsPage() {
     setError(null);
     try {
       const periodDays = { "7d": 7, "30d": 30, "90d": 90 }[period] || 30;
-      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources, teamPerf, utm, sentiment, clv] = await Promise.allSettled([
+      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources, teamPerf, utm, sentiment, clv, util] = await Promise.allSettled([
         fetchAnalyticsOverview(user.tenantId, token, period),
         fetchAnalyticsConversations(user.tenantId, token, period),
         fetchAnalyticsLeads(user.tenantId, token, period),
@@ -300,6 +302,7 @@ export default function AnalyticsPage() {
         fetchLeadSourcesUtm(user.tenantId, token, period),
         fetchConversationSentiment(user.tenantId, token, period),
         fetchCustomerLifetimeValue(user.tenantId, token),
+        fetchAppointmentUtilization(user.tenantId, token, periodDays),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
@@ -354,6 +357,8 @@ export default function AnalyticsPage() {
       if (sentiment.status === "fulfilled") setSentimentData(sentiment.value);
       // Customer lifetime value
       if (clv.status === "fulfilled") setClvData(clv.value);
+      // Appointment utilization
+      if (util.status === "fulfilled") setUtilizationData(util.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1061,6 +1066,42 @@ export default function AnalyticsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Appointment Utilization */}
+      <div className="analytics-section" style={{ marginTop: "24px" }}>
+        <h2 className="analytics-section-title">Appointment Utilization</h2>
+        {utilizationData && !utilizationData.message ? (
+          <div>
+            <div className="analytics-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginBottom: "16px" }}>
+              <StatCard label="Utilization Rate" value={`${utilizationData.utilization_pct}%`} />
+              <StatCard label="Available Slots" value={utilizationData.total_available_slots} />
+              <StatCard label="Booked Slots" value={utilizationData.total_booked_slots} />
+              <StatCard label="Slot Duration" value={`${utilizationData.slot_duration_minutes}min`} />
+            </div>
+            {utilizationData.daily_breakdown.length > 0 && (
+              <div style={{ background: "var(--bg-secondary)", borderRadius: "8px", padding: "16px" }}>
+                <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>Daily Utilization</div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={utilizationData.daily_breakdown.slice(-14)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis dataKey="date" tick={{ fill: chartTheme.text, fontSize: 11 }} tickFormatter={(d) => d.slice(5)} />
+                    <YAxis tick={{ fill: chartTheme.text, fontSize: 11 }} domain={[0, 100]} unit="%" />
+                    <Tooltip contentStyle={{ background: chartTheme.tooltip, border: "none", borderRadius: 8, color: chartTheme.tooltipText }} formatter={(v) => `${v}%`} />
+                    <Bar dataKey="utilization_pct" name="Utilization" fill={chartTheme.accent} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: "16px", marginBottom: "8px" }}>No business hours configured</div>
+            <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+              Set up your business hours in Settings to see appointment utilization metrics.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Customer Lifetime Value */}

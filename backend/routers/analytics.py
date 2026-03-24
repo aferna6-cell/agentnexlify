@@ -1357,3 +1357,127 @@ async def get_customer_lifetime_value(
     }
     _set_cached(cache_key, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Appointment Utilization Rate
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/appointment-utilization")
+async def get_appointment_utilization(
+    tenant_id: str,
+    days: int = Query(default=30, ge=1, le=365),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Calculate appointment slot utilization rate.
+
+    Compares available slots vs booked slots per day over the given period.
+    Shows capacity utilization percentage to help businesses optimize scheduling.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    cache_key = f"utilization:{tenant_id}:{days}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    start_date = now - timedelta(days=days)
+
+    # Get business hours
+    try:
+        bh = db.table("business_hours").select("hours, slot_duration_minutes").eq("tenant_id", tenant_id).limit(1).execute()
+    except Exception:
+        logger.exception("utilization: failed to query business_hours for %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to query business hours")
+
+    if not bh.data:
+        empty = {"utilization_pct": 0, "total_available_slots": 0, "total_booked_slots": 0, "daily_breakdown": [], "message": "No business hours configured"}
+        _set_cached(cache_key, empty)
+        return empty
+
+    hours_config = bh.data[0].get("hours") or {}
+    slot_duration = bh.data[0].get("slot_duration_minutes") or 30
+
+    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+    # Calculate available slots per day of week
+    slots_per_dow: dict[int, int] = {}
+    for i, day_name in enumerate(day_names):
+        day_config = hours_config.get(day_name, {})
+        if not day_config.get("enabled", False):
+            slots_per_dow[i] = 0
+            continue
+        start_str = day_config.get("start") or "09:00"
+        end_str = day_config.get("end") or "17:00"
+        try:
+            sh, sm = map(int, start_str.split(":"))
+            eh, em = map(int, end_str.split(":"))
+            total_minutes = (eh * 60 + em) - (sh * 60 + sm)
+            slots_per_dow[i] = max(0, total_minutes // slot_duration)
+        except (ValueError, IndexError):
+            slots_per_dow[i] = 0
+
+    # Get booked appointments in the period
+    try:
+        appts = (
+            db.table("appointments")
+            .select("start_time, status")
+            .eq("tenant_id", tenant_id)
+            .gte("start_time", start_date.isoformat())
+            .lte("start_time", now.isoformat())
+            .in_("status", ["confirmed", "completed", "checked_in", "pending"])
+            .limit(_QUERY_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("utilization: failed to query appointments for %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to query appointments")
+
+    # Count booked per date
+    booked_per_date: dict[str, int] = defaultdict(int)
+    for appt in (appts.data or []):
+        try:
+            dt = datetime.fromisoformat(appt["start_time"].replace("Z", "+00:00"))
+            booked_per_date[dt.strftime("%Y-%m-%d")] += 1
+        except (ValueError, TypeError):
+            pass
+
+    # Build daily breakdown
+    daily_breakdown = []
+    total_available = 0
+    total_booked = 0
+
+    current = start_date.date()
+    end = now.date()
+    while current <= end:
+        dow = current.weekday()
+        available = slots_per_dow.get(dow, 0)
+        date_str = current.isoformat()
+        booked = booked_per_date.get(date_str, 0)
+        total_available += available
+        total_booked += booked
+
+        if available > 0:
+            daily_breakdown.append({
+                "date": date_str,
+                "available": available,
+                "booked": min(booked, available),
+                "utilization_pct": round(min(booked / available * 100, 100), 1),
+            })
+        current += timedelta(days=1)
+
+    overall_pct = round(total_booked / total_available * 100, 1) if total_available > 0 else 0
+
+    utilization_result = {
+        "utilization_pct": min(overall_pct, 100),
+        "total_available_slots": total_available,
+        "total_booked_slots": min(total_booked, total_available),
+        "slot_duration_minutes": slot_duration,
+        "daily_breakdown": daily_breakdown[-30:],
+    }
+    _set_cached(cache_key, utilization_result)
+    return utilization_result
