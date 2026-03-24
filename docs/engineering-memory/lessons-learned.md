@@ -66,3 +66,14 @@ The widget lead capture only deduped by email. Leads from missed-call text-back 
 
 ### Automation loop functions must be imported in main.py
 Every new function added to automation_engine.py needs to be: (1) added to the import list in main.py, (2) added to the appropriate tick tier, and (3) wrapped in _safe_run(). Missing any step means the function never executes.
+
+## 2026-03-24 Session 8
+
+### Dummy UUIDs for FK-constrained columns always fail silently
+The `decay_stale_lead_scores` function used `"00000000-0000-0000-0000-000000000000"` as tenant_id for an activity_log dedup marker. Since activity_log.tenant_id has `REFERENCES tenants(id)`, the insert silently failed every time (FK violation caught by the `except Exception: pass` block). The function had zero dedup protection and ran on every 30-min tick. **Solution**: always use a real tenant_id for activity_log inserts. If the function is cross-tenant, grab a real tenant_id from the data being processed.
+
+### HTML escape all user data in email templates
+Customer names, business names, and free-text fields (notes, interest areas, invoice numbers) were interpolated raw into HTML email bodies. While email clients sanitize HTML, this is still an injection risk. **Solution**: always use `html.escape()` when embedding user data in HTML emails.
+
+### Consolidate tenant DB queries within the same function
+The booking.py `create_appointment` function queried the tenants table twice — once for SMS confirmation and once for email confirmation. Similarly, billing.py queried tenants twice for the owner notification and customer receipt. **Solution**: fetch tenant data once at the top and reuse.

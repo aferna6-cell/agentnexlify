@@ -602,3 +602,21 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Pattern:** When a Supabase column is NULL, `dict.get("key", False)` returns None (not False). If this None is passed to a Pydantic field typed as `bool` (not `bool | None`), Pydantic v2 raises `ValidationError`. Same for `dict.get("key", 0)` with `int` fields.
 **Fix:** Use `dict.get("key") or False` for booleans, `dict.get("key") or 0` for ints. For the special case of `is_online` where we need to distinguish False from NULL, use `dict.get("key") is not False`.
 **Prevention:** Before passing Supabase data to Pydantic models with non-optional typed fields, always use the `or` pattern. Grep for `.get\("[^"]+",\s*(True|False|0|\d+)\)` in files that construct Pydantic responses.
+
+## 2026-03-24 Session 8
+
+### Dummy UUID FK violations in activity_log
+**Pattern:** Using a non-existent UUID like `"00000000-0000-0000-0000-000000000000"` as `tenant_id` when inserting into `activity_log`. The table has `tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE`, so inserts with fake UUIDs fail with FK violation.
+**Impact:** When the insert is wrapped in `except Exception: pass`, the failure is silent. Any dedup logic based on the insert never works.
+**Fix:** Always use a real tenant_id from the data being processed. For cross-tenant background tasks, grab any valid tenant_id from the leads/invoices being processed.
+**Files affected:** `automation_engine.py:decay_stale_lead_scores`
+
+### show_watermark NULL → Pydantic validation error
+**Pattern:** `widget.get("show_watermark", True)` returns None when the DB column is NULL. Passing None to a Pydantic field typed `bool` (not `bool | None`) raises a validation error.
+**Fix:** Use `widget.get("show_watermark") is not False` for boolean fields that default to True.
+**Files affected:** `widget_chat.py` (3 locations), `widget_config.py` (1 location)
+
+### Unescaped user data in HTML emails
+**Pattern:** Customer names, business names, notes, and interest areas interpolated directly into HTML email bodies using f-strings. While most email clients sanitize HTML, this is an injection vector.
+**Fix:** Always use `html.escape()` on user-provided strings before embedding in HTML emails.
+**Files affected:** `booking.py` (appointment confirmation), `automation_engine.py` (re-engagement + overdue escalation)

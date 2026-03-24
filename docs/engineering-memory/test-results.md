@@ -231,3 +231,43 @@ _Track what features have been tested, what passed, what failed._
 - Lead re-engagement email delivery (needs cold leads + Resend)
 - Invoice overdue escalation triggers (needs overdue invoices in DB)
 - Widget funnel with real session data (needs chat_messages in DB)
+
+## 2026-03-24 Session 8
+
+### Build Tests
+- Backend import: PASS
+- Frontend build: PASS (4.02-4.21s across iterations)
+- Widget JS sync: PASS (files identical)
+
+### Code Audit Results
+- `from __future__ import annotations`: 0 occurrences (PASS)
+- `except:` (bare): 0 occurrences (PASS)
+- `except BaseException`: 0 occurrences (PASS)
+- `table("leads").eq("tenant_id"`: 0 occurrences (PASS)
+- `table("conversations").eq("tenant_id"`: 0 occurrences (PASS)
+- Invalid Claude model IDs: 0 occurrences (PASS)
+- Widget JS sync: files identical (PASS)
+- `.get("business_name", default)`: 0 occurrences (PASS)
+- `.get("business_type", default)`: 0 occurrences (PASS)
+- `.get("owner_email", default)`: 0 occurrences (PASS)
+- `.get("plan", default)`: 0 occurrences — all use `or` pattern (PASS)
+- Operator precedence bugs: 0 occurrences (PASS)
+- Route shadowing: 0 issues (PASS)
+- show_watermark NULL safety: FIXED (3 locations in widget_chat.py, 1 in widget_config.py)
+
+### Bugs Found and Fixed
+- show_watermark: `.get("show_watermark", True)` returns None when NULL, crashes non-optional Pydantic `bool` field: FIXED with `is not False`
+- widget config string fields: `.get("bot_name", "AI Assistant")` returns None when NULL, crashes Pydantic `str` field: FIXED with `or` pattern
+- decay dedup FK violation: dummy UUID always fails FK constraint, no dedup: FIXED with real tenant_id
+- Duplicate DB queries in booking.py and billing.py: FIXED by consolidation
+- HTML XSS in 3 email templates: FIXED with html.escape()
+
+### New Features (static analysis)
+- CLV: aggregates invoices by lead_id, correct client_id-free query (invoices use tenant_id), 5-min cache (PASS)
+- Utilization: business_hours JSONB parsing, correct slot calculation, booked count from appointments (PASS)
+- Lead aging: correct client_id for leads query, proper dedup via activity_log, paid-plan filter, HTML-escaped output (PASS)
+
+### Features Not Tested (need live environment)
+- CLV with real invoice data (needs paid invoices in DB)
+- Utilization with real appointments (needs business_hours configured)
+- Lead aging alert email delivery (needs stale leads + Resend)

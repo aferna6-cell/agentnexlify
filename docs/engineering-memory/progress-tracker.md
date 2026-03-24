@@ -240,3 +240,34 @@ _What was built each session. Proves velocity, prevents re-doing work._
 ### Backlog
 - Marked 11 items as complete (built this session + Widget proactive greeting from Session 6)
 - Added 15 new backlog items (total unchecked: ~31)
+
+## 2026-03-24 Session 8
+
+### Bugs Fixed (Phase A)
+1. **NULL-safe .get() round 5** — Fixed show_watermark in widget_chat.py (3 locations using `is not False`), bot_name/primary_color/position/greeting_message in widget_config.py + auth.py (2 constructors) + business_page.py. All switched from `.get("key", default)` to `.get("key") or default`.
+2. **CRITICAL: decay_stale_lead_scores FK violation** — Dedup marker used dummy UUID "00000000-0000-0000-0000-000000000000" for activity_log.tenant_id, which has FK constraint to tenants. Insert always failed silently, meaning NO dedup — function ran on every 30-min automation tick instead of once daily. Fixed to use real tenant_id from processed leads.
+3. **Duplicate DB query in booking.py** — Appointment confirmation SMS and email each queried tenants table separately. Consolidated to single query.
+4. **HTML XSS in email templates** — customer_name, biz_name, notes, interest, inv_number all interpolated raw into HTML emails. Fixed with html.escape() in booking.py, automation_engine.py (re-engagement + overdue escalation).
+5. **Duplicate DB query in billing.py** — Invoice payment receipt queried tenants twice for biz_name. Hoisted initialization before try block.
+6. Total: 15+ code fixes across 6 files
+
+### Features Built (Phase B)
+1. **Customer Lifetime Value (CLV)** (analytics.py, analytics.js, AnalyticsPage.jsx)
+   - GET /analytics/{tenant_id}/customer-lifetime-value
+   - Aggregates paid invoices by lead_id with revenue, invoice count, dates
+   - Top N customers table on AnalyticsPage with stat cards
+   - No migration needed — computed from existing invoices table
+2. **Appointment Utilization Rate** (analytics.py, analytics.js, AnalyticsPage.jsx)
+   - GET /analytics/{tenant_id}/appointment-utilization
+   - Compares business_hours available slots vs booked appointments
+   - Daily breakdown with utilization percentage bar chart
+   - Stat cards: utilization %, available, booked, slot duration
+3. **Lead Aging Alerts** (automation_engine.py, main.py)
+   - Daily digest email to paid tenants listing leads in "new" status for 48h+
+   - Grouped by tenant, HTML table with name/email/phone/age
+   - Dedup via activity_log per tenant per day
+   - Runs on 30-min automation tier
+
+### Backlog
+- Marked 3 items as complete (CLV, utilization, lead aging alerts)
+- 28 unchecked items remaining

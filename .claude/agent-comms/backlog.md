@@ -528,9 +528,9 @@ _Added during session 2026-03-24. Thinking like a small business owner paying $2
 _Added during session 2026-03-24. Thinking like a small business owner growing their practice._
 
 - [ ] **Recurring appointment revenue dashboard** — Show MRR from recurring appointments by customer. Which regulars generate the most revenue? Chart on AnalyticsPage.
-- [ ] **Lead aging alerts** — When leads sit in "new" status for 48+ hours without contact, alert the business owner. Prevents leads falling through the cracks.
-- [ ] **Customer lifetime value (CLV) tracker** — Calculate total revenue per lead from invoices paid. Show CLV on lead detail and analytics. Helps identify VIP customers.
-- [ ] **Appointment utilization rate** — Compare available slots vs booked slots per day/week. Shows capacity utilization percentage. Helps businesses know when they can take more clients.
+- [x] **Lead aging alerts** — DONE 2026-03-24 Session 8. — When leads sit in "new" status for 48+ hours without contact, alert the business owner. Prevents leads falling through the cracks.
+- [x] **Customer lifetime value (CLV) tracker** — DONE 2026-03-24 Session 8. — Calculate total revenue per lead from invoices paid. Show CLV on lead detail and analytics. Helps identify VIP customers.
+- [x] **Appointment utilization rate** — DONE 2026-03-24 Session 8. — Compare available slots vs booked slots per day/week. Shows capacity utilization percentage. Helps businesses know when they can take more clients.
 - [ ] **Invoice partial payment tracking** — Allow recording partial payments against an invoice. Track remaining balance. Show payment history per invoice.
 - [ ] **Team member schedule/availability** — Each team member sets their own working hours. Assignment respects availability. Calendar shows who's free.
 - [ ] **Lead assignment round-robin** — Auto-assign new leads to team members in rotation. Configurable on Settings page. Ensures even distribution.
