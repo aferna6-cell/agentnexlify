@@ -28,5 +28,11 @@ export async function request(path, { method = "GET", body, token } = {}) {
     throw new ApiError(res.status, err);
   }
 
-  return res.json();
+  // 204 No Content — nothing to parse (common for DELETE endpoints)
+  if (res.status === 204) return null;
+
+  // Some endpoints may return empty bodies with 200/201
+  const text = await res.text();
+  if (!text) return null;
+  return JSON.parse(text);
 }
