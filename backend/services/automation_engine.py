@@ -938,9 +938,11 @@ async def send_rebook_suggestions() -> int:
 
         days, suggestion = _REBOOK_INTERVALS[btype]
 
-        # Dedup: check if we already sent a rebook for this appointment
+        # Dedup: check if we already sent a rebook for this appointment (by appointment ID)
+        appt_id = appt["id"]
+        dedup_tag = f"rebook_sent_{appt_id}"
         try:
-            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("lead_id", appt.get("lead_id")).eq("activity_type", "rebook_suggestion_sent").limit(1).execute()
+            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("activity_type", dedup_tag).limit(1).execute()
             if existing.data:
                 continue
         except Exception:
@@ -965,14 +967,14 @@ async def send_rebook_suggestions() -> int:
                 if result.get("success"):
                     sent += 1
             except Exception:
-                logger.exception("Failed to send rebook suggestion for appointment %s", appt["id"])
+                logger.exception("Failed to send rebook suggestion for appointment %s", appt_id)
 
-        # Log to prevent duplicates
+        # Log to prevent duplicates (keyed by appointment ID)
         try:
             db.table("activity_log").insert({
                 "tenant_id": tenant_id,
                 "lead_id": appt.get("lead_id"),
-                "activity_type": "rebook_suggestion_sent",
+                "activity_type": dedup_tag,
                 "description": f"Rebook suggestion sent: {suggestion} in {days} days",
             }).execute()
         except Exception:
@@ -2766,7 +2768,7 @@ async def detect_appointment_no_shows() -> int:
         overdue_appts = (
             db.table("appointments")
             .select("id, tenant_id, lead_id, customer_name, start_time")
-            .eq("status", "confirmed")
+            .in_("status", ["confirmed", "pending"])
             .lt("start_time", cutoff)
             .limit(BATCH_LIMIT)
             .execute()
