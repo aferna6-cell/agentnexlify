@@ -503,22 +503,42 @@ _Added during second session on 2026-03-23. Thinking like a small business owner
 _Added during session 2026-03-24. Thinking like a small business owner paying $249/mo who needs the platform to run their business._
 
 - [ ] **Appointment recurring revenue report** — Monthly report showing total revenue from recurring appointments. Helps service businesses (lawn care, cleaning, salons) see MRR from repeat customers. Dashboard card + AnalyticsPage section.
-- [ ] **Lead scoring decay** — Leads that haven't interacted in 30+ days should have their score decay automatically. Prevents stale leads from clogging hot lists. Background task in automation loop.
+- [x] **Lead scoring decay** — DONE 2026-03-24 Session 7. — Leads that haven't interacted in 30+ days should have their score decay automatically. Prevents stale leads from clogging hot lists. Background task in automation loop.
 - [ ] **SMS conversation in widget** — Allow business owners to send SMS to leads directly from the ConversationsPage (not just email). Uses existing Twilio integration. Reply button shows channel toggle (email/SMS).
-- [ ] **Automated lead re-engagement** — When a lead goes cold (no interaction for 14+ days), auto-send a "we haven't heard from you" email. Configurable on Settings page. Dedup via activity_log.
-- [ ] **Invoice payment receipt** — When an invoice is paid (via Stripe webhook or manual), auto-send a receipt email to the customer with payment details. Currently only the business owner is notified.
-- [ ] **Appointment type analytics** — If service types are configured, show which service types are most popular, highest revenue, most no-shows. Helps businesses optimize their offerings.
+- [x] **Automated lead re-engagement** — DONE 2026-03-24 Session 7. — When a lead goes cold (no interaction for 14+ days), auto-send a "we haven't heard from you" email. Configurable on Settings page. Dedup via activity_log.
+- [x] **Invoice payment receipt** — DONE 2026-03-24 Session 7. — When an invoice is paid (via Stripe webhook or manual), auto-send a receipt email to the customer with payment details. Currently only the business owner is notified.
+- [x] **Appointment type analytics** — DONE 2026-03-24 Session 7. — If service types are configured, show which service types are most popular, highest revenue, most no-shows. Helps businesses optimize their offerings.
 - [ ] **Widget conversation rating** — At the end of each chat, show a simple thumbs up/down or 1-5 star rating. Store in a new column on conversations. Dashboard shows average rating.
-- [ ] **Lead duplicate merge from widget** — When the widget captures a lead with an email/phone matching an existing lead, auto-merge instead of creating a duplicate. Currently the dedup only works on manual import.
-- [ ] **Export invoices to CSV/PDF** — Business owners need to export invoices for tax season. CSV export of all invoices with date range filter. Optional: generate PDF bundle.
-- [ ] **Appointment confirmation via SMS** — After an appointment is booked (through widget or dashboard), send an instant SMS confirmation to the customer with date, time, and business details.
+- [x] **Lead duplicate merge from widget** — DONE 2026-03-24 Session 7. — When the widget captures a lead with an email/phone matching an existing lead, auto-merge instead of creating a duplicate. Currently the dedup only works on manual import.
+- [x] **Export invoices to CSV** — DONE 2026-03-24 Session 7. — Business owners need to export invoices for tax season. CSV export of all invoices with date range filter. Optional: generate PDF bundle.
+- [x] **Appointment confirmation via SMS** — DONE 2026-03-24 Session 7. — After an appointment is booked (through widget or dashboard), send an instant SMS confirmation to the customer with date, time, and business details.
 - [ ] **Custom dashboard greeting** — Let business owners customize the dashboard greeting message (currently "Welcome back, {name}"). Some want their company motto or daily affirmation.
 - [ ] **Lead activity heatmap** — Show which hours of the day and days of the week get the most lead activity. Helps businesses staff appropriately. Uses chat_messages.created_at data.
 - [ ] **Bulk SMS from leads page** — Select multiple leads and send a quick SMS message to all of them. Different from marketing campaigns — this is a quick one-off text blast from the leads table.
-- [ ] **Widget proactive greeting** — After a visitor has been on the page for X seconds without interacting, auto-open the widget with a proactive message like "Hi! Can I help you find something?" Configurable delay and message in WidgetPage.
-- [ ] **Invoice overdue escalation** — If an invoice is overdue by 7+ days, escalate: send a more urgent reminder, notify the business owner, and add a "past due" flag visible on the leads page.
+- [x] **Widget proactive greeting** — DONE 2026-03-24 Session 6. — After a visitor has been on the page for X seconds without interacting, auto-open the widget with a proactive message like "Hi! Can I help you find something?" Configurable delay and message in WidgetPage.
+- [x] **Invoice overdue escalation** — DONE 2026-03-24 Session 7. — If an invoice is overdue by 7+ days, escalate: send a more urgent reminder, notify the business owner, and add a "past due" flag visible on the leads page.
 - [ ] **Appointment waitlist priority** — Let business owners set priority levels on waitlist entries (VIP, regular). VIP customers get notified first when a slot opens up.
 - [ ] **Lead timeline export** — Export a lead's full activity timeline as a PDF for printing or sharing. Useful for contractors who need to show project history to clients.
-- [ ] **Widget visitor analytics** — Track how many unique visitors see the widget vs. how many start a conversation. Conversion funnel: widget loaded → chat started → lead captured → appointment booked.
+- [x] **Widget visitor analytics** — DONE 2026-03-24 Session 7. — Track how many unique visitors see the widget vs. how many start a conversation. Conversion funnel: widget loaded → chat started → lead captured → appointment booked.
 - [ ] **Batch appointment creation** — Create appointments for multiple leads at once (e.g., "All my Monday regulars"). Select leads, pick a time slot pattern, and generate appointments in bulk.
-- [ ] **AI-powered review response suggestions** — When a new review comes in, auto-generate a suggested response and notify the business owner. Currently the owner has to click "Generate AI Response" manually.
+- [x] **AI-powered review response suggestions** — DONE 2026-03-24 Session 7. — When a new review comes in, auto-generate a suggested response and notify the business owner. Currently the owner has to click "Generate AI Response" manually.
+
+## Features — New Opportunities (2026-03-24 Session 7)
+
+_Added during session 2026-03-24. Thinking like a small business owner growing their practice._
+
+- [ ] **Recurring appointment revenue dashboard** — Show MRR from recurring appointments by customer. Which regulars generate the most revenue? Chart on AnalyticsPage.
+- [ ] **Lead aging alerts** — When leads sit in "new" status for 48+ hours without contact, alert the business owner. Prevents leads falling through the cracks.
+- [ ] **Customer lifetime value (CLV) tracker** — Calculate total revenue per lead from invoices paid. Show CLV on lead detail and analytics. Helps identify VIP customers.
+- [ ] **Appointment utilization rate** — Compare available slots vs booked slots per day/week. Shows capacity utilization percentage. Helps businesses know when they can take more clients.
+- [ ] **Invoice partial payment tracking** — Allow recording partial payments against an invoice. Track remaining balance. Show payment history per invoice.
+- [ ] **Team member schedule/availability** — Each team member sets their own working hours. Assignment respects availability. Calendar shows who's free.
+- [ ] **Lead assignment round-robin** — Auto-assign new leads to team members in rotation. Configurable on Settings page. Ensures even distribution.
+- [ ] **Conversation handoff notes** — When handing off a conversation from AI to human or between team members, include a summary of the conversation context.
+- [ ] **SMS opt-in compliance** — Track explicit SMS consent per lead. Only send SMS to opted-in leads. Widget captures consent during phone collection.
+- [ ] **Appointment recurring revenue report** — Monthly report showing total revenue from recurring appointments. Helps service businesses see MRR from repeat customers.
+- [ ] **Dashboard daily goal tracker** — Set daily goals for leads, appointments, revenue. Progress bar on dashboard. Helps businesses stay motivated and focused.
+- [ ] **Email delivery health dashboard** — Track email bounce rates, spam complaints, delivery rates. Alert when deliverability drops. Uses Resend webhook data.
+- [ ] **Customer referral tracking** — When a new lead mentions being referred by an existing customer, link them. Track which customers generate the most referrals.
+- [ ] **Appointment group booking** — Allow booking multiple people for the same time slot (classes, group sessions). Set max capacity per slot.
+- [ ] **Widget A/B test greetings** — Test different greeting messages and measure which one leads to more conversations. Auto-rotate between variants.

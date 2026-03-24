@@ -180,3 +180,54 @@ _Track what features have been tested, what passed, what failed._
 - Proactive greeting timing (needs widget deployed on external page)
 - Dashboard customizer persistence across browser sessions
 - Notification quick actions navigation (needs live notification data)
+
+## 2026-03-24 Session 7
+
+### Build Tests
+- Backend import: PASS
+- Frontend build: PASS (3.61-4.19s across iterations)
+- Widget JS sync: PASS (files identical)
+
+### Code Audit Results
+- `from __future__ import annotations`: 0 occurrences (PASS)
+- `except:` (bare): 0 occurrences (PASS)
+- `table("leads").eq("tenant_id"`: 0 occurrences (PASS)
+- `table("conversations").eq("tenant_id"`: 0 occurrences (PASS)
+- Invalid Claude model IDs: 0 occurrences (PASS)
+- Widget JS sync: files identical (PASS)
+- `.get("business_name", default)`: 0 occurrences (PASS)
+- `.get("business_type", default)`: 0 occurrences (PASS)
+- `.get("owner_email", default)`: 0 occurrences (PASS)
+- `.get("plan", default)`: 0 occurrences — all use `or` pattern (PASS)
+- Operator precedence `.get("plan") or "free" == "free"`: 0 occurrences (PASS)
+- `created_by` on appointments: only in comment (PASS)
+- `"completed"` on action_items: 0 in query context — all use "done" (PASS)
+- Route shadowing: 0 issues detected (PASS)
+- `except BaseException`: 0 occurrences (PASS)
+
+### Bugs Found and Fixed
+- widget_config.py: proactive_enabled, proactive_delay_seconds, booking_enabled passed None to non-optional Pydantic fields: FIXED with `or` pattern
+- widget_config.py: _resolve_online_status used `not .get("is_online", True)` which treats None as offline: FIXED with `is not False`
+- auth.py: is_online passed None to `bool` Pydantic field: FIXED with `is not False`
+- auth.py: plan_status passed None to `str` Pydantic field: FIXED with `or "active"`
+- notifications.py: activity_type, description, priority used `.get("key", default)` pattern: FIXED with `or`
+
+### New Features (static analysis)
+- Lead scoring decay: idempotent daily run, checks updated_at + activity_log, min score 0 (PASS)
+- Invoice payment receipt: resolves customer email from lead, HTML receipt with line items (PASS)
+- Appointment confirmation: SMS rate-limited for paid plans, email with formatted time (PASS)
+- Lead re-engagement: 14-day cold threshold, 30-day dedup, unsubscribe link included (PASS)
+- Invoice overdue escalation: 7-day threshold, status update to overdue, owner notification (PASS)
+- Phone dedup in widget: only triggers when no email, fills missing fields on existing lead (PASS)
+- Invoice CSV export: 14 columns, date/status filter, lead name resolution (PASS)
+- Appointment type analytics: service type matching from notes, 5-min cache (PASS)
+- Auto AI review response: Claude Haiku with 30s timeout, only for reviews without existing draft (PASS)
+- Widget visitor funnel: conversion rates computed from existing data, 14-day daily trend (PASS)
+
+### Features Not Tested (need live environment)
+- Lead scoring decay with real stale leads (needs leads with old updated_at)
+- Invoice payment receipt email delivery (needs live Stripe webhook + Resend)
+- Appointment confirmation SMS delivery (needs live Twilio + paid tenant)
+- Lead re-engagement email delivery (needs cold leads + Resend)
+- Invoice overdue escalation triggers (needs overdue invoices in DB)
+- Widget funnel with real session data (needs chat_messages in DB)

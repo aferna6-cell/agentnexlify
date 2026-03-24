@@ -195,3 +195,48 @@ _What was built each session. Proves velocity, prevents re-doing work._
 ### Backlog
 - Marked 11 items as complete (were already built in previous sessions)
 - Added 20 new backlog items (total unchecked: ~25)
+
+## 2026-03-24 Session 7
+
+### Bugs Fixed (Phase A)
+1. **NULL-safe .get() round 4** — Fixed 7 instances in widget_config.py (proactive_enabled, proactive_delay_seconds, booking_enabled, is_online in 2 places), auth.py (is_online, plan_status), notifications.py (activity_type, description, priority). These would cause Pydantic validation errors when Supabase columns are NULL.
+2. Total: 7 code fixes across 3 files
+
+### Features Built (Phase B)
+1. **Lead scoring decay** (automation_engine.py, main.py)
+   - Background task decays lead_score by 10% for leads with no interaction in 30+ days
+   - Daily dedup via activity_log, checks both updated_at and activity_log for recent activity
+2. **Invoice payment receipt** (billing.py)
+   - Auto-sends itemized receipt email to customer when invoice paid via Stripe
+   - Includes line items, subtotal, tax, total paid, business name
+3. **Appointment confirmation SMS + email** (booking.py)
+   - SMS confirmation to customer phone (paid plans only, rate-limited)
+   - Email confirmation with formatted date/time and notes
+4. **Lead re-engagement emails** (automation_engine.py, main.py)
+   - Auto-emails leads with status new/contacted that haven't interacted in 14+ days
+   - 30-day dedup window, respects unsubscribe, includes unsubscribe link
+5. **Invoice overdue escalation** (automation_engine.py, main.py)
+   - Urgent email to customer for invoices 7+ days past due
+   - Owner notification with amount/customer/due date
+   - Auto-updates invoice status to 'overdue'
+6. **Lead phone dedup in widget** (widget_helpers.py)
+   - When widget captures lead with phone but no email, checks for existing lead by phone
+   - Auto-fills missing fields on matched lead, prevents duplicate creation
+7. **Invoice CSV export** (invoices.py, invoices.js, InvoicesPage.jsx)
+   - GET /invoices/{tenant_id}/export with date range and status filters
+   - 14-column CSV with resolved customer names
+   - Frontend Export CSV button on InvoicesPage
+8. **Appointment type analytics** (analytics.py)
+   - GET /analytics/{tenant_id}/appointment-types with service type breakdown
+   - Popularity, completion rate, no-show rate, revenue estimate per type
+9. **Auto AI review response** (automation_engine.py)
+   - When check_new_reviews detects a new review, auto-generates Claude Haiku draft
+   - Stores ai_draft_response on the review record for owner to review
+10. **Widget visitor funnel analytics** (analytics.py)
+    - GET /analytics/{tenant_id}/widget-funnel
+    - Sessions started -> leads captured -> appointments booked
+    - Conversion rates and daily trend data
+
+### Backlog
+- Marked 11 items as complete (built this session + Widget proactive greeting from Session 6)
+- Added 15 new backlog items (total unchecked: ~31)

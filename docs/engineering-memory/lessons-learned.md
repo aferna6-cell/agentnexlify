@@ -55,3 +55,14 @@ The original no-show detector only checked `status = 'confirmed'`. But appointme
 
 ### Many backlog items get completed but not marked
 11 backlog items were unchecked despite being built in sessions 4-5 (team performance, UTM tracking, sentiment analysis, widget chat hours, bulk invoices, lead nurture score). **Solution**: always scan backlog for done-but-unchecked items at session start.
+
+## 2026-03-24 Session 7
+
+### .get("key", default) regression on boolean/int fields with Pydantic
+When Supabase returns NULL for a boolean column, `.get("key", False)` returns None (not False). If this None is passed to a Pydantic model field typed as `bool` (not `bool | None`), Pydantic v2 raises a validation error. This crashed the widget config endpoint for proactive_enabled/proactive_delay_seconds when migration 071 wasn't applied. **Solution**: always use `.get("key") or False` for boolean fields and `.get("key") or default` for int fields from Supabase data feeding into non-optional Pydantic models.
+
+### Phone dedup prevents duplicate leads from missed-call text-back
+The widget lead capture only deduped by email. Leads from missed-call text-back (phone-only, no email) were creating duplicates every time they texted again. Adding phone dedup after the email dedup check catches this case.
+
+### Automation loop functions must be imported in main.py
+Every new function added to automation_engine.py needs to be: (1) added to the import list in main.py, (2) added to the appropriate tick tier, and (3) wrapped in _safe_run(). Missing any step means the function never executes.

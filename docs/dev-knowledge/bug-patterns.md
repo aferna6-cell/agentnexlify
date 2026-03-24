@@ -594,3 +594,11 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Pattern:** The `detect_appointment_no_shows()` function only checked `status = 'confirmed'`. Appointments that were never confirmed (still `pending`) but whose start time had passed were not detected as no-shows.
 **Fix:** Use `.in_("status", ["confirmed", "pending"])` to catch both states.
 **Lesson:** When querying for "overdue" items, consider all pre-completion statuses, not just the most common one.
+
+## Bug: .get("key", default) on boolean/int Supabase fields with Pydantic models
+
+**Date:** 2026-03-24 Session 7
+**Files:** widget_config.py, auth.py, notifications.py
+**Pattern:** When a Supabase column is NULL, `dict.get("key", False)` returns None (not False). If this None is passed to a Pydantic field typed as `bool` (not `bool | None`), Pydantic v2 raises `ValidationError`. Same for `dict.get("key", 0)` with `int` fields.
+**Fix:** Use `dict.get("key") or False` for booleans, `dict.get("key") or 0` for ints. For the special case of `is_online` where we need to distinguish False from NULL, use `dict.get("key") is not False`.
+**Prevention:** Before passing Supabase data to Pydantic models with non-optional typed fields, always use the `or` pattern. Grep for `.get\("[^"]+",\s*(True|False|0|\d+)\)` in files that construct Pydantic responses.
