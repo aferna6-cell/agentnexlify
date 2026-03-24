@@ -8,6 +8,8 @@ import {
   fetchAnalyticsWidget,
   fetchMissedCallAnalytics,
   fetchLeadSources,
+  fetchTeamPerformance,
+  fetchLeadSourcesUtm,
 } from "../utils/api/analytics";
 import { fetchConversations } from "../utils/api/conversations";
 import { fetchTagDefinitions } from "../utils/api/tags";
@@ -256,6 +258,8 @@ export default function AnalyticsPage() {
   const [missedCallsData, setMissedCallsData] = useState(null);
   const [missedCallsError, setMissedCallsError] = useState(false);
   const [leadSources, setLeadSources] = useState([]);
+  const [teamPerformance, setTeamPerformance] = useState(null);
+  const [utmData, setUtmData] = useState(null);
   const [error, setError] = useState(null);
 
   const [currentTheme, setCurrentTheme] = useState(
@@ -277,7 +281,8 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources] = await Promise.allSettled([
+      const periodDays = { "7d": 7, "30d": 30, "90d": 90 }[period] || 30;
+      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources, teamPerf, utm] = await Promise.allSettled([
         fetchAnalyticsOverview(user.tenantId, token, period),
         fetchAnalyticsConversations(user.tenantId, token, period),
         fetchAnalyticsLeads(user.tenantId, token, period),
@@ -287,6 +292,8 @@ export default function AnalyticsPage() {
         fetchTagDefinitions(user.tenantId, token),
         fetchMissedCallAnalytics(user.tenantId, token, period),
         fetchLeadSources(user.tenantId, token),
+        fetchTeamPerformance(user.tenantId, token, periodDays),
+        fetchLeadSourcesUtm(user.tenantId, token, period),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
@@ -332,6 +339,11 @@ export default function AnalyticsPage() {
         setMissedCallsData(null);
         setMissedCallsError(true);
       }
+
+      // Team performance
+      if (teamPerf.status === "fulfilled") setTeamPerformance(teamPerf.value);
+      // UTM analytics
+      if (utm.status === "fulfilled") setUtmData(utm.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -819,6 +831,154 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
         )}
+      </div>
+
+      {/* Team Performance */}
+      <div className="analytics-charts-row">
+        <div className="analytics-chart-card" style={{ flex: 1 }}>
+          <h3>Team Performance</h3>
+          <div className="analytics-chart-subtitle">
+            Per-member metrics for the selected period
+          </div>
+          {teamPerformance?.members?.length > 0 ? (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "12px", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+                    <th style={{ textAlign: "left", padding: "8px 12px", fontWeight: 500 }}>Member</th>
+                    <th style={{ textAlign: "left", padding: "8px 12px", fontWeight: 500 }}>Role</th>
+                    <th style={{ textAlign: "right", padding: "8px 12px", fontWeight: 500 }}>Conversations</th>
+                    <th style={{ textAlign: "right", padding: "8px 12px", fontWeight: 500 }}>Avg Response</th>
+                    <th style={{ textAlign: "right", padding: "8px 12px", fontWeight: 500 }}>Leads</th>
+                    <th style={{ textAlign: "right", padding: "8px 12px", fontWeight: 500 }}>Appointments</th>
+                    <th style={{ textAlign: "right", padding: "8px 12px", fontWeight: 500 }}>Tasks Done</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamPerformance.members.map((m) => {
+                    const rt = m.avg_response_time_seconds;
+                    const rtDisplay = rt > 0
+                      ? rt > 3600 ? `${Math.round(rt / 3600)}h` : rt > 60 ? `${Math.round(rt / 60)}m` : `${rt}s`
+                      : "--";
+                    return (
+                      <tr key={m.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                        <td style={{ padding: "10px 12px", fontWeight: 500 }}>{m.name}</td>
+                        <td style={{ padding: "10px 12px", color: "var(--text-secondary)", textTransform: "capitalize" }}>{m.role}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>{m.conversations_handled}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "right", color: rt > 300 ? "var(--red)" : rt > 60 ? "var(--yellow)" : "var(--green)" }}>{rtDisplay}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>{m.leads_assigned}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>{m.appointments_booked}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>{m.action_items_completed}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{ display: "flex", gap: "24px", marginTop: "16px", padding: "12px", background: "var(--bg-secondary)", borderRadius: "8px", fontSize: "13px" }}>
+                <div><span style={{ color: "var(--text-secondary)" }}>Total conversations:</span> <strong>{teamPerformance.total_conversations || 0}</strong></div>
+                <div><span style={{ color: "var(--text-secondary)" }}>Total leads assigned:</span> <strong>{teamPerformance.total_leads_assigned || 0}</strong></div>
+              </div>
+            </div>
+          ) : (
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No team data yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Add team members and assign conversations to see per-member performance metrics.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* UTM / Lead Source Analytics */}
+      <div className="analytics-charts-row">
+        <div className="analytics-chart-card" style={{ flex: 1 }}>
+          <h3>UTM Campaign Analytics</h3>
+          <div className="analytics-chart-subtitle">
+            Lead sources breakdown by UTM parameters
+          </div>
+          {utmData?.by_source?.length > 0 ? (
+            <div>
+              <div style={{ display: "flex", gap: "16px", marginBottom: "16px", flexWrap: "wrap" }}>
+                <div style={{ padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: "8px", flex: "1 1 150px" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>Total Leads</div>
+                  <div style={{ fontSize: "20px", fontWeight: 600 }}>{utmData.total_leads || 0}</div>
+                </div>
+                <div style={{ padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: "8px", flex: "1 1 150px" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>With UTM Data</div>
+                  <div style={{ fontSize: "20px", fontWeight: 600, color: "var(--accent)" }}>{utmData.total_with_utm || 0}</div>
+                </div>
+                <div style={{ padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: "8px", flex: "1 1 150px" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>Direct / No UTM</div>
+                  <div style={{ fontSize: "20px", fontWeight: 600 }}>{utmData.total_without_utm || 0}</div>
+                </div>
+              </div>
+
+              {/* Source breakdown chart */}
+              <h4 style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px", marginTop: "16px" }}>By Source</h4>
+              <ResponsiveContainer width="100%" height={Math.max(120, utmData.by_source.length * 40)}>
+                <BarChart data={utmData.by_source} layout="vertical" margin={{ left: 80, right: 60, top: 5, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <XAxis type="number" stroke={chartTheme.text} fontSize={11} />
+                  <YAxis dataKey="source" type="category" stroke={chartTheme.text} fontSize={11} width={70} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload;
+                      return (
+                        <div className="analytics-tooltip">
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>{d.source}</div>
+                          <div>Leads: {d.count}</div>
+                          <div>Converted: {d.converted}</div>
+                          <div>Rate: {d.conversion_rate}%</div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="count" name="Leads" radius={[0, 4, 4, 0]} fill={chartTheme.accent} />
+                </BarChart>
+              </ResponsiveContainer>
+
+              {/* Medium breakdown */}
+              {utmData.by_medium?.length > 0 && (
+                <div style={{ marginTop: "20px" }}>
+                  <h4 style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>By Medium</h4>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {utmData.by_medium.map((m) => (
+                      <div key={m.medium} style={{ padding: "8px 14px", background: "var(--bg-secondary)", borderRadius: "6px", fontSize: "13px" }}>
+                        <span style={{ fontWeight: 500 }}>{m.medium}</span>
+                        <span style={{ marginLeft: "8px", color: "var(--accent)" }}>{m.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Campaign breakdown */}
+              {utmData.by_campaign?.length > 0 && (
+                <div style={{ marginTop: "20px" }}>
+                  <h4 style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>By Campaign</h4>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {utmData.by_campaign.map((c) => (
+                      <div key={c.campaign} style={{ padding: "8px 14px", background: "var(--bg-secondary)", borderRadius: "6px", fontSize: "13px" }}>
+                        <span style={{ fontWeight: 500 }}>{c.campaign}</span>
+                        <span style={{ marginLeft: "8px", color: "var(--purple)" }}>{c.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No UTM data yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                UTM parameters are captured when visitors arrive at your widget from campaign links.
+                Add ?utm_source=google&utm_medium=cpc to your widget page URLs to start tracking.
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
