@@ -180,7 +180,7 @@ async def ai_write_job_description(
     if tenant_result.data:
         biz_name = tenant_result.data[0].get("business_name") or ""
         biz_type = tenant_result.data[0].get("business_type") or ""
-        city = tenant_result.data[0].get("city", "")
+        city = tenant_result.data[0].get("city") or ""
 
     context = f"Business: {biz_name}" if biz_name else ""
     if biz_type:
@@ -318,7 +318,7 @@ async def public_job_listings(request: Request, tenant_id: str):
     return {
         "business_name": tenant.get("business_name") or "",
         "business_phone": tenant.get("business_phone", ""),
-        "city": tenant.get("city", ""),
+        "city": tenant.get("city") or "",
         "jobs": jobs_result.data or [],
     }
 

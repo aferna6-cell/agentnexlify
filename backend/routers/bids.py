@@ -320,7 +320,7 @@ async def ai_generate_bid(
         if tenant_result.data:
             biz_name = tenant_result.data[0].get("business_name") or ""
             biz_type = tenant_result.data[0].get("business_type") or ""
-            city = tenant_result.data[0].get("city", "")
+            city = tenant_result.data[0].get("city") or ""
     except Exception:
         logger.warning("Could not fetch tenant info for AI bid generation", exc_info=True)
 

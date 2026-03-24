@@ -1292,7 +1292,7 @@ async def track_keywords(
 
     tenant = tenant_result.data[0]
     business_type = tenant.get("business_type") or "local business"
-    city = tenant.get("city", "unknown")
+    city = tenant.get("city") or "unknown"
 
     # Deduplicate and clean keywords
     cleaned_keywords = list(set(kw.strip().lower() for kw in body.keywords if kw.strip()))
@@ -1460,7 +1460,7 @@ async def run_competitor_analysis(
     tenant = tenant_result.data[0]
     business_name = tenant.get("business_name") or "Your business"
     business_type = tenant.get("business_type") or "business"
-    city = tenant.get("city", "")
+    city = tenant.get("city") or ""
 
     # Get your latest SEO audit score if available
     your_score = None
