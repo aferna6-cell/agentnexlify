@@ -1,36 +1,48 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-03-23 (automated morning routine)
+Updated: 2026-03-23 (automated evening review)
 
-## Top 3 Priorities
+## Tomorrow's Top 3 Priorities
 
-1. **Apply migration 065 to live Supabase** — client_accounts table blocking client login in production
-2. **Silent frontend catch in ClientLoginPage.jsx** — `.catch(() => {})` hides errors on business name fetch
-3. **Verify 30+ features in production** — massive feature velocity (Cycles 154-167) needs production validation
+1. **Apply migrations 065-067 to live Supabase** — client_accounts (065), waitlist_entries (066), scoring_configs (067) are all pending. 065 blocks client login in production.
+2. **Complete and commit Revenue Analytics feature** — backend router, frontend page, and API util are written but uncommitted. Wire up and test.
+3. **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` still present despite being flagged this morning. Health check script regex doesn't detect it.
 
 ## Active Tasks
 
 ### Priority 1 — Critical / Blocking
 
-- [ ] **Apply migration 065 (client_accounts)** — white-label client login (Cycle 163) depends on this table existing in production. Schema-log.md shows "Pending". Use Supabase MCP or SQL editor.
+- [ ] **Apply migration 065 (client_accounts)** — white-label client login depends on this table. Schema-log.md shows "Pending". Use Supabase MCP or SQL editor.
+  - Agent: **schema-guardian** → manual apply
+- [ ] **Apply migration 066 (waitlist_entries)** — appointment waitlist feature. Created today, not yet applied.
+  - Agent: **schema-guardian** → manual apply
+- [ ] **Apply migration 067 (scoring_configs)** — lead scoring config feature. Created today, not yet applied.
   - Agent: **schema-guardian** → manual apply
 
-### Priority 2 — Code Quality
+### Priority 2 — In-Progress Features
 
-- [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Should at minimum log the error. Health check script doesn't catch this (regex difference).
+- [ ] **Revenue Analytics feature** — backend/routers/revenue.py, frontend RevenuePage.jsx, and API util created but uncommitted. Needs testing and commit.
+  - Agent: **backend-dev** + **frontend-dev**
+- [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Health check script regex mismatch means this isn't auto-detected.
   - Agent: **frontend-dev**
-- [ ] **Production feature verification** — Cycles 154-167 added: client login, AI-to-human handoff, QR codes, competitor analysis, scheduled post auto-publish, dynamic booking placeholders. None verified in production.
+
+### Priority 3 — Verification
+
+- [ ] **Production feature verification** — Cycles 154-167 added 14+ features, none production-verified.
   - Agent: **qa-tester**
 
-### Priority 3 — Documentation Gaps
-
-- [x] Document Cycle 156 bug fix (silent except-pass in pipeline seeding) — added to bug-patterns.md
-- [x] Document Cycle 159 bug fix (N+1 in CSV import) — added to bug-patterns.md
-
-### Priority 4 — Improvements
+### Priority 4 — Carried Forward
 
 - [ ] **Two-way email sync** — still pending from previous backlog
 - [ ] **Fix 16 test isolation failures** — carried forward from previous backlog
+
+## Completed (Recent) — 2026-03-23
+
+- [x] **Morning health check and review** — documented 21 commits from Cycles 147-167
+- [x] **Bug patterns updated** — entries #28 (silent except-pass) and #29 (N+1 CSV import) added
+- [x] **Schema-log updated** — migrations 066 and 067 documented
+- [x] **Hero copy updated on Home.jsx** — more specific value prop
+- [x] **FormBuilderPage em-dash cleanup** — replaced em-dashes with hyphens for consistency
 
 ## Completed Since Last Update (Cycles 147-167)
 
@@ -49,7 +61,7 @@ Updated: 2026-03-23 (automated morning routine)
 ## Overall Progress (Cycles 116-167)
 
 - 52 commits, 85+ tests
-- 7 migrations (059-065), 7 simulations
+- 7 migrations (059-065) + 2 new pending (066-067), 7 simulations
 - 35 api domain modules (100% split complete)
 - 15+ features shipped, 10+ bug fixes, 5+ security patches
 

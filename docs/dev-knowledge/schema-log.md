@@ -375,4 +375,14 @@ New table `client_accounts` for client portal authentication. Columns: tenant_id
 
 **Applied:** Pending — must be run on live Supabase manually.
 
+### 066 — Appointment Waitlist
+New table `waitlist_entries` for appointment waitlist management. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL), customer_name (TEXT NOT NULL), customer_email (TEXT), customer_phone (TEXT), preferred_date (DATE NOT NULL), preferred_time_start/end (TEXT), service_type_id (FK→service_types, ON DELETE SET NULL), notes (TEXT), status (TEXT CHECK: waiting/notified/booked/expired/cancelled, DEFAULT 'waiting'), notified_at (TIMESTAMPTZ), booked_appointment_id (FK→appointments, ON DELETE SET NULL), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status) and (tenant_id, preferred_date) for waiting entries. RLS enabled.
+
+**Applied:** Pending — created 2026-03-23, not yet applied to Supabase.
+
+### 067 — Lead Scoring Configuration
+New table `scoring_configs` for per-tenant configurable lead scoring weights. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), factor (TEXT NOT NULL), weight (INTEGER CHECK 0-100, DEFAULT 10), description (TEXT), is_enabled (BOOLEAN DEFAULT true), created_at (TIMESTAMPTZ). Unique index on (tenant_id, factor). Indexed on tenant_id. RLS enabled.
+
+**Applied:** Pending — created 2026-03-23, not yet applied to Supabase.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
