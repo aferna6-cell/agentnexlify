@@ -529,6 +529,163 @@ async def create_invoice(
 
 
 # ---------------------------------------------------------------------------
+# Bulk Invoice Generation
+# Must be before /{tenant_id}/{invoice_id} to avoid route shadowing
+# ---------------------------------------------------------------------------
+
+
+class BulkInvoiceRequest(BaseModel):
+    lead_ids: list[str] = Field(..., max_length=50, description="Up to 50 lead IDs")
+    items: list[InvoiceItemModel] = Field(..., min_length=1)
+    tax_rate: float = Field(0.0, ge=0, le=100)
+    due_date: date | None = None
+    notes: str | None = Field(None, max_length=5000)
+    auto_send: bool = Field(False, description="Automatically send invoices after creation")
+    send_method: str = Field("email", pattern="^(email|sms|both)$")
+
+
+@router.post("/{tenant_id}/bulk", status_code=201)
+async def create_bulk_invoices(
+    tenant_id: str,
+    req: BulkInvoiceRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Create invoices for multiple leads at once.
+
+    Useful for monthly service businesses (lawn care, cleaning, etc.)
+    that bill the same amount to many clients. Max 50 leads per request.
+    Optionally auto-sends via email/SMS after creation.
+    """
+    verify_tenant(claims, tenant_id)
+
+    if len(req.lead_ids) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 leads per bulk operation")
+    if len(req.lead_ids) == 0:
+        raise HTTPException(status_code=400, detail="At least one lead_id required")
+
+    items = [item.model_dump() for item in req.items]
+    subtotal, tax_amount, total = _compute_invoice_totals(items, req.tax_rate)
+
+    db = get_supabase()
+
+    # Fetch lead info for all leads at once
+    try:
+        leads_result = (
+            db.table("leads")
+            .select("id, name, email, phone")
+            .eq("client_id", tenant_id)
+            .in_("id", req.lead_ids)
+            .execute()
+        )
+    except Exception:
+        logger.exception("bulk_invoices: failed to fetch leads for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch leads")
+
+    lead_map = {l["id"]: l for l in (leads_result.data or [])}
+
+    created = []
+    failed = []
+
+    for lead_id in req.lead_ids:
+        lead = lead_map.get(lead_id)
+        if not lead:
+            failed.append({"lead_id": lead_id, "reason": "Lead not found"})
+            continue
+
+        try:
+            invoice_number = await _get_next_invoice_number(db, tenant_id)
+            data = {
+                "tenant_id": tenant_id,
+                "lead_id": lead_id,
+                "invoice_number": invoice_number,
+                "items_json": items,
+                "subtotal": subtotal,
+                "tax_rate": req.tax_rate,
+                "tax_amount": tax_amount,
+                "total": total,
+                "status": "draft",
+            }
+            if req.due_date is not None:
+                data["due_date"] = req.due_date.isoformat()
+            if req.notes is not None:
+                data["notes"] = req.notes
+
+            result = db.table("invoices").insert(data).execute()
+            if result.data:
+                invoice = result.data[0]
+                created.append(invoice)
+                fire_event_background(tenant_id, "invoice.created", {
+                    "invoice_id": invoice["id"],
+                    "invoice_number": invoice.get("invoice_number"),
+                    "total": invoice.get("total"),
+                    "lead_id": lead_id,
+                })
+            else:
+                failed.append({"lead_id": lead_id, "reason": "Insert returned no data"})
+        except Exception as exc:
+            logger.warning("bulk_invoices: failed for lead %s: %s", lead_id, exc)
+            failed.append({"lead_id": lead_id, "reason": str(exc)[:200]})
+
+    # Auto-send if requested
+    sent_count = 0
+    if req.auto_send and created:
+        tenant_result = (
+            db.table("tenants")
+            .select("business_name, owner_email")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        business_name = "Your Business"
+        if tenant_result.data:
+            business_name = tenant_result.data[0].get("business_name") or "Your Business"
+
+        for invoice in created:
+            inv_lead_id = invoice.get("lead_id")
+            lead = lead_map.get(inv_lead_id, {})
+            inv_number = invoice.get("invoice_number", "")
+            inv_total = invoice.get("total", 0)
+
+            try:
+                if req.send_method in ("email", "both") and lead.get("email"):
+                    await send_email(
+                        to=lead["email"],
+                        subject=f"Invoice {inv_number} from {business_name}",
+                        body_html=(
+                            f"<h2>Invoice {inv_number}</h2>"
+                            f"<p>Amount due: <strong>${inv_total:.2f}</strong></p>"
+                            f"<p>Please contact us for payment details.</p>"
+                            f"<p>Best regards,<br>{business_name}</p>"
+                        ),
+                        tenant_id=tenant_id,
+                        lead_id=inv_lead_id or "",
+                    )
+                if req.send_method in ("sms", "both") and lead.get("phone"):
+                    await send_sms(
+                        lead["phone"],
+                        f"{business_name}: Invoice {inv_number} for ${inv_total:.2f} has been sent. Please contact us for payment details.",
+                    )
+
+                # Update status to sent
+                db.table("invoices").update({
+                    "status": "sent",
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                    "sent_via": req.send_method,
+                }).eq("id", invoice["id"]).execute()
+                sent_count += 1
+            except Exception:
+                logger.warning("bulk_invoices: failed to send invoice %s", invoice.get("id"), exc_info=True)
+
+    return {
+        "created_count": len(created),
+        "failed_count": len(failed),
+        "sent_count": sent_count,
+        "created": created,
+        "failed": failed,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Item Templates (Line Item Library)
 # Must be before /{tenant_id}/{invoice_id} to avoid route shadowing
 # ---------------------------------------------------------------------------

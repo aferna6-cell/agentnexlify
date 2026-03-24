@@ -35,6 +35,11 @@ export function recordPayment(tenantId, token, invoiceId, data) {
   return request(`/api/v1/invoices/${tenantId}/${invoiceId}/record-payment`, { method: "POST", token, body: data });
 }
 
+// Bulk Invoice Generation
+export function createBulkInvoices(tenantId, token, data) {
+  return request(`/api/v1/invoices/${tenantId}/bulk`, { method: "POST", token, body: data });
+}
+
 // Item Templates
 export function fetchItemTemplates(tenantId, token) {
   return request(`/api/v1/invoices/${tenantId}/item-templates`, { token });
