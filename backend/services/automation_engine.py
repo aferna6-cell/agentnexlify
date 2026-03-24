@@ -2666,3 +2666,55 @@ async def process_recurring_invoices() -> int:
             logger.exception("Failed to process recurring invoice %s", parent_id)
 
     return created
+
+
+# ---------------------------------------------------------------------------
+# Auto-Archive Old Conversations
+# ---------------------------------------------------------------------------
+
+async def auto_archive_old_conversations() -> int:
+    """Archive conversations with no activity for 30+ days.
+
+    Sets status to 'archived' for conversations that are still 'open' or
+    'closed' but haven't been updated in over 30 days. Archived
+    conversations remain searchable but won't appear in the main inbox.
+    """
+    db = get_supabase()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    archived = 0
+
+    try:
+        # Find stale conversations across all tenants
+        stale = (
+            db.table("conversations")
+            .select("id, client_id")
+            .in_("status", ["open", "closed"])
+            .lt("updated_at", cutoff)
+            .limit(200)
+            .execute()
+        )
+
+        if not stale.data:
+            return 0
+
+        ids = [row["id"] for row in stale.data]
+
+        # Batch update status to archived
+        for i in range(0, len(ids), 50):
+            chunk = ids[i:i + 50]
+            for cid in chunk:
+                try:
+                    db.table("conversations").update({
+                        "status": "archived",
+                    }).eq("id", cid).execute()
+                    archived += 1
+                except Exception:
+                    logger.warning("Failed to archive conversation %s", cid, exc_info=True)
+
+        if archived > 0:
+            logger.info("auto_archive: archived %d stale conversations (>30 days inactive)", archived)
+
+    except Exception:
+        logger.exception("auto_archive_old_conversations failed")
+
+    return archived
