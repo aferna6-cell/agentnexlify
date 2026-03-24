@@ -37,6 +37,7 @@ class BookingSubmitRequest(BaseModel):
     date: str        # YYYY-MM-DD
     start_time: str  # HH:MM
     end_time: str    # HH:MM
+    service_type_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -104,16 +105,56 @@ def _slot_available(tenant_id: str, target_date: date, start_time_str: str, end_
         return False
 
 
+def _build_service_type_section(service_types: list[dict], safe_color: str) -> str:
+    """Build HTML for the service type selector, if service types are configured."""
+    if not service_types:
+        return ""
+
+    options_html = ""
+    for st in service_types:
+        safe_id = html.escape(str(st["id"]))
+        safe_name = html.escape(st.get("name") or "Service")
+        duration = st.get("duration_minutes", 30)
+        price = st.get("price")
+        desc = st.get("description") or ""
+        safe_desc = html.escape(desc)
+
+        price_html = ""
+        if price is not None and float(price) > 0:
+            price_html = f'<span style="color:{safe_color};font-weight:600;">${float(price):.0f}</span>'
+
+        options_html += f"""
+        <label class="service-option" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:10px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='{safe_color}'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#333'">
+          <input type="radio" name="service_type" value="{safe_id}" data-duration="{duration}" style="accent-color:{safe_color};width:18px;height:18px;" onchange="selectService(this)"/>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:0.95rem;">{safe_name}</div>
+            <div style="font-size:0.8rem;color:#999;">{duration} min{' — ' + safe_desc if safe_desc else ''}</div>
+          </div>
+          {price_html}
+        </label>"""
+
+    return f"""
+    <div class="card" id="service-card">
+      <h2>Select a Service</h2>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        {options_html}
+      </div>
+      <input type="hidden" id="f-service-type" value="" />
+    </div>"""
+
+
 def _build_booking_page_html(
     business_name: str,
     primary_color: str,
     slug: str,
     slots_by_date: dict[str, list[dict]],
+    service_types: list[dict] | None = None,
 ) -> str:
     """Return a fully self-contained HTML booking page."""
 
     safe_name = html.escape(business_name)
     safe_color = html.escape(primary_color)
+    service_types = service_types or []
 
     # Build slot option elements grouped by date
     slot_options_html = ""
@@ -339,6 +380,7 @@ def _build_booking_page_html(
   </div>
 
   <div class="container">
+    {_build_service_type_section(service_types, safe_color)}
     <div class="card">
       <h2>Choose a Time</h2>
       {slot_options_html}
@@ -376,6 +418,15 @@ def _build_booking_page_html(
     var selectedDate = null;
     var selectedStart = null;
     var selectedEnd = null;
+
+    function selectService(radio) {{
+      document.getElementById('f-service-type').value = radio.value;
+      // Highlight the selected option
+      document.querySelectorAll('.service-option').forEach(function(opt) {{
+        opt.style.borderColor = '#333';
+      }});
+      radio.closest('.service-option').style.borderColor = '{safe_color}';
+    }}
 
     function showDay(dateStr) {{
       // Deactivate all tabs
@@ -438,6 +489,8 @@ def _build_booking_page_html(
       btn.disabled = true;
       btn.textContent = 'Booking...';
 
+      var serviceTypeId = (document.getElementById('f-service-type') || {{}}).value || null;
+
       fetch('/api/v1/book/{slug}/submit', {{
         method: 'POST',
         headers: {{ 'Content-Type': 'application/json' }},
@@ -447,7 +500,8 @@ def _build_booking_page_html(
           phone: phone,
           date: selectedDate,
           start_time: selectedStart,
-          end_time: selectedEnd
+          end_time: selectedEnd,
+          service_type_id: serviceTypeId
         }})
       }})
       .then(function(resp) {{ return resp.json(); }})
@@ -496,6 +550,22 @@ async def booking_page(request: Request, business_slug: str):
 
     primary_color = _fetch_widget_color(tenant_id)
 
+    # Fetch service types for this tenant
+    service_types = []
+    try:
+        db = get_supabase()
+        st_result = (
+            db.table("service_types")
+            .select("id, name, duration_minutes, description, price")
+            .eq("tenant_id", tenant_id)
+            .eq("is_active", True)
+            .order("sort_order")
+            .execute()
+        )
+        service_types = st_result.data or []
+    except Exception:
+        logger.warning("Could not fetch service types for tenant %s", tenant_id, exc_info=True)
+
     # Build available slots for the next 7 days
     today = date.today()
     slots_by_date: dict[str, list[dict]] = {}
@@ -520,6 +590,7 @@ async def booking_page(request: Request, business_slug: str):
         primary_color=primary_color,
         slug=html.escape(business_slug),
         slots_by_date=slots_by_date,
+        service_types=service_types,
     )
     return HTMLResponse(content=page_html, status_code=200)
 
@@ -564,6 +635,23 @@ async def booking_submit(
 
     db = get_supabase()
 
+    # Resolve service type name if provided
+    service_note = "Booked via public booking page"
+    if body.service_type_id:
+        try:
+            st_row = (
+                db.table("service_types")
+                .select("name, duration_minutes")
+                .eq("id", body.service_type_id)
+                .eq("tenant_id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            if st_row.data:
+                service_note = f"Service: {st_row.data[0]['name']} ({st_row.data[0]['duration_minutes']} min) — Booked via public booking page"
+        except Exception:
+            logger.warning("Could not look up service type %s", body.service_type_id, exc_info=True)
+
     # Create appointment
     try:
         appt_result = db.table("appointments").insert({
@@ -574,7 +662,7 @@ async def booking_submit(
             "start_time": start_iso,
             "end_time": end_iso,
             "status": "confirmed",
-            "notes": "Booked via public booking page",
+            "notes": service_note,
         }).execute()
     except Exception:
         logger.exception(
