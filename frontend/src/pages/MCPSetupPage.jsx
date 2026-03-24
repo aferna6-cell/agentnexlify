@@ -236,7 +236,7 @@ export default function MCPSetupPage() {
             }}
           >
             No API key found. Go to the{" "}
-            <strong>Widget</strong> page to configure your widget first — your
+            <strong>Widget</strong> page to configure your widget first - your
             API key will be generated automatically.
           </div>
         )}
@@ -545,7 +545,7 @@ export default function MCPSetupPage() {
             }}
           >
             Open a new conversation in Claude Desktop and ask:{" "}
-            <em>"What leads came in this week?"</em> — Claude will use your
+            <em>"What leads came in this week?"</em> - Claude will use your
             AgentNexLiFy MCP tools to fetch the answer.
           </p>
         </div>

@@ -127,7 +127,7 @@ export default function AIInsightsWidget({ tenantId, token }) {
         </p>
       ) : (
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-          Not enough data yet — insights will appear after your first full week.
+          Not enough data yet - insights will appear after your first full week.
         </p>
       )}
     </div>

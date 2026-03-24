@@ -1,10 +1,39 @@
-import { useState, useCallback, useEffect, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, lazy, Suspense, Component } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
 import LoginPage from "./LoginPage";
 import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
+
+class PageErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidUpdate(prevProps) {
+    if (prevProps.pageKey !== this.props.pageKey) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: "1.5rem", marginBottom: 12 }}>Something went wrong</div>
+          <p style={{ marginBottom: 16 }}>{this.state.error?.message || "An unexpected error occurred."}</p>
+          <button className="btn-primary" onClick={() => this.setState({ hasError: false, error: null })}>
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Lazy-load all dashboard pages — each becomes its own chunk
 const Dashboard = lazy(() => import("../pages/Dashboard"));
@@ -190,13 +219,15 @@ export default function App() {
           {loading ? (
             <SkeletonLoader />
           ) : (
-            <Suspense fallback={<SkeletonLoader />}>
-              <PageComponent
-                onNavigate={handleNavigate}
-                onPlanLoaded={setActivePlan}
-                pageData={pageData}
-              />
-            </Suspense>
+            <PageErrorBoundary pageKey={currentPage}>
+              <Suspense fallback={<SkeletonLoader />}>
+                <PageComponent
+                  onNavigate={handleNavigate}
+                  onPlanLoaded={setActivePlan}
+                  pageData={pageData}
+                />
+              </Suspense>
+            </PageErrorBoundary>
           )}
         </main>
       </div>

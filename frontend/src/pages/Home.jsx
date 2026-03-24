@@ -72,7 +72,7 @@ const faqData = [
     id: "faq-a7",
     question: "What if AI makes a mistake?",
     answer:
-      "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers \u2014 you decide how to follow up. Nothing goes out without your approval.",
+      "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers - you decide how to follow up. Nothing goes out without your approval.",
   },
   {
     id: "faq-a8",
@@ -104,7 +104,7 @@ function DemoSlide({ tab }) {
           <div className="ds-panel-title">Recent Activity</div>
           <div className="ds-activity-item"><span className="ds-activity-dot" />New lead captured from website</div>
           <div className="ds-activity-item"><span className="ds-activity-dot" />Follow-up sent to Sarah Johnson</div>
-          <div className="ds-activity-item"><span className="ds-activity-dot" />Appointment booked &mdash; Mike Chen</div>
+          <div className="ds-activity-item"><span className="ds-activity-dot" />Appointment booked - Mike Chen</div>
         </div>
       </div>
     </div>
@@ -113,7 +113,7 @@ function DemoSlide({ tab }) {
   if (tab === "Widget Chat") return (
     <div className="ds-chat">
       <div className="ds-chat-window">
-        <div className="ds-chat-header"><span className="ds-chat-status" />AI Assistant &mdash; Online</div>
+        <div className="ds-chat-header"><span className="ds-chat-status" />AI Assistant - Online</div>
         <div className="ds-chat-body">
           <div className="ds-msg bot">Hi! How can I help you today?</div>
           <div className="ds-msg user">I&apos;d like to schedule a consultation</div>
@@ -159,17 +159,17 @@ function DemoSlide({ tab }) {
 
   if (tab === "Calendar") return (
     <div className="ds-calendar">
-      <div className="ds-panel-title">This Week &mdash; March 2026</div>
+      <div className="ds-panel-title">This Week - March 2026</div>
       <div className="ds-cal-grid">
         {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => (
           <div className="ds-cal-col" key={day}>
             <div className="ds-cal-day">{day}</div>
             <div className="ds-cal-slots">
-              {day === "Mon" && <><div className="ds-cal-event blue">9:00 &mdash; Sarah J.</div><div className="ds-cal-event green">2:00 &mdash; Mike C.</div></>}
-              {day === "Tue" && <div className="ds-cal-event purple">10:30 &mdash; Emily D.</div>}
-              {day === "Wed" && <><div className="ds-cal-event blue">11:00 &mdash; James W.</div><div className="ds-cal-event green">3:30 &mdash; Lisa P.</div></>}
-              {day === "Thu" && <div className="ds-cal-event accent">2:00 &mdash; New Consult</div>}
-              {day === "Fri" && <div className="ds-cal-event blue">9:30 &mdash; Follow-up</div>}
+              {day === "Mon" && <><div className="ds-cal-event blue">9:00 - Sarah J.</div><div className="ds-cal-event green">2:00 - Mike C.</div></>}
+              {day === "Tue" && <div className="ds-cal-event purple">10:30 - Emily D.</div>}
+              {day === "Wed" && <><div className="ds-cal-event blue">11:00 - James W.</div><div className="ds-cal-event green">3:30 - Lisa P.</div></>}
+              {day === "Thu" && <div className="ds-cal-event accent">2:00 - New Consult</div>}
+              {day === "Fri" && <div className="ds-cal-event blue">9:30 - Follow-up</div>}
             </div>
           </div>
         ))}
@@ -381,7 +381,7 @@ export default function Home() {
 
     { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
-    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers — you decide how to follow up." } },
+    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers - you decide how to follow up." } },
     { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service." } }
   ]
 }
@@ -434,12 +434,9 @@ export default function Home() {
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
               <h1 className="reveal">
-                AI That Helps Run Your{" "}
-                <span className="accent-gradient">Business</span>
+                Run smarter marketing, capture more customers, and book more appointments{" "}
+                <span className="accent-gradient">automatically.</span>
               </h1>
-              <p className="lp-hero-sub reveal">
-                Capture customers, book appointments, run marketing campaigns, and grow your online presence &mdash; all on autopilot.
-              </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
                   Get Started {"\u2192"}
@@ -519,7 +516,7 @@ export default function Home() {
         <div className="container">
           <div className="lp-features-header">
             <div className="section-label reveal">Features</div>
-            <h2 className="section-title reveal">Automation, marketing, and growth &mdash; in one place.</h2>
+            <h2 className="section-title reveal">Everything you need to capture customers and grow your business with AI</h2>
           </div>
           <div className="lp-features-grid">
             <div className="lp-feature-card reveal">
@@ -527,84 +524,63 @@ export default function Home() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <h3>Customer Capture</h3>
-              <p>Stay on top of every customer. Your website welcomes visitors 24/7.</p>
+              <p>Never miss a lead. Your website engages visitors and captures interest 24/7.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </div>
               <h3>Appointment Booking</h3>
-              <p>Let customers book appointments 24/7. No more back-and-forth.</p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-              </div>
-              <h3>Smart Follow-Ups</h3>
-              <p>Friendly follow-ups that keep conversations going.</p>
+              <p>Let customers book instantly without the back and forth.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
               <h3>Customer Pipeline</h3>
-              <p>Every customer scored and organized. See who&apos;s most interested at a glance.</p>
+              <p>All your leads in one place, scored and organized so you know who to focus on.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
               </div>
-              <h3>Email &amp; SMS Campaigns</h3>
-              <p>Send targeted email and SMS campaigns to the right leads at the right time.</p>
+              <h3>Email and SMS Campaigns</h3>
+              <p>Reach the right people at the right time with targeted campaigns.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
               </div>
-              <h3>SEO Audit &amp; Optimization</h3>
-              <p>AI-powered website audits with actionable recommendations to rank higher.</p>
+              <h3>SEO Audit and Optimization</h3>
+              <p>Identify what&apos;s holding your site back and get clear steps to improve your rankings.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               </div>
               <h3>AI Content Writer</h3>
-              <p>Generate blog posts, social media content, and marketing copy with AI.</p>
+              <p>Create blogs, social posts, and marketing content in minutes.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
               </div>
               <h3>Social Media Marketing</h3>
-              <p>Create, schedule, and manage social media posts across all platforms.</p>
+              <p>Plan, schedule, and manage your social presence across platforms.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
               </div>
-              <h3>Analytics &amp; Reporting</h3>
-              <p>Know what&apos;s working. Track leads, conversions, and engagement in real time.</p>
+              <h3>Analytics and Reporting</h3>
+              <p>Track leads, conversions, and performance in real time.</p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
               </div>
               <h3>Hosted Business Page</h3>
-              <p>A professional web presence for your business, ready in minutes.</p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-              <h3>Dedicated Support</h3>
-              <p>Real people ready to help you succeed.</p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              </div>
-              <h3>Custom Branding</h3>
-              <p>Make it yours. Customize colors, logos, and styling to match your brand.</p>
+              <p>Launch a professional online presence in minutes.</p>
             </div>
           </div>
         </div>
@@ -617,7 +593,7 @@ export default function Home() {
             <div className="section-label reveal">Pricing</div>
             <h2 className="section-title reveal">One platform. Every tool your business needs.</h2>
             <p className="section-subtitle reveal">
-              CRM, marketing, SEO, social media, and AI automation &mdash; all included. Hands-on setup and ongoing support with every plan.
+              CRM, marketing, SEO, social media, and AI automation - all included. Hands-on setup and ongoing support with every plan.
             </p>
           </div>
           <div className="lp-pricing-grid">
@@ -659,7 +635,7 @@ export default function Home() {
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$299 one-time setup</span>
-                <span className="lp-pricing-waived-badge pulse-glow">Waived &mdash; Only 10 Spots Remaining</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived - Only 10 Spots Remaining</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
@@ -691,7 +667,7 @@ export default function Home() {
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$499 one-time setup</span>
-                <span className="lp-pricing-waived-badge pulse-glow">Waived &mdash; Only 10 Spots Remaining</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived - Only 10 Spots Remaining</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Growth, plus:</div>
@@ -724,7 +700,7 @@ export default function Home() {
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$999 one-time setup</span>
-                <span className="lp-pricing-waived-badge pulse-glow">Waived &mdash; Only 10 Spots Remaining</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived - Only 10 Spots Remaining</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Professional, plus:</div>

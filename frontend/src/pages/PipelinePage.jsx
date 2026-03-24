@@ -335,7 +335,7 @@ function LeadQuickView({ lead, onClose }) {
           {lead.deal_value != null && (
             <div style={{ display: "flex", gap: 8 }}>
               <span style={{ color: "var(--text-muted)", minWidth: 80 }}>Deal Value</span>
-              <span style={{ color: "#22c55e", fontWeight: 600 }}>{formatCurrency(lead.deal_value) || "—"}</span>
+              <span style={{ color: "#22c55e", fontWeight: 600 }}>{formatCurrency(lead.deal_value) || "-"}</span>
             </div>
           )}
           {lead.lead_score != null && (
@@ -475,7 +475,7 @@ export default function PipelinePage() {
       <div className="page-header">
         <div>
           <h1>Pipeline</h1>
-          <p>Visual sales pipeline — track deals from lead to close</p>
+          <p>Visual sales pipeline - track deals from lead to close</p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <button
@@ -502,9 +502,9 @@ export default function PipelinePage() {
       >
         {[
           { label: "Pipeline Value", value: totalPipelineValue ? ("$" + totalPipelineValue.toLocaleString("en-US", { maximumFractionDigits: 0 })) : "$0", color: "#3b82f6" },
-          { label: "Conversion Rate", value: closedLeads.length > 0 ? `${conversionRate}%` : "—", color: "#22c55e" },
-          { label: "Avg Deal Value", value: avgDealValue ? ("$" + Math.round(avgDealValue).toLocaleString("en-US")) : "—", color: "#8b5cf6" },
-          { label: "Total Deals", value: leads.length, color: "var(--text-secondary)" },
+          { label: "Conversion Rate", value: closedLeads.length > 0 ? `${conversionRate}%` : "-", color: "#22c55e" },
+          { label: "Avg Deal Value", value: avgDealValue ? ("$" + Math.round(avgDealValue).toLocaleString("en-US")) : "-", color: "#8b5cf6" },
+          { label: "Total Deals", value: allLeads.length, color: "var(--text-secondary)" },
         ].map((card) => (
           <div
             key={card.label}

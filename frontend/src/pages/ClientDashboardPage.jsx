@@ -159,7 +159,7 @@ function AppointmentsTab({ items }) {
           <div style={s.cardMeta}>
             {new Date(a.start_time).toLocaleDateString()} at{" "}
             {new Date(a.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            {" — "}
+            {" - "}
             {new Date(a.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </div>
           {a.notes && <div style={s.cardNotes}>{a.notes}</div>}
@@ -181,7 +181,7 @@ function InvoicesTab({ items }) {
           </div>
           <div style={s.cardMeta}>
             Total: ${Number(inv.total || 0).toFixed(2)}
-            {inv.due_date && ` — Due: ${new Date(inv.due_date).toLocaleDateString()}`}
+            {inv.due_date && ` - Due: ${new Date(inv.due_date).toLocaleDateString()}`}
           </div>
           {inv.items_json && Array.isArray(inv.items_json) && (
             <div style={{ marginTop: 8 }}>
@@ -235,7 +235,7 @@ function DocumentsTab({ items }) {
           </div>
           <div style={s.cardMeta}>
             Created: {new Date(doc.created_at).toLocaleDateString()}
-            {doc.signed_at && ` — Signed: ${new Date(doc.signed_at).toLocaleDateString()}`}
+            {doc.signed_at && ` - Signed: ${new Date(doc.signed_at).toLocaleDateString()}`}
           </div>
         </div>
       ))}

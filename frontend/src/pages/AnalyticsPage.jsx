@@ -225,7 +225,7 @@ function BusiestHoursHeatMap({ peakHours, chartTheme }) {
                   backgroundColor: getCellColor(grid[d][h]),
                   opacity: getCellOpacity(grid[d][h]),
                 }}
-                title={`${dayLabel} ${h}:00 — ${grid[d][h]} conversations`}
+                title={`${dayLabel} ${h}:00 - ${grid[d][h]} conversations`}
               />
             ))}
           </div>

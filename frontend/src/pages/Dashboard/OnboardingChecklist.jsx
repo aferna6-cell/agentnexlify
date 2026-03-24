@@ -763,7 +763,7 @@ export default function OnboardingChecklist({
             <p className="onboarding-hint">
               Automations let your AI follow up with new leads automatically.
               Create a welcome email sequence so every lead hears from you
-              within minutes — no manual work needed.
+              within minutes - no manual work needed.
             </p>
             {existingSequences === null ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-muted)", fontSize: "0.85rem" }}>
@@ -837,7 +837,7 @@ export default function OnboardingChecklist({
                   }}
                   style={{ marginTop: 4 }}
                 >
-                  Skip — I'll set up my own
+                  Skip - I'll set up my own
                 </button>
               </>
             )}

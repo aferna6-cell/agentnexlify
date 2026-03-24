@@ -8,7 +8,7 @@ const meta = {
 };
 
 const hero = {
-  h1: "Never Miss a Reservation Again — AI Chatbot for Restaurants",
+  h1: "Never Miss a Reservation Again - AI Chatbot for Restaurants",
   subhead: "Handle bookings, confirmations, and FAQs automatically.",
   painPoint: "Missed calls mean empty tables. Fix it tonight.",
 };
@@ -18,7 +18,7 @@ const features = [
     icon: "R",
     title: "24/7 Reservation Booking",
     description:
-      "Customers book tables via your website or SMS any time — no staff needed.",
+      "Customers book tables via your website or SMS any time - no staff needed.",
   },
   {
     icon: "C",

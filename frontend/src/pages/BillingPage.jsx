@@ -382,7 +382,7 @@ export default function BillingPage() {
                     );
                   } else if (val === false) {
                     cell = (
-                      <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>&mdash;</span>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>-</span>
                     );
                   } else {
                     cell = (

@@ -7,7 +7,7 @@ export default function PrivacyPolicy() {
     <div className="legal-page">
       <Helmet>
         <title>Privacy Policy | AgentNexLiFy</title>
-        <meta name="description" content="AgentNexLiFy Privacy Policy — how we collect, use, and protect your data." />
+        <meta name="description" content="AgentNexLiFy Privacy Policy - how we collect, use, and protect your data." />
       </Helmet>
 
       <nav className="legal-nav">
@@ -54,7 +54,7 @@ export default function PrivacyPolicy() {
           <h3>From Website Visitors (Chat Users)</h3>
           <ul>
             <li><strong>Conversation data:</strong> Messages sent and received through the chat widget.</li>
-            <li><strong>Contact information:</strong> Name, email, and phone number &mdash; only if voluntarily provided during the chat conversation.</li>
+            <li><strong>Contact information:</strong> Name, email, and phone number - only if voluntarily provided during the chat conversation.</li>
             <li><strong>Session data:</strong> A randomly generated session ID stored in the visitor&rsquo;s browser (localStorage). This is not a tracking cookie.</li>
           </ul>
 

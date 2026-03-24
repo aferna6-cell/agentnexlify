@@ -7,7 +7,7 @@ export default function TermsOfService() {
     <div className="legal-page">
       <Helmet>
         <title>Terms of Service | AgentNexLiFy</title>
-        <meta name="description" content="AgentNexLiFy Terms of Service — the rules and guidelines for using our AI chat widget platform." />
+        <meta name="description" content="AgentNexLiFy Terms of Service - the rules and guidelines for using our AI chat widget platform." />
       </Helmet>
 
       <nav className="legal-nav">
@@ -29,7 +29,7 @@ export default function TermsOfService() {
           <p>
             AgentNexLiFy (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;) is a software-as-a-service (SaaS)
             platform that provides AI-powered chat widgets for business websites. Our widget lets your website
-            visitors ask questions, get instant AI-generated answers, and submit their contact information &mdash;
+            visitors ask questions, get instant AI-generated answers, and submit their contact information -
             all without you lifting a finger.
           </p>
           <p>
@@ -110,9 +110,9 @@ export default function TermsOfService() {
           <h2>7. Third-Party Services</h2>
           <p>AgentNexLiFy relies on the following third-party providers:</p>
           <ul>
-            <li><strong>Anthropic (Claude API)</strong> &mdash; Powers AI-generated chat responses.</li>
-            <li><strong>Stripe</strong> &mdash; Processes payments and manages subscriptions.</li>
-            <li><strong>Supabase</strong> &mdash; Stores your account data, conversations, and leads.</li>
+            <li><strong>Anthropic (Claude API)</strong> - Powers AI-generated chat responses.</li>
+            <li><strong>Stripe</strong> - Processes payments and manages subscriptions.</li>
+            <li><strong>Supabase</strong> - Stores your account data, conversations, and leads.</li>
           </ul>
           <p>
             Each of these services has its own terms and privacy policies. We are not responsible for

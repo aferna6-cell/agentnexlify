@@ -711,7 +711,7 @@ export default function IntegrationsPage({ onNavigate }) {
               <li>Copy the webhook URL provided by the tool</li>
               <li>Come back here, go to the <strong>Webhooks</strong> tab, click <strong>"+ Add Webhook"</strong></li>
               <li>Paste the URL and select which events to send</li>
-              <li>Go back to your automation tool and test the trigger &mdash; it should receive a sample payload</li>
+              <li>Go back to your automation tool and test the trigger - it should receive a sample payload</li>
               <li>Add your action step (Google Sheets, Slack, Mailchimp, CRM, etc.)</li>
             </ol>
           </div>

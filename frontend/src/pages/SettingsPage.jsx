@@ -466,12 +466,12 @@ export default function SettingsPage({ onNavigate }) {
                 <li>
                   <button className="settings-link-btn" onClick={() => onNavigate?.("faq")} style={{ fontSize: "0.85rem", padding: 0, textDecoration: "underline" }}>
                     Add FAQs manually
-                  </button> — teach your AI about your services, pricing, and policies.
+                  </button> - teach your AI about your services, pricing, and policies.
                 </li>
                 <li>
                   <button className="settings-link-btn" onClick={() => onNavigate?.("business-page")} style={{ fontSize: "0.85rem", padding: 0, textDecoration: "underline" }}>
                     Set up your Business Page
-                  </button> — we'll auto-scan it to train your AI.
+                  </button> - we'll auto-scan it to train your AI.
                 </li>
               </ul>
             </div>

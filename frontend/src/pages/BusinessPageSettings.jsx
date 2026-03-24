@@ -190,7 +190,7 @@ export default function BusinessPageSettings() {
     <div className="fade-in">
       <div className="page-header">
         <h1>Business Page</h1>
-        <p>Give your business a professional web presence — no website needed</p>
+        <p>Give your business a professional web presence - no website needed</p>
       </div>
 
       <div className="settings-page-grid">

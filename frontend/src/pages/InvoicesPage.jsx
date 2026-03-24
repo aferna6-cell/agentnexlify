@@ -401,7 +401,7 @@ export default function InvoicesPage() {
           { label: "Total Outstanding", value: formatCurrency(subtotal), color: "#f59e0b" },
           { label: "Total Paid", value: formatCurrency(totalPaid), color: "#22c55e" },
           { label: "Overdue", value: overdueCount, color: "#ef4444" },
-          { label: "Avg Days to Payment", value: avgDays ? `${Math.round(avgDays)}d` : "—", color: "#3b82f6" },
+          { label: "Avg Days to Payment", value: avgDays ? `${Math.round(avgDays)}d` : "-", color: "#3b82f6" },
         ].map((card) => (
           <div
             key={card.label}
@@ -557,7 +557,7 @@ export default function InvoicesPage() {
                   #{inv.invoice_number || inv.id?.slice(0, 8)}
                 </span>
                 <span style={{ fontSize: "0.85rem" }}>
-                  {inv.customer_name || inv.lead_name || "—"}
+                  {inv.customer_name || inv.lead_name || "-"}
                 </span>
                 <span style={{ textAlign: "right", fontSize: "0.9rem", fontWeight: 700, color: "#3b82f6" }}>
                   {formatCurrency(inv.total ?? total)}
@@ -566,10 +566,10 @@ export default function InvoicesPage() {
                   <StatusBadge status={inv.status} />
                 </span>
                 <span style={{ textAlign: "center", fontSize: "0.8rem", color: inv.status === "overdue" ? "#ef4444" : "var(--text-secondary)" }}>
-                  {formatDate(inv.due_date) || "—"}
+                  {formatDate(inv.due_date) || "-"}
                 </span>
                 <span style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                  {formatDate(inv.sent_at) || "—"}
+                  {formatDate(inv.sent_at) || "-"}
                 </span>
                 <div
                   style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}
@@ -868,7 +868,7 @@ export default function InvoicesPage() {
                     <option value="" disabled>Select a bid...</option>
                     {bids.map((bid) => (
                       <option key={bid.id} value={bid.id}>
-                        {bid.title} — {formatCurrency(calcTotal(bid.line_items || [], 0))}
+                        {bid.title} - {formatCurrency(calcTotal(bid.line_items || [], 0))}
                       </option>
                     ))}
                   </select>
@@ -1148,7 +1148,7 @@ export default function InvoicesPage() {
           >
             <h3 style={{ marginBottom: 4 }}>Send Invoice</h3>
             <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 20 }}>
-              Invoice #{sendTarget.invoice_number || sendTarget.id?.slice(0, 8)} —{" "}
+              Invoice #{sendTarget.invoice_number || sendTarget.id?.slice(0, 8)} -{" "}
               {formatCurrency(sendTarget.total ?? calcTotal(sendTarget.items || [], sendTarget.tax_rate || 0))}
             </p>
 

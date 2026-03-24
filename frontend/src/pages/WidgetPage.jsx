@@ -214,8 +214,8 @@ export default function WidgetPage() {
             </button>
             <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
               {isOnline
-                ? "Widget is live — visitors can chat with your AI assistant."
-                : "Widget is offline — visitors will see a contact form."}
+                ? "Widget is live - visitors can chat with your AI assistant."
+                : "Widget is offline - visitors will see a contact form."}
             </span>
           </div>
           <div style={{

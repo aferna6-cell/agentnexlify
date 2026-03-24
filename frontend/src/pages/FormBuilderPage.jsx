@@ -546,7 +546,7 @@ export default function FormBuilderPage() {
               const isExpanded = expandedSubId === sub.id;
               const submissionData = sub.data_json || sub.data || sub.submission_data || {};
               const summaryParts = Object.values(submissionData).filter(Boolean).slice(0, 3);
-              const summaryText = summaryParts.join(" / ") || "—";
+              const summaryText = summaryParts.join(" / ") || "-";
 
               return (
                 <div key={sub.id || idx}>
@@ -606,7 +606,7 @@ export default function FormBuilderPage() {
                             {key}:
                           </span>
                           <span style={{ color: "var(--text-secondary)" }}>
-                            {typeof val === "boolean" ? (val ? "Yes" : "No") : String(val || "—")}
+                            {typeof val === "boolean" ? (val ? "Yes" : "No") : String(val || "-")}
                           </span>
                         </div>
                       ))}

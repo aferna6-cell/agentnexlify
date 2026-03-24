@@ -151,7 +151,7 @@ export default function Availability({ onNavigate }) {
           {gcalConnected ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--green)" }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", display: "inline-block" }} />
-              Connected — availability checks against your real calendar
+              Connected - availability checks against your real calendar
             </div>
           ) : (
             <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>

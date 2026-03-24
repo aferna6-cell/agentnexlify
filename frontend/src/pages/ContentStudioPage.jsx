@@ -448,7 +448,7 @@ export default function ContentStudioPage() {
           <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>&#9997;</div>
           <h3 style={{ margin: "0 0 8px", color: "var(--text-primary)" }}>No content yet</h3>
           <p style={{ color: "var(--text-secondary)", margin: "0 0 16px", maxWidth: 400, marginInline: "auto" }}>
-            Add your first piece of content — paste a blog post, describe a recent project, or upload a text file.
+            Add your first piece of content - paste a blog post, describe a recent project, or upload a text file.
             The AI will repurpose it for every platform.
           </p>
           <button
