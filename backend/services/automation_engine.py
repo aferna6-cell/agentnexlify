@@ -1058,7 +1058,7 @@ async def send_aftercare_instructions() -> int:
                 tenant_cache[tenant_id] = None
 
         tenant = tenant_cache.get(tenant_id)
-        if not tenant or tenant.get("plan") or "free" == "free":
+        if not tenant or (tenant.get("plan") or "free") == "free":
             continue
 
         btype = (tenant.get("business_type") or "").lower()
@@ -2529,7 +2529,7 @@ async def send_birthday_greetings() -> int:
                 tenant_cache[tenant_id] = None
 
         tenant = tenant_cache.get(tenant_id)
-        if not tenant or tenant.get("plan") or "free" == "free":
+        if not tenant or (tenant.get("plan") or "free") == "free":
             continue
 
         business_name = tenant.get("business_name") or "Us"
