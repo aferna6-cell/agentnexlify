@@ -96,10 +96,12 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             "conversation_id": conversation_id,
         })
 
+    # Get DB handle for conversation operations
+    db = get_supabase()
+
     # Increment usage counter only for new conversations
     if is_new:
         try:
-            db = get_supabase()
             current_used = tenant.get("conversations_used_this_month", 0) or 0
             db.table("tenants").update(
                 {"conversations_used_this_month": current_used + 1}

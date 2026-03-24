@@ -1,7 +1,8 @@
 """Conversation state management — load, create, and persist conversations.
 
 Schema (conversations table):
-  id, tenant_id, session_id, messages (JSONB), lead_id, started_at, last_message_at
+  id, client_id, session_id, messages (JSONB), lead_id, started_at, last_message_at
+  NOTE: conversations uses client_id (NOT tenant_id) — same pattern as leads table.
 """
 
 
@@ -19,7 +20,7 @@ def get_or_create_conversation(tenant_id: str, session_id: str) -> dict:
     result = (
         db.table("conversations")
         .select("*")
-        .eq("tenant_id", tenant_id)
+        .eq("client_id", tenant_id)
         .eq("session_id", session_id)
         .order("started_at", desc=True)
         .limit(1)
@@ -29,7 +30,7 @@ def get_or_create_conversation(tenant_id: str, session_id: str) -> dict:
         return result.data[0]
 
     new_conv = {
-        "tenant_id": tenant_id,
+        "client_id": tenant_id,
         "session_id": session_id,
         "messages": [],
     }
@@ -41,6 +42,6 @@ def get_or_create_conversation(tenant_id: str, session_id: str) -> dict:
         logger.exception("Failed to create conversation for tenant %s", tenant_id)
 
     # Return a minimal dict so callers can continue even if DB insert fails
-    return {"id": session_id, "tenant_id": tenant_id, "session_id": session_id, "messages": []}
+    return {"id": session_id, "client_id": tenant_id, "session_id": session_id, "messages": []}
 
 

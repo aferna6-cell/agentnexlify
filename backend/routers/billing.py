@@ -1,6 +1,7 @@
 """Stripe billing endpoints — checkout, webhooks, and customer portal."""
 
 
+import html as html_mod
 import logging
 
 import stripe
@@ -357,7 +358,7 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
     if owner_email:
         try:
             from backend.services.email_sender import send_email
-            business_name = tenant.get("business_name", "your business")
+            business_name = html_mod.escape(tenant.get("business_name", "your business"))
             await send_email(
                 to=owner_email,
                 subject="Payment failed — your AgentNexLiFy subscription is paused",
