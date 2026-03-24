@@ -574,3 +574,19 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** backend/routers/sms.py (select + insert), backend/routers/analytics.py (4 queries)
 **Fix:** Changed all `.eq("tenant_id", ...)` to `.eq("client_id", ...)` on conversations table queries.
 **Prevention:** Both `leads` and `conversations` tables use `client_id`. All other tables use `tenant_id`. Check the schema before writing queries.
+
+## 2026-03-24 (night)
+
+### BUG: Operator precedence in birthday greeting plan check
+- **File:** backend/services/automation_engine.py, send_birthday_greetings()
+- **Pattern:** `tenant.get("plan") or "free" == "free"` — Python evaluates `"free" == "free"` first (True), then `tenant.get("plan") or True` which is always truthy.
+- **Effect:** Birthday greetings were never sent to any tenant because the condition always evaluated to "skip" (the intent was to skip free-plan tenants).
+- **Fix:** `(tenant.get("plan") or "free") == "free"` — parentheses force correct evaluation.
+- **Status:** FIXED 2026-03-24. Found in 2 occurrences.
+
+### BUG: log_activity wrong positional args in assign_lead
+- **File:** backend/routers/leads.py, assign_lead()
+- **Pattern:** `log_activity(db, tenant_id, lead_id, "assignment", ...)` — db (Supabase client) passed as tenant_id.
+- **Effect:** Activity log entries had the Supabase client object string as tenant_id, which would silently fail or create orphaned rows.
+- **Fix:** Changed to keyword arguments: `log_activity(tenant_id=..., activity_type=..., ...)`.
+- **Status:** FIXED 2026-03-24.

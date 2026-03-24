@@ -66,3 +66,20 @@ _What was built each session. Proves velocity, prevents re-doing work._
 
 ### Commits
 - 7 commits pushed to origin/main
+
+## Session 2026-03-24 (night)
+
+### Bugs Fixed
+1. **Birthday greeting operator precedence** — `tenant.get("plan") or "free" == "free"` always evaluated to True due to Python operator precedence. Fixed to `(tenant.get("plan") or "free") == "free"`. This meant birthday greetings were never being sent to paid tenants.
+2. **log_activity wrong args in assign_lead** — Was passing `db` (Supabase client object) as `tenant_id` parameter. Fixed to use keyword arguments.
+
+### Features Built
+1. **Dashboard Quick Actions** — Quick Book modal (creates appointments from dashboard), Add Lead modal (creates leads directly), Send Campaign navigation. Added POST /appointments/{tenant_id}/dashboard-book JWT-protected endpoint.
+2. **Lead Notes from Conversations** — "Lead Note" button on ConversationsPage links to the conversation's associated lead. Inline textarea with success feedback. Backend now returns lead_id in conversation list response.
+3. **Service Type Selection on Booking Page** — Public booking page shows radio button service type selector when service_types are configured. Records selected service in appointment notes.
+4. **Team Member Activity Log** — GET /team/{tenant_id}/activity endpoint filters activity_log entries with performed_by metadata. TeamActivityPage with member filter, time range, grid layout. Added performed_by tracking to lead create and assign actions.
+5. **Email Template Preview with Sample Data** — resolveTemplateVars() in SequenceBuilder replaces {{variables}} with highlighted sample data. Blue highlight for known vars, yellow for unknown.
+6. **Invoice Payment Webhook** — Stripe webhook handler now detects invoice payments (checkout.session.completed with invoice_id metadata), marks invoice as paid, fires invoice.paid webhook event, logs activity.
+
+### Commits
+- 5 commits pushed to origin/main

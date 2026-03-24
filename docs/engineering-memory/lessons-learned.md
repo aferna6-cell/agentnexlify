@@ -12,3 +12,8 @@ _Append-only. Never delete entries. This is institutional memory._
 - **Python deps not in requirements.txt**: The project has many pip packages not tracked in a requirements file. When cloning fresh, need to install: fastapi, uvicorn, pydantic, pydantic-settings, supabase, httpx, python-jose, python-multipart, slowapi, anthropic, resend, twilio, stripe, python-json-logger, bcrypt, email-validator, google-auth, google-auth-oauthlib, google-api-python-client, cffi, cryptography, mcp, qrcode, pillow.
 - **git branch is `master` locally but remote is `main`**: Push with `git push -u origin master:main`.
 - **Conversations table uses `client_id` not `tenant_id`**: Verified in conversation_inbox.py `_find_conversation()`. All queries correctly use `.eq("client_id", tenant_id)`.
+
+## 2026-03-24 (night)
+- **Python operator precedence with `or` and `==`**: `a.get("x") or "default" == "default"` is NOT the same as `(a.get("x") or "default") == "default"`. The first evaluates as `a.get("x") or ("default" == "default")` which is `a.get("x") or True`, always truthy. Always wrap `or` fallbacks in parentheses when comparing.
+- **log_activity positional args are fragile**: The assign_lead code was passing `db` as the first positional arg to log_activity, which silently accepted it as tenant_id (strings and objects are both valid). Use keyword arguments for all log_activity calls to prevent this class of bug.
+- **Detached HEAD from previous sessions**: When the previous session commits on detached HEAD, the new session needs to merge those commits back into master before working. Use `git merge <hash>` on master.

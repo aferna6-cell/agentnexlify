@@ -462,20 +462,45 @@ _Think like a plumber, dentist, salon owner, or restaurant manager. What do they
 - [x] **Appointment waitlist management** — DONE 2026-03-24. Migration 066, backend CRUD, public join endpoint, notify via email/SMS, frontend WaitlistPage.
 - [x] **Lead scoring configuration** — DONE 2026-03-24. Migration 067, per-tenant customizable weights, auto-seed defaults, frontend ScoringConfigPage with sliders.
 - [x] **Bulk lead status update** — DONE 2026-03-24. Checkboxes in table view, bulk action bar with stage change, assign, delete.
-- [ ] **Appointment confirmation via SMS/email** — When a new appointment is booked, auto-send confirmation with date/time/location to the customer. Currently only reminders exist, no confirmation.
-- [ ] **Customer birthday automation** — Auto-send birthday emails/SMS with optional promo code. Uses date_of_birth field (migration 064). Build the automation task and settings UI.
-- [ ] **Dashboard quick actions widget** — Top of dashboard: "Quick Book", "Add Lead", "Send Campaign" buttons for one-click access to common tasks without navigating.
+- [x] **Appointment confirmation via SMS/email** — DONE 2026-03-24. Auto-sends email + SMS confirmation on booking via booking.py.
+- [x] **Customer birthday automation** — DONE 2026-03-24. send_birthday_greetings() in automation engine. Fixed operator precedence bug.
+- [x] **Dashboard quick actions widget** — DONE 2026-03-24. Quick Book + Add Lead modals, Send Campaign navigation.
 - [x] **Lead activity timeline on detail drawer** — DONE 2026-03-24. Backend endpoint aggregates activity_log + appointments + email_events. Visual timeline in LeadDetailDrawer.
-- [ ] **Recurring invoice generation** — Auto-create next invoice from recurring invoices when next_invoice_date arrives. Migration 060 added the fields, need the automation loop task.
+- [x] **Recurring invoice generation** — DONE 2026-03-24. process_recurring_invoices() in automation loop (30min tier).
 - [ ] **Appointment no-show tracking** — Mark appointments as "no-show" and track no-show rate per lead and overall. Helps businesses identify unreliable customers.
-- [ ] **Email template preview with sample data** — When editing automation email templates, show a live preview with sample lead data filled in (name, business, etc.) instead of raw {{variables}}.
+- [x] **Email template preview with sample data** — DONE 2026-03-24. resolveTemplateVars() with highlighted sample values in SequenceBuilder.
 - [ ] **Conversation search** — Search across all conversations by keyword. Currently conversations can only be filtered by tags, not searched by content.
-- [ ] **Lead notes quick-add from conversations** — Button on ConversationsPage to add a note to the linked lead without navigating to the lead detail page.
+- [x] **Lead notes quick-add from conversations** — DONE 2026-03-24. Lead Note button on ConversationsPage with inline textarea.
 - [x] **Webhook retry mechanism** — DONE 2026-03-24. Exponential backoff: 3 retries at 5s, 15s, 60s.
 - [ ] **Dashboard mobile responsive fixes** — Audit all dashboard pages for mobile responsiveness. Many pages are built desktop-first with fixed widths.
-- [ ] **Appointment type selection in booking page** — When service_types exist, let customers pick which service they want when booking. Currently uses a single slot duration.
+- [x] **Appointment type selection in booking page** — DONE 2026-03-24. Service type radio selector on public booking page.
 - [ ] **Lead import from Google Contacts** — Import leads from Google Contacts CSV export format. Map Google Contacts fields to lead fields automatically.
 - [x] **Auto-archive old conversations** — DONE 2026-03-24. Background task in 30-min tier, archives conversations inactive >30 days.
-- [ ] **Invoice payment webhook notification** — When a Stripe payment comes in for an invoice, fire a webhook event and update the dashboard in real-time.
+- [x] **Invoice payment webhook notification** — DONE 2026-03-24. Stripe checkout.session.completed handler for invoice payments.
 - [ ] **AI chatbot knowledge base panel** — Show a "Knowledge Sources" panel on SettingsPage showing what the AI knows: FAQ count, website pages crawled, feedback corrections count.
-- [ ] **Team member activity log** — Track which team member performed which actions (assigned leads, replied to conversations, updated statuses) for accountability.
+- [x] **Team member activity log** — DONE 2026-03-24. TeamActivityPage + GET /team/{tenant_id}/activity endpoint.
+
+## Features — Tier 8: Production Hardening & Growth (2026-03-24)
+
+_Think like a business owner who is live in production with real customers. What breaks? What's missing?_
+
+- [ ] [P1] [fix]: Appointment double-booking race condition — Add DB advisory lock or SELECT FOR UPDATE before insert to prevent two simultaneous bookings for the same slot | Files: backend/services/booking.py | Done when: concurrent booking test passes
+- [ ] [P1] [fix]: Widget session cleanup — Stale widget sessions accumulate in chat_messages. Add background task to prune sessions with no messages in 90 days | Files: backend/services/automation_engine.py | Done when: prune task runs and old sessions are cleaned
+- [ ] [P1] [fix]: Invoice number uniqueness — invoice_number is not unique-constrained in DB. Two invoices could get the same number under concurrency | Files: migrations/068_invoice_number_unique.sql, backend/routers/invoices.py | Done when: unique index exists and invoice creation retries on conflict
+- [ ] [P2] [feat]: Appointment reschedule page — Public page where customers can reschedule their appointment via a signed link in confirmation email | Files: backend/routers/booking_page.py, backend/services/email_sender.py | Done when: reschedule link in confirmation email works end-to-end
+- [ ] [P2] [feat]: Lead deduplication on import — CSV import should check for existing leads by email/phone before creating duplicates | Files: backend/routers/leads.py | Done when: CSV import skips or merges duplicates with a count summary
+- [ ] [P2] [feat]: Bulk invoice send — Select multiple invoices and send them all at once instead of one by one | Files: backend/routers/invoices.py, frontend/src/pages/InvoicesPage.jsx | Done when: checkbox selection + bulk send button works
+- [ ] [P2] [feat]: Dashboard KPI cards — Show week-over-week delta (up/down arrows with percentages) on dashboard overview cards | Files: frontend/src/pages/Dashboard/OverviewCards.jsx, backend/routers/auth.py | Done when: cards show +/-% vs last week
+- [ ] [P3] [feat]: Lead export to CSV — Export filtered leads as CSV for external use (accounting, mailing lists) | Files: backend/routers/leads.py, frontend/src/pages/LeadsPage.jsx | Done when: "Export CSV" button downloads filtered leads
+- [ ] [P3] [feat]: Appointment calendar sync link — iCal/webcal URL for businesses to subscribe to in Google Calendar/Apple Calendar | Files: backend/routers/appointments.py | Done when: GET /{tenant_id}/ical returns valid .ics feed
+- [ ] [P3] [feat]: Client portal appointment self-service — Let clients cancel or reschedule appointments from their portal | Files: backend/routers/client_portal.py, frontend/src/pages/ClientDashboardPage.jsx | Done when: portal shows cancel/reschedule buttons
+- [ ] [P2] [test]: End-to-end appointment booking flow — Test public booking page submit -> appointment created -> confirmation email sent -> lead linked | Files: tests/ | Done when: integration test covers full flow
+- [ ] [P2] [test]: Invoice payment flow — Test Stripe webhook handler correctly marks invoice paid and fires webhook event | Files: tests/ | Done when: mock Stripe event properly updates invoice
+- [ ] [P2] [test]: Lead CRUD with permissions — Test owner, admin, member, viewer can/cannot create/update/delete leads | Files: tests/ | Done when: all 4 role levels tested
+- [ ] [P3] [test]: Birthday greeting dedup — Test that same lead doesn't get two birthday emails in one year | Files: tests/ | Done when: second call returns 0 sent
+- [ ] [P3] [test]: Recurring invoice generation — Test process_recurring_invoices creates child invoice and advances next_invoice_date | Files: tests/ | Done when: parent's next_invoice_date is advanced after processing
+- [ ] [P2] [fix]: Conversation channel display on mobile — Channel badges (Chat/SMS) overflow on narrow screens | Files: frontend/src/pages/ConversationsPage.jsx | Done when: badges wrap properly on 375px width
+- [ ] [P3] [feat]: Webhook delivery dashboard — Show recent webhook deliveries with status (success/failed/retrying) per webhook | Files: backend/routers/webhooks.py, frontend/src/pages/WebhooksPage.jsx | Done when: webhook detail view shows delivery log
+- [ ] [P3] [feat]: AI conversation summary on conversation list — Show a one-line AI summary next to each conversation in the list | Files: backend/routers/auth.py, frontend/src/pages/ConversationsPage.jsx | Done when: summary appears under lead name
+- [ ] [P4] [chore]: Create requirements.txt from installed packages — Track all Python dependencies for deployment reproducibility | Files: requirements.txt | Done when: pip freeze output is committed
+- [ ] [P4] [chore]: Add loading skeleton to TeamActivityPage — Currently shows nothing while loading | Files: frontend/src/pages/TeamActivityPage.jsx | Done when: SkeletonLoader shows during load
