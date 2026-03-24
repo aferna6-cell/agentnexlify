@@ -1055,6 +1055,60 @@ async def _capture_leads_from_session(
                     logger.warning("lead_capture: tag extraction failed for lead %s", lead["id"], exc_info=True)
                 return
 
+        # Dedup: check by phone + client_id (when no email match)
+        if combined.get("phone") and not combined.get("email"):
+            logger.info(
+                "lead_capture: phone dedup check — phone=%s client_id=%s",
+                combined["phone"], tenant_id,
+            )
+            try:
+                existing_by_phone = (
+                    db.table("leads")
+                    .select("id, name, email, areas_of_interest, conversation_summary")
+                    .eq("client_id", tenant_id)
+                    .eq("phone", combined["phone"])
+                    .limit(1)
+                    .execute()
+                )
+            except Exception as dedup_err:
+                logger.error(
+                    "lead_capture: phone dedup query FAILED: %s", dedup_err, exc_info=True,
+                )
+                existing_by_phone = type("R", (), {"data": []})()
+
+            if existing_by_phone.data:
+                lead = existing_by_phone.data[0]
+                logger.info("lead_capture: existing lead found by phone id=%s", lead["id"])
+                updates = {}
+                if combined.get("name") and not lead.get("name"):
+                    updates["name"] = combined["name"]
+                if combined.get("email") and not lead.get("email"):
+                    updates["email"] = combined["email"]
+                summary = _build_conversation_summary(messages)
+                if summary and not lead.get("conversation_summary"):
+                    updates["conversation_summary"] = summary
+                if updates:
+                    db.table("leads").update(updates).eq("id", lead["id"]).execute()
+                    log_activity(
+                        tenant_id=tenant_id,
+                        activity_type="lead_updated",
+                        description=f"Lead info captured via phone dedup: {', '.join(updates.keys())}",
+                        lead_id=lead["id"],
+                        metadata={"source": "widget", "fields": list(updates.keys())},
+                    )
+                    fire_event_background(tenant_id, "lead.updated", {
+                        "lead_id": lead["id"],
+                        "updated_fields": list(updates.keys()),
+                        "source": "widget",
+                    })
+                try:
+                    tags = _extract_tags_from_conversation(messages)
+                    if tags:
+                        db.table("leads").update({"tags": tags}).eq("id", lead["id"]).execute()
+                except Exception:
+                    logger.warning("lead_capture: tag extraction failed for lead %s", lead["id"], exc_info=True)
+                return
+
         # Extract service interest from conversation context
         service_interest = _extract_service_interest(messages)
 

@@ -3180,3 +3180,398 @@ async def analyze_conversation_sentiment() -> int:
         logger.info("analyze_conversation_sentiment: analyzed %d conversations", analyzed)
 
     return analyzed
+
+
+# ---------------------------------------------------------------------------
+# Lead Scoring Decay
+# ---------------------------------------------------------------------------
+
+
+async def decay_stale_lead_scores() -> int:
+    """
+    Decay lead scores for leads that haven't had any interaction in 30+ days.
+    Reduces score by 10% per run (capped at minimum 0). Runs daily via
+    the 30-min automation loop with dedup via activity_log.
+
+    This prevents stale leads from clogging hot/warm lists when they've gone
+    cold. Business owners see an accurate picture of which leads are active.
+    """
+    db = get_supabase()
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # Dedup: only run once per day
+    try:
+        dedup = (
+            db.table("activity_log")
+            .select("id")
+            .eq("activity_type", "lead_score_decay")
+            .gte("created_at", f"{today_str}T00:00:00Z")
+            .limit(1)
+            .execute()
+        )
+        if dedup.data:
+            return 0
+    except Exception:
+        logger.warning("decay_stale_lead_scores: dedup check failed", exc_info=True)
+        return 0
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    decayed = 0
+
+    try:
+        # Get all leads with a score > 0
+        leads = (
+            db.table("leads")
+            .select("id, client_id, lead_score, updated_at")
+            .gt("lead_score", 0)
+            .limit(BATCH_LIMIT * 10)
+            .execute()
+        )
+    except Exception:
+        logger.exception("decay_stale_lead_scores: failed to query leads")
+        return 0
+
+    for lead in (leads.data or []):
+        lead_id = lead["id"]
+        tenant_id = lead.get("client_id")
+        updated_at = lead.get("updated_at") or ""
+        current_score = lead.get("lead_score") or 0
+
+        if current_score <= 0:
+            continue
+
+        # Check if lead has had any recent activity
+        if updated_at > cutoff:
+            continue  # Lead was updated recently, skip decay
+
+        # Also check activity_log for recent interactions
+        try:
+            recent_activity = (
+                db.table("activity_log")
+                .select("id")
+                .eq("lead_id", lead_id)
+                .gte("created_at", cutoff)
+                .limit(1)
+                .execute()
+            )
+            if recent_activity.data:
+                continue  # Has recent activity, skip decay
+        except Exception:
+            continue  # On error, skip this lead rather than wrongly decay
+
+        # Decay by 10%, minimum 0
+        new_score = max(0, int(current_score * 0.9))
+        if new_score == current_score:
+            new_score = max(0, current_score - 1)  # Ensure at least -1 for low scores
+
+        try:
+            db.table("leads").update({"lead_score": new_score}).eq("id", lead_id).execute()
+            decayed += 1
+        except Exception:
+            logger.warning("decay_stale_lead_scores: failed to update lead %s", lead_id, exc_info=True)
+
+    # Log that decay ran today (dedup marker)
+    if decayed > 0:
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": "00000000-0000-0000-0000-000000000000",
+                "activity_type": "lead_score_decay",
+                "description": f"Decayed {decayed} stale lead scores",
+            }).execute()
+        except Exception:
+            logger.warning("decay_stale_lead_scores: failed to log dedup marker", exc_info=True)
+    else:
+        # Still log even if 0 decayed, to prevent re-running
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": "00000000-0000-0000-0000-000000000000",
+                "activity_type": "lead_score_decay",
+                "description": "Lead score decay ran, 0 leads decayed",
+            }).execute()
+        except Exception:
+            pass
+
+    if decayed > 0:
+        logger.info("decay_stale_lead_scores: decayed %d leads", decayed)
+
+    return decayed
+
+
+# ---------------------------------------------------------------------------
+# Automated Lead Re-engagement
+# ---------------------------------------------------------------------------
+
+
+async def send_lead_reengagement_emails() -> int:
+    """
+    Auto-send a re-engagement email to leads that have gone cold (no interaction
+    for 14+ days). Only targets leads with status 'new' or 'contacted' that have
+    an email address and haven't been unsubscribed.
+
+    Dedup via activity_log ('lead_reengagement_sent' per lead, max once per 30 days).
+    Only runs for paid tenants.
+    """
+    db = get_supabase()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+    reengagement_window = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    sent = 0
+
+    try:
+        # Get leads that haven't been updated in 14+ days
+        leads = (
+            db.table("leads")
+            .select("id, client_id, name, email, status, updated_at, areas_of_interest")
+            .in_("status", ["new", "contacted"])
+            .not_.is_("email", "null")
+            .eq("unsubscribed", False)
+            .lt("updated_at", cutoff)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_lead_reengagement_emails: failed to query leads")
+        return 0
+
+    if not (leads.data):
+        return 0
+
+    tenant_cache: dict[str, dict | None] = {}
+
+    for lead in leads.data:
+        lead_id = lead["id"]
+        tenant_id = lead["client_id"]
+        lead_email = lead.get("email")
+        lead_name = lead.get("name") or "there"
+
+        if not lead_email:
+            continue
+
+        # Cache tenant data
+        if tenant_id not in tenant_cache:
+            try:
+                t = db.table("tenants").select("business_name, plan, owner_email").eq("id", tenant_id).limit(1).execute()
+                tenant_cache[tenant_id] = t.data[0] if t.data else None
+            except Exception:
+                tenant_cache[tenant_id] = None
+
+        tenant = tenant_cache.get(tenant_id)
+        if not tenant or (tenant.get("plan") or "free") == "free":
+            continue
+
+        biz_name = tenant.get("business_name") or "us"
+
+        # Dedup: check if we've sent a re-engagement email in the last 30 days
+        try:
+            dedup = (
+                db.table("activity_log")
+                .select("id")
+                .eq("tenant_id", tenant_id)
+                .eq("lead_id", lead_id)
+                .eq("activity_type", "lead_reengagement_sent")
+                .gte("created_at", reengagement_window)
+                .limit(1)
+                .execute()
+            )
+            if dedup.data:
+                continue
+        except Exception:
+            continue
+
+        # Build and send re-engagement email
+        interest = lead.get("areas_of_interest") or ""
+        interest_line = f" regarding {interest}" if interest else ""
+
+        try:
+            from backend.services.email_sender import send_email, build_unsubscribe_url
+            unsub_url = build_unsubscribe_url(lead_id)
+
+            send_email(
+                to=lead_email,
+                subject=f"Still interested? We're here to help — {biz_name}",
+                html=f"""
+                <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;">
+                    <p>Hi {lead_name},</p>
+                    <p>We noticed you reached out to {biz_name}{interest_line} a little while ago. We wanted to follow up and see if you still need help.</p>
+                    <p>Whether you have questions, want to schedule an appointment, or just want to chat — we're here for you.</p>
+                    <p>Simply reply to this email or visit our website to continue the conversation.</p>
+                    <p style="margin-top:24px;">Best regards,<br/><strong>{biz_name}</strong></p>
+                    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+                    <p style="color:#999;font-size:11px;"><a href="{unsub_url}" style="color:#999;">Unsubscribe</a></p>
+                </div>
+                """,
+            )
+            sent += 1
+
+            # Log the send for dedup
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "lead_id": lead_id,
+                "activity_type": "lead_reengagement_sent",
+                "description": f"Re-engagement email sent to {lead_email}",
+            }).execute()
+
+        except Exception:
+            logger.warning("send_lead_reengagement_emails: failed for lead %s", lead_id, exc_info=True)
+
+    if sent > 0:
+        logger.info("send_lead_reengagement_emails: sent %d re-engagement emails", sent)
+
+    return sent
+
+
+# ---------------------------------------------------------------------------
+# Invoice Overdue Escalation
+# ---------------------------------------------------------------------------
+
+
+async def escalate_overdue_invoices() -> int:
+    """
+    Escalate invoices overdue by 7+ days:
+    1. Send urgent reminder to customer
+    2. Notify business owner
+    3. Update invoice status to 'overdue'
+    Dedup via activity_log ('invoice_escalation' per lead per 14-day window).
+    """
+    db = get_supabase()
+    today = datetime.now(timezone.utc)
+    seven_days_ago = (today - timedelta(days=7)).strftime("%Y-%m-%d")
+    escalation_window = (today - timedelta(days=14)).isoformat()
+    escalated = 0
+
+    try:
+        overdue = (
+            db.table("invoices")
+            .select("id, tenant_id, lead_id, invoice_number, total, due_date, items_json")
+            .eq("status", "sent")
+            .lt("due_date", seven_days_ago)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("escalate_overdue_invoices: failed to query invoices")
+        return 0
+
+    if not overdue.data:
+        return 0
+
+    for inv in overdue.data:
+        inv_id = inv["id"]
+        tenant_id = inv.get("tenant_id")
+        lead_id = inv.get("lead_id")
+        inv_number = inv.get("invoice_number") or ""
+        total = float(inv.get("total") or 0)
+        due_date = inv.get("due_date") or ""
+
+        # Dedup: skip if already escalated for this lead in last 14 days
+        try:
+            specific_dedup = (
+                db.table("activity_log")
+                .select("id")
+                .eq("tenant_id", tenant_id)
+                .eq("activity_type", "invoice_escalation")
+                .gte("created_at", escalation_window)
+                .limit(1)
+                .execute()
+            )
+            # Check description contains this invoice number
+            already_done = any(inv_number in (d.get("description") or "") for d in (specific_dedup.data or [])) if inv_number else False
+            if already_done:
+                continue
+        except Exception:
+            continue
+
+        # Get customer info from lead
+        customer_email = None
+        customer_name = "Customer"
+        if lead_id:
+            try:
+                lead_r = db.table("leads").select("email, name").eq("id", lead_id).limit(1).execute()
+                if lead_r.data:
+                    customer_email = lead_r.data[0].get("email")
+                    customer_name = lead_r.data[0].get("name") or "Customer"
+            except Exception:
+                pass
+
+        # Get business info
+        biz_name = "Business"
+        owner_email = None
+        try:
+            t = db.table("tenants").select("business_name, owner_email, plan").eq("id", tenant_id).limit(1).execute()
+            if t.data:
+                biz_name = t.data[0].get("business_name") or "Business"
+                owner_email = t.data[0].get("owner_email")
+                if (t.data[0].get("plan") or "free") == "free":
+                    continue
+        except Exception:
+            continue
+
+        days_overdue = 7
+        try:
+            days_overdue = (today.date() - datetime.strptime(due_date, "%Y-%m-%d").date()).days
+        except (ValueError, TypeError):
+            pass
+
+        # 1. Send urgent reminder to customer
+        if customer_email:
+            try:
+                send_email(
+                    to=customer_email,
+                    subject=f"OVERDUE: Invoice {inv_number} — {days_overdue} days past due",
+                    html=f"""
+                    <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;">
+                        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:16px;margin-bottom:16px;">
+                            <h2 style="color:#dc2626;margin:0;">Payment Overdue</h2>
+                        </div>
+                        <p>Hi {customer_name},</p>
+                        <p>Invoice <strong>{inv_number}</strong> for <strong>${total:.2f}</strong> was due on {due_date} and is now <strong>{days_overdue} days overdue</strong>.</p>
+                        <p>Please arrange payment at your earliest convenience.</p>
+                        <p>If you've already paid, please disregard this notice.</p>
+                        <p style="margin-top:24px;">Thank you,<br/><strong>{biz_name}</strong></p>
+                    </div>
+                    """,
+                )
+            except Exception:
+                logger.warning("escalate_overdue_invoices: failed to email customer for %s", inv_id, exc_info=True)
+
+        # 2. Notify business owner
+        if owner_email:
+            try:
+                send_email(
+                    to=owner_email,
+                    subject=f"Invoice {inv_number} is {days_overdue} days overdue (${total:.2f})",
+                    html=f"""
+                    <h2>Overdue Invoice Alert</h2>
+                    <p>Invoice <strong>{inv_number}</strong> for <strong>{customer_name}</strong> is {days_overdue} days past due.</p>
+                    <table style="border-collapse:collapse;margin:12px 0;">
+                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Amount:</td><td><strong>${total:.2f}</strong></td></tr>
+                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Due Date:</td><td>{due_date}</td></tr>
+                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Customer:</td><td>{customer_name}</td></tr>
+                    </table>
+                    """,
+                )
+            except Exception:
+                logger.warning("escalate_overdue_invoices: failed to notify owner for %s", inv_id, exc_info=True)
+
+        # 3. Update invoice status to overdue
+        try:
+            db.table("invoices").update({"status": "overdue"}).eq("id", inv_id).eq("status", "sent").execute()
+        except Exception:
+            logger.warning("escalate_overdue_invoices: failed to update status for %s", inv_id, exc_info=True)
+
+        # 4. Log escalation
+        try:
+            db.table("activity_log").insert({
+                "tenant_id": tenant_id,
+                "lead_id": lead_id,
+                "activity_type": "invoice_escalation",
+                "description": f"Invoice {inv_number} escalated — {days_overdue} days overdue (${total:.2f})",
+            }).execute()
+        except Exception:
+            pass
+
+        escalated += 1
+
+    if escalated > 0:
+        logger.info("escalate_overdue_invoices: escalated %d invoices", escalated)
+
+    return escalated

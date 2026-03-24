@@ -93,6 +93,9 @@ async def _automation_loop():
         send_daily_digest_emails,
         auto_close_inactive_conversations,
         analyze_conversation_sentiment,
+        decay_stale_lead_scores,
+        send_lead_reengagement_emails,
+        escalate_overdue_invoices,
     )
 
     tick = 0
@@ -123,6 +126,7 @@ async def _automation_loop():
                 _safe_run("generate_recurring_invoices", generate_recurring_invoices),
                 _safe_run("detect_appointment_no_shows", detect_appointment_no_shows),
                 _safe_run("auto_close_inactive_conversations", auto_close_inactive_conversations),
+                _safe_run("escalate_overdue_invoices", escalate_overdue_invoices),
             ])
 
         # Every 30 min: heavy/infrequent tasks
@@ -133,6 +137,8 @@ async def _automation_loop():
                 _safe_run("send_birthday_greetings", send_birthday_greetings),
                 _safe_run("send_daily_digest_emails", send_daily_digest_emails),
                 _safe_run("analyze_conversation_sentiment", analyze_conversation_sentiment),
+                _safe_run("decay_stale_lead_scores", decay_stale_lead_scores),
+                _safe_run("send_lead_reengagement_emails", send_lead_reengagement_emails),
             ])
 
         await asyncio.gather(*core_tasks)

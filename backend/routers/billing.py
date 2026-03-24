@@ -336,6 +336,65 @@ def _handle_invoice_payment(db, session: dict, invoice_id: str, tenant_id: str |
     except Exception:
         logger.warning("Failed to send payment notification email for invoice %s", invoice_id, exc_info=True)
 
+    # Send payment receipt to the CUSTOMER
+    try:
+        # Find customer email: from session, from lead, or from invoice sent_to
+        receipt_email = customer_email
+        if not receipt_email and invoice.get("lead_id"):
+            lead_result = db.table("leads").select("email, name").eq("id", invoice["lead_id"]).limit(1).execute()
+            if lead_result.data:
+                receipt_email = lead_result.data[0].get("email")
+
+        if receipt_email:
+            biz_name_for_receipt = "Business"
+            try:
+                t_result = db.table("tenants").select("business_name").eq("id", resolved_tenant_id).limit(1).execute()
+                if t_result.data:
+                    biz_name_for_receipt = t_result.data[0].get("business_name") or "Business"
+            except Exception:
+                pass
+
+            inv_number = invoice.get("invoice_number") or ""
+            items_html = ""
+            for item in (invoice.get("items_json") or []):
+                desc = item.get("description") or ""
+                qty = item.get("quantity", 1)
+                price = item.get("unit_price", 0)
+                items_html += f"<tr><td style='padding:6px 12px 6px 0;border-bottom:1px solid #eee;'>{desc}</td><td style='padding:6px 8px;border-bottom:1px solid #eee;text-align:center;'>{qty}</td><td style='padding:6px 0 6px 8px;border-bottom:1px solid #eee;text-align:right;'>${float(price) * int(qty):.2f}</td></tr>"
+
+            from backend.services.email_sender import send_email as _send_receipt
+            _send_receipt(
+                to=receipt_email,
+                subject=f"Payment Receipt — Invoice {inv_number} from {biz_name_for_receipt}",
+                html=f"""
+                <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+                    <h2 style="color:#10b981;">Payment Received — Thank You!</h2>
+                    <p>This confirms your payment for invoice <strong>{inv_number}</strong>.</p>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                        <thead>
+                            <tr style="background:#f9fafb;">
+                                <th style="padding:8px 12px 8px 0;text-align:left;border-bottom:2px solid #e5e7eb;">Item</th>
+                                <th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb;">Qty</th>
+                                <th style="padding:8px 0 8px 8px;text-align:right;border-bottom:2px solid #e5e7eb;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>{items_html}</tbody>
+                    </table>
+                    <table style="margin:16px 0;">
+                        <tr><td style="padding:4px 16px 4px 0;color:#666;">Subtotal:</td><td style="text-align:right;">${float(invoice.get('subtotal') or 0):.2f}</td></tr>
+                        <tr><td style="padding:4px 16px 4px 0;color:#666;">Tax:</td><td style="text-align:right;">${float(invoice.get('tax_amount') or 0):.2f}</td></tr>
+                        <tr><td style="padding:4px 16px 4px 0;font-weight:bold;">Total Paid:</td><td style="text-align:right;font-weight:bold;color:#10b981;">${amount_paid:.2f}</td></tr>
+                    </table>
+                    <p style="color:#666;font-size:13px;">Paid on {now[:10]} via Stripe</p>
+                    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+                    <p style="color:#999;font-size:12px;">{biz_name_for_receipt} — Powered by AgentNexLiFy</p>
+                </div>
+                """,
+            )
+            logger.info("Sent payment receipt to customer %s for invoice %s", receipt_email, invoice_id)
+    except Exception:
+        logger.warning("Failed to send payment receipt to customer for invoice %s", invoice_id, exc_info=True)
+
 
 def _handle_checkout_completed(db, session: dict) -> None:
     logger.info(
