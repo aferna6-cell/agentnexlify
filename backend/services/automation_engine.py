@@ -2562,3 +2562,107 @@ async def send_birthday_greetings() -> int:
             logger.warning("Failed to log birthday greeting for lead %s", lead_id, exc_info=True)
 
     return sent
+
+
+async def process_recurring_invoices() -> int:
+    """Create new invoices from recurring invoices whose next_invoice_date has arrived.
+
+    Runs every 30 min in the automation loop. For each recurring invoice with
+    next_invoice_date <= today:
+    1. Create a new draft invoice with the same line items
+    2. Advance the parent's next_invoice_date by the recurrence_interval
+    3. Log the activity
+    """
+    from datetime import date
+
+    db = get_supabase()
+    today_str = date.today().isoformat()
+
+    try:
+        due = (
+            db.table("invoices")
+            .select("id, tenant_id, lead_id, items_json, tax_rate, notes, recurrence_interval, next_invoice_date, invoice_number")
+            .eq("is_recurring", True)
+            .lte("next_invoice_date", today_str)
+            .not_.is_("next_invoice_date", "null")
+            .neq("status", "cancelled")
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("process_recurring_invoices: query failed")
+        return 0
+
+    if not due.data:
+        return 0
+
+    created = 0
+    for parent in due.data:
+        parent_id = parent["id"]
+        tenant_id = parent["tenant_id"]
+        try:
+            items = parent.get("items_json") or []
+            tax_rate = float(parent.get("tax_rate") or 0)
+            subtotal = sum(float(i.get("quantity", 1)) * float(i.get("unit_price", 0)) for i in items)
+            tax_amount = round(subtotal * tax_rate / 100, 2)
+            total = round(subtotal + tax_amount, 2)
+
+            # Generate invoice number
+            prefix = f"INV-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
+            count_result = db.table("invoices").select("id", count="exact").eq("tenant_id", tenant_id).execute()
+            seq = (count_result.count or 0) + 1
+            invoice_number = f"{prefix}-{seq:04d}"
+
+            # Calculate due date (same offset as recurrence interval)
+            from dateutil.relativedelta import relativedelta
+            interval = parent.get("recurrence_interval", "monthly")
+            intervals_map = {
+                "weekly": relativedelta(weeks=1),
+                "biweekly": relativedelta(weeks=2),
+                "monthly": relativedelta(months=1),
+                "quarterly": relativedelta(months=3),
+            }
+            delta = intervals_map.get(interval, relativedelta(months=1))
+            due_date = (date.today() + delta).isoformat()
+
+            new_invoice = {
+                "tenant_id": tenant_id,
+                "lead_id": parent.get("lead_id"),
+                "parent_invoice_id": parent_id,
+                "invoice_number": invoice_number,
+                "items_json": items,
+                "subtotal": subtotal,
+                "tax_rate": tax_rate,
+                "tax_amount": tax_amount,
+                "total": total,
+                "notes": parent.get("notes"),
+                "status": "draft",
+                "due_date": due_date,
+                "is_recurring": False,  # child is not itself recurring
+            }
+            db.table("invoices").insert(new_invoice).execute()
+
+            # Advance the parent's next_invoice_date
+            next_date = date.fromisoformat(parent["next_invoice_date"]) + delta
+            db.table("invoices").update({
+                "next_invoice_date": next_date.isoformat(),
+            }).eq("id", parent_id).execute()
+
+            created += 1
+            logger.info(
+                "Created recurring invoice %s from parent %s for tenant %s (next: %s)",
+                invoice_number, parent_id, tenant_id, next_date.isoformat(),
+            )
+
+            fire_event_background(tenant_id, "invoice.created", {
+                "invoice_id": new_invoice.get("id"),
+                "invoice_number": invoice_number,
+                "total": total,
+                "status": "draft",
+                "recurring_from": parent_id,
+            })
+
+        except Exception:
+            logger.exception("Failed to process recurring invoice %s", parent_id)
+
+    return created

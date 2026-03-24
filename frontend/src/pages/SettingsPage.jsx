@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchTenant, updateTenantSettings } from "../utils/api/dashboard";
+import { fetchTenant, updateTenantSettings, fetchKnowledgeStats } from "../utils/api/dashboard";
 import { fetchAiFeedback, deleteAiFeedback, startWebsiteCrawl, getCrawlStatus } from "../utils/api/widget-config";
 import { fetchTagDefinitions, createTagDefinition, updateTagDefinition, deleteTagDefinition } from "../utils/api/tags";
 import { searchAvailableNumbers, provisionPhoneNumber, releasePhoneNumber } from "../utils/api/phone";
@@ -31,6 +31,7 @@ export default function SettingsPage({ onNavigate }) {
   const [email, setEmail] = useState("");
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
   const [feedback, setFeedback] = useState([]);
+  const [knowledgeStats, setKnowledgeStats] = useState(null);
   const [crawlStatus, setCrawlStatus] = useState(null);
   const [crawling, setCrawling] = useState(false);
   const [businessSlug, setBusinessSlug] = useState(null);
@@ -105,6 +106,9 @@ export default function SettingsPage({ onNavigate }) {
       fetchAiFeedback(user.tenantId, token)
         .then((data) => setFeedback(data.feedback || []))
         .catch((err) => console.warn("AI feedback fetch failed:", err.message));
+      fetchKnowledgeStats(user.tenantId, token)
+        .then((data) => setKnowledgeStats(data))
+        .catch((err) => console.warn("Knowledge stats fetch failed:", err.message));
     }
   }, [user?.tenantId, token]);
 
@@ -1225,6 +1229,65 @@ export default function SettingsPage({ onNavigate }) {
             )}
           </div>
         </div>
+
+        {/* AI Knowledge Sources */}
+        {knowledgeStats && (
+          <div className="settings-card">
+            <h3>AI Knowledge Sources</h3>
+            <p className="settings-card-desc">
+              What your AI chatbot currently knows. The more sources, the better your AI can help visitors.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 12 }}>
+              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: knowledgeStats.faq_count > 0 ? "#22c55e" : "var(--text-muted)" }}>
+                  {knowledgeStats.faq_count}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>FAQ Entries</div>
+                {knowledgeStats.faq_count === 0 && (
+                  <button onClick={() => onNavigate && onNavigate("faq")} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 4 }}>
+                    Add FAQs
+                  </button>
+                )}
+              </div>
+              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: knowledgeStats.website_pages_crawled > 0 ? "#22c55e" : "var(--text-muted)" }}>
+                  {knowledgeStats.website_pages_crawled}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Website Pages Crawled</div>
+                {knowledgeStats.website_crawl_status && (
+                  <div style={{ fontSize: 11, color: knowledgeStats.website_crawl_status === "completed" ? "#22c55e" : "#f59e0b", marginTop: 2 }}>
+                    Status: {knowledgeStats.website_crawl_status}
+                  </div>
+                )}
+              </div>
+              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: knowledgeStats.feedback_corrections_count > 0 ? "#f59e0b" : "var(--text-muted)" }}>
+                  {knowledgeStats.feedback_corrections_count}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>AI Corrections</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>From thumbs-down feedback</div>
+              </div>
+              {knowledgeStats.active_chat_flow && (
+                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#8b5cf6" }}>Active</div>
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Chat Flow: {knowledgeStats.active_chat_flow}</div>
+                </div>
+              )}
+              {knowledgeStats.menu_items_count > 0 && (
+                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#22c55e" }}>{knowledgeStats.menu_items_count}</div>
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Menu Items</div>
+                </div>
+              )}
+              {knowledgeStats.job_postings_count > 0 && (
+                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#22c55e" }}>{knowledgeStats.job_postings_count}</div>
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Active Job Postings</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* AI Feedback */}
         <div className="settings-card">

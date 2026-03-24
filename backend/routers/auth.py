@@ -1306,3 +1306,73 @@ async def get_activity(tenant_id: str, claims: dict = Depends(_get_current_tenan
         items = items[:20]
 
     return {"activity": items}
+
+
+@router.get("/knowledge-stats/{tenant_id}")
+async def get_knowledge_stats(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Return stats about what the AI chatbot knows: FAQs, website pages, feedback corrections."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    stats = {
+        "faq_count": 0,
+        "website_pages_crawled": 0,
+        "website_crawl_status": None,
+        "website_url": None,
+        "feedback_corrections_count": 0,
+        "active_chat_flow": None,
+        "menu_items_count": 0,
+        "job_postings_count": 0,
+    }
+
+    try:
+        faq_res = db.table("faq_entries").select("id", count="exact").eq("tenant_id", tenant_id).execute()
+        stats["faq_count"] = faq_res.count or 0
+    except Exception:
+        logger.debug("knowledge-stats: faq query failed", exc_info=True)
+
+    try:
+        wc_res = db.table("website_content").select("pages_found, crawl_status").eq("tenant_id", tenant_id).limit(1).execute()
+        if wc_res.data:
+            stats["website_pages_crawled"] = wc_res.data[0].get("pages_found") or 0
+            stats["website_crawl_status"] = wc_res.data[0].get("crawl_status")
+    except Exception:
+        logger.debug("knowledge-stats: website_content query failed", exc_info=True)
+
+    try:
+        tenant_res = db.table("tenants").select("website_url").eq("id", tenant_id).limit(1).execute()
+        if tenant_res.data:
+            stats["website_url"] = tenant_res.data[0].get("website_url")
+    except Exception:
+        logger.debug("knowledge-stats: tenant query failed", exc_info=True)
+
+    try:
+        fb_res = db.table("ai_feedback").select("id", count="exact").eq("tenant_id", tenant_id).eq("rating", "down").execute()
+        stats["feedback_corrections_count"] = fb_res.count or 0
+    except Exception:
+        logger.debug("knowledge-stats: ai_feedback query failed", exc_info=True)
+
+    try:
+        flow_res = db.table("chat_flows").select("name").eq("tenant_id", tenant_id).eq("is_active", True).limit(1).execute()
+        if flow_res.data:
+            stats["active_chat_flow"] = flow_res.data[0].get("name")
+    except Exception:
+        logger.debug("knowledge-stats: chat_flows query failed", exc_info=True)
+
+    try:
+        menu_res = db.table("menu_items").select("id", count="exact").eq("tenant_id", tenant_id).execute()
+        stats["menu_items_count"] = menu_res.count or 0
+    except Exception:
+        logger.debug("knowledge-stats: menu query failed", exc_info=True)
+
+    try:
+        jobs_res = db.table("jobs").select("id", count="exact").eq("tenant_id", tenant_id).eq("is_active", True).execute()
+        stats["job_postings_count"] = jobs_res.count or 0
+    except Exception:
+        logger.debug("knowledge-stats: jobs query failed", exc_info=True)
+
+    return stats

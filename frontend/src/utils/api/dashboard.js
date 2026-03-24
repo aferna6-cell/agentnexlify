@@ -86,3 +86,7 @@ export function generateMcpKey(tenantId, token) {
 export function revokeMcpKey(tenantId, token) {
   return request(`/api/v1/auth/mcp-key/${tenantId}`, { method: "DELETE", token });
 }
+
+export function fetchKnowledgeStats(tenantId, token) {
+  return request(`/api/v1/auth/knowledge-stats/${tenantId}`, { token });
+}

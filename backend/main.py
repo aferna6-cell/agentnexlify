@@ -88,6 +88,7 @@ async def _automation_loop():
         send_weekly_intelligence_briefs,
         send_birthday_greetings,
         send_aftercare_instructions,
+        process_recurring_invoices,
     )
 
     tick = 0
@@ -123,6 +124,7 @@ async def _automation_loop():
                 _safe_run("send_monthly_reports", send_monthly_reports),
                 _safe_run("send_weekly_intelligence_briefs", send_weekly_intelligence_briefs),
                 _safe_run("send_birthday_greetings", send_birthday_greetings),
+                _safe_run("process_recurring_invoices", process_recurring_invoices),
             ])
 
         await asyncio.gather(*core_tasks)
