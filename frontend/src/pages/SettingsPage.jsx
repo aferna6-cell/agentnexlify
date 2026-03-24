@@ -28,6 +28,8 @@ export default function SettingsPage({ onNavigate }) {
     textback_message: "Hi! Sorry we missed your call at {business_name}. How can we help? Reply here and we'll get back to you right away.",
     textback_quiet_start: "22:00",
     textback_quiet_end: "08:00",
+    birthday_enabled: false,
+    birthday_message: "",
   });
   const [email, setEmail] = useState("");
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
@@ -86,6 +88,8 @@ export default function SettingsPage({ onNavigate }) {
         textback_message: tenant.textback_message || "Hi! Sorry we missed your call at {business_name}. How can we help? Reply here and we'll get back to you right away.",
         textback_quiet_start: tenant.textback_quiet_start || "22:00",
         textback_quiet_end: tenant.textback_quiet_end || "08:00",
+        birthday_enabled: tenant.birthday_enabled || false,
+        birthday_message: tenant.birthday_message || "",
       });
       setEmail(tenant.owner_email || "");
       setBusinessSlug(tenant.business_slug || null);
@@ -771,6 +775,40 @@ export default function SettingsPage({ onNavigate }) {
               </div>
             </>
           )}
+          {/* Birthday Automation */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+            <input
+              type="checkbox"
+              checked={form.birthday_enabled}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, birthday_enabled: e.target.checked }));
+                setSaved(false);
+              }}
+              id="birthday-toggle"
+            />
+            <label htmlFor="birthday-toggle" style={{ margin: 0, cursor: "pointer" }}>
+              <strong>Birthday Greetings</strong> — Auto-send birthday emails to leads with a date of birth
+            </label>
+          </div>
+          {form.birthday_enabled && (
+            <>
+              <div className="settings-field" style={{ marginTop: 12 }}>
+                <label className="settings-label">Custom Birthday Message (optional)</label>
+                <textarea
+                  className="settings-textarea"
+                  rows={3}
+                  value={form.birthday_message}
+                  onChange={(e) => { setForm((f) => ({ ...f, birthday_message: e.target.value })); setSaved(false); }}
+                  placeholder="Leave empty for the default greeting. Use {customer_name} and {business_name} as placeholders."
+                  style={{ resize: "vertical" }}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Available variables: {"{customer_name}"}, {"{business_name}"}. HTML supported.
+                </span>
+              </div>
+            </>
+          )}
+
           <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: "0.75rem" }}>
             {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
           </button>

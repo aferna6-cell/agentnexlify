@@ -2525,7 +2525,7 @@ async def send_birthday_greetings() -> int:
 
         if tenant_id not in tenant_cache:
             try:
-                t = db.table("tenants").select("business_name, plan").eq("id", tenant_id).limit(1).execute()
+                t = db.table("tenants").select("business_name, plan, birthday_enabled, birthday_message").eq("id", tenant_id).limit(1).execute()
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
                 tenant_cache[tenant_id] = None
@@ -2534,17 +2534,26 @@ async def send_birthday_greetings() -> int:
         if not tenant or (tenant.get("plan") or "free") == "free":
             continue
 
+        # Skip if birthday automation is explicitly disabled
+        if not tenant.get("birthday_enabled"):
+            continue
+
         business_name = tenant.get("business_name") or "Us"
         customer_name = lead.get("name") or "there"
 
+        # Use custom template if provided, otherwise default
+        custom_msg = tenant.get("birthday_message")
+        if custom_msg:
+            body = custom_msg.replace("{customer_name}", customer_name).replace("{business_name}", business_name)
+        else:
+            body = (
+                f"<h2>Happy Birthday, {customer_name}!</h2>"
+                f"<p>Everyone at <strong>{business_name}</strong> wishes you a wonderful birthday!</p>"
+                f"<p>As a special thank you for being a valued client, we'd love to see you soon. "
+                f"Reply to this email or contact us to schedule your next visit.</p>"
+                f"<p>Best wishes,<br>The {business_name} Team</p>"
+            )
         subject = f"Happy Birthday from {business_name}!"
-        body = (
-            f"<h2>Happy Birthday, {customer_name}!</h2>"
-            f"<p>Everyone at <strong>{business_name}</strong> wishes you a wonderful birthday!</p>"
-            f"<p>As a special thank you for being a valued client, we'd love to see you soon. "
-            f"Reply to this email or contact us to schedule your next visit.</p>"
-            f"<p>Best wishes,<br>The {business_name} Team</p>"
-        )
 
         try:
             result = await send_email(to=lead["email"], subject=subject, body_html=body, tenant_id=tenant_id)

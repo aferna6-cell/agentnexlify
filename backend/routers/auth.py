@@ -1050,7 +1050,7 @@ async def update_settings(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     body = await request.json()
-    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled", "google_review_link", "review_request_config", "website_url", "textback_enabled", "textback_message", "textback_quiet_start", "textback_quiet_end"}
+    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled", "google_review_link", "review_request_config", "website_url", "textback_enabled", "textback_message", "textback_quiet_start", "textback_quiet_end", "birthday_enabled", "birthday_message"}
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
@@ -1075,7 +1075,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     db = get_supabase()
     result = (
         db.table("tenants")
-        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled")
+        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, birthday_enabled, birthday_message")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
