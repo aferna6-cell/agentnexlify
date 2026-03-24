@@ -279,7 +279,7 @@ async def execute_step(execution_id: str) -> None:
 
         ai_body = await _generate_ai_email(
             db, execution["tenant_id"], execution["lead_id"],
-            tenant.get("business_name", ""), step.get("body_template"),
+            tenant.get("business_name") or "", step.get("body_template"),
         )
 
         subject = render_template(step["subject_template"], context)
@@ -297,7 +297,7 @@ async def execute_step(execution_id: str) -> None:
                 )
                 wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
                 if wc_branding:
-                    ai_body = build_branded_email_html(ai_body, wc_branding, tenant.get("business_name", ""))
+                    ai_body = build_branded_email_html(ai_body, wc_branding, tenant.get("business_name") or "")
             except Exception:
                 logger.debug("Failed to load branding for AI email, sending plain", exc_info=True)
 
@@ -362,7 +362,7 @@ async def execute_step(execution_id: str) -> None:
                 )
                 wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
                 if wc_branding:
-                    body = build_branded_email_html(body, wc_branding, tenant.get("business_name", ""))
+                    body = build_branded_email_html(body, wc_branding, tenant.get("business_name") or "")
             except Exception:
                 logger.debug("Failed to load branding for email, sending plain", exc_info=True)
 
