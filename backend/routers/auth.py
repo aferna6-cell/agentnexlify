@@ -465,7 +465,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             greeting_message=w.get("greeting_message", "Hi! How can I help you today?"),
             position=w.get("position", "bottom-right"),
             branding=w.get("branding") or None,
-            is_online=w.get("is_online", True),
+            is_online=w.get("is_online") is not False,
             offline_message=w.get("offline_message"),
         )
     else:
@@ -566,7 +566,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     response = DashboardResponse(
         business_name=t.get("business_name") or "",
         plan=t.get("plan") or "free",
-        plan_status=t.get("plan_status", "active"),
+        plan_status=t.get("plan_status") or "active",
         conversations_used_this_month=conversations_used,
         monthly_conversation_limit=None,
         widget_api_key=api_key,

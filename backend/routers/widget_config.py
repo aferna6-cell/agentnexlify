@@ -40,7 +40,8 @@ def _resolve_online_status(widget: dict, tenant: dict) -> bool:
     the manual is_online toggle.
     """
     # Manual override: if is_online is explicitly False, respect it
-    if not widget.get("is_online", True):
+    is_online = widget.get("is_online")
+    if is_online is False:
         return False
 
     # Check chat hours schedule
@@ -48,8 +49,8 @@ def _resolve_online_status(widget: dict, tenant: dict) -> bool:
     if chat_hours_status is not None:
         return chat_hours_status
 
-    # Default: use the is_online toggle
-    return widget.get("is_online", True)
+    # Default: use the is_online toggle (NULL treated as True)
+    return widget.get("is_online") is not False
 
 
 def _is_within_chat_hours(widget: dict, tenant_id: str) -> bool | None:
@@ -217,15 +218,15 @@ async def get_config(request: Request, api_key: str):
         show_watermark=show_watermark,
         allowed_domains=widget.get("allowed_domains"),
         tenant_id=widget.get("tenant_id"),
-        booking_enabled=widget.get("booking_enabled", False),
+        booking_enabled=widget.get("booking_enabled") or False,
         branding=branding if branding else None,
         agent_name=tenant.get("business_name"),
         is_online=_resolve_online_status(widget, tenant),
         offline_message=widget.get("offline_message"),
         menu_items=menu_items,
         business_type=tenant.get("business_type"),
-        proactive_enabled=widget.get("proactive_enabled", False),
-        proactive_delay_seconds=widget.get("proactive_delay_seconds", 30),
+        proactive_enabled=widget.get("proactive_enabled") or False,
+        proactive_delay_seconds=widget.get("proactive_delay_seconds") or 30,
         proactive_message=widget.get("proactive_message"),
     )
 

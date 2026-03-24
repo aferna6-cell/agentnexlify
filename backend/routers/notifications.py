@@ -134,8 +134,8 @@ async def get_notifications(
             recent_items.append(
                 NotificationItem(
                     type="activity",
-                    title=act.get("activity_type", "activity"),
-                    description=act.get("description", ""),
+                    title=act.get("activity_type") or "activity",
+                    description=act.get("description") or "",
                     created_at=act["created_at"],
                 )
             )
@@ -160,7 +160,7 @@ async def get_notifications(
         overdue_action_items_count = len(overdue_data)
 
         for item in overdue_data[:5]:
-            priority = item.get("priority", "medium")
+            priority = item.get("priority") or "medium"
             recent_items.append(
                 NotificationItem(
                     type="action_item",
