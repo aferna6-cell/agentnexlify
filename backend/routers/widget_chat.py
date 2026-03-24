@@ -147,7 +147,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                         response=last_reply,
                         session_id=req.session_id,
                         lead_captured=False,
-                        show_watermark=widget.get("show_watermark", True),
+                        show_watermark=widget.get("show_watermark") is not False,
                         handoff=True,
                     )
         except Exception:
@@ -159,7 +159,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             response=waiting_msg,
             session_id=req.session_id,
             lead_captured=False,
-            show_watermark=widget.get("show_watermark", True),
+            show_watermark=widget.get("show_watermark") is not False,
             handoff=True,
         )
 
@@ -506,7 +506,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     if tenant.get("plan") == "free":
         show_watermark = True
     else:
-        show_watermark = widget.get("show_watermark", True)
+        show_watermark = widget.get("show_watermark") is not False
 
     return WidgetChatResponse(
         response=assistant_text,

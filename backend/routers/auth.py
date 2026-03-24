@@ -460,10 +460,10 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         w = widget_result.data[0]
         api_key = w["api_key"]
         widget_config = WidgetConfigDetail(
-            bot_name=w.get("bot_name", ""),
-            primary_color=w.get("primary_color", "#00BFFF"),
-            greeting_message=w.get("greeting_message", "Hi! How can I help you today?"),
-            position=w.get("position", "bottom-right"),
+            bot_name=w.get("bot_name") or "",
+            primary_color=w.get("primary_color") or "#00BFFF",
+            greeting_message=w.get("greeting_message") or "Hi! How can I help you today?",
+            position=w.get("position") or "bottom-right",
             branding=w.get("branding") or None,
             is_online=w.get("is_online") is not False,
             offline_message=w.get("offline_message"),
@@ -630,10 +630,10 @@ async def update_widget_config(
 
     w = result.data[0]
     return WidgetConfigDetail(
-        bot_name=w.get("bot_name", ""),
-        primary_color=w.get("primary_color", "#00BFFF"),
-        greeting_message=w.get("greeting_message", ""),
-        position=w.get("position", "bottom-right"),
+        bot_name=w.get("bot_name") or "",
+        primary_color=w.get("primary_color") or "#00BFFF",
+        greeting_message=w.get("greeting_message") or "",
+        position=w.get("position") or "bottom-right",
         branding=w.get("branding") or None,
     )
 

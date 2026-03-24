@@ -3311,26 +3311,32 @@ async def decay_stale_lead_scores() -> int:
         except Exception:
             logger.warning("decay_stale_lead_scores: failed to update lead %s", lead_id, exc_info=True)
 
-    # Log that decay ran today (dedup marker)
-    if decayed > 0:
+    # Log that decay ran today (dedup marker) — use first available tenant_id
+    # (activity_log.tenant_id has FK to tenants, so we need a real tenant)
+    marker_tenant_id = None
+    for lead in (leads.data or []):
+        if lead.get("client_id"):
+            marker_tenant_id = lead["client_id"]
+            break
+    if not marker_tenant_id:
+        # Fallback: grab any tenant
+        try:
+            any_t = db.table("tenants").select("id").limit(1).execute()
+            if any_t.data:
+                marker_tenant_id = any_t.data[0]["id"]
+        except Exception:
+            pass
+
+    if marker_tenant_id:
+        desc = f"Decayed {decayed} stale lead scores" if decayed > 0 else "Lead score decay ran, 0 leads decayed"
         try:
             db.table("activity_log").insert({
-                "tenant_id": "00000000-0000-0000-0000-000000000000",
+                "tenant_id": marker_tenant_id,
                 "activity_type": "lead_score_decay",
-                "description": f"Decayed {decayed} stale lead scores",
+                "description": desc,
             }).execute()
         except Exception:
             logger.warning("decay_stale_lead_scores: failed to log dedup marker", exc_info=True)
-    else:
-        # Still log even if 0 decayed, to prevent re-running
-        try:
-            db.table("activity_log").insert({
-                "tenant_id": "00000000-0000-0000-0000-000000000000",
-                "activity_type": "lead_score_decay",
-                "description": "Lead score decay ran, 0 leads decayed",
-            }).execute()
-        except Exception:
-            pass
 
     if decayed > 0:
         logger.info("decay_stale_lead_scores: decayed %d leads", decayed)

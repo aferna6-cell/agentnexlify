@@ -270,63 +270,62 @@ def create_appointment(
     except Exception:
         logger.warning("Failed to sync appointment %s to Google Calendar", appointment["id"], exc_info=True)
 
-    # Send appointment confirmation SMS to customer
-    if customer_phone:
+    # Fetch tenant data once for confirmations (SMS + email)
+    _confirm_tenant = {}
+    if customer_phone or customer_email:
         try:
-            tenant_result = db.table("tenants").select("business_name, plan, sms_notifications_enabled").eq("id", tenant_id).limit(1).execute()
-            tenant_data = tenant_result.data[0] if tenant_result.data else {}
-            biz_name = tenant_data.get("business_name") or "our office"
-            plan = tenant_data.get("plan") or "free"
+            _tr = db.table("tenants").select("business_name, plan, sms_notifications_enabled").eq("id", tenant_id).limit(1).execute()
+            _confirm_tenant = _tr.data[0] if _tr.data else {}
+        except Exception:
+            logger.warning("Failed to fetch tenant data for appointment confirmations", exc_info=True)
 
-            if plan != "free":
-                from backend.services.sms_rate_limiter import check_sms_rate_limit
-                if check_sms_rate_limit(tenant_id, plan):
-                    from backend.services.twilio_service import send_sms as _send_confirm_sms
-                    # Format the time for display
-                    try:
-                        from datetime import datetime as _dt
-                        dt = _dt.fromisoformat(start_time.replace("Z", "+00:00"))
-                        formatted = dt.strftime("%A, %B %d at %I:%M %p")
-                    except (ValueError, AttributeError):
-                        formatted = start_time
+    _confirm_biz = _confirm_tenant.get("business_name") or "our office"
+    _confirm_plan = _confirm_tenant.get("plan") or "free"
 
-                    _send_confirm_sms(
-                        to=customer_phone,
-                        body=f"Your appointment with {biz_name} is confirmed for {formatted}. Reply STOP to opt out.",
-                        from_number=None,
-                    )
-                    logger.info("Sent confirmation SMS to %s for appointment %s", customer_phone, appointment["id"])
+    # Format the time for display
+    try:
+        from datetime import datetime as _dt
+        _confirm_dt = _dt.fromisoformat(start_time.replace("Z", "+00:00"))
+        _confirm_formatted = _confirm_dt.strftime("%A, %B %d, %Y at %I:%M %p")
+        _confirm_formatted_short = _confirm_dt.strftime("%A, %B %d at %I:%M %p")
+    except (ValueError, AttributeError):
+        _confirm_formatted = start_time
+        _confirm_formatted_short = start_time
+
+    # Send appointment confirmation SMS to customer
+    if customer_phone and _confirm_plan != "free":
+        try:
+            from backend.services.sms_rate_limiter import check_sms_rate_limit
+            if check_sms_rate_limit(tenant_id, _confirm_plan):
+                from backend.services.twilio_service import send_sms as _send_confirm_sms
+                _send_confirm_sms(
+                    to=customer_phone,
+                    body=f"Your appointment with {_confirm_biz} is confirmed for {_confirm_formatted_short}. Reply STOP to opt out.",
+                    from_number=None,
+                )
+                logger.info("Sent confirmation SMS to %s for appointment %s", customer_phone, appointment["id"])
         except Exception:
             logger.warning("Failed to send confirmation SMS for appointment %s", appointment["id"], exc_info=True)
 
     # Send appointment confirmation email to customer
     if customer_email:
         try:
-            tenant_result2 = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
-            biz_name2 = (tenant_result2.data[0].get("business_name") or "Our Office") if tenant_result2.data else "Our Office"
-            try:
-                from datetime import datetime as _dt2
-                dt2 = _dt2.fromisoformat(start_time.replace("Z", "+00:00"))
-                formatted2 = dt2.strftime("%A, %B %d, %Y at %I:%M %p")
-            except (ValueError, AttributeError):
-                formatted2 = start_time
-
             from backend.services.email_sender import send_email as _send_confirm_email
             _send_confirm_email(
                 to=customer_email,
-                subject=f"Appointment Confirmed — {biz_name2}",
+                subject=f"Appointment Confirmed — {_confirm_biz}",
                 html=f"""
                 <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;">
                     <h2 style="color:#10b981;">Appointment Confirmed</h2>
                     <p>Hi {customer_name},</p>
-                    <p>Your appointment with <strong>{biz_name2}</strong> has been confirmed:</p>
+                    <p>Your appointment with <strong>{_confirm_biz}</strong> has been confirmed:</p>
                     <div style="background:#f9fafb;border-radius:8px;padding:16px;margin:16px 0;">
-                        <p style="margin:4px 0;"><strong>Date & Time:</strong> {formatted2}</p>
+                        <p style="margin:4px 0;"><strong>Date & Time:</strong> {_confirm_formatted}</p>
                         {f'<p style="margin:4px 0;"><strong>Notes:</strong> {notes}</p>' if notes else ''}
                     </div>
                     <p style="color:#666;font-size:13px;">We look forward to seeing you!</p>
                     <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-                    <p style="color:#999;font-size:12px;">{biz_name2} — Powered by AgentNexLiFy</p>
+                    <p style="color:#999;font-size:12px;">{_confirm_biz} — Powered by AgentNexLiFy</p>
                 </div>
                 """,
             )

@@ -180,7 +180,7 @@ async def get_config(request: Request, api_key: str):
     if tenant.get("plan") == "free":
         show_watermark = True
     else:
-        show_watermark = widget.get("show_watermark", True)
+        show_watermark = widget.get("show_watermark") is not False
 
     # Branding: filter by plan
     plan = tenant.get("plan") or "free"
@@ -211,10 +211,10 @@ async def get_config(request: Request, api_key: str):
             logger.warning("menu_items config load failed for tenant %s", tenant["id"])
 
     return WidgetConfigResponse(
-        bot_name=widget.get("bot_name", "AI Assistant"),
-        primary_color=widget.get("primary_color", "#00BFFF"),
+        bot_name=widget.get("bot_name") or "AI Assistant",
+        primary_color=widget.get("primary_color") or "#00BFFF",
         greeting_message=widget.get("greeting_message"),
-        position=widget.get("position", "bottom-right"),
+        position=widget.get("position") or "bottom-right",
         show_watermark=show_watermark,
         allowed_domains=widget.get("allowed_domains"),
         tenant_id=widget.get("tenant_id"),
