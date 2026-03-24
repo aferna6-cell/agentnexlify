@@ -3,9 +3,10 @@
  */
 import { request } from "./_client";
 
-export function fetchConversations(tenantId, token, { channel } = {}) {
+export function fetchConversations(tenantId, token, { channel, search } = {}) {
   const params = new URLSearchParams();
   if (channel) params.set("channel", channel);
+  if (search) params.set("search", search);
   const qs = params.toString();
   return request(`/api/v1/auth/conversations/${tenantId}${qs ? `?${qs}` : ""}`, { token });
 }

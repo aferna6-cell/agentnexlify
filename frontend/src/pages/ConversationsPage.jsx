@@ -56,6 +56,7 @@ export default function ConversationsPage() {
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [search, setSearch] = useState("");
+  const [serverSearch, setServerSearch] = useState(""); // triggers API reload
   const [tagFilter, setTagFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -120,7 +121,7 @@ export default function ConversationsPage() {
     setLoading(true);
     try {
       const [convRes, tagRes, teamRes] = await Promise.all([
-        fetchConversations(user.tenantId, token, { channel: channelFilter || undefined }),
+        fetchConversations(user.tenantId, token, { channel: channelFilter || undefined, search: serverSearch.length >= 3 ? serverSearch : undefined }),
         fetchTagDefinitions(user.tenantId, token).catch(() => ({ tags: [] })),
         fetchTeamMembers(user.tenantId, token).catch(() => ({ members: [] })),
       ]);
@@ -144,7 +145,7 @@ export default function ConversationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenantId, token, channelFilter]);
+  }, [user?.tenantId, token, channelFilter, serverSearch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -669,9 +670,15 @@ export default function ConversationsPage() {
 
             <input
               className="conv-search"
-              placeholder="Search conversations..."
+              placeholder="Search conversations... (Enter to search messages)"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                if (!e.target.value) setServerSearch("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") setServerSearch(search);
+              }}
             />
             <select
               value={channelFilter}

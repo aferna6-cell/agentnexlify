@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from jose import JWTError, jwt
 
 from backend.config import settings
@@ -713,6 +713,7 @@ async def delete_faq(
 async def list_conversations(
     tenant_id: str,
     channel: str | None = None,
+    search: str | None = Query(None, max_length=200),
     claims: dict = Depends(_get_current_tenant),
 ):
     if claims["tenant_id"] != tenant_id:
@@ -790,6 +791,20 @@ async def list_conversations(
         logger.warning("Failed to fetch conversation metadata", exc_info=True)
 
     conv_list = sorted(sessions.values(), key=lambda s: s["last_message_at"], reverse=True)
+
+    # Search filter: match against message content, preview, or lead name
+    if search:
+        search_lower = search.lower()
+        # Build a set of session_ids that have matching messages
+        matching_sessions = set()
+        for msg in (result.data or []):
+            if search_lower in (msg.get("content") or "").lower():
+                matching_sessions.add(msg["session_id"])
+        # Also match on lead names
+        for sid, name in lead_map.items():
+            if search_lower in (name or "").lower():
+                matching_sessions.add(sid)
+        conv_list = [c for c in conv_list if c["session_id"] in matching_sessions]
 
     # If filtering by channel, limit conv_list to sessions that appear in channel_map
     if channel:
