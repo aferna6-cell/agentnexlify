@@ -432,3 +432,49 @@ async def public_service_types(request: Request, tenant_id: str, api_key: str = 
         .execute()
     )
     return result.data or []
+
+
+@router.get("/no-show-stats/{tenant_id}")
+async def get_no_show_stats(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Get no-show statistics: total no-shows, no-show rate, and repeat offenders."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Get all completed + no_show appointments for rate calculation
+    all_appts = (
+        db.table("appointments")
+        .select("id, status, customer_email, customer_name, lead_id")
+        .eq("tenant_id", tenant_id)
+        .in_("status", ["completed", "no_show"])
+        .execute()
+    )
+    appts = all_appts.data or []
+
+    total = len(appts)
+    no_shows = [a for a in appts if a["status"] == "no_show"]
+    no_show_count = len(no_shows)
+    no_show_rate = round((no_show_count / total * 100) if total > 0 else 0, 1)
+
+    # Find repeat offenders (2+ no-shows by email)
+    email_counts = {}
+    for a in no_shows:
+        email = a.get("customer_email") or a.get("customer_name") or "unknown"
+        email_counts[email] = email_counts.get(email, 0) + 1
+
+    repeat_offenders = [
+        {"customer": email, "no_show_count": count}
+        for email, count in sorted(email_counts.items(), key=lambda x: -x[1])
+        if count >= 2
+    ][:10]  # Top 10
+
+    return {
+        "total_appointments": total,
+        "no_show_count": no_show_count,
+        "no_show_rate": no_show_rate,
+        "repeat_offenders": repeat_offenders,
+    }
