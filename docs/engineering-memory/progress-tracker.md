@@ -1,6 +1,23 @@
 # Progress Tracker
 _What was built each session. Proves velocity, prevents re-doing work._
 
+## Session 2026-03-24 (afternoon)
+
+### Bugs Fixed
+1. **conversations table FK misuse** — sms.py and analytics.py queried conversations with tenant_id instead of client_id. All 6 occurrences fixed (4 in analytics.py, 2 in sms.py including an insert).
+2. **NULL plan from Supabase** — 22 `.get("plan", "free")` calls returned None when DB had NULL. Fixed to `or "free"` pattern across 7 files (auth, billing, widget_chat, widget_config, sequences, team, automation_engine).
+3. **NULL business_name/type/city in customer-facing text** — 40+ `.get("key", "default")` calls returned None for NULL DB values. Fixed across 20 files (widget prompts, emails, SMS, invoices, calls, SEO, bids, jobs, billing).
+4. **NULL owner_email in Stripe customer creation** — Could pass None to Stripe. Fixed in billing.py and auth.py.
+
+### Features Built
+1. **Bulk Lead Actions UI** — Checkbox selection on LeadsPage table view with bulk action bar. Change stage, assign/unassign, delete multiple leads at once. Visual selection highlighting.
+2. **Lead Activity Timeline** — New GET /leads/{tenant_id}/{lead_id}/activity endpoint. Aggregates activity_log + appointments + email_events into unified timeline. Rendered in LeadDetailDrawer with icons and relative timestamps.
+3. **Webhook Retry Improvement** — Upgraded from single 30s retry to 3 retries with exponential backoff (5s, 15s, 60s). Better logging per retry attempt.
+4. **Auto-Archive Old Conversations** — New background task in 30-min automation tier. Archives conversations with status open/closed and updated_at > 30 days. Up to 200 per cycle.
+
+### Commits
+- 8 commits on detached HEAD
+
 ## Session 2026-03-24
 
 ### Bugs Fixed

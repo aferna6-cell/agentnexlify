@@ -554,3 +554,23 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 **Prevention:** Any shared API client must handle empty-body responses. Test DELETE endpoints from the UI, not just create/update.
 
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
+
+---
+
+### dict.get("key", default) returns None for Supabase NULL
+**Date:** 2026-03-24
+**Symptom:** Free-tier restrictions not enforced, "None" appearing in customer-facing text, watermark not showing.
+**Root Cause:** When Supabase returns NULL for a column, Python dict.get("key", "default") returns None (not "default") because the key exists. The default only applies when the key is absent.
+**Files Changed:** 20+ backend files including auth.py, billing.py, widget_chat.py, widget_config.py, automation_engine.py, calls.py, invoices.py, etc.
+**Fix:** Changed `.get("plan", "free")` to `.get("plan") or "free"` pattern for all nullable fields.
+**Prevention:** Always use `x.get("key") or "fallback"` for Supabase columns that can be NULL. Never use `x.get("key", "fallback")`.
+
+---
+
+### conversations table queries using tenant_id instead of client_id
+**Date:** 2026-03-24
+**Symptom:** Conversation counts return 0, SMS threads not found, analytics show no data.
+**Root Cause:** The conversations table uses `client_id` as its FK to tenants (same as leads). sms.py and analytics.py were using `tenant_id` which returned empty results.
+**Files Changed:** backend/routers/sms.py (select + insert), backend/routers/analytics.py (4 queries)
+**Fix:** Changed all `.eq("tenant_id", ...)` to `.eq("client_id", ...)` on conversations table queries.
+**Prevention:** Both `leads` and `conversations` tables use `client_id`. All other tables use `tenant_id`. Check the schema before writing queries.
