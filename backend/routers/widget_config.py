@@ -102,14 +102,15 @@ async def get_config(request: Request, api_key: str):
     widget = _get_widget_config(api_key)
     tenant = _get_tenant(widget["tenant_id"])
 
-    # Force watermark for free plan
-    if tenant.get("plan") == "free":
+    # Force watermark for free plan (treat NULL plan as free)
+    tenant_plan = tenant.get("plan") or "free"
+    if tenant_plan == "free":
         show_watermark = True
     else:
         show_watermark = widget.get("show_watermark", True)
 
     # Branding: filter by plan
-    plan = tenant.get("plan", "free")
+    plan = tenant_plan
     raw_branding = widget.get("branding") or {}
     branding = _filter_branding_for_plan(raw_branding, plan)
     # Free/growth: enforce powered-by defaults

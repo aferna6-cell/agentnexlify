@@ -336,7 +336,7 @@ async def login(request: Request, req: LoginRequest):
         token = _create_token(
             tenant_id,
             email,
-            tenant.get("plan", "free"),
+            tenant.get("plan") or "free",
             tenant.get("business_name", ""),
             business_type=tenant.get("business_type"),
         )
@@ -344,7 +344,7 @@ async def login(request: Request, req: LoginRequest):
             tenant_id=tenant_id,
             token=token,
             business_name=tenant.get("business_name", ""),
-            plan=tenant.get("plan", "free"),
+            plan=tenant.get("plan") or "free",
         )
 
     # 2. Check team_members table (team member login)
@@ -382,7 +382,7 @@ async def login(request: Request, req: LoginRequest):
         token = _create_token(
             tenant_id=tenant_id,
             email=email,
-            plan=t.get("plan", "free"),
+            plan=t.get("plan") or "free",
             business_name=t.get("business_name", ""),
             user_id=str(member["id"]),
             role=member["role"],
@@ -394,7 +394,7 @@ async def login(request: Request, req: LoginRequest):
             tenant_id=tenant_id,
             token=token,
             business_name=t.get("business_name", ""),
-            plan=t.get("plan", "free"),
+            plan=t.get("plan") or "free",
         )
 
     raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -419,7 +419,7 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         tenant_id=str(t["id"]),
         email=t["owner_email"],
         business_name=t["business_name"],
-        plan=t.get("plan", "free"),
+        plan=t.get("plan") or "free",
         city=t.get("city"),
         owner_name=t.get("owner_name"),
         business_type=t.get("business_type"),
@@ -565,7 +565,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
 
     response = DashboardResponse(
         business_name=t.get("business_name", ""),
-        plan=t.get("plan", "free"),
+        plan=t.get("plan") or "free",
         plan_status=t.get("plan_status", "active"),
         conversations_used_this_month=conversations_used,
         monthly_conversation_limit=None,
@@ -599,7 +599,7 @@ async def update_widget_config(
 
     # Get tenant plan for branding filtering
     tenant_result = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()
-    plan = tenant_result.data[0].get("plan", "free") if tenant_result.data else "free"
+    plan = tenant_result.data[0].get("plan") or "free" if tenant_result.data else "free"
 
     updates = {k: v for k, v in req.model_dump(exclude={"branding"}).items() if v is not None}
 
@@ -1067,7 +1067,7 @@ async def billing_change_plan(
     if not customer_id:
         raise HTTPException(status_code=400, detail="No billing account. Subscribe first.")
 
-    current_plan = tenant.get("plan", "free")
+    current_plan = tenant.get("plan") or "free"
     if current_plan == new_plan:
         raise HTTPException(status_code=400, detail="Already on this plan")
 
@@ -1133,7 +1133,7 @@ FREE_TRIAL_DAYS = 14
 
 def _compute_trial_status(tenant: dict) -> dict:
     """Compute trial status for a tenant. Returns dict with trial fields."""
-    plan = tenant.get("plan", "free")
+    plan = tenant.get("plan") or "free"
     if plan != "free":
         return {"trial_days_remaining": None, "trial_expired": False}
 
@@ -1190,7 +1190,7 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
         trial_expires = (ts + timedelta(days=FREE_TRIAL_DAYS)).isoformat()
 
     return TrialStatusResponse(
-        plan=tenant.get("plan", "free"),
+        plan=tenant.get("plan") or "free",
         trial_started=trial_started if isinstance(trial_started, str) else (trial_started.isoformat() if trial_started else None),
         trial_expires=trial_expires,
         days_remaining=trial["trial_days_remaining"],

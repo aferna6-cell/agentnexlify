@@ -658,7 +658,7 @@ async def send_campaign(
             if not lead.get("phone"):
                 skipped += 1
                 continue
-            plan = tenant.get("plan", "free")
+            plan = tenant.get("plan") or "free"
             if not check_sms_rate_limit(tenant_id, plan):
                 skipped += 1
                 continue

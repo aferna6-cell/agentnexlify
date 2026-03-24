@@ -249,7 +249,7 @@ async def accept_invite(request: Request, req: AcceptInviteRequest):
     token = _create_token(
         tenant_id=str(member["tenant_id"]),
         email=member["email"],
-        plan=t.get("plan", "free"),
+        plan=t.get("plan") or "free",
         business_name=t.get("business_name", ""),
         user_id=str(member["id"]),
         role=member["role"],

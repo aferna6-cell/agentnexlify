@@ -66,7 +66,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     _check_origin(request, widget.get("allowed_domains"))
 
     # 2b. Free trial expiry check
-    if tenant.get("plan") == "free" and tenant.get("free_trial_started_at"):
+    if (tenant.get("plan") or "free") == "free" and tenant.get("free_trial_started_at"):
         from datetime import datetime, timezone
         trial_started = tenant["free_trial_started_at"]
         if isinstance(trial_started, str):
@@ -504,8 +504,8 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             _record_response_metric, tenant["id"], req.session_id, conversation_id,
         )
 
-    # 15. Watermark logic
-    if tenant.get("plan") == "free":
+    # 15. Watermark logic (treat NULL plan as free)
+    if (tenant.get("plan") or "free") == "free":
         show_watermark = True
     else:
         show_watermark = widget.get("show_watermark", True)
