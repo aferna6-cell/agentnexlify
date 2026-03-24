@@ -543,4 +543,14 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 **Files:** `backend/routers/leads.py` (CSV import endpoint)
 **Prevention:** Any import/batch operation that checks for existing records must use `.in_()` batch queries, not per-row lookups. Same N+1 pattern as check_no_response_leads (Cycle 82). (Cycle 159)
 
+---
+
+### API client crashes on DELETE responses — res.json() on 204 No Content
+**Date:** 2026-03-24
+**Symptom:** DELETE operations (lead delete, webhook delete, snippet delete, etc.) throw JSON parse errors in the browser console. The delete may still succeed server-side but the frontend doesn't handle the response correctly.
+**Root Cause:** `frontend/src/utils/api/_client.js` `request()` function always called `res.json()` on line 31 regardless of status code. 204 No Content responses from DELETE endpoints have no body, causing JSON.parse to throw.
+**Files Changed:** `frontend/src/utils/api/_client.js`
+**Fix:** Check for `res.status === 204` and empty response text before attempting JSON parse. Return `null` for 204 responses.
+**Prevention:** Any shared API client must handle empty-body responses. Test DELETE endpoints from the UI, not just create/update.
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
