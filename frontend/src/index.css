@@ -1626,6 +1626,8 @@ body {
 }
 .leads-table tbody tr { cursor: pointer; transition: background 0.1s; }
 .leads-table tbody tr:hover { background: var(--bg-secondary); }
+.leads-table tbody tr.selected-row { background: rgba(0,191,255,0.06); }
+.leads-table tbody tr.selected-row:hover { background: rgba(0,191,255,0.12); }
 .leads-table-empty { text-align: center; color: var(--text-muted); padding: 40px 14px !important; }
 .stage-badge {
   display: inline-block; padding: 2px 10px; border-radius: 10px;
