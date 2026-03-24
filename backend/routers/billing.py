@@ -312,6 +312,7 @@ def _handle_invoice_payment(db, session: dict, invoice_id: str, tenant_id: str |
         })
 
     # Send payment confirmation email to business owner
+    biz_name = "Your Business"
     try:
         tenant_result = db.table("tenants").select("owner_email, business_name").eq("id", resolved_tenant_id).execute()
         if tenant_result.data:
@@ -346,13 +347,8 @@ def _handle_invoice_payment(db, session: dict, invoice_id: str, tenant_id: str |
                 receipt_email = lead_result.data[0].get("email")
 
         if receipt_email:
-            biz_name_for_receipt = "Business"
-            try:
-                t_result = db.table("tenants").select("business_name").eq("id", resolved_tenant_id).limit(1).execute()
-                if t_result.data:
-                    biz_name_for_receipt = t_result.data[0].get("business_name") or "Business"
-            except Exception:
-                pass
+            # Reuse biz_name from owner notification block above (avoid duplicate DB query)
+            biz_name_for_receipt = biz_name
 
             inv_number = invoice.get("invoice_number") or ""
             items_html = ""
