@@ -3045,3 +3045,127 @@ async def auto_close_inactive_conversations() -> int:
         logger.info("auto_close_inactive_conversations: closed %d inactive conversations", closed)
 
     return closed
+
+
+async def analyze_conversation_sentiment() -> int:
+    """Analyze sentiment for recently closed conversations that don't have a sentiment yet.
+
+    Uses Claude to classify the overall conversation sentiment as positive, neutral, or negative.
+    Runs on closed conversations with at least 2 messages, limited to BATCH_LIMIT per run.
+
+    Returns count of conversations analyzed.
+    """
+    import httpx
+    from backend.config import settings
+
+    db = get_supabase()
+    analyzed = 0
+
+    # Find closed conversations without sentiment, recent first
+    try:
+        convos = (
+            db.table("conversations")
+            .select("id, client_id, session_id")
+            .eq("status", "closed")
+            .is_("sentiment", "null")
+            .order("updated_at", desc=True)
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("analyze_conversation_sentiment: failed to query conversations")
+        return 0
+
+    if not convos.data:
+        return 0
+
+    for conv in convos.data:
+        conv_id = conv["id"]
+        session_id = conv.get("session_id")
+        client_id = conv.get("client_id")
+
+        if not session_id:
+            continue
+
+        # Fetch last 20 messages for this conversation
+        try:
+            msgs_result = (
+                db.table("chat_messages")
+                .select("role, content")
+                .eq("session_id", session_id)
+                .eq("tenant_id", client_id)
+                .order("created_at", desc=False)
+                .limit(20)
+                .execute()
+            )
+        except Exception:
+            logger.warning("analyze_conversation_sentiment: failed to fetch messages for %s", conv_id, exc_info=True)
+            continue
+
+        messages = msgs_result.data or []
+        if len(messages) < 2:
+            # Not enough messages to analyze — mark as neutral to skip next time
+            try:
+                db.table("conversations").update({"sentiment": "neutral"}).eq("id", conv_id).execute()
+            except Exception:
+                pass
+            analyzed += 1
+            continue
+
+        # Build transcript
+        transcript_lines = []
+        for m in messages:
+            role = m.get("role") or "user"
+            content = (m.get("content") or "")[:500]
+            transcript_lines.append(f"{role}: {content}")
+        transcript = "\n".join(transcript_lines)
+
+        # Call Claude for sentiment analysis
+        sentiment = "neutral"
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                resp = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": settings.anthropic_api_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    json={
+                        "model": "claude-haiku-4-5-20251001",
+                        "max_tokens": 20,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": (
+                                    "Analyze the overall sentiment of this customer conversation. "
+                                    "Reply with ONLY one word: positive, neutral, or negative.\n\n"
+                                    f"Conversation:\n{transcript[:3000]}"
+                                ),
+                            }
+                        ],
+                    },
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    raw = (data.get("content", [{}])[0].get("text") or "neutral").strip().lower()
+                    if raw in ("positive", "neutral", "negative"):
+                        sentiment = raw
+                    elif "positive" in raw:
+                        sentiment = "positive"
+                    elif "negative" in raw:
+                        sentiment = "negative"
+        except Exception:
+            logger.warning("analyze_conversation_sentiment: Claude API call failed for %s", conv_id, exc_info=True)
+
+        # Update the conversation with sentiment
+        try:
+            db.table("conversations").update({"sentiment": sentiment}).eq("id", conv_id).execute()
+            analyzed += 1
+        except Exception:
+            logger.warning("analyze_conversation_sentiment: failed to update sentiment for %s", conv_id, exc_info=True)
+
+    if analyzed > 0:
+        logger.info("analyze_conversation_sentiment: analyzed %d conversations", analyzed)
+
+    return analyzed

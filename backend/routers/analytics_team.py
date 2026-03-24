@@ -462,3 +462,105 @@ async def lead_sources_utm(
 
     _set_cache(cache_key, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Conversation Sentiment Analytics
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/conversation-sentiment")
+async def conversation_sentiment_analytics(
+    tenant_id: str,
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Sentiment distribution across conversations.
+
+    Returns:
+    - distribution: count of positive, neutral, negative conversations
+    - total_analyzed: how many conversations have sentiment data
+    - total_unanalyzed: how many are still pending
+    - recent_negative: last 10 negative-sentiment conversations for review
+    """
+    verify_tenant(claims, tenant_id)
+
+    cache_key = f"conv_sentiment:{tenant_id}:{period}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    days = {"7d": 7, "30d": 30, "90d": 90}[period]
+    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    db = get_supabase()
+
+    # Fetch conversations with sentiment (conversations table uses client_id)
+    try:
+        convs = (
+            db.table("conversations")
+            .select("id, session_id, sentiment, status, updated_at, lead_id")
+            .eq("client_id", tenant_id)
+            .gte("created_at", start)
+            .limit(5000)
+            .execute()
+        )
+    except Exception:
+        logger.warning("conv_sentiment: failed to fetch conversations for %s", tenant_id, exc_info=True)
+        return {"distribution": {}, "total_analyzed": 0, "total_unanalyzed": 0, "recent_negative": []}
+
+    all_convs = convs.data or []
+    distribution = {"positive": 0, "neutral": 0, "negative": 0}
+    analyzed = 0
+    unanalyzed = 0
+    negative_convs = []
+
+    for c in all_convs:
+        sentiment = c.get("sentiment")
+        if sentiment in ("positive", "neutral", "negative"):
+            distribution[sentiment] += 1
+            analyzed += 1
+            if sentiment == "negative":
+                negative_convs.append({
+                    "id": c["id"],
+                    "session_id": c.get("session_id") or "",
+                    "lead_id": c.get("lead_id"),
+                    "updated_at": c.get("updated_at") or "",
+                    "status": c.get("status") or "",
+                })
+        else:
+            unanalyzed += 1
+
+    # Sort negatives by most recent first, limit to 10
+    negative_convs.sort(key=lambda x: x["updated_at"], reverse=True)
+    recent_negative = negative_convs[:10]
+
+    # Enrich negative conversations with lead names
+    if recent_negative:
+        lead_ids = list({n["lead_id"] for n in recent_negative if n.get("lead_id")})
+        lead_names: dict[str, str] = {}
+        if lead_ids:
+            try:
+                leads_result = (
+                    db.table("leads")
+                    .select("id, name, email")
+                    .in_("id", lead_ids)
+                    .execute()
+                )
+                for l in leads_result.data or []:
+                    lead_names[l["id"]] = l.get("name") or l.get("email") or "Unknown"
+            except Exception:
+                pass
+
+        for n in recent_negative:
+            n["lead_name"] = lead_names.get(n.get("lead_id"), "")
+
+    result = {
+        "distribution": distribution,
+        "total_analyzed": analyzed,
+        "total_unanalyzed": unanalyzed,
+        "recent_negative": recent_negative,
+    }
+
+    _set_cache(cache_key, result)
+    return result

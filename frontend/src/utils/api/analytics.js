@@ -38,3 +38,7 @@ export function fetchTeamPerformance(tenantId, token, days = 30) {
 export function fetchLeadSourcesUtm(tenantId, token, period = "30d") {
   return request(`/api/v1/analytics/${tenantId}/lead-sources-utm?period=${period}`, { token });
 }
+
+export function fetchConversationSentiment(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/conversation-sentiment?period=${period}`, { token });
+}

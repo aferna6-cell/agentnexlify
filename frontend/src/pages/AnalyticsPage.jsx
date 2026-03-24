@@ -10,6 +10,7 @@ import {
   fetchLeadSources,
   fetchTeamPerformance,
   fetchLeadSourcesUtm,
+  fetchConversationSentiment,
 } from "../utils/api/analytics";
 import { fetchConversations } from "../utils/api/conversations";
 import { fetchTagDefinitions } from "../utils/api/tags";
@@ -260,6 +261,7 @@ export default function AnalyticsPage() {
   const [leadSources, setLeadSources] = useState([]);
   const [teamPerformance, setTeamPerformance] = useState(null);
   const [utmData, setUtmData] = useState(null);
+  const [sentimentData, setSentimentData] = useState(null);
   const [error, setError] = useState(null);
 
   const [currentTheme, setCurrentTheme] = useState(
@@ -282,7 +284,7 @@ export default function AnalyticsPage() {
     setError(null);
     try {
       const periodDays = { "7d": 7, "30d": 30, "90d": 90 }[period] || 30;
-      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources, teamPerf, utm] = await Promise.allSettled([
+      const [ov, conv, leads, resp, wid, convos, tagDefs, missedCalls, sources, teamPerf, utm, sentiment] = await Promise.allSettled([
         fetchAnalyticsOverview(user.tenantId, token, period),
         fetchAnalyticsConversations(user.tenantId, token, period),
         fetchAnalyticsLeads(user.tenantId, token, period),
@@ -294,6 +296,7 @@ export default function AnalyticsPage() {
         fetchLeadSources(user.tenantId, token),
         fetchTeamPerformance(user.tenantId, token, periodDays),
         fetchLeadSourcesUtm(user.tenantId, token, period),
+        fetchConversationSentiment(user.tenantId, token, period),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
@@ -344,6 +347,8 @@ export default function AnalyticsPage() {
       if (teamPerf.status === "fulfilled") setTeamPerformance(teamPerf.value);
       // UTM analytics
       if (utm.status === "fulfilled") setUtmData(utm.value);
+      // Sentiment analytics
+      if (sentiment.status === "fulfilled") setSentimentData(sentiment.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -755,6 +760,78 @@ export default function AnalyticsPage() {
               <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
                 Tags are automatically assigned by AI when visitors chat through your widget.
                 Once conversations start flowing, you will see which topics come up most often.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Conversation Sentiment */}
+      <div className="analytics-charts-row">
+        <div className="analytics-chart-card" style={{ flex: 1 }}>
+          <h3>Conversation Sentiment</h3>
+          <div className="analytics-chart-subtitle">
+            AI-analyzed emotional tone of customer conversations
+          </div>
+          {sentimentData?.total_analyzed > 0 ? (
+            <div>
+              <div style={{ display: "flex", gap: "16px", marginBottom: "16px", flexWrap: "wrap" }}>
+                {[
+                  { label: "Positive", key: "positive", color: "var(--green)", emoji: "" },
+                  { label: "Neutral", key: "neutral", color: "var(--yellow)", emoji: "" },
+                  { label: "Negative", key: "negative", color: "var(--red)", emoji: "" },
+                ].map((s) => {
+                  const count = sentimentData.distribution[s.key] || 0;
+                  const pct = sentimentData.total_analyzed > 0 ? Math.round((count / sentimentData.total_analyzed) * 100) : 0;
+                  return (
+                    <div key={s.key} style={{ flex: "1 1 120px", padding: "16px", background: "var(--bg-secondary)", borderRadius: "8px", borderLeft: `3px solid ${s.color}` }}>
+                      <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>{s.label}</div>
+                      <div style={{ fontSize: "24px", fontWeight: 600 }}>{count}</div>
+                      <div style={{ fontSize: "12px", color: s.color }}>{pct}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Sentiment bar */}
+              <div style={{ display: "flex", height: "12px", borderRadius: "6px", overflow: "hidden", marginBottom: "16px" }}>
+                {["positive", "neutral", "negative"].map((key) => {
+                  const count = sentimentData.distribution[key] || 0;
+                  const pct = sentimentData.total_analyzed > 0 ? (count / sentimentData.total_analyzed) * 100 : 0;
+                  const colors = { positive: "var(--green)", neutral: "var(--yellow)", negative: "var(--red)" };
+                  return pct > 0 ? (
+                    <div key={key} style={{ width: `${pct}%`, backgroundColor: colors[key], transition: "width 0.3s" }} title={`${key}: ${count}`} />
+                  ) : null;
+                })}
+              </div>
+
+              {/* Recent negative conversations */}
+              {sentimentData.recent_negative?.length > 0 && (
+                <div style={{ marginTop: "16px" }}>
+                  <h4 style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>Recent Negative Conversations</h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {sentimentData.recent_negative.slice(0, 5).map((n) => (
+                      <div key={n.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--bg-secondary)", borderRadius: "6px", borderLeft: "3px solid var(--red)", fontSize: "13px" }}>
+                        <span style={{ fontWeight: 500 }}>{n.lead_name || n.session_id || "Unknown visitor"}</span>
+                        <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{n.updated_at ? new Date(n.updated_at).toLocaleDateString() : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {sentimentData.total_unanalyzed > 0 && (
+                <div style={{ marginTop: "12px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                  {sentimentData.total_unanalyzed} conversation{sentimentData.total_unanalyzed !== 1 ? "s" : ""} pending analysis
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="analytics-empty" style={{ padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "16px", marginBottom: "8px" }}>No sentiment data yet</div>
+              <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: "1.5" }}>
+                Conversation sentiment is analyzed automatically after conversations close.
+                Once your chat widget has handled a few conversations, sentiment distribution will appear here.
               </div>
             </div>
           )}
