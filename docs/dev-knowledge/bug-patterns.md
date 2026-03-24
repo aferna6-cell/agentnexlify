@@ -563,3 +563,21 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Problem:** 15 more instances of `.get("business_name", "default")` found in files not previously checked. When Supabase returns `{"business_name": null}`, `.get()` returns `None` (key exists with null value), not the default.
 **Affected files:** dependencies.py, billing.py, auth.py, local_seo.py, calls.py, widget_booking.py, widget_helpers.py, invoices.py, automations.py, business_page.py, twilio_webhooks.py, jobs.py, widget_config.py, widget_chat.py
 **Fix:** Replace `.get("key", "default")` with `.get("key") or "default"` everywhere.
+
+## 2026-03-24 Session 5
+
+### CRITICAL: Python operator precedence with `or` and `==`
+**Problem:** `tenant.get("plan") or "free" == "free"` always evaluates to True. Python precedence: `==` binds tighter than `or`, so it's `tenant.get("plan") or True`. This caused birthday greetings and rebook suggestions to skip ALL paid tenants.
+**Affected files:** automation_engine.py (lines 1061, 2532)
+**Fix:** Add parentheses: `(tenant.get("plan") or "free") == "free"`.
+**Prevention:** Grep for pattern `\.get\("[^"]+"\) or "[^"]+" ==` — this is always a bug.
+
+### analytics_team.py: non-existent columns
+**Problem:** Team performance endpoint queried `appointments.created_by` (doesn't exist in any migration) and `action_items.updated_at` (doesn't exist). Also used status value "completed" but action_items CHECK only allows "done".
+**Fix:** Appointments now attributed via lead assignment. Action items use `created_at` and `"done"`.
+**Prevention:** Always cross-reference column names against schema-log.md when writing new queries.
+
+### .get("key", default) round 4
+**Problem:** 7 more instances found in bids.py, widget_helpers.py (timezone + city), reviews.py, jobs.py (business_phone, city), content.py.
+**Fix:** Converted to `.get("key") or default` pattern.
+**Prevention:** Run `grep '\.get("[^"]+",\s*"' backend/` at start of every session.

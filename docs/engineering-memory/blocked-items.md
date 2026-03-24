@@ -18,6 +18,16 @@ _Things that need human intervention. Don't waste cycles retrying these._
 - Scoring config endpoints will error until this is applied to live Supabase
 - **Action needed:** Run migration 067 in Supabase SQL editor
 
+### Migration 068 (conversation_sentiment) not applied
+- The `sentiment` column on conversations exists as a migration file
+- Sentiment analysis background task + analytics endpoint will work but return empty data
+- **Action needed:** Run migration 068 in Supabase SQL editor
+
+### Migration 069 (widget_chat_hours) not applied
+- The `chat_hours` and `chat_hours_enabled` columns on widget_configs exist as a migration file
+- Chat hours feature will fail silently (falls back to manual toggle)
+- **Action needed:** Run migration 069 in Supabase SQL editor
+
 ### Migration 064 (lead date_of_birth) application status unknown
 - No "Applied" note in schema-log.md for migration 064
 - Birthday greetings automation depends on this column existing

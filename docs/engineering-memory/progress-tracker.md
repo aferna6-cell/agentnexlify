@@ -128,3 +128,33 @@ _What was built each session. Proves velocity, prevents re-doing work._
 
 ### Backlog
 - 16 unchecked items remaining
+
+## 2026-03-24 Session 5
+
+### Bugs Fixed (Phase A)
+1. **NULL-safe .get() round 3** — Fixed 7 instances of `.get("key", "default")` pattern across bids.py, widget_helpers.py, reviews.py, jobs.py, content.py
+2. **analytics_team.py: non-existent columns** — appointments query used `created_by` (doesn't exist), action_items query used `updated_at` (doesn't exist). Fixed to use lead assignment and `created_at` respectively
+3. **analytics_team.py: wrong status value** — action_items filter used "completed" but CHECK constraint only allows "done"
+4. **CRITICAL: operator precedence bug** — `tenant.get("plan") or "free" == "free"` always evaluated to True, skipping ALL paid tenants from birthday greetings and rebook suggestions. Fixed with parentheses: `(tenant.get("plan") or "free") == "free"`
+5. Total: 11 code fixes across 8 files
+
+### Features Built (Phase B)
+1. **Team Performance + UTM Analytics** (AnalyticsPage.jsx)
+   - Team performance table: conversations, avg response time, leads, appointments, tasks per member
+   - UTM campaign analytics: source/medium/campaign breakdown with conversion rates
+   - Both load in parallel with existing analytics calls
+2. **Conversation Sentiment Analysis** (migration 068, automation_engine.py, analytics_team.py, AnalyticsPage.jsx)
+   - Migration: sentiment column on conversations (positive/neutral/negative)
+   - Background: Claude Haiku analyzes closed conversations every 30 min
+   - Analytics: distribution cards, proportional bar, recent negative list
+3. **Widget Chat Hours** (migration 069, widget_config.py, WidgetPage.jsx)
+   - Separate schedule from business hours for AI chat availability
+   - Auto online/offline based on time + business timezone
+   - Per-day enable/start/end configuration on WidgetPage
+4. **Bulk Invoice Generation** (invoices.py)
+   - POST /invoices/{tenant_id}/bulk for up to 50 leads at once
+   - Same line items, tax, due date for all; optional auto-send via email/SMS
+5. **Lead Nurture Score** (leads.py, leads.js)
+   - Computed from email_events: opens +1, clicks +3, replies +5
+   - Trend indicators: warming/cooling/stable/cold
+   - No migration needed — computed on-the-fly

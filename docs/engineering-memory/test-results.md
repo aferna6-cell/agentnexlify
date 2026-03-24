@@ -112,3 +112,35 @@ _Track what features have been tested, what passed, what failed._
 ### Features Not Tested (need live environment)
 - Team performance with real team data (needs team_members + assigned conversations)
 - UTM tracking end-to-end (needs widget with UTM params + leads in DB)
+
+## 2026-03-24 Session 5
+
+### Build Tests
+- Backend import: PASS
+- Frontend build: PASS (3.65-5.71s across iterations)
+
+### Code Audit Results
+- `from __future__ import annotations`: 0 occurrences (PASS)
+- `except:` (bare): 0 occurrences (PASS)
+- `table("leads").eq("tenant_id"`: 0 occurrences (PASS)
+- `table("conversations").eq("tenant_id"`: 0 occurrences (PASS)
+- Invalid Claude model IDs: 0 occurrences (PASS)
+- Widget JS sync: files identical (PASS)
+- `.get("business_type", "default")`: 0 remaining after fix (PASS — all converted to `or`)
+- Operator precedence `.get("plan") or "free" == "free"`: 0 remaining after fix (PASS)
+- `created_by` on appointments: 0 occurrences (PASS — was only in analytics_team.py, now fixed)
+- `"completed"` on action_items: 0 occurrences in query context (PASS — all use "done")
+
+### New Features (static analysis)
+- Team Performance endpoint: aggregates 5+ tables, correct client_id for conversations/leads, uses lead assignment for appointments (PASS)
+- UTM analytics endpoint: reads source/metadata from leads/activity_log, correct client_id (PASS)
+- Conversation sentiment: migration 068 correct, background task uses Claude Haiku, analytics query correct (PASS)
+- Widget chat hours: migration 069 correct, _is_within_chat_hours uses business timezone, manual toggle override works (PASS)
+- Bulk invoice generation: max 50 leads, auto-send optional, fires webhooks, correct client_id for leads (PASS)
+- Lead nurture score: computed from email_events, no migration needed, correct scoring weights (PASS)
+
+### Features Not Tested (need live environment)
+- Conversation sentiment analysis end-to-end (needs closed conversations + Anthropic API key)
+- Chat hours auto-switching (needs migration 069 applied + business hours configured)
+- Bulk invoice auto-send (needs Resend/Twilio configured)
+- Lead nurture score with real data (needs email_events in DB)

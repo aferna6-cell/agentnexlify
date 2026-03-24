@@ -33,3 +33,14 @@ The sandboxed environment does not have git credentials configured for cloning p
 
 ### Comments can mislead — always verify code, not comments
 Found a comment in sms.py that said "conversations table uses tenant_id" but the actual code correctly used `client_id`. Comments drift from code. When auditing, check the actual queries, not the comments.
+
+## 2026-03-24 Session 5
+
+### Python operator precedence with `or` and `==`
+`tenant.get("plan") or "free" == "free"` does NOT mean `(tenant.get("plan") or "free") == "free"`. It means `tenant.get("plan") or ("free" == "free")` which is `tenant.get("plan") or True` — always truthy! This caused birthday greetings and rebook suggestions to skip ALL paid tenants silently. **Solution**: always use parentheses when combining `or` with `==`: `(x or default) == value`.
+
+### New code introduces old bugs — always re-audit
+analytics_team.py was written in Session 4 but referenced `created_by` (non-existent column on appointments), used `"completed"` (wrong value for action_items, should be `"done"`), and filtered on `updated_at` (non-existent on action_items). Each of these existed in the original session. **Solution**: cross-reference ALL column names against migrations/schema-log.md when writing new queries.
+
+### .get("key", "default") keeps regressing
+Session 3 fixed 15, Session 4 found 0 regressions, but Session 5 found 7 more in files that weren't checked (bids.py, reviews.py, content.py, jobs.py, widget_helpers.py). **Solution**: the grep pattern `\.get\("[^"]+",\s*"` should be run every session. Eventually add to pre-commit hook.

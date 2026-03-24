@@ -375,6 +375,16 @@ New table `client_accounts` for client portal authentication. Columns: tenant_id
 
 **Applied:** Pending — must be run on live Supabase manually.
 
+### 068 — Conversation Sentiment
+Adds `sentiment` (TEXT CHECK: positive/neutral/negative) to `conversations` table. Index on (client_id, sentiment) WHERE sentiment IS NOT NULL. Used for AI-powered conversation sentiment analysis.
+
+**Applied:** Pending — must be run on live Supabase manually.
+
+### 069 — Widget Chat Hours
+Adds `chat_hours` (JSONB DEFAULT NULL) and `chat_hours_enabled` (BOOLEAN NOT NULL DEFAULT false) to `widget_configs` table. Enables separate schedule for when AI chat is active vs showing offline contact form.
+
+**Applied:** Pending — must be run on live Supabase manually.
+
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
 
 ### 066 — Appointment Waitlist
