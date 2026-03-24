@@ -819,10 +819,11 @@ class InviteValidationResponse(BaseModel):
 
 
 class NotificationItem(BaseModel):
-    type: str  # "new_lead", "new_conversation", "appointment", "activity"
+    type: str  # "new_lead", "new_conversation", "appointment", "activity", "action_item"
     title: str
     description: str
     created_at: str | None = None
+    entity_id: str | None = None  # ID of the related entity (lead_id, session_id, etc.)
 
 
 class NotificationsResponse(BaseModel):
@@ -830,5 +831,6 @@ class NotificationsResponse(BaseModel):
     new_conversations_count: int = 0
     todays_appointments_count: int = 0
     overdue_action_items_count: int = 0
+    action_items_count: int = 0
     total_unread: int = 0
     recent_items: list[NotificationItem] = Field(default_factory=list)

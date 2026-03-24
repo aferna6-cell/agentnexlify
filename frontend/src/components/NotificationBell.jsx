@@ -2,6 +2,29 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchNotifications } from "../utils/api/dashboard";
 
+const ActionButton = ({ label, onClick, color = "var(--accent)" }) => (
+  <button
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
+    style={{
+      background: "none",
+      border: `1px solid ${color}`,
+      color,
+      padding: "3px 10px",
+      borderRadius: "4px",
+      fontSize: "0.7rem",
+      fontWeight: 600,
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+      transition: "background 0.15s, color 0.15s",
+      lineHeight: "1.4",
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.background = color; e.currentTarget.style.color = "#000"; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = color; }}
+  >
+    {label}
+  </button>
+);
+
 export default function NotificationBell({ onNavigate }) {
   const { user, token } = useAuth();
   const [data, setData] = useState(null);
@@ -41,13 +64,43 @@ export default function NotificationBell({ onNavigate }) {
     appointment: "\u{1F4C5}",
     new_conversation: "\u{1F4AC}",
     activity: "\u{1F4CB}",
+    action_item: "\u{2705}",
+  };
+
+  const handleNavigate = (page, pageData = null) => {
+    setOpen(false);
+    onNavigate?.(page, pageData);
   };
 
   const handleItemClick = (item) => {
-    setOpen(false);
-    if (item.type === "new_lead") onNavigate?.("leads");
-    else if (item.type === "appointment") onNavigate?.("calendar");
-    else if (item.type === "new_conversation") onNavigate?.("conversations");
+    if (item.type === "new_lead") handleNavigate("leads");
+    else if (item.type === "appointment") handleNavigate("calendar");
+    else if (item.type === "new_conversation") handleNavigate("conversations");
+    else if (item.type === "action_item") handleNavigate("action_items");
+    else handleNavigate("dashboard");
+  };
+
+  const getQuickActions = (item) => {
+    const actions = [];
+    if (item.type === "new_lead") {
+      actions.push(
+        { label: "View Lead", onClick: () => handleNavigate("leads", { highlightLead: item.entity_id }) },
+        { label: "Reply", onClick: () => handleNavigate("leads", { replyTo: item.entity_id }) },
+      );
+    } else if (item.type === "appointment") {
+      actions.push(
+        { label: "View", onClick: () => handleNavigate("calendar") },
+      );
+    } else if (item.type === "new_conversation") {
+      actions.push(
+        { label: "Open Chat", onClick: () => handleNavigate("conversations", { openSession: item.entity_id }) },
+      );
+    } else if (item.type === "action_item") {
+      actions.push(
+        { label: "View Tasks", onClick: () => handleNavigate("action_items") },
+      );
+    }
+    return actions;
   };
 
   return (
@@ -102,9 +155,10 @@ export default function NotificationBell({ onNavigate }) {
           position: "absolute",
           top: "calc(100% + 8px)",
           right: 0,
-          width: 340,
-          maxHeight: 420,
-          background: "var(--card-bg)",
+          width: 380,
+          maxWidth: "calc(100vw - 24px)",
+          maxHeight: 480,
+          background: "var(--bg-card)",
           border: "1px solid var(--border)",
           borderRadius: "12px",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
@@ -135,6 +189,43 @@ export default function NotificationBell({ onNavigate }) {
             </div>
           </div>
 
+          {/* Quick Navigation Row */}
+          <div style={{
+            padding: "8px 16px",
+            borderBottom: "1px solid var(--border)",
+            display: "flex",
+            gap: "6px",
+            flexWrap: "wrap",
+          }}>
+            {data?.new_leads_count > 0 && (
+              <ActionButton
+                label={`${data.new_leads_count} New Lead${data.new_leads_count !== 1 ? "s" : ""}`}
+                onClick={() => handleNavigate("leads")}
+              />
+            )}
+            {data?.todays_appointments_count > 0 && (
+              <ActionButton
+                label={`${data.todays_appointments_count} Today`}
+                onClick={() => handleNavigate("calendar")}
+                color="var(--green)"
+              />
+            )}
+            {data?.new_conversations_count > 0 && (
+              <ActionButton
+                label={`${data.new_conversations_count} Unread`}
+                onClick={() => handleNavigate("conversations")}
+                color="var(--purple)"
+              />
+            )}
+            {data?.action_items_count > 0 && (
+              <ActionButton
+                label={`${data.action_items_count} Task${data.action_items_count !== 1 ? "s" : ""}`}
+                onClick={() => handleNavigate("action_items")}
+                color="var(--yellow)"
+              />
+            )}
+          </div>
+
           {/* Items */}
           <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
             {(!data || data.recent_items.length === 0) ? (
@@ -147,57 +238,67 @@ export default function NotificationBell({ onNavigate }) {
                 No recent activity
               </div>
             ) : (
-              data.recent_items.map((item, i) => (
-                <div
-                  key={i}
-                  onClick={() => handleItemClick(item)}
-                  style={{
-                    padding: "10px 16px",
-                    display: "flex",
-                    gap: "10px",
-                    alignItems: "flex-start",
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover-overlay)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <span style={{ fontSize: "1.1rem", flexShrink: 0, marginTop: 2 }}>
-                    {typeIcons[item.type] || "\u{1F514}"}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 500,
-                      color: "var(--text-primary)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
-                      {item.title}
-                    </div>
-                    <div style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-secondary)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
-                      {item.description}
-                    </div>
-                  </div>
-                  {item.created_at && (
-                    <span style={{
-                      fontSize: "0.7rem",
-                      color: "var(--text-muted)",
-                      flexShrink: 0,
-                      whiteSpace: "nowrap",
-                    }}>
-                      {formatTimeAgo(item.created_at)}
+              data.recent_items.map((item, i) => {
+                const actions = getQuickActions(item);
+                return (
+                  <div
+                    key={i}
+                    onClick={() => handleItemClick(item)}
+                    style={{
+                      padding: "10px 16px",
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "flex-start",
+                      cursor: "pointer",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover-overlay)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span style={{ fontSize: "1.1rem", flexShrink: 0, marginTop: 2 }}>
+                      {typeIcons[item.type] || "\u{1F514}"}
                     </span>
-                  )}
-                </div>
-              ))
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: "0.82rem",
+                        fontWeight: 500,
+                        color: "var(--text-primary)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}>
+                        {item.title}
+                      </div>
+                      <div style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-secondary)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}>
+                        {item.description}
+                      </div>
+                      {actions.length > 0 && (
+                        <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                          {actions.map((a, j) => (
+                            <ActionButton key={j} label={a.label} onClick={a.onClick} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {item.created_at && (
+                      <span style={{
+                        fontSize: "0.7rem",
+                        color: "var(--text-muted)",
+                        flexShrink: 0,
+                        whiteSpace: "nowrap",
+                      }}>
+                        {formatTimeAgo(item.created_at)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

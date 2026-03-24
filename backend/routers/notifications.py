@@ -60,6 +60,7 @@ async def get_notifications(
                     title=f"New lead: {lead_name}",
                     description=description,
                     created_at=lead["created_at"],
+                    entity_id=lead["id"],
                 )
             )
     except Exception:
@@ -113,6 +114,7 @@ async def get_notifications(
                     title=f"Appointment: {customer}",
                     description=f"Scheduled at {formatted_time}",
                     created_at=appt.get("created_at") or start,
+                    entity_id=appt["id"],
                 )
             )
     except Exception:
@@ -161,14 +163,30 @@ async def get_notifications(
             priority = item.get("priority", "medium")
             recent_items.append(
                 NotificationItem(
-                    type="overdue_action_item",
+                    type="action_item",
                     title=f"Overdue: {item['description'][:60]}",
                     description=f"Priority: {priority} | Due: {item.get('due_date', 'unknown')}",
                     created_at=item.get("due_date"),
+                    entity_id=item["id"],
                 )
             )
     except Exception:
         logger.warning("Notifications: failed to fetch overdue action items for %s", tenant_id, exc_info=True)
+
+    # --- 6. Total pending action items count ---
+    action_items_count = 0
+    try:
+        pending_res = (
+            db.table("action_items")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("status", "pending")
+            .limit(1)
+            .execute()
+        )
+        action_items_count = pending_res.count or 0
+    except Exception:
+        logger.warning("Notifications: failed to count pending action items for %s", tenant_id, exc_info=True)
 
     # --- Sort all items by created_at DESC and limit to 20 ---
     recent_items.sort(key=lambda item: item.created_at or "", reverse=True)
@@ -181,6 +199,7 @@ async def get_notifications(
         new_conversations_count=new_conversations_count,
         todays_appointments_count=todays_appointments_count,
         overdue_action_items_count=overdue_action_items_count,
+        action_items_count=action_items_count,
         total_unread=total_unread,
         recent_items=recent_items,
     )

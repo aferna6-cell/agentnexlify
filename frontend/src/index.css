@@ -4077,3 +4077,284 @@ body {
 @media (max-width: 768px) {
   .branding-color-group { grid-template-columns: 1fr; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   COMPREHENSIVE MOBILE RESPONSIVE — Session 6
+   Covers all dashboard pages for phones and tablets.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Global Mobile Layout ── */
+@media (max-width: 768px) {
+  /* Notification bell area */
+  .app > div > div:has(.notification-bell) {
+    padding: 4px 12px 0;
+  }
+
+  /* Page headers */
+  .page-header h1 { font-size: 20px; }
+  .page-header p { font-size: 13px; }
+
+  /* All page-level header rows with buttons */
+  [style*="display: flex"][style*="justify-content: space-between"] {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Generic table responsive wrapper */
+  table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  thead, tbody, tr { display: table; width: 100%; table-layout: auto; }
+  table th, table td { font-size: 0.8rem; padding: 8px 10px; }
+
+  /* Modals */
+  .modal, [class*="modal"] {
+    max-width: 95vw !important;
+    width: 95vw !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* ── Leads Page ── */
+@media (max-width: 768px) {
+  .leads-header, .leads-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .leads-controls input[type="search"],
+  .leads-controls input[type="text"],
+  .leads-controls select {
+    width: 100%;
+    min-width: unset;
+  }
+  .lead-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .bulk-action-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+}
+
+/* ── Invoices Page ── */
+@media (max-width: 768px) {
+  .invoices-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .invoice-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Calendar ── */
+@media (max-width: 768px) {
+  .cal-grid { grid-template-columns: repeat(7, 1fr); gap: 1px; }
+  .cal-cell { min-height: 40px; font-size: 0.7rem; padding: 2px; }
+  .cal-cell .appt-dot { font-size: 0.6rem; }
+  .cal-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .cal-header h1 { font-size: 18px; }
+  .cal-nav { justify-content: center; }
+  .cal-view-tabs { justify-content: center; }
+}
+
+/* ── Pipeline / Kanban Board ── */
+@media (max-width: 768px) {
+  .pipeline-columns {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    padding-bottom: 12px;
+    scroll-snap-type: x mandatory;
+  }
+  .pipeline-column {
+    min-width: 260px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+}
+
+/* ── Conversations Page ── */
+@media (max-width: 768px) {
+  .conv-sidebar {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .conv-reply-input { font-size: 14px; }
+}
+
+/* ── Action Items ── */
+@media (max-width: 768px) {
+  .action-items-filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .action-items-filters select,
+  .action-items-filters input {
+    width: 100%;
+  }
+}
+
+/* ── Reviews Page ── */
+@media (max-width: 768px) {
+  .reviews-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .review-card {
+    padding: 12px;
+  }
+}
+
+/* ── Content Studio ── */
+@media (max-width: 768px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+  .content-detail {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* ── Forms / Documents ── */
+@media (max-width: 768px) {
+  .form-builder-layout {
+    grid-template-columns: 1fr;
+  }
+  .form-fields-panel, .form-preview-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* ── Bids Page ── */
+@media (max-width: 768px) {
+  .bid-items-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* ── Smart Lists ── */
+@media (max-width: 768px) {
+  .smart-list-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Local SEO ── */
+@media (max-width: 768px) {
+  .seo-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .seo-tab {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+  }
+  .seo-score-circle {
+    width: 80px;
+    height: 80px;
+    font-size: 1.5rem;
+  }
+}
+
+/* ── Social Media ── */
+@media (max-width: 768px) {
+  .social-calendar-grid {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+  }
+  .social-post-card {
+    padding: 10px;
+  }
+}
+
+/* ── Calls Page ── */
+@media (max-width: 768px) {
+  .calls-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Waitlist Page ── */
+@media (max-width: 768px) {
+  .waitlist-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .waitlist-filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* ── Chat Flow Builder ── */
+@media (max-width: 768px) {
+  .flow-builder-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .flow-canvas {
+    min-height: 300px;
+  }
+  .flow-sidebar {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 300px;
+    overflow-y: auto;
+  }
+}
+
+/* ── CSAT Page ── */
+@media (max-width: 768px) {
+  .csat-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Marketing Campaigns ── */
+@media (max-width: 768px) {
+  .campaign-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .campaign-detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Small Phone (extra compact) ── */
+@media (max-width: 480px) {
+  .content { padding: 12px; padding-top: 52px; }
+
+  .reviews-stats,
+  .calls-stats,
+  .waitlist-stats,
+  .csat-stats,
+  .campaign-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-stats-row { grid-template-columns: 1fr; }
+
+  /* Touch-friendly buttons */
+  button, .btn, [role="button"] {
+    min-height: 40px;
+    min-width: 40px;
+  }
+
+  /* Compact modals */
+  .modal, [class*="modal"] {
+    padding: 16px !important;
+  }
+}
