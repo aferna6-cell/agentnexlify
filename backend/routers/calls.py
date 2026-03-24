@@ -424,7 +424,7 @@ async def handle_incoming_call(request: Request):
         logger.warning("Incoming call to %s -- no matching tenant found", called)
         return Response(content=_build_twiml_error(), media_type="application/xml")
 
-    business_name = tenant.get("business_name", "our business")
+    business_name = tenant.get("business_name") or "our business"
 
     # Build the respond URL for the Gather action
     base_url = str(request.base_url).rstrip("/")
@@ -531,7 +531,7 @@ async def handle_voice_respond(request: Request):
         )
 
     tenant_id = tenant["id"]
-    business_name = tenant.get("business_name", "our business")
+    business_name = tenant.get("business_name") or "our business"
     session_id = f"call_{call_sid}"
     db = get_supabase()
 
@@ -709,7 +709,7 @@ async def handle_recording_complete(request: Request):
         return Response(content="OK", media_type="text/plain")
 
     tenant_id = tenant["id"]
-    business_name = tenant.get("business_name", "us")
+    business_name = tenant.get("business_name") or "us"
     db = get_supabase()
 
     # Parse duration

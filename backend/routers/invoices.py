@@ -921,7 +921,7 @@ async def send_invoice(
         else:
             invoice_number = invoice.get("invoice_number", "")
             total = float(invoice.get("total", 0))
-            biz_name = business.get("business_name", "Your Service Provider")
+            biz_name = business.get("business_name") or "Your Service Provider"
             if payment_link_url:
                 sms_body = (
                     f"Hi {lead.get('name', 'there')}! Invoice {invoice_number} for ${total:,.2f} "

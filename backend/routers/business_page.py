@@ -210,7 +210,7 @@ async def get_business_page(request: Request, slug: str):
     allowed = _allowed_tier_fields(plan)
 
     return BusinessPagePublic(
-        business_name=tenant.get("business_name", ""),
+        business_name=tenant.get("business_name") or "",
         description=tenant.get("business_description"),
         phone=tenant.get("business_phone"),
         address=tenant.get("business_address"),
@@ -362,7 +362,7 @@ async def update_business_page(
             .execute()
         )
         if existing.data and not existing.data[0].get("business_slug"):
-            name = existing.data[0].get("business_name", "business")
+            name = existing.data[0].get("business_name") or "business"
             slug = _slugify(name)
             slug = _ensure_unique_slug(db, slug, tenant_id)
             updates["business_slug"] = slug

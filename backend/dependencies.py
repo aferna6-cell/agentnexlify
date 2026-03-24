@@ -34,8 +34,8 @@ def get_business_context(db, tenant_id: str) -> tuple[str, str]:
         )
         if result.data:
             return (
-                result.data[0].get("business_name", "the business"),
-                result.data[0].get("business_type", ""),
+                result.data[0].get("business_name") or "the business",
+                result.data[0].get("business_type") or "",
             )
     except Exception:
         logger.warning(

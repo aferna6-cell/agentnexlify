@@ -248,7 +248,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
     # Load menu items for restaurant tenants
     menu_items = None
-    if tenant.get("business_type", "").lower() == "restaurant":
+    if tenant.get("business_type") or "".lower() == "restaurant":
         try:
             menu_result = (
                 db.table("menu_items")
@@ -456,7 +456,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 from backend.services.sms import send_sms_notification
                 send_sms_notification(
                     owner_phone,
-                    f"[{tenant.get('business_name', 'Business')}] A customer requested to speak with a team member. Check your inbox.",
+                    f"[{tenant.get('business_name') or 'Business'}] A customer requested to speak with a team member. Check your inbox.",
                 )
         except Exception:
             logger.warning("Failed to send handoff SMS notification", exc_info=True)

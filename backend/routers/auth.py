@@ -337,13 +337,13 @@ async def login(request: Request, req: LoginRequest):
             tenant_id,
             email,
             tenant.get("plan") or "free",
-            tenant.get("business_name", ""),
+            tenant.get("business_name") or "",
             business_type=tenant.get("business_type"),
         )
         return LoginResponse(
             tenant_id=tenant_id,
             token=token,
-            business_name=tenant.get("business_name", ""),
+            business_name=tenant.get("business_name") or "",
             plan=tenant.get("plan") or "free",
         )
 
@@ -383,7 +383,7 @@ async def login(request: Request, req: LoginRequest):
             tenant_id=tenant_id,
             email=email,
             plan=t.get("plan") or "free",
-            business_name=t.get("business_name", ""),
+            business_name=t.get("business_name") or "",
             user_id=str(member["id"]),
             role=member["role"],
             is_team_member=True,
@@ -393,7 +393,7 @@ async def login(request: Request, req: LoginRequest):
         return LoginResponse(
             tenant_id=tenant_id,
             token=token,
-            business_name=t.get("business_name", ""),
+            business_name=t.get("business_name") or "",
             plan=t.get("plan") or "free",
         )
 
@@ -564,7 +564,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     trial = _compute_trial_status(t)
 
     response = DashboardResponse(
-        business_name=t.get("business_name", ""),
+        business_name=t.get("business_name") or "",
         plan=t.get("plan") or "free",
         plan_status=t.get("plan_status", "active"),
         conversations_used_this_month=conversations_used,

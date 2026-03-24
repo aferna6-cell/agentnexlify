@@ -178,8 +178,8 @@ async def ai_write_job_description(
     biz_type = ""
     city = ""
     if tenant_result.data:
-        biz_name = tenant_result.data[0].get("business_name", "")
-        biz_type = tenant_result.data[0].get("business_type", "")
+        biz_name = tenant_result.data[0].get("business_name") or ""
+        biz_type = tenant_result.data[0].get("business_type") or ""
         city = tenant_result.data[0].get("city", "")
 
     context = f"Business: {biz_name}" if biz_name else ""
@@ -316,7 +316,7 @@ async def public_job_listings(request: Request, tenant_id: str):
     )
 
     return {
-        "business_name": tenant.get("business_name", ""),
+        "business_name": tenant.get("business_name") or "",
         "business_phone": tenant.get("business_phone", ""),
         "city": tenant.get("city", ""),
         "jobs": jobs_result.data or [],
@@ -373,7 +373,7 @@ async def public_apply(
         )
         if tenant_result.data:
             owner_phone = tenant_result.data[0].get("business_phone")
-            biz_name = tenant_result.data[0].get("business_name", "your business")
+            biz_name = tenant_result.data[0].get("business_name") or "your business"
             if owner_phone:
                 from backend.services.twilio_service import send_sms
                 sms_body = (

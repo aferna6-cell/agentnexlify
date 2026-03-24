@@ -250,7 +250,7 @@ async def accept_invite(request: Request, req: AcceptInviteRequest):
         tenant_id=str(member["tenant_id"]),
         email=member["email"],
         plan=t.get("plan") or "free",
-        business_name=t.get("business_name", ""),
+        business_name=t.get("business_name") or "",
         user_id=str(member["id"]),
         role=member["role"],
         is_team_member=True,

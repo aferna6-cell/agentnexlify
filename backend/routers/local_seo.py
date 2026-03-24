@@ -930,8 +930,8 @@ async def run_seo_audit(
         )
 
     # Run AI analysis
-    business_name = tenant.get("business_name", "Unknown Business")
-    business_type = tenant.get("business_type", "local business")
+    business_name = tenant.get("business_name") or "Unknown Business"
+    business_type = tenant.get("business_type") or "local business"
 
     audit_result = await _run_seo_audit_ai(
         pages_json, extracted_text, business_name, business_type,
@@ -1291,7 +1291,7 @@ async def track_keywords(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     tenant = tenant_result.data[0]
-    business_type = tenant.get("business_type", "local business")
+    business_type = tenant.get("business_type") or "local business"
     city = tenant.get("city", "unknown")
 
     # Deduplicate and clean keywords
@@ -1458,8 +1458,8 @@ async def run_competitor_analysis(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     tenant = tenant_result.data[0]
-    business_name = tenant.get("business_name", "Your business")
-    business_type = tenant.get("business_type", "business")
+    business_name = tenant.get("business_name") or "Your business"
+    business_type = tenant.get("business_type") or "business"
     city = tenant.get("city", "")
 
     # Get your latest SEO audit score if available
