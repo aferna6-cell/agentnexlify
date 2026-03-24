@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchDashboard } from "../utils/api/dashboard";
-import { updateWidgetConfig, toggleWidgetOnlineStatus } from "../utils/api/widget-config";
+import { updateWidgetConfig, toggleWidgetOnlineStatus, fetchChatHours, updateChatHours } from "../utils/api/widget-config";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const POSITIONS = [
@@ -50,6 +50,17 @@ export default function WidgetPage() {
   });
   const [isOnline, setIsOnline] = useState(true);
   const [togglingOnline, setTogglingOnline] = useState(false);
+  const [chatHoursEnabled, setChatHoursEnabled] = useState(false);
+  const [chatHours, setChatHours] = useState({
+    monday: { start: "09:00", end: "17:00", enabled: true },
+    tuesday: { start: "09:00", end: "17:00", enabled: true },
+    wednesday: { start: "09:00", end: "17:00", enabled: true },
+    thursday: { start: "09:00", end: "17:00", enabled: true },
+    friday: { start: "09:00", end: "17:00", enabled: true },
+    saturday: { start: "10:00", end: "14:00", enabled: false },
+    sunday: { start: "10:00", end: "14:00", enabled: false },
+  });
+  const [savingChatHours, setSavingChatHours] = useState(false);
   const [branding, setBranding] = useState({
     logo_url: "",
     secondary_color: "",
@@ -91,6 +102,14 @@ export default function WidgetPage() {
             custom_css: b.custom_css || "",
           });
         }
+      }
+      // Load chat hours
+      try {
+        const ch = await fetchChatHours(user.tenantId, token);
+        if (ch.chat_hours_enabled !== undefined) setChatHoursEnabled(ch.chat_hours_enabled);
+        if (ch.chat_hours && typeof ch.chat_hours === "object") setChatHours(prev => ({ ...prev, ...ch.chat_hours }));
+      } catch (e) {
+        // Chat hours not supported yet (migration not applied)
       }
     } catch (err) {
       console.error("Failed to load widget config", err);
@@ -148,6 +167,29 @@ export default function WidgetPage() {
     } finally {
       setTogglingOnline(false);
     }
+  };
+
+  const handleSaveChatHours = async () => {
+    if (!user?.tenantId) return;
+    setSavingChatHours(true);
+    try {
+      await updateChatHours(user.tenantId, token, {
+        chat_hours_enabled: chatHoursEnabled,
+        chat_hours: chatHours,
+      });
+    } catch (err) {
+      console.error("Failed to save chat hours", err);
+    } finally {
+      setSavingChatHours(false);
+    }
+  };
+
+  const handleChatHourChange = (day, field) => (e) => {
+    const value = field === "enabled" ? e.target.checked : e.target.value;
+    setChatHours(prev => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: value },
+    }));
   };
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
@@ -237,6 +279,81 @@ export default function WidgetPage() {
             }} />
             {isOnline ? "Live Chat Active" : "Offline Mode"}
           </div>
+        </div>
+
+        {/* Chat Hours */}
+        <div className="settings-card">
+          <h3>Chat Hours</h3>
+          <p className="settings-card-desc">
+            Set specific hours when the AI chat is active. Outside these hours, the widget shows the offline contact form.
+            Different from business hours (which control appointment booking).
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "0.75rem 0" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={chatHoursEnabled}
+                onChange={(e) => setChatHoursEnabled(e.target.checked)}
+                style={{ width: 18, height: 18 }}
+              />
+              <span style={{ fontSize: "0.9rem" }}>Enable chat hour schedule</span>
+            </label>
+          </div>
+          {chatHoursEnabled && (
+            <div style={{ marginTop: "12px" }}>
+              {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((day) => (
+                <div key={day} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "8px 0",
+                  borderBottom: "1px solid var(--border)",
+                }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", width: "140px", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={chatHours[day]?.enabled || false}
+                      onChange={handleChatHourChange(day, "enabled")}
+                      style={{ width: 16, height: 16 }}
+                    />
+                    <span style={{ textTransform: "capitalize", fontSize: "0.85rem" }}>{day}</span>
+                  </label>
+                  {chatHours[day]?.enabled ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <input
+                        type="time"
+                        value={chatHours[day]?.start || "09:00"}
+                        onChange={handleChatHourChange(day, "start")}
+                        style={{ padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}
+                      />
+                      <span style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>to</span>
+                      <input
+                        type="time"
+                        value={chatHours[day]?.end || "17:00"}
+                        onChange={handleChatHourChange(day, "end")}
+                        style={{ padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}
+                      />
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Offline all day</span>
+                  )}
+                </div>
+              ))}
+              <button
+                className="btn-primary"
+                onClick={handleSaveChatHours}
+                disabled={savingChatHours}
+                style={{ marginTop: "16px" }}
+              >
+                {savingChatHours ? "Saving..." : "Save Chat Hours"}
+              </button>
+            </div>
+          )}
+          {!chatHoursEnabled && (
+            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "8px 0 0" }}>
+              When disabled, the widget uses the manual Online/Offline toggle above.
+            </p>
+          )}
         </div>
 
         {/* Customization */}

@@ -31,6 +31,79 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
 
+
+def _resolve_online_status(widget: dict, tenant: dict) -> bool:
+    """Determine if the widget should show as online.
+
+    If chat hours are enabled and the tenant is on a paid plan,
+    auto-compute based on the schedule. Otherwise fall back to
+    the manual is_online toggle.
+    """
+    # Manual override: if is_online is explicitly False, respect it
+    if not widget.get("is_online", True):
+        return False
+
+    # Check chat hours schedule
+    chat_hours_status = _is_within_chat_hours(widget, tenant.get("id") or widget.get("tenant_id") or "")
+    if chat_hours_status is not None:
+        return chat_hours_status
+
+    # Default: use the is_online toggle
+    return widget.get("is_online", True)
+
+
+def _is_within_chat_hours(widget: dict, tenant_id: str) -> bool | None:
+    """Check if current time is within configured chat hours.
+
+    Returns:
+    - True if within hours
+    - False if outside hours
+    - None if chat hours not enabled (caller should fall back to is_online toggle)
+    """
+    if not widget.get("chat_hours_enabled"):
+        return None
+
+    chat_hours = widget.get("chat_hours")
+    if not chat_hours or not isinstance(chat_hours, dict):
+        return None
+
+    # Get business timezone from business_hours table
+    import zoneinfo
+    try:
+        db = get_supabase()
+        bh_result = (
+            db.table("business_hours")
+            .select("timezone")
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        tz_name = (bh_result.data[0].get("timezone") or "America/New_York") if bh_result.data else "America/New_York"
+        tz = zoneinfo.ZoneInfo(tz_name)
+    except Exception:
+        tz = zoneinfo.ZoneInfo("America/New_York")
+
+    now = datetime.now(tz)
+    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    today_key = day_names[now.weekday()]
+
+    day_config = chat_hours.get(today_key)
+    if not day_config or not day_config.get("enabled"):
+        return False
+
+    start_str = day_config.get("start", "00:00")
+    end_str = day_config.get("end", "23:59")
+
+    try:
+        start_h, start_m = map(int, start_str.split(":"))
+        end_h, end_m = map(int, end_str.split(":"))
+        current_minutes = now.hour * 60 + now.minute
+        start_minutes = start_h * 60 + start_m
+        end_minutes = end_h * 60 + end_m
+        return start_minutes <= current_minutes < end_minutes
+    except (ValueError, AttributeError):
+        return None
+
 # ---------------------------------------------------------------------------
 # File upload config
 # ---------------------------------------------------------------------------
@@ -147,7 +220,7 @@ async def get_config(request: Request, api_key: str):
         booking_enabled=widget.get("booking_enabled", False),
         branding=branding if branding else None,
         agent_name=tenant.get("business_name"),
-        is_online=widget.get("is_online", True),
+        is_online=_resolve_online_status(widget, tenant),
         offline_message=widget.get("offline_message"),
         menu_items=menu_items,
         business_type=tenant.get("business_type"),
@@ -186,6 +259,35 @@ async def toggle_online_status(
             tenant_id, e, exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Failed to update online status")
+
+
+@router.get("/config/{tenant_id}/chat-hours")
+async def get_chat_hours(
+    tenant_id: str,
+    claims: dict = Depends(_get_jwt_claims),
+):
+    """Get chat hours configuration for the widget settings page."""
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    try:
+        db = get_supabase()
+        result = (
+            db.table("widget_configs")
+            .select("chat_hours_enabled, chat_hours")
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not result.data:
+            return {"chat_hours_enabled": False, "chat_hours": None}
+        w = result.data[0]
+        return {
+            "chat_hours_enabled": w.get("chat_hours_enabled") or False,
+            "chat_hours": w.get("chat_hours"),
+        }
+    except Exception:
+        logger.exception("get_chat_hours: failed for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch chat hours")
 
 
 @router.post("/upload")

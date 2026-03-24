@@ -25,6 +25,20 @@ export function toggleWidgetOnlineStatus(tenantId, token, isOnline) {
   });
 }
 
+// --- Chat Hours ---
+
+export function fetchChatHours(tenantId, token) {
+  return request(`/api/v1/widget/config/${tenantId}/chat-hours`, { token });
+}
+
+export function updateChatHours(tenantId, token, data) {
+  return request(`/api/v1/auth/widget-config/${tenantId}`, {
+    method: "PUT",
+    token,
+    body: data,
+  });
+}
+
 // --- AI Feedback ---
 
 export function fetchAiFeedback(tenantId, token) {

@@ -204,6 +204,8 @@ class WidgetConfigUpdateRequest(BaseModel):
     greeting_message: str | None = None
     position: str | None = None
     branding: BrandingConfig | None = None
+    chat_hours_enabled: bool | None = None
+    chat_hours: dict | None = None
 
 
 class FaqEntryResponse(BaseModel):
