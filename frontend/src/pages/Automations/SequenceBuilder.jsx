@@ -163,8 +163,36 @@ function renderWithSampleData(text) {
   return result;
 }
 
+/* ---------- Sample data for template preview ---------- */
+const SAMPLE_DATA = {
+  name: "Alex Johnson",
+  first_name: "Alex",
+  email: "alex@example.com",
+  phone: "(555) 123-4567",
+  business_name: "Your Business",
+  business_phone: "(555) 987-6543",
+  appointment_date: "Friday, April 10, 2026",
+  appointment_time: "2:00 PM",
+  review_link: "https://g.page/your-business/review",
+  unsubscribe_url: "#",
+  status: "New Lead",
+  service: "General Consultation",
+};
+
+function resolveTemplateVars(text) {
+  if (!text) return text;
+  return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    const val = SAMPLE_DATA[key];
+    if (val !== undefined) return `<span style="background:#dbeafe;color:#1e40af;padding:1px 4px;border-radius:3px;font-size:0.9em;" title="Sample: {{${key}}}">${val}</span>`;
+    return `<span style="background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;font-size:0.9em;" title="Unknown variable">{{${key}}}</span>`;
+  });
+}
+
 /* ---------- Email Preview ---------- */
 function EmailPreview({ body, subject }) {
+  const resolvedSubject = resolveTemplateVars(subject);
+  const resolvedBody = resolveTemplateVars(body);
+
   return (
     <div style={{
       background: "#ffffff",
@@ -182,7 +210,10 @@ function EmailPreview({ body, subject }) {
       }}>
         <div><strong>From:</strong> Your Business &lt;noreply@agentnexlify.com&gt;</div>
         <div><strong>To:</strong> Alex Johnson &lt;alex@example.com&gt;</div>
-        <div><strong>Subject:</strong> {subject || "(no subject)"}</div>
+        <div dangerouslySetInnerHTML={{ __html: `<strong>Subject:</strong> ${resolvedSubject || "(no subject)"}` }} />
+      </div>
+      <div style={{ padding: "4px 12px 0", fontSize: "10px", color: "#94a3b8", fontStyle: "italic" }}>
+        Variables like {"{{name}}"} are shown with sample data
       </div>
       <div
         style={{
@@ -194,7 +225,7 @@ function EmailPreview({ body, subject }) {
           overflowY: "auto",
         }}
         dangerouslySetInnerHTML={{
-          __html: body || '<p style="color:#94a3b8;font-style:italic">Start typing to see a preview...</p>',
+          __html: resolvedBody || '<p style="color:#94a3b8;font-style:italic">Start typing to see a preview...</p>',
         }}
       />
     </div>
