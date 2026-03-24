@@ -17,6 +17,81 @@ import AIInsightsWidget from "./AIInsightsWidget";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 const ONBOARDING_KEY_PREFIX = "anx_onboarding_";
+const WIDGET_PREFS_KEY = "anx_dashboard_widgets_";
+
+const ALL_WIDGETS = [
+  { id: "lead_pipeline", label: "Lead Pipeline", defaultVisible: true },
+  { id: "activity_feed", label: "Activity Feed", defaultVisible: true },
+  { id: "today_appts", label: "Today's Appointments", defaultVisible: true },
+  { id: "action_items", label: "Action Items", defaultVisible: true },
+  { id: "ai_insights", label: "AI Insights", defaultVisible: true },
+  { id: "widget_embed", label: "Widget Embed Code", defaultVisible: true },
+  { id: "crm_widgets", label: "CRM Stats", defaultVisible: true },
+];
+
+function getWidgetPrefs(tenantId) {
+  try {
+    const raw = localStorage.getItem(`${WIDGET_PREFS_KEY}${tenantId}`);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveWidgetPrefs(tenantId, prefs) {
+  try {
+    localStorage.setItem(`${WIDGET_PREFS_KEY}${tenantId}`, JSON.stringify(prefs));
+  } catch { /* storage full or unavailable */ }
+}
+
+function WidgetCustomizer({ tenantId, prefs, onUpdate, onClose }) {
+  const [local, setLocal] = useState(prefs);
+
+  const toggle = (widgetId) => {
+    setLocal((p) => ({ ...p, [widgetId]: !p[widgetId] }));
+  };
+
+  const handleSave = () => {
+    saveWidgetPrefs(tenantId, local);
+    onUpdate(local);
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
+    }} onClick={onClose}>
+      <div style={{
+        background: "var(--bg-card)", border: "1px solid var(--border)",
+        borderRadius: "var(--radius)", padding: "24px", width: "380px", maxWidth: "90vw",
+      }} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ marginBottom: 16 }}>Customize Dashboard</h3>
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", marginBottom: 16 }}>
+          Choose which sections appear on your dashboard.
+        </p>
+        {ALL_WIDGETS.map((w) => (
+          <label key={w.id} style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+            cursor: "pointer", borderBottom: "1px solid var(--border)",
+          }}>
+            <input
+              type="checkbox"
+              checked={local[w.id] !== false}
+              onChange={() => toggle(w.id)}
+            />
+            <span style={{ fontSize: "0.9rem" }}>{w.label}</span>
+          </label>
+        ))}
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function isOnboardingDismissed(tenantId) {
   try {
@@ -40,6 +115,16 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   const [crmWidgets, setCrmWidgets] = useState(null);
   const [seqStats, setSeqStats] = useState(null);
   const [onboardingStatus, setOnboardingStatus] = useState(null);
+  const [widgetPrefs, setWidgetPrefs] = useState(() => {
+    const saved = getWidgetPrefs(user?.tenantId);
+    if (saved) return saved;
+    const defaults = {};
+    ALL_WIDGETS.forEach((w) => { defaults[w.id] = w.defaultVisible; });
+    return defaults;
+  });
+  const [showCustomizer, setShowCustomizer] = useState(false);
+
+  const isVisible = (widgetId) => widgetPrefs[widgetId] !== false;
 
   const loadDashboard = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -142,10 +227,37 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   return (
     <div className="fade-in">
       {error && dashData && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
-      <div className="page-header">
-        <h1>Dashboard</h1>
-        <p>Welcome back{dashData?.business_name ? `, ${dashData.business_name}` : user.businessName ? `, ${user.businessName}` : ""}</p>
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <h1>Dashboard</h1>
+          <p>Welcome back{dashData?.business_name ? `, ${dashData.business_name}` : user.businessName ? `, ${user.businessName}` : ""}</p>
+        </div>
+        <button
+          onClick={() => setShowCustomizer(true)}
+          style={{
+            background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)",
+            padding: "6px 14px", borderRadius: "var(--radius-sm)", fontSize: "0.8rem",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          Customize
+        </button>
       </div>
+
+      {showCustomizer && (
+        <WidgetCustomizer
+          tenantId={user.tenantId}
+          prefs={widgetPrefs}
+          onUpdate={setWidgetPrefs}
+          onClose={() => setShowCustomizer(false)}
+        />
+      )}
 
       {showOnboarding && dashData && (
         <OnboardingChecklist
@@ -175,30 +287,34 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
 
       <div className="dashboard-main-grid">
         <div className="dashboard-main-content">
-          <LeadPipeline
-            leads={leads}
-            onSelectLead={setSelectedLead}
-            onNavigate={onNavigate}
-            onStageDrop={handleStageDrop}
-          />
-          <div className="dashboard-bottom-row">
-            <ActivityFeed activity={activity} />
-            <TodayAppointments tenantId={user.tenantId} token={token} onNavigate={onNavigate} />
-            <ActionItemsWidget tenantId={user.tenantId} token={token} onNavigate={onNavigate} />
-            <AIInsightsWidget tenantId={user.tenantId} token={token} />
-            <WidgetEmbed
-              apiKey={dashData?.widget_api_key}
-              tenantId={user.tenantId}
-              widgetConfig={dashData?.widget_config}
+          {isVisible("lead_pipeline") && (
+            <LeadPipeline
+              leads={leads}
+              onSelectLead={setSelectedLead}
               onNavigate={onNavigate}
+              onStageDrop={handleStageDrop}
             />
+          )}
+          <div className="dashboard-bottom-row">
+            {isVisible("activity_feed") && <ActivityFeed activity={activity} />}
+            {isVisible("today_appts") && <TodayAppointments tenantId={user.tenantId} token={token} onNavigate={onNavigate} />}
+            {isVisible("action_items") && <ActionItemsWidget tenantId={user.tenantId} token={token} onNavigate={onNavigate} />}
+            {isVisible("ai_insights") && <AIInsightsWidget tenantId={user.tenantId} token={token} />}
+            {isVisible("widget_embed") && (
+              <WidgetEmbed
+                apiKey={dashData?.widget_api_key}
+                tenantId={user.tenantId}
+                widgetConfig={dashData?.widget_config}
+                onNavigate={onNavigate}
+              />
+            )}
           </div>
         </div>
         <QuickActions onNavigate={onNavigate} />
       </div>
 
       {/* CRM Dashboard Widgets */}
-      {crmWidgets && (
+      {crmWidgets && isVisible("crm_widgets") && (
         <div className="crm-widgets">
           <div className="crm-widget-card">
             <h3>Weekly Stats</h3>
