@@ -396,3 +396,13 @@ Creates `waitlist_entries` table for visitors waiting for appointment slots. Col
 Creates `scoring_configs` table for per-tenant customizable lead scoring weights. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), factor (TEXT NOT NULL), weight (INTEGER DEFAULT 10, CHECK 0-100), description (TEXT), is_enabled (BOOLEAN DEFAULT true), created_at (TIMESTAMPTZ). Unique constraint on (tenant_id, factor). Indexed on tenant_id. RLS enabled.
 
 **Applied:** Pending — must be run on live Supabase manually.
+
+### 070 — Birthday Automation Settings
+Adds `birthday_enabled` (BOOLEAN NOT NULL DEFAULT false) and `birthday_message` (TEXT DEFAULT NULL) to `tenants`. Enables per-tenant configurable birthday greeting automation with custom message template supporting {customer_name} and {business_name} placeholders.
+
+**Applied:** Pending — must be run on live Supabase manually.
+
+### 071 — Widget Proactive Greeting
+Adds `proactive_enabled` (BOOLEAN NOT NULL DEFAULT false), `proactive_delay_seconds` (INTEGER NOT NULL DEFAULT 30), and `proactive_message` (TEXT DEFAULT 'Hi there! Is there anything I can help you with today?') to `widget_configs`. Enables configurable auto-open behavior for the chat widget with custom timing and message.
+
+**Applied:** Pending — must be run on live Supabase manually.

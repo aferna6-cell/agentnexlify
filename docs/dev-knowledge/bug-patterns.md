@@ -581,3 +581,16 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Problem:** 7 more instances found in bids.py, widget_helpers.py (timezone + city), reviews.py, jobs.py (business_phone, city), content.py.
 **Fix:** Converted to `.get("key") or default` pattern.
 **Prevention:** Run `grep '\.get("[^"]+",\s*"' backend/` at start of every session.
+
+## 2026-03-24 Session 6
+
+### Dedup keyed by nullable FK fails silently
+**Pattern:** Using a nullable FK column (like `lead_id`) as a dedup key in activity_log queries. When the FK is NULL, `.eq("lead_id", None)` in PostgreSQL/Supabase never matches any row (NULL != NULL), so dedup silently fails and the action repeats every automation cycle.
+**Affected:** `send_rebook_suggestions()` — was keyed by `lead_id` which is nullable on appointments.
+**Fix:** Key dedup by a non-nullable column like the appointment ID: `activity_type = "rebook_sent_{appt_id}"`.
+**Detection:** Search for `.eq("lead_id", appt.get("lead_id"))` or similar patterns where the column could be NULL.
+
+### No-show detection missed pending appointments
+**Pattern:** The `detect_appointment_no_shows()` function only checked `status = 'confirmed'`. Appointments that were never confirmed (still `pending`) but whose start time had passed were not detected as no-shows.
+**Fix:** Use `.in_("status", ["confirmed", "pending"])` to catch both states.
+**Lesson:** When querying for "overdue" items, consider all pre-completion statuses, not just the most common one.

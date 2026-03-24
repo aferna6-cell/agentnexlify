@@ -144,3 +144,39 @@ _Track what features have been tested, what passed, what failed._
 - Chat hours auto-switching (needs migration 069 applied + business hours configured)
 - Bulk invoice auto-send (needs Resend/Twilio configured)
 - Lead nurture score with real data (needs email_events in DB)
+
+## 2026-03-24 Session 6
+
+### Build Tests
+- Backend import: PASS
+- Frontend build: PASS (4.12-6.18s across iterations)
+- Widget JS sync: PASS (files identical)
+
+### Code Audit Results
+- `from __future__ import annotations`: 0 occurrences (PASS)
+- `except:` (bare): 0 occurrences (PASS)
+- `table("leads").eq("tenant_id"`: 0 occurrences (PASS)
+- `table("conversations").eq("tenant_id"`: 0 occurrences (PASS)
+- Invalid Claude model IDs: 0 occurrences (PASS — all claude-sonnet-4-6 or claude-haiku-4-5-20251001)
+- Widget JS sync: files identical (PASS)
+- `.get("business_name", default)`: 0 occurrences (PASS — all use `or` pattern)
+- `.get("business_type", default)`: 0 occurrences (PASS)
+- `.get("owner_email", default)`: 0 occurrences (PASS)
+- Operator precedence `.get("plan") or "free" == "free"`: 0 occurrences (PASS)
+
+### Bugs Found and Fixed
+- Rebook suggestion dedup keyed by lead_id (NULL fails dedup): FIXED with appointment ID key
+- No-show detection only checked confirmed status: FIXED to include pending
+
+### New Features (static analysis)
+- Dashboard mobile responsive: media queries for 768px and 480px, tables scroll, grids stack (PASS)
+- Notification quick actions: entity_id on items, action_items_count on response, per-type buttons (PASS)
+- Birthday automation: respects birthday_enabled, custom template with variable replacement (PASS)
+- Dashboard customizer: localStorage prefs, 7 toggleable sections, modal UI (PASS)
+- Widget proactive greeting: configurable delay 5-120s, custom message, widget JS updated (PASS)
+
+### Features Not Tested (need live environment)
+- Birthday automation end-to-end (needs leads with date_of_birth + Resend API key)
+- Proactive greeting timing (needs widget deployed on external page)
+- Dashboard customizer persistence across browser sessions
+- Notification quick actions navigation (needs live notification data)

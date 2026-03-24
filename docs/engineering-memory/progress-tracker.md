@@ -158,3 +158,40 @@ _What was built each session. Proves velocity, prevents re-doing work._
    - Computed from email_events: opens +1, clicks +3, replies +5
    - Trend indicators: warming/cooling/stable/cold
    - No migration needed — computed on-the-fly
+
+## 2026-03-24 Session 6
+
+### Bugs Fixed (Phase A)
+1. **Rebook suggestion dedup keyed by lead_id** — When lead_id is NULL (nullable FK on appointments), PostgreSQL NULL != NULL means no dedup happened. Fixed to key by appointment ID instead.
+2. **No-show detection missed pending appointments** — Only checked `status = 'confirmed'` but pending appointments past start_time are also no-shows. Fixed to check both confirmed and pending.
+
+### Features Built (Phase B)
+1. **Dashboard Mobile Responsive** (index.css)
+   - Comprehensive media queries for 768px and 480px breakpoints
+   - Tables: horizontal scroll on mobile for all data tables
+   - Stats grids: stack to 2-col on tablets, 1-col on phones
+   - Pipeline: horizontal scroll with snap points on mobile
+   - Modals: full-width (95vw) on mobile
+   - Touch: min 40px button targets on small phones
+   - Sidebar: already had hamburger/overlay (verified working)
+2. **Notification Bell Quick Actions** (NotificationBell.jsx, notifications.py, schemas.py)
+   - Per-notification action buttons: View Lead/Reply for leads, Open Chat for conversations, View for appointments, View Tasks for action items
+   - Quick navigation row with colored count badges (leads, appointments, conversations, tasks)
+   - Backend: entity_id on NotificationItem, action_items_count on response
+3. **Customer Birthday Automation** (migration 070, SettingsPage.jsx, automation_engine.py, auth.py)
+   - Settings page toggle + custom message template with {customer_name}/{business_name}
+   - Automation engine respects birthday_enabled flag (previously sent to all paid tenants)
+   - HTML template support for custom birthday messages
+4. **Dashboard Customizable Widgets** (Dashboard/index.jsx)
+   - Customize button opens modal with toggle per widget section
+   - 7 toggleable sections: Lead Pipeline, Activity Feed, Appointments, Action Items, AI Insights, Widget Embed, CRM Stats
+   - Preferences stored in localStorage per tenant, persist across sessions
+5. **Widget Proactive Greeting** (migration 071, widget JS, WidgetPage.jsx, schemas.py, widget_config.py)
+   - Migration: proactive_enabled, proactive_delay_seconds, proactive_message on widget_configs
+   - Widget JS: uses configurable delay instead of hardcoded 5s, shows custom message without API call
+   - WidgetPage: Proactive Greeting section with toggle, delay input (5-120s), message textarea
+   - Both widget JS copies synced
+
+### Backlog
+- Marked 11 items as complete (were already built in previous sessions)
+- Added 20 new backlog items (total unchecked: ~25)

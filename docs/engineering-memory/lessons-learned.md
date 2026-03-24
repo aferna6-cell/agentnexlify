@@ -44,3 +44,14 @@ analytics_team.py was written in Session 4 but referenced `created_by` (non-exis
 
 ### .get("key", "default") keeps regressing
 Session 3 fixed 15, Session 4 found 0 regressions, but Session 5 found 7 more in files that weren't checked (bids.py, reviews.py, content.py, jobs.py, widget_helpers.py). **Solution**: the grep pattern `\.get\("[^"]+",\s*"` should be run every session. Eventually add to pre-commit hook.
+
+## 2026-03-24 Session 6
+
+### Rebook dedup must key by appointment, not lead
+The rebook suggestion dedup used `lead_id` as the dedup key in activity_log, but `lead_id` is nullable on appointments. When NULL, `.eq("lead_id", None)` in Supabase/PostgreSQL never matches (NULL != NULL), so no dedup happened. **Solution**: key dedup by appointment ID (`rebook_sent_{appt_id}`), which is always non-null.
+
+### No-show detection should include pending status
+The original no-show detector only checked `status = 'confirmed'`. But appointments that were never confirmed (still pending) past their start time are also no-shows. Both confirmed and pending should be checked.
+
+### Many backlog items get completed but not marked
+11 backlog items were unchecked despite being built in sessions 4-5 (team performance, UTM tracking, sentiment analysis, widget chat hours, bulk invoices, lead nurture score). **Solution**: always scan backlog for done-but-unchecked items at session start.

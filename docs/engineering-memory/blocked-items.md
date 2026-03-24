@@ -42,3 +42,13 @@ _Things that need human intervention. Don't waste cycles retrying these._
 - Requires SEMrush or Ahrefs API subscription ($100+/mo)
 - Currently using AI-estimated scores which are directional but not precise
 - **Action needed:** Business decision on whether to invest in API access
+
+### Migration 070 (birthday_automation) not applied
+- Adds `birthday_enabled` and `birthday_message` columns to tenants
+- Birthday automation settings on SettingsPage will fail until applied
+- **Action needed:** Run migration 070 in Supabase SQL editor
+
+### Migration 071 (widget_proactive_greeting) not applied
+- Adds `proactive_enabled`, `proactive_delay_seconds`, `proactive_message` to widget_configs
+- Proactive greeting feature will fail silently (uses defaults)
+- **Action needed:** Run migration 071 in Supabase SQL editor
