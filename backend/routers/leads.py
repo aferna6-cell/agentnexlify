@@ -864,6 +864,100 @@ async def generate_lead_summary(
     return {"summary": summary}
 
 
+# --- Lead Activity Timeline ---
+
+
+@router.get("/{tenant_id}/{lead_id}/activity")
+async def get_lead_activity(
+    tenant_id: str,
+    lead_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Get activity timeline for a specific lead."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    # Verify lead exists
+    lead = (
+        db.table("leads")
+        .select("id")
+        .eq("id", lead_id)
+        .eq("client_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not lead.data:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Fetch activity log entries for this lead
+    activity = (
+        db.table("activity_log")
+        .select("id, activity_type, description, metadata, created_at")
+        .eq("tenant_id", tenant_id)
+        .eq("lead_id", lead_id)
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+
+    # Also fetch appointments for this lead
+    appointments = (
+        db.table("appointments")
+        .select("id, customer_name, start_time, status, created_at")
+        .eq("tenant_id", tenant_id)
+        .eq("lead_id", lead_id)
+        .order("start_time", desc=True)
+        .limit(20)
+        .execute()
+    )
+
+    # Also fetch email events for this lead
+    email_events = (
+        db.table("email_events")
+        .select("id, event_type, details, created_at")
+        .eq("tenant_id", tenant_id)
+        .eq("lead_id", lead_id)
+        .order("created_at", desc=True)
+        .limit(20)
+        .execute()
+    )
+
+    # Merge all into a single timeline
+    timeline = []
+
+    for a in (activity.data or []):
+        timeline.append({
+            "type": a.get("activity_type") or "activity",
+            "description": a.get("description") or "",
+            "metadata": a.get("metadata"),
+            "created_at": a["created_at"],
+        })
+
+    for appt in (appointments.data or []):
+        status = appt.get("status") or "scheduled"
+        timeline.append({
+            "type": f"appointment_{status}",
+            "description": f"Appointment ({status}): {appt.get('customer_name') or 'Customer'} at {appt.get('start_time', '')}",
+            "metadata": {"appointment_id": appt["id"]},
+            "created_at": appt["created_at"],
+        })
+
+    for ev in (email_events.data or []):
+        timeline.append({
+            "type": f"email_{ev.get('event_type', 'event')}",
+            "description": f"Email {ev.get('event_type', 'event')}",
+            "metadata": ev.get("details"),
+            "created_at": ev["created_at"],
+        })
+
+    # Sort by date descending
+    timeline.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+
+    return {"timeline": timeline[:100]}
+
+
 class BulkUpdateRequest(BaseModel):
     lead_ids: list[str] = Field(..., min_length=1, max_length=100)
     status: str | None = None

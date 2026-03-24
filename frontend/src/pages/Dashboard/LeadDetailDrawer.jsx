@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, requestReviewForLead } from "../../utils/api/leads";
+import { fetchLeadScore, sendLeadEmail, sendLeadSms, assignLead, requestReviewForLead, fetchLeadActivity } from "../../utils/api/leads";
 import { fetchTeamMembers } from "../../utils/api/team";
 import { fetchFieldDefinitions, fetchLeadFieldValues, updateLeadFieldValues } from "../../utils/api/misc";
 
@@ -65,6 +65,54 @@ function temperatureBadge(temp) {
       {temp.charAt(0).toUpperCase() + temp.slice(1).toLowerCase()}
     </span>
   );
+}
+
+const TIMELINE_ICONS = {
+  lead_created: { icon: "+", color: "#22c55e" },
+  lead_updated: { icon: "\u270E", color: "#00BFFF" },
+  assignment: { icon: "\u2192", color: "#8b5cf6" },
+  lead_suggestion: { icon: "\u2728", color: "#f5a623" },
+  appointment_scheduled: { icon: "\uD83D\uDCC5", color: "#22c55e" },
+  appointment_completed: { icon: "\u2713", color: "#22c55e" },
+  appointment_cancelled: { icon: "\u2717", color: "#ef4444" },
+  appointment_no_show: { icon: "!", color: "#f5a623" },
+  email_open: { icon: "\uD83D\uDCE7", color: "#00BFFF" },
+  email_click: { icon: "\uD83D\uDD17", color: "#8b5cf6" },
+  conversation_assigned: { icon: "\u21C4", color: "#8b5cf6" },
+  status_change: { icon: "\u2B06", color: "#00BFFF" },
+};
+
+function timelineIcon(type) {
+  const cfg = TIMELINE_ICONS[type] || { icon: "\u2022", color: "var(--text-muted)" };
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: 24,
+      height: 24,
+      borderRadius: "50%",
+      background: `${cfg.color}22`,
+      color: cfg.color,
+      fontSize: 12,
+      fontWeight: 700,
+      flexShrink: 0,
+    }}>
+      {cfg.icon}
+    </span>
+  );
+}
+
+function formatTimelineDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffH = diffMs / (1000 * 60 * 60);
+  if (diffH < 1) return `${Math.max(1, Math.floor(diffMs / 60000))}m ago`;
+  if (diffH < 24) return `${Math.floor(diffH)}h ago`;
+  if (diffH < 48) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function GenericScoreFactors({ lead }) {
@@ -200,6 +248,10 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   const [savingCustomFields, setSavingCustomFields] = useState(false);
   const [customFieldStatus, setCustomFieldStatus] = useState(null);
 
+  // Activity Timeline state
+  const [timeline, setTimeline] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+
   useEffect(() => {
     if (user?.tenantId && token) {
       fetchTeamMembers(user.tenantId, token)
@@ -218,6 +270,16 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
       setCustomFieldDefs(Array.isArray(defs) ? defs : (defs?.fields || []));
       setCustomFieldValues(vals && typeof vals === "object" ? vals : {});
     });
+  }, [user?.tenantId, token, lead.id]);
+
+  // Load activity timeline
+  useEffect(() => {
+    if (!user?.tenantId || !token || !lead.id) return;
+    setTimelineLoading(true);
+    fetchLeadActivity(user.tenantId, token, lead.id)
+      .then((data) => setTimeline(data.timeline || []))
+      .catch(() => setTimeline([]))
+      .finally(() => setTimelineLoading(false));
   }, [user?.tenantId, token, lead.id]);
 
   useEffect(() => {
@@ -694,6 +756,51 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               <div className="intel-row">
                 <span className="intel-label">Conversation</span>
                 <span className="intel-value" style={{ color: "var(--accent)" }}>Linked</span>
+              </div>
+            )}
+          </div>
+
+          {/* Activity Timeline */}
+          <div className="intel-section">
+            <div className="intel-title">Activity Timeline</div>
+            {timelineLoading ? (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "12px 0" }}>Loading...</div>
+            ) : timeline.length === 0 ? (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "12px 0" }}>No activity recorded yet.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {timeline.slice(0, 15).map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      padding: "8px 0",
+                      borderBottom: i < Math.min(timeline.length, 15) - 1 ? "1px solid var(--border-color, rgba(255,255,255,0.06))" : "none",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    {timelineIcon(item.type)}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: "0.82rem",
+                        color: "var(--text-primary)",
+                        lineHeight: 1.4,
+                        wordBreak: "break-word",
+                      }}>
+                        {item.description}
+                      </div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        {formatTimelineDate(item.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {timeline.length > 15 && (
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", padding: "8px 0", textAlign: "center" }}>
+                    +{timeline.length - 15} more events
+                  </div>
+                )}
               </div>
             )}
           </div>

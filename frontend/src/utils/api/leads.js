@@ -93,3 +93,7 @@ export function bulkUpdateLeads(tenantId, token, { lead_ids, status, assigned_to
     body: { lead_ids, status: status || undefined, assigned_to: assigned_to || undefined, tags_add: tags_add || undefined },
   });
 }
+
+export function fetchLeadActivity(tenantId, token, leadId) {
+  return request(`/api/v1/leads/${tenantId}/${leadId}/activity`, { token });
+}
