@@ -1,6 +1,7 @@
 """Appointment booking service — slot generation, conflict detection, lead linkage."""
 
 
+import html as html_mod
 import logging
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -311,21 +312,24 @@ def create_appointment(
     if customer_email:
         try:
             from backend.services.email_sender import send_email as _send_confirm_email
+            _safe_name = html_mod.escape(customer_name)
+            _safe_biz = html_mod.escape(_confirm_biz)
+            _safe_notes = html_mod.escape(notes) if notes else ""
             _send_confirm_email(
                 to=customer_email,
                 subject=f"Appointment Confirmed — {_confirm_biz}",
                 html=f"""
                 <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;">
                     <h2 style="color:#10b981;">Appointment Confirmed</h2>
-                    <p>Hi {customer_name},</p>
-                    <p>Your appointment with <strong>{_confirm_biz}</strong> has been confirmed:</p>
+                    <p>Hi {_safe_name},</p>
+                    <p>Your appointment with <strong>{_safe_biz}</strong> has been confirmed:</p>
                     <div style="background:#f9fafb;border-radius:8px;padding:16px;margin:16px 0;">
                         <p style="margin:4px 0;"><strong>Date & Time:</strong> {_confirm_formatted}</p>
-                        {f'<p style="margin:4px 0;"><strong>Notes:</strong> {notes}</p>' if notes else ''}
+                        {f'<p style="margin:4px 0;"><strong>Notes:</strong> {_safe_notes}</p>' if notes else ''}
                     </div>
                     <p style="color:#666;font-size:13px;">We look forward to seeing you!</p>
                     <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-                    <p style="color:#999;font-size:12px;">{_confirm_biz} — Powered by AgentNexLiFy</p>
+                    <p style="color:#999;font-size:12px;">{_safe_biz} — Powered by AgentNexLiFy</p>
                 </div>
                 """,
             )

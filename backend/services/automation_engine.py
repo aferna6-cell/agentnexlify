@@ -3425,8 +3425,11 @@ async def send_lead_reengagement_emails() -> int:
             continue
 
         # Build and send re-engagement email
+        import html as _html
         interest = lead.get("areas_of_interest") or ""
-        interest_line = f" regarding {interest}" if interest else ""
+        interest_line = f" regarding {_html.escape(interest)}" if interest else ""
+        safe_lead_name = _html.escape(lead_name)
+        safe_biz_name = _html.escape(biz_name)
 
         try:
             from backend.services.email_sender import send_email, build_unsubscribe_url
@@ -3437,11 +3440,11 @@ async def send_lead_reengagement_emails() -> int:
                 subject=f"Still interested? We're here to help — {biz_name}",
                 html=f"""
                 <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;">
-                    <p>Hi {lead_name},</p>
-                    <p>We noticed you reached out to {biz_name}{interest_line} a little while ago. We wanted to follow up and see if you still need help.</p>
+                    <p>Hi {safe_lead_name},</p>
+                    <p>We noticed you reached out to {safe_biz_name}{interest_line} a little while ago. We wanted to follow up and see if you still need help.</p>
                     <p>Whether you have questions, want to schedule an appointment, or just want to chat — we're here for you.</p>
                     <p>Simply reply to this email or visit our website to continue the conversation.</p>
-                    <p style="margin-top:24px;">Best regards,<br/><strong>{biz_name}</strong></p>
+                    <p style="margin-top:24px;">Best regards,<br/><strong>{safe_biz_name}</strong></p>
                     <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
                     <p style="color:#999;font-size:11px;"><a href="{unsub_url}" style="color:#999;">Unsubscribe</a></p>
                 </div>
@@ -3559,6 +3562,10 @@ async def escalate_overdue_invoices() -> int:
             pass
 
         # 1. Send urgent reminder to customer
+        import html as _html2
+        _safe_cust = _html2.escape(customer_name)
+        _safe_biz = _html2.escape(biz_name)
+        _safe_inv = _html2.escape(inv_number)
         if customer_email:
             try:
                 send_email(
@@ -3569,11 +3576,11 @@ async def escalate_overdue_invoices() -> int:
                         <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:16px;margin-bottom:16px;">
                             <h2 style="color:#dc2626;margin:0;">Payment Overdue</h2>
                         </div>
-                        <p>Hi {customer_name},</p>
-                        <p>Invoice <strong>{inv_number}</strong> for <strong>${total:.2f}</strong> was due on {due_date} and is now <strong>{days_overdue} days overdue</strong>.</p>
+                        <p>Hi {_safe_cust},</p>
+                        <p>Invoice <strong>{_safe_inv}</strong> for <strong>${total:.2f}</strong> was due on {due_date} and is now <strong>{days_overdue} days overdue</strong>.</p>
                         <p>Please arrange payment at your earliest convenience.</p>
                         <p>If you've already paid, please disregard this notice.</p>
-                        <p style="margin-top:24px;">Thank you,<br/><strong>{biz_name}</strong></p>
+                        <p style="margin-top:24px;">Thank you,<br/><strong>{_safe_biz}</strong></p>
                     </div>
                     """,
                 )
@@ -3588,11 +3595,11 @@ async def escalate_overdue_invoices() -> int:
                     subject=f"Invoice {inv_number} is {days_overdue} days overdue (${total:.2f})",
                     html=f"""
                     <h2>Overdue Invoice Alert</h2>
-                    <p>Invoice <strong>{inv_number}</strong> for <strong>{customer_name}</strong> is {days_overdue} days past due.</p>
+                    <p>Invoice <strong>{_safe_inv}</strong> for <strong>{_safe_cust}</strong> is {days_overdue} days past due.</p>
                     <table style="border-collapse:collapse;margin:12px 0;">
                         <tr><td style="padding:4px 12px 4px 0;color:#666;">Amount:</td><td><strong>${total:.2f}</strong></td></tr>
                         <tr><td style="padding:4px 12px 4px 0;color:#666;">Due Date:</td><td>{due_date}</td></tr>
-                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Customer:</td><td>{customer_name}</td></tr>
+                        <tr><td style="padding:4px 12px 4px 0;color:#666;">Customer:</td><td>{_safe_cust}</td></tr>
                     </table>
                     """,
                 )
