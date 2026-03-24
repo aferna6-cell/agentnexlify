@@ -50,3 +50,14 @@ export function createItemTemplate(tenantId, token, data) {
 export function deleteItemTemplate(tenantId, token, templateId) {
   return request(`/api/v1/invoices/${tenantId}/item-templates/${templateId}`, { method: "DELETE", token });
 }
+export function exportInvoicesCSV(tenantId, token, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.start_date) params.set("start_date", filters.start_date);
+  if (filters.end_date) params.set("end_date", filters.end_date);
+  if (filters.status) params.set("status", filters.status);
+  const qs = params.toString();
+  const base = import.meta.env.VITE_API_BASE || "";
+  return fetch(`${base}/api/v1/invoices/${tenantId}/export${qs ? "?" + qs : ""}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

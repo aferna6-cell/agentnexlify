@@ -1235,3 +1235,92 @@ async def record_partial_payment(
         raise HTTPException(status_code=500, detail="Failed to record payment")
 
     return result.data[0]
+
+
+# ---------------------------------------------------------------------------
+# Invoice Export to CSV
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/export")
+async def export_invoices_csv(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    start_date: str | None = Query(None, description="Start date filter (YYYY-MM-DD)"),
+    end_date: str | None = Query(None, description="End date filter (YYYY-MM-DD)"),
+    status_filter: str | None = Query(None, alias="status", description="Filter by status"),
+):
+    """Export all invoices as CSV download. Supports date range and status filters."""
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    query = (
+        db.table("invoices")
+        .select("invoice_number, status, subtotal, tax_amount, total, due_date, paid_at, payment_method, lead_id, created_at, items_json, is_recurring, deposit_amount, amount_paid")
+        .eq("tenant_id", tenant_id)
+        .order("created_at", desc=True)
+        .limit(5000)
+    )
+    if start_date:
+        query = query.gte("created_at", f"{start_date}T00:00:00Z")
+    if end_date:
+        query = query.lte("created_at", f"{end_date}T23:59:59Z")
+    if status_filter:
+        query = query.eq("status", status_filter)
+
+    result = query.execute()
+    invoices = result.data or []
+
+    # Resolve lead names
+    lead_ids = list(set(inv.get("lead_id") for inv in invoices if inv.get("lead_id")))
+    lead_map: dict[str, str] = {}
+    if lead_ids:
+        try:
+            leads_r = db.table("leads").select("id, name, email").in_("id", lead_ids[:200]).execute()
+            for l in (leads_r.data or []):
+                lead_map[l["id"]] = l.get("name") or l.get("email") or ""
+        except Exception:
+            pass
+
+    import csv
+    import io
+    from starlette.responses import StreamingResponse
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Invoice Number", "Status", "Customer", "Subtotal", "Tax", "Total",
+        "Amount Paid", "Deposit", "Due Date", "Paid At", "Payment Method",
+        "Items", "Recurring", "Created At",
+    ])
+    for inv in invoices:
+        items = inv.get("items_json") or []
+        items_str = "; ".join(
+            f"{i.get('description', '')} x{i.get('quantity', 1)} @ ${float(i.get('unit_price', 0)):.2f}"
+            for i in items
+        )
+        writer.writerow([
+            inv.get("invoice_number") or "",
+            inv.get("status") or "",
+            lead_map.get(inv.get("lead_id") or "", ""),
+            f"{float(inv.get('subtotal') or 0):.2f}",
+            f"{float(inv.get('tax_amount') or 0):.2f}",
+            f"{float(inv.get('total') or 0):.2f}",
+            f"{float(inv.get('amount_paid') or 0):.2f}",
+            f"{float(inv.get('deposit_amount') or 0):.2f}",
+            inv.get("due_date") or "",
+            inv.get("paid_at") or "",
+            inv.get("payment_method") or "",
+            items_str,
+            "Yes" if inv.get("is_recurring") else "No",
+            (inv.get("created_at") or "")[:10],
+        ])
+
+    output.seek(0)
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="invoices-{today_str}.csv"'},
+    )

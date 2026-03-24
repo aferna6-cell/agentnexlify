@@ -13,6 +13,7 @@ import {
   fetchItemTemplates,
   createItemTemplate,
   recordPayment,
+  exportInvoicesCSV,
 } from "../utils/api/invoices";
 import { fetchLeads } from "../utils/api/leads";
 import { fetchBids } from "../utils/api/bids";
@@ -381,6 +382,31 @@ export default function InvoicesPage() {
             }}
           >
             Refresh
+          </button>
+          <button
+            className="btn-primary"
+            onClick={async () => {
+              try {
+                const resp = await exportInvoicesCSV(tenantId, token, { status: activeFilter !== "all" ? activeFilter : undefined });
+                if (!resp.ok) throw new Error("Export failed");
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error("Export failed:", err);
+              }
+            }}
+            style={{
+              background: "transparent",
+              border: "1px solid var(--border-color)",
+              color: "var(--text-primary)",
+            }}
+          >
+            Export CSV
           </button>
           <button className="btn-primary" onClick={openCreate}>
             + Create Invoice

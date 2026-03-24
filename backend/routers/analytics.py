@@ -1021,3 +1021,114 @@ async def no_show_stats(
         "completed_count": len([a for a in all_appts if a.get("status") == "completed"]),
         "repeat_no_shows": repeat_no_shows[:20],
     }
+
+
+# ---------------------------------------------------------------------------
+# Appointment Type Analytics (Service Type Breakdown)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{tenant_id}/appointment-types")
+async def get_appointment_type_analytics(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    days: int = Query(30, ge=7, le=365),
+):
+    """Analyze appointment data by service type: popularity, revenue, no-show rates."""
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    cache_key = f"appt_types:{tenant_id}:{days}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    db = get_supabase()
+    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    # Get service types for this tenant
+    service_types = {}
+    try:
+        st_result = db.table("service_types").select("id, name, duration_minutes, price").eq("tenant_id", tenant_id).execute()
+        for st in (st_result.data or []):
+            service_types[st["id"]] = st
+    except Exception:
+        logger.warning("appointment_type_analytics: failed to fetch service types for %s", tenant_id, exc_info=True)
+
+    # Get appointments in period
+    try:
+        appts_result = (
+            db.table("appointments")
+            .select("id, status, notes, start_time, customer_name")
+            .eq("tenant_id", tenant_id)
+            .gte("start_time", start)
+            .limit(_QUERY_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("appointment_type_analytics: failed to fetch appointments for %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch appointments")
+
+    appts = appts_result.data or []
+
+    # Group by service type (extracted from notes or default)
+    type_stats: dict[str, dict] = defaultdict(lambda: {
+        "name": "General",
+        "count": 0,
+        "completed": 0,
+        "no_show": 0,
+        "cancelled": 0,
+        "revenue_estimate": 0.0,
+    })
+
+    for appt in appts:
+        # Try to identify service type from notes
+        notes = appt.get("notes") or ""
+        matched_type = "general"
+        matched_name = "General"
+        matched_price = 0.0
+
+        for st_id, st_info in service_types.items():
+            st_name = st_info.get("name") or ""
+            if st_name.lower() in notes.lower():
+                matched_type = st_id
+                matched_name = st_name
+                matched_price = float(st_info.get("price") or 0)
+                break
+
+        stats = type_stats[matched_type]
+        stats["name"] = matched_name
+        stats["count"] += 1
+
+        status = appt.get("status") or ""
+        if status == "completed":
+            stats["completed"] += 1
+            stats["revenue_estimate"] += matched_price
+        elif status == "no_show":
+            stats["no_show"] += 1
+        elif status == "cancelled":
+            stats["cancelled"] += 1
+
+    # Convert to sorted list
+    breakdown = []
+    for type_id, stats in type_stats.items():
+        no_show_rate = round(stats["no_show"] / stats["count"] * 100, 1) if stats["count"] > 0 else 0
+        breakdown.append({
+            "service_type": stats["name"],
+            "total": stats["count"],
+            "completed": stats["completed"],
+            "no_show": stats["no_show"],
+            "no_show_rate": no_show_rate,
+            "cancelled": stats["cancelled"],
+            "revenue_estimate": round(stats["revenue_estimate"], 2),
+        })
+    breakdown.sort(key=lambda x: x["total"], reverse=True)
+
+    result = {
+        "period_days": days,
+        "total_appointments": len(appts),
+        "service_types_configured": len(service_types),
+        "breakdown": breakdown[:20],
+    }
+    _set_cached(cache_key, result)
+    return result
