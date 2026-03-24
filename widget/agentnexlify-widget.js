@@ -765,6 +765,11 @@
   let menuItems = null; // Array of {name, description, price, category} or null
   let businessType = ""; // e.g. "legal", "restaurant", "dental"
 
+  // Proactive greeting state
+  let proactiveEnabled = false;
+  let proactiveDelay = 30; // seconds
+  let proactiveMessage = null;
+
   // Booking state
   let tenantId = "";
   let bookingEnabled = false;
@@ -792,6 +797,10 @@
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
       }
+      // Proactive greeting settings
+      proactiveEnabled = data.proactive_enabled || false;
+      proactiveDelay = data.proactive_delay_seconds || 30;
+      if (data.proactive_message) proactiveMessage = data.proactive_message;
     } catch (e) {
       console.warn("AgentNexLiFy: Failed to fetch config", e);
     }
@@ -1582,23 +1591,26 @@
     });
     input.addEventListener("input", () => autoResize(input));
 
-    // Auto-open after 5 seconds if no history and not manually closed
+    // Auto-open: use proactive delay if configured, otherwise 5s default
     const savedState = localStorage.getItem(STATE_KEY);
     if (savedState === "open") {
       toggleWindow(true);
     } else if (history.length === 0 && savedState !== "closed") {
+      const delayMs = proactiveEnabled ? (proactiveDelay * 1000) : 5000;
       setTimeout(() => {
         if (!isOpen && !hasAutoOpened) {
           hasAutoOpened = true;
           toggleWindow(true);
-          // Send initial greeting
-          if (
-            document.getElementById("anx-messages").children.length === 0
-          ) {
-            triggerGreeting();
+          if (document.getElementById("anx-messages").children.length === 0) {
+            if (proactiveEnabled && proactiveMessage) {
+              // Show the proactive message directly without API call
+              addMessage("assistant", proactiveMessage);
+            } else {
+              triggerGreeting();
+            }
           }
         }
-      }, 5000);
+      }, delayMs);
     }
   }
 

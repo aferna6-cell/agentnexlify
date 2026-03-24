@@ -157,6 +157,9 @@ class WidgetConfigDetail(BaseModel):
     branding: dict | None = None
     is_online: bool = True
     offline_message: str | None = None
+    proactive_enabled: bool = False
+    proactive_delay_seconds: int = 30
+    proactive_message: str | None = None
 
 
 class DashboardResponse(BaseModel):
@@ -206,6 +209,9 @@ class WidgetConfigUpdateRequest(BaseModel):
     branding: BrandingConfig | None = None
     chat_hours_enabled: bool | None = None
     chat_hours: dict | None = None
+    proactive_enabled: bool | None = None
+    proactive_delay_seconds: int | None = None
+    proactive_message: str | None = None
 
 
 class FaqEntryResponse(BaseModel):
@@ -308,6 +314,9 @@ class WidgetConfigResponse(BaseModel):
     offline_message: str | None = None
     menu_items: list[dict] | None = None
     business_type: str | None = None
+    proactive_enabled: bool = False
+    proactive_delay_seconds: int = 30
+    proactive_message: str | None = None
 
 
 class WidgetLeadRequest(BaseModel):

@@ -224,6 +224,9 @@ async def get_config(request: Request, api_key: str):
         offline_message=widget.get("offline_message"),
         menu_items=menu_items,
         business_type=tenant.get("business_type"),
+        proactive_enabled=widget.get("proactive_enabled", False),
+        proactive_delay_seconds=widget.get("proactive_delay_seconds", 30),
+        proactive_message=widget.get("proactive_message"),
     )
 
 

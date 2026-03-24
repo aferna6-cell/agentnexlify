@@ -47,6 +47,9 @@ export default function WidgetPage() {
     primary_color: "#00BFFF",
     greeting_message: "",
     position: "bottom-right",
+    proactive_enabled: false,
+    proactive_delay_seconds: 30,
+    proactive_message: "Hi there! Is there anything I can help you with today?",
   });
   const [isOnline, setIsOnline] = useState(true);
   const [togglingOnline, setTogglingOnline] = useState(false);
@@ -86,6 +89,9 @@ export default function WidgetPage() {
           primary_color: dash.widget_config.primary_color || "#00BFFF",
           greeting_message: dash.widget_config.greeting_message || "",
           position: dash.widget_config.position || "bottom-right",
+          proactive_enabled: dash.widget_config.proactive_enabled || false,
+          proactive_delay_seconds: dash.widget_config.proactive_delay_seconds || 30,
+          proactive_message: dash.widget_config.proactive_message || "Hi there! Is there anything I can help you with today?",
         });
         setIsOnline(dash.widget_config.is_online !== false);
         if (dash.widget_config.branding) {
@@ -353,6 +359,55 @@ export default function WidgetPage() {
             <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "8px 0 0" }}>
               When disabled, the widget uses the manual Online/Offline toggle above.
             </p>
+          )}
+        </div>
+
+        {/* Proactive Greeting */}
+        <div className="settings-card">
+          <h3>Proactive Greeting</h3>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 12 }}>
+            Auto-open the widget after a visitor has been on your page for a set time, with a friendly message to start the conversation.
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <input
+              type="checkbox"
+              id="proactive-toggle"
+              checked={form.proactive_enabled}
+              onChange={(e) => setForm((f) => ({ ...f, proactive_enabled: e.target.checked }))}
+            />
+            <label htmlFor="proactive-toggle" style={{ cursor: "pointer" }}>
+              <strong>Enable proactive greeting</strong>
+            </label>
+          </div>
+          {form.proactive_enabled && (
+            <>
+              <div className="settings-field">
+                <label>Delay (seconds)</label>
+                <input
+                  type="number"
+                  min={5}
+                  max={120}
+                  value={form.proactive_delay_seconds}
+                  onChange={(e) => setForm((f) => ({ ...f, proactive_delay_seconds: parseInt(e.target.value) || 30 }))}
+                  style={{ width: 100 }}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Widget opens after this many seconds of inactivity (5-120)
+                </span>
+              </div>
+              <div className="settings-field">
+                <label>Proactive Message</label>
+                <textarea
+                  value={form.proactive_message}
+                  onChange={(e) => setForm((f) => ({ ...f, proactive_message: e.target.value }))}
+                  placeholder="Hi there! Is there anything I can help you with today?"
+                  rows={2}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  This message appears as the first AI message when the widget auto-opens.
+                </span>
+              </div>
+            </>
           )}
         </div>
 

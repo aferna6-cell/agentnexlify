@@ -473,27 +473,52 @@ _Added during session 2026-03-23 code audit. Focused on reliability, engagement,
 - [ ] **Voice message transcription in widget** — Allow widget visitors to record voice messages. Transcribe via Whisper API and save as text in chat_messages. Business owner sees both transcript and audio player.
 - [x] **Invoice recurring auto-generation** — DONE 2026-03-23. Background task in 5-min automation loop. — For leads with is_recurring invoices, auto-generate the next invoice on next_invoice_date. Background task in automation loop. Currently the fields exist but nothing processes them.
 - [ ] **Lead import from Google Contacts** — OAuth to Google Contacts, import contacts as leads with name/email/phone. One-click import for businesses switching from paper/spreadsheet tracking.
-- [ ] **Dashboard customizable widgets** — Let business owners rearrange and show/hide dashboard widgets (stats cards, recent leads, today's appointments, AI insights). Store layout preference in tenants table as JSONB.
+- [x] **Dashboard customizable widgets** — DONE 2026-03-24. — Let business owners rearrange and show/hide dashboard widgets (stats cards, recent leads, today's appointments, AI insights). Store layout preference in tenants table as JSONB.
 
 ## Features — New Opportunities (2026-03-23 Session 2)
 
 _Added during second session on 2026-03-23. Thinking like a small business owner using AgentNexLiFy daily._
 
 - [x] **Appointment check-in system** — DONE 2026-03-23. POST /{tenant_id}/{appointment_id}/check-in endpoint + Calendar UI Check In button.
-- [ ] **Customer birthday automation** — Auto-send birthday email/SMS with a special offer or greeting. Uses leads.date_of_birth. Configurable message template on Settings page. Great retention tool for salons and dental offices.
-- [ ] **Team member performance dashboard** — Per-team-member metrics: conversations handled, average response time, leads assigned, appointments booked. Helps business owners see who's contributing. Tab on Analytics page.
-- [ ] **Lead source UTM tracking** — Capture UTM parameters from the widget embed page URL. Store utm_source, utm_medium, utm_campaign on leads. Analytics breakdown by campaign. Help businesses know which ads drive leads.
-- [ ] **Automated appointment follow-up survey** — After appointment completion, auto-send a 3-question satisfaction survey via email. Results stored in csat_responses. Simpler than the current CSAT flow.
-- [ ] **Widget chat hours** — Set specific hours when the AI chat is active vs showing the offline form. Different from business hours — some businesses want chat 24/7 but appointments only during business hours. Separate schedule in widget_configs.
-- [ ] **Bulk invoice generation** — Select multiple leads and generate invoices for all of them at once. Useful for monthly service businesses (lawn care, cleaning) that bill the same amount to many clients.
-- [ ] **Lead nurture score** — Track how engaged a lead is with automated emails. Opens = +1, clicks = +3, replies = +5. Separate from the main lead score. Shows which leads are warming up or going cold.
-- [ ] **Dashboard mobile responsive** — The dashboard currently doesn't look great on phones. Add responsive breakpoints, collapsible sidebar, touch-friendly controls. Business owners check their dashboard on their phone between jobs.
+- [x] **Customer birthday automation** — DONE 2026-03-24. — Auto-send birthday email/SMS with a special offer or greeting. Uses leads.date_of_birth. Configurable message template on Settings page. Great retention tool for salons and dental offices.
+- [x] **Team member performance dashboard** — DONE 2026-03-24 Session 5. — Per-team-member metrics: conversations handled, average response time, leads assigned, appointments booked. Helps business owners see who's contributing. Tab on Analytics page.
+- [x] **Lead source UTM tracking** — DONE 2026-03-24 Session 5. — Capture UTM parameters from the widget embed page URL. Store utm_source, utm_medium, utm_campaign on leads. Analytics breakdown by campaign. Help businesses know which ads drive leads.
+- [x] **Automated appointment follow-up survey** — ALREADY DONE. — After appointment completion, auto-send a 3-question satisfaction survey via email. Results stored in csat_responses. Simpler than the current CSAT flow.
+- [x] **Widget chat hours** — DONE 2026-03-24 Session 5. — Set specific hours when the AI chat is active vs showing the offline form. Different from business hours — some businesses want chat 24/7 but appointments only during business hours. Separate schedule in widget_configs.
+- [x] **Bulk invoice generation** — DONE 2026-03-24 Session 5. — Select multiple leads and generate invoices for all of them at once. Useful for monthly service businesses (lawn care, cleaning) that bill the same amount to many clients.
+- [x] **Lead nurture score** — DONE 2026-03-24 Session 5. — Track how engaged a lead is with automated emails. Opens = +1, clicks = +3, replies = +5. Separate from the main lead score. Shows which leads are warming up or going cold.
+- [x] **Dashboard mobile responsive** — DONE 2026-03-24. — The dashboard currently doesn't look great on phones. Add responsive breakpoints, collapsible sidebar, touch-friendly controls. Business owners check their dashboard on their phone between jobs.
 - [x] **Appointment buffer zones** — DONE 2026-03-23. Fixed conflict detection in booking.py to extend booked ranges by buffer_minutes.
-- [ ] **Conversation sentiment analysis** — After each conversation ends, Claude analyzes overall sentiment (positive/neutral/negative). Store on conversations table. Dashboard shows sentiment distribution. Alerts on negative conversations.
-- [ ] **Quick actions from notification bell** — Currently notifications just show info. Add action buttons: "Reply" to a conversation, "Call back" for missed calls, "View lead" for new leads. Reduces clicks to take action.
+- [x] **Conversation sentiment analysis** — DONE 2026-03-24 Session 5. — After each conversation ends, Claude analyzes overall sentiment (positive/neutral/negative). Store on conversations table. Dashboard shows sentiment distribution. Alerts on negative conversations.
+- [x] **Quick actions from notification bell** — DONE 2026-03-24. — Currently notifications just show info. Add action buttons: "Reply" to a conversation, "Call back" for missed calls, "View lead" for new leads. Reduces clicks to take action.
 - [x] **Stripe payment webhook for invoices** — DONE 2026-03-23. Auto-updates invoice to paid via checkout.session.completed metadata.
 - [x] **Widget typing indicator** — ALREADY DONE. showTyping()/hideTyping() with bouncing dots already exists in widget JS.
 - [x] **Lead export to CSV** — DONE 2026-03-23. GET /leads/{tenant_id}/export returns CSV download. Frontend Export CSV button on LeadsPage.
 - [x] **Conversation auto-close** — DONE 2026-03-23. auto_close_inactive_conversations() runs every 5 min, closes conversations inactive >24h.
 - [x] **AI-generated FAQ suggestions** — DONE 2026-03-23. POST /faq/{tenant_id}/suggest analyzes conversations via Claude, suggests Q&A pairs.
 - [x] **Appointment reschedule (not just cancel)** — DONE 2026-03-23. POST /reschedule endpoint with email+SMS notifications, activity log, webhook. Calendar UI.
+
+## Features — New Opportunities (2026-03-24 Session 6)
+
+_Added during session 2026-03-24. Thinking like a small business owner paying $249/mo who needs the platform to run their business._
+
+- [ ] **Appointment recurring revenue report** — Monthly report showing total revenue from recurring appointments. Helps service businesses (lawn care, cleaning, salons) see MRR from repeat customers. Dashboard card + AnalyticsPage section.
+- [ ] **Lead scoring decay** — Leads that haven't interacted in 30+ days should have their score decay automatically. Prevents stale leads from clogging hot lists. Background task in automation loop.
+- [ ] **SMS conversation in widget** — Allow business owners to send SMS to leads directly from the ConversationsPage (not just email). Uses existing Twilio integration. Reply button shows channel toggle (email/SMS).
+- [ ] **Automated lead re-engagement** — When a lead goes cold (no interaction for 14+ days), auto-send a "we haven't heard from you" email. Configurable on Settings page. Dedup via activity_log.
+- [ ] **Invoice payment receipt** — When an invoice is paid (via Stripe webhook or manual), auto-send a receipt email to the customer with payment details. Currently only the business owner is notified.
+- [ ] **Appointment type analytics** — If service types are configured, show which service types are most popular, highest revenue, most no-shows. Helps businesses optimize their offerings.
+- [ ] **Widget conversation rating** — At the end of each chat, show a simple thumbs up/down or 1-5 star rating. Store in a new column on conversations. Dashboard shows average rating.
+- [ ] **Lead duplicate merge from widget** — When the widget captures a lead with an email/phone matching an existing lead, auto-merge instead of creating a duplicate. Currently the dedup only works on manual import.
+- [ ] **Export invoices to CSV/PDF** — Business owners need to export invoices for tax season. CSV export of all invoices with date range filter. Optional: generate PDF bundle.
+- [ ] **Appointment confirmation via SMS** — After an appointment is booked (through widget or dashboard), send an instant SMS confirmation to the customer with date, time, and business details.
+- [ ] **Custom dashboard greeting** — Let business owners customize the dashboard greeting message (currently "Welcome back, {name}"). Some want their company motto or daily affirmation.
+- [ ] **Lead activity heatmap** — Show which hours of the day and days of the week get the most lead activity. Helps businesses staff appropriately. Uses chat_messages.created_at data.
+- [ ] **Bulk SMS from leads page** — Select multiple leads and send a quick SMS message to all of them. Different from marketing campaigns — this is a quick one-off text blast from the leads table.
+- [ ] **Widget proactive greeting** — After a visitor has been on the page for X seconds without interacting, auto-open the widget with a proactive message like "Hi! Can I help you find something?" Configurable delay and message in WidgetPage.
+- [ ] **Invoice overdue escalation** — If an invoice is overdue by 7+ days, escalate: send a more urgent reminder, notify the business owner, and add a "past due" flag visible on the leads page.
+- [ ] **Appointment waitlist priority** — Let business owners set priority levels on waitlist entries (VIP, regular). VIP customers get notified first when a slot opens up.
+- [ ] **Lead timeline export** — Export a lead's full activity timeline as a PDF for printing or sharing. Useful for contractors who need to show project history to clients.
+- [ ] **Widget visitor analytics** — Track how many unique visitors see the widget vs. how many start a conversation. Conversion funnel: widget loaded → chat started → lead captured → appointment booked.
+- [ ] **Batch appointment creation** — Create appointments for multiple leads at once (e.g., "All my Monday regulars"). Select leads, pick a time slot pattern, and generate appointments in bulk.
+- [ ] **AI-powered review response suggestions** — When a new review comes in, auto-generate a suggested response and notify the business owner. Currently the owner has to click "Generate AI Response" manually.
