@@ -6,6 +6,7 @@ dedicated /webhooks/ URL while keeping the logic in one place.
 
 
 import logging
+from datetime import datetime, timezone
 
 import stripe
 from fastapi import APIRouter, HTTPException, Request
@@ -18,6 +19,7 @@ from backend.routers.billing import (
     _handle_subscription_deleted,
     _handle_subscription_updated,
 )
+from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,12 @@ async def stripe_webhook(request: Request):
 
     try:
         if event_type == "checkout.session.completed":
-            _handle_checkout_completed(db, data)
+            # Check if this is an invoice payment (has invoice_id in metadata)
+            metadata = data.get("metadata") or {}
+            if metadata.get("invoice_id") and metadata.get("tenant_id"):
+                _handle_invoice_payment(db, data)
+            else:
+                _handle_checkout_completed(db, data)
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             _handle_subscription_updated(db, data)
         elif event_type == "customer.subscription.deleted":
@@ -62,3 +69,73 @@ async def stripe_webhook(request: Request):
         raise HTTPException(status_code=500, detail="Webhook handler failed")
 
     return {"status": "ok"}
+
+
+def _handle_invoice_payment(db, session: dict) -> None:
+    """Handle payment for an AgentNexLiFy invoice (via Stripe Payment Link).
+
+    Updates the invoice status to 'paid', records payment details,
+    fires an invoice.paid webhook event, and logs the activity.
+    """
+    metadata = session.get("metadata") or {}
+    invoice_id = metadata.get("invoice_id")
+    tenant_id = metadata.get("tenant_id")
+    amount_total = session.get("amount_total", 0)  # in cents
+    payment_intent = session.get("payment_intent")
+
+    if not invoice_id or not tenant_id:
+        logger.warning("_handle_invoice_payment: missing invoice_id or tenant_id in metadata")
+        return
+
+    logger.info("Invoice payment received: invoice_id=%s, tenant_id=%s, amount=%s",
+                invoice_id, tenant_id, amount_total)
+
+    # Update the invoice to 'paid'
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        result = db.table("invoices").update({
+            "status": "paid",
+            "paid_at": now_iso,
+            "amount_paid": round(amount_total / 100, 2),
+            "payment_method": "stripe",
+            "stripe_payment_id": payment_intent,
+        }).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+
+        if not result.data:
+            logger.warning("Invoice %s not found for tenant %s", invoice_id, tenant_id)
+            return
+
+        invoice = result.data[0]
+        logger.info("Invoice %s marked as paid (amount: $%.2f)",
+                     invoice.get("invoice_number", invoice_id), round(amount_total / 100, 2))
+    except Exception:
+        logger.exception("Failed to update invoice %s to paid", invoice_id)
+        return
+
+    # Fire webhook event
+    try:
+        fire_event_background(tenant_id, "invoice.paid", {
+            "invoice_id": invoice_id,
+            "invoice_number": invoice.get("invoice_number"),
+            "total": float(invoice.get("total", 0)),
+            "amount_paid": round(amount_total / 100, 2),
+            "payment_method": "stripe",
+            "lead_id": invoice.get("lead_id"),
+            "paid_at": now_iso,
+        })
+    except Exception:
+        logger.warning("Failed to fire invoice.paid webhook for %s", invoice_id, exc_info=True)
+
+    # Log activity
+    try:
+        from backend.services.activity import log_activity
+        lead_id = invoice.get("lead_id")
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="invoice_paid",
+            description=f"Invoice {invoice.get('invoice_number', '')} paid (${round(amount_total / 100, 2):.2f})",
+            lead_id=lead_id,
+            metadata={"invoice_id": invoice_id, "amount": round(amount_total / 100, 2)},
+        )
+    except Exception:
+        logger.warning("Failed to log invoice.paid activity for %s", invoice_id, exc_info=True)
