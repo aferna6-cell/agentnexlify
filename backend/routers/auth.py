@@ -989,7 +989,7 @@ async def billing_checkout(
     tenant = result.data[0]
 
     customer = get_or_create_customer(
-        email=tenant.get("owner_email", ""),
+        email=tenant.get("owner_email") or "",
         tenant_id=tenant_id,
         business_name=tenant.get("business_name"),
     )
