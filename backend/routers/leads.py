@@ -862,3 +862,62 @@ async def generate_lead_summary(
     db.table("leads").update({"conversation_summary": summary}).eq("id", lead_id).execute()
 
     return {"summary": summary}
+
+
+class BulkUpdateRequest(BaseModel):
+    lead_ids: list[str] = Field(..., min_length=1, max_length=100)
+    status: str | None = None
+    assigned_to: str | None = None
+    tags_add: list[str] | None = None  # Tags to add (union with existing)
+
+
+@router.post("/{tenant_id}/bulk-update")
+async def bulk_update_leads(
+    tenant_id: str,
+    req: BulkUpdateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Update status, assignment, or tags for multiple leads at once."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if not req.status and not req.assigned_to and not req.tags_add:
+        raise HTTPException(status_code=400, detail="Nothing to update. Provide status, assigned_to, or tags_add.")
+
+    db = get_supabase()
+    updated = 0
+    errors = []
+
+    for lead_id in req.lead_ids:
+        try:
+            update_data = {}
+            if req.status:
+                update_data["status"] = req.status
+            if req.assigned_to is not None:
+                update_data["assigned_to"] = req.assigned_to if req.assigned_to else None
+
+            if req.tags_add:
+                # Fetch existing tags and merge
+                existing = db.table("leads").select("tags").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                if existing.data:
+                    current_tags = existing.data[0].get("tags") or []
+                    merged = list(set(current_tags + req.tags_add))
+                    update_data["tags"] = merged
+
+            if update_data:
+                result = (
+                    db.table("leads")
+                    .update(update_data)
+                    .eq("id", lead_id)
+                    .eq("client_id", tenant_id)
+                    .execute()
+                )
+                if result.data:
+                    updated += 1
+                else:
+                    errors.append(lead_id)
+        except Exception as e:
+            logger.warning("Bulk update failed for lead %s: %s", lead_id, str(e))
+            errors.append(lead_id)
+
+    return {"updated": updated, "failed": len(errors), "failed_ids": errors}

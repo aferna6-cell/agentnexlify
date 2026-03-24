@@ -86,3 +86,10 @@ export function fetchLeadSuggestions(tenantId, token) {
 export function handleLeadSuggestion(tenantId, token, suggestionId, action) {
   return request(`/api/v1/leads/${tenantId}/suggestions/${suggestionId}`, { method: "POST", token, body: { action } });
 }
+
+export function bulkUpdateLeads(tenantId, token, { lead_ids, status, assigned_to, tags_add }) {
+  return request(`/api/v1/leads/${tenantId}/bulk-update`, {
+    method: "POST", token,
+    body: { lead_ids, status: status || undefined, assigned_to: assigned_to || undefined, tags_add: tags_add || undefined },
+  });
+}

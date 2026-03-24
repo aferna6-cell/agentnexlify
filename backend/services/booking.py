@@ -263,7 +263,78 @@ def create_appointment(
     except Exception:
         logger.warning("Failed to sync appointment %s to Google Calendar", appointment["id"], exc_info=True)
 
+    # Send confirmation to customer (best-effort, background)
+    try:
+        _send_appointment_confirmation(tenant_id, appointment)
+    except Exception:
+        logger.warning("Failed to send appointment confirmation for %s", appointment["id"], exc_info=True)
+
     return appointment
+
+
+def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> None:
+    """Send booking confirmation via email and/or SMS to the customer."""
+    from backend.services.email_sender import send_email
+    from backend.services.twilio_service import send_sms
+
+    db = get_supabase()
+    tenant = db.table("tenants").select("business_name, business_phone").eq("id", tenant_id).limit(1).execute()
+    business_name = tenant.data[0]["business_name"] if tenant.data else "Our business"
+    business_phone = (tenant.data[0].get("business_phone") or "") if tenant.data else ""
+
+    customer_name = appointment.get("customer_name", "Customer")
+    customer_email = appointment.get("customer_email")
+    customer_phone = appointment.get("customer_phone")
+    start_time = appointment.get("start_time", "")
+
+    # Parse the start time for display
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+        display_date = dt.strftime("%A, %B %d, %Y")
+        display_time = dt.strftime("%I:%M %p")
+    except Exception:
+        display_date = start_time
+        display_time = ""
+
+    # Send email confirmation
+    if customer_email:
+        try:
+            html_body = f"""
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2563eb;">Appointment Confirmed!</h2>
+                <p>Hi {customer_name},</p>
+                <p>Your appointment has been booked with <strong>{business_name}</strong>.</p>
+                <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                    <p style="margin: 4px 0;"><strong>Date:</strong> {display_date}</p>
+                    <p style="margin: 4px 0;"><strong>Time:</strong> {display_time}</p>
+                    {f'<p style="margin: 4px 0;"><strong>Notes:</strong> {appointment.get("notes", "")}</p>' if appointment.get("notes") else ""}
+                </div>
+                <p>If you need to reschedule or cancel, please contact us{f" at {business_phone}" if business_phone else ""}.</p>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">— {business_name}</p>
+            </div>
+            """
+            send_email(
+                to_email=customer_email,
+                subject=f"Appointment Confirmed - {business_name}",
+                html_body=html_body,
+            )
+            logger.info("Sent appointment confirmation email to %s for tenant %s", customer_email, tenant_id)
+        except Exception:
+            logger.warning("Failed to send appointment confirmation email to %s", customer_email, exc_info=True)
+
+    # Send SMS confirmation
+    if customer_phone:
+        try:
+            sms_body = (
+                f"Hi {customer_name}! Your appointment with {business_name} is confirmed for "
+                f"{display_date} at {display_time}."
+                f"{' Contact us to reschedule: ' + business_phone if business_phone else ''}"
+            )
+            send_sms(to_phone=customer_phone, body=sms_body, tenant_id=tenant_id)
+            logger.info("Sent appointment confirmation SMS to %s for tenant %s", customer_phone, tenant_id)
+        except Exception:
+            logger.warning("Failed to send appointment confirmation SMS to %s", customer_phone, exc_info=True)
 
 
 def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:

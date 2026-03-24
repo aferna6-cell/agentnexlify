@@ -454,3 +454,28 @@ _The continuous loop works through this backlog using the work hierarchy: Featur
 
 - [x] [RESEARCHED] **QR code generator for widget + review links** — Generate QR codes on the dashboard that open the chat widget or Google review page when scanned. Podium uses QR codes heavily for in-store review collection. Physical businesses (restaurants, salons, contractors) can print and display them.
 - [x] [RESEARCHED] **Competitor analysis dashboard** — DONE 2026-03-22 Cycle 167. Enter competitor names, get AI comparison of SEO scores, strengths, gaps, recommendations of SEO scores, review ratings, and visibility. Uses existing AI audit engine to analyze competitors. Fully buildable without external APIs.
+
+## Features — Tier 7: Small Business Daily Operations (2026-03-24)
+
+_Think like a plumber, dentist, salon owner, or restaurant manager. What do they need every day?_
+
+- [x] **Appointment waitlist management** — DONE 2026-03-24. Migration 066, backend CRUD, public join endpoint, notify via email/SMS, frontend WaitlistPage.
+- [x] **Lead scoring configuration** — DONE 2026-03-24. Migration 067, per-tenant customizable weights, auto-seed defaults, frontend ScoringConfigPage with sliders.
+- [ ] **Bulk lead status update** — Select multiple leads on LeadsPage and change status, assign, or add tags in bulk. Saves time for businesses with 50+ leads.
+- [ ] **Appointment confirmation via SMS/email** — When a new appointment is booked, auto-send confirmation with date/time/location to the customer. Currently only reminders exist, no confirmation.
+- [ ] **Customer birthday automation** — Auto-send birthday emails/SMS with optional promo code. Uses date_of_birth field (migration 064). Build the automation task and settings UI.
+- [ ] **Dashboard quick actions widget** — Top of dashboard: "Quick Book", "Add Lead", "Send Campaign" buttons for one-click access to common tasks without navigating.
+- [ ] **Lead activity timeline on detail drawer** — Show a visual timeline of all lead interactions: when they chatted, booked, were emailed, status changed. Currently activity_log exists but isn't rendered visually.
+- [ ] **Recurring invoice generation** — Auto-create next invoice from recurring invoices when next_invoice_date arrives. Migration 060 added the fields, need the automation loop task.
+- [ ] **Appointment no-show tracking** — Mark appointments as "no-show" and track no-show rate per lead and overall. Helps businesses identify unreliable customers.
+- [ ] **Email template preview with sample data** — When editing automation email templates, show a live preview with sample lead data filled in (name, business, etc.) instead of raw {{variables}}.
+- [ ] **Conversation search** — Search across all conversations by keyword. Currently conversations can only be filtered by tags, not searched by content.
+- [ ] **Lead notes quick-add from conversations** — Button on ConversationsPage to add a note to the linked lead without navigating to the lead detail page.
+- [ ] **Webhook retry mechanism** — When a webhook delivery fails, auto-retry up to 3 times with exponential backoff. Currently failures are logged but not retried.
+- [ ] **Dashboard mobile responsive fixes** — Audit all dashboard pages for mobile responsiveness. Many pages are built desktop-first with fixed widths.
+- [ ] **Appointment type selection in booking page** — When service_types exist, let customers pick which service they want when booking. Currently uses a single slot duration.
+- [ ] **Lead import from Google Contacts** — Import leads from Google Contacts CSV export format. Map Google Contacts fields to lead fields automatically.
+- [ ] **Auto-archive old conversations** — Conversations with no activity for 30+ days should auto-archive to keep the inbox clean. Archived conversations still searchable.
+- [ ] **Invoice payment webhook notification** — When a Stripe payment comes in for an invoice, fire a webhook event and update the dashboard in real-time.
+- [ ] **AI chatbot knowledge base panel** — Show a "Knowledge Sources" panel on SettingsPage showing what the AI knows: FAQ count, website pages crawled, feedback corrections count.
+- [ ] **Team member activity log** — Track which team member performed which actions (assigned leads, replied to conversations, updated statuses) for accountability.
