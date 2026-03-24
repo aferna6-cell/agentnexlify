@@ -277,7 +277,7 @@ async def repurpose_content(
         .execute()
     )
     business_name = tenant_result.data[0]["business_name"] if tenant_result.data else "the business"
-    business_type = tenant_result.data[0].get("business_type", "") if tenant_result.data else ""
+    business_type = (tenant_result.data[0].get("business_type") or "") if tenant_result.data else ""
     biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
 
     # Build one prompt for all platforms

@@ -311,7 +311,7 @@ def _format_hours_block(bh: dict) -> str:
 
     import zoneinfo
     try:
-        tz = zoneinfo.ZoneInfo(bh.get("timezone", "America/New_York"))
+        tz = zoneinfo.ZoneInfo(bh.get("timezone") or "America/New_York")
     except Exception:
         tz = zoneinfo.ZoneInfo("America/New_York")
 
@@ -359,8 +359,8 @@ def _build_system_prompt(
     custom_field_defs: list[dict] | None = None,
 ) -> str:
     business_name = tenant.get("business_name") or "our company"
-    business_type = tenant.get("business_type", "")
-    city = tenant.get("city", "")
+    business_type = tenant.get("business_type") or ""
+    city = tenant.get("city") or ""
 
     location = f" in {city}" if city else ""
     btype = f" ({business_type})" if business_type else ""

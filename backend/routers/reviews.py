@@ -327,7 +327,7 @@ async def generate_ai_draft(
         .execute()
     )
     business_name = tenant_result.data[0]["business_name"] if tenant_result.data else "our business"
-    business_type = tenant_result.data[0].get("business_type", "") if tenant_result.data else ""
+    business_type = (tenant_result.data[0].get("business_type") or "") if tenant_result.data else ""
 
     tone_desc = {
         "professional": "professional and courteous",

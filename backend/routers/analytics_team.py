@@ -220,22 +220,37 @@ async def get_team_performance(
     except Exception:
         logger.warning("team_perf: failed to fetch leads for %s", tenant_id, exc_info=True)
 
-    # 5. Appointments booked (appointments table uses tenant_id)
+    # 5. Appointments booked — attribute to team member via lead assignment
+    #    (appointments table has no created_by column; use lead_id -> leads.assigned_to)
     appt_counts: dict[str, int] = defaultdict(int)
     try:
         appts = (
             db.table("appointments")
-            .select("created_by")
+            .select("lead_id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
             .neq("status", "cancelled")
+            .not_.is_("lead_id", "null")
             .limit(5000)
             .execute()
         )
-        for a in appts.data or []:
-            creator = a.get("created_by")
-            if creator:
-                appt_counts[creator] += 1
+        appt_lead_ids = list({a["lead_id"] for a in (appts.data or []) if a.get("lead_id")})
+        if appt_lead_ids:
+            # Look up which team member owns each lead
+            chunk_size = 200
+            for i in range(0, len(appt_lead_ids), chunk_size):
+                chunk = appt_lead_ids[i:i + chunk_size]
+                lead_assign_result = (
+                    db.table("leads")
+                    .select("id, assigned_to")
+                    .in_("id", chunk)
+                    .not_.is_("assigned_to", "null")
+                    .execute()
+                )
+                for la in lead_assign_result.data or []:
+                    assigned = la.get("assigned_to")
+                    if assigned:
+                        appt_counts[assigned] += 1
     except Exception:
         logger.warning("team_perf: failed to fetch appointments for %s", tenant_id, exc_info=True)
 
@@ -246,8 +261,8 @@ async def get_team_performance(
             db.table("action_items")
             .select("assigned_to")
             .eq("tenant_id", tenant_id)
-            .eq("status", "completed")
-            .gte("updated_at", start)
+            .eq("status", "done")
+            .gte("created_at", start)
             .not_.is_("assigned_to", "null")
             .limit(5000)
             .execute()
