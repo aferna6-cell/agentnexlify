@@ -750,12 +750,13 @@ async def list_conversations(
             sessions[sid]["last_message_at"] = msg["created_at"]
             sessions[sid]["last_message"] = (msg["content"] or "")[:120]
 
-    # Try to attach lead names to sessions
+    # Try to attach lead names and IDs to sessions
     lead_map = {}
+    lead_id_map = {}
     try:
         leads_result = (
             db.table("leads")
-            .select("conversation_id, name, email")
+            .select("id, conversation_id, name, email")
             .eq("client_id", tenant_id)
             .execute()
         )
@@ -763,6 +764,7 @@ async def list_conversations(
             cid = lead.get("conversation_id")
             if cid:
                 lead_map[cid] = lead.get("name") or lead.get("email") or ""
+                lead_id_map[cid] = lead["id"]
     except Exception:
         logger.warning("Failed to map lead names to conversations", exc_info=True)
 
@@ -813,6 +815,7 @@ async def list_conversations(
 
     for c in conv_list:
         c["lead_name"] = lead_map.get(c["session_id"], "")
+        c["lead_id"] = lead_id_map.get(c["session_id"])
         c["tags"] = tags_map.get(c["session_id"], [])
         c["channel"] = channel_map.get(c["session_id"], "widget")
         c["assigned_to"] = assigned_map.get(c["session_id"])

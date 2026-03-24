@@ -44,6 +44,10 @@ export function setAppointmentRecurrence(tenantId, token, appointmentId, rule, e
   return request(`/api/v1/appointments/${tenantId}/${appointmentId}/recur`, { method: "POST", token, body: { rule, end_date: endDate } });
 }
 
+export function createAppointment(tenantId, token, data) {
+  return request(`/api/v1/appointments/${tenantId}/dashboard-book`, { method: "POST", token, body: data });
+}
+
 export function fetchNoShowStats(tenantId, token) {
   return request(`/api/v1/appointments/no-show-stats/${tenantId}`, { token });
 }

@@ -208,6 +208,60 @@ async def book_appointment(request: Request, tenant_id: str, req: BookAppointmen
 # ── Dashboard endpoints (JWT-protected) ───────────────────────
 
 
+class DashboardBookRequest:
+    """Request model for dashboard-initiated appointment creation."""
+    pass
+
+
+from pydantic import BaseModel as _BaseModel
+
+
+class _DashboardBookBody(_BaseModel):
+    customer_name: str
+    customer_email: str | None = None
+    customer_phone: str | None = None
+    start_time: str
+    end_time: str
+    notes: str | None = None
+    status: str = "confirmed"
+
+
+@router.post("/{tenant_id}/dashboard-book")
+async def dashboard_book_appointment(
+    tenant_id: str,
+    req: _DashboardBookBody,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Book an appointment from the dashboard (JWT-protected)."""
+    _verify_tenant(claims, tenant_id)
+    try:
+        appointment = create_appointment(
+            tenant_id=tenant_id,
+            customer_name=req.customer_name,
+            customer_email=req.customer_email,
+            start_time=req.start_time,
+            end_time=req.end_time,
+            customer_phone=req.customer_phone,
+            notes=req.notes,
+        )
+    except Exception as exc:
+        err_msg = str(exc)
+        if "exclusion" in err_msg.lower() or "conflicting" in err_msg.lower():
+            raise HTTPException(status_code=409, detail="This time slot is no longer available")
+        logger.exception("Failed to create appointment for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to create appointment")
+
+    fire_event_background(tenant_id, "appointment.booked", {
+        "appointment_id": appointment["id"],
+        "customer_name": appointment["customer_name"],
+        "customer_email": appointment.get("customer_email"),
+        "start_time": appointment["start_time"],
+        "end_time": appointment["end_time"],
+    })
+
+    return appointment
+
+
 @router.get("/{tenant_id}", response_model=AppointmentListResponse)
 async def get_appointments(
     tenant_id: str,
