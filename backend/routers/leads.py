@@ -1367,3 +1367,140 @@ async def reset_scoring_config(
         logger.warning("Failed to reset scoring config for %s", tenant_id, exc_info=True)
 
     return {"reset": True, "message": "Scoring config reset to defaults"}
+
+
+# ---------------------------------------------------------------------------
+# Lead Nurture Score (computed from email engagement)
+# ---------------------------------------------------------------------------
+
+# Scoring weights for email engagement
+_NURTURE_WEIGHTS = {"open": 1, "click": 3, "reply": 5}
+
+
+@router.get("/{tenant_id}/nurture-scores")
+async def get_nurture_scores(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Get nurture scores for leads based on email engagement.
+
+    Computes scores on-the-fly from email_events:
+    - Email open: +1 point
+    - Email click: +3 points
+    - Reply (chat message after email): +5 points
+
+    Returns leads sorted by nurture_score descending (most engaged first).
+    Also includes a trend indicator: warming (score increasing), cooling
+    (no recent activity), or stable.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+    from datetime import datetime, timedelta, timezone
+    from collections import defaultdict
+
+    # Fetch email events for this tenant (leads uses client_id)
+    try:
+        events_result = (
+            db.table("email_events")
+            .select("lead_id, event_type, created_at")
+            .eq("tenant_id", tenant_id)
+            .not_.is_("lead_id", "null")
+            .order("created_at", desc=True)
+            .limit(5000)
+            .execute()
+        )
+    except Exception:
+        logger.exception("nurture_scores: failed to fetch email events for %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to fetch engagement data")
+
+    events = events_result.data or []
+    if not events:
+        return {"leads": [], "total_scored": 0}
+
+    # Compute scores per lead
+    lead_scores: dict[str, int] = defaultdict(int)
+    lead_recent: dict[str, str] = {}  # lead_id -> most recent event timestamp
+    now = datetime.now(timezone.utc)
+    seven_days_ago = (now - timedelta(days=7)).isoformat()
+    thirty_days_ago = (now - timedelta(days=30)).isoformat()
+
+    recent_activity: dict[str, int] = defaultdict(int)  # activity in last 7 days
+    older_activity: dict[str, int] = defaultdict(int)    # activity 8-30 days ago
+
+    for ev in events:
+        lid = ev.get("lead_id")
+        if not lid:
+            continue
+        event_type = ev.get("event_type") or "open"
+        created_at = ev.get("created_at") or ""
+        weight = _NURTURE_WEIGHTS.get(event_type, 1)
+        lead_scores[lid] += weight
+
+        if lid not in lead_recent or created_at > lead_recent[lid]:
+            lead_recent[lid] = created_at
+
+        if created_at >= seven_days_ago:
+            recent_activity[lid] += weight
+        elif created_at >= thirty_days_ago:
+            older_activity[lid] += weight
+
+    if not lead_scores:
+        return {"leads": [], "total_scored": 0}
+
+    # Sort by score descending, take top N
+    sorted_leads = sorted(lead_scores.items(), key=lambda x: -x[1])[:limit]
+    lead_ids = [lid for lid, _ in sorted_leads]
+
+    # Fetch lead details
+    lead_names: dict[str, dict] = {}
+    try:
+        chunk_size = 200
+        for i in range(0, len(lead_ids), chunk_size):
+            chunk = lead_ids[i:i + chunk_size]
+            leads_result = (
+                db.table("leads")
+                .select("id, name, email, status, lead_score")
+                .eq("client_id", tenant_id)
+                .in_("id", chunk)
+                .execute()
+            )
+            for l in leads_result.data or []:
+                lead_names[l["id"]] = l
+    except Exception:
+        logger.warning("nurture_scores: failed to fetch lead details for %s", tenant_id, exc_info=True)
+
+    # Build response
+    result_leads = []
+    for lid, score in sorted_leads:
+        lead = lead_names.get(lid, {})
+        recent = recent_activity.get(lid, 0)
+        older = older_activity.get(lid, 0)
+
+        # Trend: warming if recent > older, cooling if no recent, stable otherwise
+        if recent > 0 and recent >= older:
+            trend = "warming"
+        elif recent == 0 and older > 0:
+            trend = "cooling"
+        elif recent == 0 and older == 0:
+            trend = "cold"
+        else:
+            trend = "stable"
+
+        result_leads.append({
+            "lead_id": lid,
+            "name": lead.get("name") or lead.get("email") or "Unknown",
+            "email": lead.get("email") or "",
+            "status": lead.get("status") or "new",
+            "lead_score": lead.get("lead_score") or 0,
+            "nurture_score": score,
+            "trend": trend,
+            "last_engagement": lead_recent.get(lid, ""),
+        })
+
+    return {
+        "leads": result_leads,
+        "total_scored": len(lead_scores),
+    }

@@ -98,6 +98,10 @@ export function fetchLeadTimeline(tenantId, token, leadId, limit = 50) {
   return request(`/api/v1/leads/${tenantId}/${leadId}/timeline?limit=${limit}`, { token });
 }
 
+export function fetchNurtureScores(tenantId, token, limit = 50) {
+  return request(`/api/v1/leads/${tenantId}/nurture-scores?limit=${limit}`, { token });
+}
+
 export async function exportLeadsCSV(tenantId, token, { status } = {}) {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
