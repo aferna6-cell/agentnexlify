@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, pipeline_automations, resend_webhooks, reviews, scoring_config, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhook_deliveries, webhooks, widget_chat, widget_config, widget_lead
+from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, revenue, reviews, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, webhooks, widget_chat, widget_config, widget_lead
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -76,7 +76,6 @@ async def _automation_loop():
     from backend.services.automation_engine import (
         check_new_reviews,
         check_no_response_leads,
-        fail_stale_executions,
         process_pending_steps,
         send_appointment_reminders,
         send_csat_surveys,
@@ -89,9 +88,6 @@ async def _automation_loop():
         send_weekly_intelligence_briefs,
         send_birthday_greetings,
         send_aftercare_instructions,
-        process_recurring_invoices,
-        auto_archive_old_conversations,
-        prune_stale_widget_sessions,
     )
 
     tick = 0
@@ -127,10 +123,6 @@ async def _automation_loop():
                 _safe_run("send_monthly_reports", send_monthly_reports),
                 _safe_run("send_weekly_intelligence_briefs", send_weekly_intelligence_briefs),
                 _safe_run("send_birthday_greetings", send_birthday_greetings),
-                _safe_run("process_recurring_invoices", process_recurring_invoices),
-                _safe_run("auto_archive_old_conversations", auto_archive_old_conversations),
-                _safe_run("prune_stale_widget_sessions", prune_stale_widget_sessions),
-                _safe_run("fail_stale_executions", fail_stale_executions),
             ])
 
         await asyncio.gather(*core_tasks)
@@ -406,8 +398,6 @@ async def log_requests(request: Request, call_next):
 
 
 # --- Routers ---
-# NOTE: webhook_deliveries must be registered BEFORE webhooks to prevent
-# route shadowing (/{tenant_id}/{webhook_id}/deliveries vs /{tenant_id}/{webhook_id})
 app.include_router(analytics.router)
 app.include_router(appointments.router)
 app.include_router(auth.router)
@@ -417,12 +407,10 @@ app.include_router(clients.router)
 app.include_router(email_templates.router)
 app.include_router(leads.router)
 app.include_router(stripe_webhooks.router)
-app.include_router(resend_webhooks.router)
 app.include_router(sequences.router)
 app.include_router(sequences.leads_router)
 app.include_router(support.router)
 app.include_router(integrations.router)
-app.include_router(webhook_deliveries.router)
 app.include_router(webhooks.router)
 app.include_router(sms.router)
 app.include_router(team.router)
@@ -458,12 +446,10 @@ app.include_router(marketing_campaigns.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)
 app.include_router(pipeline.router)
-app.include_router(pipeline_automations.router)
+app.include_router(revenue.router)
 app.include_router(smart_lists.router)
 app.include_router(forms.router)
 app.include_router(channels_facebook.router)
-app.include_router(waitlist.router)
-app.include_router(scoring_config.router)
 
 
 # --- Static files (widget) ---
