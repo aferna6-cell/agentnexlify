@@ -6,11 +6,14 @@ Two public endpoints (NO auth required):
   POST /api/v1/book/{business_slug}/submit  — create appointment + lead
 """
 
+import hashlib
+import hmac
 import html
 import logging
+import os
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -750,3 +753,298 @@ async def booking_submit(
         content={"success": True, "message": "Appointment booked! You'll receive a confirmation email shortly."},
         status_code=200,
     )
+
+
+# ── Public Appointment Reschedule ──────────────────────────────
+
+
+def _generate_reschedule_token(appointment_id: str) -> str:
+    """Generate HMAC token for appointment reschedule link."""
+    secret = os.environ.get("API_SECRET_KEY", "agentnexlify-dev-secret")
+    return hmac.new(secret.encode(), f"reschedule:{appointment_id}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def _verify_reschedule_token(appointment_id: str, token: str) -> bool:
+    """Verify HMAC reschedule token."""
+    expected = _generate_reschedule_token(appointment_id)
+    return hmac.compare_digest(expected, token)
+
+
+def build_reschedule_url(appointment_id: str, business_slug: str) -> str:
+    """Build a public reschedule URL with signed token."""
+    token = _generate_reschedule_token(appointment_id)
+    base_url = os.environ.get("BACKEND_URL", "https://agentnexlify-production.up.railway.app")
+    return f"{base_url}/api/v1/book/reschedule/{appointment_id}?token={token}"
+
+
+@router.get("/reschedule/{appointment_id}", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def reschedule_page(request: Request, appointment_id: str, token: str = Query(...)):
+    """Public reschedule page. Customer picks a new time slot."""
+    if not _verify_reschedule_token(appointment_id, token):
+        return HTMLResponse("<h2>Invalid or expired reschedule link.</h2>", status_code=403)
+
+    db = get_supabase()
+    appt = db.table("appointments").select("*").eq("id", appointment_id).limit(1).execute()
+    if not appt.data:
+        return HTMLResponse("<h2>Appointment not found.</h2>", status_code=404)
+
+    appointment = appt.data[0]
+    tenant_id = appointment["tenant_id"]
+
+    if appointment.get("status") in ("cancelled", "no_show", "completed"):
+        return HTMLResponse(f"<h2>This appointment has already been {appointment['status']}.</h2>", status_code=400)
+
+    tenant = db.table("tenants").select("business_name, business_phone").eq("id", tenant_id).limit(1).execute()
+    biz_name = html.escape((tenant.data[0].get("business_name") or "Our Business") if tenant.data else "Our Business")
+    biz_phone = html.escape((tenant.data[0].get("business_phone") or "") if tenant.data else "")
+
+    # Get available slots for next 14 days
+    today = date.today()
+    slots_by_day = {}
+    for offset in range(1, 15):
+        d = today + timedelta(days=offset)
+        slots = generate_available_slots(tenant_id, d)
+        if slots:
+            day_str = d.isoformat()
+            slots_by_day[day_str] = [{"start": s["start_utc"], "end": s["end_utc"], "label": s["display"]} for s in slots]
+
+    import json
+    slots_json = json.dumps(slots_by_day)
+
+    current_dt = ""
+    try:
+        dt = datetime.fromisoformat(appointment["start_time"].replace("Z", "+00:00"))
+        current_dt = dt.strftime("%A, %B %d at %I:%M %p")
+    except Exception:
+        current_dt = appointment.get("start_time", "")
+
+    page_html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reschedule Appointment - {biz_name}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f9fafb; margin: 0; padding: 20px; color: #1f2937; }}
+  .container {{ max-width: 500px; margin: 40px auto; background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+  h1 {{ font-size: 1.5rem; margin: 0 0 8px; }}
+  .current {{ background: #fef3c7; padding: 12px 16px; border-radius: 8px; margin: 16px 0; font-size: 0.9rem; }}
+  label {{ display: block; font-weight: 600; margin: 16px 0 6px; }}
+  select, button {{ width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }}
+  button {{ background: #2563eb; color: #fff; border: none; cursor: pointer; font-weight: 600; margin-top: 16px; }}
+  button:hover {{ background: #1d4ed8; }}
+  button:disabled {{ background: #93c5fd; cursor: not-allowed; }}
+  .success {{ background: #dcfce7; padding: 16px; border-radius: 8px; color: #166534; text-align: center; }}
+  .error {{ background: #fee2e2; padding: 12px; border-radius: 8px; color: #991b1b; margin-top: 12px; }}
+  .cancel-link {{ display: block; text-align: center; margin-top: 16px; color: #ef4444; cursor: pointer; font-size: 0.9rem; }}
+</style>
+</head><body>
+<div class="container">
+  <h1>Reschedule Your Appointment</h1>
+  <p style="color:#6b7280;">{biz_name}</p>
+  <div class="current">Current: <strong>{html.escape(current_dt)}</strong></div>
+  <div id="form">
+    <label for="day">Select a new date:</label>
+    <select id="day" onchange="updateSlots()"><option value="">Choose a date...</option></select>
+    <label for="slot">Select a time:</label>
+    <select id="slot"><option value="">Choose a time...</option></select>
+    <button id="submitBtn" onclick="submitReschedule()" disabled>Reschedule Appointment</button>
+    <div id="error" class="error" style="display:none;"></div>
+  </div>
+  <div id="success" class="success" style="display:none;">
+    Your appointment has been rescheduled! You'll receive a confirmation email shortly.
+  </div>
+  <div class="cancel-link" onclick="cancelAppointment()">Cancel this appointment instead</div>
+</div>
+<script>
+const SLOTS = {slots_json};
+const daySelect = document.getElementById('day');
+const slotSelect = document.getElementById('slot');
+const submitBtn = document.getElementById('submitBtn');
+
+Object.keys(SLOTS).sort().forEach(d => {{
+  const dt = new Date(d + 'T12:00:00');
+  const label = dt.toLocaleDateString('en-US', {{ weekday: 'long', month: 'long', day: 'numeric' }});
+  daySelect.innerHTML += `<option value="${{d}}">${{label}}</option>`;
+}});
+
+function updateSlots() {{
+  const day = daySelect.value;
+  slotSelect.innerHTML = '<option value="">Choose a time...</option>';
+  submitBtn.disabled = true;
+  if (!day || !SLOTS[day]) return;
+  SLOTS[day].forEach((s, i) => {{
+    slotSelect.innerHTML += `<option value="${{i}}">${{s.label}}</option>`;
+  }});
+  slotSelect.onchange = () => {{ submitBtn.disabled = !slotSelect.value; }};
+}}
+
+async function submitReschedule() {{
+  const day = daySelect.value;
+  const idx = parseInt(slotSelect.value);
+  if (!day || isNaN(idx)) return;
+  const slot = SLOTS[day][idx];
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Rescheduling...';
+  document.getElementById('error').style.display = 'none';
+  try {{
+    const res = await fetch('/api/v1/book/reschedule/{appointment_id}/submit', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ token: '{token}', new_start: slot.start, new_end: slot.end }}),
+    }});
+    const data = await res.json();
+    if (res.ok) {{
+      document.getElementById('form').style.display = 'none';
+      document.getElementById('success').style.display = 'block';
+      document.querySelector('.cancel-link').style.display = 'none';
+    }} else {{
+      document.getElementById('error').textContent = data.detail || 'Failed to reschedule.';
+      document.getElementById('error').style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Reschedule Appointment';
+    }}
+  }} catch(e) {{
+    document.getElementById('error').textContent = 'Network error. Please try again.';
+    document.getElementById('error').style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Reschedule Appointment';
+  }}
+}}
+
+async function cancelAppointment() {{
+  if (!confirm('Are you sure you want to cancel this appointment?')) return;
+  try {{
+    const res = await fetch('/api/v1/book/reschedule/{appointment_id}/cancel', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ token: '{token}' }}),
+    }});
+    if (res.ok) {{
+      document.getElementById('form').style.display = 'none';
+      document.querySelector('.cancel-link').style.display = 'none';
+      document.getElementById('success').textContent = 'Your appointment has been cancelled.';
+      document.getElementById('success').style.display = 'block';
+    }}
+  }} catch(e) {{}}
+}}
+</script>
+</body></html>"""
+    return HTMLResponse(page_html)
+
+
+class _RescheduleBody(BaseModel):
+    token: str
+    new_start: str
+    new_end: str
+
+
+@router.post("/reschedule/{appointment_id}/submit")
+@limiter.limit("10/minute")
+async def reschedule_submit(request: Request, appointment_id: str, body: _RescheduleBody):
+    """Submit a reschedule for an appointment."""
+    if not _verify_reschedule_token(appointment_id, body.token):
+        raise HTTPException(status_code=403, detail="Invalid or expired reschedule link")
+
+    db = get_supabase()
+    appt = db.table("appointments").select("*").eq("id", appointment_id).limit(1).execute()
+    if not appt.data:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    appointment = appt.data[0]
+    if appointment.get("status") in ("cancelled", "no_show", "completed"):
+        raise HTTPException(status_code=400, detail=f"Cannot reschedule — appointment is {appointment['status']}")
+
+    tenant_id = appointment["tenant_id"]
+
+    # Check slot availability (pre-insert check)
+    existing = (
+        db.table("appointments")
+        .select("id")
+        .eq("tenant_id", tenant_id)
+        .neq("id", appointment_id)
+        .neq("status", "cancelled")
+        .lt("start_time", body.new_end)
+        .gt("end_time", body.new_start)
+        .limit(1)
+        .execute()
+    )
+    if existing.data:
+        raise HTTPException(status_code=409, detail="That time slot is no longer available")
+
+    # Update the appointment
+    try:
+        result = (
+            db.table("appointments")
+            .update({
+                "start_time": body.new_start,
+                "end_time": body.new_end,
+                "notes": f"{appointment.get('notes', '') or ''}\n[Rescheduled by customer]".strip(),
+            })
+            .eq("id", appointment_id)
+            .execute()
+        )
+    except Exception as exc:
+        error_msg = str(exc).lower()
+        if "exclude" in error_msg or "overlap" in error_msg:
+            raise HTTPException(status_code=409, detail="That time slot was just booked")
+        logger.exception("Failed to reschedule appointment %s", appointment_id)
+        raise HTTPException(status_code=500, detail="Failed to reschedule")
+
+    # Send new confirmation email (best-effort)
+    try:
+        from backend.services.booking import _send_appointment_confirmation
+        if result.data:
+            _send_appointment_confirmation(tenant_id, result.data[0])
+    except Exception:
+        logger.warning("Failed to send reschedule confirmation for %s", appointment_id, exc_info=True)
+
+    # Log activity
+    try:
+        from backend.services.activity import log_activity
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="appointment_rescheduled",
+            description=f"Customer rescheduled appointment to {body.new_start}",
+            lead_id=appointment.get("lead_id"),
+        )
+    except Exception:
+        logger.warning("Failed to log reschedule activity", exc_info=True)
+
+    return {"success": True, "message": "Appointment rescheduled successfully"}
+
+
+class _CancelBody(BaseModel):
+    token: str
+
+
+@router.post("/reschedule/{appointment_id}/cancel")
+@limiter.limit("10/minute")
+async def reschedule_cancel(request: Request, appointment_id: str, body: _CancelBody):
+    """Cancel an appointment via the reschedule link."""
+    if not _verify_reschedule_token(appointment_id, body.token):
+        raise HTTPException(status_code=403, detail="Invalid or expired link")
+
+    db = get_supabase()
+    appt = db.table("appointments").select("id, tenant_id, lead_id, status").eq("id", appointment_id).limit(1).execute()
+    if not appt.data:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    appointment = appt.data[0]
+    if appointment.get("status") == "cancelled":
+        return {"success": True, "message": "Already cancelled"}
+
+    db.table("appointments").update({"status": "cancelled"}).eq("id", appointment_id).execute()
+
+    try:
+        from backend.services.activity import log_activity
+        log_activity(
+            tenant_id=appointment["tenant_id"],
+            activity_type="appointment_cancelled",
+            description="Customer cancelled appointment via reschedule link",
+            lead_id=appointment.get("lead_id"),
+        )
+    except Exception:
+        logger.warning("Failed to log cancel activity", exc_info=True)
+
+    fire_event_background(appointment["tenant_id"], "appointment.cancelled", {"appointment_id": appointment_id})
+
+    return {"success": True, "message": "Appointment cancelled"}

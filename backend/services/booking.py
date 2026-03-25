@@ -296,6 +296,16 @@ def create_appointment(
     return appointment
 
 
+def _reschedule_link_html(appointment: dict) -> str:
+    """Generate a reschedule link for the confirmation email."""
+    try:
+        from backend.routers.booking_page import build_reschedule_url
+        url = build_reschedule_url(appointment["id"], "")
+        return f'<a href="{url}" style="color: #2563eb; text-decoration: underline;">click here to reschedule</a>'
+    except Exception:
+        return "please contact us"
+
+
 def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> None:
     """Send booking confirmation via email and/or SMS to the customer."""
     from backend.services.email_sender import send_email
@@ -334,7 +344,7 @@ def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> None:
                     <p style="margin: 4px 0;"><strong>Time:</strong> {display_time}</p>
                     {f'<p style="margin: 4px 0;"><strong>Notes:</strong> {appointment.get("notes", "")}</p>' if appointment.get("notes") else ""}
                 </div>
-                <p>If you need to reschedule or cancel, please contact us{f" at {business_phone}" if business_phone else ""}.</p>
+                <p>If you need to reschedule or cancel, {_reschedule_link_html(appointment)}{f" or contact us at {business_phone}" if business_phone else " please use the link above or contact us"}.</p>
                 <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">— {business_name}</p>
             </div>
             """
