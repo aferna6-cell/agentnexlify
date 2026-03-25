@@ -26,6 +26,8 @@ const BusinessPage = lazy(() => import("./pages/BusinessPage"));
 const ClientPortalPublicPage = lazy(() => import("./pages/ClientPortalPublicPage"));
 const ClientLoginPage = lazy(() => import("./pages/ClientLoginPage"));
 const ClientDashboardPage = lazy(() => import("./pages/ClientDashboardPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
@@ -92,6 +94,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/" element={<Home />} />
             <Route path="/free-widget" element={<FreeWidget />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/contact" element={<Contact />} />

@@ -602,6 +602,43 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ SOCIAL PROOF ============ */}
+      <section className="section" id="testimonials" style={{ background: "var(--bg-secondary, #0a0a1a)" }}>
+        <div className="container">
+          <div className="section-label reveal">Trusted by Business Owners</div>
+          <h2 className="section-title reveal">What early adopters are saying</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", marginTop: "2rem" }}>
+            {[
+              { name: "Mike R.", biz: "Plumbing Company", quote: "We were missing calls left and right. Now the AI handles after-hours inquiries and books appointments while we sleep. Landed 3 new jobs in the first week." },
+              { name: "Sarah L.", biz: "Dental Practice", quote: "Our front desk was overwhelmed. The chat widget handles 60% of patient questions automatically. My team can finally focus on patient care." },
+              { name: "James T.", biz: "HVAC Services", quote: "The instant quoting feature is a game-changer. Customers get a ballpark estimate right in the chat, and we close deals faster." },
+            ].map((t, i) => (
+              <div key={i} className="reveal" style={{
+                background: "var(--bg-primary, #111127)",
+                border: "1px solid var(--border-color, #222)",
+                borderRadius: 12,
+                padding: "1.5rem",
+              }}>
+                <div style={{ fontSize: "1.5rem", marginBottom: "0.75rem", opacity: 0.3 }}>{"\u201C"}</div>
+                <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-secondary, #aaa)", marginBottom: "1rem" }}>{t.quote}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #3B82F6, #8B5CF6)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: "0.85rem" }}>
+                    {t.name[0]}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{t.name}</div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted, #666)" }}>{t.biz}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="reveal" style={{ textAlign: "center", marginTop: "1.5rem", color: "var(--text-muted, #666)", fontSize: "0.9rem" }}>
+            Join 50+ businesses already using AgentNexLiFy to automate their growth.
+          </p>
+        </div>
+      </section>
+
       {/* ============ PRICING ============ */}
       <section className="section" id="pricing">
         <div className="container">

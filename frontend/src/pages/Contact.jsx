@@ -50,10 +50,23 @@ export default function Contact() {
 
         <p className="contact-intro">
           Have a question, feedback, or need help? Fill out the form below and
-          we'll get back to you as soon as possible. You can also email us
-          directly at{" "}
-          <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>.
+          we'll get back to you as soon as possible.
         </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem", padding: "1.25rem", background: "var(--bg-secondary, #f8f9fa)", borderRadius: 10, border: "1px solid var(--border-color, #e2e8f0)" }}>
+          <div>
+            <strong style={{ display: "block", marginBottom: 4 }}>Email us directly</strong>
+            <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>
+          </div>
+          <div>
+            <strong style={{ display: "block", marginBottom: 4 }}>Response time</strong>
+            <span>We typically respond within 24 hours</span>
+          </div>
+          <div>
+            <strong style={{ display: "block", marginBottom: 4 }}>Business hours</strong>
+            <span>Monday - Friday, 9 AM - 6 PM EST</span>
+          </div>
+        </div>
 
         {success ? (
           <div className="contact-success">

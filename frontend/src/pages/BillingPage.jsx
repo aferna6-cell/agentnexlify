@@ -6,8 +6,8 @@ import SkeletonLoader from "../components/SkeletonLoader";
 const PLANS = [
   { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
   { key: "growth",       name: "Growth",       price: "$249", period: "/mo" },
-  { key: "professional", name: "Professional", price: "$499", period: "/mo", popular: true },
   { key: "autopilot",   name: "Autopilot",    price: "$299", period: "/mo" },
+  { key: "professional", name: "Professional", price: "$499", period: "/mo", popular: true },
   { key: "enterprise",  name: "Enterprise",   price: "$899", period: "/mo" },
 ];
 

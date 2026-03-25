@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence } from "../utils/api/appointments";
+import { fetchAppointments, updateAppointment, cancelAppointment, setAppointmentRecurrence, createAppointment } from "../utils/api/appointments";
 
 const STATUS_COLORS = {
   confirmed: { bg: "var(--accent-dim)", border: "var(--accent)", text: "var(--accent)" },
@@ -56,6 +56,10 @@ export default function Calendar({ onNavigate }) {
   const [recurRule, setRecurRule] = useState("");
   const [recurEndDate, setRecurEndDate] = useState("");
   const [recurSaving, setRecurSaving] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ customer_name: "", date: "", start_time: "", duration: "30", notes: "" });
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState(null);
 
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -135,6 +139,41 @@ export default function Calendar({ onNavigate }) {
     }
   };
 
+  const openAddModal = () => {
+    const today = formatDate(new Date());
+    setAddForm({ customer_name: "", date: today, start_time: "09:00", duration: "30", notes: "" });
+    setAddError(null);
+    setAddSaving(false);
+    setShowAddModal(true);
+  };
+
+  const handleAddSubmit = async () => {
+    if (!addForm.customer_name || !addForm.date || !addForm.start_time) {
+      setAddError("Please fill in customer name, date, and start time.");
+      return;
+    }
+    setAddSaving(true);
+    setAddError(null);
+    try {
+      const startDt = new Date(`${addForm.date}T${addForm.start_time}:00`);
+      const durationMs = parseInt(addForm.duration, 10) * 60 * 1000;
+      const endDt = new Date(startDt.getTime() + durationMs);
+      await createAppointment(user.tenantId, token, {
+        customer_name: addForm.customer_name,
+        start_time: startDt.toISOString(),
+        end_time: endDt.toISOString(),
+        notes: addForm.notes || undefined,
+        status: "confirmed",
+      });
+      setShowAddModal(false);
+      loadAppointments();
+    } catch (err) {
+      setAddError(err.body?.detail || err.message || "Failed to create appointment.");
+    } finally {
+      setAddSaving(false);
+    }
+  };
+
   const getApptPosition = (appt) => {
     const start = new Date(appt.start_time);
     const end = new Date(appt.end_time);
@@ -151,9 +190,14 @@ export default function Calendar({ onNavigate }) {
 
   return (
     <div className="fade-in">
-      <div className="page-header">
-        <h1>Calendar</h1>
-        <p>Manage your appointments</p>
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h1>Calendar</h1>
+          <p>Manage your appointments</p>
+        </div>
+        <button className="btn-primary" onClick={openAddModal} style={{ whiteSpace: "nowrap" }}>
+          + Add Appointment
+        </button>
       </div>
 
       <div className="calendar-toolbar">
@@ -278,6 +322,74 @@ export default function Calendar({ onNavigate }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3>Add Appointment</h3>
+            {addError && <div className="error-banner" style={{ marginBottom: "0.75rem" }}>{addError}</div>}
+            <div className="modal-field">
+              <label>Customer Name</label>
+              <input
+                type="text"
+                className="modal-select"
+                placeholder="Enter customer name"
+                value={addForm.customer_name}
+                onChange={e => setAddForm(f => ({ ...f, customer_name: e.target.value }))}
+              />
+            </div>
+            <div className="modal-field">
+              <label>Date</label>
+              <input
+                type="date"
+                className="modal-select"
+                value={addForm.date}
+                onChange={e => setAddForm(f => ({ ...f, date: e.target.value }))}
+              />
+            </div>
+            <div className="modal-field">
+              <label>Start Time</label>
+              <input
+                type="time"
+                className="modal-select"
+                value={addForm.start_time}
+                onChange={e => setAddForm(f => ({ ...f, start_time: e.target.value }))}
+              />
+            </div>
+            <div className="modal-field">
+              <label>Duration</label>
+              <select
+                className="modal-select"
+                value={addForm.duration}
+                onChange={e => setAddForm(f => ({ ...f, duration: e.target.value }))}
+              >
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">60 minutes</option>
+                <option value="90">90 minutes</option>
+                <option value="120">2 hours</option>
+              </select>
+            </div>
+            <div className="modal-field">
+              <label>Notes (optional)</label>
+              <textarea
+                className="modal-textarea"
+                rows={3}
+                placeholder="Add any notes about this appointment"
+                value={addForm.notes}
+                onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-primary" onClick={handleAddSubmit} disabled={addSaving}>
+                {addSaving ? "Creating..." : "Create Appointment"}
+              </button>
+              <button className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}

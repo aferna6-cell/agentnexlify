@@ -77,6 +77,7 @@ const CSATPage = lazy(() => import("../pages/CSATPage"));
 const WaitlistPage = lazy(() => import("../pages/WaitlistPage"));
 const ScoringConfigPage = lazy(() => import("../pages/ScoringConfigPage"));
 const TeamActivityPage = lazy(() => import("../pages/TeamActivityPage"));
+const SupportPage = lazy(() => import("../pages/SupportPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -120,6 +121,7 @@ const pages = {
   waitlist: WaitlistPage,
   scoring_config: ScoringConfigPage,
   team_activity: TeamActivityPage,
+  support: SupportPage,
 };
 
 function TrialBanner({ trialData, onNavigate }) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const planLabels = {
@@ -74,6 +74,38 @@ const allNavItems = [
   { key: "support", icon: <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" />, label: "Support" },
 ];
 
+const NAV_GROUPS = [
+  { key: "overview",       label: "OVERVIEW",          items: ["dashboard", "analytics"] },
+  { key: "crm",            label: "CRM",               items: ["clients", "pipeline", "smart_lists", "client_portal"] },
+  { key: "communications", label: "COMMUNICATIONS",    items: ["conversations", "calls", "chat_flows", "widget", "snippets", "faq"] },
+  { key: "marketing",      label: "MARKETING",         items: ["content_studio", "social_media", "campaigns", "form_builder"] },
+  { key: "operations",     label: "OPERATIONS",        items: ["calendar", "automations", "action_items", "invoices", "documents", "bids", "jobs", "menu", "orders"] },
+  { key: "reviews_seo",    label: "REVIEWS & SEO",     items: ["reviews", "csat", "local_seo"] },
+  { key: "settings",       label: "SETTINGS",          items: ["team", "billing", "business_page", "integrations", "mcp_setup", "settings", "support"] },
+];
+
+const DEFAULT_EXPANDED = ["overview", "crm"];
+
+const ChevronIcon = ({ expanded }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{
+      transition: "transform 0.2s ease",
+      transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+      flexShrink: 0,
+    }}
+  >
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 const SunIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="5" />
@@ -108,6 +140,28 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
   const userRole = user?.role || "owner";
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    try {
+      const stored = localStorage.getItem("sidebar_groups");
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // Ignore parse errors, use default
+    }
+    return DEFAULT_EXPANDED;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sidebar_groups", JSON.stringify(expandedGroups));
+  }, [expandedGroups]);
+
+  const toggleGroup = useCallback((groupKey) => {
+    setExpandedGroups((prev) =>
+      prev.includes(groupKey)
+        ? prev.filter((k) => k !== groupKey)
+        : [...prev, groupKey]
+    );
+  }, []);
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("theme") || "dark";
   });
@@ -133,9 +187,7 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
   // Close sidebar on mobile when navigating
   const handleNavClick = (key) => {
     setMobileOpen(false);
-    if (key === "support") {
-      window.open("/contact", "_blank");
-    } else {
+    {
       onNavigate(key);
     }
   };
@@ -170,16 +222,34 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
           <span>AgentNexLiFy</span>
         </div>
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <div
-              key={item.key}
-              className={`nav-item${currentPage === item.key ? " active" : ""}`}
-              onClick={() => handleNavClick(item.key)}
-            >
-              <span className="nav-item-icon">{item.icon}</span>
-              <span className="nav-item-label">{item.label}</span>
-            </div>
-          ))}
+          {NAV_GROUPS.map((group) => {
+            const groupItems = group.items
+              .map((key) => navItems.find((n) => n.key === key))
+              .filter(Boolean);
+            if (groupItems.length === 0) return null;
+            const isExpanded = expandedGroups.includes(group.key);
+            return (
+              <div key={group.key} className="sidebar-group">
+                <div
+                  className="sidebar-group-header"
+                  onClick={() => toggleGroup(group.key)}
+                >
+                  <span className="sidebar-group-label">{group.label}</span>
+                  <ChevronIcon expanded={isExpanded} />
+                </div>
+                {isExpanded && groupItems.map((item) => (
+                  <div
+                    key={item.key}
+                    className={`nav-item${currentPage === item.key ? " active" : ""}`}
+                    onClick={() => handleNavClick(item.key)}
+                  >
+                    <span className="nav-item-icon">{item.icon}</span>
+                    <span className="nav-item-label">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         <div className="sidebar-footer">
           <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>

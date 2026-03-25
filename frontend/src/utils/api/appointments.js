@@ -23,6 +23,10 @@ export function deleteServiceType(tenantId, token, serviceId) {
   return request(`/api/v1/appointments/${tenantId}/service-types/${serviceId}`, { method: "DELETE", token });
 }
 
+export function createAppointment(tenantId, token, data) {
+  return request(`/api/v1/appointments/${tenantId}`, { method: "POST", token, body: data });
+}
+
 export function fetchAppointments(tenantId, token, { startDate, endDate, status } = {}) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
