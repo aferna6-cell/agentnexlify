@@ -1,6 +1,18 @@
 # Progress Tracker
 _What was built each session. Proves velocity, prevents re-doing work._
 
+## Session 2026-03-25 (scheduled remote — evening)
+
+### Bugs Fixed
+1. **Restaurant menu check operator precedence (P1)** — `widget_chat.py` had `tenant.get("business_type") or "".lower() == "restaurant"` which evaluates as `tenant.get("business_type") or False` due to Python operator precedence. This meant non-restaurant tenants with any business_type loaded menu items unnecessarily (wasted DB query per chat), and tenants with no business_type never loaded menus. Fixed to `(tenant.get("business_type") or "").lower() == "restaurant"`. This is the 3rd occurrence of the `or` + `==` precedence bug pattern (after birthday greeting and plan check).
+
+2. **Scheduled post N+1 UPDATE (P2)** — `main.py` `_process_scheduled_posts()` updated each post individually inside a loop (1 UPDATE per post, up to 100 DB round-trips every 5 min). Refactored to batch all post IDs and update in a single `.in_()` call, with fallback to individual updates if the batch fails. Same pattern as the `_recover_stalled_campaigns` batch fix from Cycle 104.
+
+### Commits
+- 2 commits pushed to fix/scheduled-session-2026-03-25 branch via GitHub MCP
+
+---
+
 ## Session 2026-03-25 (scheduled remote — noon)
 
 ### Features Built
