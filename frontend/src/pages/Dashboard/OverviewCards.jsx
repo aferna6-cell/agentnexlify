@@ -1,6 +1,36 @@
 import { trackEvent } from "../../utils/analytics";
 
-export default function OverviewCards({ conversationsUsed, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0, emailsSentToday = 0, missedCallsThisWeek = null }) {
+function DeltaBadge({ deltaPct }) {
+  if (deltaPct === null || deltaPct === undefined) return null;
+  const isUp = deltaPct > 0;
+  const isDown = deltaPct < 0;
+  const isFlat = deltaPct === 0;
+
+  const color = isUp ? "#22c55e" : isDown ? "#ef4444" : "var(--text-muted)";
+  const arrow = isUp ? "\u2191" : isDown ? "\u2193" : "\u2192";
+  const label = isFlat ? "No change" : `${isUp ? "+" : ""}${deltaPct}%`;
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "3px",
+        fontSize: "0.75rem",
+        fontWeight: 600,
+        color,
+        padding: "2px 6px",
+        borderRadius: "4px",
+        background: isUp ? "rgba(34,197,94,0.1)" : isDown ? "rgba(239,68,68,0.1)" : "rgba(128,128,128,0.1)",
+      }}
+      title={`vs last week`}
+    >
+      {arrow} {label}
+    </span>
+  );
+}
+
+export default function OverviewCards({ conversationsUsed, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0, emailsSentToday = 0, missedCallsThisWeek = null, kpiDeltas = null }) {
   const planLabels = {
     free: "Free",
     growth: "Growth",
@@ -14,7 +44,10 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
     <div className="stats-row">
       {/* Conversations This Month */}
       <div className="stat-card">
-        <div className="stat-label">Conversations This Month</div>
+        <div className="stat-label">
+          Conversations This Month
+          {kpiDeltas?.conversations && <DeltaBadge deltaPct={kpiDeltas.conversations.delta_pct} />}
+        </div>
         <div className="stat-value">{conversationsUsed}</div>
         <div className="stat-usage-text">Unlimited</div>
         {conversationsUsed === 0 && (
@@ -26,7 +59,10 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
 
       {/* Leads Captured */}
       <div className="stat-card">
-        <div className="stat-label">Leads Captured</div>
+        <div className="stat-label">
+          Leads Captured
+          {kpiDeltas?.leads && <DeltaBadge deltaPct={kpiDeltas.leads.delta_pct} />}
+        </div>
         <div className="stat-value">{leadCount}</div>
         {hotLeadsCount > 0 ? (
           <div
@@ -37,7 +73,7 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
           </div>
         ) : (
           <div className="stat-trend neutral">
-            Total leads captured
+            {kpiDeltas?.leads?.this_week > 0 ? `${kpiDeltas.leads.this_week} this week` : "Total leads captured"}
           </div>
         )}
         {leadCount === 0 && (
@@ -103,6 +139,22 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
           </>
         )}
       </div>
+
+      {/* Appointments This Week */}
+      {kpiDeltas?.appointments && (
+        <div className="stat-card">
+          <div className="stat-label">
+            Appointments This Week
+            <DeltaBadge deltaPct={kpiDeltas.appointments.delta_pct} />
+          </div>
+          <div className="stat-value">{kpiDeltas.appointments.this_week}</div>
+          <div className="stat-trend neutral">
+            {kpiDeltas.appointments.last_week > 0
+              ? `${kpiDeltas.appointments.last_week} last week`
+              : "Track your bookings"}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -90,3 +90,9 @@ export function revokeMcpKey(tenantId, token) {
 export function fetchKnowledgeStats(tenantId, token) {
   return request(`/api/v1/auth/knowledge-stats/${tenantId}`, { token });
 }
+
+// --- KPI Deltas (week-over-week) ---
+
+export function fetchKpiDeltas(tenantId, token) {
+  return request(`/api/v1/analytics/${tenantId}/kpi-deltas`, { token });
+}

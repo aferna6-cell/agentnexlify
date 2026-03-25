@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchDashboard, fetchActivity, fetchOnboardingStatus } from "../../utils/api/dashboard";
+import { fetchDashboard, fetchActivity, fetchOnboardingStatus, fetchKpiDeltas } from "../../utils/api/dashboard";
 import { fetchLeads, updateLead, deleteLead } from "../../utils/api/leads";
 import { fetchSequenceStats, fetchAutomations } from "../../utils/api/automations";
 import { fetchCrmDashboardWidgets } from "../../utils/api/crm";
@@ -40,13 +40,14 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   const [crmWidgets, setCrmWidgets] = useState(null);
   const [seqStats, setSeqStats] = useState(null);
   const [onboardingStatus, setOnboardingStatus] = useState(null);
+  const [kpiDeltas, setKpiDeltas] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     if (!user?.tenantId) return;
     setLoading(true);
     setError(null);
     try {
-      const [dashRes, leadsRes, autoRes, activityRes, crmRes, seqStatsRes, onboardRes] =
+      const [dashRes, leadsRes, autoRes, activityRes, crmRes, seqStatsRes, onboardRes, kpiRes] =
         await Promise.allSettled([
           fetchDashboard(user.tenantId, token),
           fetchLeads(user.tenantId, token),
@@ -55,6 +56,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           fetchCrmDashboardWidgets(user.tenantId, token),
           fetchSequenceStats(user.tenantId, token),
           fetchOnboardingStatus(user.tenantId, token),
+          fetchKpiDeltas(user.tenantId, token),
         ]);
 
       if (dashRes.status === "fulfilled") {
@@ -68,6 +70,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
       if (crmRes.status === "fulfilled") setCrmWidgets(crmRes.value);
       if (seqStatsRes.status === "fulfilled") setSeqStats(seqStatsRes.value);
       if (onboardRes.status === "fulfilled") setOnboardingStatus(onboardRes.value);
+      if (kpiRes.status === "fulfilled") setKpiDeltas(kpiRes.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -168,6 +171,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         hotLeadsCount={dashData?.hot_leads_count ?? 0}
         emailsSentToday={seqStats?.emails_sent_today ?? 0}
         missedCallsThisWeek={dashData?.missed_calls_this_week ?? null}
+        kpiDeltas={kpiDeltas}
       />
       <div className="analytics-link" onClick={() => onNavigate("analytics")}>
         View Analytics &rarr;

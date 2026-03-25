@@ -949,3 +949,101 @@ async def lead_source_breakdown(
     response = {"breakdown": breakdown, "total": sum(counts.values())}
     _cache[cache_key] = (time.time(), response)
     return response
+
+
+@router.get("/{tenant_id}/kpi-deltas")
+async def kpi_deltas(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Return week-over-week KPI deltas for dashboard overview cards.
+
+    Compares this week (last 7 days) vs previous week (8-14 days ago) for:
+    - leads captured
+    - conversations
+    - appointments booked
+    - hot leads (score >= 8)
+    """
+    verify_tenant(claims, tenant_id)
+
+    cache_key = f"kpi_deltas:{tenant_id}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    this_week_start = (now - timedelta(days=7)).isoformat()
+    last_week_start = (now - timedelta(days=14)).isoformat()
+    last_week_end = (now - timedelta(days=7)).isoformat()
+
+    def _count_in_range(table: str, id_col: str, start: str, end: str | None = None, extra_filters: dict | None = None) -> int:
+        try:
+            q = db.table(table).select("id", count="exact").eq(id_col, tenant_id).gte("created_at", start)
+            if end:
+                q = q.lt("created_at", end)
+            if extra_filters:
+                for k, v in extra_filters.items():
+                    q = q.eq(k, v) if not isinstance(v, tuple) else q.gte(k, v[0])
+            result = q.execute()
+            return result.count or 0
+        except Exception:
+            logger.warning("KPI delta query failed for %s on %s", tenant_id, table, exc_info=True)
+            return 0
+
+    def _count_leads(start: str, end: str | None = None, hot: bool = False) -> int:
+        try:
+            q = db.table("leads").select("id", count="exact").eq("client_id", tenant_id).gte("created_at", start)
+            if end:
+                q = q.lt("created_at", end)
+            if hot:
+                q = q.gte("lead_score", 8)
+            result = q.execute()
+            return result.count or 0
+        except Exception:
+            logger.warning("KPI delta leads query failed for %s", tenant_id, exc_info=True)
+            return 0
+
+    # This week counts
+    leads_this = _count_leads(this_week_start)
+    leads_last = _count_leads(last_week_start, last_week_end)
+
+    hot_this = _count_leads(this_week_start, hot=True)
+    hot_last = _count_leads(last_week_start, last_week_end, hot=True)
+
+    convos_this = _count_in_range("conversations", "client_id", this_week_start)
+    convos_last = _count_in_range("conversations", "client_id", last_week_start, last_week_end)
+
+    appts_this = _count_in_range("appointments", "tenant_id", this_week_start)
+    appts_last = _count_in_range("appointments", "tenant_id", last_week_start, last_week_end)
+
+    def _delta_pct(current: int, previous: int) -> float | None:
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return round(((current - previous) / previous) * 100, 1)
+
+    response = {
+        "leads": {
+            "this_week": leads_this,
+            "last_week": leads_last,
+            "delta_pct": _delta_pct(leads_this, leads_last),
+        },
+        "hot_leads": {
+            "this_week": hot_this,
+            "last_week": hot_last,
+            "delta_pct": _delta_pct(hot_this, hot_last),
+        },
+        "conversations": {
+            "this_week": convos_this,
+            "last_week": convos_last,
+            "delta_pct": _delta_pct(convos_this, convos_last),
+        },
+        "appointments": {
+            "this_week": appts_this,
+            "last_week": appts_last,
+            "delta_pct": _delta_pct(appts_this, appts_last),
+        },
+    }
+
+    _cache[cache_key] = (time.time(), response)
+    return response
