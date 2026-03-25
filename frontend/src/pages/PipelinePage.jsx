@@ -619,7 +619,7 @@ export default function PipelinePage() {
                         flex: 1,
                       }}
                     >
-                      No deals in {stage.label.toLowerCase()}
+                      No deals in {(stage.name || "this stage").toLowerCase()}
                       <br />
                       <span style={{ fontSize: "0.7rem", marginTop: 4, display: "block", opacity: 0.7 }}>
                         Move a deal here using the "Move" button on a card

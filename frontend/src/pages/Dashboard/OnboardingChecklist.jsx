@@ -168,10 +168,8 @@ export default function OnboardingChecklist({
   const completedCount = steps.filter((s) => s.complete).length;
   const totalSteps = steps.length;
 
-  // Use API percentage if available, otherwise compute from steps
-  const completionPct = onboardingStatus?.completion_percentage != null
-    ? onboardingStatus.completion_percentage
-    : Math.round((completedCount / totalSteps) * 100);
+  // Always compute percentage from frontend steps to match the displayed count
+  const completionPct = Math.round((completedCount / totalSteps) * 100);
 
   const allDone = completedCount === totalSteps;
 

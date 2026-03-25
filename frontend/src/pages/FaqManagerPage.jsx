@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchFaqEntries, createFaqEntry, deleteFaqEntry } from "../utils/api/faq";
+import { fetchFaqEntries, createFaqEntry, updateFaqEntry, deleteFaqEntry } from "../utils/api/faq";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function FaqManagerPage() {
@@ -11,6 +11,8 @@ export default function FaqManagerPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ question: "", answer: "", category: "" });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ question: "", answer: "", category: "" });
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -37,6 +39,25 @@ export default function FaqManagerPage() {
       setShowForm(false);
     } catch (err) {
       console.error("Failed to create FAQ", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEdit = (faq) => {
+    setEditingId(faq.id);
+    setEditForm({ question: faq.question, answer: faq.answer, category: faq.category || "" });
+  };
+
+  const handleUpdate = async () => {
+    if (!editForm.question.trim() || !editForm.answer.trim()) return;
+    setSaving(true);
+    try {
+      const updated = await updateFaqEntry(user.tenantId, token, editingId, editForm);
+      setFaqs((prev) => prev.map((f) => (f.id === editingId ? { ...f, ...updated } : f)));
+      setEditingId(null);
+    } catch (err) {
+      console.error("Failed to update FAQ", err);
     } finally {
       setSaving(false);
     }
@@ -113,15 +134,50 @@ export default function FaqManagerPage() {
         <div className="faq-list">
           {faqs.map((faq) => (
             <div key={faq.id} className="faq-item">
-              <div className="faq-item-q">{faq.question}</div>
-              <div className="faq-item-a">{faq.answer}</div>
-              {faq.category && <div className="faq-item-cat">{faq.category}</div>}
-              <button
-                className={`faq-delete-btn${deleteConfirm === faq.id ? " confirming" : ""}`}
-                onClick={() => handleDelete(faq.id)}
-              >
-                {deleteConfirm === faq.id ? "Confirm Delete" : "Delete"}
-              </button>
+              {editingId === faq.id ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
+                  <input
+                    value={editForm.question}
+                    onChange={(e) => setEditForm((f) => ({ ...f, question: e.target.value }))}
+                    style={{ width: "100%" }}
+                  />
+                  <textarea
+                    value={editForm.answer}
+                    onChange={(e) => setEditForm((f) => ({ ...f, answer: e.target.value }))}
+                    rows={3}
+                    style={{ width: "100%" }}
+                  />
+                  <input
+                    value={editForm.category}
+                    onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                    placeholder="Category"
+                    style={{ width: "100%" }}
+                  />
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button className="btn-primary" onClick={handleUpdate} disabled={saving}>
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                    <button className="faq-delete-btn" onClick={() => setEditingId(null)}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="faq-item-q">{faq.question}</div>
+                  <div className="faq-item-a">{faq.answer}</div>
+                  {faq.category && <div className="faq-item-cat">{faq.category}</div>}
+                  <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                    <button className="btn-primary" onClick={() => startEdit(faq)} style={{ fontSize: "0.8rem", padding: "4px 12px" }}>
+                      Edit
+                    </button>
+                    <button
+                      className={`faq-delete-btn${deleteConfirm === faq.id ? " confirming" : ""}`}
+                      onClick={() => handleDelete(faq.id)}
+                    >
+                      {deleteConfirm === faq.id ? "Confirm Delete" : "Delete"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

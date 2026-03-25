@@ -60,8 +60,9 @@ export default function ClientPortalPage() {
         fetchServiceRecords(user.tenantId, token),
         fetchLeads(user.tenantId, token, { per_page: 200 }),
       ]);
-      setRecords(recordsData.records || recordsData || []);
-      const leadsList = leadsData.leads || leadsData || [];
+      const recordsList = Array.isArray(recordsData?.records) ? recordsData.records : Array.isArray(recordsData) ? recordsData : [];
+      setRecords(recordsList);
+      const leadsList = Array.isArray(leadsData?.leads) ? leadsData.leads : Array.isArray(leadsData) ? leadsData : [];
       setLeads(leadsList);
       setError(null);
     } catch (err) {
@@ -191,17 +192,18 @@ export default function ClientPortalPage() {
     }
   };
 
-  // Build lead name lookup
-  const leadMap = {};
-  leads.forEach((l) => { leadMap[l.id] = l; });
-
-  // Get unique leads that have service records
-  const leadsWithRecords = [...new Set(records.filter((r) => r.lead_id).map((r) => r.lead_id))];
-
   if (loading) return <SkeletonLoader />;
 
-  const totalRecords = records.length;
-  const totalInvoiced = records.reduce((sum, r) => sum + (Number(r.invoice_amount) || 0), 0);
+  // Build lead name lookup
+  const leadMap = {};
+  (Array.isArray(leads) ? leads : []).forEach((l) => { leadMap[l.id] = l; });
+
+  // Get unique leads that have service records
+  const safeRecords = Array.isArray(records) ? records : [];
+  const leadsWithRecords = [...new Set(safeRecords.filter((r) => r.lead_id).map((r) => r.lead_id))];
+
+  const totalRecords = safeRecords.length;
+  const totalInvoiced = safeRecords.reduce((sum, r) => sum + (Number(r.invoice_amount) || 0), 0);
   const uniqueClients = leadsWithRecords.length;
 
   return (

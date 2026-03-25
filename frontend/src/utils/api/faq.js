@@ -15,6 +15,14 @@ export function createFaqEntry(tenantId, token, { question, answer, category }) 
   });
 }
 
+export function updateFaqEntry(tenantId, token, faqId, { question, answer, category }) {
+  return request(`/api/v1/auth/faq/${tenantId}/${faqId}`, {
+    method: "PUT",
+    token,
+    body: { question, answer, category },
+  });
+}
+
 export async function deleteFaqEntry(tenantId, token, faqId) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;

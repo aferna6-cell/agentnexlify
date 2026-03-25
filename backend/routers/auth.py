@@ -692,6 +692,32 @@ async def create_faq(
     )
 
 
+@router.put("/faq/{tenant_id}/{faq_id}", response_model=FaqEntryResponse)
+async def update_faq(
+    tenant_id: str,
+    faq_id: str,
+    req: FaqCreateRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Update an existing FAQ entry."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_supabase()
+    update_data = {"question": req.question, "answer": req.answer}
+    if req.category is not None:
+        update_data["category"] = req.category
+    result = (
+        db.table("faq_entries")
+        .update(update_data)
+        .eq("id", faq_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="FAQ entry not found")
+    return result.data[0]
+
+
 @router.delete("/faq/{tenant_id}/{faq_id}", status_code=204)
 async def delete_faq(
     tenant_id: str,
