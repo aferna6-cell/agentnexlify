@@ -70,6 +70,7 @@ const MarketingCampaignsPage = lazy(() => import("../pages/MarketingCampaignsPag
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
 const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
+const PipelineAutomationsPage = lazy(() => import("../pages/PipelineAutomationsPage"));
 const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
 const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
 const CSATPage = lazy(() => import("../pages/CSATPage"));
@@ -112,6 +113,7 @@ const pages = {
   invoices: InvoicesPage,
   documents: DocumentsPage,
   pipeline: PipelinePage,
+  pipeline_automations: PipelineAutomationsPage,
   smart_lists: SmartListsPage,
   form_builder: FormBuilderPage,
   csat: CSATPage,
