@@ -1,10 +1,11 @@
-# State — 2026-03-24T23:22:00Z
-- Session log: docs/engineering-memory/sessions/20260324-2305.md
-- Built: Dashboard quick actions (Quick Book + Add Lead modals), Lead notes quick-add from ConversationsPage, Service type selection on public booking page, Team member activity log (page + endpoint), Email template preview with sample data, Invoice payment webhook handler
-- Fixed: Birthday greeting operator precedence bug (plan check always evaluated to free), log_activity wrong args in assign_lead (db passed as tenant_id)
-- Tested: 10/10 safety checks passing (no future imports, no BaseException, no bare except, widget sync, no tenant_id on leads/conversations, no .get("plan", ...) pattern, no .get("business_name", ...) pattern)
-- Commits: 5 (feat: quick actions + lead notes + birthday fix, feat: booking page service types, feat: team activity log, feat: email template preview, feat: invoice payment webhook)
+# State — 2026-03-25T00:20:00Z
+- Session log: docs/engineering-memory/sessions/20260325-0003.md
+- Fixed: 3 P1 production issues (appointment double-booking race condition, invoice number uniqueness with migration 068, stale widget session cleanup)
+- Built: Dashboard KPI deltas (week-over-week), lead CSV export with filters, appointment iCal calendar feed, public appointment reschedule page with HMAC-signed links, bulk invoice send with checkbox UI
+- Tested: 11/11 safety checks passing (added model ID validation check)
+- Commits: 5 (3 P1 fixes, KPI deltas, CSV export + iCal, reschedule page, bulk invoice send)
 - In progress: (none)
-- Next up: Appointment no-show tracking, dashboard mobile responsive fixes, conversation search, lead export to CSV, dashboard KPI deltas
+- Next up: Lead pipeline stage automations, appointment type-based pricing, dashboard calendar view, conversation assignment notification
 - Build status: PASS
-- Test matrix summary: 10/10 passing
+- Test matrix summary: 11/11 passing
+- Backlog: 19 new items added (Tier 9), 39 total unchecked

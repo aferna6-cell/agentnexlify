@@ -386,3 +386,8 @@ New table `scoring_configs` for per-tenant configurable lead scoring weights. Co
 **Applied:** Pending — created 2026-03-23, not yet applied to Supabase.
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
+
+### 068 — Invoice Number Unique Index
+Adds unique index `idx_invoices_tenant_number ON invoices(tenant_id, invoice_number)`. Prevents duplicate invoice numbers under concurrent creation. Backend retries with incremented sequence on conflict.
+
+**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.

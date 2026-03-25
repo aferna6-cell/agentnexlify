@@ -484,15 +484,15 @@ _Think like a plumber, dentist, salon owner, or restaurant manager. What do they
 
 _Think like a business owner who is live in production with real customers. What breaks? What's missing?_
 
-- [ ] [P1] [fix]: Appointment double-booking race condition — Add DB advisory lock or SELECT FOR UPDATE before insert to prevent two simultaneous bookings for the same slot | Files: backend/services/booking.py | Done when: concurrent booking test passes
-- [ ] [P1] [fix]: Widget session cleanup — Stale widget sessions accumulate in chat_messages. Add background task to prune sessions with no messages in 90 days | Files: backend/services/automation_engine.py | Done when: prune task runs and old sessions are cleaned
-- [ ] [P1] [fix]: Invoice number uniqueness — invoice_number is not unique-constrained in DB. Two invoices could get the same number under concurrency | Files: migrations/068_invoice_number_unique.sql, backend/routers/invoices.py | Done when: unique index exists and invoice creation retries on conflict
-- [ ] [P2] [feat]: Appointment reschedule page — Public page where customers can reschedule their appointment via a signed link in confirmation email | Files: backend/routers/booking_page.py, backend/services/email_sender.py | Done when: reschedule link in confirmation email works end-to-end
+- [x] [P1] [fix]: Appointment double-booking race condition — DONE 2026-03-25. Pre-insert overlap check + graceful DB constraint handling. Returns 409.
+- [x] [P1] [fix]: Widget session cleanup — DONE 2026-03-25. prune_stale_widget_sessions() in 30-min automation tier.
+- [x] [P1] [fix]: Invoice number uniqueness — DONE 2026-03-25. Migration 068. Retry 3x on conflict.
+- [x] [P2] [feat]: Appointment reschedule page — DONE 2026-03-25. HMAC-signed reschedule links in confirmation emails.
 - [ ] [P2] [feat]: Lead deduplication on import — CSV import should check for existing leads by email/phone before creating duplicates | Files: backend/routers/leads.py | Done when: CSV import skips or merges duplicates with a count summary
-- [ ] [P2] [feat]: Bulk invoice send — Select multiple invoices and send them all at once instead of one by one | Files: backend/routers/invoices.py, frontend/src/pages/InvoicesPage.jsx | Done when: checkbox selection + bulk send button works
-- [ ] [P2] [feat]: Dashboard KPI cards — Show week-over-week delta (up/down arrows with percentages) on dashboard overview cards | Files: frontend/src/pages/Dashboard/OverviewCards.jsx, backend/routers/auth.py | Done when: cards show +/-% vs last week
-- [ ] [P3] [feat]: Lead export to CSV — Export filtered leads as CSV for external use (accounting, mailing lists) | Files: backend/routers/leads.py, frontend/src/pages/LeadsPage.jsx | Done when: "Export CSV" button downloads filtered leads
-- [ ] [P3] [feat]: Appointment calendar sync link — iCal/webcal URL for businesses to subscribe to in Google Calendar/Apple Calendar | Files: backend/routers/appointments.py | Done when: GET /{tenant_id}/ical returns valid .ics feed
+- [x] [P2] [feat]: Bulk invoice send — DONE 2026-03-25. Checkbox selection, max 50 per request.
+- [x] [P2] [feat]: Dashboard KPI cards — DONE 2026-03-25. Week-over-week delta badges.
+- [x] [P3] [feat]: Lead export to CSV — DONE 2026-03-25. Export button on LeadsPage with filters.
+- [x] [P3] [feat]: Appointment calendar sync link — DONE 2026-03-25. iCal feed endpoint.
 - [ ] [P3] [feat]: Client portal appointment self-service — Let clients cancel or reschedule appointments from their portal | Files: backend/routers/client_portal.py, frontend/src/pages/ClientDashboardPage.jsx | Done when: portal shows cancel/reschedule buttons
 - [ ] [P2] [test]: End-to-end appointment booking flow — Test public booking page submit -> appointment created -> confirmation email sent -> lead linked | Files: tests/ | Done when: integration test covers full flow
 - [ ] [P2] [test]: Invoice payment flow — Test Stripe webhook handler correctly marks invoice paid and fires webhook event | Files: tests/ | Done when: mock Stripe event properly updates invoice
@@ -504,3 +504,27 @@ _Think like a business owner who is live in production with real customers. What
 - [ ] [P3] [feat]: AI conversation summary on conversation list — Show a one-line AI summary next to each conversation in the list | Files: backend/routers/auth.py, frontend/src/pages/ConversationsPage.jsx | Done when: summary appears under lead name
 - [ ] [P4] [chore]: Create requirements.txt from installed packages — Track all Python dependencies for deployment reproducibility | Files: requirements.txt | Done when: pip freeze output is committed
 - [ ] [P4] [chore]: Add loading skeleton to TeamActivityPage — Currently shows nothing while loading | Files: frontend/src/pages/TeamActivityPage.jsx | Done when: SkeletonLoader shows during load
+
+## Features — Tier 9: Retention & Revenue Optimization (2026-03-25)
+
+_Think like a business owner who is paying $249/mo. What makes them stay? What makes them upgrade?_
+
+- [ ] [P1] [fix]: Stale automation executions — Executions stuck in 'running' for >24h should be marked 'failed' with reason | Files: backend/services/automation_engine.py | Done when: stuck executions auto-fail after 24h
+- [ ] [P1] [fix]: Email bounce handling — Resend webhook for bounces should mark lead's email as invalid and skip future sends | Files: backend/routers/stripe_webhooks.py, backend/services/email_sender.py | Done when: bounced emails set a flag and automations skip them
+- [ ] [P1] [fix]: Chat widget reconnection — Widget loses connection after laptop sleep/resume and doesn't recover | Files: widget/agentnexlify-widget.js | Done when: widget auto-reconnects and resumes session after network loss
+- [ ] [P2] [feat]: Lead pipeline stage automations — Auto-trigger actions when a lead moves between pipeline stages (send email, create task, notify team) | Files: backend/routers/pipeline.py, backend/services/automation_engine.py | Done when: stage change fires configured actions
+- [ ] [P2] [feat]: Appointment type-based pricing display — Show service price next to appointment type on booking page | Files: backend/routers/booking_page.py | Done when: public booking page shows "$XX" next to each service option
+- [ ] [P2] [feat]: Dashboard calendar view — Full calendar view of appointments on the dashboard with month/week/day toggles | Files: frontend/src/pages/Dashboard/CalendarView.jsx | Done when: interactive calendar shows appointments with click-to-detail
+- [ ] [P2] [feat]: Conversation assignment auto-notification — When a conversation is assigned to a team member, email/SMS them | Files: backend/routers/conversation_inbox.py | Done when: assigned member gets email notification with conversation link
+- [ ] [P2] [feat]: Revenue dashboard — Monthly revenue tracking from paid invoices, MRR chart, pipeline value | Files: backend/routers/analytics.py, frontend/src/pages/AnalyticsPage.jsx | Done when: revenue section on analytics page with chart
+- [ ] [P3] [feat]: Lead activity email digest — Daily/weekly email to business owner summarizing new leads, hot leads, missed calls | Files: backend/services/automation_engine.py | Done when: configurable digest email goes out on schedule
+- [ ] [P3] [feat]: Client portal messaging — Let clients send messages through their portal that appear in conversations | Files: backend/routers/client_portal.py | Done when: client can type a message and it appears in dashboard inbox
+- [ ] [P3] [feat]: Invoice late fee auto-calculation — Auto-add late fee to overdue invoices based on configurable percentage | Files: backend/services/automation_engine.py, backend/routers/invoices.py | Done when: overdue invoices auto-recalculate with late fee
+- [ ] [P2] [test]: Appointment reschedule flow — Test signed URL generation, page render, slot selection, reschedule submit, cancel | Files: tests/ | Done when: full reschedule flow covered
+- [ ] [P2] [test]: Bulk invoice send — Test sending 5 invoices, verify status updates, handle mixed success/failure | Files: tests/ | Done when: bulk send returns correct sent/failed counts
+- [ ] [P2] [test]: KPI delta calculation — Test week-over-week comparison with known data, zero previous week, equal weeks | Files: tests/ | Done when: delta percentages verified for edge cases
+- [ ] [P3] [test]: iCal feed format — Test that generated .ics file validates and imports into Google Calendar | Files: tests/ | Done when: iCal output parses correctly
+- [ ] [P3] [test]: Lead CSV export — Test that exported CSV contains correct columns, handles special characters, respects filters | Files: tests/ | Done when: CSV output matches filtered lead data
+- [ ] [P2] [fix]: Appointment status transitions — No validation that status changes follow valid paths (e.g. can't go from cancelled to confirmed) | Files: backend/services/booking.py | Done when: invalid transitions return 400 error
+- [ ] [P3] [feat]: Smart lead scoring recalculation — Trigger lead score recalculation when lead data changes (new note, new message, appointment completed) | Files: backend/services/lead_scoring.py | Done when: score updates automatically on relevant events
+- [ ] [P4] [chore]: Consolidate duplicate error handling patterns — Many routers have identical try/except blocks for Supabase queries | Files: backend/utils/db_helpers.py | Done when: shared helper reduces duplicate error handling by 50%

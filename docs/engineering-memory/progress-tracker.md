@@ -83,3 +83,20 @@ _What was built each session. Proves velocity, prevents re-doing work._
 
 ### Commits
 - 5 commits pushed to origin/main
+
+## Session 2026-03-25
+
+### Bugs Fixed
+1. **Appointment double-booking race condition** — Added pre-insert overlap check in create_appointment() and graceful handling of DB EXCLUDE constraint violations. All callers (public booking, dashboard booking, booking page) now return 409 on conflict instead of 500.
+2. **Invoice number uniqueness** — Migration 068 adds unique index on (tenant_id, invoice_number). Invoice creation retries up to 3x with incrementing sequence on conflict.
+3. **Widget session cleanup** — New prune_stale_widget_sessions() function deletes chat_messages from sessions inactive >90 days. Skips sessions with active conversations. Runs in 30-min automation tier.
+
+### Features Built
+1. **Dashboard KPI deltas** — New GET /analytics/{tenant_id}/kpi-deltas endpoint. Compares this week vs last week for leads, conversations, appointments, hot leads. DeltaBadge component shows green up/red down/gray flat arrows with percentages. New appointments-this-week card.
+2. **Lead CSV export** — GET /leads/{tenant_id}/export-csv with stage/search/assigned_to filters. Downloads CSV with all lead fields including tags (comma-separated). "Export CSV" button on LeadsPage respects current filters.
+3. **Appointment iCal feed** — GET /appointments/{tenant_id}/ical?key={api_key} returns .ics calendar feed. Includes last 30 days + next 90 days appointments. Businesses subscribe in Google Calendar/Apple Calendar.
+4. **Appointment reschedule page** — HMAC-signed reschedule URLs in confirmation emails. Public page shows available slots for next 14 days. Customer can pick new date/time or cancel directly. Activity logging for both actions.
+5. **Bulk invoice send** — POST /invoices/{tenant_id}/bulk-send sends up to 50 invoices. Creates Stripe payment links, dispatches via email/SMS. InvoicesPage: checkbox column, select-all, bulk action bar.
+
+### Commits
+- 5 commits pushed to origin/main
