@@ -59,6 +59,56 @@ def _find_conversation(db, conversation_id: str, tenant_id: str, select: str = "
     return None
 
 
+# --- Conversation Assignment Notification ---
+
+async def _send_assignment_notification(
+    tenant_id: str,
+    assignee_name: str,
+    assignee_email: str,
+    conversation_preview: str,
+    lead_name: str,
+) -> None:
+    """Email team member when a conversation is assigned to them.
+
+    Best-effort: failures are logged but don't block the assignment.
+    """
+    if not assignee_email:
+        return
+
+    try:
+        from backend.services.email_sender import send_email
+        from backend.config import settings
+
+        dashboard_url = settings.frontend_url.rstrip("/")
+        preview_text = conversation_preview[:200] if conversation_preview else "(no messages yet)"
+
+        body_html = (
+            f"<h2>Conversation Assigned to You</h2>"
+            f"<p>Hi {assignee_name},</p>"
+            f"<p>A conversation has been assigned to you.</p>"
+            f'<div style="background:#f3f4f6;border-radius:8px;padding:16px;margin:16px 0;">'
+            f'<p style="margin:4px 0;"><strong>Lead:</strong> {lead_name or "Unknown visitor"}</p>'
+            f'<p style="margin:4px 0;"><strong>Latest message:</strong></p>'
+            f'<p style="margin:4px 0;color:#6b7280;font-style:italic;">"{preview_text}"</p>'
+            f"</div>"
+            f'<p><a href="{dashboard_url}/conversations" '
+            f'style="color:#2563eb;text-decoration:underline;">'
+            f"Open in Dashboard</a></p>"
+        )
+
+        await send_email(
+            to=assignee_email,
+            subject="Conversation assigned to you",
+            body_html=body_html,
+            tenant_id=tenant_id,
+        )
+        logger.info("Sent assignment notification to %s for tenant %s", assignee_email, tenant_id)
+    except Exception:
+        logger.warning(
+            "Failed to send assignment notification to %s", assignee_email, exc_info=True
+        )
+
+
 # --- Conversation Assignment ---
 
 @router.put("/{tenant_id}/conversations/{conversation_id}/assign")
@@ -74,17 +124,18 @@ async def assign_conversation(
     db = get_supabase()
 
     # Verify conversation belongs to tenant (supports UUID or session_id)
-    conv_row = _find_conversation(db, conversation_id, tenant_id)
+    conv_row = _find_conversation(db, conversation_id, tenant_id, select="id, session_id, lead_id")
     if not conv_row:
         raise HTTPException(status_code=404, detail="Conversation not found")
     conv_uuid = conv_row["id"]
 
     # If assigning, verify team member exists
     assignee_name = None
+    assignee_email = None
     if req.assigned_to:
         member = (
             db.table("team_members")
-            .select("id, name")
+            .select("id, name, email")
             .eq("id", req.assigned_to)
             .eq("tenant_id", tenant_id)
             .limit(1)
@@ -93,6 +144,7 @@ async def assign_conversation(
         if not member.data:
             raise HTTPException(status_code=404, detail="Team member not found")
         assignee_name = member.data[0].get("name", "Team member")
+        assignee_email = member.data[0].get("email")
 
     # Update assignment
     result = (
@@ -113,6 +165,49 @@ async def assign_conversation(
         }).execute()
     except Exception:
         logger.warning("Failed to log conversation assignment activity", exc_info=True)
+
+    # Send email notification to assigned team member (only on assign, not unassign)
+    if req.assigned_to and assignee_email:
+        # Get conversation preview for notification
+        conversation_preview = ""
+        lead_name = ""
+        try:
+            session_id = conv_row.get("session_id")
+            if session_id:
+                last_msg = (
+                    db.table("chat_messages")
+                    .select("content, role")
+                    .eq("tenant_id", tenant_id)
+                    .eq("session_id", session_id)
+                    .order("created_at", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                if last_msg.data:
+                    conversation_preview = last_msg.data[0].get("content", "")
+
+            # Get lead name if available
+            lead_id = conv_row.get("lead_id")
+            if lead_id:
+                lead_row = (
+                    db.table("leads")
+                    .select("name")
+                    .eq("id", lead_id)
+                    .limit(1)
+                    .execute()
+                )
+                if lead_row.data:
+                    lead_name = lead_row.data[0].get("name", "")
+        except Exception:
+            logger.warning("Failed to fetch conversation preview for notification", exc_info=True)
+
+        await _send_assignment_notification(
+            tenant_id=tenant_id,
+            assignee_name=assignee_name,
+            assignee_email=assignee_email,
+            conversation_preview=conversation_preview,
+            lead_name=lead_name,
+        )
 
     return {"assigned_to": req.assigned_to, "message": action}
 
