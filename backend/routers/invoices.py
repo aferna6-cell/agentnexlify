@@ -91,8 +91,11 @@ def _compute_invoice_totals(items: list[dict], tax_rate: float) -> tuple[float, 
     return subtotal, tax_amount, total
 
 
-async def _get_next_invoice_number(db, tenant_id: str) -> str:
-    """Generate a sequential invoice number: INV-{tenant_id[:4].upper()}-{NNN}."""
+async def _get_next_invoice_number(db, tenant_id: str, attempt: int = 0) -> str:
+    """Generate a sequential invoice number: INV-{tenant_id[:4].upper()}-{NNN}.
+
+    The `attempt` param offsets the sequence to handle retry on uniqueness conflict.
+    """
     try:
         result = (
             db.table("invoices")
@@ -107,14 +110,14 @@ async def _get_next_invoice_number(db, tenant_id: str) -> str:
             # Extract sequential portion after the last dash
             parts = last_num.rsplit("-", 1)
             if len(parts) == 2 and parts[1].isdigit():
-                seq = int(parts[1]) + 1
+                seq = int(parts[1]) + 1 + attempt
             else:
-                seq = 1
+                seq = 1 + attempt
         else:
-            seq = 1
+            seq = 1 + attempt
     except Exception:
         logger.warning("Could not determine next invoice number for tenant %s", tenant_id, exc_info=True)
-        seq = 1
+        seq = 1 + attempt
     prefix = tenant_id[:4].upper()
     return f"INV-{prefix}-{seq:03d}"
 
@@ -508,13 +511,23 @@ async def create_invoice(
         intervals = {"weekly": relativedelta(weeks=1), "biweekly": relativedelta(weeks=2), "monthly": relativedelta(months=1), "quarterly": relativedelta(months=3)}
         data["next_invoice_date"] = (base + intervals.get(req.recurrence_interval, relativedelta(months=1))).isoformat()
 
-    try:
-        result = db.table("invoices").insert(data).execute()
-    except Exception:
-        logger.exception("Failed to create invoice for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to create invoice")
+    # Try insert with retry on invoice_number uniqueness conflict (migration 068)
+    result = None
+    for retry in range(3):
+        if retry > 0:
+            data["invoice_number"] = await _get_next_invoice_number(db, tenant_id, attempt=retry)
+        try:
+            result = db.table("invoices").insert(data).execute()
+            break
+        except Exception as exc:
+            error_msg = str(exc).lower()
+            if ("unique" in error_msg or "duplicate" in error_msg or "idx_invoices_tenant_number" in error_msg) and retry < 2:
+                logger.warning("Invoice number conflict for tenant %s, retrying (attempt %d)", tenant_id, retry + 1)
+                continue
+            logger.exception("Failed to create invoice for tenant %s", tenant_id)
+            raise HTTPException(status_code=500, detail="Failed to create invoice")
 
-    if not result.data:
+    if not result or not result.data:
         raise HTTPException(status_code=500, detail="Failed to create invoice")
 
     invoice = result.data[0]

@@ -652,7 +652,7 @@ async def booking_submit(
         except Exception:
             logger.warning("Could not look up service type %s", body.service_type_id, exc_info=True)
 
-    # Create appointment
+    # Create appointment (with double-booking safety net at DB level)
     try:
         appt_result = db.table("appointments").insert({
             "tenant_id": tenant_id,
@@ -664,7 +664,13 @@ async def booking_submit(
             "status": "confirmed",
             "notes": service_note,
         }).execute()
-    except Exception:
+    except Exception as exc:
+        error_msg = str(exc).lower()
+        if "exclude" in error_msg or "overlap" in error_msg or "conflicting" in error_msg:
+            raise HTTPException(
+                status_code=409,
+                detail="That time slot was just booked by someone else. Please choose another.",
+            )
         logger.exception(
             "Failed to create appointment for tenant %s slug %s", tenant_id, business_slug
         )

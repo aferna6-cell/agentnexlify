@@ -180,6 +180,8 @@ async def book_appointment(request: Request, tenant_id: str, req: BookAppointmen
             end_time=req.end_utc,
             notes=req.notes,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except Exception as exc:
         err_msg = str(exc)
         if "exclusion" in err_msg.lower() or "conflicting" in err_msg.lower():
@@ -244,6 +246,8 @@ async def dashboard_book_appointment(
             customer_phone=req.customer_phone,
             notes=req.notes,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except Exception as exc:
         err_msg = str(exc)
         if "exclusion" in err_msg.lower() or "conflicting" in err_msg.lower():

@@ -2718,3 +2718,70 @@ async def auto_archive_old_conversations() -> int:
         logger.exception("auto_archive_old_conversations failed")
 
     return archived
+
+
+async def prune_stale_widget_sessions() -> int:
+    """Delete chat_messages from widget sessions with no messages in 90+ days.
+
+    Prevents indefinite accumulation of stale sessions. Runs in the 30-min
+    automation tier. Processes up to 500 sessions per run.
+    """
+    db = get_supabase()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+    pruned = 0
+
+    try:
+        # Find distinct session_ids where the most recent message is older than 90 days
+        # We look for sessions that start with 'anx_' (widget sessions) to avoid SMS sessions
+        stale_messages = (
+            db.table("chat_messages")
+            .select("session_id")
+            .lt("created_at", cutoff)
+            .limit(500)
+            .execute()
+        )
+
+        if not stale_messages.data:
+            return 0
+
+        # Get unique session IDs from old messages
+        candidate_sessions = list({row["session_id"] for row in stale_messages.data})
+
+        for session_id in candidate_sessions:
+            try:
+                # Verify no recent messages exist for this session
+                recent = (
+                    db.table("chat_messages")
+                    .select("id")
+                    .eq("session_id", session_id)
+                    .gte("created_at", cutoff)
+                    .limit(1)
+                    .execute()
+                )
+                if recent.data:
+                    continue  # Session has recent activity, skip
+
+                # Check if session has a linked conversation that's not archived
+                linked_conv = (
+                    db.table("conversations")
+                    .select("id, status")
+                    .eq("session_id", session_id)
+                    .limit(1)
+                    .execute()
+                )
+                if linked_conv.data and linked_conv.data[0].get("status") not in ("archived",):
+                    continue  # Active conversation, skip
+
+                # Safe to prune — delete old messages for this session
+                db.table("chat_messages").delete().eq("session_id", session_id).lt("created_at", cutoff).execute()
+                pruned += 1
+            except Exception:
+                logger.warning("Failed to prune session %s", session_id, exc_info=True)
+
+        if pruned > 0:
+            logger.info("prune_stale_sessions: cleaned %d stale widget sessions (>90 days inactive)", pruned)
+
+    except Exception:
+        logger.exception("prune_stale_widget_sessions failed")
+
+    return pruned

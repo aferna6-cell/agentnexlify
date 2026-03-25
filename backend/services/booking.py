@@ -216,8 +216,26 @@ def create_appointment(
     customer_phone: str | None = None,
     notes: str | None = None,
 ) -> dict:
-    """Create a new appointment. Raises on double-booking (DB constraint)."""
+    """Create a new appointment with double-booking protection.
+
+    Uses a pre-insert overlap check plus DB EXCLUDE constraint as safety net.
+    Raises ValueError on conflict so callers can return 409.
+    """
     db = get_supabase()
+
+    # Pre-insert overlap check — catch most races before hitting DB constraint
+    existing = (
+        db.table("appointments")
+        .select("id")
+        .eq("tenant_id", tenant_id)
+        .neq("status", "cancelled")
+        .lt("start_time", end_time)
+        .gt("end_time", start_time)
+        .limit(1)
+        .execute()
+    )
+    if existing.data:
+        raise ValueError("This time slot is already booked. Please choose a different time.")
 
     payload = {
         "tenant_id": tenant_id,
@@ -230,7 +248,13 @@ def create_appointment(
         "notes": notes,
     }
 
-    result = db.table("appointments").insert(payload).execute()
+    try:
+        result = db.table("appointments").insert(payload).execute()
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "exclude" in error_msg or "overlap" in error_msg or "conflicting" in error_msg:
+            raise ValueError("This time slot was just booked by someone else. Please choose a different time.") from e
+        raise
     appointment = result.data[0]
 
     # Link to lead

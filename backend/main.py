@@ -90,6 +90,7 @@ async def _automation_loop():
         send_aftercare_instructions,
         process_recurring_invoices,
         auto_archive_old_conversations,
+        prune_stale_widget_sessions,
     )
 
     tick = 0
@@ -127,6 +128,7 @@ async def _automation_loop():
                 _safe_run("send_birthday_greetings", send_birthday_greetings),
                 _safe_run("process_recurring_invoices", process_recurring_invoices),
                 _safe_run("auto_archive_old_conversations", auto_archive_old_conversations),
+                _safe_run("prune_stale_widget_sessions", prune_stale_widget_sessions),
             ])
 
         await asyncio.gather(*core_tasks)
