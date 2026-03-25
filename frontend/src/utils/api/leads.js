@@ -97,3 +97,27 @@ export function bulkUpdateLeads(tenantId, token, { lead_ids, status, assigned_to
 export function fetchLeadActivity(tenantId, token, leadId) {
   return request(`/api/v1/leads/${tenantId}/${leadId}/activity`, { token });
 }
+
+export async function exportLeadsCSV(tenantId, token, { stage, search, assigned_to } = {}) {
+  const params = new URLSearchParams();
+  if (stage) params.set("stage", stage);
+  if (search) params.set("search", search);
+  if (assigned_to) params.set("assigned_to", assigned_to);
+  const qs = params.toString();
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/v1/leads/${tenantId}/export-csv${qs ? `?${qs}` : ""}`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, err);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `leads-export.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

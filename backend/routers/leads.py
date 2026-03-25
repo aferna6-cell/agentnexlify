@@ -549,6 +549,72 @@ _VALID_STATUSES = {"new", "contacted", "appointment_booked", "closed", "lost"}
 _MAX_IMPORT_ROWS = 500
 
 
+@router.get("/{tenant_id}/export-csv")
+async def export_leads_csv(
+    tenant_id: str,
+    stage: str | None = Query(None),
+    search: str | None = Query(None),
+    assigned_to: str | None = Query(None),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Export filtered leads as CSV file download."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_supabase()
+
+    query = (
+        db.table("leads")
+        .select(
+            "name, email, phone, status, lead_score, lead_temperature, "
+            "areas_of_interest, tags, conversation_summary, deal_value, "
+            "source, created_at, updated_at"
+        )
+        .eq("client_id", tenant_id)
+    )
+
+    if stage:
+        query = query.eq("status", stage)
+    if assigned_to:
+        if assigned_to == "unassigned":
+            query = query.is_("assigned_to", "null")
+        else:
+            query = query.eq("assigned_to", assigned_to)
+    if search:
+        safe_search = search.replace(",", "").replace(".", "").strip()
+        if safe_search:
+            query = query.or_(
+                f"name.ilike.%{safe_search}%,email.ilike.%{safe_search}%,phone.ilike.%{safe_search}%"
+            )
+
+    query = query.order("created_at", desc=True).limit(5000)
+    result = query.execute()
+    leads_data = result.data or []
+
+    # Build CSV
+    output = io.StringIO()
+    fields = [
+        "name", "email", "phone", "status", "lead_score", "lead_temperature",
+        "areas_of_interest", "tags", "conversation_summary", "deal_value",
+        "source", "created_at", "updated_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for lead in leads_data:
+        # Convert tags array to comma-separated string
+        row = {**lead}
+        if isinstance(row.get("tags"), list):
+            row["tags"] = ", ".join(row["tags"])
+        writer.writerow(row)
+
+    csv_content = output.getvalue()
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=leads-export-{tenant_id[:8]}.csv"},
+    )
+
+
 @router.post("/{tenant_id}/import")
 async def import_leads_csv(
     tenant_id: str,
