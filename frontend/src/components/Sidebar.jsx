@@ -37,6 +37,7 @@ const allNavItems = [
   { key: "analytics", icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />, label: "Analytics" },
   { key: "clients", icon: <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />, label: "Clients" },
   { key: "pipeline", icon: <Icon d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />, label: "Pipeline", roles: ["owner", "admin", "member"] },
+  { key: "pipeline_automations", icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />, label: "Stage Automations", roles: ["owner", "admin"] },
   { key: "calendar", icon: <Icon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18" />, label: "Calendar" },
   { key: "conversations", icon: <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />, label: "Conversations" },
   { key: "action_items", icon: <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4" />, label: "Action Items" },
