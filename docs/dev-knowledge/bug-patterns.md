@@ -553,6 +553,74 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 **Fix:** Check for `res.status === 204` and empty response text before attempting JSON parse. Return `null` for 204 responses.
 **Prevention:** Any shared API client must handle empty-body responses. Test DELETE endpoints from the UI, not just create/update.
 
+---
+
+### 30. Pipeline crash — PipelinePage.jsx
+**Date:** 2026-03-23 (Commit 38fb69f)
+**Symptom:** Pipeline page crashes on load.
+**Root Cause:** Unknown — needs human enrichment.
+**Files Changed:** `frontend/src/pages/PipelinePage.jsx` + 30 other files (also included hero/features copy update and sitewide em-dash removal)
+**Prevention:** Test pipeline page after any frontend changes that touch PipelinePage.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 31. Missing await in stripe_webhooks
+**Date:** 2026-03-23 (Commit 5e9abcc)
+**Symptom:** Stripe webhook handler missing await on async call.
+**Root Cause:** Async function called without `await`, causing the operation to fire-and-forget silently.
+**Files Changed:** `backend/routers/stripe_webhooks.py`
+**Prevention:** Always await async Supabase calls in webhook handlers.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 32. UnboundLocalError in widget_chat
+**Date:** 2026-03-23 (Commit 5e9abcc)
+**Symptom:** Widget chat endpoint raises UnboundLocalError under certain conditions.
+**Root Cause:** Variable referenced before assignment in a conditional code path.
+**Files Changed:** `backend/routers/widget_chat.py`
+**Prevention:** Ensure all variables are initialized before use in all code paths.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 33. Wrong FK column in conversation.py service — client_id regression #3
+**Date:** 2026-03-23 (Commit 5e9abcc)
+**Symptom:** Conversation service queries fail to find conversations.
+**Root Cause:** `conversation.py` service queried conversations table with `tenant_id` instead of `client_id`. This is the same pattern as bugs #23 (conversation_inbox.py, Cycle 71) and the widget helpers regression (Cycle 154).
+**Files Changed:** `backend/services/conversation.py`
+**Prevention:** EVERY file that touches the `conversations` table must use `client_id`. Run `grep -n 'conversations.*tenant_id' backend/ -r` before committing.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 34. XSS in billing email
+**Date:** 2026-03-23 (Commit 5e9abcc)
+**Symptom:** User-supplied values in billing email templates were not HTML-escaped.
+**Root Cause:** Raw user input rendered in HTML email body without escaping.
+**Files Changed:** `backend/routers/billing.py`
+**Prevention:** All user-supplied values rendered in HTML emails must be escaped. Same pattern as bug #31 (review request XSS, Cycle 109).
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 35. Test isolation — auth.settings cross-contamination
+**Date:** 2026-03-23 (Commit d1a36c6)
+**Symptom:** Test fixtures leak `auth.settings` state across test files, causing unpredictable test failures when tests run in different orders.
+**Root Cause:** Test fixtures patched auth settings but didn't isolate the patch scope properly, allowing cross-file contamination.
+**Files Changed:** 12 test files (test_appointments.py, test_auth_endpoints.py, test_automation_extras.py, test_business_page.py, test_calls.py, test_cors_and_rate_limit.py, test_documents.py, test_google_calendar.py, test_login_and_chat.py, test_service_types.py, test_social_media.py, test_stripe_webhook.py)
+**Prevention:** All test fixtures that patch `auth.settings` must use `patch("backend.routers.<module>.auth.settings", ...)` to prevent cross-file contamination.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
 
 ---

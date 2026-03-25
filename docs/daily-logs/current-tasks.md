@@ -1,12 +1,12 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-03-23 (automated evening review)
+Updated: 2026-03-24 (automated evening review)
 
 ## Tomorrow's Top 3 Priorities
 
 1. **Apply migrations 065-067 to live Supabase** — client_accounts (065), waitlist_entries (066), scoring_configs (067) are all pending. 065 blocks client login in production.
 2. **Complete and commit Revenue Analytics feature** — backend router, frontend page, and API util are written but uncommitted. Wire up and test.
-3. **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` still present despite being flagged this morning. Health check script regex doesn't detect it.
+3. **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` still present despite being flagged. Health check regex doesn't detect it.
 
 ## Active Tasks
 
@@ -14,9 +14,9 @@ Updated: 2026-03-23 (automated evening review)
 
 - [ ] **Apply migration 065 (client_accounts)** — white-label client login depends on this table. Schema-log.md shows "Pending". Use Supabase MCP or SQL editor.
   - Agent: **schema-guardian** → manual apply
-- [ ] **Apply migration 066 (waitlist_entries)** — appointment waitlist feature. Created today, not yet applied.
+- [ ] **Apply migration 066 (waitlist_entries)** — appointment waitlist feature. Created 2026-03-23, not yet applied.
   - Agent: **schema-guardian** → manual apply
-- [ ] **Apply migration 067 (scoring_configs)** — lead scoring config feature. Created today, not yet applied.
+- [ ] **Apply migration 067 (scoring_configs)** — lead scoring config feature. Created 2026-03-23, not yet applied.
   - Agent: **schema-guardian** → manual apply
 
 ### Priority 2 — In-Progress Features
@@ -30,11 +30,16 @@ Updated: 2026-03-23 (automated evening review)
 
 - [ ] **Production feature verification** — Cycles 154-167 added 14+ features, none production-verified.
   - Agent: **qa-tester**
+- [ ] **Enrich auto-logged bug patterns (#30-35)** — 6 new skeleton entries added 2026-03-24. Need human enrichment for root cause details.
 
 ### Priority 4 — Carried Forward
 
 - [ ] **Two-way email sync** — still pending from previous backlog
-- [ ] **Fix 16 test isolation failures** — carried forward from previous backlog
+- [ ] **Fix 16 test isolation failures** — partially addressed by d1a36c6 (12 files patched), may still have remaining failures
+
+## Completed (Recent) — 2026-03-24
+
+- [x] **Evening knowledge base update** — 6 bug pattern entries (#30-35) added for 3 fix commits from 2026-03-23
 
 ## Completed (Recent) — 2026-03-23
 
@@ -43,6 +48,9 @@ Updated: 2026-03-23 (automated evening review)
 - [x] **Schema-log updated** — migrations 066 and 067 documented
 - [x] **Hero copy updated on Home.jsx** — more specific value prop
 - [x] **FormBuilderPage em-dash cleanup** — replaced em-dashes with hyphens for consistency
+- [x] **Pipeline crash fix** — 38fb69f (committed after evening review)
+- [x] **4-bug fix** — 5e9abcc (stripe_webhooks, widget_chat, conversation.py FK, billing XSS)
+- [x] **Test isolation fix** — d1a36c6 (12 test files patched)
 
 ## Completed Since Last Update (Cycles 147-167)
 
