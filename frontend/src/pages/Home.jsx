@@ -17,22 +17,38 @@ function getUserEmail() {
   }
 }
 
-/* Pricing CTA that prefills email or redirects to signup */
-function StripeCta({ href, children }) {
-  const handleClick = (e) => {
-    const email = getUserEmail();
-    if (!email) {
-      e.preventDefault();
+/* Pricing CTA that creates a Stripe checkout session or redirects to signup */
+function StripeCta({ plan, children }) {
+  const handleClick = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem("anx_token");
+    if (!token) {
       window.location.href = "/signup";
       return;
     }
-    e.preventDefault();
-    trackEvent("begin_checkout", { event_label: "home_pricing" });
-    const url = `${href}?prefilled_email=${encodeURIComponent(email)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    trackEvent("begin_checkout", { event_label: "home_pricing", plan });
+    try {
+      const API = import.meta.env.VITE_API_URL || "";
+      const resp = await fetch(`${API}/api/v1/auth/billing/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await resp.json();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        window.location.href = "/signup";
+      }
+    } catch {
+      window.location.href = "/signup";
+    }
   };
   return (
-    <a href={href} onClick={handleClick} className="pricing-cta">
+    <a href="/signup" onClick={handleClick} className="pricing-cta">
       {children}
     </a>
   );
@@ -391,7 +407,7 @@ export default function Home() {
       {/* ============ NAV ============ */}
       <nav className={`lp-nav${navScrolled ? " scrolled" : ""}`} role="navigation" aria-label="Main navigation">
         <div className="lp-nav-inner">
-          <a href="#" className="lp-nav-logo">
+          <a href="/" className="lp-nav-logo">
             <img src="/logo.png" alt="Agent NexLiFy" />
             <span>NexLiFy</span>
           </a>
@@ -635,7 +651,7 @@ export default function Home() {
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$299 one-time setup</span>
-                <span className="lp-pricing-waived-badge pulse-glow">Waived - Only 10 Spots Remaining</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived for early customers</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
@@ -652,7 +668,7 @@ export default function Home() {
                 <li>Basic analytics &amp; reporting</li>
                 <li>Email support</li>
               </ul>
-              <StripeCta href="https://buy.stripe.com/test_7sYdRb4CedaQaxk2J14AU01">
+              <StripeCta plan="growth">
                 Get Started {"\u2192"}
               </StripeCta>
             </div>
@@ -667,7 +683,7 @@ export default function Home() {
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$499 one-time setup</span>
-                <span className="lp-pricing-waived-badge pulse-glow">Waived - Only 10 Spots Remaining</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived for early customers</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Growth, plus:</div>
@@ -685,7 +701,7 @@ export default function Home() {
                 <li>Advanced analytics &amp; insights</li>
                 <li>Priority email &amp; chat support</li>
               </ul>
-              <StripeCta href="https://buy.stripe.com/test_7sYdRb7Oq1s8gVIabt4AU02">
+              <StripeCta plan="professional">
                 Get Started {"\u2192"}
               </StripeCta>
             </div>
@@ -700,7 +716,7 @@ export default function Home() {
               </div>
               <div className="lp-pricing-setup">
                 <span className="lp-pricing-setup-original">$999 one-time setup</span>
-                <span className="lp-pricing-waived-badge pulse-glow">Waived - Only 10 Spots Remaining</span>
+                <span className="lp-pricing-waived-badge pulse-glow">Waived for early customers</span>
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">Everything in Professional, plus:</div>
@@ -717,7 +733,7 @@ export default function Home() {
                 <li>Full analytics suite</li>
                 <li>Dedicated account manager</li>
               </ul>
-              <StripeCta href="https://buy.stripe.com/test_8x24gBfgSc6M6h41EX4AU03">
+              <StripeCta plan="enterprise">
                 Get Started {"\u2192"}
               </StripeCta>
             </div>
@@ -824,18 +840,7 @@ export default function Home() {
           </div>
           <div className="lp-footer-bottom">
             <span className="lp-footer-copy">&copy; 2026 Agent NexLiFy. All rights reserved.</span>
-            <div className="lp-footer-socials">
-              <a href="#" aria-label="Twitter / X">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-              </a>
-              <a href="#" aria-label="LinkedIn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                </svg>
-              </a>
-            </div>
+            {/* Social links removed until real profiles are created */}
           </div>
         </div>
       </footer>

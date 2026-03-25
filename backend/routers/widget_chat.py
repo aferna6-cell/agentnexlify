@@ -369,9 +369,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
     # 8. Call Anthropic
     api_key_present = bool(settings.anthropic_api_key)
-    api_key_preview = (settings.anthropic_api_key or "")[:12] + "..." if api_key_present else "MISSING"
+    api_key_status = "CONFIGURED" if api_key_present else "MISSING"
     logger.info("widget_chat: calling Anthropic model=%s api_key=%s msg_count=%d",
-                MODEL, api_key_preview, len(messages))
+                MODEL, api_key_status, len(messages))
     try:
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
         api_response = client.messages.create(
@@ -453,8 +453,8 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         try:
             owner_phone = tenant.get("notification_phone")
             if owner_phone and tenant.get("sms_notifications_enabled"):
-                from backend.services.sms import send_sms_notification
-                send_sms_notification(
+                from backend.services.twilio_service import send_sms
+                await send_sms(
                     owner_phone,
                     f"[{tenant.get('business_name') or 'Business'}] A customer requested to speak with a team member. Check your inbox.",
                 )

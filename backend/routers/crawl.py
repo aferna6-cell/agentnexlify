@@ -50,8 +50,8 @@ async def trigger_crawl(
 
     try:
         crawl_record = await start_crawl(tenant_id, url)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid URL or crawl configuration. Please check the website URL and try again.")
     return crawl_record
 
 

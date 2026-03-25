@@ -312,7 +312,7 @@ async def register(request: Request, req: RegisterRequest):
 
 
 @router.post("/login", response_model=LoginResponse)
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def login(request: Request, req: LoginRequest):
     db = get_supabase()
     email = req.email.lower().strip()

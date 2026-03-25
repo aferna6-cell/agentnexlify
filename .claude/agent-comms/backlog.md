@@ -2,9 +2,20 @@
 
 _The continuous loop reads this file every cycle and works top to bottom within each section. Add tasks anytime — the loop picks them up automatically._
 
-_Last updated: 2026-03-14_
+_Last updated: 2026-03-23_
 
 ---
+
+## Features — CTO-Researched Competitive Features (2026-03-25, BUILD AFTER SITE FIXES)
+
+_Priority order: streaming > voice > quoting > review autopilot > agency > business brain_
+
+- [ ] **[CTO-RESEARCHED] Widget Streaming Responses with Claude SSE** — SSE streaming for chat widget so users see tokens in real-time. Use Claude streaming API with `thinking.display: "omitted"`. Target: first visible token in <500ms. Files: widget chat components, backend chat.py, claude_service.py.
+- [ ] **[CTO-RESEARCHED] AI Voice Channel (Vapi/Retell Integration)** — AI phone answering using same knowledge base as chat widget. Calls forwarded after 3 rings, transcribed, logged in dashboard alongside chat. Create voice_service.py, voice.py router, VoiceCallLog/VoiceSettings UI.
+- [ ] **[CTO-RESEARCHED] Instant Quote Engine for Service Businesses** — AI-powered quoting in chat widget. Customer describes problem, AI asks qualifying questions, generates ballpark estimate from configured pricing. Create quote_engine.py, ServiceCatalog UI, QuoteSettings, QuoteDisplay widget component.
+- [ ] **[CTO-RESEARCHED] Review Response Autopilot** — One-click AI-generated review responses matching business voice. Negative reviews get empathetic handling, positive get grateful tone. Enhance ReviewManagement UI, review_response_service.py.
+- [ ] **[CTO-RESEARCHED] Agency/Reseller Multi-Tenant Architecture** — Database schema and API for agency/reseller accounts. Platform > Agency > Business hierarchy. Wholesale pricing. Create agency.py model/router/service.
+- [ ] **[CTO-RESEARCHED] Business Brain (Unified AI Knowledge Context)** — Vector store per tenant with automatic ingestion from all interactions. Every interaction feeds knowledge graph. Create knowledge_service.py, embedding_service.py, knowledge_entry model.
 
 ## Features — Tier 0: Quo-Inspired Competitive Features (BUILD FIRST)
 
@@ -319,6 +330,30 @@ _Done-for-you digital presence: website + GBP + widget + reviews + booking in on
 
 _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones here._
 
+### CTO Site Review (2026-03-25) — CRITICAL
+
+- [ ] **[CTO-SITE-REVIEW] Stripe checkout links are TEST MODE** — Pricing page "Get Started" buttons for Growth ($249), Professional ($499), and Enterprise ($899) link to `buy.stripe.com/test_*` URLs. Revenue pipeline broken. Fix: implement server-side Stripe Checkout Session creation via `/api/v1/auth/billing/checkout`. Done when: clicking "Get Started" creates a real Stripe checkout session.
+- [ ] **[CTO-SITE-REVIEW] No "Forgot Password" on login page** — Login page has no password reset link. Business owners who forget passwords are locked out. Create ForgotPassword page, backend reset token endpoint (via Resend), reset tokens expire after 1 hour.
+- [ ] **[CTO-SITE-REVIEW] Social media links in footer are dead (#)** — Twitter/X and LinkedIn links point to `href="#"`. Remove until real profiles exist.
+- [ ] **[CTO-SITE-REVIEW] Privacy Policy "do not" rendering** — Verify negation statements are unambiguous in all rendering contexts.
+
+### CTO Site Review (2026-03-25) — HIGH
+
+- [ ] **[CTO-SITE-REVIEW] "Book a Demo" goes to generic contact form** — Hero CTA should open a real scheduling interface (Cal.com/Calendly embed or our booking feature).
+- [ ] **[CTO-SITE-REVIEW] No chat widget on our own website** — We sell a chat widget but don't use it on agentnexlify.com. Embed our widget as product demo + lead capture.
+- [ ] **[CTO-SITE-REVIEW] "Only 10 Spots Remaining" on ALL tiers is fake scarcity** — Replace with honest "Setup fee waived for early customers" messaging.
+- [ ] **[CTO-SITE-REVIEW] Signup industry dropdown missing key verticals** — Only 10 options. Add HVAC, Landscaping, Cleaning, Electrical, Roofing, Pest Control, Moving, Photography, Accounting, Veterinary, Chiropractic, Tutoring (20+ total).
+- [ ] **[CTO-SITE-REVIEW] No testimonials or social proof on landing page** — Zero testimonials, logos, case studies, or metrics. Add social proof section.
+- [ ] **[CTO-SITE-REVIEW] Demo section is static mockups** — Make clickable/interactive or embed live widget demo.
+- [ ] **[CTO-SITE-REVIEW] Contact page is too barebones** — Add expected response time, chat widget embed, direct email, business hours.
+- [ ] **[CTO-SITE-REVIEW] No Google OAuth on signup** — Adding "Sign up with Google" would reduce friction.
+
+### Other Bugs
+
+- [ ] **Audit Claude API calls for Sonnet 4.6 model string** — Verify all Claude API calls use `claude-sonnet-4-6` for fast responses and `claude-opus-4-6` for complex tasks.
+
+### Resolved
+
 - [x] Widget not capturing phone numbers with country codes (international format) — fixed 2026-03-12
 - [x] Dashboard analytics may show wrong timezone for appointment times — fixed 2026-03-12
 - [x] Test signup with an email that already exists — NOT A BUG, returns 409 correctly (investigated 2026-03-15)
@@ -327,6 +362,14 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] Verify automation sequence execution runs on a schedule — NOT A BUG, runs correctly as asyncio task in main.py (confirmed 2026-03-15)
 
 ## Tests — Coverage Gaps
+
+### CTO-Mandated Tests (2026-03-25)
+
+- [ ] **SSE Streaming Integration Tests** — Happy path streaming, connection drop recovery, API failure fallback, concurrent stream handling. File: `tests/test_chat_streaming.py`.
+- [ ] **Voice Channel E2E Test Suite** — Inbound call > AI greeting > question answering > appointment booking > call logging > lead creation. File: `tests/test_voice_integration.py`.
+- [ ] **Multi-Tenant Isolation Regression Suite** — Two test tenants, verify tenant A cannot see tenant B's conversations, leads, appointments, settings, analytics. Must run on every PR. File: `tests/test_multi_tenant_isolation.py`.
+
+### Existing
 
 - [x] Test signup flow with duplicate email — done 2026-03-12
 - [x] Test chat endpoint with empty message body — covered in lead extraction tests 2026-03-12
@@ -345,6 +388,13 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] Test rate limiting: verified decorators applied on all public endpoints — DONE 2026-03-15 Cycle 59 (2 tests)
 - [x] Test Google Calendar OAuth: status, disconnect, connected — DONE 2026-03-15 Cycle 80 (3 tests)
 - [x] Test team invites: validated invite token returns member info — DONE 2026-03-15 Cycle 55
+- [ ] **Test invoicing endpoints** — CRUD, Stripe Payment Link creation, send invoice via email/SMS, payment reminder dedup, status transitions (draft→sent→paid→overdue)
+- [ ] **Test pipeline endpoints** — Stage CRUD, board view, lead stage movement, default stage seeding, deal value aggregation, won/lost analytics
+- [ ] **Test form builder public submission** — Public form submit with valid/invalid data, lead auto-creation from submission, required field validation, form not found (404)
+- [ ] **Test document e-signature flow** — Create document from template, send for signature, public signing endpoint with valid/invalid/expired token, signature data storage
+- [ ] **Test marketing campaign sending** — Campaign create, audience filtering (status/temperature/tags), send with Resend+Twilio, unsubscribe exclusion, max 500 recipient cap
+- [ ] **Test missed call text-back** — Missed call webhook, auto-text sending, quiet hours enforcement, SMS reply threading, lead auto-creation from caller phone
+- [ ] **Test AI action item extraction** — Extraction from chat messages, priority assignment, due date parsing, assignment to team members, status transitions (open→done)
 
 ## Content — Marketing & Docs
 
@@ -435,6 +485,68 @@ _Discovered via dental office customer simulation. Applicable to all healthcare 
 - [x] [RESEARCHED] **AI-to-human handoff** — DONE 2026-03-22 Cycle 161. AI detects user request for human, tags conversation "handoff", notifies team, skips Claude on subsequent messages, shows team replies.
 - [x] [RESEARCHED] **Lead source analytics dashboard** — DONE 2026-03-21 Cycle 134. Horizontal bar chart on AnalyticsPage with color-coded sources.
 - [x] [RESEARCHED] **Post-appointment care instructions** — DONE 2026-03-21 Cycle 135. Aftercare templates for 5 business types, dental has procedure-specific instructions.
+
+## Features — Tier 7: Growth & Retention (2026-03-23)
+
+_Features that make a non-technical small business owner pay $199/mo and never leave. Focused on proving ROI, reducing daily friction, and becoming the single tool they open every morning._
+
+### Revenue-Driving Features
+
+- [ ] **ROI Dashboard — "Your AI earned you $X this month"** — Dedicated dashboard card that calculates estimated revenue attributed to the platform: leads captured x avg deal value, appointments booked x avg service price, invoices paid. Business owners need to see a dollar amount that exceeds their subscription cost. Pull from leads (converted), appointments (completed), invoices (paid). Show month-over-month trend. This is the single most important retention metric — if they see $3,000 earned vs $199 paid, they never cancel.
+
+- [ ] **Automated "We miss you" win-back campaigns** — When a lead goes cold (no activity for 14/30/60 days), auto-trigger a personalized re-engagement email or SMS. AI writes the message based on the lead's original conversation context and interests. Configurable per tenant with delay thresholds. This recovers revenue that would otherwise be lost — a plumber who quoted a kitchen remodel 3 weeks ago gets a "Still thinking about that kitchen remodel?" text.
+
+- [ ] **Referral program — "Refer a friend, get a month free"** — Migration: referral_codes table (tenant_id, code, referred_tenant_id, reward_status). Tenants generate a unique referral link from BillingPage. When a new tenant signs up via referral and subscribes to a paid plan, both referrer and referee get one month credit. Dashboard shows referral stats. Viral growth loop that costs nothing until it works.
+
+- [ ] **Upsell prompts based on usage** — When a free-tier tenant hits usage milestones (10 leads, 5 appointments, first missed call), show a contextual banner: "You captured 10 leads this week. Upgrade to Growth to auto-follow-up with all of them." Triggered from backend usage counters, displayed as dismissable banners on dashboard. Non-annoying, value-based nudges tied to moments the owner already feels the platform's value.
+
+- [ ] **Google Review link auto-prompt after invoice paid** — When an invoice is marked as paid (Stripe webhook or manual), auto-send an SMS/email asking for a Google review. Delay configurable (default 2 hours). Uses existing review request infrastructure but triggered by payment instead of appointment completion. Businesses that get paid are at peak customer satisfaction — capture that moment.
+
+### Retention Features — Make It the First App They Open
+
+- [ ] **Daily morning digest email** — "Good morning, here's your day." Sent at 7am in the tenant's timezone. Includes: today's appointments with customer names, overdue action items, new leads overnight, unread conversations, yesterday's key stats (leads, conversations, revenue). Keeps the business owner engaged even when they forget to open the dashboard. Configurable: daily/weekly/off.
+
+- [ ] **Mobile-friendly quick actions from email** — Every notification email (new lead, missed call, new review) includes one-tap action buttons that work on mobile: "Call Back" (tel: link), "Reply" (deep link to conversation), "Approve Bid" (link to bid page). Business owners are on their phone between jobs — let them act without opening the dashboard. Uses HTML email buttons with deep links to the frontend.
+
+- [ ] **Streak tracker — "You've responded to leads within 5 minutes for 12 days straight"** — Gamification widget on dashboard homepage. Tracks response time streaks, lead follow-up streaks, review response streaks. Shows current streak + best streak. Subtle but effective — business owners become competitive with themselves. Fires a congratulatory notification at milestones (7 days, 30 days, 100 days).
+
+- [ ] **"Set it and forget it" automation presets by business type** — One-click automation setup: "Plumber Starter Pack" creates 5 automations (new lead follow-up, appointment reminder, review request, rebook reminder, missed call text-back) pre-configured for the business type. Currently each automation must be built manually. Non-technical owners never build automations — give them a button that sets up everything. Leverage existing business_type + automation infrastructure.
+
+### Performance Optimizations
+
+- [ ] **Add database indexes for recent high-volume tables** — Add composite indexes on: invoices (tenant_id, status, created_at), social_posts (tenant_id, status, scheduled_for), marketing_campaigns (tenant_id, status), form_submissions (form_id, created_at), action_items (tenant_id, status). These tables have grown since launch and queries are scanning without indexes.
+
+- [ ] **Paginate conversations and orders endpoints** — ConversationsPage and OrdersPage currently load all records. Add offset/limit pagination like LeadsPage already has. Restaurants with 500+ orders and businesses with 1000+ conversations will hit performance walls.
+
+- [ ] **Debounce dashboard API calls on page load** — Dashboard homepage fires 6+ parallel API calls on mount (stats, insights, action items, notifications, leads, appointments). Add a single /api/v1/dashboard/{tenant_id}/summary endpoint that returns all dashboard data in one call. Reduces round trips from 6 to 1. Frontend renders progressively as data arrives.
+
+### Error Handling Improvements
+
+- [ ] **Graceful degradation when Twilio is unreachable** — If Twilio SMS/voice fails (network error, auth expired, insufficient funds), catch the error, log it, and show a user-visible alert on the dashboard: "SMS delivery failed — check your Twilio balance." Currently failures are silently swallowed in background tasks. Add a tenant_alerts system for surfacing operational issues.
+
+- [ ] **Retry failed webhook deliveries with exponential backoff** — Webhook delivery currently fires once and logs success/failure. Add retry logic: 3 attempts with 1min/5min/30min delays. Store retry_count and next_retry_at on webhook_logs. Process retries in the automation loop. Business owners relying on Zapier integrations lose data when their Zap endpoint is temporarily down.
+
+- [ ] **User-facing error messages for Claude API failures** — When Claude API returns 429 (rate limit), 500 (server error), or timeout, show a specific user-friendly message instead of generic "Something went wrong." In chat widget: "Our AI is thinking hard — please try again in a moment." In dashboard AI features: "AI analysis temporarily unavailable — your data is safe." Log the specific error for debugging.
+
+### Security Hardening
+
+- [ ] **Add CSRF protection to all state-changing endpoints** — Dashboard frontend should send a CSRF token with every POST/PUT/DELETE. Backend validates it. Currently relies on JWT auth alone, but CSRF attacks can still exploit an authenticated session if the user visits a malicious site while logged in. Use double-submit cookie pattern compatible with SPA architecture.
+
+- [ ] **Audit log for sensitive operations** — Log all billing changes, team member additions/removals, API key regenerations, password changes, and plan changes to a new audit_log table. Include actor (tenant_id + team_member_id), action, timestamp, IP address. Accessible from Settings page for owner role only. Required for SOC 2 readiness and builds enterprise trust.
+
+### Mobile Responsiveness
+
+- [ ] **Responsive dashboard sidebar — collapsible on mobile** — Dashboard sidebar currently does not collapse on small screens, pushing content off-viewport. Add a hamburger menu toggle on screens < 768px. Sidebar slides in as an overlay. Auto-close on navigation. Business owners check their dashboard on their phone between appointments — this is table stakes.
+
+- [ ] **Touch-friendly pipeline Kanban board** — PipelinePage Kanban drag-and-drop does not work on touch devices. Add touch event handlers (touchstart/touchmove/touchend) or use a library that supports both pointer types. Contractors and sales people manage their pipeline from their phone on job sites.
+
+### Accessibility Improvements
+
+- [ ] **Add ARIA labels and keyboard navigation to all dashboard pages** — Audit all interactive elements (buttons, modals, dropdowns, tabs) for missing aria-label, aria-describedby, and role attributes. Add keyboard navigation (Tab, Enter, Escape) to modals, dropdown menus, and the sidebar. Screen reader users should be able to navigate the full dashboard. Start with the 5 most-used pages: Dashboard, Leads, Conversations, Calendar, Settings.
+
+- [ ] **Color contrast audit for dark theme** — Several dashboard elements (muted text, disabled buttons, placeholder text) may not meet WCAG AA contrast ratio (4.5:1 for normal text, 3:1 for large text). Audit all text/background combinations. Fix any that fall below threshold. Affects readability for all users, not just those with visual impairments.
+
+---
 
 ## Optimization
 

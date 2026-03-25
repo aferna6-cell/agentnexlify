@@ -200,6 +200,27 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 **New dashboard page:** Create in `frontend/src/pages/` → dark theme → live API data → helpful empty states → sidebar link
 **Database migration:** Next numbered file in `migrations/` (after 064) → apply via Supabase MCP or SQL editor → update schema-log.md → update Pydantic models
 
+## Model Selection (Updated 2026-03-25)
+- Widget chat responses: use `claude-sonnet-4-6` (fast, fewer tokens, 1M context)
+- Complex tasks (documents, quotes, analysis): use `claude-opus-4-6`
+- Streaming: always set `stream=True` for widget responses
+- Extended thinking: set `thinking.display: "omitted"` when streaming to users
+
+## Development Rules (Updated 2026-03-25)
+- NEVER add new features without running the test suite first
+- NEVER skip security review on auth or payment endpoints
+- ALL tenant-specific queries MUST use RLS or explicit tenant_id filtering
+- ALL Stripe integration MUST use production keys in production (NEVER test keys)
+- ALL API endpoints MUST have input validation and proper error responses
+
+## Competitive Intel (Updated 2026-03-25)
+- GoHighLevel: AI Employee (calls + chat), white-label SaaS, $97-497/mo — #1 competitor
+- Drillbit (YC): AI receptionist + quoting + CRM for contractors — direct vertical competitor
+- Phonely (YC S24): AI receptionist, 70% cheaper than answering services
+- Toma (a16z + YC): AI receptionist, thousands of daily interactions
+- Birdeye/Podium: $300-600/mo, AI review responses are key selling point
+- Oscar Chat: $40/mo budget competitor, 95+ languages
+
 ## Knowledge Base
 
 `docs/dev-knowledge/`: bug-patterns.md, schema-log.md, architecture-decisions.md. Always update after fixing bugs or changing schema.

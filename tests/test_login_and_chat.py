@@ -59,6 +59,13 @@ def test_client(mock_settings):
     except Exception:
         pass
 
+    # Reset rate limiter state between tests
+    try:
+        from backend.limiter import limiter
+        limiter.reset()
+    except Exception:
+        pass
+
     for p in patches:
         p.stop()
 

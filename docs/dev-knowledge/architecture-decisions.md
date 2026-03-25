@@ -353,4 +353,30 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** Frontend pages must use the centralized API utility functions from `frontend/src/utils/api/` rather than raw `fetch()` calls. Exception: endpoints returning non-JSON responses (blobs, streams) may use raw fetch since the `request()` client always parses JSON.
 **Why:** Raw fetch scattered across pages duplicates the base URL, auth header, and error handling logic. Using the API utils ensures consistent error handling via `ApiError`, avoids hardcoded URLs, and makes it easy to add auth token refresh or request interceptors later.
 
+### ADR-2026-03-25-001: Streaming Architecture for Widget
+**Date:** 2026-03-25
+**Decision:** Use SSE (Server-Sent Events) for widget response streaming instead of WebSockets.
+**Why:** SSE is simpler, works through most proxies/CDNs, auto-reconnects, and is sufficient for server-to-client streaming (which is all we need for chat responses). Claude API: Use `stream=True` with `thinking.display: "omitted"` for faster streaming.
+
+---
+
+### ADR-2026-03-25-002: Voice Integration Partner Selection
+**Date:** 2026-03-25
+**Decision:** Integrate Vapi as primary voice AI partner. Retell AI as backup.
+**Why:** Developer-focused API, $0.05-0.07/min, strong docs. Implementation uses a thin adapter layer so providers can be swapped without changing business logic.
+
+---
+
+### ADR-2026-03-25-003: Multi-Tenant Agency Architecture
+**Date:** 2026-03-25
+**Decision:** Agencies are first-class entities with hierarchical tenant model (Platform > Agency > Business).
+**Why:** GoHighLevel's growth came from agencies reselling the platform. Our agency model allows white-label reselling with wholesale pricing, enabling channel partners to drive growth.
+
+---
+
+### ADR-2026-03-25-004: Stripe Checkout Migration
+**Date:** 2026-03-25
+**Decision:** Replace static Stripe checkout links with dynamic server-side Checkout Session creation.
+**Why:** Static test links were found on production, breaking the revenue pipeline. Dynamic sessions allow plan selection, coupon codes, trial periods, and proper webhook handling. The existing `/api/v1/auth/billing/checkout` endpoint is the canonical checkout flow.
+
 _Add new decisions when significant architectural choices are made._
