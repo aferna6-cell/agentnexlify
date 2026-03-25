@@ -169,8 +169,9 @@ async def _process_scheduled_posts():
     """Auto-publish social media posts whose scheduled_for has passed.
 
     Posts with status='scheduled' and scheduled_for <= now() are updated to
-    status='published' with published_at set. When platform OAuth is connected
-    in the future, this is where the actual API publish call will go.
+    status='published' with published_at set in a single batch query.
+    When platform OAuth is connected in the future, this is where the
+    actual API publish call will go (and may need per-post handling).
     """
     from datetime import datetime, timezone
     from backend.models.database import get_supabase
@@ -189,22 +190,38 @@ async def _process_scheduled_posts():
         if not due_posts.data:
             return 0
 
-        published = 0
-        for post in due_posts.data:
-            try:
-                db.table("social_posts").update({
-                    "status": "published",
-                    "published_at": now_iso,
-                }).eq("id", post["id"]).execute()
-                published += 1
+        # Batch update all due posts in a single query (avoids N+1 pattern)
+        post_ids = [post["id"] for post in due_posts.data]
+        try:
+            db.table("social_posts").update({
+                "status": "published",
+                "published_at": now_iso,
+            }).in_("id", post_ids).execute()
+
+            for post in due_posts.data:
                 logger.info(
                     "Auto-published scheduled social post %s (%s) for tenant %s",
                     post["id"], post["platform"], post["tenant_id"],
                 )
-            except Exception:
-                logger.exception("Failed to auto-publish social post %s", post["id"])
-
-        return published
+            return len(post_ids)
+        except Exception:
+            # Fallback: if batch fails (e.g. constraint on one post), try individually
+            logger.warning("Batch post publish failed, falling back to individual updates")
+            published = 0
+            for post in due_posts.data:
+                try:
+                    db.table("social_posts").update({
+                        "status": "published",
+                        "published_at": now_iso,
+                    }).eq("id", post["id"]).execute()
+                    published += 1
+                    logger.info(
+                        "Auto-published scheduled social post %s (%s) for tenant %s",
+                        post["id"], post["platform"], post["tenant_id"],
+                    )
+                except Exception:
+                    logger.exception("Failed to auto-publish social post %s", post["id"])
+            return published
     except Exception:
         logger.exception("_process_scheduled_posts failed")
         return 0
