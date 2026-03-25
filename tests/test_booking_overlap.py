@@ -310,21 +310,27 @@ class TestLeadLinkage:
 class TestCreateAppointment:
     """Test appointment creation."""
 
+    @patch("backend.services.booking._send_appointment_confirmation")
     @patch("backend.services.booking.link_appointment_to_lead")
     @patch("backend.services.booking.get_supabase")
-    def test_creates_confirmed_appointment(self, mock_db, mock_link):
+    def test_creates_confirmed_appointment(self, mock_db, mock_link, mock_confirm):
         mock_link.return_value = None
         mock_table = MagicMock()
+        for method in ["select", "eq", "neq", "lt", "gt", "limit", "insert"]:
+            getattr(mock_table, method).return_value = mock_table
         mock_table.insert.return_value = mock_table
-        mock_table.execute.return_value = MagicMock(data=[{
-            "id": "appt-001",
-            "tenant_id": "tenant-1",
-            "customer_name": "John",
-            "customer_email": "john@test.com",
-            "start_time": "2027-03-15T14:00:00+00:00",
-            "end_time": "2027-03-15T14:30:00+00:00",
-            "status": "confirmed",
-        }])
+        mock_table.execute.side_effect = [
+            MagicMock(data=[]),
+            MagicMock(data=[{
+                "id": "appt-001",
+                "tenant_id": "tenant-1",
+                "customer_name": "John",
+                "customer_email": "john@test.com",
+                "start_time": "2027-03-15T14:00:00+00:00",
+                "end_time": "2027-03-15T14:30:00+00:00",
+                "status": "confirmed",
+            }]),
+        ]
         mock_db.return_value.table.return_value = mock_table
 
         result = create_appointment(
@@ -336,6 +342,7 @@ class TestCreateAppointment:
         )
         assert result["status"] == "confirmed"
         assert result["id"] == "appt-001"
+        mock_confirm.assert_called_once()
 
         # Verify the insert payload
         insert_call = mock_table.insert.call_args[0][0]

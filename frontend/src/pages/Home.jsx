@@ -23,12 +23,12 @@ function StripeCta({ plan, children }) {
     e.preventDefault();
     const token = localStorage.getItem("anx_token");
     if (!token) {
-      window.location.href = "/signup";
+      window.location.href = `/signup?plan=${encodeURIComponent(plan)}`;
       return;
     }
     trackEvent("begin_checkout", { event_label: "home_pricing", plan });
     try {
-      const API = import.meta.env.VITE_API_URL || "";
+      const API = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "";
       const resp = await fetch(`${API}/api/v1/auth/billing/checkout`, {
         method: "POST",
         headers: {
@@ -241,7 +241,7 @@ function DemoPreview() {
         <div className="demo-preview-cta reveal">
           <div className="section-label">Demo</div>
           <h2 className="section-title">Try Our Demo</h2>
-          <Link to="/contact" className="btn-primary">
+          <Link to="/demo" className="btn-primary">
             Book a Demo {"\u2192"}
           </Link>
         </div>
@@ -372,16 +372,16 @@ export default function Home() {
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
     {
-      "@type": "Offer", "name": "Growth", "price": "199", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "199", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Growth", "price": "249", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "249", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Professional", "price": "399", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "399", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Professional", "price": "499", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "499", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Enterprise", "price": "799", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "799", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Enterprise", "price": "899", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "899", "priceCurrency": "USD", "billingDuration": "P1M" }
     }
   ]
 }
@@ -457,7 +457,7 @@ export default function Home() {
                 <Link to="/signup" className="btn-primary">
                   Get Started {"\u2192"}
                 </Link>
-                <Link to="/contact" className="btn-secondary">
+                <Link to="/demo" className="btn-secondary">
                   Book a Demo
                 </Link>
               </div>
@@ -789,7 +789,7 @@ export default function Home() {
             <Link to="/signup" className="btn-primary">
               Get Started {"\u2192"}
             </Link>
-            <Link to="/contact" className="btn-secondary">
+            <Link to="/demo" className="btn-secondary">
               Book a Demo
             </Link>
           </div>
@@ -864,7 +864,7 @@ export default function Home() {
               <h4>Company</h4>
               <ul>
                 <li><Link to="/contact">Contact</Link></li>
-                <li><Link to="/contact">Book a Demo</Link></li>
+                <li><Link to="/demo">Book a Demo</Link></li>
               </ul>
             </div>
             <div className="lp-footer-col">

@@ -1,16 +1,37 @@
-"""Tests for authentication endpoints — signup and login.
+"""Tests for authentication endpoints — signup, login, password reset, and checkout.
 
 These use FastAPI's TestClient with mocked Supabase to test
 the register and login flows without hitting the real database.
 """
 
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+
+def _make_auth_token(
+    tenant_id: str = "tenant-001",
+    role: str = "owner",
+    secret: str = "test-secret-key-for-jwt",
+):
+    from jose import jwt
+
+    payload = {
+        "tenant_id": tenant_id,
+        "sub": tenant_id,
+        "email": "owner@example.com",
+        "plan": "free",
+        "business_name": "Test Business",
+        "role": role,
+        "is_team_member": False,
+        "exp": datetime.now(timezone.utc) + timedelta(days=1),
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
 
 
 @pytest.fixture
@@ -219,3 +240,136 @@ class TestLogin:
             "password": "anything",
         })
         assert response.status_code == 401
+
+
+class TestPasswordReset:
+    """Test forgot/reset password flows."""
+
+    @patch("backend.routers.auth.secrets.token_urlsafe", return_value="fixed-reset-token")
+    @patch("backend.routers.auth.send_email", new_callable=AsyncMock)
+    def test_forgot_password_existing_email_sends_reset_link(self, mock_send_email, _mock_token, test_client):
+        client, db_mock = test_client
+
+        _setup_table_mock(db_mock, {
+            "tenants": [
+                [{
+                    "id": "tenant-001",
+                    "owner_email": "owner@example.com",
+                    "owner_name": "Owner",
+                    "business_name": "Test Business",
+                }],
+                [],
+            ],
+        })
+
+        response = client.post("/api/v1/auth/forgot-password", json={"email": "owner@example.com"})
+
+        assert response.status_code == 200
+        assert "reset link has been sent" in response.json()["message"].lower()
+        mock_send_email.assert_awaited_once()
+        kwargs = mock_send_email.await_args.kwargs
+        assert kwargs["to"] == "owner@example.com"
+        assert "fixed-reset-token" in kwargs["body_html"]
+
+    @patch("backend.routers.auth.send_email", new_callable=AsyncMock)
+    def test_forgot_password_unknown_email_returns_generic_message(self, mock_send_email, test_client):
+        client, db_mock = test_client
+
+        _setup_table_mock(db_mock, {"tenants": []})
+
+        response = client.post("/api/v1/auth/forgot-password", json={"email": "missing@example.com"})
+
+        assert response.status_code == 200
+        assert "reset link has been sent" in response.json()["message"].lower()
+        mock_send_email.assert_not_awaited()
+
+    def test_reset_password_invalid_token_returns_400(self, test_client):
+        client, db_mock = test_client
+
+        _setup_table_mock(db_mock, {"tenants": []})
+
+        response = client.post(
+            "/api/v1/auth/reset-password",
+            json={"token": "bad-token", "password": "NewPassword123!"},
+        )
+
+        assert response.status_code == 400
+        assert "invalid or expired" in response.json()["detail"].lower()
+
+    def test_reset_password_success_updates_hash_and_clears_token(self, test_client):
+        client, db_mock = test_client
+
+        tenant_table = MagicMock()
+        for method in ["select", "update", "eq", "limit"]:
+            getattr(tenant_table, method).return_value = tenant_table
+        tenant_table.execute.side_effect = [
+            MagicMock(data=[{
+                "id": "tenant-001",
+                "reset_token_expires": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+            }]),
+            MagicMock(data=[]),
+        ]
+
+        def mock_table(name):
+            assert name == "tenants"
+            return tenant_table
+
+        db_mock.table = mock_table
+
+        response = client.post(
+            "/api/v1/auth/reset-password",
+            json={"token": "valid-token", "password": "NewPassword123!"},
+        )
+
+        assert response.status_code == 200
+        assert "successfully" in response.json()["message"].lower()
+
+        update_payload = tenant_table.update.call_args[0][0]
+        assert update_payload["reset_token"] is None
+        assert update_payload["reset_token_expires"] is None
+        assert update_payload["password_hash"] != "NewPassword123!"
+        assert update_payload["password_hash"]
+
+
+class TestBillingCheckout:
+    """Test Stripe checkout session creation from the auth router."""
+
+    @patch("backend.routers.auth.stripe.checkout.Session.create")
+    @patch("backend.routers.auth.get_or_create_customer")
+    def test_billing_checkout_returns_checkout_url(self, mock_customer, mock_create_session, test_client):
+        client, db_mock = test_client
+        token = _make_auth_token()
+
+        _setup_table_mock(db_mock, {
+            "tenants": [{
+                "id": "tenant-001",
+                "owner_email": "owner@example.com",
+                "business_name": "Test Business",
+            }],
+        })
+
+        mock_customer.return_value = MagicMock(id="cus_123")
+        mock_create_session.return_value = MagicMock(url="https://checkout.stripe.test/session_123")
+
+        response = client.post(
+            "/api/v1/auth/billing/checkout",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"plan": "growth"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["checkout_url"] == "https://checkout.stripe.test/session_123"
+        mock_create_session.assert_called_once()
+
+    def test_billing_checkout_rejects_invalid_plan(self, test_client):
+        client, _db_mock = test_client
+        token = _make_auth_token()
+
+        response = client.post(
+            "/api/v1/auth/billing/checkout",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"plan": "invalid"},
+        )
+
+        assert response.status_code == 400
+        assert "invalid plan" in response.json()["detail"].lower()

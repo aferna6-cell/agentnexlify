@@ -20,6 +20,37 @@ The codebase is generally well-structured with good security fundamentals (bcryp
 
 ---
 
+## Verification Update — 2026-03-25
+
+This report was re-verified against the current repository state after the initial automated pass. Several findings above were already stale by the time of manual verification.
+
+### Re-verified as resolved in the current tree
+
+- Dynamic Stripe Checkout already exists on the production landing page via `frontend/src/pages/Home.jsx` and `backend/routers/auth.py`, and the paid-plan selection now carries through signup before redirecting to Checkout.
+- Forgot/reset password already exists in `frontend/src/components/LoginPage.jsx`, `frontend/src/pages/ForgotPasswordPage.jsx`, `frontend/src/pages/ResetPasswordPage.jsx`, and `backend/routers/auth.py`, including 1-hour reset token expiry.
+- Auth rate limiting is already applied on register, login, forgot-password, and reset-password routes in `backend/routers/auth.py`.
+- The widget handoff SMS path no longer imports a missing module; `backend/routers/widget_chat.py` uses `backend.services.twilio_service.send_sms`.
+- The current production `Home.jsx` no longer ships dead social links, fake “10 spots” scarcity copy, or missing testimonials/social-proof.
+- The signup industry list is already expanded in `frontend/src/pages/SignupPage.jsx`.
+- Dedicated widget API and multi-tenant isolation suites already exist in `tests/test_widget_api.py` and `tests/test_multi_tenant_isolation.py`.
+
+### Verified during this pass
+
+- `pytest -q`: **305 passed**
+- `cd frontend && npm run build`: **passed**
+- Added/updated test coverage for password reset, authenticated checkout session creation, current appointment overlap behavior, and webhook retry behavior.
+- Added a startup warning in `backend/main.py` when `API_SECRET_KEY` is missing so multi-worker JWT invalidation is visible in logs.
+
+### Remaining open gaps after re-verification
+
+- The repository still has **no configured lint command/toolchain**; `npm run lint` fails because no `lint` script exists.
+- `API_SECRET_KEY` still falls back to a per-process random value when unset; this is now warned loudly at startup, but production still depends on correct environment configuration.
+- `localStorage` remains the SPA auth token store.
+- Full RLS verification still requires live Supabase inspection; local code review alone cannot prove production policy coverage.
+- Phase 2 UX items still open include demo booking, dogfooding the widget on the marketing site, and Google OAuth signup.
+
+---
+
 ## CRITICAL Findings
 
 ### C1: Stripe Checkout Links Are TEST MODE

@@ -147,8 +147,9 @@ class TestCreateAppointmentSuccess:
         _setup_table_mock(db_mock, {
             # _get_widget_config looks up widget_configs by api_key
             "widget_configs": [{"tenant_id": _TENANT_ID, "api_key": "anx_test_key"}],
-            # create_appointment inserts into appointments, then queries leads
+            # create_appointment first checks for overlap, then inserts
             "appointments": [
+                [],  # overlap check finds no conflicting appointment
                 # First call: insert returns the new appointment
                 [{
                     "id": "appt-001",
@@ -206,15 +207,18 @@ class TestCreateAppointmentPastDate:
 
         _setup_table_mock(db_mock, {
             "widget_configs": [{"tenant_id": _TENANT_ID, "api_key": "anx_test_key"}],
-            "appointments": [[{
-                "id": "appt-past-001",
-                "tenant_id": _TENANT_ID,
-                "customer_name": "Past Booker",
-                "customer_email": "past@example.com",
-                "start_time": _PAST_START,
-                "end_time": _PAST_END,
-                "status": "confirmed",
-            }]],
+            "appointments": [
+                [],  # overlap check
+                [{
+                    "id": "appt-past-001",
+                    "tenant_id": _TENANT_ID,
+                    "customer_name": "Past Booker",
+                    "customer_email": "past@example.com",
+                    "start_time": _PAST_START,
+                    "end_time": _PAST_END,
+                    "status": "confirmed",
+                }],
+            ],
             "leads": [[], [{"id": "lead-past-001"}]],
             "webhooks": [],
         })

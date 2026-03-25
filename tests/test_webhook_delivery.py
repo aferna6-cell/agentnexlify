@@ -18,6 +18,7 @@ from backend.services.webhook_dispatcher import (
     _deliver,
     _DAILY_LIMIT,
     _MAX_FAILURES,
+    _MAX_RETRIES,
 )
 
 
@@ -191,7 +192,7 @@ class TestDeliver:
     @patch("backend.services.webhook_dispatcher.asyncio.sleep", new_callable=AsyncMock)
     @patch("backend.services.webhook_dispatcher.get_supabase")
     @patch("backend.services.webhook_dispatcher.httpx.AsyncClient")
-    async def test_failed_delivery_retries_once(self, mock_client_cls, mock_db, mock_sleep):
+    async def test_failed_delivery_retries_until_max_attempts(self, mock_client_cls, mock_db, mock_sleep):
         # Mock HTTP response with 500
         mock_resp = MagicMock()
         mock_resp.status_code = 500
@@ -216,12 +217,11 @@ class TestDeliver:
         webhook = {"id": "wh-1", "url": "https://hook.test/fail", "secret": None}
         payload = {"event": "lead.created", "data": {}}
 
-        await _deliver("tenant-1", webhook, payload, is_retry=False)
+        await _deliver("tenant-1", webhook, payload, attempt=0)
 
-        # Should have slept before retry
-        mock_sleep.assert_called_once()
-        # Should have posted twice (original + retry)
-        assert mock_client.post.call_count == 2
+        # Should sleep once per retry and stop after the configured max.
+        assert mock_sleep.await_count == _MAX_RETRIES
+        assert mock_client.post.call_count == _MAX_RETRIES + 1
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher.asyncio.sleep", new_callable=AsyncMock)
@@ -251,8 +251,8 @@ class TestDeliver:
         webhook = {"id": "wh-1", "url": "https://hook.test/fail", "secret": None}
         payload = {"event": "lead.created", "data": {}}
 
-        # Call with is_retry=True — should NOT retry again
-        await _deliver("tenant-1", webhook, payload, is_retry=True)
+        # Calling at the max attempt count should not schedule another retry.
+        await _deliver("tenant-1", webhook, payload, attempt=_MAX_RETRIES)
 
-        mock_sleep.assert_not_called()
+        mock_sleep.assert_not_awaited()
         assert mock_client.post.call_count == 1

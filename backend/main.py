@@ -277,6 +277,10 @@ async def lifespan(app: FastAPI):
     global _startup_time
     _startup_time = time.time()
     logger.info("AgentNexLiFy starting up")
+    if not os.environ.get("API_SECRET_KEY"):
+        logger.warning(
+            "API_SECRET_KEY is not set; using a per-process fallback secret will invalidate JWTs across workers."
+        )
     if not os.environ.get("TESTING"):
         task = asyncio.create_task(_automation_loop())
     yield

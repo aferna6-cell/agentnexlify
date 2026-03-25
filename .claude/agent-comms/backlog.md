@@ -332,25 +332,25 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 
 ### CTO Site Review (2026-03-25) — CRITICAL
 
-- [ ] **[CTO-SITE-REVIEW] Stripe checkout links are TEST MODE** — Pricing page "Get Started" buttons for Growth ($249), Professional ($499), and Enterprise ($899) link to `buy.stripe.com/test_*` URLs. Revenue pipeline broken. Fix: implement server-side Stripe Checkout Session creation via `/api/v1/auth/billing/checkout`. Done when: clicking "Get Started" creates a real Stripe checkout session.
-- [ ] **[CTO-SITE-REVIEW] No "Forgot Password" on login page** — Login page has no password reset link. Business owners who forget passwords are locked out. Create ForgotPassword page, backend reset token endpoint (via Resend), reset tokens expire after 1 hour.
-- [ ] **[CTO-SITE-REVIEW] Social media links in footer are dead (#)** — Twitter/X and LinkedIn links point to `href="#"`. Remove until real profiles exist.
-- [ ] **[CTO-SITE-REVIEW] Privacy Policy "do not" rendering** — Verify negation statements are unambiguous in all rendering contexts.
+- [x] **[CTO-SITE-REVIEW] Stripe checkout links are TEST MODE** — FIXED 2026-03-25. Pricing CTAs now create server-side Stripe Checkout Sessions via `/api/v1/auth/billing/checkout`, and paid-plan selection carries through signup before redirecting to Checkout.
+- [x] **[CTO-SITE-REVIEW] No "Forgot Password" on login page** — FIXED 2026-03-25. Login page links to forgot password; reset flow exists with 1-hour token expiry via email.
+- [x] **[CTO-SITE-REVIEW] Social media links in footer are dead (#)** — FIXED 2026-03-25. Dead placeholder social links were removed from the production landing page.
+- [x] **[CTO-SITE-REVIEW] Privacy Policy "do not" rendering** — FIXED 2026-03-25. Negation statements render explicitly as “do not” in the current privacy policy page.
 
 ### CTO Site Review (2026-03-25) — HIGH
 
-- [ ] **[CTO-SITE-REVIEW] "Book a Demo" goes to generic contact form** — Hero CTA should open a real scheduling interface (Cal.com/Calendly embed or our booking feature).
+- [x] **[CTO-SITE-REVIEW] "Book a Demo" goes to generic contact form** — FIXED 2026-03-25. Landing-page demo CTAs now route to `/demo`, which redirects to the live Calendly scheduling flow.
 - [ ] **[CTO-SITE-REVIEW] No chat widget on our own website** — We sell a chat widget but don't use it on agentnexlify.com. Embed our widget as product demo + lead capture.
-- [ ] **[CTO-SITE-REVIEW] "Only 10 Spots Remaining" on ALL tiers is fake scarcity** — Replace with honest "Setup fee waived for early customers" messaging.
-- [ ] **[CTO-SITE-REVIEW] Signup industry dropdown missing key verticals** — Only 10 options. Add HVAC, Landscaping, Cleaning, Electrical, Roofing, Pest Control, Moving, Photography, Accounting, Veterinary, Chiropractic, Tutoring (20+ total).
-- [ ] **[CTO-SITE-REVIEW] No testimonials or social proof on landing page** — Zero testimonials, logos, case studies, or metrics. Add social proof section.
-- [ ] **[CTO-SITE-REVIEW] Demo section is static mockups** — Make clickable/interactive or embed live widget demo.
+- [x] **[CTO-SITE-REVIEW] "Only 10 Spots Remaining" on ALL tiers is fake scarcity** — FIXED 2026-03-25. Pricing now uses honest “waived for early customers” language.
+- [x] **[CTO-SITE-REVIEW] Signup industry dropdown missing key verticals** — FIXED 2026-03-25. Signup now includes 20+ target SMB verticals.
+- [x] **[CTO-SITE-REVIEW] No testimonials or social proof on landing page** — FIXED 2026-03-25. Landing page now includes a testimonials/social-proof section.
+- [x] **[CTO-SITE-REVIEW] Demo section is static mockups** — FIXED 2026-03-25. Demo section now supports interactive tab switching instead of a single static mockup.
 - [ ] **[CTO-SITE-REVIEW] Contact page is too barebones** — Add expected response time, chat widget embed, direct email, business hours.
 - [ ] **[CTO-SITE-REVIEW] No Google OAuth on signup** — Adding "Sign up with Google" would reduce friction.
 
 ### Other Bugs
 
-- [ ] **Audit Claude API calls for Sonnet 4.6 model string** — Verify all Claude API calls use `claude-sonnet-4-6` for fast responses and `claude-opus-4-6` for complex tasks.
+- [x] **Audit Claude API calls for Sonnet 4.6 model string** — VERIFIED 2026-03-25. Current repository Claude calls use `claude-sonnet-4-6`; no invalid model strings were found.
 
 ### Resolved
 
@@ -377,6 +377,8 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 - [x] Test appointment booking with overlapping time slots — done 2026-03-12 (12 tests)
 - [x] Test webhook delivery and retry logic — done 2026-03-12 (18 tests)
 - [x] Test Stripe webhook signature verification — done 2026-03-12 (7 tests)
+- [x] Test password reset flow — DONE 2026-03-25 (forgot-password + reset-password happy/error paths)
+- [x] Test authenticated Stripe checkout session creation — DONE 2026-03-25
 - [x] Test widget CORS from external domain — DONE 2026-03-15 Cycle 59 (3 CORS tests)
 - [x] Test automation sequence execution order — DONE 2026-03-15 Cycle 59 (2 sequence tests)
 - [x] Test login flow: valid login, wrong password, non-existent email — DONE 2026-03-15 Cycle 52 (4 tests)

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+const PAID_PLANS = new Set(["growth", "professional", "enterprise"]);
 
 const INDUSTRIES = [
   { value: "accounting", label: "Accounting" },
@@ -30,6 +31,9 @@ const INDUSTRIES = [
 ];
 
 export default function SignupPage() {
+  const [searchParams] = useSearchParams();
+  const requestedPlan = (searchParams.get("plan") || "").toLowerCase();
+  const checkoutPlan = PAID_PLANS.has(requestedPlan) ? requestedPlan : "";
   const [form, setForm] = useState({
     business_name: "",
     owner_name: "",
@@ -82,7 +86,26 @@ export default function SignupPage() {
       const { token, tenant_id } = await res.json();
       localStorage.setItem("anx_token", token);
       localStorage.setItem("anx_tenant_id", tenant_id);
-      trackEvent("sign_up", { method: "email" });
+      trackEvent("sign_up", { method: "email", plan: checkoutPlan || "free" });
+
+      if (checkoutPlan) {
+        const checkoutRes = await fetch(`${API_BASE}/api/v1/auth/billing/checkout`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ plan: checkoutPlan }),
+        });
+
+        const checkoutData = await checkoutRes.json().catch(() => ({}));
+        if (checkoutRes.ok && checkoutData.checkout_url) {
+          trackEvent("begin_checkout", { event_label: "signup_redirect", plan: checkoutPlan });
+          window.location.href = checkoutData.checkout_url;
+          return;
+        }
+      }
+
       window.location.href = "/dashboard";
     } catch (err) {
       setError(err.message);
@@ -95,7 +118,11 @@ export default function SignupPage() {
     <div className="login-page">
       <div className="login-card" style={{ width: 420 }}>
         <h1 className="login-title">AgentNexLiFy</h1>
-        <p className="login-subtitle">Create your free account</p>
+        <p className="login-subtitle">
+          {checkoutPlan
+            ? `Create your account to continue with the ${checkoutPlan[0].toUpperCase()}${checkoutPlan.slice(1)} plan`
+            : "Create your free account"}
+        </p>
         <form onSubmit={handleSubmit}>
           <div className="login-field">
             <label>Business Name</label>

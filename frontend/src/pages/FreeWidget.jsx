@@ -70,7 +70,7 @@ export default function FreeWidget() {
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "description": "Free AI-powered customer service chatbot for websites. Capture leads, answer questions, and book appointments 24/7.",
-    "url": "https://agentnexlify.com/free-chatbot",
+    "url": "https://agentnexlify.com/free-widget",
     "offers": [
       {
         "@type": "Offer",
@@ -82,11 +82,11 @@ export default function FreeWidget() {
       {
         "@type": "Offer",
         "name": "Growth",
-        "price": "199",
+        "price": "249",
         "priceCurrency": "USD",
         "priceSpecification": {
           "@type": "UnitPriceSpecification",
-          "price": "199",
+          "price": "249",
           "priceCurrency": "USD",
           "billingDuration": "P1M"
         },
@@ -95,11 +95,11 @@ export default function FreeWidget() {
       {
         "@type": "Offer",
         "name": "Professional",
-        "price": "399",
+        "price": "499",
         "priceCurrency": "USD",
         "priceSpecification": {
           "@type": "UnitPriceSpecification",
-          "price": "399",
+          "price": "499",
           "priceCurrency": "USD",
           "billingDuration": "P1M"
         },
@@ -128,10 +128,10 @@ export default function FreeWidget() {
       <Helmet>
         <title>Free AI Chatbot for Your Website | AgentNexLiFy</title>
         <meta name="description" content="Add a free AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required." />
-        <link rel="canonical" href="https://agentnexlify.com/free-chatbot" />
+        <link rel="canonical" href="https://agentnexlify.com/free-widget" />
         <meta property="og:title" content="Free AI Chatbot for Your Website | AgentNexLiFy" />
         <meta property="og:description" content="Add a free AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required." />
-        <meta property="og:url" content="https://agentnexlify.com/free-chatbot" />
+        <meta property="og:url" content="https://agentnexlify.com/free-widget" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Free AI Chatbot for Your Website | AgentNexLiFy" />
