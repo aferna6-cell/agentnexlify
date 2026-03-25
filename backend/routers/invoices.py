@@ -1091,3 +1091,107 @@ async def record_partial_payment(
         raise HTTPException(status_code=500, detail="Failed to record payment")
 
     return result.data[0]
+
+
+class BulkSendRequest(BaseModel):
+    invoice_ids: list[str] = Field(..., max_length=50)
+    channel: str = Field("email", pattern="^(email|sms|both)$")
+
+
+@router.post("/{tenant_id}/bulk-send")
+async def bulk_send_invoices(
+    tenant_id: str,
+    req: BulkSendRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Send multiple invoices at once. Max 50 per request."""
+    verify_tenant(claims, tenant_id)
+
+    if not req.invoice_ids:
+        raise HTTPException(status_code=400, detail="No invoice IDs provided")
+    if len(req.invoice_ids) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 invoices per bulk send")
+
+    db = get_supabase()
+    sent = 0
+    failed = 0
+    errors = []
+
+    # Fetch tenant info once
+    business = {}
+    try:
+        t = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+        business = t.data[0] if t.data else {}
+    except Exception:
+        pass
+    biz_name = business.get("business_name") or "Your Service Provider"
+
+    for invoice_id in req.invoice_ids:
+        try:
+            inv = db.table("invoices").select("*").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
+            if not inv.data:
+                failed += 1
+                errors.append(f"{invoice_id}: not found")
+                continue
+
+            invoice = inv.data[0]
+            if invoice["status"] in ("paid", "cancelled"):
+                failed += 1
+                errors.append(f"{invoice.get('invoice_number', invoice_id)}: already {invoice['status']}")
+                continue
+
+            lead_id = invoice.get("lead_id")
+            lead = None
+            if lead_id:
+                lead_row = db.table("leads").select("name, email, phone").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                lead = lead_row.data[0] if lead_row.data else None
+
+            if not lead or (not lead.get("email") and not lead.get("phone")):
+                failed += 1
+                errors.append(f"{invoice.get('invoice_number', invoice_id)}: no contact info")
+                continue
+
+            total = float(invoice.get("total") or 0)
+            payment_link = invoice.get("stripe_payment_link")
+            if not payment_link and total > 0:
+                try:
+                    payment_link = await _get_or_create_stripe_payment_link(
+                        invoice_id, tenant_id, invoice.get("invoice_number", ""), total
+                    )
+                except Exception:
+                    logger.warning("Could not create payment link for invoice %s", invoice_id, exc_info=True)
+
+            inv_num = invoice.get("invoice_number", "")
+
+            if req.channel in ("email", "both") and lead.get("email"):
+                try:
+                    subject = f"Invoice {inv_num} from {biz_name}"
+                    link_html = f'<a href="{payment_link}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Pay ${total:,.2f}</a>' if payment_link else f"<p>Amount due: ${total:,.2f}</p>"
+                    html_body = f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'><h2>Invoice {inv_num}</h2><p>Hi {lead.get('name', 'there')},</p><p>You have an invoice from <strong>{biz_name}</strong> for <strong>${total:,.2f}</strong>.</p>{link_html}<p style='color:#6b7280;font-size:12px;margin-top:24px;'>-- {biz_name}</p></div>"
+                    send_email(to_email=lead["email"], subject=subject, html_body=html_body)
+                except Exception:
+                    logger.warning("Failed to email invoice %s", invoice_id, exc_info=True)
+
+            if req.channel in ("sms", "both") and lead.get("phone"):
+                try:
+                    msg = f"Hi {lead.get('name', 'there')}! Invoice {inv_num} for ${total:,.2f} from {biz_name}."
+                    if payment_link:
+                        msg += f" Pay here: {payment_link}"
+                    send_sms(to_phone=lead["phone"], body=msg, tenant_id=tenant_id)
+                except Exception:
+                    logger.warning("Failed to SMS invoice %s", invoice_id, exc_info=True)
+
+            db.table("invoices").update({
+                "status": "sent",
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "sent_via": req.channel,
+            }).eq("id", invoice_id).execute()
+
+            sent += 1
+
+        except Exception:
+            failed += 1
+            errors.append(f"{invoice_id}: unexpected error")
+            logger.exception("Bulk send failed for invoice %s", invoice_id)
+
+    return {"sent": sent, "failed": failed, "errors": errors[:10]}

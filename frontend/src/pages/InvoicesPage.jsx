@@ -13,6 +13,7 @@ import {
   fetchItemTemplates,
   createItemTemplate,
   recordPayment,
+  bulkSendInvoices,
 } from "../utils/api/invoices";
 import { fetchLeads } from "../utils/api/leads";
 import { fetchBids } from "../utils/api/bids";
@@ -126,6 +127,10 @@ export default function InvoicesPage() {
   // Partial payment
   const [paymentAmount, setPaymentAmount] = useState("");
   const [recordingPayment, setRecordingPayment] = useState(false);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkSending, setBulkSending] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -511,7 +516,7 @@ export default function InvoicesPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "100px 1fr 120px 100px 110px 110px 160px",
+              gridTemplateColumns: "28px 100px 1fr 120px 100px 110px 110px 160px",
               padding: "10px 16px",
               borderBottom: "1px solid var(--border-color)",
               fontSize: "0.75rem",
@@ -521,6 +526,15 @@ export default function InvoicesPage() {
               letterSpacing: "0.05em",
             }}
           >
+            <span style={{ width: 28 }}>
+              <input type="checkbox"
+                checked={selectedIds.size > 0 && filteredInvoices.every(i => selectedIds.has(i.id))}
+                onChange={(e) => {
+                  if (e.target.checked) setSelectedIds(new Set(filteredInvoices.map(i => i.id)));
+                  else setSelectedIds(new Set());
+                }}
+              />
+            </span>
             <span>Invoice #</span>
             <span>Customer</span>
             <span style={{ textAlign: "right" }}>Amount</span>
@@ -529,6 +543,52 @@ export default function InvoicesPage() {
             <span style={{ textAlign: "center" }}>Sent</span>
             <span style={{ textAlign: "right" }}>Actions</span>
           </div>
+
+          {/* Bulk Action Bar */}
+          {selectedIds.size > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "10px 16px",
+              background: "rgba(0,191,255,0.08)", borderBottom: "1px solid rgba(0,191,255,0.25)",
+            }}>
+              <span style={{ fontWeight: 600, fontSize: 13, color: "var(--accent, #00BFFF)" }}>
+                {selectedIds.size} selected
+              </span>
+              <button
+                disabled={bulkSending}
+                onClick={async () => {
+                  setBulkSending(true);
+                  try {
+                    const result = await bulkSendInvoices(user.tenantId, token, [...selectedIds], "email");
+                    setError(null);
+                    setSelectedIds(new Set());
+                    loadData();
+                    alert(`Sent: ${result.sent}, Failed: ${result.failed}${result.errors?.length ? '\n' + result.errors.join('\n') : ''}`);
+                  } catch (err) {
+                    setError(err.body?.detail || err.message || "Bulk send failed");
+                  } finally {
+                    setBulkSending(false);
+                  }
+                }}
+                style={{
+                  padding: "4px 12px", fontSize: 12, fontWeight: 600,
+                  background: "var(--accent, #00BFFF)", color: "#fff",
+                  border: "none", borderRadius: 6, cursor: "pointer",
+                }}
+              >
+                {bulkSending ? "Sending..." : "Send All via Email"}
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                style={{
+                  padding: "4px 10px", fontSize: 12,
+                  background: "none", color: "var(--text-muted)",
+                  border: "1px solid var(--border-color)", borderRadius: 6, cursor: "pointer",
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
 
           {filteredInvoices.map((inv) => {
             const isDeleting = deletingIds.has(inv.id);
@@ -542,7 +602,7 @@ export default function InvoicesPage() {
                 onClick={() => setDetailInvoice(inv)}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "100px 1fr 120px 100px 110px 110px 160px",
+                  gridTemplateColumns: "28px 100px 1fr 120px 100px 110px 110px 160px",
                   padding: "12px 16px",
                   borderBottom: "1px solid var(--border-color)",
                   alignItems: "center",
@@ -553,6 +613,16 @@ export default function InvoicesPage() {
                 onMouseEnter={(e) => { e.currentTarget.style.background = "var(--hover-overlay)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               >
+                <span onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox"
+                    checked={selectedIds.has(inv.id)}
+                    onChange={(e) => {
+                      const next = new Set(selectedIds);
+                      if (e.target.checked) next.add(inv.id); else next.delete(inv.id);
+                      setSelectedIds(next);
+                    }}
+                  />
+                </span>
                 <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--accent)" }}>
                   #{inv.invoice_number || inv.id?.slice(0, 8)}
                 </span>
