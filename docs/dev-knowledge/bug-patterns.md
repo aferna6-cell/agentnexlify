@@ -621,6 +621,78 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+## 2026-03-25
+
+### 36. Stripe test mode checkout links on production
+**Date:** 2026-03-25 (Commit 3b7846d)
+**Symptom:** Signup checkout uses Stripe test mode links, meaning no real payments are collected.
+**Root Cause:** Static Stripe checkout links hardcoded in frontend pointed to test mode instead of using dynamic server-side Checkout Session creation.
+**Files Changed:** backend/routers/auth.py, backend/services/stripe_service.py, frontend pages
+**Fix:** Replaced static test links with dynamic `POST /api/v1/auth/billing/checkout` endpoint that creates server-side Checkout Sessions.
+**Prevention:** Never use static Stripe checkout links. Always create sessions server-side. ADR-2026-03-25-004 documents this decision.
+
+---
+
+### 37. SMS notification import crash in widget_chat.py
+**Date:** 2026-03-25 (Commit 3b7846d)
+**Symptom:** Widget chat crashes when SMS notification is triggered after lead capture.
+**Root Cause:** Wrong module import for SMS notification function + missing `await` on async call.
+**Files Changed:** backend/routers/widget_chat.py
+**Fix:** Fixed import path and added `await`.
+**Prevention:** Always verify import paths when referencing cross-module functions. Always `await` async calls.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 38. Raw exception leak in crawl.py
+**Date:** 2026-03-25 (Commit 3b7846d)
+**Symptom:** Website crawl errors expose internal exception details to API callers.
+**Root Cause:** Exception message passed directly to HTTP error response without sanitization.
+**Files Changed:** backend/routers/crawl.py
+**Fix:** Return generic error message to client, log full exception server-side.
+**Prevention:** Never include raw exception messages in API responses. Log internally, return generic messages.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 39. Pipeline page crash — stage.label.toLowerCase() on stage.name
+**Date:** 2026-03-25 (Commit 712b80c)
+**Symptom:** Pipeline page crashes on load with `Cannot read properties of undefined (reading 'toLowerCase')`.
+**Root Cause:** Code called `stage.label.toLowerCase()` but the pipeline stages object has `name`, not `label`.
+**Files Changed:** frontend/src/pages/PipelinePage.jsx
+**Fix:** Changed `stage.label` to `stage.name`.
+**Prevention:** When accessing stage properties, verify against the backend response shape. Pipeline stages return `name`, not `label`.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 40. Client Portal .filter() on non-array crash
+**Date:** 2026-03-25 (Commit 712b80c)
+**Symptom:** Client Portal page crashes when API returns non-array data (null, undefined, or error object).
+**Root Cause:** `.filter()` called directly on API response without checking if it's an array first.
+**Files Changed:** frontend/src/pages/ClientPortalPage.jsx
+**Fix:** Added `Array.isArray()` guards before `.filter()` calls.
+**Prevention:** Always guard `.filter()`, `.map()`, `.reduce()` with `Array.isArray()` when the data comes from an API response.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
+### 41. Onboarding progress math mismatch
+**Date:** 2026-03-25 (Commit 712b80c)
+**Symptom:** Onboarding progress shows wrong percentage — completing steps doesn't update the bar correctly.
+**Root Cause:** Frontend used backend's 5-check percentage calculation, but the frontend onboarding checklist has 8 steps.
+**Files Changed:** frontend/src/pages/Dashboard/OnboardingChecklist.jsx
+**Fix:** Changed to frontend 8-step count calculation instead of backend percentage.
+**Prevention:** When frontend and backend have different step counts for the same feature, derive progress from the frontend's own step count.
+
+*Auto-logged — needs human enrichment for root cause details*
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
 
 ---

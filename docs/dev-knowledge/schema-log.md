@@ -387,7 +387,22 @@ New table `scoring_configs` for per-tenant configurable lead scoring weights. Co
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
 
-### 068 — Invoice Number Unique Index
+### 068 — Invoice Number Unique Index (duplicate number)
 Adds unique index `idx_invoices_tenant_number ON invoices(tenant_id, invoice_number)`. Prevents duplicate invoice numbers under concurrent creation. Backend retries with incremented sequence on conflict.
+
+**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+
+### 068 — Password Reset Tokens (duplicate number)
+Adds `reset_token` (TEXT) and `reset_token_expires` (TIMESTAMPTZ) to `tenants`. Partial index on `reset_token` for non-null values. Supports password reset flow via email token.
+
+**Applied:** Pending — created 2026-03-25, not yet applied to Supabase. **Note: duplicate migration number — must renumber before applying.**
+
+### 069 — Lead Email Bounced
+Adds `email_bounced` (BOOLEAN DEFAULT FALSE) and `email_bounced_at` (TIMESTAMPTZ) to `leads`. Partial index on bounced leads. Resend webhook sets this flag; automation engine and email sender skip bounced leads.
+
+**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+
+### 070 — Pipeline Automations
+Creates `pipeline_automations` table for auto-trigger actions when leads move between pipeline stages. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT), trigger_stage (TEXT NOT NULL), actions (JSONB NOT NULL DEFAULT '[]'), is_active (BOOLEAN DEFAULT TRUE), created_at, updated_at. Indexed on tenant_id and (tenant_id, trigger_stage) for active automations. Actions support: email, create_task, notify_team.
 
 **Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
