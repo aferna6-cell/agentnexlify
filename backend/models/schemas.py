@@ -139,6 +139,30 @@ class LoginResponse(BaseModel):
     plan: str
 
 
+class GoogleRegisterRequest(BaseModel):
+    setup_token: str
+    business_name: str
+    industry: str = "other"
+    city: str = ""
+    phone: str | None = None
+    website_url: str | None = None
+
+    @field_validator("website_url")
+    @classmethod
+    def validate_google_website_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        import re
+        if not re.match(r"^https?://", v, re.IGNORECASE):
+            v = f"https://{v}"
+        if not re.match(r"^https?://[^\s/$.?#].[^\s]*$", v, re.IGNORECASE):
+            raise ValueError("Invalid website URL")
+        return v
+
+
 class MeResponse(BaseModel):
     tenant_id: str
     email: str

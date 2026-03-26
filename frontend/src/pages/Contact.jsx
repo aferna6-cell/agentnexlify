@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import MarketingWidgetEmbed from "../components/MarketingWidgetEmbed";
 import { submitContactForm } from "../utils/api/dashboard";
 import "../styles/legal.css";
 import "../styles/contact.css";
@@ -66,6 +67,20 @@ export default function Contact() {
             <strong style={{ display: "block", marginBottom: 4 }}>Business hours</strong>
             <span>Monday - Friday, 9 AM - 6 PM EST</span>
           </div>
+          <div>
+            <strong style={{ display: "block", marginBottom: 4 }}>Need a faster answer?</strong>
+            <span>Use the live AI chat in the bottom-right corner for instant product questions.</span>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "2rem", padding: "1.25rem", borderRadius: 10, background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.18)" }}>
+          <h2 style={{ marginTop: 0, marginBottom: "0.5rem", fontSize: "1.1rem" }}>Book a live demo instead</h2>
+          <p style={{ marginTop: 0, marginBottom: "1rem", color: "var(--text-secondary, #475569)" }}>
+            Want to see the full platform in action? Pick a time on our live calendar and we&apos;ll walk you through the dashboard, widget, and automation setup.
+          </p>
+          <Link to="/demo" className="contact-submit" style={{ display: "inline-flex", textDecoration: "none", width: "auto" }}>
+            Book a Demo
+          </Link>
         </div>
 
         {success ? (
@@ -120,6 +135,7 @@ export default function Contact() {
           </form>
         )}
       </article>
+      <MarketingWidgetEmbed />
     </div>
   );
 }

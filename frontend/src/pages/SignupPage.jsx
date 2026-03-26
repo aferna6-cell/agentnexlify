@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
 
@@ -34,19 +34,40 @@ export default function SignupPage() {
   const [searchParams] = useSearchParams();
   const requestedPlan = (searchParams.get("plan") || "").toLowerCase();
   const checkoutPlan = PAID_PLANS.has(requestedPlan) ? requestedPlan : "";
-  const [form, setForm] = useState({
+  const googleSetupToken = searchParams.get("google_setup") || "";
+  const googleEmail = searchParams.get("email") || "";
+  const googleName = searchParams.get("name") || "";
+  const googleError = searchParams.get("google_error") || "";
+  const isGoogleSignup = Boolean(googleSetupToken);
+  const [form, setForm] = useState(() => ({
     business_name: "",
-    owner_name: "",
-    email: "",
+    owner_name: googleName,
+    email: googleEmail,
     phone: "",
     website_url: "",
     industry: "other",
     city: "",
     password: "",
     confirmPassword: "",
-  });
+  }));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (googleError) {
+      setError("Google sign-up could not be completed. Please try again.");
+    }
+  }, [googleError]);
+
+  useEffect(() => {
+    if (!isGoogleSignup) return;
+    setForm((current) => ({
+      ...current,
+      owner_name: googleName || current.owner_name,
+      email: googleEmail || current.email,
+    }));
+  }, [googleEmail, googleName, isGoogleSignup]);
 
   function update(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -56,26 +77,40 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
-    if (form.password !== form.confirmPassword) {
+    if (!isGoogleSignup && form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+      const endpoint = isGoogleSignup
+        ? `${API_BASE}/api/v1/auth/google-register`
+        : `${API_BASE}/api/v1/auth/register`;
+      const body = isGoogleSignup
+        ? {
+            setup_token: googleSetupToken,
+            business_name: form.business_name,
+            phone: form.phone || undefined,
+            website_url: form.website_url || undefined,
+            industry: form.industry,
+            city: form.city,
+          }
+        : {
+            business_name: form.business_name,
+            owner_name: form.owner_name,
+            email: form.email,
+            phone: form.phone || undefined,
+            website_url: form.website_url || undefined,
+            industry: form.industry,
+            city: form.city,
+            password: form.password,
+          };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business_name: form.business_name,
-          owner_name: form.owner_name,
-          email: form.email,
-          phone: form.phone || undefined,
-          website_url: form.website_url || undefined,
-          industry: form.industry,
-          city: form.city,
-          password: form.password,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -86,7 +121,7 @@ export default function SignupPage() {
       const { token, tenant_id } = await res.json();
       localStorage.setItem("anx_token", token);
       localStorage.setItem("anx_tenant_id", tenant_id);
-      trackEvent("sign_up", { method: "email", plan: checkoutPlan || "free" });
+      trackEvent("sign_up", { method: isGoogleSignup ? "google" : "email", plan: checkoutPlan || "free" });
 
       if (checkoutPlan) {
         const checkoutRes = await fetch(`${API_BASE}/api/v1/auth/billing/checkout`, {
@@ -114,6 +149,35 @@ export default function SignupPage() {
     }
   }
 
+  async function handleGoogleSignup() {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      const params = new URLSearchParams({ mode: "signup" });
+      if (checkoutPlan) params.set("plan", checkoutPlan);
+
+      const res = await fetch(`${API_BASE}/api/v1/auth/google/url?${params.toString()}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.auth_url) {
+        throw new Error(data.detail || "Google sign-up is not available yet");
+      }
+      window.location.href = data.auth_url;
+    } catch (err) {
+      setError(err.message);
+      setGoogleLoading(false);
+    }
+  }
+
+  const submitLabel = loading
+    ? isGoogleSignup
+      ? "Finishing setup..."
+      : "Creating account..."
+    : checkoutPlan
+      ? `Continue to ${checkoutPlan[0].toUpperCase()}${checkoutPlan.slice(1)} checkout`
+      : isGoogleSignup
+        ? "Finish Google Signup"
+        : "Get Started Free";
+
   return (
     <div className="login-page">
       <div className="login-card" style={{ width: 420 }}>
@@ -123,6 +187,28 @@ export default function SignupPage() {
             ? `Create your account to continue with the ${checkoutPlan[0].toUpperCase()}${checkoutPlan.slice(1)} plan`
             : "Create your free account"}
         </p>
+        {!isGoogleSignup ? (
+          <>
+            <button
+              type="button"
+              className="login-btn"
+              onClick={handleGoogleSignup}
+              disabled={loading || googleLoading}
+              style={{ marginBottom: "1rem", background: "#fff", color: "#111827", border: "1px solid rgba(255,255,255,0.18)" }}
+            >
+              {googleLoading ? "Redirecting to Google..." : "Sign up with Google"}
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+              <span>or continue with email</span>
+              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+            </div>
+          </>
+        ) : (
+          <div style={{ marginBottom: "1rem", padding: "0.875rem 1rem", borderRadius: 12, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "var(--text-secondary)" }}>
+            Using Google account <strong style={{ color: "var(--text-primary)" }}>{googleEmail}</strong>. Finish your business setup below.
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="login-field">
             <label>Business Name</label>
@@ -142,6 +228,7 @@ export default function SignupPage() {
               onChange={update("owner_name")}
               placeholder="Jane Smith"
               required
+              readOnly={isGoogleSignup}
             />
           </div>
           <div className="login-field">
@@ -153,6 +240,7 @@ export default function SignupPage() {
               onChange={update("email")}
               placeholder="you@company.com"
               required
+              readOnly={isGoogleSignup}
             />
           </div>
           <div className="login-field">
@@ -198,32 +286,36 @@ export default function SignupPage() {
               placeholder="New York"
             />
           </div>
-          <div className="login-field">
-            <label>Password</label>
-            <input
-              type="password"
-              className="login-input"
-              value={form.password}
-              onChange={update("password")}
-              placeholder="Min. 8 characters"
-              minLength={8}
-              required
-            />
-          </div>
-          <div className="login-field">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              className="login-input"
-              value={form.confirmPassword}
-              onChange={update("confirmPassword")}
-              placeholder="Re-enter password"
-              required
-            />
-          </div>
+          {!isGoogleSignup && (
+            <>
+              <div className="login-field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  className="login-input"
+                  value={form.password}
+                  onChange={update("password")}
+                  placeholder="Min. 8 characters"
+                  minLength={8}
+                  required
+                />
+              </div>
+              <div className="login-field">
+                <label>Confirm Password</label>
+                <input
+                  type="password"
+                  className="login-input"
+                  value={form.confirmPassword}
+                  onChange={update("confirmPassword")}
+                  placeholder="Re-enter password"
+                  required
+                />
+              </div>
+            </>
+          )}
           {error && <div className="login-error">{error}</div>}
-          <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? "Creating account..." : "Get Started Free"}
+          <button type="submit" className="login-btn" disabled={loading || googleLoading}>
+            {submitLabel}
           </button>
           <p className="login-legal-note">
             By signing up, you agree to our{" "}

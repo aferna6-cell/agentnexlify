@@ -340,13 +340,13 @@ _Check docs/dev-knowledge/bug-patterns.md for documented bugs. Add any new ones 
 ### CTO Site Review (2026-03-25) — HIGH
 
 - [x] **[CTO-SITE-REVIEW] "Book a Demo" goes to generic contact form** — FIXED 2026-03-25. Landing-page demo CTAs now route to `/demo`, which redirects to the live Calendly scheduling flow.
-- [ ] **[CTO-SITE-REVIEW] No chat widget on our own website** — We sell a chat widget but don't use it on agentnexlify.com. Embed our widget as product demo + lead capture.
+- [x] **[CTO-SITE-REVIEW] No chat widget on our own website** — FIXED 2026-03-26. The production landing page and contact page now load the live AgentNexLiFy widget, and the demo tenant FAQ/greeting content was refreshed for product Q&A.
 - [x] **[CTO-SITE-REVIEW] "Only 10 Spots Remaining" on ALL tiers is fake scarcity** — FIXED 2026-03-25. Pricing now uses honest “waived for early customers” language.
 - [x] **[CTO-SITE-REVIEW] Signup industry dropdown missing key verticals** — FIXED 2026-03-25. Signup now includes 20+ target SMB verticals.
 - [x] **[CTO-SITE-REVIEW] No testimonials or social proof on landing page** — FIXED 2026-03-25. Landing page now includes a testimonials/social-proof section.
 - [x] **[CTO-SITE-REVIEW] Demo section is static mockups** — FIXED 2026-03-25. Demo section now supports interactive tab switching instead of a single static mockup.
-- [ ] **[CTO-SITE-REVIEW] Contact page is too barebones** — Add expected response time, chat widget embed, direct email, business hours.
-- [ ] **[CTO-SITE-REVIEW] No Google OAuth on signup** — Adding "Sign up with Google" would reduce friction.
+- [x] **[CTO-SITE-REVIEW] Contact page is too barebones** — FIXED 2026-03-26. Contact page now includes response-time expectations, direct email, business hours, a demo-booking CTA, and the live chat widget.
+- [x] **[CTO-SITE-REVIEW] No Google OAuth on signup** — FIXED 2026-03-26. Signup and login now support Google OAuth, with a callback flow that collects business details after Google authentication. Deployment still requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be set in the runtime environment.
 
 ### Other Bugs
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import MarketingWidgetEmbed from "../components/MarketingWidgetEmbed";
 import { trackEvent } from "../utils/analytics";
 import "../styles/home.css";
 
@@ -461,6 +462,9 @@ export default function Home() {
                   Book a Demo
                 </Link>
               </div>
+              <p className="reveal" style={{ marginTop: "1rem", color: "var(--text-secondary)", maxWidth: 520 }}>
+                Chat with our live AI assistant in the bottom-right corner to ask about pricing, setup, and how AgentNexLiFy works.
+              </p>
             </div>
 
             {/* Animated Widget Mockup */}
@@ -898,6 +902,7 @@ export default function Home() {
           </button>
         </div>
       )}
+      <MarketingWidgetEmbed />
     </div>
   );
 }

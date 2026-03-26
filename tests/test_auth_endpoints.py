@@ -7,6 +7,7 @@ the register and login flows without hitting the real database.
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -373,3 +374,108 @@ class TestBillingCheckout:
 
         assert response.status_code == 400
         assert "invalid plan" in response.json()["detail"].lower()
+
+
+class TestGoogleOAuth:
+    """Test Google OAuth helper endpoints."""
+
+    def test_google_auth_url_returns_google_redirect(self, test_client, mock_settings):
+        client, _db_mock = test_client
+        mock_settings.google_client_id = "google-client-id"
+        mock_settings.google_client_secret = "google-client-secret"
+        mock_settings.api_url = "https://api.example.com"
+
+        response = client.get("/api/v1/auth/google/url?mode=signup&plan=growth")
+
+        assert response.status_code == 200
+        auth_url = response.json()["auth_url"]
+        parsed = urlparse(auth_url)
+        params = parse_qs(parsed.query)
+        assert parsed.netloc == "accounts.google.com"
+        assert params["client_id"] == ["google-client-id"]
+        assert params["redirect_uri"] == ["https://api.example.com/api/v1/auth/google/callback"]
+        assert params["scope"] == ["openid email profile"]
+        assert "state" in params
+
+    @patch("backend.routers.auth.httpx.AsyncClient")
+    def test_google_callback_existing_owner_redirects_to_dashboard(self, mock_async_client, test_client, mock_settings):
+        client, db_mock = test_client
+        mock_settings.google_client_id = "google-client-id"
+        mock_settings.google_client_secret = "google-client-secret"
+        mock_settings.api_url = "https://api.example.com"
+        mock_settings.frontend_url = "https://app.example.com"
+
+        from backend.routers.auth import _encode_google_state
+
+        state = _encode_google_state("login")
+
+        _setup_table_mock(db_mock, {
+            "tenants": [{
+                "id": "tenant-001",
+                "business_name": "Test Business",
+                "plan": "growth",
+                "business_type": "plumbing",
+            }],
+        })
+
+        token_response = MagicMock()
+        token_response.raise_for_status.return_value = None
+        token_response.json.return_value = {"access_token": "google-access-token"}
+
+        userinfo_response = MagicMock()
+        userinfo_response.raise_for_status.return_value = None
+        userinfo_response.json.return_value = {
+            "email": "owner@example.com",
+            "name": "Owner Example",
+            "email_verified": True,
+        }
+
+        http_client = AsyncMock()
+        http_client.post.return_value = token_response
+        http_client.get.return_value = userinfo_response
+        mock_async_client.return_value.__aenter__.return_value = http_client
+
+        response = client.get(
+            f"/api/v1/auth/google/callback?code=test-code&state={state}",
+            follow_redirects=False,
+        )
+
+        assert response.status_code in {302, 307}
+        location = response.headers["location"]
+        assert location.startswith("https://app.example.com/auth/callback#")
+        assert "tenant_id=tenant-001" in location
+        assert "token=" in location
+
+    @patch("backend.routers.auth.send_email", new_callable=AsyncMock)
+    def test_google_register_creates_account(self, mock_send_email, test_client):
+        client, db_mock = test_client
+
+        from backend.routers.auth import _encode_google_setup_token
+
+        setup_token = _encode_google_setup_token(
+            email="owner@example.com",
+            owner_name="Owner Example",
+            plan="growth",
+        )
+
+        _setup_table_mock(db_mock, {
+            "tenants": [
+                [],
+                [{"id": "tenant-google-001", "business_name": "Google Biz", "owner_email": "owner@example.com", "plan": "free"}],
+            ],
+            "widget_configs": [{"id": "wc-001"}],
+        })
+
+        response = client.post("/api/v1/auth/google-register", json={
+            "setup_token": setup_token,
+            "business_name": "Google Biz",
+            "industry": "hvac",
+            "city": "Austin",
+        })
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tenant_id"] == "tenant-google-001"
+        assert data["api_key"].startswith("anx_")
+        assert data["token"]
+        mock_send_email.assert_awaited_once()
