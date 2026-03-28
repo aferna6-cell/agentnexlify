@@ -1,18 +1,18 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-03-25 (automated evening review)
+Updated: 2026-03-27 (automated evening review)
 
 ## Tomorrow's Top 3 Priorities
 
-1. **Apply migrations 065-070 to live Supabase** — 6 pending migrations (065 client_accounts, 066 waitlist, 067 scoring_configs, 068 invoice unique + password reset, 069 email bounce, 070 pipeline automations). 065 blocks client login. Note: 068 has duplicate numbers — renumber before applying.
-2. **Reduce silent frontend catches (29 remaining)** — Health check shows 29 silent `.catch(() => {})` blocks. Systematic cleanup needed per architecture decision on visible error handling.
-3. **Production verification of today's features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow — all committed but none verified on production.
+1. **Apply migrations 065-070 to live Supabase** — 6 pending migrations (065 client_accounts, 066 waitlist, 067 scoring_configs, 068 invoice unique + password reset, 069 email bounce, 070 pipeline automations). 065 blocks client login. Note: 068 has duplicate numbers — renumber before applying. **Stale since 2026-03-25.**
+2. **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow — all committed but none verified on production. **3 days unverified.**
+3. **Reduce silent frontend catches (33 remaining)** — Health check counts 0 truly empty `.catch(() => {})`, but 33 `.catch(() => <fallback>)` blocks still hide errors. Systematic cleanup needed per architecture decision on visible error handling.
 
 ## Active Tasks
 
 ### Priority 1 — Critical / Blocking
 
-- [ ] **Apply migration 065 (client_accounts)** — white-label client login depends on this table. Schema-log.md shows "Pending".
+- [ ] **Apply migration 065 (client_accounts)** — white-label client login depends on this table. Schema-log.md shows "Pending". Stale since 2026-03-23.
   - Agent: **schema-guardian** → manual apply
 - [ ] **Apply migration 066 (waitlist_entries)** — appointment waitlist feature. Created 2026-03-23, not yet applied.
   - Agent: **schema-guardian** → manual apply
@@ -25,23 +25,28 @@ Updated: 2026-03-25 (automated evening review)
 - [ ] **Apply migration 070 (pipeline automations)** — pipeline stage automations. Created 2026-03-25, not yet applied.
   - Agent: **schema-guardian** → manual apply
 
-### Priority 2 — In-Progress Features
+### Priority 2 — Verification & In-Progress
 
-- [ ] **Reduce silent frontend catches** — 29 silent `.catch(() => {})` blocks detected by health check. Architecture decision requires visible error handling.
+- [ ] **Production feature verification** — Revenue analytics, pipeline automations, webhook deliveries, password reset, CTO review fixes. All committed 2026-03-25, none production-verified. **3 days stale.**
+  - Agent: **qa-tester**
+- [ ] **Reduce silent frontend catches (33 remaining)** — `.catch(() => <fallback>)` blocks detected by manual grep. Architecture decision requires visible error handling. Count was 29 on March 25, now 33 (4 new from March 25 feature work).
   - Agent: **frontend-dev**
 - [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Still present.
   - Agent: **frontend-dev**
 
-### Priority 3 — Verification
+### Priority 3 — Knowledge & Documentation
 
-- [ ] **Production feature verification** — Revenue analytics, pipeline automations, webhook deliveries, password reset, CTO review fixes. All committed today, none production-verified.
-  - Agent: **qa-tester**
-- [ ] **Enrich auto-logged bug patterns (#30-41)** — 12 skeleton entries need human enrichment for root cause details. 6 from 2026-03-24, 6 new from 2026-03-25.
+- [ ] **Enrich auto-logged bug patterns (#30-41)** — 12 skeleton entries need human enrichment for root cause details. 6 from 2026-03-24, 6 new from 2026-03-25. Carried forward since 2026-03-24.
 
 ### Priority 4 — Carried Forward
 
 - [ ] **Two-way email sync** — still pending from previous backlog
 - [ ] **Fix 16 test isolation failures** — partially addressed by d1a36c6 (12 files patched), may still have remaining failures
+- [ ] **Automated routine reliability** — March 26 evening and March 27 morning both failed due to usage limits. Consider scheduling adjustments or retry mechanism.
+
+## Completed (Recent) — 2026-03-27
+
+_(No work completed today — 0 commits)_
 
 ## Completed (Recent) — 2026-03-25
 
