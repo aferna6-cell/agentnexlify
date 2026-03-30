@@ -35,5 +35,18 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- AgentNexLiFy chat widget — desktop only, not on dashboard -->
+    <script>
+      (function () {
+        if (!window.matchMedia("(min-width: 768px)").matches) return;
+        if (window.location.pathname.startsWith("/dashboard")) return;
+        var s = document.createElement("script");
+        s.async = true;
+        s.setAttribute("data-api-key", "anx_4-H8_i11vOOhbLHMQj1fxQutc3XbafG_W1MczCDm-zs");
+        s.setAttribute("data-api-base", "https://agentnexlify-production.up.railway.app");
+        s.src = "https://app.agentnexlify.com/widget/agentnexlify-widget.js";
+        document.body.appendChild(s);
+      })();
+    </script>
   </body>
 </html>

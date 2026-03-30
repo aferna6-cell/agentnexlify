@@ -852,8 +852,8 @@ export default function Home() {
       {showFloatingCta && !floatingCtaDismissed && (
         <div className="lp-floating-cta">
           <Link to="/signup" className="lp-floating-cta-link">
-            <span className="floating-cta-full">Try our AI assistant free {"\u2192"}</span>
-            <span className="floating-cta-short">Try Free {"\u2192"}</span>
+            <span className="floating-cta-full">Try our AI assistant free</span>
+            <span className="floating-cta-short">Try Free</span>
           </Link>
           <button
             className="lp-floating-cta-close"
