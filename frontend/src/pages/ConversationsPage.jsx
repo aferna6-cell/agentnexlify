@@ -49,6 +49,48 @@ function formatNoteTime(dateStr) {
   });
 }
 
+function _inlineMd(s) {
+  // Escape HTML entities to prevent XSS
+  s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Bold **text**
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  // Italic *text* (not inside bold markers)
+  s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+  // Links [text](url) — only allow https?:// to prevent XSS
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s;
+}
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  const out = [];
+  let inList = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
+      if (!inList) { out.push('<ul style="margin:4px 0 4px 16px;padding:0;">'); inList = true; }
+      const content = trimmed.replace(/^[-*]\s|^\d+\.\s/, '');
+      out.push('<li>' + _inlineMd(content) + '</li>');
+    } else {
+      if (inList) { out.push('</ul>'); inList = false; }
+      if (trimmed === '') {
+        if (out.length > 0) out.push('<br>');
+      } else {
+        out.push(_inlineMd(line));
+        const nextTrimmed = (lines[i + 1] || '').trim();
+        if (nextTrimmed && !nextTrimmed.startsWith('- ') && !nextTrimmed.startsWith('* ') && !/^\d+\.\s/.test(nextTrimmed)) {
+          out.push('<br>');
+        }
+      }
+    }
+  }
+  if (inList) out.push('</ul>');
+  while (out.length && out[out.length - 1] === '<br>') out.pop();
+  return out.join('');
+}
+
 export default function ConversationsPage() {
   const { user, token } = useAuth();
   const [conversations, setConversations] = useState([]);
@@ -906,7 +948,11 @@ export default function ConversationsPage() {
                 {messages.map((m) => (
                   <div key={m.id} className={`conv-msg ${m.role}`}>
                     <div className="conv-msg-role">{m.role === "user" ? "Visitor" : "AI"}</div>
+                  {m.role === "assistant" ? (
+                    <div className="conv-msg-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content || '') }} />
+                  ) : (
                     <div className="conv-msg-content">{m.content}</div>
+                  )}
                     <div className="conv-msg-time">{timeAgo(m.created_at)}</div>
                   </div>
                 ))}

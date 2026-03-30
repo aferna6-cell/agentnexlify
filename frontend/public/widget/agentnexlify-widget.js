@@ -464,6 +464,9 @@
         text-decoration: none;
       }
 
+      @keyframes anxFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      #anx-teaser { box-sizing: border-box; }
+
       /* Mobile responsive */
       @media (max-width: 480px) {
         #anx-window {
@@ -709,6 +712,10 @@
 
     // Bubble
     container.innerHTML = `
+      <div id="anx-teaser" style="display:none;position:fixed;bottom:96px;right:24px;background:#fff;border-radius:12px 12px 4px 12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:10px 14px;max-width:240px;font-size:13px;line-height:1.4;cursor:pointer;animation:anxFadeIn 0.3s ease;z-index:99997;">
+        <button id="anx-teaser-close" style="position:absolute;top:4px;right:6px;background:none;border:none;cursor:pointer;font-size:16px;color:#999;line-height:1;" title="Dismiss">&times;</button>
+        <p id="anx-teaser-text" style="margin:0;padding-right:12px;color:#333;"></p>
+      </div>
       <div id="anx-bubble">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
         <div id="anx-badge">1</div>
@@ -762,6 +769,10 @@
   let widgetIsOnline = true;
   let offlineMessage = "We are currently offline. Leave your details and we\u2019ll get back to you soon!";
 
+  // Teaser state
+  let teaserMessage = "";
+  let teaserTimer = null;
+
   // Menu state
   let menuItems = null; // Array of {name, description, price, category} or null
   let businessType = ""; // e.g. "legal", "restaurant", "dental"
@@ -791,6 +802,7 @@
       widgetIsOnline = data.is_online !== false;
       if (data.greeting_message) greetingMessage = data.greeting_message;
       if (data.offline_message) offlineMessage = data.offline_message;
+      if (data.teaser_message) teaserMessage = data.teaser_message;
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
       }
@@ -916,6 +928,50 @@
     return d.innerHTML;
   }
 
+  function _inlineMd(s) {
+    // Escape HTML entities first to prevent XSS
+    s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // Bold **text**
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    // Italic *text* (only when not inside bold)
+    s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+    // Links [text](url) — only https?:// to prevent XSS
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    return s;
+  }
+
+  function _renderMd(text) {
+    const lines = (text || '').split('\n');
+    const out = [];
+    let inList = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
+        if (!inList) { out.push('<ul style="margin:4px 0;padding-left:18px;">'); inList = true; }
+        const content = trimmed.replace(/^[-*]\s|^\d+\.\s/, '');
+        out.push('<li>' + _inlineMd(content) + '</li>');
+      } else {
+        if (inList) { out.push('</ul>'); inList = false; }
+        if (trimmed === '') {
+          // Skip empty lines at start/end, convert internal empty lines to spacing
+          if (out.length > 0 && out[out.length - 1] !== '<br>') out.push('<br>');
+        } else {
+          out.push(_inlineMd(line));
+          // Add line break after non-empty lines (except before list items)
+          const nextTrimmed = (lines[i + 1] || '').trim();
+          if (nextTrimmed && !nextTrimmed.startsWith('- ') && !nextTrimmed.startsWith('* ') && !/^\d+\.\s/.test(nextTrimmed)) {
+            out.push('<br>');
+          }
+        }
+      }
+    }
+    if (inList) out.push('</ul>');
+    // Remove trailing <br>
+    while (out.length && out[out.length - 1] === '<br>') out.pop();
+    return out.join('');
+  }
+
   // --- DOM helpers ---
   function addMessage(role, text, attachment) {
     const container = document.getElementById("anx-messages");
@@ -946,7 +1002,11 @@
         div.appendChild(p);
       }
     } else {
-      div.textContent = text;
+      if (role === 'assistant') {
+        div.innerHTML = _renderMd(text);
+      } else {
+        div.textContent = text;
+      }
     }
 
     // Feedback buttons on assistant messages
@@ -1055,11 +1115,42 @@
       localStorage.setItem(STATE_KEY, "open");
       const msgs = document.getElementById("anx-messages");
       if (msgs && msgs.children.length === 0) triggerGreeting();
+      hideTeaser();
+      if (teaserTimer) { clearTimeout(teaserTimer); teaserTimer = null; }
     } else {
       win.classList.remove("open");
       bubble.classList.remove("hidden");
       localStorage.setItem(STATE_KEY, "closed");
     }
+  }
+
+  function showTeaser() {
+    const teaser = document.getElementById("anx-teaser");
+    if (!teaser || isOpen) return;
+    if (sessionStorage.getItem("anx_teaser_dismissed")) return;
+
+    const textEl = document.getElementById("anx-teaser-text");
+    const msg = teaserMessage || (botName ? botName + " is here to help!" : "Hi! Need help?");
+    if (textEl) textEl.textContent = msg;
+
+    teaser.style.display = "block";
+
+    document.getElementById("anx-teaser-close").onclick = function(e) {
+      e.stopPropagation();
+      teaser.style.display = "none";
+      sessionStorage.setItem("anx_teaser_dismissed", "1");
+    };
+
+    teaser.onclick = function(e) {
+      if (e.target.id === "anx-teaser-close") return;
+      teaser.style.display = "none";
+      toggleWindow(true);
+    };
+  }
+
+  function hideTeaser() {
+    const teaser = document.getElementById("anx-teaser");
+    if (teaser) teaser.style.display = "none";
   }
 
   async function handleSend() {
@@ -1597,6 +1688,11 @@
           toggleWindow(true);
         }
       }, 5000);
+    }
+
+    // Show teaser bubble after 4 seconds if widget is closed
+    if (!sessionStorage.getItem("anx_teaser_dismissed")) {
+      teaserTimer = setTimeout(showTeaser, 4000);
     }
   }
 

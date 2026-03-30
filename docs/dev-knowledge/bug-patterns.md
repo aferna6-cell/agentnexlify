@@ -730,3 +730,26 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 - **Effect:** Activity log entries had the Supabase client object string as tenant_id, which would silently fail or create orphaned rows.
 - **Fix:** Changed to keyword arguments: `log_activity(tenant_id=..., activity_type=..., ...)`.
 - **Status:** FIXED 2026-03-24.
+
+---
+
+## 2026-03-30
+
+### Analytics overview shows 0 conversations despite active chat sessions
+**Date:** 2026-03-30
+**Symptom:** Analytics overview cards show 0 conversations, 0 leads, 0% conversion, flat "Conversations Over Time" chart — even when the Conversations inbox shows 84 active sessions with working Peak Hours data.
+**Root Cause:** The `conversations` table is empty (0 rows). Widget chat stores all messages in `chat_messages` only. The `_get_or_create_conversation` insert silently fails or is skipped, falling back to `session_id` as a conversation identifier. Analytics `get_overview` and `get_conversations_trend` queried the empty `conversations` table; the widget analytics endpoint queried `chat_messages` (which is why Peak Hours worked but Overview didn't).
+**Files Changed:** `backend/routers/analytics.py`
+**Fix:** Changed `get_overview` and `get_conversations_trend` to count unique `session_id` values in `chat_messages` (with `tenant_id` filter) instead of querying the `conversations` table.
+**Prevention:** `chat_messages` is the canonical store. Any analytics counting "conversations" should count unique `session_id` values in `chat_messages`, NOT rows in the `conversations` table. The `conversations` table is unreliable — rows may not exist even when messages do.
+
+---
+
+### Widget/dashboard renders AI responses as raw markdown text (asterisks, dashes visible)
+**Date:** 2026-03-30
+**Symptom:** AI bot responses with `**bold**`, `- bullet lists`, etc. show as literal asterisks and dashes to visitors on the widget and to agents in the dashboard Conversations viewer.
+**Root Cause:** Widget used `div.textContent = text` for ALL messages (including assistant). Dashboard used React `{m.content}` which renders as plain text. Neither had a markdown parser.
+**Files Changed:** `widget/agentnexlify-widget.js`, `frontend/public/widget/agentnexlify-widget.js`, `frontend/src/pages/ConversationsPage.jsx`
+**Fix:** Added custom sanitized markdown-to-HTML renderers (`_inlineMd` + `_renderMd` in widget; `_inlineMd` + `renderMarkdown` in ConversationsPage). HTML entities escaped before markdown processing. Links restricted to `https?://` URLs. Applied only to `role === "assistant"` messages; user messages remain plain text.
+**Prevention:** Never use `.textContent` or `{value}` for AI-generated content that may contain markdown. Always render with a sanitized parser. Apply markdown rendering ONLY to bot/assistant messages, never to user messages (they should remain plain text to prevent XSS from visitor input).
+

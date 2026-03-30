@@ -84,19 +84,22 @@ async def get_overview(
     now_iso = datetime.now(timezone.utc).isoformat()
     db = get_supabase()
 
-    # Current period conversations — count rows in conversations table (avoids
-    # fetching up to 10,000 chat_messages rows just to count unique sessions)
+    # Current period conversations — count unique sessions in chat_messages.
+    # The conversations table is not reliably populated for all tenants, so
+    # chat_messages (which drives the Peak Hours chart) is used as the
+    # authoritative source here.
     try:
-        curr_conv_result = (
-            db.table("conversations")
-            .select("id", count="exact")
-            .eq("client_id", tenant_id)
+        curr_msgs_for_count = (
+            db.table("chat_messages")
+            .select("session_id")
+            .eq("tenant_id", tenant_id)
             .gte("created_at", start)
             .lt("created_at", now_iso)
-            .limit(1)
+            .limit(5000)
             .execute()
         )
-        total_conversations = curr_conv_result.count or 0
+        unique_sessions = {m["session_id"] for m in (curr_msgs_for_count.data or [])}
+        total_conversations = len(unique_sessions)
     except Exception:
         logger.warning("Failed to fetch conversation analytics for %s", tenant_id, exc_info=True)
         total_conversations = 0
@@ -119,18 +122,19 @@ async def get_overview(
         total_messages = 0
         avg_messages = 0
 
-    # Previous period conversations
+    # Previous period conversations — same approach: unique sessions in chat_messages
     try:
-        prev_conv_result = (
-            db.table("conversations")
-            .select("id", count="exact")
-            .eq("client_id", tenant_id)
+        prev_msgs_for_count = (
+            db.table("chat_messages")
+            .select("session_id")
+            .eq("tenant_id", tenant_id)
             .gte("created_at", prev_start)
             .lt("created_at", start)
-            .limit(1)
+            .limit(5000)
             .execute()
         )
-        prev_conversations = prev_conv_result.count or 0
+        prev_unique_sessions = {m["session_id"] for m in (prev_msgs_for_count.data or [])}
+        prev_conversations = len(prev_unique_sessions)
     except Exception:
         logger.warning("Failed to fetch previous period conversations for %s", tenant_id, exc_info=True)
         prev_conversations = 0
@@ -277,12 +281,13 @@ async def get_conversations_trend(
     db = get_supabase()
 
     try:
-        # Query conversations table directly — avoids fetching thousands of
-        # chat_messages rows just to count unique sessions per day.
+        # Query chat_messages for session_id + created_at — conversations table
+        # is not reliably populated for all tenants, but chat_messages is the
+        # canonical message store and is always written to.
         convos = (
-            db.table("conversations")
-            .select("created_at")
-            .eq("client_id", tenant_id)
+            db.table("chat_messages")
+            .select("session_id, created_at")
+            .eq("tenant_id", tenant_id)
             .gte("created_at", start)
             .lt("created_at", now_iso)
             .order("created_at")
@@ -290,11 +295,12 @@ async def get_conversations_trend(
             .execute()
         )
 
-        # Count conversations by date
-        count_by_date: dict[str, int] = defaultdict(int)
+        # Count unique sessions by date (one conversation = one unique session_id per day)
+        date_sessions: dict[str, set] = defaultdict(set)
         for row in convos.data or []:
             date_str = row["created_at"][:10]
-            count_by_date[date_str] += 1
+            date_sessions[date_str].add(row["session_id"])
+        count_by_date: dict[str, int] = {d: len(s) for d, s in date_sessions.items()}
 
         # Build full date range with zeroes for days with no activity
         today = datetime.now(timezone.utc).date()
