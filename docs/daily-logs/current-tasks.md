@@ -1,11 +1,11 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-03-27 (automated evening review)
+Updated: 2026-03-30 (automated morning startup)
 
 ## Tomorrow's Top 3 Priorities
 
 1. **Apply migrations 065-070 to live Supabase** — 6 pending migrations (065 client_accounts, 066 waitlist, 067 scoring_configs, 068 invoice unique + password reset, 069 email bounce, 070 pipeline automations). 065 blocks client login. Note: 068 has duplicate numbers — renumber before applying. **Stale since 2026-03-25.**
-2. **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow — all committed but none verified on production. **3 days unverified.**
+2. **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow — all committed but none verified on production. **5 days unverified.**
 3. **Reduce silent frontend catches (33 remaining)** — Health check counts 0 truly empty `.catch(() => {})`, but 33 `.catch(() => <fallback>)` blocks still hide errors. Systematic cleanup needed per architecture decision on visible error handling.
 
 ## Active Tasks
@@ -27,9 +27,9 @@ Updated: 2026-03-27 (automated evening review)
 
 ### Priority 2 — Verification & In-Progress
 
-- [ ] **Production feature verification** — Revenue analytics, pipeline automations, webhook deliveries, password reset, CTO review fixes. All committed 2026-03-25, none production-verified. **3 days stale.**
+- [ ] **Production feature verification** — Revenue analytics, pipeline automations, webhook deliveries, password reset, CTO review fixes. All committed 2026-03-25, none production-verified. **5 days stale.**
   - Agent: **qa-tester**
-- [ ] **Reduce silent frontend catches (33 remaining)** — `.catch(() => <fallback>)` blocks detected by manual grep. Architecture decision requires visible error handling. Count was 29 on March 25, now 33 (4 new from March 25 feature work).
+- [ ] **Reduce silent frontend catches (33 remaining)** — `.catch(() => <fallback>)` blocks detected by manual grep. Architecture decision requires visible error handling. Count steady at 33 since 2026-03-27.
   - Agent: **frontend-dev**
 - [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Still present.
   - Agent: **frontend-dev**
@@ -44,9 +44,13 @@ Updated: 2026-03-27 (automated evening review)
 - [ ] **Fix 16 test isolation failures** — partially addressed by d1a36c6 (12 files patched), may still have remaining failures
 - [ ] **Automated routine reliability** — March 26 evening and March 27 morning both failed due to usage limits. Consider scheduling adjustments or retry mechanism.
 
+## Completed (Recent) — 2026-03-30
+
+_(No work completed — 0 commits in last 24h. Morning docs only.)_
+
 ## Completed (Recent) — 2026-03-27
 
-_(No work completed today — 0 commits)_
+_(No work completed — 0 commits; docs only from evening review)_
 
 ## Completed (Recent) — 2026-03-25
 
