@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import MarketingWidgetEmbed from "../components/MarketingWidgetEmbed";
 import { submitContactForm } from "../utils/api/dashboard";
 import "../styles/legal.css";
 import "../styles/contact.css";
@@ -69,7 +68,7 @@ export default function Contact() {
           </div>
           <div>
             <strong style={{ display: "block", marginBottom: 4 }}>Need a faster answer?</strong>
-            <span>Use the live AI chat in the bottom-right corner for instant product questions.</span>
+            <span>Email us at <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a> for the fastest response.</span>
           </div>
         </div>
 
@@ -135,7 +134,6 @@ export default function Contact() {
           </form>
         )}
       </article>
-      <MarketingWidgetEmbed />
     </div>
   );
 }

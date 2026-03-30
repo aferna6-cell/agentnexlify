@@ -758,6 +758,7 @@
   let msgCounter = 0;
   let botName = "Aria";
   let agentName = "Agent";
+  let greetingMessage = "";
   let widgetIsOnline = true;
   let offlineMessage = "We are currently offline. Leave your details and we\u2019ll get back to you soon!";
 
@@ -788,6 +789,7 @@
       bookingEnabled = data.booking_enabled || false;
       businessType = (data.business_type || "").toLowerCase();
       widgetIsOnline = data.is_online !== false;
+      if (data.greeting_message) greetingMessage = data.greeting_message;
       if (data.offline_message) offlineMessage = data.offline_message;
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
@@ -1034,7 +1036,7 @@
   function updateHeader() {
     const title = document.getElementById("anx-title");
     const avatar = document.getElementById("anx-header-avatar");
-    if (title) title.textContent = `${botName} \u2022 ${agentName}'s AI Assistant`;
+    if (title) title.textContent = botName;
     if (avatar) avatar.textContent = botName.charAt(0).toUpperCase();
   }
 
@@ -1051,6 +1053,8 @@
       document.getElementById("anx-badge").style.display = "none";
       document.getElementById("anx-input").focus();
       localStorage.setItem(STATE_KEY, "open");
+      const msgs = document.getElementById("anx-messages");
+      if (msgs && msgs.children.length === 0) triggerGreeting();
     } else {
       win.classList.remove("open");
       bubble.classList.remove("hidden");
@@ -1591,30 +1595,18 @@
         if (!isOpen && !hasAutoOpened) {
           hasAutoOpened = true;
           toggleWindow(true);
-          // Send initial greeting
-          if (
-            document.getElementById("anx-messages").children.length === 0
-          ) {
-            triggerGreeting();
-          }
         }
       }, 5000);
     }
   }
 
-  async function triggerGreeting() {
-    showTyping();
-    try {
-      const data = await sendMessage("hi");
-      hideTyping();
-      addMessage("assistant", data.response);
-    } catch (e) {
-      hideTyping();
-      addMessage(
-        "assistant",
-        `Hey there! How can I help you today?`
-      );
-    }
+  function triggerGreeting() {
+    const msgs = document.getElementById("anx-messages");
+    if (!msgs || msgs.children.length > 0) return;
+    addMessage(
+      "assistant",
+      greetingMessage || "Hey there! How can I help you today?"
+    );
   }
 
   // --- Run ---
