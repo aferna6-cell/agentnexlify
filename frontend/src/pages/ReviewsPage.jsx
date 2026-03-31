@@ -65,7 +65,8 @@ export default function ReviewsPage() {
       });
       setReviews(res.reviews || []);
       setStats(res.stats || {});
-    } catch {
+    } catch (err) {
+      console.warn("Failed to load reviews:", err.message);
       setReviews([]);
     } finally {
       setLoading(false);
@@ -174,7 +175,8 @@ export default function ReviewsPage() {
       const res = await fetchLeads(user.tenantId, token, { per_page: 200 });
       const leads = res.leads || res || [];
       setRequestLeads(leads.filter((l) => l.email || l.phone));
-    } catch {
+    } catch (err) {
+      console.warn("Failed to load leads for review request:", err.message);
       setRequestLeads([]);
     } finally {
       setRequestLeadsLoading(false);
