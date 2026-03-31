@@ -1017,8 +1017,27 @@ async def kpi_deltas(
     hot_this = _count_leads(this_week_start, hot=True)
     hot_last = _count_leads(last_week_start, last_week_end, hot=True)
 
-    convos_this = _count_in_range("conversations", "client_id", this_week_start)
-    convos_last = _count_in_range("conversations", "client_id", last_week_start, last_week_end)
+    # Count conversations from chat_messages (unique sessions) rather than the
+    # conversations table, which is unreliable and may have FK issues.
+    # architecture-decisions.md: "chat_messages is the canonical store"
+    def _count_sessions_in_range(start: str, end: str | None = None) -> int:
+        try:
+            q = (
+                db.table("chat_messages")
+                .select("session_id")
+                .eq("tenant_id", tenant_id)
+                .gte("created_at", start)
+            )
+            if end:
+                q = q.lt("created_at", end)
+            result = q.limit(5000).execute()
+            return len({r["session_id"] for r in (result.data or [])})
+        except Exception:
+            logger.warning("KPI delta session count failed for %s", tenant_id, exc_info=True)
+            return 0
+
+    convos_this = _count_sessions_in_range(this_week_start)
+    convos_last = _count_sessions_in_range(last_week_start, last_week_end)
 
     appts_this = _count_in_range("appointments", "tenant_id", this_week_start)
     appts_last = _count_in_range("appointments", "tenant_id", last_week_start, last_week_end)

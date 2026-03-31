@@ -1093,3 +1093,83 @@ async def bulk_update_leads(
             errors.append(lead_id)
 
     return {"updated": updated, "failed": len(errors), "failed_ids": errors}
+
+
+@router.get("/{tenant_id}/debug")
+async def debug_lead_capture(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Debug endpoint: visibility into lead capture health for a tenant.
+
+    Returns recent lead counts and sample IDs to help diagnose whether
+    widget lead capture is working correctly. Owner-only access.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if claims.get("role") not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Owner or admin access required")
+
+    db = get_supabase()
+
+    try:
+        # Total leads count
+        total_result = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("client_id", tenant_id)
+            .execute()
+        )
+        total_leads = total_result.count or 0
+    except Exception:
+        logger.error("debug_lead_capture: total count failed for %s", tenant_id, exc_info=True)
+        total_leads = -1
+
+    try:
+        # Leads created in the last 7 days
+        from datetime import datetime, timedelta, timezone
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        recent_result = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("client_id", tenant_id)
+            .gte("created_at", week_ago)
+            .execute()
+        )
+        leads_last_7_days = recent_result.count or 0
+    except Exception:
+        logger.error("debug_lead_capture: recent count failed for %s", tenant_id, exc_info=True)
+        leads_last_7_days = -1
+
+    try:
+        # Most recent lead created_at timestamp
+        latest_result = (
+            db.table("leads")
+            .select("id, created_at, email, phone")
+            .eq("client_id", tenant_id)
+            .order("created_at", desc=True)
+            .limit(5)
+            .execute()
+        )
+        latest_leads = latest_result.data or []
+        last_lead_created_at = latest_leads[0]["created_at"] if latest_leads else None
+        sample_lead_ids = [l["id"] for l in latest_leads]
+        has_email_leads = any(l.get("email") for l in latest_leads)
+    except Exception:
+        logger.error("debug_lead_capture: sample query failed for %s", tenant_id, exc_info=True)
+        last_lead_created_at = None
+        sample_lead_ids = []
+        has_email_leads = False
+
+    logger.info(
+        "debug_lead_capture: tenant=%s total=%s last_7d=%s last_created=%s",
+        tenant_id, total_leads, leads_last_7_days, last_lead_created_at,
+    )
+
+    return {
+        "total_leads": total_leads,
+        "leads_last_7_days": leads_last_7_days,
+        "last_lead_created_at": last_lead_created_at,
+        "has_email_leads": has_email_leads,
+        "sample_lead_ids": sample_lead_ids,
+    }

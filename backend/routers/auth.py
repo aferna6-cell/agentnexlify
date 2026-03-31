@@ -854,7 +854,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Widget config — full details for onboarding
     widget_result = (
         db.table("widget_configs")
-        .select("api_key, bot_name, primary_color, greeting_message, position, branding, is_online, offline_message")
+        .select("api_key, bot_name, primary_color, greeting_message, position, branding, is_online, offline_message, teaser_message")
         .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()

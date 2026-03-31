@@ -1129,9 +1129,9 @@
     if (!teaser || isOpen) return;
     if (sessionStorage.getItem("anx_teaser_shown")) return;
 
+    if (!teaserMessage) return;
     const textEl = document.getElementById("anx-teaser-text");
-    const msg = teaserMessage || (botName ? botName + " is here to help!" : "Hi! Need help?");
-    if (textEl) textEl.textContent = msg;
+    if (textEl) textEl.textContent = teaserMessage;
 
     sessionStorage.setItem("anx_teaser_shown", "1");
     teaser.style.display = "block";
@@ -1690,8 +1690,9 @@
       }, 5000);
     }
 
-    // Show teaser bubble after 3 seconds if widget is closed and not yet shown this session
-    if (!sessionStorage.getItem("anx_teaser_shown")) {
+    // Show teaser bubble after 3 seconds if widget is closed, not yet shown this session,
+    // and a teaser_message has been configured (no config = no bubble).
+    if (teaserMessage && !sessionStorage.getItem("anx_teaser_shown")) {
       teaserTimer = setTimeout(showTeaser, 3000);
     }
   }
