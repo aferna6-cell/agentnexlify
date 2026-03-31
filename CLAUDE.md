@@ -224,3 +224,45 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 ## Knowledge Base
 
 `docs/dev-knowledge/`: bug-patterns.md, schema-log.md, architecture-decisions.md. Always update after fixing bugs or changing schema.
+
+---
+
+## Workspaces & Routing
+
+3-layer routing: Root CLAUDE.md → Workspace CONTEXT.md → Skills/Tools
+
+| Task | Go to | Read first | Skip |
+|------|-------|------------|------|
+| Spec a feature or plan a phase | /planning | CONTEXT.md | /ops |
+| Write or fix code (backend) | /backend | CONTEXT.md | /ops |
+| Write or fix code (frontend) | /frontend | CONTEXT.md | /ops |
+| Widget config or knowledge base | /widget | CONTEXT.md | /backend, /frontend |
+| Deploy, monitor, debug infra, write docs | /ops | CONTEXT.md | /planning |
+| Fix a bug (unknown location) | — | All CONTEXT.md files | — |
+| **"Council this"** or complex decision with stakes | /skills/llm-council | SKILL.md | — |
+
+Each workspace has a `CONTEXT.md` with local rules, patterns, and known issues. Read it before working in that area.
+
+## Workspace Index
+
+- `/backend` — FastAPI service, routers, services, migrations. See `backend/CONTEXT.md`
+- `/frontend` — React/Vite dashboard. See `frontend/CONTEXT.md`
+- `/planning` — Specs, architecture decisions, phase tracking. See `planning/CONTEXT.md`
+- `/ops` — Deploy, monitoring, scripts, documentation. See `ops/CONTEXT.md`
+- `/widget` — Tenant knowledge bases, embed configs, smoke tests. See `widget/CONTEXT.md`
+- `/skills/llm-council` — LLM Council for complex decisions. See `skills/llm-council/SKILL.md`
+
+## Naming Conventions (Architecture Files)
+
+- Specs: `feature-name_spec.md` (in `/planning/specs/`)
+- Decisions: `YYYY-MM-DD-decision-title.md` (in `/planning/decisions/`)
+- Knowledge bases: `tenant-name_kb.md` (in `/widget/knowledge-bases/`)
+- Test prompts: `tenant-name_smoke-tests.md` (in `/widget/test-prompts/`)
+
+## LLM Council (Complex Decisions)
+
+**Triggers:** "council this", "pressure-test this", "war room this", "debate this", or any decision with real stakes and tradeoffs.
+
+When triggered: read `/skills/llm-council/SKILL.md` and execute the full council protocol. Five independent AI advisors run in parallel, peer-review anonymously, chairman synthesizes. Output: HTML report + markdown transcript saved to `/skills/llm-council/reports/` and `/skills/llm-council/transcripts/`.
+
+**Do NOT run the council on:** simple questions, factual lookups, or creation tasks. Only run when the user faces genuine uncertainty where multiple perspectives add value.
