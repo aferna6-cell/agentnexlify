@@ -753,3 +753,13 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Fix:** Added custom sanitized markdown-to-HTML renderers (`_inlineMd` + `_renderMd` in widget; `_inlineMd` + `renderMarkdown` in ConversationsPage). HTML entities escaped before markdown processing. Links restricted to `https?://` URLs. Applied only to `role === "assistant"` messages; user messages remain plain text.
 **Prevention:** Never use `.textContent` or `{value}` for AI-generated content that may contain markdown. Always render with a sanitized parser. Apply markdown rendering ONLY to bot/assistant messages, never to user messages (they should remain plain text to prevent XSS from visitor input).
 
+---
+
+### Marketing site widget shows wrong bot name — API key typo
+**Date:** 2026-03-30
+**Symptom:** The AgentNexLiFy marketing site chat widget loads but shows "Aria" (the default fallback name) instead of the configured tenant bot name. Widget config fetch silently fails to match.
+**Root Cause:** `frontend/index.html` had two transposed characters in the widget `data-api-key` attribute (LHM→LHW, W1→Wl), causing the key lookup to return no matching tenant. The widget JS falls back to a hardcoded default "Aria" bot name when config fetch fails.
+**Files Changed:** `frontend/index.html`
+**Fix:** Corrected the transposed characters in the API key attribute value.
+**Prevention:** The API key embed in index.html is the marketing site's tenant config — treat it like a config value, not a string literal. After any HTML edit near the widget script tag, verify the widget shows the correct bot name on the marketing site. The silent fallback to "Aria" is the symptom of ANY widget config load failure (wrong key, CORS error, API down).
+
