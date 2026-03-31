@@ -186,6 +186,17 @@ export default function TeamPage() {
 
       {loading ? (
         <div className="team-loading">Loading team...</div>
+      ) : members.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>&#128101;</div>
+          <h3 style={{ margin: "0 0 0.5rem", color: "var(--text-primary)" }}>No team members yet</h3>
+          <p style={{ color: "var(--text-muted)", marginBottom: "1rem", maxWidth: 400, margin: "0 auto 1rem" }}>
+            Invite colleagues to collaborate on your dashboard. Admins can manage settings, Members get full data access, and Viewers get read-only access.
+          </p>
+          <button className="btn-primary" onClick={() => setShowInvite(true)}>
+            Invite Your First Team Member
+          </button>
+        </div>
       ) : (
         <div className="team-table-wrapper">
           <table className="team-table">

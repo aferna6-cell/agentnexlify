@@ -31,3 +31,11 @@ export function generateAIDraft(tenantId, token, reviewId, tone = "professional"
 export function fetchReviewResponseStats(tenantId, token) {
   return request(`/api/v1/reviews/${tenantId}/response-stats`, { token });
 }
+
+export function requestReview(tenantId, token, leadId, channel) {
+  return request(`/api/v1/reviews/${tenantId}/request-review/${leadId}`, {
+    method: "POST",
+    token,
+    body: { channel },
+  });
+}

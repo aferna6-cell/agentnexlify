@@ -1127,18 +1127,18 @@
   function showTeaser() {
     const teaser = document.getElementById("anx-teaser");
     if (!teaser || isOpen) return;
-    if (sessionStorage.getItem("anx_teaser_dismissed")) return;
+    if (sessionStorage.getItem("anx_teaser_shown")) return;
 
     const textEl = document.getElementById("anx-teaser-text");
     const msg = teaserMessage || (botName ? botName + " is here to help!" : "Hi! Need help?");
     if (textEl) textEl.textContent = msg;
 
+    sessionStorage.setItem("anx_teaser_shown", "1");
     teaser.style.display = "block";
 
     document.getElementById("anx-teaser-close").onclick = function(e) {
       e.stopPropagation();
       teaser.style.display = "none";
-      sessionStorage.setItem("anx_teaser_dismissed", "1");
     };
 
     teaser.onclick = function(e) {
@@ -1690,9 +1690,9 @@
       }, 5000);
     }
 
-    // Show teaser bubble after 4 seconds if widget is closed
-    if (!sessionStorage.getItem("anx_teaser_dismissed")) {
-      teaserTimer = setTimeout(showTeaser, 4000);
+    // Show teaser bubble after 3 seconds if widget is closed and not yet shown this session
+    if (!sessionStorage.getItem("anx_teaser_shown")) {
+      teaserTimer = setTimeout(showTeaser, 3000);
     }
   }
 

@@ -278,7 +278,7 @@ export default function BillingPage() {
           borderCollapse: "separate",
           borderSpacing: 0,
           background: "var(--bg-secondary, var(--card-bg))",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
           overflow: "hidden",
           minWidth: 700,
@@ -293,7 +293,7 @@ export default function BillingPage() {
                 fontWeight: 600,
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
-                borderBottom: "1px solid var(--border-color)",
+                borderBottom: "1px solid var(--border)",
                 width: "22%",
               }}>
                 Feature
@@ -304,7 +304,7 @@ export default function BillingPage() {
                   <th key={plan.key} style={{
                     textAlign: "center",
                     padding: "12px 8px 16px",
-                    borderBottom: "1px solid var(--border-color)",
+                    borderBottom: "1px solid var(--border)",
                     background: isCurrent
                       ? "rgba(0,191,255,0.07)"
                       : plan.popular ? "rgba(139,92,246,0.05)" : "transparent",
@@ -407,7 +407,7 @@ export default function BillingPage() {
           </tbody>
           <tfoot>
             <tr>
-              <td style={{ padding: "16px 20px", borderTop: "1px solid var(--border-color)" }} />
+              <td style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }} />
               {PLANS.map((plan) => {
                 const isCurrent = plan.key === currentPlan;
                 let btn;
@@ -432,7 +432,7 @@ export default function BillingPage() {
                   <td key={plan.key} style={{
                     padding: "16px 10px",
                     textAlign: "center",
-                    borderTop: "1px solid var(--border-color)",
+                    borderTop: "1px solid var(--border)",
                     background: isCurrent ? "rgba(0,191,255,0.05)" : "transparent",
                   }}>
                     {btn}

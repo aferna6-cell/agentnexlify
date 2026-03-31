@@ -34,3 +34,7 @@ export function fetchMissedCallAnalytics(tenantId, token, period = "30d") {
 export function fetchRevenue(tenantId, token) {
   return request(`/api/v1/analytics/${tenantId}/revenue`, { token });
 }
+
+export function fetchAnalyticsHealth(tenantId, token) {
+  return request(`/api/v1/analytics/${tenantId}/health`, { token });
+}

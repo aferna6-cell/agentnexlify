@@ -933,21 +933,22 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
 
     # Count actual conversations from chat_messages (distinct session_ids).
     # Supabase REST doesn't support COUNT(DISTINCT), so we fetch session_ids
-    # and deduplicate in Python.  Limit to 500 rows for safety.
+    # and deduplicate in Python.  Limit raised to 5000 to avoid under-counting
+    # tenants with many messages per session (88 sessions × ~6 msgs = ~528 rows).
     conversations_used = t.get("conversations_used_this_month", 0)
     try:
         chat_sessions = (
             db.table("chat_messages")
             .select("session_id")
             .eq("tenant_id", tenant_id)
-            .limit(500)
+            .limit(5000)
             .execute()
         )
         if chat_sessions.data:
             unique_sessions = len({r["session_id"] for r in chat_sessions.data})
             conversations_used = max(conversations_used, unique_sessions)
     except Exception:
-        logger.debug("chat_messages count failed for tenant %s", tenant_id)
+        logger.warning("chat_messages count failed for tenant %s", tenant_id, exc_info=True)
 
     # Missed calls this week
     missed_calls = 0
@@ -1040,6 +1041,7 @@ async def update_widget_config(
         greeting_message=w.get("greeting_message", ""),
         position=w.get("position", "bottom-right"),
         branding=w.get("branding") or None,
+        teaser_message=w.get("teaser_message"),
     )
 
 

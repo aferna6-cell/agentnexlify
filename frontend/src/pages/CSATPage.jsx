@@ -118,7 +118,7 @@ export default function CSATPage() {
           style={{
             padding: "6px 10px",
             borderRadius: 6,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             background: "var(--bg-secondary)",
             color: "var(--text-primary)",
             fontSize: "0.85rem",
@@ -161,7 +161,7 @@ export default function CSATPage() {
             background: "var(--bg-card)",
             padding: 16,
             borderRadius: 10,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
           }}
         >
           {loadingStats ? (
@@ -187,7 +187,7 @@ export default function CSATPage() {
             background: "var(--bg-card)",
             padding: 16,
             borderRadius: 10,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
           }}
         >
           {loadingStats ? (
@@ -223,7 +223,7 @@ export default function CSATPage() {
             background: "var(--bg-card)",
             padding: 16,
             borderRadius: 10,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
           }}
         >
           {loadingStats ? (
@@ -262,7 +262,7 @@ export default function CSATPage() {
               background: "var(--bg-card)",
               padding: 16,
               borderRadius: 10,
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
           >
             <h4
@@ -287,7 +287,7 @@ export default function CSATPage() {
                 <Tooltip
                   contentStyle={{
                     background: "var(--bg-secondary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 6,
                     color: "var(--text-primary)",
                   }}
@@ -303,7 +303,7 @@ export default function CSATPage() {
               background: "var(--bg-card)",
               padding: 16,
               borderRadius: 10,
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
           >
             <h4
@@ -314,7 +314,7 @@ export default function CSATPage() {
             {trendData.length > 1 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={trendData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis
                     dataKey="date"
                     tick={{ fill: "var(--text-muted)", fontSize: 10 }}
@@ -330,7 +330,7 @@ export default function CSATPage() {
                   <Tooltip
                     contentStyle={{
                       background: "var(--bg-secondary)",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       color: "var(--text-primary)",
                     }}
@@ -366,14 +366,14 @@ export default function CSATPage() {
         style={{
           background: "var(--bg-card)",
           borderRadius: 10,
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           overflow: "hidden",
         }}
       >
         <div
           style={{
             padding: "14px 16px",
-            borderBottom: "1px solid var(--border-color)",
+            borderBottom: "1px solid var(--border)",
           }}
         >
           <h3 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)" }}>
@@ -415,7 +415,7 @@ export default function CSATPage() {
                 <tr
                   style={{
                     background: "var(--bg-secondary)",
-                    borderBottom: "1px solid var(--border-color)",
+                    borderBottom: "1px solid var(--border)",
                   }}
                 >
                   <th
@@ -468,7 +468,7 @@ export default function CSATPage() {
                   <tr
                     key={r.id}
                     style={{
-                      borderBottom: "1px solid var(--border-color)",
+                      borderBottom: "1px solid var(--border)",
                       transition: "background 0.1s",
                     }}
                     onMouseEnter={(e) =>

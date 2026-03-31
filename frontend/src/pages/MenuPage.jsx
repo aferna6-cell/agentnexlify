@@ -138,7 +138,7 @@ export default function MenuPage() {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}
             >
               <option value="">All Categories</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -148,7 +148,7 @@ export default function MenuPage() {
             className="btn-primary"
             onClick={handleImportFromWebsite}
             disabled={importing}
-            style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+            style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}
           >
             {importing ? "Importing..." : "Import from Website"}
           </button>
@@ -186,7 +186,7 @@ export default function MenuPage() {
               {catItems.map(item => (
                 <div key={item.id} style={{
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 16,
                   opacity: item.available ? 1 : 0.5,
@@ -213,15 +213,15 @@ export default function MenuPage() {
                   )}
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                     <button onClick={() => openEdit(item)} style={{
-                      background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px",
+                      background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 10px",
                       color: "var(--text-secondary)", cursor: "pointer", fontSize: "0.8rem",
                     }}>Edit</button>
                     <button onClick={() => handleToggle(item)} style={{
-                      background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px",
+                      background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 10px",
                       color: item.available ? "var(--yellow, #facc15)" : "var(--green, #22c55e)", cursor: "pointer", fontSize: "0.8rem",
                     }}>{item.available ? "Mark Unavailable" : "Mark Available"}</button>
                     <button onClick={() => handleDelete(item.id)} style={{
-                      background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px",
+                      background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 10px",
                       color: "var(--red, #ef4444)", cursor: "pointer", fontSize: "0.8rem", marginLeft: "auto",
                     }}>Delete</button>
                   </div>
@@ -240,7 +240,7 @@ export default function MenuPage() {
         }} onClick={() => setShowModal(false)}>
           <div style={{
             background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ marginBottom: 16 }}>{editItem ? "Edit Menu Item" : "Add Menu Item"}</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -276,7 +276,7 @@ export default function MenuPage() {
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
               <button onClick={() => setShowModal(false)} style={{
-                background: "transparent", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 16px",
+                background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px",
                 color: "var(--text-primary)", cursor: "pointer",
               }}>Cancel</button>
               <button className="btn-primary" onClick={handleSave} disabled={!form.name || !form.price}>

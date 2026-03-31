@@ -361,7 +361,7 @@ export default function SettingsPage({ onNavigate }) {
             <select
               value={form.business_type}
               onChange={handleChange("business_type")}
-              style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+              style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
             >
               <option value="">Select type...</option>
               <option value="restaurant">Restaurant / Food Service</option>
@@ -415,7 +415,7 @@ export default function SettingsPage({ onNavigate }) {
             >
               {crawling ? "Scanning..." : form.website_url ? "Scan Website" : "Scan Business Page"}
             </button>
-            <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}>
+            <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
               {saving ? "Saving..." : saved ? "Saved!" : "Save URL"}
             </button>
           </div>
@@ -596,7 +596,7 @@ export default function SettingsPage({ onNavigate }) {
                     }));
                     setSaved(false);
                   }}
-                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
                 >
                   <option value={0}>Immediately</option>
                   <option value={1}>1 hour</option>
@@ -615,7 +615,7 @@ export default function SettingsPage({ onNavigate }) {
                     }));
                     setSaved(false);
                   }}
-                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
                 >
                   <option value="email">Email</option>
                   <option value="sms">SMS</option>
@@ -665,7 +665,7 @@ export default function SettingsPage({ onNavigate }) {
                     width: "100%",
                     padding: "8px 10px",
                     borderRadius: 6,
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     background: "var(--bg-secondary)",
                     color: "var(--text-primary)",
                     resize: "vertical",
@@ -696,7 +696,7 @@ export default function SettingsPage({ onNavigate }) {
                       style={{
                         padding: "6px 10px",
                         borderRadius: 6,
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         background: "var(--bg-secondary)",
                         color: "var(--text-primary)",
                         fontSize: "0.9rem",
@@ -716,7 +716,7 @@ export default function SettingsPage({ onNavigate }) {
                       style={{
                         padding: "6px 10px",
                         borderRadius: 6,
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         background: "var(--bg-secondary)",
                         color: "var(--text-primary)",
                         fontSize: "0.9rem",
@@ -828,7 +828,7 @@ export default function SettingsPage({ onNavigate }) {
                       <div key={n.phone_number} style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         padding: "8px 12px", borderRadius: 8,
-                        background: "var(--bg-secondary)", border: "1px solid var(--border-color)",
+                        background: "var(--bg-secondary)", border: "1px solid var(--border)",
                       }}>
                         <div>
                           <span style={{ fontWeight: 600, color: "var(--text-primary)", marginRight: 8 }}>
@@ -923,7 +923,7 @@ export default function SettingsPage({ onNavigate }) {
                     fontSize: "0.78rem",
                     color: "var(--text-secondary)",
                     background: "var(--bg-secondary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 6,
                     padding: "8px 10px",
                     resize: "none",
@@ -979,7 +979,7 @@ export default function SettingsPage({ onNavigate }) {
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   padding: "8px 12px", borderRadius: 8,
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   opacity: tag.is_enabled ? 1 : 0.5,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1030,7 +1030,7 @@ export default function SettingsPage({ onNavigate }) {
           {/* Add custom tag form */}
           <div style={{
             marginTop: 16, padding: "12px 14px", borderRadius: 8,
-            background: "var(--bg-secondary)", border: "1px solid var(--border-color)",
+            background: "var(--bg-secondary)", border: "1px solid var(--border)",
           }}>
             <label style={{ fontSize: "0.8rem", color: "var(--text-muted)", display: "block", marginBottom: 8 }}>
               Add custom tag
@@ -1041,7 +1041,7 @@ export default function SettingsPage({ onNavigate }) {
                 value={newTagColor}
                 onChange={(e) => setNewTagColor(e.target.value)}
                 style={{
-                  width: 32, height: 32, padding: 0, border: "1px solid var(--border-color)",
+                  width: 32, height: 32, padding: 0, border: "1px solid var(--border)",
                   borderRadius: 6, cursor: "pointer", background: "transparent",
                 }}
                 title="Tag color"
@@ -1093,7 +1093,7 @@ export default function SettingsPage({ onNavigate }) {
                   padding: "9px 14px",
                   borderRadius: 8,
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontWeight: 500 }}>
@@ -1154,7 +1154,7 @@ export default function SettingsPage({ onNavigate }) {
             padding: "14px 16px",
             borderRadius: 8,
             background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
           }}>
             <label style={{ fontSize: "0.8rem", color: "var(--text-muted)", display: "block", marginBottom: 10 }}>
               Add a new field
@@ -1174,7 +1174,7 @@ export default function SettingsPage({ onNavigate }) {
                   flex: "1 1 110px",
                   padding: "8px 10px",
                   borderRadius: 6,
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   background: "var(--bg-primary)",
                   color: "var(--text-primary)",
                   fontSize: "0.9rem",
@@ -1238,7 +1238,7 @@ export default function SettingsPage({ onNavigate }) {
               What your AI chatbot currently knows. The more sources, the better your AI can help visitors.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 12 }}>
-              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
                 <div style={{ fontSize: 24, fontWeight: 700, color: knowledgeStats.faq_count > 0 ? "#22c55e" : "var(--text-muted)" }}>
                   {knowledgeStats.faq_count}
                 </div>
@@ -1249,7 +1249,7 @@ export default function SettingsPage({ onNavigate }) {
                   </button>
                 )}
               </div>
-              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
                 <div style={{ fontSize: 24, fontWeight: 700, color: knowledgeStats.website_pages_crawled > 0 ? "#22c55e" : "var(--text-muted)" }}>
                   {knowledgeStats.website_pages_crawled}
                 </div>
@@ -1260,7 +1260,7 @@ export default function SettingsPage({ onNavigate }) {
                   </div>
                 )}
               </div>
-              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+              <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
                 <div style={{ fontSize: 24, fontWeight: 700, color: knowledgeStats.feedback_corrections_count > 0 ? "#f59e0b" : "var(--text-muted)" }}>
                   {knowledgeStats.feedback_corrections_count}
                 </div>
@@ -1268,19 +1268,19 @@ export default function SettingsPage({ onNavigate }) {
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>From thumbs-down feedback</div>
               </div>
               {knowledgeStats.active_chat_flow && (
-                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
                   <div style={{ fontSize: 16, fontWeight: 600, color: "#8b5cf6" }}>Active</div>
                   <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Chat Flow: {knowledgeStats.active_chat_flow}</div>
                 </div>
               )}
               {knowledgeStats.menu_items_count > 0 && (
-                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
                   <div style={{ fontSize: 24, fontWeight: 700, color: "#22c55e" }}>{knowledgeStats.menu_items_count}</div>
                   <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Menu Items</div>
                 </div>
               )}
               {knowledgeStats.job_postings_count > 0 && (
-                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}>
+                <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
                   <div style={{ fontSize: 24, fontWeight: 700, color: "#22c55e" }}>{knowledgeStats.job_postings_count}</div>
                   <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Active Job Postings</div>
                 </div>

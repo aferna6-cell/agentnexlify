@@ -381,7 +381,7 @@ export default function InvoicesPage() {
             onClick={() => { setLoading(true); loadData(); }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -412,7 +412,7 @@ export default function InvoicesPage() {
             key={card.label}
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "16px 20px",
             }}
@@ -439,7 +439,7 @@ export default function InvoicesPage() {
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
-                border: isActive ? "1px solid var(--accent)" : "1px solid var(--border-color)",
+                border: isActive ? "1px solid var(--accent)" : "1px solid var(--border)",
                 background: isActive ? "var(--accent-dim)" : "var(--bg-secondary)",
                 color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 cursor: "pointer",
@@ -493,7 +493,7 @@ export default function InvoicesPage() {
             <button
               className="btn-primary"
               onClick={() => setActiveFilter("all")}
-              style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+              style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}
             >
               Clear Filter
             </button>
@@ -507,7 +507,7 @@ export default function InvoicesPage() {
         <div
           style={{
             background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             overflow: "hidden",
           }}
@@ -518,7 +518,7 @@ export default function InvoicesPage() {
               display: "grid",
               gridTemplateColumns: "28px 100px 1fr 120px 100px 110px 110px 160px",
               padding: "10px 16px",
-              borderBottom: "1px solid var(--border-color)",
+              borderBottom: "1px solid var(--border)",
               fontSize: "0.75rem",
               color: "var(--text-muted)",
               fontWeight: 600,
@@ -582,7 +582,7 @@ export default function InvoicesPage() {
                 style={{
                   padding: "4px 10px", fontSize: 12,
                   background: "none", color: "var(--text-muted)",
-                  border: "1px solid var(--border-color)", borderRadius: 6, cursor: "pointer",
+                  border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer",
                 }}
               >
                 Clear
@@ -604,7 +604,7 @@ export default function InvoicesPage() {
                   display: "grid",
                   gridTemplateColumns: "28px 100px 1fr 120px 100px 110px 110px 160px",
                   padding: "12px 16px",
-                  borderBottom: "1px solid var(--border-color)",
+                  borderBottom: "1px solid var(--border)",
                   alignItems: "center",
                   cursor: "pointer",
                   opacity: isDeleting ? 0.5 : 1,
@@ -684,7 +684,7 @@ export default function InvoicesPage() {
                     onClick={(e) => handleCopyPaymentLink(inv, e)}
                     style={{
                       background: "none",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "4px 8px",
                       color: copiedId === inv.id ? "#22c55e" : "var(--text-secondary)",
@@ -700,7 +700,7 @@ export default function InvoicesPage() {
                     disabled={isDeleting}
                     style={{
                       background: "none",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "4px 8px",
                       color: "#ef4444",
@@ -724,7 +724,7 @@ export default function InvoicesPage() {
           onClick={() => setDetailInvoice(null)}
         >
           <div
-            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 620, maxHeight: "85vh", overflowY: "auto", border: "1px solid var(--border-color)" }}
+            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 620, maxHeight: "85vh", overflowY: "auto", border: "1px solid var(--border)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -766,7 +766,7 @@ export default function InvoicesPage() {
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
                   Items
                 </div>
-                <div style={{ border: "1px solid var(--border-color)", borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", background: "var(--bg-secondary)", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
                     <span>Description</span>
                     <span style={{ textAlign: "right" }}>Qty</span>
@@ -774,7 +774,7 @@ export default function InvoicesPage() {
                     <span style={{ textAlign: "right" }}>Total</span>
                   </div>
                   {detailInvoice.items_json.map((item, idx) => (
-                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "1px solid var(--border-color)", fontSize: "0.85rem" }}>
+                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
                       <span>{item.description}</span>
                       <span style={{ textAlign: "right" }}>{item.quantity}</span>
                       <span style={{ textAlign: "right" }}>{formatCurrency(item.unit_price)}</span>
@@ -824,7 +824,7 @@ export default function InvoicesPage() {
                   onClick={() => handleCopyPaymentLink(detailInvoice)}
                   style={{
                     background: copiedId === detailInvoice.id ? "rgba(34,197,94,0.1)" : "var(--bg-secondary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 6,
                     padding: "6px 12px",
                     color: copiedId === detailInvoice.id ? "#22c55e" : "var(--text-secondary)",
@@ -882,7 +882,7 @@ export default function InvoicesPage() {
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border-color)", paddingTop: 16 }}>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: 16 }}>
               {(detailInvoice.status === "draft" || detailInvoice.status === "sent") && (
                 <button
                   onClick={() => { setDetailInvoice(null); openSend(detailInvoice); }}
@@ -918,7 +918,7 @@ export default function InvoicesPage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 640, maxHeight: "88vh", overflowY: "auto", border: "1px solid var(--border-color)" }}
+            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 640, maxHeight: "88vh", overflowY: "auto", border: "1px solid var(--border)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ marginBottom: 16 }}>Create Invoice</h3>
@@ -992,12 +992,12 @@ export default function InvoicesPage() {
                       <div style={{ position: "relative" }}>
                         <button
                           onClick={() => setShowTemplates((v) => !v)}
-                          style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px", color: "var(--purple, #8b5cf6)", cursor: "pointer", fontSize: "0.75rem" }}
+                          style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 10px", color: "var(--purple, #8b5cf6)", cursor: "pointer", fontSize: "0.75rem" }}
                         >
                           Saved Items
                         </button>
                         {showTemplates && (
-                          <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, background: "var(--bg-card, #1e1e2e)", border: "1px solid var(--border-color)", borderRadius: 8, padding: 4, zIndex: 50, minWidth: 220, maxHeight: 200, overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                          <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, background: "var(--bg-card, #1e1e2e)", border: "1px solid var(--border)", borderRadius: 8, padding: 4, zIndex: 50, minWidth: 220, maxHeight: 200, overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
                             {itemTemplates.map((t) => (
                               <button
                                 key={t.id}
@@ -1016,7 +1016,7 @@ export default function InvoicesPage() {
                     )}
                     <button
                       onClick={addItem}
-                      style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 10px", color: "var(--accent)", cursor: "pointer", fontSize: "0.75rem" }}
+                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 10px", color: "var(--accent)", cursor: "pointer", fontSize: "0.75rem" }}
                     >
                       + Add Item
                     </button>
@@ -1082,7 +1082,7 @@ export default function InvoicesPage() {
                 ))}
 
                 {/* Totals summary */}
-                <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: 8, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, fontSize: "0.85rem" }}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, fontSize: "0.85rem" }}>
                   <div style={{ color: "var(--text-secondary)" }}>
                     Subtotal: {formatCurrency(calcSubtotal(form.items))}
                   </div>
@@ -1190,7 +1190,7 @@ export default function InvoicesPage() {
             <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowModal(false)}
-                style={{ background: "transparent", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
+                style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
               >
                 Cancel
               </button>
@@ -1213,7 +1213,7 @@ export default function InvoicesPage() {
           onClick={() => setShowSendModal(false)}
         >
           <div
-            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border-color)" }}
+            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ marginBottom: 4 }}>Send Invoice</h3>
@@ -1247,7 +1247,7 @@ export default function InvoicesPage() {
             </div>
 
             <div
-              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 8, padding: 12, marginBottom: 20, fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.6 }}
+              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 8, padding: 12, marginBottom: 20, fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.6 }}
             >
               <strong>Preview:</strong>
               <br />
@@ -1265,7 +1265,7 @@ export default function InvoicesPage() {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowSendModal(false)}
-                style={{ background: "transparent", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
+                style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
               >
                 Cancel
               </button>

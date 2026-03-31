@@ -689,7 +689,7 @@ export default function ConversationsPage() {
               marginBottom: 8,
               borderRadius: 8,
               overflow: "hidden",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}>
               <button
                 onClick={() => setInboxFilter("all")}
@@ -719,7 +719,7 @@ export default function ConversationsPage() {
                   fontSize: "0.8rem",
                   fontWeight: 600,
                   border: "none",
-                  borderLeft: "1px solid var(--border-color)",
+                  borderLeft: "1px solid var(--border)",
                   cursor: "pointer",
                   background: inboxFilter === "mine"
                     ? "var(--accent, #00BFFF)"
@@ -749,7 +749,7 @@ export default function ConversationsPage() {
             <select
               value={channelFilter}
               onChange={(e) => { setChannelFilter(e.target.value); setSelected(null); }}
-              style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
+              style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
             >
               <option value="">All Channels</option>
               <option value="widget">Widget (Chat)</option>
@@ -760,7 +760,7 @@ export default function ConversationsPage() {
               <select
                 value={tagFilter}
                 onChange={(e) => setTagFilter(e.target.value)}
-                style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
+                style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
               >
                 <option value="">All tags ({conversations.length})</option>
                 {allTags.map((t) => (
@@ -861,7 +861,7 @@ export default function ConversationsPage() {
                           padding: "4px 8px",
                           fontSize: "0.75rem",
                           borderRadius: 6,
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           background: "var(--bg-secondary)",
                           color: "var(--text-primary)",
                           minWidth: 110,
@@ -882,7 +882,7 @@ export default function ConversationsPage() {
                     </div>
 
                     {/* Divider */}
-                    <span style={{ width: 1, height: 16, background: "var(--border-color)", flexShrink: 0 }} />
+                    <span style={{ width: 1, height: 16, background: "var(--border)", flexShrink: 0 }} />
 
                     {/* Tags */}
                     {(selectedConv?.tags || []).map((tag) => {
@@ -906,7 +906,7 @@ export default function ConversationsPage() {
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") addTag(selected); }}
                       placeholder="Add tag..."
-                      style={{ width: 80, padding: "2px 6px", fontSize: "0.75rem", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                      style={{ width: 80, padding: "2px 6px", fontSize: "0.75rem", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
                     />
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -1160,7 +1160,7 @@ export default function ConversationsPage() {
                   padding: "0.75rem",
                   borderRadius: 10,
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   position: "relative",
                 }}>
                   {/* Channel indicator for outbound reply */}
@@ -1202,7 +1202,7 @@ export default function ConversationsPage() {
                             : "transparent",
                           border: showSnippetPicker
                             ? "1px solid rgba(59,130,246,0.3)"
-                            : "1px solid var(--border-color)",
+                            : "1px solid var(--border)",
                           borderRadius: 8,
                           padding: "8px 10px",
                           cursor: "pointer",
@@ -1233,7 +1233,7 @@ export default function ConversationsPage() {
                           width: 360,
                           maxHeight: 380,
                           background: "var(--bg-primary)",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 12,
                           boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
                           display: "flex",
@@ -1244,7 +1244,7 @@ export default function ConversationsPage() {
                           {/* Picker header */}
                           <div style={{
                             padding: "10px 12px",
-                            borderBottom: "1px solid var(--border-color)",
+                            borderBottom: "1px solid var(--border)",
                           }}>
                             <div style={{
                               display: "flex",
@@ -1280,7 +1280,7 @@ export default function ConversationsPage() {
                                 width: "100%",
                                 padding: "7px 10px",
                                 borderRadius: 6,
-                                border: "1px solid var(--border-color)",
+                                border: "1px solid var(--border)",
                                 background: "var(--bg-secondary)",
                                 color: "var(--text-primary)",
                                 fontSize: "0.8rem",
@@ -1342,7 +1342,7 @@ export default function ConversationsPage() {
                                       padding: "10px 12px",
                                       background: "transparent",
                                       border: "none",
-                                      borderBottom: "1px solid var(--border-color)",
+                                      borderBottom: "1px solid var(--border)",
                                       cursor: "pointer",
                                       textAlign: "left",
                                       transition: "background 0.1s ease",
@@ -1435,7 +1435,7 @@ export default function ConversationsPage() {
                         padding: "8px 10px",
                         fontSize: "0.85rem",
                         borderRadius: 8,
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         background: "var(--bg-primary)",
                         color: "var(--text-primary)",
                         resize: "vertical",

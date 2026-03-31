@@ -115,7 +115,7 @@ export default function OrdersPage() {
             onChange={(e) => setFilterStatus(e.target.value)}
             style={{
               padding: "8px 12px", borderRadius: 8,
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               background: "var(--bg-secondary)", color: "var(--text-primary)",
               fontSize: "0.85rem",
             }}
@@ -126,7 +126,7 @@ export default function OrdersPage() {
             ))}
           </select>
           <button className="btn-primary" onClick={() => { setLoading(true); load(); }} style={{
-            background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)",
+            background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)",
           }}>
             Refresh
           </button>
@@ -137,7 +137,7 @@ export default function OrdersPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
         {statCards.map((card) => (
           <div key={card.label} style={{
-            background: "var(--bg-secondary)", border: "1px solid var(--border-color)",
+            background: "var(--bg-secondary)", border: "1px solid var(--border)",
             borderRadius: 12, padding: "16px 20px",
           }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>{card.label}</div>
@@ -164,7 +164,7 @@ export default function OrdersPage() {
               <div
                 key={order.id}
                 style={{
-                  background: "var(--bg-secondary)", border: "1px solid var(--border-color)",
+                  background: "var(--bg-secondary)", border: "1px solid var(--border)",
                   borderRadius: 12, padding: 16, cursor: "pointer",
                   borderLeft: `4px solid ${statusColor.color}`,
                 }}
@@ -221,7 +221,7 @@ export default function OrdersPage() {
                         onClick={(e) => { e.stopPropagation(); handleStatusChange(order.id, "cancelled"); }}
                         disabled={updating === order.id}
                         style={{
-                          background: "none", border: "1px solid var(--border-color)", borderRadius: 6,
+                          background: "none", border: "1px solid var(--border)", borderRadius: 6,
                           padding: "6px 10px", color: "var(--red, #ef4444)", cursor: "pointer",
                           fontSize: "0.8rem",
                         }}
@@ -250,7 +250,7 @@ export default function OrdersPage() {
             style={{
               background: "var(--bg-primary)", borderRadius: 12, padding: 24,
               width: "90%", maxWidth: 520, maxHeight: "80vh", overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -273,7 +273,7 @@ export default function OrdersPage() {
             {/* Customer Info */}
             <div style={{
               background: "var(--bg-secondary)", borderRadius: 8, padding: 12, marginBottom: 16,
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Customer</div>
               <div style={{ fontSize: "0.9rem", fontWeight: 600 }}>{selectedOrder.customer_name || "Not provided"}</div>
@@ -303,13 +303,13 @@ export default function OrdersPage() {
             {/* Items */}
             <div style={{
               background: "var(--bg-secondary)", borderRadius: 8, padding: 12, marginBottom: 16,
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Items</div>
               {(Array.isArray(selectedOrder.items_json) ? selectedOrder.items_json : []).map((item, idx) => (
                 <div key={idx} style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "6px 0", borderBottom: idx < selectedOrder.items_json.length - 1 ? "1px solid var(--border-color)" : "none",
+                  padding: "6px 0", borderBottom: idx < selectedOrder.items_json.length - 1 ? "1px solid var(--border)" : "none",
                 }}>
                   <div>
                     <span style={{ fontWeight: 500 }}>{item.name || item.item_name || "Item"}</span>
@@ -320,7 +320,7 @@ export default function OrdersPage() {
                   <span style={{ fontWeight: 600 }}>{formatCurrency(item.price || item.total || 0)}</span>
                 </div>
               ))}
-              <div style={{ borderTop: "2px solid var(--border-color)", marginTop: 8, paddingTop: 8 }}>
+              <div style={{ borderTop: "2px solid var(--border)", marginTop: 8, paddingTop: 8 }}>
                 {selectedOrder.subtotal > 0 && selectedOrder.subtotal !== selectedOrder.total && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
                     <span>Subtotal</span>
@@ -344,7 +344,7 @@ export default function OrdersPage() {
             {selectedOrder.notes && (
               <div style={{
                 background: "var(--bg-secondary)", borderRadius: 8, padding: 12, marginBottom: 16,
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
               }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Notes</div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{selectedOrder.notes}</div>
@@ -358,7 +358,7 @@ export default function OrdersPage() {
                   onClick={() => { handleStatusChange(selectedOrder.id, "cancelled"); }}
                   disabled={updating === selectedOrder.id}
                   style={{
-                    background: "none", border: "1px solid var(--border-color)", borderRadius: 8,
+                    background: "none", border: "1px solid var(--border)", borderRadius: 8,
                     padding: "8px 16px", color: "var(--red, #ef4444)", cursor: "pointer",
                   }}
                 >
@@ -377,7 +377,7 @@ export default function OrdersPage() {
               <button
                 onClick={() => setSelectedOrder(null)}
                 style={{
-                  background: "transparent", border: "1px solid var(--border-color)", borderRadius: 8,
+                  background: "transparent", border: "1px solid var(--border)", borderRadius: 8,
                   padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer",
                 }}
               >

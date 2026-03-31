@@ -148,7 +148,7 @@ export default function MCPSetupPage() {
       <div
         style={{
           background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
           padding: 20,
           marginBottom: 20,
@@ -203,7 +203,7 @@ export default function MCPSetupPage() {
                 padding: "10px 14px",
                 borderRadius: 8,
                 background: "var(--bg-primary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 color: "var(--text-primary)",
                 fontSize: "0.85rem",
                 fontFamily: "monospace",
@@ -246,7 +246,7 @@ export default function MCPSetupPage() {
       <div
         style={{
           background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
           padding: 20,
           marginBottom: 20,
@@ -380,7 +380,7 @@ export default function MCPSetupPage() {
                 position: "relative",
                 borderRadius: 8,
                 overflow: "hidden",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
               }}
             >
               <div
@@ -390,7 +390,7 @@ export default function MCPSetupPage() {
                   alignItems: "center",
                   padding: "8px 14px",
                   background: "rgba(59,130,246,0.08)",
-                  borderBottom: "1px solid var(--border-color)",
+                  borderBottom: "1px solid var(--border)",
                 }}
               >
                 <span
@@ -406,7 +406,7 @@ export default function MCPSetupPage() {
                   onClick={() => copyToClipboard(configJson, setCopiedConfig)}
                   style={{
                     background: "none",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 6,
                     padding: "4px 10px",
                     color: "var(--text-secondary)",
@@ -555,7 +555,7 @@ export default function MCPSetupPage() {
       <div
         style={{
           background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
           padding: 20,
           marginBottom: 20,
@@ -606,7 +606,7 @@ export default function MCPSetupPage() {
               key={tool.name}
               style={{
                 background: "var(--bg-primary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 10,
                 padding: "14px 16px",
                 display: "flex",
@@ -642,7 +642,7 @@ export default function MCPSetupPage() {
       <div
         style={{
           background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
           padding: 20,
           marginBottom: 20,
@@ -693,7 +693,7 @@ export default function MCPSetupPage() {
               key={idx}
               style={{
                 background: "var(--bg-primary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 10,
                 padding: "12px 16px",
                 display: "flex",

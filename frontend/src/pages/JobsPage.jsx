@@ -253,7 +253,7 @@ export default function JobsPage() {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -284,7 +284,7 @@ export default function JobsPage() {
             key={card.label}
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "16px 20px",
             }}
@@ -321,7 +321,7 @@ export default function JobsPage() {
                 <div
                   style={{
                     background: "var(--bg-secondary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: isExpanded ? "12px 12px 0 0" : 12,
                     padding: 16,
                     borderLeft: `4px solid ${job.is_active ? "#22c55e" : "var(--text-muted)"}`,
@@ -425,7 +425,7 @@ export default function JobsPage() {
                           disabled={togglingJobId === job.id}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 6,
                             padding: "6px 10px",
                             color: job.is_active ? "var(--text-muted)" : "#22c55e",
@@ -443,7 +443,7 @@ export default function JobsPage() {
                           onClick={() => openEdit(job)}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 6,
                             padding: "6px 10px",
                             color: "var(--text-secondary)",
@@ -457,7 +457,7 @@ export default function JobsPage() {
                           onClick={() => handleDelete(job.id)}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 6,
                             padding: "6px 10px",
                             color: "var(--red, #ef4444)",
@@ -477,7 +477,7 @@ export default function JobsPage() {
                   <div
                     style={{
                       background: "var(--bg-primary)",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderTop: "none",
                       borderRadius: "0 0 12px 12px",
                       padding: 16,
@@ -533,7 +533,7 @@ export default function JobsPage() {
                               key={app.id}
                               style={{
                                 background: "var(--bg-secondary)",
-                                border: "1px solid var(--border-color)",
+                                border: "1px solid var(--border)",
                                 borderRadius: 8,
                                 padding: 12,
                               }}
@@ -635,7 +635,7 @@ export default function JobsPage() {
                                     style={{
                                       padding: "4px 8px",
                                       borderRadius: 6,
-                                      border: "1px solid var(--border-color)",
+                                      border: "1px solid var(--border)",
                                       background: "var(--bg-primary)",
                                       color: "var(--text-primary)",
                                       fontSize: "0.8rem",
@@ -686,7 +686,7 @@ export default function JobsPage() {
               maxWidth: 520,
               maxHeight: "80vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -871,7 +871,7 @@ export default function JobsPage() {
                 onClick={() => setShowModal(false)}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",

@@ -132,7 +132,7 @@ export default function WaitlistPage() {
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
         {statCards.map(s => (
-          <div key={s.label} style={{ background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 10, padding: "16px 20px" }}>
+          <div key={s.label} style={{ background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 20px" }}>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>{s.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
           </div>
@@ -148,7 +148,7 @@ export default function WaitlistPage() {
             style={{
               padding: "6px 14px",
               borderRadius: 6,
-              border: statusFilter === s ? "1px solid var(--accent)" : "1px solid var(--border-color)",
+              border: statusFilter === s ? "1px solid var(--accent)" : "1px solid var(--border)",
               background: statusFilter === s ? "var(--accent-dim)" : "transparent",
               color: statusFilter === s ? "var(--accent)" : "var(--text-secondary)",
               cursor: "pointer",
@@ -180,7 +180,7 @@ export default function WaitlistPage() {
             return (
               <div key={entry.id} style={{
                 background: "var(--card-bg)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 10,
                 padding: "16px 20px",
                 display: "flex",
@@ -277,7 +277,7 @@ export default function WaitlistPage() {
                       style={{
                         padding: "6px 10px",
                         borderRadius: 6,
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         background: "transparent",
                         color: "var(--text-secondary)",
                         cursor: "pointer",
@@ -293,7 +293,7 @@ export default function WaitlistPage() {
                     style={{
                       padding: "6px 10px",
                       borderRadius: 6,
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       background: "transparent",
                       color: "#ef4444",
                       cursor: "pointer",
@@ -317,7 +317,7 @@ export default function WaitlistPage() {
         }} onClick={() => setNotifyModal(null)}>
           <div style={{
             background: "var(--card-bg)", borderRadius: 12, padding: 24, maxWidth: 480, width: "90%",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ color: "var(--text-primary)", marginBottom: 16, fontSize: 18 }}>Notify Customer</h3>
             <p style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 12 }}>
@@ -329,7 +329,7 @@ export default function WaitlistPage() {
               placeholder="Custom message (optional)..."
               rows={3}
               style={{
-                width: "100%", padding: 10, borderRadius: 6, border: "1px solid var(--border-color)",
+                width: "100%", padding: 10, borderRadius: 6, border: "1px solid var(--border)",
                 background: "var(--input-bg)", color: "var(--text-primary)", resize: "vertical", fontSize: 14,
                 marginBottom: 16,
               }}
@@ -338,7 +338,7 @@ export default function WaitlistPage() {
               <button
                 onClick={() => setNotifyModal(null)}
                 style={{
-                  padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border-color)",
+                  padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border)",
                   background: "transparent", color: "var(--text-secondary)", cursor: "pointer",
                 }}
               >

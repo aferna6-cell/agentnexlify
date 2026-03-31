@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import UpgradePrompt, { planBelowRequired } from "../components/UpgradePrompt";
+import { fetchDashboard } from "../utils/api/dashboard";
 import {
   analyzeSeoProfile,
   fetchSeoProfile,
@@ -75,7 +76,7 @@ function ScoreGauge({ score, label = "Score", size = 70 }) {
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <svg height={radius * 2} width={radius * 2} style={{ transform: "rotate(-90deg)" }}>
         <circle
-          stroke="var(--border-color)"
+          stroke="var(--border)"
           fill="transparent"
           strokeWidth={stroke}
           r={normalizedRadius}
@@ -139,7 +140,7 @@ function Card({ children, style = {} }) {
     <div
       style={{
         background: "var(--bg-secondary)",
-        border: "1px solid var(--border-color)",
+        border: "1px solid var(--border)",
         borderRadius: 12,
         padding: 24,
         ...style,
@@ -351,7 +352,7 @@ function SeoAuditTab({ tenantId, token }) {
                   key={key}
                   style={{
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 10,
                     padding: "14px 16px",
                   }}
@@ -366,7 +367,7 @@ function SeoAuditTab({ tenantId, token }) {
                     <span style={{ fontWeight: 700, fontSize: "1rem", color: barColor }}>{catScore}</span>
                   </div>
                   {/* Progress bar */}
-                  <div style={{ height: 6, background: "var(--border-color)", borderRadius: 3, marginBottom: 8 }}>
+                  <div style={{ height: 6, background: "var(--border)", borderRadius: 3, marginBottom: 8 }}>
                     <div
                       style={{
                         height: "100%",
@@ -485,7 +486,7 @@ function SeoAuditTab({ tenantId, token }) {
                   key={idx}
                   style={{
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 10,
                     borderLeft: `4px solid ${priorityColor}`,
                     padding: "14px 16px",
@@ -540,7 +541,7 @@ function SeoAuditTab({ tenantId, token }) {
                     alignItems: "center",
                     padding: "10px 14px",
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                   }}
                 >
@@ -676,7 +677,7 @@ function GeoScoreTab({ tenantId, token }) {
               const platformData = platforms[key] || {};
               const platformScore = platformData.score ?? platformData.visibility ?? null;
 
-              let barColor = "var(--border-color)";
+              let barColor = "var(--border)";
               if (platformScore !== null) {
                 if (platformScore >= 70) barColor = "#22c55e";
                 else if (platformScore >= 40) barColor = "#f59e0b";
@@ -688,7 +689,7 @@ function GeoScoreTab({ tenantId, token }) {
                   key={key}
                   style={{
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 10,
                     padding: "16px",
                     display: "flex",
@@ -721,7 +722,7 @@ function GeoScoreTab({ tenantId, token }) {
                       <div style={{ fontWeight: 700, fontSize: "1.5rem", color: barColor }}>
                         {platformScore}
                       </div>
-                      <div style={{ width: "100%", height: 4, background: "var(--border-color)", borderRadius: 2 }}>
+                      <div style={{ width: "100%", height: 4, background: "var(--border)", borderRadius: 2 }}>
                         <div
                           style={{
                             height: "100%",
@@ -765,7 +766,7 @@ function GeoScoreTab({ tenantId, token }) {
                     gap: 10,
                     padding: "10px 14px",
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     borderLeft: `3px solid ${color}`,
                   }}
@@ -804,7 +805,7 @@ function GeoScoreTab({ tenantId, token }) {
                   gap: 12,
                   padding: "12px 14px",
                   background: "var(--bg-primary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                 }}
               >
@@ -853,7 +854,7 @@ function GeoScoreTab({ tenantId, token }) {
                   gap: 12,
                   padding: "12px 14px",
                   background: "var(--bg-primary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                 }}
               >
@@ -976,7 +977,7 @@ function KeywordsTab({ tenantId, token }) {
               flex: 1,
               padding: "10px 14px",
               background: "var(--bg-primary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 8,
               color: "var(--text-primary)",
               fontSize: "0.85rem",
@@ -1009,7 +1010,7 @@ function KeywordsTab({ tenantId, token }) {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
               padding: "6px 14px",
               fontSize: "0.8rem",
@@ -1045,7 +1046,7 @@ function KeywordsTab({ tenantId, token }) {
                         color: "var(--text-muted)",
                         textTransform: "uppercase",
                         letterSpacing: "0.05em",
-                        borderBottom: "1px solid var(--border-color)",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {header}
@@ -1061,7 +1062,7 @@ function KeywordsTab({ tenantId, token }) {
                     <tr
                       key={idx}
                       style={{
-                        borderBottom: "1px solid var(--border-color)",
+                        borderBottom: "1px solid var(--border)",
                         transition: "background 0.15s",
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
@@ -1275,7 +1276,7 @@ function ProfileTab({ tenantId, token }) {
                   key={idx}
                   style={{
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 10,
                     borderLeft: `4px solid ${priorityColor}`,
                     padding: "14px 16px",
@@ -1446,6 +1447,16 @@ export default function LocalSEOPage({ onNavigate }) {
   const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState("audit");
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  // Fetch live plan from API — never trust JWT for plan gating
+  const [livePlan, setLivePlan] = useState(null);
+  useEffect(() => {
+    if (!user?.tenantId || !token) return;
+    fetchDashboard(user.tenantId, token)
+      .then((data) => { if (data?.plan) setLivePlan(data.plan); })
+      .catch((err) => console.warn("LocalSEO: failed to fetch plan:", err.message));
+  }, [user?.tenantId, token]);
+  // Use live plan if loaded, fall back to JWT plan only until API responds
+  const effectivePlan = livePlan ?? user?.plan;
 
   if (!user?.tenantId) {
     return (
@@ -1479,8 +1490,8 @@ export default function LocalSEOPage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Plan gate banner for free/growth users */}
-      {planBelowRequired(user?.plan, "professional") && (
+      {/* Plan gate banner for free/growth users — uses live API plan, not JWT */}
+      {planBelowRequired(effectivePlan, "professional") && (
         <UpgradePrompt
           feature="Local SEO & Marketing Hub"
           requiredPlan="professional"

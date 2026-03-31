@@ -326,7 +326,7 @@ export default function BidsPage() {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -340,7 +340,7 @@ export default function BidsPage() {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -371,7 +371,7 @@ export default function BidsPage() {
             key={card.label}
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "16px 20px",
             }}
@@ -401,7 +401,7 @@ export default function BidsPage() {
                 borderRadius: 8,
                 border: isActive
                   ? "1px solid var(--accent)"
-                  : "1px solid var(--border-color)",
+                  : "1px solid var(--border)",
                 background: isActive ? "var(--accent-dim)" : "var(--bg-secondary)",
                 color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 cursor: "pointer",
@@ -467,7 +467,7 @@ export default function BidsPage() {
               onClick={() => setActiveFilter("all")}
               style={{
                 background: "transparent",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
@@ -491,7 +491,7 @@ export default function BidsPage() {
                 key={bid.id}
                 style={{
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 16,
                   borderLeft: `4px solid ${statusColor.color}`,
@@ -562,7 +562,7 @@ export default function BidsPage() {
                         disabled={isDeleting}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 6,
                           padding: "6px 10px",
                           color: "var(--text-secondary)",
@@ -577,7 +577,7 @@ export default function BidsPage() {
                         disabled={isDeleting}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 6,
                           padding: "6px 10px",
                           color: "var(--red, #ef4444)",
@@ -619,7 +619,7 @@ export default function BidsPage() {
               maxWidth: 600,
               maxHeight: "80vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -667,7 +667,7 @@ export default function BidsPage() {
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
                   Line Items
                 </div>
-                <div style={{ border: "1px solid var(--border-color)", borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", background: "var(--bg-secondary)", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
                     <span>Item</span>
                     <span style={{ textAlign: "right" }}>Qty</span>
@@ -675,14 +675,14 @@ export default function BidsPage() {
                     <span style={{ textAlign: "right" }}>Total</span>
                   </div>
                   {detailBid.line_items.map((li, idx) => (
-                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "1px solid var(--border-color)", fontSize: "0.85rem" }}>
+                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
                       <span>{li.name}</span>
                       <span style={{ textAlign: "right" }}>{li.qty}</span>
                       <span style={{ textAlign: "right" }}>{formatCurrency(li.unit_price)}</span>
                       <span style={{ textAlign: "right", fontWeight: 600 }}>{formatCurrency((li.qty || 0) * (li.unit_price || 0))}</span>
                     </div>
                   ))}
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "10px 12px", borderTop: "2px solid var(--border-color)", fontSize: "0.9rem", fontWeight: 700 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "10px 12px", borderTop: "2px solid var(--border)", fontSize: "0.9rem", fontWeight: 700 }}>
                     <span>Total</span>
                     <span />
                     <span />
@@ -739,13 +739,13 @@ export default function BidsPage() {
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border-color)", paddingTop: 16 }}>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: 16 }}>
               <button
                 onClick={() => handleSaveAsTemplate(detailBid)}
                 disabled={savingTemplate}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",
@@ -759,7 +759,7 @@ export default function BidsPage() {
                 onClick={() => openEdit(detailBid)}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",
@@ -803,7 +803,7 @@ export default function BidsPage() {
               maxWidth: 600,
               maxHeight: "85vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -894,7 +894,7 @@ export default function BidsPage() {
                     onClick={addLineItem}
                     style={{
                       background: "none",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "4px 10px",
                       color: "var(--accent)",
@@ -998,7 +998,7 @@ export default function BidsPage() {
                 }}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",
@@ -1042,7 +1042,7 @@ export default function BidsPage() {
               maxWidth: 520,
               maxHeight: "80vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1066,7 +1066,7 @@ export default function BidsPage() {
                     key={tmpl.id}
                     style={{
                       background: "var(--bg-secondary)",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 8,
                       padding: 12,
                       display: "flex",
@@ -1100,7 +1100,7 @@ export default function BidsPage() {
                         onClick={() => handleDeleteTemplate(tmpl.id)}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 6,
                           padding: "6px 10px",
                           color: "#ef4444",

@@ -222,7 +222,7 @@ export default function ClientPortalPage() {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -252,7 +252,7 @@ export default function ClientPortalPage() {
             key={card.label}
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "16px 20px",
             }}
@@ -286,7 +286,7 @@ export default function ClientPortalPage() {
                   key={leadId}
                   style={{
                     background: "var(--bg-secondary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     padding: "8px 12px",
                     display: "flex",
@@ -442,7 +442,7 @@ export default function ClientPortalPage() {
                 key={record.id}
                 style={{
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 16,
                   opacity: isDeleting ? 0.5 : 1,
@@ -505,7 +505,7 @@ export default function ClientPortalPage() {
                         disabled={isDeleting}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 6,
                           padding: "6px 10px",
                           color: "var(--text-secondary)",
@@ -520,7 +520,7 @@ export default function ClientPortalPage() {
                         disabled={isDeleting}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 6,
                           padding: "6px 10px",
                           color: "var(--red, #ef4444)",
@@ -562,7 +562,7 @@ export default function ClientPortalPage() {
               maxWidth: 520,
               maxHeight: "80vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -609,7 +609,7 @@ export default function ClientPortalPage() {
                       width: "100%",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       background: "var(--bg-secondary)",
                       color: "var(--text-primary)",
                       fontSize: "0.85rem",
@@ -643,7 +643,7 @@ export default function ClientPortalPage() {
                     width: "100%",
                     padding: "8px 12px",
                     borderRadius: 8,
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     background: "var(--bg-secondary)",
                     color: "var(--text-primary)",
                     fontSize: "0.85rem",
@@ -681,7 +681,7 @@ export default function ClientPortalPage() {
                 }}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",

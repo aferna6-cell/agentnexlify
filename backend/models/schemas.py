@@ -181,6 +181,7 @@ class WidgetConfigDetail(BaseModel):
     branding: dict | None = None
     is_online: bool = True
     offline_message: str | None = None
+    teaser_message: str | None = None
 
 
 class DashboardResponse(BaseModel):
@@ -228,6 +229,7 @@ class WidgetConfigUpdateRequest(BaseModel):
     greeting_message: str | None = None
     position: str | None = None
     branding: BrandingConfig | None = None
+    teaser_message: str | None = None
 
 
 class FaqEntryResponse(BaseModel):
@@ -330,6 +332,7 @@ class WidgetConfigResponse(BaseModel):
     offline_message: str | None = None
     menu_items: list[dict] | None = None
     business_type: str | None = None
+    teaser_message: str | None = None
 
 
 class WidgetLeadRequest(BaseModel):

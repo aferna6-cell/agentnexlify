@@ -161,7 +161,7 @@ export default function SnippetsPage() {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -197,7 +197,7 @@ export default function SnippetsPage() {
                 borderRadius: 8,
                 border: isActive
                   ? "1px solid var(--accent)"
-                  : "1px solid var(--border-color)",
+                  : "1px solid var(--border)",
                 background: isActive ? "var(--accent-dim)" : "var(--bg-secondary)",
                 color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 cursor: "pointer",
@@ -233,7 +233,7 @@ export default function SnippetsPage() {
             maxWidth: 400,
             padding: "10px 14px",
             borderRadius: 8,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             background: "var(--bg-secondary)",
             color: "var(--text-primary)",
             fontSize: "0.9rem",
@@ -293,7 +293,7 @@ export default function SnippetsPage() {
               }}
               style={{
                 background: "transparent",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
@@ -323,7 +323,7 @@ export default function SnippetsPage() {
                 key={snippet.id}
                 style={{
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 16,
                   display: "flex",
@@ -419,7 +419,7 @@ export default function SnippetsPage() {
                     display: "flex",
                     gap: 6,
                     justifyContent: "flex-end",
-                    borderTop: "1px solid var(--border-color)",
+                    borderTop: "1px solid var(--border)",
                     paddingTop: 10,
                     marginTop: 2,
                   }}
@@ -429,7 +429,7 @@ export default function SnippetsPage() {
                     disabled={isDeleting}
                     style={{
                       background: "none",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "6px 12px",
                       color: "var(--text-secondary)",
@@ -444,7 +444,7 @@ export default function SnippetsPage() {
                     disabled={isDeleting}
                     style={{
                       background: "none",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "6px 12px",
                       color: "var(--red, #ef4444)",
@@ -484,7 +484,7 @@ export default function SnippetsPage() {
               maxWidth: 520,
               maxHeight: "80vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -551,7 +551,7 @@ export default function SnippetsPage() {
                       width: "100%",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       background: "var(--bg-secondary)",
                       color: "var(--text-primary)",
                       fontSize: "0.85rem",
@@ -627,7 +627,7 @@ export default function SnippetsPage() {
                 }}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",

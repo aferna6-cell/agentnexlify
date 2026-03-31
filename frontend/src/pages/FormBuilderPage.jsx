@@ -502,7 +502,7 @@ export default function FormBuilderPage() {
                 onClick={() => copyToClipboard(getEmbedIframe(viewingSubmissions), "iframe")}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",
@@ -517,7 +517,7 @@ export default function FormBuilderPage() {
           <div
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               overflow: "hidden",
             }}
@@ -528,7 +528,7 @@ export default function FormBuilderPage() {
                 display: "grid",
                 gridTemplateColumns: "60px 1fr 140px 100px",
                 padding: "10px 16px",
-                borderBottom: "1px solid var(--border-color)",
+                borderBottom: "1px solid var(--border)",
                 fontSize: "0.75rem",
                 color: "var(--text-muted)",
                 fontWeight: 600,
@@ -556,7 +556,7 @@ export default function FormBuilderPage() {
                       display: "grid",
                       gridTemplateColumns: "60px 1fr 140px 100px",
                       padding: "12px 16px",
-                      borderBottom: "1px solid var(--border-color)",
+                      borderBottom: "1px solid var(--border)",
                       alignItems: "center",
                       cursor: "pointer",
                       transition: "background 0.1s ease",
@@ -597,7 +597,7 @@ export default function FormBuilderPage() {
                       style={{
                         padding: "12px 16px 12px 76px",
                         background: "var(--bg-primary)",
-                        borderBottom: "1px solid var(--border-color)",
+                        borderBottom: "1px solid var(--border)",
                       }}
                     >
                       {Object.entries(submissionData).map(([key, val]) => (
@@ -657,7 +657,7 @@ export default function FormBuilderPage() {
               onClick={() => { setShowEditor(false); setEditingForm(null); }}
               style={{
                 background: "transparent",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 8,
                 padding: "8px 16px",
                 color: "var(--text-primary)",
@@ -705,7 +705,7 @@ export default function FormBuilderPage() {
             <div
               style={{
                 background: "var(--bg-secondary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
                 padding: 20,
                 marginBottom: 16,
@@ -739,7 +739,7 @@ export default function FormBuilderPage() {
             <div
               style={{
                 background: "var(--bg-secondary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
                 padding: 20,
                 marginBottom: 16,
@@ -753,7 +753,7 @@ export default function FormBuilderPage() {
                   onClick={addField}
                   style={{
                     background: "none",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 6,
                     padding: "4px 12px",
                     color: "var(--accent)",
@@ -776,7 +776,7 @@ export default function FormBuilderPage() {
                 <div
                   key={field.id}
                   style={{
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     padding: "12px 14px",
                     marginBottom: 10,
@@ -806,10 +806,10 @@ export default function FormBuilderPage() {
                         disabled={idx === 0}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 4,
                           padding: "2px 6px",
-                          color: idx === 0 ? "var(--border-color)" : "var(--text-secondary)",
+                          color: idx === 0 ? "var(--border)" : "var(--text-secondary)",
                           cursor: idx === 0 ? "default" : "pointer",
                           fontSize: "0.75rem",
                         }}
@@ -822,10 +822,10 @@ export default function FormBuilderPage() {
                         disabled={idx === formData.fields.length - 1}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 4,
                           padding: "2px 6px",
-                          color: idx === formData.fields.length - 1 ? "var(--border-color)" : "var(--text-secondary)",
+                          color: idx === formData.fields.length - 1 ? "var(--border)" : "var(--text-secondary)",
                           cursor: idx === formData.fields.length - 1 ? "default" : "pointer",
                           fontSize: "0.75rem",
                         }}
@@ -910,7 +910,7 @@ export default function FormBuilderPage() {
             <div
               style={{
                 background: "var(--bg-secondary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
                 padding: 20,
                 marginBottom: 16,
@@ -967,7 +967,7 @@ export default function FormBuilderPage() {
               <div
                 style={{
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 20,
                 }}
@@ -989,7 +989,7 @@ export default function FormBuilderPage() {
                       onClick={() => copyToClipboard(getDirectLink(editingForm), "link")}
                       style={{
                         background: copiedEmbed === "link" ? "rgba(34,197,94,0.1)" : "var(--bg-primary)",
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         borderRadius: 6,
                         padding: "6px 12px",
                         color: copiedEmbed === "link" ? "#22c55e" : "var(--text-secondary)",
@@ -1016,7 +1016,7 @@ export default function FormBuilderPage() {
                       onClick={() => copyToClipboard(getEmbedIframe(editingForm), "iframe")}
                       style={{
                         background: copiedEmbed === "iframe" ? "rgba(34,197,94,0.1)" : "var(--bg-primary)",
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         borderRadius: 6,
                         padding: "6px 12px",
                         color: copiedEmbed === "iframe" ? "#22c55e" : "var(--text-secondary)",
@@ -1043,7 +1043,7 @@ export default function FormBuilderPage() {
             <div
               style={{
                 background: "var(--bg-secondary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
                 padding: 16,
               }}
@@ -1077,7 +1077,7 @@ export default function FormBuilderPage() {
             onClick={() => { setLoading(true); loadData(); }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -1108,7 +1108,7 @@ export default function FormBuilderPage() {
             key={card.label}
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "16px 20px",
             }}
@@ -1160,7 +1160,7 @@ export default function FormBuilderPage() {
         <div
           style={{
             background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             overflow: "hidden",
           }}
@@ -1171,7 +1171,7 @@ export default function FormBuilderPage() {
               display: "grid",
               gridTemplateColumns: "2fr 120px 100px 130px 200px",
               padding: "10px 16px",
-              borderBottom: "1px solid var(--border-color)",
+              borderBottom: "1px solid var(--border)",
               fontSize: "0.75rem",
               color: "var(--text-muted)",
               fontWeight: 600,
@@ -1198,7 +1198,7 @@ export default function FormBuilderPage() {
                   display: "grid",
                   gridTemplateColumns: "2fr 120px 100px 130px 200px",
                   padding: "12px 16px",
-                  borderBottom: "1px solid var(--border-color)",
+                  borderBottom: "1px solid var(--border)",
                   alignItems: "center",
                   opacity: isDeleting ? 0.5 : 1,
                   transition: "background 0.1s ease",
@@ -1269,7 +1269,7 @@ export default function FormBuilderPage() {
                     onClick={() => copyToClipboard(getDirectLink(form), "link")}
                     style={{
                       background: "none",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "4px 8px",
                       color: copiedEmbed === "link" ? "#22c55e" : "var(--text-secondary)",
@@ -1285,7 +1285,7 @@ export default function FormBuilderPage() {
                     disabled={isDeleting}
                     style={{
                       background: "none",
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "4px 8px",
                       color: "#ef4444",

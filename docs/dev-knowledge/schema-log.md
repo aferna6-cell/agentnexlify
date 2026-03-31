@@ -406,3 +406,8 @@ Adds `email_bounced` (BOOLEAN DEFAULT FALSE) and `email_bounced_at` (TIMESTAMPTZ
 Creates `pipeline_automations` table for auto-trigger actions when leads move between pipeline stages. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT), trigger_stage (TEXT NOT NULL), actions (JSONB NOT NULL DEFAULT '[]'), is_active (BOOLEAN DEFAULT TRUE), created_at, updated_at. Indexed on tenant_id and (tenant_id, trigger_stage) for active automations. Actions support: email, create_task, notify_team.
 
 **Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+
+### 071 — Widget Teaser Message
+Adds `teaser_message` (TEXT, nullable) to `widget_configs`. Stores the text displayed in the teaser bubble when the chat widget is minimized. Shown after a 3-second delay to prompt visitor engagement. Nullable — when NULL, the widget falls back to its default teaser behavior. Uses `ADD COLUMN IF NOT EXISTS` for safe re-runs.
+
+**Applied:** 2026-03-31 via Supabase Management API. Verified: `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'widget_configs' AND column_name = 'teaser_message'` returned `[{"column_name":"teaser_message","data_type":"text"}]`.

@@ -118,7 +118,7 @@ export default function ScoringConfigPage() {
             + Add Factor
           </button>
           <button onClick={handleReset} style={{
-            padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border-color)",
+            padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)",
             background: "transparent", color: "var(--text-secondary)", cursor: "pointer", fontSize: 13,
           }}>
             Reset Defaults
@@ -139,7 +139,7 @@ export default function ScoringConfigPage() {
 
       {/* Weight total indicator */}
       <div style={{
-        background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 10,
+        background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 10,
         padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>
@@ -155,14 +155,14 @@ export default function ScoringConfigPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {factors.map(f => (
           <div key={f.id} style={{
-            background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 10,
+            background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 10,
             padding: "16px 20px", opacity: f.is_enabled ? 1 : 0.5,
             display: "flex", alignItems: "center", gap: 16,
           }}>
             {/* Toggle */}
             <button onClick={() => handleToggle(f.id)} style={{
               width: 36, height: 20, borderRadius: 10, border: "none", cursor: "pointer",
-              background: f.is_enabled ? "var(--accent)" : "var(--border-color)",
+              background: f.is_enabled ? "var(--accent)" : "var(--border)",
               position: "relative", flexShrink: 0,
             }}>
               <div style={{
@@ -201,7 +201,7 @@ export default function ScoringConfigPage() {
 
             {/* Delete */}
             <button onClick={() => handleDelete(f.id)} style={{
-              padding: "4px 8px", borderRadius: 4, border: "1px solid var(--border-color)",
+              padding: "4px 8px", borderRadius: 4, border: "1px solid var(--border)",
               background: "transparent", color: "#ef4444", cursor: "pointer", fontSize: 12,
             }}>
               Del
@@ -225,7 +225,7 @@ export default function ScoringConfigPage() {
         }} onClick={() => setShowAdd(false)}>
           <div style={{
             background: "var(--card-bg)", borderRadius: 12, padding: 24, maxWidth: 420, width: "90%",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ color: "var(--text-primary)", marginBottom: 16 }}>Add Custom Scoring Factor</h3>
 
@@ -235,7 +235,7 @@ export default function ScoringConfigPage() {
               onChange={e => setNewFactor({ ...newFactor, factor: e.target.value })}
               placeholder="e.g. referral_source"
               style={{
-                width: "100%", padding: 10, borderRadius: 6, border: "1px solid var(--border-color)",
+                width: "100%", padding: 10, borderRadius: 6, border: "1px solid var(--border)",
                 background: "var(--input-bg)", color: "var(--text-primary)", marginBottom: 12, fontSize: 14,
               }}
             />
@@ -246,7 +246,7 @@ export default function ScoringConfigPage() {
               onChange={e => setNewFactor({ ...newFactor, description: e.target.value })}
               placeholder="Explains what this factor measures"
               style={{
-                width: "100%", padding: 10, borderRadius: 6, border: "1px solid var(--border-color)",
+                width: "100%", padding: 10, borderRadius: 6, border: "1px solid var(--border)",
                 background: "var(--input-bg)", color: "var(--text-primary)", marginBottom: 12, fontSize: 14,
               }}
             />
@@ -259,14 +259,14 @@ export default function ScoringConfigPage() {
               value={newFactor.weight}
               onChange={e => setNewFactor({ ...newFactor, weight: e.target.value })}
               style={{
-                width: 100, padding: 10, borderRadius: 6, border: "1px solid var(--border-color)",
+                width: 100, padding: 10, borderRadius: 6, border: "1px solid var(--border)",
                 background: "var(--input-bg)", color: "var(--text-primary)", marginBottom: 16, fontSize: 14,
               }}
             />
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setShowAdd(false)} style={{
-                padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border-color)",
+                padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border)",
                 background: "transparent", color: "var(--text-secondary)", cursor: "pointer",
               }}>Cancel</button>
               <button onClick={handleAdd} style={{

@@ -27,6 +27,7 @@ from backend.routers.widget_helpers import (
     _categorize_conversation,
     _check_origin,
     _extract_action_items,
+    _extract_lead_info,
     _get_cached,
     _get_or_create_conversation,
     _get_tenant,
@@ -479,6 +480,17 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 11. Lead capture — runs in background so it doesn't slow the response.
     # Scans ALL messages in the session (not just the current one) for
     # email, phone, and name.  Deduplicates by email + tenant_id.
+
+    # Synchronously detect whether contact info is present so the response
+    # can set lead_captured=True immediately (background task does the actual
+    # DB write; this check only affects what we report back to the caller).
+    _has_contact = bool(_extract_lead_info(req.message))
+    if not _has_contact:
+        for _m in messages[-5:]:  # scan last 5 messages for prior contact info
+            if _m.get("role") == "user" and _extract_lead_info(_m.get("content", "")):
+                _has_contact = True
+                break
+
     background_tasks.add_task(
         _capture_leads_from_session, tenant["id"], req.session_id, conversation_id,
     )
@@ -513,7 +525,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     return WidgetChatResponse(
         response=assistant_text,
         session_id=req.session_id,
-        lead_captured=False,  # Actual capture runs in background task
+        lead_captured=_has_contact,
         show_watermark=show_watermark,
         handoff=handoff_triggered,
     )

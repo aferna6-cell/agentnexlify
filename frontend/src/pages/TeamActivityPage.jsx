@@ -68,7 +68,7 @@ export default function TeamActivityPage() {
           style={{
             padding: "8px 12px", borderRadius: 8,
             background: "var(--bg-secondary)", color: "var(--text-primary)",
-            border: "1px solid var(--border-color)", fontSize: "0.85rem",
+            border: "1px solid var(--border)", fontSize: "0.85rem",
           }}
         >
           <option value="">All Team Members</option>
@@ -82,7 +82,7 @@ export default function TeamActivityPage() {
           style={{
             padding: "8px 12px", borderRadius: 8,
             background: "var(--bg-secondary)", color: "var(--text-primary)",
-            border: "1px solid var(--border-color)", fontSize: "0.85rem",
+            border: "1px solid var(--border)", fontSize: "0.85rem",
           }}
         >
           <option value={1}>Last 24 hours</option>
@@ -104,15 +104,15 @@ export default function TeamActivityPage() {
             gap: 0, fontSize: "0.85rem",
           }}>
             <div style={{ display: "contents" }}>
-              <div style={{ padding: "12px 16px", fontWeight: 600, borderBottom: "1px solid var(--border-color)", color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Who</div>
-              <div style={{ padding: "12px 16px", fontWeight: 600, borderBottom: "1px solid var(--border-color)", color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Action</div>
-              <div style={{ padding: "12px 16px", fontWeight: 600, borderBottom: "1px solid var(--border-color)", color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>When</div>
+              <div style={{ padding: "12px 16px", fontWeight: 600, borderBottom: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Who</div>
+              <div style={{ padding: "12px 16px", fontWeight: 600, borderBottom: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Action</div>
+              <div style={{ padding: "12px 16px", fontWeight: 600, borderBottom: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>When</div>
             </div>
             {activity.map((a) => {
               const config = ACTIVITY_ICONS[a.activity_type] || { emoji: ".", color: "#666" };
               return (
                 <div key={a.id} style={{ display: "contents" }}>
-                  <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{
                       width: 28, height: 28, borderRadius: "50%",
                       background: `${config.color}20`, color: config.color,
@@ -123,7 +123,7 @@ export default function TeamActivityPage() {
                     </span>
                     <span style={{ fontWeight: 500 }}>{a.performed_by_name || "Unknown"}</span>
                   </div>
-                  <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border-color)", color: "var(--text-primary)" }}>
+                  <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", color: "var(--text-primary)" }}>
                     <span style={{
                       display: "inline-block", padding: "2px 8px", borderRadius: 4,
                       background: `${config.color}15`, color: config.color,
@@ -134,7 +134,7 @@ export default function TeamActivityPage() {
                     </span>
                     {a.description}
                   </div>
-                  <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border-color)", color: "var(--text-muted)", textAlign: "right", whiteSpace: "nowrap" }}>
+                  <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", color: "var(--text-muted)", textAlign: "right", whiteSpace: "nowrap" }}>
                     {timeAgo(a.created_at)}
                   </div>
                 </div>

@@ -53,7 +53,7 @@ function PipelineCard({ lead, onMove, onSelect, movingId, stages }) {
     <div
       style={{
         background: "var(--bg-primary)",
-        border: "1px solid var(--border-color)",
+        border: "1px solid var(--border)",
         borderRadius: 10,
         padding: "12px 14px",
         cursor: "pointer",
@@ -62,7 +62,7 @@ function PipelineCard({ lead, onMove, onSelect, movingId, stages }) {
         position: "relative",
       }}
       onMouseEnter={(e) => { if (!isMoving) e.currentTarget.style.borderColor = "var(--accent)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border-color)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
       onClick={() => onSelect(lead)}
     >
       {/* Header row: name + move button */}
@@ -79,7 +79,7 @@ function PipelineCard({ lead, onMove, onSelect, movingId, stages }) {
             disabled={isMoving}
             style={{
               background: "none",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 4,
               padding: "2px 6px",
               color: "var(--text-muted)",
@@ -98,7 +98,7 @@ function PipelineCard({ lead, onMove, onSelect, movingId, stages }) {
                 right: 0,
                 top: "calc(100% + 4px)",
                 background: "var(--bg-primary)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 8,
                 zIndex: 50,
                 minWidth: 140,
@@ -205,7 +205,7 @@ function AddDealModal({ onClose, onSave, saving, stages }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border-color)" }}
+        style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <h3 style={{ marginBottom: 16 }}>Add Deal</h3>
@@ -280,7 +280,7 @@ function AddDealModal({ onClose, onSave, saving, stages }) {
         <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
           <button
             onClick={onClose}
-            style={{ background: "transparent", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
+            style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
           >
             Cancel
           </button>
@@ -304,7 +304,7 @@ function LeadQuickView({ lead, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border-color)" }}
+        style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -481,7 +481,7 @@ export default function PipelinePage() {
           <button
             className="btn-primary"
             onClick={() => { setLoading(true); loadBoard(); }}
-            style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+            style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}
           >
             Refresh
           </button>
@@ -508,7 +508,7 @@ export default function PipelinePage() {
         ].map((card) => (
           <div
             key={card.label}
-            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 12, padding: "16px 20px" }}
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px" }}
           >
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>{card.label}</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: card.color }}>{card.value}</div>
@@ -558,7 +558,7 @@ export default function PipelinePage() {
                 key={stage.name}
                 style={{
                   background: stageIdx % 2 === 0 ? "var(--bg-secondary)" : "rgba(255,255,255,0.02)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   display: "flex",
                   flexDirection: "column",
@@ -570,7 +570,7 @@ export default function PipelinePage() {
                 <div
                   style={{
                     padding: "12px 14px",
-                    borderBottom: "2px solid var(--border-color)",
+                    borderBottom: "2px solid var(--border)",
                     borderTopLeftRadius: 12,
                     borderTopRightRadius: 12,
                     background: stageBg,
@@ -610,7 +610,7 @@ export default function PipelinePage() {
                   {stageLeads.length === 0 ? (
                     <div
                       style={{
-                        border: "1px dashed var(--border-color)",
+                        border: "1px dashed var(--border)",
                         borderRadius: 8,
                         padding: "20px 12px",
                         textAlign: "center",

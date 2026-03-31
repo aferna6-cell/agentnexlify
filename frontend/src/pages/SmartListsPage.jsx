@@ -172,7 +172,7 @@ function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount 
                   padding: "4px 8px",
                   borderRadius: 6,
                   background: checked ? "var(--accent-dim)" : "transparent",
-                  border: checked ? "1px solid var(--accent)" : "1px solid var(--border-color)",
+                  border: checked ? "1px solid var(--accent)" : "1px solid var(--border)",
                   transition: "all 0.15s ease",
                 }}
               >
@@ -370,7 +370,7 @@ function SmartListModal({ list, onClose, onSave, saving }) {
           maxWidth: 580,
           maxHeight: "90vh",
           overflowY: "auto",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -404,7 +404,7 @@ function SmartListModal({ list, onClose, onSave, saving }) {
         <div
           style={{
             background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             borderRadius: 10,
             padding: 16,
             marginBottom: 20,
@@ -424,7 +424,7 @@ function SmartListModal({ list, onClose, onSave, saving }) {
             onClick={onClose}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 8,
               padding: "8px 16px",
               color: "var(--text-primary)",
@@ -470,7 +470,7 @@ function LeadsTable({ leads, loading }) {
     <div
       style={{
         background: "var(--bg-secondary)",
-        border: "1px solid var(--border-color)",
+        border: "1px solid var(--border)",
         borderRadius: 12,
         overflow: "hidden",
       }}
@@ -481,7 +481,7 @@ function LeadsTable({ leads, loading }) {
           display: "grid",
           gridTemplateColumns: "1.5fr 1.5fr 1fr 0.8fr 0.7fr 0.6fr",
           padding: "10px 16px",
-          borderBottom: "1px solid var(--border-color)",
+          borderBottom: "1px solid var(--border)",
           fontSize: "0.75rem",
           color: "var(--text-muted)",
           fontWeight: 600,
@@ -505,7 +505,7 @@ function LeadsTable({ leads, loading }) {
             display: "grid",
             gridTemplateColumns: "1.5fr 1.5fr 1fr 0.8fr 0.7fr 0.6fr",
             padding: "10px 16px",
-            borderBottom: "1px solid var(--border-color)",
+            borderBottom: "1px solid var(--border)",
             alignItems: "center",
             fontSize: "0.85rem",
             transition: "background 0.1s ease",
@@ -723,7 +723,7 @@ export default function SmartListsPage({ onNavigate }) {
           <button
             className="btn-primary"
             onClick={() => { setLoading(true); loadSmartLists(); }}
-            style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+            style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}
           >
             Refresh
           </button>
@@ -768,7 +768,7 @@ export default function SmartListsPage({ onNavigate }) {
         <div
           style={{
             background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             display: "flex",
             flexDirection: "column",
@@ -779,7 +779,7 @@ export default function SmartListsPage({ onNavigate }) {
           <div
             style={{
               padding: "14px 16px",
-              borderBottom: "1px solid var(--border-color)",
+              borderBottom: "1px solid var(--border)",
               fontSize: "0.8rem",
               fontWeight: 600,
               color: "var(--text-muted)",
@@ -878,7 +878,7 @@ export default function SmartListsPage({ onNavigate }) {
                           disabled={isRefreshing}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 4,
                             padding: "2px 8px",
                             color: "var(--text-secondary)",
@@ -892,7 +892,7 @@ export default function SmartListsPage({ onNavigate }) {
                           onClick={() => handleEdit(list)}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 4,
                             padding: "2px 8px",
                             color: "var(--accent)",
@@ -907,7 +907,7 @@ export default function SmartListsPage({ onNavigate }) {
                           disabled={isDeleting}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 4,
                             padding: "2px 8px",
                             color: "#ef4444",
@@ -930,7 +930,7 @@ export default function SmartListsPage({ onNavigate }) {
         <div
           style={{
             background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             display: "flex",
             flexDirection: "column",
@@ -987,7 +987,7 @@ export default function SmartListsPage({ onNavigate }) {
               <div
                 style={{
                   padding: "16px 20px",
-                  borderBottom: "1px solid var(--border-color)",
+                  borderBottom: "1px solid var(--border)",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-start",
@@ -1050,7 +1050,7 @@ export default function SmartListsPage({ onNavigate }) {
 
               {/* Filter summary badges */}
               {selectedList.filter_json && (
-                <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border-color)", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginRight: 4 }}>
                     Filters:
                   </span>
@@ -1081,7 +1081,7 @@ export default function SmartListsPage({ onNavigate }) {
                           fontSize: "0.72rem",
                           background: "var(--hover-overlay)",
                           color: "var(--text-secondary)",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                         }}
                       >
                         {b}

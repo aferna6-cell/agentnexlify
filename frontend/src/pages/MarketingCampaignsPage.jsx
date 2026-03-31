@@ -10,6 +10,7 @@ import {
   estimateCampaignRecipients,
 } from "../utils/api/campaigns";
 import { fetchTagDefinitions } from "../utils/api/tags";
+import { fetchDashboard } from "../utils/api/dashboard";
 import SkeletonLoader from "../components/SkeletonLoader";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import UpgradePrompt, { planBelowRequired } from "../components/UpgradePrompt";
@@ -78,14 +79,14 @@ function formatPercent(num) {
 
 const cardStyle = {
   background: "var(--bg-secondary, var(--card-bg))",
-  border: "1px solid var(--border-color)",
+  border: "1px solid var(--border)",
   borderRadius: 12,
   padding: 24,
 };
 
 const inputStyle = {
   width: "100%", padding: "10px 14px", borderRadius: 8,
-  border: "1px solid var(--border-color)", background: "var(--bg-primary)",
+  border: "1px solid var(--border)", background: "var(--bg-primary)",
   color: "var(--text-primary)", fontSize: "0.9rem", boxSizing: "border-box",
 };
 
@@ -96,7 +97,7 @@ const btnPrimary = {
 
 const btnSecondary = {
   background: "var(--bg-primary)", color: "var(--text-secondary)",
-  border: "1px solid var(--border-color)", padding: "8px 16px",
+  border: "1px solid var(--border)", padding: "8px 16px",
   borderRadius: 8, cursor: "pointer", fontSize: "0.85rem",
 };
 
@@ -112,7 +113,7 @@ const overlayStyle = {
 const modalStyle = {
   background: "var(--bg-secondary, var(--card-bg))", borderRadius: 16,
   padding: "28px 32px", width: "90%", maxWidth: 750, maxHeight: "90vh",
-  overflowY: "auto", border: "1px solid var(--border-color)",
+  overflowY: "auto", border: "1px solid var(--border)",
 };
 
 /* ==== Main Component ==== */
@@ -120,7 +121,8 @@ const modalStyle = {
 export default function MarketingCampaignsPage({ onNavigate }) {
   const { user, token } = useAuth();
 
-  // Plan gating
+  // Plan gating — use live plan from API, fall back to JWT only as initial value
+  const [livePlan, setLivePlan] = useState(user?.plan || "free");
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Data state
@@ -155,7 +157,14 @@ export default function MarketingCampaignsPage({ onNavigate }) {
     }
   }, [user?.tenantId, token, typeFilter, statusFilter]);
 
-  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+  useEffect(() => {
+    loadCampaigns();
+    if (user?.tenantId) {
+      fetchDashboard(user.tenantId, token)
+        .then((res) => { if (res?.plan) setLivePlan(res.plan); })
+        .catch(() => {}); // non-critical — JWT plan is the fallback
+    }
+  }, [loadCampaigns, user?.tenantId, token]);
 
   /* ---- Open campaign detail ---- */
 
@@ -231,7 +240,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
         </div>
         <button
           onClick={() => {
-            if (planBelowRequired(user?.plan, "growth")) {
+            if (planBelowRequired(livePlan, "growth")) {
               setShowUpgradePrompt(true);
             } else {
               setShowCreate(true);
@@ -244,7 +253,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
       </div>
 
       {/* Plan gate banner for free users */}
-      {planBelowRequired(user?.plan, "growth") && (
+      {planBelowRequired(livePlan, "growth") && (
         <UpgradePrompt
           feature="Marketing Campaigns"
           requiredPlan="growth"
@@ -305,7 +314,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
         <div style={{ overflowX: "auto" }}>
           <table style={{
             width: "100%", borderCollapse: "separate", borderSpacing: 0,
-            background: "var(--bg-secondary, var(--card-bg))", border: "1px solid var(--border-color)",
+            background: "var(--bg-secondary, var(--card-bg))", border: "1px solid var(--border)",
             borderRadius: 12, overflow: "hidden",
           }}>
             <thead>
@@ -313,7 +322,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
                 {["Name", "Type", "Status", "Recipients", "Open Rate", "Sent Date", "Actions"].map((h) => (
                   <th key={h} style={{
                     textAlign: "left", padding: "12px 16px", fontSize: "0.8rem",
-                    color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border-color)",
+                    color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border)",
                     textTransform: "uppercase", letterSpacing: "0.05em",
                   }}>{h}</th>
                 ))}
@@ -425,7 +434,7 @@ function CampaignDetailPanel({ campaign, loading, onClose, onSend }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
               {statsData.map((s) => (
                 <div key={s.label} style={{
-                  background: "var(--bg-primary)", border: "1px solid var(--border-color)",
+                  background: "var(--bg-primary)", border: "1px solid var(--border)",
                   borderRadius: 8, padding: "12px 16px", textAlign: "center",
                 }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>{s.label}</div>
@@ -451,7 +460,7 @@ function CampaignDetailPanel({ campaign, loading, onClose, onSend }) {
                 <BarChart data={chartData}>
                   <XAxis dataKey="name" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border-color)", borderRadius: 8, color: "var(--text-primary)" }} />
+                  <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)" }} />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="var(--accent)" />
                 </BarChart>
               </ResponsiveContainer>
@@ -460,7 +469,7 @@ function CampaignDetailPanel({ campaign, loading, onClose, onSend }) {
 
           {/* Campaign Content Preview */}
           {(campaign.subject || campaign.body || campaign.body_html) && (
-            <div style={{ background: "var(--bg-primary)", border: "1px solid var(--border-color)", borderRadius: 8, padding: 16 }}>
+            <div style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, padding: 16 }}>
               <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: "0 0 8px" }}>Content Preview</h3>
               {campaign.subject && (
                 <div style={{ marginBottom: 8 }}>
@@ -487,7 +496,7 @@ function CampaignDetailPanel({ campaign, loading, onClose, onSend }) {
                       {["Name", "Email", "Status"].map((h) => (
                         <th key={h} style={{
                           textAlign: "left", padding: "8px 12px", fontSize: "0.75rem",
-                          color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border-color)",
+                          color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border)",
                         }}>{h}</th>
                       ))}
                     </tr>
@@ -526,14 +535,14 @@ function RateIndicator({ label, rate, color }) {
   const pct = rate != null ? Math.round(rate * 100) / 100 : 0;
   return (
     <div style={{
-      background: "var(--bg-primary)", border: "1px solid var(--border-color)",
+      background: "var(--bg-primary)", border: "1px solid var(--border)",
       borderRadius: 8, padding: "16px 20px",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{label}</span>
         <span style={{ fontSize: "1.1rem", fontWeight: 700, color }}>{pct}%</span>
       </div>
-      <div style={{ height: 6, background: "var(--border-color)", borderRadius: 3, overflow: "hidden" }}>
+      <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${Math.min(pct, 100)}%`, background: color, borderRadius: 3, transition: "width 0.3s" }} />
       </div>
     </div>
@@ -681,7 +690,7 @@ function CreateCampaignModal({ tenantId, token, onClose, onCreated }) {
             {CAMPAIGN_TYPES.map((t) => (
               <button key={t.key} onClick={() => setType(t.key)} style={{
                 padding: "10px 24px", borderRadius: 8, fontSize: "0.9rem", cursor: "pointer",
-                border: type === t.key ? `2px solid ${t.key === "email" ? "var(--accent)" : "var(--green)"}` : "1px solid var(--border-color)",
+                border: type === t.key ? `2px solid ${t.key === "email" ? "var(--accent)" : "var(--green)"}` : "1px solid var(--border)",
                 background: type === t.key ? (t.key === "email" ? "var(--accent-dim)" : "var(--green-dim)") : "var(--bg-primary)",
                 color: type === t.key ? (t.key === "email" ? "var(--accent)" : "var(--green)") : "var(--text-secondary)",
                 fontWeight: type === t.key ? 600 : 400,
@@ -733,7 +742,7 @@ function CreateCampaignModal({ tenantId, token, onClose, onCreated }) {
           {showAiGen && (
             <div style={{
               marginTop: 12, padding: 16, background: "var(--bg-primary)",
-              border: "1px solid var(--border-color)", borderRadius: 8,
+              border: "1px solid var(--border)", borderRadius: 8,
             }}>
               <div style={{ marginBottom: 12 }}>
                 <label style={labelStyle}>Topic</label>
@@ -768,7 +777,7 @@ function CreateCampaignModal({ tenantId, token, onClose, onCreated }) {
         {/* Target Audience */}
         <div style={{
           marginBottom: 16, padding: 16, background: "var(--bg-primary)",
-          border: "1px solid var(--border-color)", borderRadius: 8,
+          border: "1px solid var(--border)", borderRadius: 8,
         }}>
           <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", color: "var(--text-primary)" }}>
             Target Audience
@@ -803,7 +812,7 @@ function CreateCampaignModal({ tenantId, token, onClose, onCreated }) {
                   return (
                     <button key={tagName} onClick={() => toggleTag(tagName)} style={{
                       padding: "4px 12px", borderRadius: 12, fontSize: "0.8rem", cursor: "pointer",
-                      border: isSelected ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                      border: isSelected ? "2px solid var(--accent)" : "1px solid var(--border)",
                       background: isSelected ? "var(--accent-dim)" : "transparent",
                       color: isSelected ? "var(--accent)" : "var(--text-secondary)",
                       fontWeight: isSelected ? 600 : 400,

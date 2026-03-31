@@ -22,7 +22,7 @@ const overlayStyle = {
 
 const modalStyle = {
   background: "var(--bg-secondary, #1a1a2e)",
-  border: "1px solid var(--border-color)",
+  border: "1px solid var(--border)",
   borderRadius: 16,
   padding: "32px 36px",
   width: "90%",
@@ -142,7 +142,7 @@ export default function UpgradePrompt({ feature, requiredPlan, onClose, onNaviga
             style={{
               background: "var(--bg-primary, #0d0d1a)",
               color: "var(--text-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               padding: "10px 22px",
               borderRadius: 8,
               fontWeight: 500,

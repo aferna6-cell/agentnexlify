@@ -36,10 +36,10 @@ function StatusBadge({ status }) {
 }
 
 const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 };
-const modalBase = { background: "var(--bg-primary)", borderRadius: 12, padding: 24, border: "1px solid var(--border-color)" };
+const modalBase = { background: "var(--bg-primary)", borderRadius: 12, padding: 24, border: "1px solid var(--border)" };
 const sectionLabel = { fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 };
 const fieldLabel = { display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" };
-const cancelBtn = { background: "transparent", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" };
+const cancelBtn = { background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" };
 const warnBox = (c) => ({ marginBottom: 12, padding: "8px 12px", background: `rgba(${c},0.1)`, border: `1px solid rgba(${c},0.3)`, borderRadius: 8, fontSize: "0.8rem" });
 
 export default function DocumentsPage() {
@@ -192,7 +192,7 @@ export default function DocumentsPage() {
           <p>Create, send, and track documents for signing</p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <button className="btn-primary" onClick={() => { setLoading(true); loadData(); }} style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}>Refresh</button>
+          <button className="btn-primary" onClick={() => { setLoading(true); loadData(); }} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}>Refresh</button>
           <button className="btn-primary" onClick={openCreate}>+ New Document</button>
         </div>
       </div>
@@ -205,7 +205,7 @@ export default function DocumentsPage() {
           { label: "Signed", value: signedCount, color: "#22c55e" },
           { label: "Draft", value: draftCount, color: "var(--text-muted)" },
         ].map((card) => (
-          <div key={card.label} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 12, padding: "16px 20px" }}>
+          <div key={card.label} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>{card.label}</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: card.color }}>{card.value}</div>
           </div>
@@ -218,7 +218,7 @@ export default function DocumentsPage() {
           const isActive = activeFilter === s;
           const count = s === "all" ? documents.length : documents.filter((d) => d.status === s).length;
           return (
-            <button key={s} onClick={() => setActiveFilter(s)} style={{ padding: "8px 16px", borderRadius: 8, border: isActive ? "1px solid var(--accent)" : "1px solid var(--border-color)", background: isActive ? "var(--accent-dim)" : "var(--bg-secondary)", color: isActive ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.85rem", fontWeight: isActive ? 600 : 400, textTransform: "capitalize", transition: "all 0.15s ease" }}>
+            <button key={s} onClick={() => setActiveFilter(s)} style={{ padding: "8px 16px", borderRadius: 8, border: isActive ? "1px solid var(--accent)" : "1px solid var(--border)", background: isActive ? "var(--accent-dim)" : "var(--bg-secondary)", color: isActive ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.85rem", fontWeight: isActive ? 600 : 400, textTransform: "capitalize", transition: "all 0.15s ease" }}>
               {s}<span style={{ marginLeft: 6, fontSize: "0.75rem", opacity: 0.7 }}>{count}</span>
             </button>
           );
@@ -244,14 +244,14 @@ export default function DocumentsPage() {
               : "Create your first document to start collecting e-signatures. Add an HTML template, assign a signer, and send it via email or SMS."}
           </p>
           {activeFilter !== "all" ? (
-            <button className="btn-primary" onClick={() => setActiveFilter("all")} style={{ background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}>Clear Filter</button>
+            <button className="btn-primary" onClick={() => setActiveFilter("all")} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}>Clear Filter</button>
           ) : (
             <button className="btn-primary" onClick={openCreate}>Create Your First Document</button>
           )}
         </div>
       ) : (
-        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 100px 110px 160px", padding: "10px 16px", borderBottom: "1px solid var(--border-color)", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 100px 110px 160px", padding: "10px 16px", borderBottom: "1px solid var(--border)", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
             <span>Title</span><span>Signer</span>
             <span style={{ textAlign: "center" }}>Status</span>
             <span style={{ textAlign: "center" }}>Created</span>
@@ -262,7 +262,7 @@ export default function DocumentsPage() {
             const canSend = doc.status === "draft";
             const hasSentOrViewed = doc.status === "sent" || doc.status === "viewed";
             return (
-              <div key={doc.id} onClick={() => setDetailDoc(doc)} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 100px 110px 160px", padding: "12px 16px", borderBottom: "1px solid var(--border-color)", alignItems: "center", cursor: "pointer", opacity: isDeleting ? 0.5 : 1, transition: "background 0.1s ease" }}
+              <div key={doc.id} onClick={() => setDetailDoc(doc)} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 100px 110px 160px", padding: "12px 16px", borderBottom: "1px solid var(--border)", alignItems: "center", cursor: "pointer", opacity: isDeleting ? 0.5 : 1, transition: "background 0.1s ease" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "var(--hover-overlay)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
                 <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--accent)" }}>{doc.title || "Untitled"}</span>
@@ -274,12 +274,12 @@ export default function DocumentsPage() {
                     <button onClick={(e) => openSend(doc, e)} style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: 6, padding: "4px 10px", color: "#3b82f6", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600 }}>Send</button>
                   )}
                   {hasSentOrViewed && (
-                    <button onClick={(e) => handleCopyLink(doc, e)} style={{ background: copiedId === doc.id ? "rgba(34,197,94,0.1)" : "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 8px", color: copiedId === doc.id ? "#22c55e" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.75rem" }}>
+                    <button onClick={(e) => handleCopyLink(doc, e)} style={{ background: copiedId === doc.id ? "rgba(34,197,94,0.1)" : "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", color: copiedId === doc.id ? "#22c55e" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.75rem" }}>
                       {copiedId === doc.id ? "Copied!" : "Link"}
                     </button>
                   )}
                   {canSend && (
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }} disabled={isDeleting} style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 8px", color: "#ef4444", cursor: "pointer", fontSize: "0.75rem" }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }} disabled={isDeleting} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", color: "#ef4444", cursor: "pointer", fontSize: "0.75rem" }}>
                       {isDeleting ? "..." : "Del"}
                     </button>
                   )}
@@ -326,7 +326,7 @@ export default function DocumentsPage() {
                 <div style={{ ...sectionLabel, marginBottom: 4 }}>Signing Link</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <input readOnly value={detailDoc.signing_url || `${window.location.origin}/sign/${detailDoc.id}`} style={{ flex: 1, fontSize: "0.8rem", background: "var(--bg-secondary)", color: "var(--text-secondary)" }} />
-                  <button onClick={() => handleCopyLink(detailDoc)} style={{ background: copiedId === detailDoc.id ? "rgba(34,197,94,0.1)" : "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 6, padding: "6px 12px", color: copiedId === detailDoc.id ? "#22c55e" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                  <button onClick={() => handleCopyLink(detailDoc)} style={{ background: copiedId === detailDoc.id ? "rgba(34,197,94,0.1)" : "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 6, padding: "6px 12px", color: copiedId === detailDoc.id ? "#22c55e" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
                     {copiedId === detailDoc.id ? "Copied!" : "Copy Link"}
                   </button>
                 </div>
@@ -343,12 +343,12 @@ export default function DocumentsPage() {
             {detailDoc.html_content && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ ...sectionLabel, marginBottom: 4 }}>Document Preview</div>
-                <div style={{ background: "#fff", color: "#1a1a1a", borderRadius: 8, padding: 16, maxHeight: 300, overflowY: "auto", border: "1px solid var(--border-color)", fontSize: "0.85rem", lineHeight: 1.6 }}
+                <div style={{ background: "#fff", color: "#1a1a1a", borderRadius: 8, padding: 16, maxHeight: 300, overflowY: "auto", border: "1px solid var(--border)", fontSize: "0.85rem", lineHeight: 1.6 }}
                   dangerouslySetInnerHTML={{ __html: detailDoc.html_content }} />
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border-color)", paddingTop: 16 }}>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: 16 }}>
               {detailDoc.status === "draft" && (
                 <>
                   <button onClick={() => { setDetailDoc(null); openSend(detailDoc); }} style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: 8, padding: "8px 16px", color: "#3b82f6", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}>Send Document</button>
@@ -472,7 +472,7 @@ export default function DocumentsPage() {
               ))}
             </div>
 
-            <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 8, padding: 12, marginBottom: 20, fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 8, padding: 12, marginBottom: 20, fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
               <strong>What happens next:</strong><br />
               The signer will receive a link to view and sign the document.
               {(sendMethod === "email" || sendMethod === "both") && " An email with the signing link and document preview will be sent."}

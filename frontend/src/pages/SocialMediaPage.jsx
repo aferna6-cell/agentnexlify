@@ -90,14 +90,14 @@ function timeAgo(dateStr) {
 /* ---- Card style ---- */
 const cardStyle = {
   background: "var(--bg-secondary, var(--card-bg))",
-  border: "1px solid var(--border-color)",
+  border: "1px solid var(--border)",
   borderRadius: 12,
   padding: 24,
 };
 
 const inputStyle = {
   width: "100%", padding: "10px 14px", borderRadius: 8,
-  border: "1px solid var(--border-color)", background: "var(--bg-primary)",
+  border: "1px solid var(--border)", background: "var(--bg-primary)",
   color: "var(--text-primary)", fontSize: "0.9rem", boxSizing: "border-box",
 };
 
@@ -108,7 +108,7 @@ const btnPrimary = {
 
 const btnSecondary = {
   background: "var(--bg-primary)", color: "var(--text-secondary)",
-  border: "1px solid var(--border-color)", padding: "8px 16px",
+  border: "1px solid var(--border)", padding: "8px 16px",
   borderRadius: 8, cursor: "pointer", fontSize: "0.85rem",
 };
 
@@ -276,7 +276,7 @@ export default function SocialMediaPage() {
             <button key={mode} onClick={() => setViewMode(mode)}
               style={{
                 padding: "7px 14px", borderRadius: 8, textTransform: "capitalize", fontSize: "0.8rem",
-                border: viewMode === mode ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                border: viewMode === mode ? "2px solid var(--accent)" : "1px solid var(--border)",
                 background: viewMode === mode ? "var(--accent-dim)" : "var(--bg-secondary, var(--card-bg))",
                 color: viewMode === mode ? "var(--accent)" : "var(--text-secondary)",
                 cursor: "pointer", fontWeight: viewMode === mode ? 600 : 400,
@@ -382,7 +382,7 @@ export default function SocialMediaPage() {
               return (
                 <div key={day} style={{
                   minHeight: 80, background: isToday ? "var(--accent-dim)" : "var(--bg-secondary, var(--card-bg))",
-                  border: isToday ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                  border: isToday ? "2px solid var(--accent)" : "1px solid var(--border)",
                   borderRadius: 6, padding: "4px 6px", overflow: "hidden",
                 }}>
                   <div style={{ fontSize: "0.7rem", fontWeight: 600, color: isToday ? "var(--accent)" : "var(--text-secondary)", marginBottom: 2 }}>
@@ -421,7 +421,7 @@ export default function SocialMediaPage() {
                 <BarChart data={platformCounts}>
                   <XAxis dataKey="name" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border-color)", borderRadius: 8, color: "var(--text-primary)" }} />
+                  <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)" }} />
                   <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                     {platformCounts.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -570,7 +570,7 @@ function CreatePostModal({ tenantId, token, onClose, onCreated }) {
               <button key={p.key} onClick={() => togglePlatform(p.key)} style={{
                 padding: "8px 14px", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6,
-                border: selectedPlatforms.includes(p.key) ? `2px solid ${p.color}` : "1px solid var(--border-color)",
+                border: selectedPlatforms.includes(p.key) ? `2px solid ${p.color}` : "1px solid var(--border)",
                 background: selectedPlatforms.includes(p.key) ? `${p.color}15` : "var(--bg-primary)",
                 color: selectedPlatforms.includes(p.key) ? p.color : "var(--text-secondary)",
                 fontWeight: selectedPlatforms.includes(p.key) ? 600 : 400,
@@ -818,7 +818,7 @@ function CampaignGeneratorModal({ tenantId, token, onClose, onGenerated }) {
                   <button key={p.key} onClick={() => togglePlatform(p.key)} style={{
                     padding: "8px 14px", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer",
                     display: "flex", alignItems: "center", gap: 6,
-                    border: selectedPlatforms.includes(p.key) ? `2px solid ${p.color}` : "1px solid var(--border-color)",
+                    border: selectedPlatforms.includes(p.key) ? `2px solid ${p.color}` : "1px solid var(--border)",
                     background: selectedPlatforms.includes(p.key) ? `${p.color}15` : "var(--bg-primary)",
                     color: selectedPlatforms.includes(p.key) ? p.color : "var(--text-secondary)",
                     fontWeight: selectedPlatforms.includes(p.key) ? 600 : 400,
@@ -1010,7 +1010,7 @@ const overlayStyle = {
 const modalStyle = {
   background: "var(--bg-secondary, var(--card-bg))", borderRadius: 16,
   padding: "28px 32px", width: "90%", maxWidth: 700, maxHeight: "90vh",
-  overflowY: "auto", border: "1px solid var(--border-color)",
+  overflowY: "auto", border: "1px solid var(--border)",
 };
 
 const labelStyle = {

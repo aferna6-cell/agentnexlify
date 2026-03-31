@@ -199,8 +199,9 @@ export default function LeadsPage() {
       setLeads(res.leads || []);
       setTotalPages(res.total_pages || 1);
       setTotalLeads(res.total || 0);
-    } catch {
+    } catch (err) {
       setLeads([]);
+      setError(err.body?.detail || err.message || "Failed to load leads.");
     } finally {
       setLoading(false);
     }
@@ -504,9 +505,6 @@ export default function LeadsPage() {
             Table
           </button>
         </div>
-        <button className="leads-export-btn" onClick={handleExportCSV}>
-          Export CSV
-        </button>
         <button
           className="leads-export-btn"
           onClick={() => fileInputRef.current?.click()}
@@ -554,7 +552,7 @@ export default function LeadsPage() {
             onChange={(e) => setBulkAction(e.target.value)}
             style={{
               background: "var(--bg-secondary)", color: "var(--text-primary)",
-              border: "1px solid var(--border-color)", borderRadius: 6,
+              border: "1px solid var(--border)", borderRadius: 6,
               padding: "5px 10px", fontSize: 13, cursor: "pointer",
             }}
           >
@@ -599,7 +597,7 @@ export default function LeadsPage() {
       {bulkResult && (
         <div style={{
           marginBottom: 12, padding: "8px 14px", borderRadius: 8,
-          background: "var(--bg-card)", border: "1px solid var(--border-color)", fontSize: 13,
+          background: "var(--bg-card)", border: "1px solid var(--border)", fontSize: 13,
         }}>
           Bulk update: {bulkResult.updated} updated{bulkResult.failed > 0 && `, ${bulkResult.failed} failed`}
           <button onClick={() => setBulkResult(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 12 }}>dismiss</button>
@@ -677,12 +675,12 @@ export default function LeadsPage() {
               <p style={{ color: "var(--text-muted)" }}>No duplicates found.</p>
             ) : (
               duplicates.map((dup, i) => (
-                <div key={i} style={{ marginBottom: 16, padding: 12, background: "var(--bg-secondary)", borderRadius: 8, border: "1px solid var(--border-color)" }}>
+                <div key={i} style={{ marginBottom: 16, padding: 12, background: "var(--bg-secondary)", borderRadius: 8, border: "1px solid var(--border)" }}>
                   <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 8 }}>
                     Match: {dup.match_field} = {dup.match_value}
                   </div>
                   {dup.leads.map((lead) => (
-                    <div key={lead.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--border-color)" }}>
+                    <div key={lead.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
                       <div>
                         <div style={{ fontWeight: 600 }}>{lead.name || "No name"}</div>
                         <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{lead.email || ""} {lead.phone || ""}</div>

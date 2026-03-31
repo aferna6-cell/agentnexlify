@@ -154,7 +154,7 @@ export default function CallsPage() {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -182,7 +182,7 @@ export default function CallsPage() {
             key={card.label}
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "16px 20px",
             }}
@@ -210,7 +210,7 @@ export default function CallsPage() {
                 borderRadius: 8,
                 border: isActive
                   ? "1px solid var(--accent)"
-                  : "1px solid var(--border-color)",
+                  : "1px solid var(--border)",
                 background: isActive ? "var(--accent-dim)" : "var(--bg-secondary)",
                 color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 cursor: "pointer",
@@ -272,7 +272,7 @@ export default function CallsPage() {
               onClick={() => setActiveFilter("all")}
               style={{
                 background: "transparent",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
@@ -290,7 +290,7 @@ export default function CallsPage() {
                 key={call.id}
                 style={{
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 16,
                   borderLeft: `4px solid ${statusColor.color}`,
@@ -387,7 +387,7 @@ export default function CallsPage() {
               maxWidth: 640,
               maxHeight: "80vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -486,7 +486,7 @@ export default function CallsPage() {
                         color: "var(--text-secondary)",
                         lineHeight: 1.5,
                         background: "var(--bg-secondary)",
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         borderRadius: 8,
                         padding: 12,
                       }}
@@ -509,7 +509,7 @@ export default function CallsPage() {
                         <div
                           style={{
                             background: "var(--bg-secondary)",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 8,
                             padding: 16,
                             maxHeight: 320,
@@ -585,7 +585,7 @@ export default function CallsPage() {
                             color: "var(--text-secondary)",
                             lineHeight: 1.6,
                             background: "var(--bg-secondary)",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 8,
                             padding: 12,
                             maxHeight: 240,
@@ -603,7 +603,7 @@ export default function CallsPage() {
                       <div
                         style={{
                           background: "var(--bg-secondary)",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 8,
                           padding: "20px 16px",
                           textAlign: "center",
@@ -673,7 +673,7 @@ export default function CallsPage() {
                   </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border-color)", paddingTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: 16 }}>
                   <button onClick={() => setDetailCall(null)} className="btn-primary">
                     Close
                   </button>

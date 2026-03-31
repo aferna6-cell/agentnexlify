@@ -100,7 +100,7 @@ export default function Calendar({ onNavigate }) {
     if (!selectedAppt || !recurRule || !recurEndDate) return;
     setRecurSaving(true);
     try {
-      const res = await setAppointmentRecurrence(user.tenantId, token, selectedAppt.id, recurRule, recurEndDate);
+      await setAppointmentRecurrence(user.tenantId, token, selectedAppt.id, recurRule, recurEndDate);
       setError(null);
       setSelectedAppt(null);
       loadAppointments();
@@ -422,7 +422,7 @@ export default function Calendar({ onNavigate }) {
             </div>
             {/* Recurrence section — only for parent/non-child confirmed appointments */}
             {selectedAppt.status === "confirmed" && !selectedAppt.recurrence_parent_id && (
-              <div className="modal-field" style={{ borderTop: "1px solid var(--border-color)", paddingTop: 12, marginTop: 8 }}>
+              <div className="modal-field" style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 8 }}>
                 <label>{selectedAppt.recurrence_rule ? "Recurring" : "Make Recurring"}</label>
                 {selectedAppt.recurrence_rule ? (
                   <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
@@ -438,7 +438,7 @@ export default function Calendar({ onNavigate }) {
                     </select>
                     <input type="date" value={recurEndDate} onChange={e => setRecurEndDate(e.target.value)}
                       min={formatDate(addDays(new Date(), 7))}
-                      style={{ flex: 1, minWidth: 130, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }} />
+                      style={{ flex: 1, minWidth: 130, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)" }} />
                     <button className="btn-primary" onClick={handleSetRecurrence} disabled={!recurRule || !recurEndDate || recurSaving}
                       style={{ whiteSpace: "nowrap" }}>
                       {recurSaving ? "Creating..." : "Create Series"}

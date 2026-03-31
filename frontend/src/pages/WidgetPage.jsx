@@ -46,6 +46,7 @@ export default function WidgetPage() {
     bot_name: "",
     primary_color: "#00BFFF",
     greeting_message: "",
+    teaser_message: "",
     position: "bottom-right",
   });
   const [isOnline, setIsOnline] = useState(true);
@@ -74,6 +75,7 @@ export default function WidgetPage() {
           bot_name: dash.widget_config.bot_name || "",
           primary_color: dash.widget_config.primary_color || "#00BFFF",
           greeting_message: dash.widget_config.greeting_message || "",
+          teaser_message: dash.widget_config.teaser_message || "",
           position: dash.widget_config.position || "bottom-right",
         });
         setIsOnline(dash.widget_config.is_online !== false);
@@ -254,6 +256,18 @@ export default function WidgetPage() {
               placeholder="Hi! How can I help you today?"
               rows={2}
             />
+          </div>
+          <div className="settings-field">
+            <label>Teaser Bubble Message</label>
+            <textarea
+              value={form.teaser_message}
+              onChange={handleChange("teaser_message")}
+              placeholder="e.g. Have questions? Ask me anything!"
+              rows={2}
+            />
+            <span className="settings-field-hint">
+              Shown as a speech bubble next to the chat icon after 3 seconds. Leave blank to disable.
+            </span>
           </div>
           <div className="settings-field">
             <label>Primary Color</label>

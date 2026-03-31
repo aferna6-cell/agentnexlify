@@ -14,8 +14,13 @@ import hashlib
 import hmac
 import logging
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request
 from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel
+
+
+class AutomationConfigUpdate(BaseModel):
+    config: dict
 
 from backend.config import settings
 from backend.models.database import get_supabase
@@ -356,7 +361,7 @@ async def toggle_automation(tenant_id: str, automation_id: str, claims: dict = D
 
 
 @router.put("/automations/{tenant_id}/{automation_id}/config")
-async def update_automation_config(tenant_id: str, automation_id: str, config: dict, claims: dict = Depends(require_role("owner", "admin"))):
+async def update_automation_config(tenant_id: str, automation_id: str, body: AutomationConfigUpdate, claims: dict = Depends(require_role("owner", "admin"))):
     """Update an automation's config JSON."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Tenant mismatch")
@@ -375,7 +380,7 @@ async def update_automation_config(tenant_id: str, automation_id: str, config: d
         raise HTTPException(status_code=404, detail="Automation not found")
 
     db.table("automations").update({
-        "config": config,
+        "config": body.config,
     }).eq("id", automation_id).execute()
 
-    return {"id": automation_id, "config": config}
+    return {"id": automation_id, "config": body.config}

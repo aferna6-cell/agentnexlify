@@ -1053,3 +1053,77 @@ async def kpi_deltas(
 
     _cache[cache_key] = (time.time(), response)
     return response
+
+
+@router.get("/{tenant_id}/health")
+async def analytics_health(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Debug endpoint: returns raw data counts for this tenant to diagnose analytics issues."""
+    verify_tenant(claims, tenant_id)
+    db = get_supabase()
+
+    # Count unique sessions from chat_messages
+    try:
+        msgs = (
+            db.table("chat_messages")
+            .select("session_id")
+            .eq("tenant_id", tenant_id)
+            .limit(5000)
+            .execute()
+        )
+        unique_sessions = len({m["session_id"] for m in (msgs.data or [])})
+    except Exception:
+        logger.warning("analytics_health: failed to count sessions for %s", tenant_id, exc_info=True)
+        unique_sessions = -1
+
+    # Count leads (uses client_id, not tenant_id)
+    try:
+        leads_res = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("client_id", tenant_id)
+            .execute()
+        )
+        lead_count = leads_res.count if leads_res.count is not None else len(leads_res.data or [])
+    except Exception:
+        logger.warning("analytics_health: failed to count leads for %s", tenant_id, exc_info=True)
+        lead_count = -1
+
+    # Count appointments
+    try:
+        appts_res = (
+            db.table("appointments")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+        appt_count = appts_res.count if appts_res.count is not None else len(appts_res.data or [])
+    except Exception:
+        logger.warning("analytics_health: failed to count appointments for %s", tenant_id, exc_info=True)
+        appt_count = -1
+
+    # Most recent message timestamp
+    try:
+        recent = (
+            db.table("chat_messages")
+            .select("created_at")
+            .eq("tenant_id", tenant_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        last_msg_at = recent.data[0]["created_at"] if recent.data else None
+    except Exception:
+        logger.warning("analytics_health: failed to fetch last message for %s", tenant_id, exc_info=True)
+        last_msg_at = None
+
+    return {
+        "tenant_id": tenant_id,
+        "unique_widget_sessions": unique_sessions,
+        "total_leads": lead_count,
+        "total_appointments": appt_count,
+        "last_message_at": last_msg_at,
+        "note": "Use this to verify data exists before debugging dashboard card display",
+    }

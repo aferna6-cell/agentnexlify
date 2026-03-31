@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchReviews, createReview, updateReview, deleteReview, generateAIDraft } from "../utils/api/reviews";
+import { fetchReviews, createReview, updateReview, deleteReview, generateAIDraft, requestReview } from "../utils/api/reviews";
+import { fetchLeads } from "../utils/api/leads";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 
 const PLATFORMS = ["google", "yelp", "facebook"];
@@ -44,6 +45,14 @@ export default function ReviewsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [newReview, setNewReview] = useState({ platform: "google", author_name: "", rating: 5, review_text: "" });
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestLeads, setRequestLeads] = useState([]);
+  const [requestLeadsLoading, setRequestLeadsLoading] = useState(false);
+  const [requestLeadId, setRequestLeadId] = useState("");
+  const [requestChannel, setRequestChannel] = useState("email");
+  const [requestSending, setRequestSending] = useState(false);
+  const [requestSuccess, setRequestSuccess] = useState(null);
+  const [requestError, setRequestError] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -154,6 +163,40 @@ export default function ReviewsPage() {
     }
   };
 
+  const openRequestModal = async () => {
+    setShowRequestModal(true);
+    setRequestLeadId("");
+    setRequestChannel("email");
+    setRequestSuccess(null);
+    setRequestError(null);
+    setRequestLeadsLoading(true);
+    try {
+      const res = await fetchLeads(user.tenantId, token, { per_page: 200 });
+      const leads = res.leads || res || [];
+      setRequestLeads(leads.filter((l) => l.email || l.phone));
+    } catch {
+      setRequestLeads([]);
+    } finally {
+      setRequestLeadsLoading(false);
+    }
+  };
+
+  const handleSendRequest = async () => {
+    if (!requestLeadId) return;
+    setRequestSending(true);
+    setRequestError(null);
+    setRequestSuccess(null);
+    try {
+      await requestReview(user.tenantId, token, requestLeadId, requestChannel);
+      setRequestSuccess("Review request sent successfully.");
+      setRequestLeadId("");
+    } catch (err) {
+      setRequestError(err.body?.detail || "Failed to send review request.");
+    } finally {
+      setRequestSending(false);
+    }
+  };
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -163,20 +206,20 @@ export default function ReviewsPage() {
 
       {/* Stats cards */}
       <div className="stats-row" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 20 }}>
-        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border)" }}>
           <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--text-primary)" }}>{stats.average_rating || "-"}</div>
           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Avg Rating</div>
           <Stars rating={Math.round(stats.average_rating || 0)} />
         </div>
-        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border)" }}>
           <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--text-primary)" }}>{stats.total}</div>
           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Total Reviews</div>
         </div>
-        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border)" }}>
           <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--green, #4ade80)" }}>{stats.responded}</div>
           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Responded</div>
         </div>
-        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+        <div className="stat-card" style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border)" }}>
           <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "var(--yellow, #facc15)" }}>{stats.unresponded}</div>
           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Need Response</div>
         </div>
@@ -195,28 +238,28 @@ export default function ReviewsPage() {
           {showAnalytics && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               {/* Rating distribution */}
-              <div style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+              <div style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border)" }}>
                 <h4 style={{ margin: "0 0 12px", color: "var(--text-primary)", fontSize: "0.9rem" }}>Rating Distribution</h4>
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={ratingDistribution} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                     <XAxis dataKey="rating" tick={{ fill: "var(--text-muted)", fontSize: 12 }} tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} tick={{ fill: "var(--text-muted)", fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 6, color: "var(--text-primary)" }} />
+                    <Tooltip contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)" }} />
                     <Bar dataKey="count" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
               {/* Monthly trend */}
-              <div style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border-color)" }}>
+              <div style={{ background: "var(--bg-card)", padding: 16, borderRadius: 10, border: "1px solid var(--border)" }}>
                 <h4 style={{ margin: "0 0 12px", color: "var(--text-primary)", fontSize: "0.9rem" }}>Monthly Avg Rating & Response Rate</h4>
                 {monthlyTrend.length > 1 ? (
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={monthlyTrend} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                       <XAxis dataKey="month" tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} />
                       <YAxis yAxisId="rating" domain={[0, 5]} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} />
                       <YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: 6, color: "var(--text-primary)" }} />
+                      <Tooltip contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)" }} />
                       <Line yAxisId="rating" type="monotone" dataKey="avg" stroke="#4ade80" strokeWidth={2} name="Avg Rating" dot={{ r: 3 }} />
                       <Line yAxisId="pct" type="monotone" dataKey="responseRate" stroke="#818cf8" strokeWidth={2} name="Response %" dot={{ r: 3 }} />
                     </LineChart>
@@ -235,24 +278,29 @@ export default function ReviewsPage() {
       {/* Toolbar */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}>
+          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}>
           <option value="">All Platforms</option>
           {PLATFORMS.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
         </select>
         <select value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)}
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}>
+          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}>
           <option value="">All Ratings</option>
           {[5, 4, 3, 2, 1].map((r) => <option key={r} value={r}>{r} Stars</option>)}
         </select>
         <select value={respondedFilter} onChange={(e) => setRespondedFilter(e.target.value)}
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}>
+          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.85rem" }}>
           <option value="">All Status</option>
           <option value="false">Needs Response</option>
           <option value="true">Responded</option>
         </select>
-        <button className="btn-primary" onClick={() => setShowAddForm(true)} style={{ marginLeft: "auto" }}>
-          Add Review
-        </button>
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+          <button className="btn-secondary" onClick={openRequestModal}>
+            Request Review
+          </button>
+          <button className="btn-primary" onClick={() => setShowAddForm(true)}>
+            Add Review
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-banner" style={{ marginBottom: 12 }}>{error}</div>}
@@ -277,7 +325,7 @@ export default function ReviewsPage() {
             <div key={review.id} onClick={() => openReview(review)}
               style={{
                 background: "var(--bg-card)", padding: 16, borderRadius: 10,
-                border: `1px solid ${review.responded ? "var(--border-color)" : "var(--yellow, #facc15)"}`,
+                border: `1px solid ${review.responded ? "var(--border)" : "var(--yellow, #facc15)"}`,
                 cursor: "pointer",
                 transition: "border-color 0.2s",
               }}>
@@ -341,11 +389,11 @@ export default function ReviewsPage() {
               </div>
             )}
 
-            <div className="modal-field" style={{ borderTop: "1px solid var(--border-color)", paddingTop: 12, marginTop: 8 }}>
+            <div className="modal-field" style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 8 }}>
               <label>Your Response</label>
               <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                 <select value={draftTone} onChange={(e) => setDraftTone(e.target.value)}
-                  style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}>
+                  style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}>
                   <option value="professional">Professional</option>
                   <option value="friendly">Friendly</option>
                   <option value="casual">Casual</option>
@@ -366,6 +414,84 @@ export default function ReviewsPage() {
               </button>
               <button className="btn-danger" onClick={() => handleDelete(selectedReview.id)}>Delete</button>
               <button className="btn-secondary" onClick={() => setSelectedReview(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Review modal */}
+      {showRequestModal && (
+        <div className="modal-overlay" onClick={() => setShowRequestModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <h3>Request a Review</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", marginTop: 0, marginBottom: 16 }}>
+              Send a review request to one of your leads via SMS or email.
+            </p>
+
+            <div className="modal-field">
+              <label>Select Lead</label>
+              {requestLeadsLoading ? (
+                <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "8px 0" }}>Loading leads...</div>
+              ) : requestLeads.length === 0 ? (
+                <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "8px 0" }}>
+                  No leads with contact info found. Add leads with an email or phone number first.
+                </div>
+              ) : (
+                <select
+                  value={requestLeadId}
+                  onChange={(e) => setRequestLeadId(e.target.value)}
+                  className="modal-select"
+                >
+                  <option value="">-- Choose a lead --</option>
+                  {requestLeads.map((lead) => (
+                    <option key={lead.id} value={lead.id}>
+                      {lead.name || "Unnamed"}{lead.email ? ` (${lead.email})` : lead.phone ? ` (${lead.phone})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="modal-field">
+              <label>Channel</label>
+              <div style={{ display: "flex", gap: 16, marginTop: 6 }}>
+                {[
+                  { value: "email", label: "Email" },
+                  { value: "sms", label: "SMS" },
+                ].map(({ value, label }) => (
+                  <label key={value} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: "var(--text-primary)", fontSize: "0.9rem" }}>
+                    <input
+                      type="radio"
+                      name="requestChannel"
+                      value={value}
+                      checked={requestChannel === value}
+                      onChange={() => setRequestChannel(value)}
+                      style={{ accentColor: "var(--accent)" }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {requestSuccess && (
+              <div style={{ padding: "10px 14px", borderRadius: 6, background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", color: "#4ade80", fontSize: "0.875rem", marginBottom: 8 }}>
+                {requestSuccess}
+              </div>
+            )}
+            {requestError && (
+              <div className="error-banner" style={{ marginBottom: 8 }}>{requestError}</div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                className="btn-primary"
+                onClick={handleSendRequest}
+                disabled={!requestLeadId || requestSending || requestLeadsLoading}
+              >
+                {requestSending ? "Sending..." : "Send Request"}
+              </button>
+              <button className="btn-secondary" onClick={() => setShowRequestModal(false)}>Close</button>
             </div>
           </div>
         </div>

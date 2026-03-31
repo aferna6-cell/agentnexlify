@@ -281,7 +281,7 @@ export default function ContentStudioPage() {
         ].map((s) => (
           <div key={s.label} style={{
             background: "var(--card-bg)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             padding: "16px 20px",
           }}>
@@ -299,7 +299,7 @@ export default function ContentStudioPage() {
           style={{
             padding: "8px 14px",
             borderRadius: 8,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             background: "var(--card-bg)",
             color: "var(--text-primary)",
             fontSize: "0.85rem",
@@ -319,7 +319,7 @@ export default function ContentStudioPage() {
           style={{
             padding: "8px 14px",
             borderRadius: 8,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             background: "var(--card-bg)",
             color: "var(--text-primary)",
             fontSize: "0.85rem",
@@ -335,7 +335,7 @@ export default function ContentStudioPage() {
               style={{
                 padding: "7px 14px",
                 borderRadius: 8,
-                border: viewMode === mode ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                border: viewMode === mode ? "2px solid var(--accent)" : "1px solid var(--border)",
                 background: viewMode === mode ? "var(--accent-dim)" : "var(--card-bg)",
                 color: viewMode === mode ? "var(--accent)" : "var(--text-secondary)",
                 cursor: "pointer",
@@ -359,7 +359,7 @@ export default function ContentStudioPage() {
                 const d = new Date(m.year, m.month - 1, 1);
                 return { year: d.getFullYear(), month: d.getMonth() };
               })}
-              style={{ background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 14px", color: "var(--text-secondary)", cursor: "pointer" }}
+              style={{ background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 14px", color: "var(--text-secondary)", cursor: "pointer" }}
             >
               &larr;
             </button>
@@ -371,7 +371,7 @@ export default function ContentStudioPage() {
                 const d = new Date(m.year, m.month + 1, 1);
                 return { year: d.getFullYear(), month: d.getMonth() };
               })}
-              style={{ background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 14px", color: "var(--text-secondary)", cursor: "pointer" }}
+              style={{ background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 14px", color: "var(--text-secondary)", cursor: "pointer" }}
             >
               &rarr;
             </button>
@@ -396,7 +396,7 @@ export default function ContentStudioPage() {
                   style={{
                     minHeight: 70,
                     background: isToday ? "var(--accent-dim)" : "var(--card-bg)",
-                    border: isToday ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                    border: isToday ? "2px solid var(--accent)" : "1px solid var(--border)",
                     borderRadius: 6,
                     padding: "4px 6px",
                     overflow: "hidden",
@@ -442,7 +442,7 @@ export default function ContentStudioPage() {
           textAlign: "center",
           padding: "60px 20px",
           background: "var(--card-bg)",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
         }}>
           <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>&#9997;</div>
@@ -474,7 +474,7 @@ export default function ContentStudioPage() {
               onClick={() => setSelectedItem(item)}
               style={{
                 background: selectedItem?.id === item.id ? "var(--hover-overlay)" : "var(--card-bg)",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 borderRadius: 10,
                 padding: "14px 20px",
                 cursor: "pointer",
@@ -526,7 +526,7 @@ export default function ContentStudioPage() {
         <div style={{
           marginTop: 24,
           background: "var(--card-bg)",
-          border: "1px solid var(--border-color)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
           padding: "24px",
         }}>
@@ -548,7 +548,7 @@ export default function ContentStudioPage() {
           </div>
           <div style={{
             background: "var(--bg-primary)",
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             borderRadius: 8,
             padding: 16,
             maxHeight: 300,
@@ -569,7 +569,7 @@ export default function ContentStudioPage() {
                 <div key={platform} style={{
                   marginBottom: 12,
                   background: "var(--bg-primary)",
-                  border: editingPlatform === platform ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                  border: editingPlatform === platform ? "2px solid var(--accent)" : "1px solid var(--border)",
                   borderRadius: 8,
                   padding: 12,
                 }}>
@@ -610,7 +610,7 @@ export default function ContentStudioPage() {
                             onClick={() => { setEditingPlatform(null); setEditText(""); }}
                             style={{
                               background: "var(--hover-overlay)",
-                              border: "1px solid var(--border-color)",
+                              border: "1px solid var(--border)",
                               color: "var(--text-secondary)",
                               padding: "3px 10px",
                               borderRadius: 6,
@@ -628,7 +628,7 @@ export default function ContentStudioPage() {
                             onClick={() => { setEditingPlatform(platform); setEditText(text); }}
                             style={{
                               background: "var(--hover-overlay)",
-                              border: "1px solid var(--border-color)",
+                              border: "1px solid var(--border)",
                               color: "var(--text-secondary)",
                               padding: "3px 10px",
                               borderRadius: 6,
@@ -643,7 +643,7 @@ export default function ContentStudioPage() {
                             onClick={() => handleCopy(platform, text)}
                             style={{
                               background: copiedPlatform === platform ? "var(--green)" : "var(--hover-overlay)",
-                              border: "1px solid var(--border-color)",
+                              border: "1px solid var(--border)",
                               color: copiedPlatform === platform ? "#fff" : "var(--text-secondary)",
                               padding: "3px 10px",
                               borderRadius: 6,
@@ -668,7 +668,7 @@ export default function ContentStudioPage() {
                         width: "100%",
                         padding: "10px 12px",
                         borderRadius: 6,
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         background: "var(--card-bg)",
                         color: "var(--text-primary)",
                         fontSize: "0.85rem",
@@ -724,7 +724,7 @@ export default function ContentStudioPage() {
                 style={{
                   padding: "7px 12px",
                   borderRadius: 8,
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   background: "var(--card-bg)",
                   color: "var(--text-primary)",
                   fontSize: "0.85rem",
@@ -735,7 +735,7 @@ export default function ContentStudioPage() {
                   onClick={() => handleSchedule(selectedItem.id, null)}
                   style={{
                     background: "var(--hover-overlay)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     color: "var(--text-secondary)",
                     padding: "6px 12px",
                     borderRadius: 8,
@@ -774,7 +774,7 @@ export default function ContentStudioPage() {
               maxWidth: 700,
               maxHeight: "90vh",
               overflowY: "auto",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
           >
             <h2 style={{ margin: "0 0 20px", color: "var(--text-primary)", fontSize: "1.2rem" }}>
@@ -790,7 +790,7 @@ export default function ContentStudioPage() {
                   style={{
                     padding: "8px 16px",
                     borderRadius: 8,
-                    border: sourceType === t.key ? "2px solid var(--accent)" : "1px solid var(--border-color)",
+                    border: sourceType === t.key ? "2px solid var(--accent)" : "1px solid var(--border)",
                     background: sourceType === t.key ? "var(--accent-dim)" : "var(--bg-primary)",
                     color: sourceType === t.key ? "var(--accent)" : "var(--text-secondary)",
                     cursor: "pointer",
@@ -818,7 +818,7 @@ export default function ContentStudioPage() {
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: 8,
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   background: "var(--bg-primary)",
                   color: "var(--text-primary)",
                   fontSize: "0.9rem",
@@ -840,7 +840,7 @@ export default function ContentStudioPage() {
                   style={{
                     padding: "10px",
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     color: "var(--text-primary)",
                     width: "100%",
@@ -852,7 +852,7 @@ export default function ContentStudioPage() {
                     marginTop: 12,
                     padding: 12,
                     background: "var(--bg-primary)",
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     maxHeight: 150,
                     overflowY: "auto",
@@ -879,7 +879,7 @@ export default function ContentStudioPage() {
                     width: "100%",
                     padding: "12px 14px",
                     borderRadius: 8,
-                    border: "1px solid var(--border-color)",
+                    border: "1px solid var(--border)",
                     background: "var(--bg-primary)",
                     color: "var(--text-primary)",
                     fontSize: "0.9rem",
@@ -905,7 +905,7 @@ export default function ContentStudioPage() {
                 style={{
                   padding: "10px 20px",
                   borderRadius: 8,
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   background: "var(--bg-primary)",
                   color: "var(--text-secondary)",
                   cursor: "pointer",

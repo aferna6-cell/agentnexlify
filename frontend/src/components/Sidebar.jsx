@@ -140,19 +140,7 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
   const userRole = user?.role || "owner";
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const [expandedGroups, setExpandedGroups] = useState(() => {
-    try {
-      const stored = localStorage.getItem("sidebar_groups");
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // Ignore parse errors, use default
-    }
-    return DEFAULT_EXPANDED;
-  });
-
-  useEffect(() => {
-    localStorage.setItem("sidebar_groups", JSON.stringify(expandedGroups));
-  }, [expandedGroups]);
+  const [expandedGroups, setExpandedGroups] = useState(DEFAULT_EXPANDED);
 
   const toggleGroup = useCallback((groupKey) => {
     setExpandedGroups((prev) =>
@@ -162,14 +150,12 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
     );
   }, []);
 
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("theme") || "dark";
-  });
+  const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
     const appEl = document.querySelector(".app");
     if (appEl) appEl.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
+    // Note: theme is session-only; no localStorage per project rules
   }, [theme]);
 
   // Close sidebar on mobile when clicking outside

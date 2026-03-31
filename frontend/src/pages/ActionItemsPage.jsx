@@ -177,7 +177,7 @@ export default function ActionItemsPage() {
             }}
             style={{
               background: "transparent",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -209,7 +209,7 @@ export default function ActionItemsPage() {
             key={card.label}
             style={{
               background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "16px 20px",
             }}
@@ -240,7 +240,7 @@ export default function ActionItemsPage() {
           style={{
             padding: "8px 12px",
             borderRadius: 8,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             background: "var(--bg-secondary)",
             color: "var(--text-primary)",
             fontSize: "0.85rem",
@@ -258,7 +258,7 @@ export default function ActionItemsPage() {
           style={{
             padding: "8px 12px",
             borderRadius: 8,
-            border: "1px solid var(--border-color)",
+            border: "1px solid var(--border)",
             background: "var(--bg-secondary)",
             color: "var(--text-primary)",
             fontSize: "0.85rem",
@@ -342,7 +342,7 @@ export default function ActionItemsPage() {
               }}
               style={{
                 background: "transparent",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
@@ -373,7 +373,7 @@ export default function ActionItemsPage() {
                 key={item.id}
                 style={{
                   background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 16,
                   borderLeft: `4px solid ${priorityInfo.dot}`,
@@ -512,7 +512,7 @@ export default function ActionItemsPage() {
                           disabled={isUpdating}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 6,
                             padding: "6px 10px",
                             color: "#22c55e",
@@ -528,7 +528,7 @@ export default function ActionItemsPage() {
                           disabled={isUpdating}
                           style={{
                             background: "none",
-                            border: "1px solid var(--border-color)",
+                            border: "1px solid var(--border)",
                             borderRadius: 6,
                             padding: "6px 10px",
                             color: "var(--text-muted)",
@@ -547,7 +547,7 @@ export default function ActionItemsPage() {
                         disabled={isUpdating}
                         style={{
                           background: "none",
-                          border: "1px solid var(--border-color)",
+                          border: "1px solid var(--border)",
                           borderRadius: 6,
                           padding: "6px 10px",
                           color: "#3b82f6",
@@ -564,7 +564,7 @@ export default function ActionItemsPage() {
                       disabled={isUpdating}
                       style={{
                         background: "none",
-                        border: "1px solid var(--border-color)",
+                        border: "1px solid var(--border)",
                         borderRadius: 6,
                         padding: "6px 10px",
                         color: "var(--red, #ef4444)",
@@ -604,7 +604,7 @@ export default function ActionItemsPage() {
               padding: 24,
               width: "90%",
               maxWidth: 480,
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -649,7 +649,7 @@ export default function ActionItemsPage() {
                       width: "100%",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       background: "var(--bg-secondary)",
                       color: "var(--text-primary)",
                       fontSize: "0.85rem",
@@ -680,7 +680,7 @@ export default function ActionItemsPage() {
                       width: "100%",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      border: "1px solid var(--border-color)",
+                      border: "1px solid var(--border)",
                       background: "var(--bg-secondary)",
                       color: "var(--text-primary)",
                       fontSize: "0.85rem",
@@ -695,7 +695,7 @@ export default function ActionItemsPage() {
                 onClick={() => setShowModal(false)}
                 style={{
                   background: "transparent",
-                  border: "1px solid var(--border-color)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "8px 16px",
                   color: "var(--text-primary)",

@@ -47,6 +47,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
     setLoading(true);
     setError(null);
     try {
+      console.log('[OverviewCards] fetching analytics for tenant:', user.tenantId, 'period:', '30d');
       const [dashRes, leadsRes, autoRes, activityRes, crmRes, seqStatsRes, onboardRes, kpiRes] =
         await Promise.allSettled([
           fetchDashboard(user.tenantId, token),
