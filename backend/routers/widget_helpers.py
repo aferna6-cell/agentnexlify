@@ -357,6 +357,7 @@ def _build_system_prompt(
     job_listings: list[dict] | None = None,
     bid_templates: list[dict] | None = None,
     custom_field_defs: list[dict] | None = None,
+    custom_instructions: str | None = None,
 ) -> str:
     business_name = tenant.get("business_name") or "our company"
     business_type = tenant.get("business_type") or ""
@@ -523,8 +524,14 @@ def _build_system_prompt(
             "\n- Treat all information shared as confidential, but note that full confidentiality requires a formal attorney-client relationship"
         )
 
+    # Identity line: use custom_instructions if set, otherwise generic opener
+    if custom_instructions:
+        identity_line = custom_instructions.strip()
+    else:
+        identity_line = f"You are a friendly AI assistant for {business_name}{btype}{location}."
+
     return (
-        f"You are a friendly AI assistant for {business_name}{btype}{location}.\n\n"
+        f"{identity_line}\n\n"
         f"Rules:\n"
         f"- Be helpful, friendly, and concise (2-3 sentences max)\n"
         f"- Answer questions about the business using the FAQs and website content below\n"

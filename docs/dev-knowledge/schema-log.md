@@ -411,3 +411,8 @@ Creates `pipeline_automations` table for auto-trigger actions when leads move be
 Adds `teaser_message` (TEXT, nullable) to `widget_configs`. Stores the text displayed in the teaser bubble when the chat widget is minimized. Shown after a 3-second delay to prompt visitor engagement. Nullable — when NULL, the widget falls back to its default teaser behavior. Uses `ADD COLUMN IF NOT EXISTS` for safe re-runs.
 
 **Applied:** 2026-03-31 via Supabase Management API. Verified: `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'widget_configs' AND column_name = 'teaser_message'` returned `[{"column_name":"teaser_message","data_type":"text"}]`.
+
+### 072 — Widget Custom Instructions
+Adds `custom_instructions` (TEXT, nullable) to `widget_configs`. Stores per-tenant AI system prompt overrides — identity line, business-specific facts, rules, and disclaimers. When set, replaces the generic "You are a friendly AI assistant for X" opener in `_build_system_prompt`. Standard platform rules (lead capture, language matching, handoff) still apply. Wired into `widget_helpers._build_system_prompt` via `custom_instructions` param; passed from `widget_chat.py` as `widget.get("custom_instructions")`.
+
+**Applied:** 2026-03-31 via Supabase MCP. MTOptions tenant (`69411b59-5b0a-4eb2-88a6-525eee47133d`) system prompt set: identity as MTOptions Assistant (Pinpoint Financial Group LLC), pricing/trial facts, risk disclaimers, "never mention AgentNexLiFy" rule.
