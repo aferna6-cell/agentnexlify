@@ -28,7 +28,7 @@ function formatTime(start, end) {
 
 export default function WaitlistPage() {
   const { user, token } = useAuth();
-  const tenantId = user?.tenant_id;
+  const tenantId = user?.tenantId;
 
   const [entries, setEntries] = useState([]);
   const [stats, setStats] = useState({ total: 0, waiting: 0, notified: 0, booked: 0, expired: 0 });

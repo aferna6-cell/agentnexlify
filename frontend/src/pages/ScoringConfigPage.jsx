@@ -8,7 +8,7 @@ import {
 
 export default function ScoringConfigPage() {
   const { user, token } = useAuth();
-  const tenantId = user?.tenant_id;
+  const tenantId = user?.tenantId;
 
   const [factors, setFactors] = useState([]);
   const [loading, setLoading] = useState(true);

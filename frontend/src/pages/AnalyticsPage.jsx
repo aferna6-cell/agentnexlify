@@ -54,6 +54,7 @@ function getChartTheme() {
     purple: v("--purple") || "#8b5cf6",
     yellow: v("--yellow"),
     red: v("--red"),
+    tooltipBg: v("--bg-card") || "#1a1a2e",
   };
 }
 
