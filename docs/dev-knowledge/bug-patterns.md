@@ -773,3 +773,33 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Fix:** Corrected the transposed characters in the API key attribute value.
 **Prevention:** The API key embed in index.html is the marketing site's tenant config — treat it like a config value, not a string literal. After any HTML edit near the widget script tag, verify the widget shows the correct bot name on the marketing site. The silent fallback to "Aria" is the symptom of ANY widget config load failure (wrong key, CORS error, API down).
 
+
+---
+
+### response_metrics UUID casting error — session_id inserted into UUID column
+**Date:** 2026-04-01
+**Symptom:** PostgreSQL UUID cast error in response_metrics inserts. Logs showed a cast failure but the error message was sparse (no traceback logged).
+**Root Cause:** `_get_or_create_conversation()` in `widget_helpers.py` returns `session_id` (plain text like "sess_abc123") as the conversation_id fallback when the conversations table lookup fails. This value was passed directly to `_record_response_metric`, which inserted it into `response_metrics.conversation_id` — a UUID column (migration 037). PostgreSQL rejected the cast.
+**Fix:** Added UUID validation in `_record_response_metric` using `uuid.UUID(value)`. If the value isn't a valid UUID, `safe_conversation_id` is set to `None` (nullable column) and a DEBUG log is emitted. Outer except upgraded from `logger.warning` to `logger.error(exc_info=True)` for full tracebacks. Pattern matches existing guard in `_capture_leads_from_session`.
+**Files Changed:** `backend/routers/widget_helpers.py`
+**Prevention:** Any code path that writes to a UUID FK column must validate the value first. `_get_or_create_conversation()` fallback returning session_id is inherently fragile — future callers should apply the same UUID guard pattern.
+
+---
+
+### Privacy/ToS links pointing to "#" in landing pages
+**Date:** 2026-04-01
+**Symptom:** Footer privacy and terms links in landing-page-v2/*.html were `href="#"` placeholders.
+**Root Cause:** Landing pages were built before real legal pages existed. The React app's `/privacy` and `/terms` routes already existed (PrivacyPolicy.jsx, TermsOfService.jsx, registered in main.jsx) but landing page HTML files were never updated.
+**Fix:** Updated all landing-page-v2/*.html footers to point to `https://agentnexlify.com/privacy` and `https://agentnexlify.com/terms`. Updated PrivacyPolicy.jsx and TermsOfService.jsx to use full legal entity name "AgentNexLiFy, operated by Pinpoint Financial Group, LLC".
+**Files Changed:** `landing-page-v2/index.html`, `landing-page-v2/free-chatbot.html`, `landing-page-v2/medical-office-chatbot.html`, `landing-page-v2/auto-shop-chatbot.html`, `landing-page-v2/dental-chatbot.html`, `landing-page-v2/salon-booking-chatbot.html`, `landing-page-v2/restaurant-chatbot.html`, `landing-page-v2/intercom-alternative.html`, `landing-page-v2/livechat-alternative.html`, `landing-page-v2/tidio-alternative.html`, `frontend/src/pages/PrivacyPolicy.jsx`, `frontend/src/pages/TermsOfService.jsx`
+**Prevention:** When adding new landing pages, always link to real /privacy and /terms immediately — don't use # placeholder.
+
+---
+
+### Schema.org sameAs placeholder URLs in structured data
+**Date:** 2026-04-01
+**Symptom:** JSON-LD Organization schema contained `"sameAs": ["FILL_IN_LINKEDIN", "FILL_IN_TWITTER"]` — fake URLs that search engines would index as broken/invalid structured data.
+**Root Cause:** Placeholder values left during initial SEO setup.
+**Fix:** Removed the `sameAs` array entirely from both locations. Other Organization schema fields (name, url, description, logo, contactPoint) were already correct.
+**Files Changed:** `demo-platform/src/components/SchemaOrg.jsx`, `landing-page-v2/index.html`
+**Prevention:** Never commit placeholder values in structured data. If real social accounts don't exist yet, omit the field rather than using a placeholder.

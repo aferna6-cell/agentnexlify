@@ -27,9 +27,9 @@ export default function PrivacyPolicy() {
         <section>
           <h2>1. Overview</h2>
           <p>
-            AgentNexLiFy (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;) provides an AI-powered chat
-            widget platform for businesses. This Privacy Policy explains what data we collect, how we use it,
-            and your rights regarding that data.
+            AgentNexLiFy, operated by Pinpoint Financial Group, LLC (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;),
+            provides an AI-powered chat widget platform for businesses. This Privacy Policy explains what data we collect,
+            how we use it, and your rights regarding that data.
           </p>
           <p>
             This policy applies to two groups of people:

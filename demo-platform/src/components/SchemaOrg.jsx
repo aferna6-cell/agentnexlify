@@ -26,7 +26,6 @@ const ORGANIZATION_SCHEMA = {
     contactType: 'sales',
     url: 'https://agentnexlify.com/contact',
   },
-  sameAs: ['FILL_IN_LINKEDIN', 'FILL_IN_TWITTER'],
 };
 
 const SOFTWARE_APP_SCHEMA = {

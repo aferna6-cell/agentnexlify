@@ -674,17 +674,35 @@ def _record_response_metric(tenant_id: str, session_id: str, conversation_id: st
         t2 = datetime.fromisoformat(first_response.replace("Z", "+00:00"))
         response_seconds = max(0, int((t2 - t1).total_seconds()))
 
+        # Only pass conversation_id if it is a valid UUID.  _get_or_create_conversation
+        # can fall back to returning session_id (a plain text string like "sess_abc123")
+        # when the conversations table is unreachable.  Inserting that value into a UUID
+        # column raises a PostgreSQL cast error.
+        from uuid import UUID as _UUID
+        try:
+            _UUID(conversation_id or "")
+            safe_conversation_id = conversation_id
+        except (ValueError, AttributeError):
+            logger.debug(
+                "response_metric: conversation_id %r is not a UUID, omitting from insert",
+                conversation_id,
+            )
+            safe_conversation_id = None
+
         db.table("response_metrics").insert({
             "tenant_id": tenant_id,
             "session_id": session_id,
-            "conversation_id": conversation_id if conversation_id else None,
+            "conversation_id": safe_conversation_id,
             "first_message_at": first_user,
             "first_response_at": first_response,
             "response_time_seconds": response_seconds,
             "channel": "widget",
         }).execute()
     except Exception:
-        logger.warning("response_metric: failed for tenant %s session %s", tenant_id, session_id, exc_info=True)
+        logger.error(
+            "response_metric: failed for tenant %s session %s",
+            tenant_id, session_id, exc_info=True,
+        )
 
 
 def _extract_service_interest(messages: list[dict]) -> str | None:
