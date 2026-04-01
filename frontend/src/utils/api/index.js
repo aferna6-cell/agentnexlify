@@ -43,3 +43,4 @@ export * from "./widget-config";
 export * from "./scoring";
 
 export { request, BASE, ApiError } from "./_client";
+export * from "./onboarding";

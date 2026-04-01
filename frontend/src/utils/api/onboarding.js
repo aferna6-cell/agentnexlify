@@ -1,0 +1,43 @@
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
+async function apiFetch(path, { token, method = "POST", body } = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
+ * Generate an AI knowledge base from onboarding answers.
+ * Returns { knowledge_base: string|null, generated: boolean }
+ */
+export function generateKb(tenantId, token, data) {
+  return apiFetch(`/api/v1/onboarding/${tenantId}/generate-kb`, { token, body: data });
+}
+
+/**
+ * Complete onboarding — persists all wizard data to the backend.
+ */
+export function completeOnboarding(tenantId, token, data) {
+  return apiFetch(`/api/v1/onboarding/${tenantId}/complete`, { token, body: data });
+}
+
+/**
+ * Create a Stripe Checkout session from the wizard (source="wizard").
+ * Returns { checkout_url: string }
+ */
+export function checkoutForWizard(token, plan) {
+  return apiFetch(`/api/v1/auth/billing/checkout`, {
+    token,
+    body: { plan, source: "wizard" },
+  });
+}
