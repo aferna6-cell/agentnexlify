@@ -3,6 +3,7 @@
 **Status:** Draft
 **Author:** Aidan
 **Date:** 2026-03-30
+**Last revised:** 2026-04-01 (migration renumber; pre-existing issue status updates)
 **Target:** 1-week build, 1 engineer
 
 ---
@@ -222,7 +223,9 @@ An `<iframe>` that loads a minimal HTML shell embedding the actual widget JS wit
 
 ### Database Changes
 
-#### Migration 071 — `widget_configs.knowledge_base`
+#### Migration 076 — `widget_configs.knowledge_base`
+
+Note: migrations 071–075 are taken (teaser_message, custom_instructions, email_sequences, conversations.lead_captured, teaser_enabled/teaser_delay_seconds). Next available number is 076.
 
 ```sql
 ALTER TABLE widget_configs
@@ -322,7 +325,7 @@ These bugs exist today and do not block the wizard from shipping, but should be 
 
 1. **`lead_captured` hardcoded `false`** — New leads from wizard-provisioned tenants will appear in the leads table but `lead_captured` will always be false. Fix: look up the actual value before updating.
 2. **`conversations` FK mismatch** — The `conversations` table may fail to insert if the FK pointing to `leads` uses the wrong column name. The wizard doesn't create conversations directly, so this doesn't break onboarding, but it will affect live chat.
-3. **`response_metrics` UUID casting error** — Doesn't affect wizard. Fix separately.
+3. ~~**`response_metrics` UUID casting error`**~~ — **Fixed 2026-04-01** (commit `418d871`). UUID validation guard added in `_record_response_metric()` in `widget_helpers.py`.
 
 ---
 
