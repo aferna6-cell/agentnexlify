@@ -1,14 +1,18 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-03-31 (automated morning startup)
+Updated: 2026-03-31 (automated evening review)
 
 ## Tomorrow's Top 3 Priorities
 
-1. **Apply migrations 065-070 to live Supabase** — 6 pending migrations (065 client_accounts, 066 waitlist, 067 scoring_configs, 068 invoice unique + password reset, 069 email bounce, 070 pipeline automations). 065 blocks client login. **NEW:** 066 and 067 ALSO have duplicate filenames — verify and delete duplicates before applying all three. 068 duplicate still unresolved. **Stale since 2026-03-25.**
-2. **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow — all committed but none verified on production. **6 days unverified.**
-3. **Reduce silent frontend catches (33 remaining)** — Health check counts 33 `.catch(() => <fallback>)` blocks that hide errors. Systematic cleanup needed per architecture decision on visible error handling.
+1. **Commit the email sequences feature** — 5 new files + 7 modified files are ready to commit. Migration 073 already applied to Supabase. `git add backend/routers/email_sequences.py frontend/src/pages/EmailSequencesPage.jsx frontend/src/utils/api/email-sequences.js migrations/073_email_sequences.sql scripts/seed_mtoptions_sequences.py` + modified files, then commit. Agent: **None needed** — straightforward commit.
+2. **Apply pending migrations 065–070** — 6 migrations stale since 2026-03-23/25, blocking client login (065), waitlist (066), scoring configs (067), invoice unique index + password reset (068 ×2, renumber required), email bounce (069), pipeline automations (070). **NEW duplicate filenames on 066 and 067.** Stale 7–8 days. Agent: **schema-guardian**.
+3. **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook delivery, password reset flow: **7 days unverified.** Agent: **qa-tester**.
 
 ## Active Tasks
+
+### Priority 0 — Uncommitted Work (Needs Commit)
+
+- [ ] **Commit email sequences feature** — Migration 073 applied to Supabase; backend router (`email_sequences.py`), frontend page (`EmailSequencesPage.jsx`), API utils (`email-sequences.js`), seed script (`seed_mtoptions_sequences.py`), and modified files (main.py, App.jsx, Sidebar.jsx, widget_lead.py, api/index.js, CLAUDE.md) all uncommitted. Risk: work lost on branch change or reset. Added: 2026-03-31.
 
 ### Priority 1 — Critical / Blocking
 
@@ -27,7 +31,7 @@ Updated: 2026-03-31 (automated morning startup)
 
 ### Priority 2 — Verification & In-Progress
 
-- [ ] **Production feature verification** — Revenue analytics, pipeline automations, webhook deliveries, password reset, CTO review fixes. All committed 2026-03-25, none production-verified. **6 days stale.**
+- [ ] **Production feature verification** — Revenue analytics, pipeline automations, webhook deliveries, password reset, CTO review fixes. All committed 2026-03-25, none production-verified. **7 days stale.**
   - Agent: **qa-tester**
 - [ ] **Reduce silent frontend catches (33 remaining)** — `.catch(() => <fallback>)` blocks detected by grep. Architecture decision requires visible error handling. Count steady at 33.
   - Agent: **frontend-dev**
@@ -46,7 +50,9 @@ Updated: 2026-03-31 (automated morning startup)
 
 ## Completed (Recent) — 2026-03-31
 
-_(Morning docs only — no code changes auto-completed.)_
+- [x] **Migration 073 created and applied** — `migrations/073_email_sequences.sql` created and applied to Supabase (mcp__supabase__apply_migration). Creates 4 tables: `email_sequences`, `email_sequence_steps`, `email_sequence_enrollments`, `email_sequence_sends`. Schema-log.md updated.
+- [x] **Email sequences feature built** — backend router, frontend page, API utils, and seed script created for MTOptions. Uncommitted but complete.
+- [x] **Migrations 071 and 072 applied** — Widget teaser message (071) and custom_instructions (072) both applied and documented in schema-log.md. MTOptions custom system prompt configured.
 
 ## Completed (Recent) — 2026-03-30
 
