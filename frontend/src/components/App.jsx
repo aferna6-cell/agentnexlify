@@ -126,6 +126,65 @@ const pages = {
   support: SupportPage,
 };
 
+// --------------------------------------------------------------------------
+// URL ↔ page-key routing (supports direct navigation and browser back/forward)
+// --------------------------------------------------------------------------
+const PAGE_TO_PATH = {
+  dashboard: "/dashboard",
+  analytics: "/dashboard/analytics",
+  leads: "/dashboard/leads",
+  clients: "/dashboard/clients",
+  client_profile: "/dashboard/client-profile",
+  pipeline: "/dashboard/pipeline",
+  pipeline_automations: "/dashboard/pipeline-automations",
+  calendar: "/dashboard/calendar",
+  availability: "/dashboard/availability",
+  conversations: "/dashboard/conversations",
+  automations: "/dashboard/automations",
+  widget: "/dashboard/widget",
+  faq: "/dashboard/faq",
+  team: "/dashboard/team",
+  billing: "/dashboard/billing",
+  integrations: "/dashboard/integrations",
+  settings: "/dashboard/settings",
+  business_page: "/dashboard/business-page",
+  reviews: "/dashboard/reviews",
+  content_studio: "/dashboard/content-studio",
+  menu: "/dashboard/menu",
+  orders: "/dashboard/orders",
+  jobs: "/dashboard/jobs",
+  action_items: "/dashboard/action-items",
+  snippets: "/dashboard/snippets",
+  chat_flows: "/dashboard/chat-flows",
+  mcp_setup: "/dashboard/mcp-setup",
+  bids: "/dashboard/bids",
+  client_portal: "/dashboard/client-portal",
+  calls: "/dashboard/calls",
+  local_seo: "/dashboard/local-seo",
+  social_media: "/dashboard/social-media",
+  campaigns: "/dashboard/campaigns",
+  email_sequences: "/dashboard/sequences",
+  invoices: "/dashboard/invoices",
+  documents: "/dashboard/documents",
+  smart_lists: "/dashboard/smart-lists",
+  form_builder: "/dashboard/forms",
+  csat: "/dashboard/csat",
+  waitlist: "/dashboard/waitlist",
+  scoring_config: "/dashboard/scoring",
+  team_activity: "/dashboard/team-activity",
+  support: "/dashboard/support",
+};
+
+const PATH_TO_PAGE = Object.fromEntries(
+  Object.entries(PAGE_TO_PATH).map(([key, path]) => [path, key])
+);
+
+function pageFromPath(pathname) {
+  if (PATH_TO_PAGE[pathname]) return PATH_TO_PAGE[pathname];
+  if (pathname.startsWith("/dashboard")) return "dashboard";
+  return null;
+}
+
 function TrialBanner({ trialData, onNavigate }) {
   if (!trialData || trialData.plan !== "free" || trialData.days_remaining === null) return null;
 
@@ -174,7 +233,9 @@ function TrialBanner({ trialData, onNavigate }) {
 
 export default function App() {
   const { user, token } = useAuth();
-  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentPage, setCurrentPage] = useState(
+    () => pageFromPath(window.location.pathname) || "dashboard"
+  );
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePlan, setActivePlan] = useState(null);
@@ -196,9 +257,22 @@ export default function App() {
     }
   }, [activePlan]);
 
+  // Sync page state with browser back/forward buttons
+  useEffect(() => {
+    const onPop = () => {
+      const page = pageFromPath(window.location.pathname) || "dashboard";
+      setCurrentPage(page);
+      setPageData(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const handleNavigate = useCallback(
     (page, data = null) => {
       if (page === currentPage && !data) return;
+      const path = PAGE_TO_PATH[page] || "/dashboard";
+      window.history.pushState(null, "", path);
       setLoading(true);
       setTimeout(() => {
         setCurrentPage(page);
