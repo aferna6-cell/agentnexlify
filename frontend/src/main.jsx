@@ -2,7 +2,7 @@ import React, { useEffect, lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import App from "./components/App";
 import Home from "./pages/Home";
 import SignupPage from "./pages/SignupPage";
@@ -29,6 +29,7 @@ const ClientDashboardPage = lazy(() => import("./pages/ClientDashboardPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
+// OnboardingWizardPage kept for direct access; /onboarding route uses OnboardingRedirect below
 const OnboardingWizardPage = lazy(() => import("./pages/OnboardingWizardPage"));
 
 
@@ -87,6 +88,19 @@ function CompareRoute() {
   return <Navigate to="/" replace />;
 }
 
+/* Redirect /onboarding — authenticated users go to dashboard, others to signup.
+   Handles the AuthProvider race condition where user is null on first render
+   while the JWT is still being parsed. */
+function OnboardingRedirect() {
+  const { user, token } = useAuth();
+  // Token exists but user not yet parsed — still loading
+  if (token && user === null) return null;
+  // Authenticated → dashboard has the inline onboarding checklist
+  if (user) return <Navigate to="/dashboard" replace />;
+  // Not authenticated → signup
+  return <Navigate to="/signup" replace />;
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <HelmetProvider>
@@ -128,8 +142,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/client/:token" element={<ClientPortalPublicPage />} />
             {/* Public business pages — no auth, standalone */}
             <Route path="/biz/:slug" element={<BusinessPage />} />
-            {/* Onboarding wizard — auth-gated, shown after registration */}
-            <Route path="/onboarding" element={<AuthProvider><OnboardingWizardPage /></AuthProvider>} />
+            {/* /onboarding — redirect authenticated users to dashboard, others to signup */}
+            <Route path="/onboarding" element={<AuthProvider><OnboardingRedirect /></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}
             <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
           </Routes>

@@ -8,11 +8,16 @@ const PAID_PLANS = new Set(["growth", "professional", "enterprise"]);
 const INDUSTRIES = [
   { value: "accounting", label: "Accounting" },
   { value: "auto_shop", label: "Auto Shop" },
+  { value: "bakery", label: "Bakery" },
+  { value: "bar_nightclub", label: "Bar / Nightclub" },
+  { value: "cafe", label: "Café / Coffee Shop" },
+  { value: "catering", label: "Catering" },
   { value: "chiropractic", label: "Chiropractic" },
   { value: "cleaning", label: "Cleaning Services" },
   { value: "dental", label: "Dental" },
   { value: "electrical", label: "Electrical" },
   { value: "fitness", label: "Fitness" },
+  { value: "food_truck", label: "Food Truck" },
   { value: "hvac", label: "HVAC" },
   { value: "landscaping", label: "Landscaping" },
   { value: "legal", label: "Legal" },
@@ -141,7 +146,7 @@ export default function SignupPage() {
         }
       }
 
-      window.location.href = "/onboarding";
+      window.location.href = "/dashboard";
     } catch (err) {
       setError(err.message);
     } finally {

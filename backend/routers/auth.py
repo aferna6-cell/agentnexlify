@@ -237,15 +237,21 @@ def _provision_tenant_account(
             logger.warning("Failed to save signup fields for new tenant %s", tenant_id, exc_info=True)
 
     api_key = f"anx_{secrets.token_urlsafe(32)}"
-    db.table("widget_configs").insert({
-        "tenant_id": tenant_id,
-        "api_key": api_key,
-        "bot_name": f"{business_name} Assistant",
-        "primary_color": "#00BFFF",
-        "greeting_message": "Hi! How can I help you today?",
-        "position": "bottom-right",
-        "show_watermark": True,
-    }).execute()
+    try:
+        wc_result = db.table("widget_configs").insert({
+            "tenant_id": tenant_id,
+            "api_key": api_key,
+            "bot_name": f"{business_name} Assistant",
+            "primary_color": "#00BFFF",
+            "greeting_message": "Hi! How can I help you today?",
+            "position": "bottom-right",
+            "show_watermark": True,
+        }).execute()
+        if not wc_result.data:
+            raise RuntimeError("widget_configs insert returned no data")
+    except Exception:
+        logger.error("Failed to create widget_configs for tenant %s — rolling back", tenant_id, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to initialize widget configuration")
 
     _seed_industry_faqs(tenant_id, industry, business_name, city)
     return tenant_id, api_key

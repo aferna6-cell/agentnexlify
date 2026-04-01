@@ -35,11 +35,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <!-- AgentNexLiFy chat widget — desktop only, not on dashboard -->
+    <!-- AgentNexLiFy chat widget — desktop only, not on auth or dashboard pages -->
     <script>
       (function () {
         if (!window.matchMedia("(min-width: 768px)").matches) return;
-        if (window.location.pathname.startsWith("/dashboard")) return;
+        var p = window.location.pathname;
+        var skipPaths = ["/dashboard", "/signup", "/login", "/onboarding", "/forgot-password", "/reset-password"];
+        if (skipPaths.some(function(s) { return p.startsWith(s); })) return;
         var s = document.createElement("script");
         s.async = true;
         s.setAttribute("data-api-key", "anx_4-H8_i11vOOhbLHWQj1fxQutc3XbafG_WlMczCDm-zs");
