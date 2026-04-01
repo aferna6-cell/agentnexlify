@@ -35,6 +35,11 @@ router = APIRouter(prefix="/api/v1/onboarding", tags=["onboarding"])
 # ---------------------------------------------------------------------------
 
 
+class FaqInput(BaseModel):
+    question: str = Field(..., max_length=500)
+    answer: str = Field(..., max_length=2000)
+
+
 class OnboardingCompleteRequest(BaseModel):
     business_name: str = Field(..., min_length=1, max_length=200)
     business_type: str = Field(..., min_length=1, max_length=50)
@@ -43,6 +48,12 @@ class OnboardingCompleteRequest(BaseModel):
     website_url: str | None = Field(None, max_length=500)
     hours: dict[str, Any] | None = None
     services: list[str] | None = None
+    # Wizard additions
+    widget_bot_name: str | None = Field(None, max_length=100)
+    widget_primary_color: str | None = Field(None, max_length=20)
+    widget_greeting_message: str | None = Field(None, max_length=500)
+    widget_position: str | None = Field(None, pattern=r"^(bottom-right|bottom-left)$")
+    faqs: list[FaqInput] | None = None
 
 
 class OnboardingCompleteResponse(BaseModel):
@@ -63,6 +74,22 @@ class OnboardingStatusResponse(BaseModel):
     has_widget_customized: bool = False
     onboarding_completed: bool = False
     completion_percentage: int = 0
+
+
+class GenerateKbRequest(BaseModel):
+    business_name: str = Field(..., min_length=1, max_length=200)
+    business_type: str = Field(..., min_length=1, max_length=50)
+    city: str = Field(..., max_length=100)
+    phone: str | None = Field(None, max_length=30)
+    website_url: str | None = Field(None, max_length=500)
+    services: list[str] = Field(default_factory=list)
+    faqs: list[FaqInput] = Field(default_factory=list)
+    hours: dict[str, Any] | None = None
+
+
+class GenerateKbResponse(BaseModel):
+    knowledge_base: str | None
+    generated: bool
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +241,23 @@ async def complete_onboarding(
         logger.exception("Failed to update tenant %s during onboarding", tenant_id)
         raise HTTPException(status_code=500, detail="Failed to update business info")
 
+    # Update widget config with customization from wizard
+    widget_updates: dict[str, Any] = {}
+    if req.widget_bot_name:
+        widget_updates["bot_name"] = req.widget_bot_name
+    if req.widget_primary_color:
+        widget_updates["primary_color"] = req.widget_primary_color
+    if req.widget_greeting_message:
+        widget_updates["greeting_message"] = req.widget_greeting_message
+    if req.widget_position:
+        widget_updates["position"] = req.widget_position
+
+    if widget_updates:
+        try:
+            db.table("widget_configs").update(widget_updates).eq("tenant_id", tenant_id).execute()
+        except Exception:
+            logger.error("Failed to update widget_configs during onboarding for %s", tenant_id, exc_info=True)
+
     # 3. Auto-create business_hours entry from the hours JSONB
     if req.hours:
         try:
@@ -293,6 +337,24 @@ async def complete_onboarding(
         if faqs_created > 0:
             configured["faqs"] = True
 
+    # Insert wizard-provided FAQs
+    if req.faqs:
+        try:
+            faq_rows = [
+                {
+                    "tenant_id": tenant_id,
+                    "question": faq.question,
+                    "answer": faq.answer,
+                    "category": "wizard",
+                    "is_active": True,
+                }
+                for faq in req.faqs
+            ]
+            db.table("faq_entries").insert(faq_rows).execute()
+            configured["faqs"] = True
+        except Exception:
+            logger.error("Failed to insert wizard FAQs for tenant %s", tenant_id, exc_info=True)
+
     # 6. Generate AI business page content
     ai_content_generated = False
     try:
@@ -342,6 +404,90 @@ async def complete_onboarding(
         faqs_created=faqs_created,
         message="Onboarding complete! Your business is configured and ready.",
     )
+
+
+@router.post("/{tenant_id}/generate-kb", response_model=GenerateKbResponse)
+@limiter.limit("5/minute")
+async def generate_knowledge_base(
+    request: Request,
+    tenant_id: str,
+    req: GenerateKbRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Generate an AI knowledge base from onboarding answers and persist it."""
+    _verify_tenant(claims, tenant_id)
+
+    # Format hours as human-readable text for the prompt
+    hours_text = "Not specified"
+    if req.hours:
+        days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        lines = []
+        tz = req.hours.get("timezone", "")
+        for day in days:
+            day_cfg = req.hours.get(day)
+            if not day_cfg:
+                continue
+            if day_cfg.get("enabled") or (day_cfg.get("open") and day_cfg.get("close")):
+                open_t = day_cfg.get("open") or day_cfg.get("start", "09:00")
+                close_t = day_cfg.get("close") or day_cfg.get("end", "17:00")
+                lines.append(f"  {day.capitalize()}: {open_t} – {close_t}")
+            else:
+                lines.append(f"  {day.capitalize()}: Closed")
+        hours_text = "\n".join(lines)
+        if tz:
+            hours_text += f"\n  Timezone: {tz}"
+
+    services_text = ", ".join(req.services) if req.services else "Not specified"
+    faqs_text = "\n".join(
+        f"Q: {faq.question}\nA: {faq.answer}" for faq in req.faqs
+    ) if req.faqs else "None provided"
+
+    prompt = f"""You are setting up an AI chat assistant for a local business. Generate a concise, structured knowledge base in markdown that the AI will use to answer customer questions.
+
+Business: {req.business_name}
+Industry: {req.business_type}
+Location: {req.city}
+Phone: {req.phone or "Not provided"}
+Website: {req.website_url or "Not provided"}
+Services offered: {services_text}
+
+Business hours:
+{hours_text}
+
+The business owner provided these common customer questions and answers:
+{faqs_text}
+
+Generate a knowledge base with these sections (use ## headers):
+- About (2-3 sentences describing the business)
+- Services (bullet list with brief descriptions)
+- Hours & Location
+- FAQs (expand the provided Q&As into polished, customer-friendly answers; add 2-3 additional FAQs that are typical for this industry if fewer than 3 were provided)
+- Contact
+
+Keep it concise. Do not invent facts not supported by the input. Do not add markdown formatting beyond headers and bullet lists."""
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1200,
+            messages=[{"role": "user", "content": prompt}],
+            timeout=30,
+        )
+        kb_text = message.content[0].text.strip()
+    except Exception:
+        logger.error("KB generation failed for tenant %s", tenant_id, exc_info=True)
+        return GenerateKbResponse(knowledge_base=None, generated=False)
+
+    # Persist to widget_configs
+    try:
+        db = get_supabase()
+        db.table("widget_configs").update({"knowledge_base": kb_text}).eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.error("Failed to persist knowledge_base for tenant %s", tenant_id, exc_info=True)
+        # Still return the generated text — frontend can retry or proceed without persistence
+
+    return GenerateKbResponse(knowledge_base=kb_text, generated=True)
 
 
 @router.get("/{tenant_id}/status", response_model=OnboardingStatusResponse)
