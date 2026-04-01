@@ -47,6 +47,8 @@ export default function WidgetPage() {
     primary_color: "#00BFFF",
     greeting_message: "",
     teaser_message: "",
+    teaser_enabled: true,
+    teaser_delay_seconds: 3,
     position: "bottom-right",
   });
   const [isOnline, setIsOnline] = useState(true);
@@ -76,6 +78,8 @@ export default function WidgetPage() {
           primary_color: dash.widget_config.primary_color || "#00BFFF",
           greeting_message: dash.widget_config.greeting_message || "",
           teaser_message: dash.widget_config.teaser_message || "",
+          teaser_enabled: dash.widget_config.teaser_enabled !== false,
+          teaser_delay_seconds: dash.widget_config.teaser_delay_seconds ?? 3,
           position: dash.widget_config.position || "bottom-right",
         });
         setIsOnline(dash.widget_config.is_online !== false);
@@ -258,17 +262,79 @@ export default function WidgetPage() {
             />
           </div>
           <div className="settings-field">
-            <label>Teaser Bubble Message</label>
-            <textarea
-              value={form.teaser_message}
-              onChange={handleChange("teaser_message")}
-              placeholder="e.g. Have questions? Ask me anything!"
-              rows={2}
-            />
-            <span className="settings-field-hint">
-              Shown as a speech bubble next to the chat icon after 3 seconds. Leave blank to disable.
-            </span>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <input
+                type="checkbox"
+                checked={form.teaser_enabled}
+                onChange={e => { setForm(f => ({ ...f, teaser_enabled: e.target.checked })); setSaved(false); }}
+                style={{ width: 16, height: 16, cursor: "pointer" }}
+              />
+              Show teaser bubble
+            </label>
           </div>
+          {form.teaser_enabled && (
+            <>
+              <div className="settings-field">
+                <label>
+                  Teaser Message
+                  <span style={{ float: "right", fontSize: "0.75rem", color: (form.teaser_message || "").length > 140 ? "#f87171" : "#888" }}>
+                    {(form.teaser_message || "").length}/150
+                  </span>
+                </label>
+                <textarea
+                  value={form.teaser_message}
+                  onChange={handleChange("teaser_message")}
+                  placeholder="e.g. Have questions? Ask me anything!"
+                  rows={2}
+                  maxLength={150}
+                />
+              </div>
+              <div className="settings-field">
+                <label>Delay before showing (seconds)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={form.teaser_delay_seconds}
+                  onChange={e => { setForm(f => ({ ...f, teaser_delay_seconds: Math.min(60, Math.max(0, parseInt(e.target.value) || 0)) })); setSaved(false); }}
+                  style={{ width: 80 }}
+                />
+              </div>
+              {form.teaser_message && (
+                <div className="settings-field">
+                  <label>Preview</label>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem", padding: "0.75rem", background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
+                    <div style={{
+                      background: "#fff",
+                      color: "#333",
+                      borderRadius: "10px 10px 2px 10px",
+                      padding: "8px 12px",
+                      fontSize: "0.8rem",
+                      maxWidth: 220,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                    }}>
+                      {form.teaser_message}
+                    </div>
+                    <div style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: "50%",
+                      background: form.primary_color || "#00BFFF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    }}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           <div className="settings-field">
             <label>Primary Color</label>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>

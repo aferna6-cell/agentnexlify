@@ -772,6 +772,8 @@
   // Teaser state
   let teaserMessage = "";
   let teaserTimer = null;
+  let teaserDelaySeconds = 3;
+  let teaserEnabled = true;
 
   // Menu state
   let menuItems = null; // Array of {name, description, price, category} or null
@@ -803,6 +805,8 @@
       if (data.greeting_message) greetingMessage = data.greeting_message;
       if (data.offline_message) offlineMessage = data.offline_message;
       if (data.teaser_message) teaserMessage = data.teaser_message;
+      if (data.teaser_delay_seconds !== undefined) teaserDelaySeconds = data.teaser_delay_seconds;
+      if (data.teaser_enabled !== undefined) teaserEnabled = data.teaser_enabled;
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
       }
@@ -1690,10 +1694,10 @@
       }, 5000);
     }
 
-    // Show teaser bubble after 3 seconds if widget is closed, not yet shown this session,
-    // and a teaser_message has been configured (no config = no bubble).
-    if (teaserMessage && !sessionStorage.getItem("anx_teaser_shown")) {
-      teaserTimer = setTimeout(showTeaser, 3000);
+    // Show teaser bubble after configured delay if enabled, widget is closed, not yet shown this session,
+    // and a teaser_message has been configured.
+    if (teaserEnabled && teaserMessage && !sessionStorage.getItem("anx_teaser_shown")) {
+      teaserTimer = setTimeout(showTeaser, teaserDelaySeconds * 1000);
     }
   }
 

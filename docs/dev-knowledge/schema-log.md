@@ -434,3 +434,14 @@ All four tables: RLS enabled, service_role full access policy. Pattern matches m
 Adds `lead_captured` (BOOLEAN NOT NULL DEFAULT false) to the `conversations` table. Populated by `_capture_leads_from_session()` in `backend/routers/widget_helpers.py` after a lead is successfully inserted (new lead path) or identified (existing lead path). Enables analytics, filtering, and reporting that depend on knowing whether a conversation resulted in a lead capture.
 
 **Applied:** 2026-04-01 via Supabase MCP.
+
+### 075 — Widget Teaser Config
+Adds two columns to `widget_configs` to fully control the teaser bubble:
+- `teaser_delay_seconds` (INTEGER NOT NULL DEFAULT 3) — seconds after page load before bubble appears (0-60)
+- `teaser_enabled` (BOOLEAN NOT NULL DEFAULT TRUE) — global on/off switch for the teaser bubble
+
+Note: `teaser_message` was already added in migration 071. Migration 075 completes the teaser bubble feature.
+
+MTOptions tenant (both tenant rows) seeded with `teaser_enabled=true`, `teaser_message='Have questions about our options alerts? Ask me!'`, `teaser_delay_seconds=3`.
+
+**Applied:** 2026-04-01 via Supabase MCP (075_widget_teaser_config.sql). File renamed from 074 to avoid collision with existing 074_conversations_lead_captured.sql.

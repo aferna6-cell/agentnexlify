@@ -182,6 +182,8 @@ class WidgetConfigDetail(BaseModel):
     is_online: bool = True
     offline_message: str | None = None
     teaser_message: str | None = None
+    teaser_delay_seconds: int = 3
+    teaser_enabled: bool = True
 
 
 class DashboardResponse(BaseModel):
@@ -229,7 +231,9 @@ class WidgetConfigUpdateRequest(BaseModel):
     greeting_message: str | None = None
     position: str | None = None
     branding: BrandingConfig | None = None
-    teaser_message: str | None = None
+    teaser_message: str | None = Field(None, max_length=150)
+    teaser_delay_seconds: int | None = Field(None, ge=0, le=60)
+    teaser_enabled: bool | None = None
 
 
 class FaqEntryResponse(BaseModel):
@@ -333,6 +337,8 @@ class WidgetConfigResponse(BaseModel):
     menu_items: list[dict] | None = None
     business_type: str | None = None
     teaser_message: str | None = None
+    teaser_delay_seconds: int = 3
+    teaser_enabled: bool = True
 
 
 class WidgetLeadRequest(BaseModel):
