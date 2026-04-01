@@ -796,6 +796,46 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 
 ---
 
+### Post-signup redirect loops back to /signup
+**Date:** 2026-04-01
+**Symptom:** After successful registration, users landed on /signup again instead of the dashboard.
+**Root Cause:** `SignupPage.jsx` line 144 redirected to `/onboarding`, and the `/onboarding` route had an auth-race-condition bug that bounced unauthenticated-state users to `/signup` before the JWT was parsed.
+**Fix:** Changed redirect target from `/onboarding` to `/dashboard`. Also fixed the /onboarding route (see below).
+**Files Changed:** `frontend/src/pages/SignupPage.jsx`
+**Prevention:** After any auth flow change, verify the success redirect lands on the intended page end-to-end.
+
+---
+
+### Chat widget appears on auth/dashboard pages
+**Date:** 2026-04-01
+**Symptom:** The AgentNexLiFy chat widget (self-embedded) appeared on /signup, /login, /onboarding, etc., creating a recursive support loop on your own auth pages.
+**Root Cause:** Widget inject script in `index.html` only excluded `/dashboard`. New paths added without updating the exclusion list.
+**Fix:** Extended `skipPaths` to include `/signup`, `/login`, `/onboarding`, `/forgot-password`, `/reset-password`.
+**Files Changed:** `frontend/index.html`
+**Prevention:** When adding new auth/onboarding routes, update `skipPaths` in index.html.
+
+---
+
+### AuthProvider race condition causes /onboarding to redirect to /signup
+**Date:** 2026-04-01
+**Symptom:** Authenticated users hitting `/onboarding` were immediately bounced to `/signup`.
+**Root Cause:** `AuthProvider` initializes `user` as `null`, then sets it via `useEffect` after parsing the JWT. Components that check `if (user === null) navigate("/signup")` fire before auth resolves, even for valid sessions.
+**Fix:** Replaced `OnboardingWizardPage` at `/onboarding` with `OnboardingRedirect` — a guard component that checks `if (token && user === null) return null` (wait) before deciding where to navigate.
+**Files Changed:** `frontend/src/main.jsx`
+**Prevention:** Any route that needs auth-gating must handle the loading state. Pattern: `if (token && user === null) return null` before any redirect logic.
+
+---
+
+### API key returned at signup differs from key shown in dashboard
+**Date:** 2026-04-01
+**Symptom:** Copying the widget embed code from the dashboard used a different api_key than what was originally generated at signup, causing the widget to fail on existing installs.
+**Root Cause:** `_provision_tenant_account` in `auth.py` had no error handling on `widget_configs.insert()`. If the insert failed silently, the registration still returned an `api_key`, but the dashboard's auto-create fallback path would generate a NEW random key — mismatching what was returned.
+**Fix:** Wrapped widget_configs insert in try/except; now raises HTTP 500 if insert fails rather than silently continuing.
+**Files Changed:** `backend/routers/auth.py`
+**Prevention:** Any multi-step provisioning that generates a key and stores it must fail atomically. Never return a key that wasn't successfully persisted.
+
+---
+
 ### Schema.org sameAs placeholder URLs in structured data
 **Date:** 2026-04-01
 **Symptom:** JSON-LD Organization schema contained `"sameAs": ["FILL_IN_LINKEDIN", "FILL_IN_TWITTER"]` — fake URLs that search engines would index as broken/invalid structured data.
