@@ -29,6 +29,7 @@ const ClientDashboardPage = lazy(() => import("./pages/ClientDashboardPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
+const OnboardingWizardPage = lazy(() => import("./pages/OnboardingWizardPage"));
 
 
 const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
@@ -127,6 +128,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/client/:token" element={<ClientPortalPublicPage />} />
             {/* Public business pages — no auth, standalone */}
             <Route path="/biz/:slug" element={<BusinessPage />} />
+            {/* Onboarding wizard — auth-gated, shown after registration */}
+            <Route path="/onboarding" element={<AuthProvider><OnboardingWizardPage /></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}
             <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
           </Routes>

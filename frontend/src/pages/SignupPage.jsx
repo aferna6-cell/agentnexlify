@@ -141,7 +141,7 @@ export default function SignupPage() {
         }
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = "/onboarding";
     } catch (err) {
       setError(err.message);
     } finally {

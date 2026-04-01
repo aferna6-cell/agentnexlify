@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget Preview</title>
+  <style>
+    body { margin: 0; background: #f0f4f8; min-height: 100vh; }
+  </style>
+</head>
+<body>
+<script>
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var apiKey = params.get("api_key");
+    if (!apiKey) return;
+    var s = document.createElement("script");
+    s.src = "/widget/agentnexlify-widget.js";
+    s.setAttribute("data-api-key", apiKey);
+    s.async = true;
+    document.body.appendChild(s);
+  })();
+</script>
+</body>
+</html>
