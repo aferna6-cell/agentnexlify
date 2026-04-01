@@ -115,6 +115,13 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
         except Exception:
             logger.error("EMAIL_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
 
+        # Email sequence enrollment trigger
+        try:
+            from backend.routers.email_sequences import enroll_lead_in_sequences
+            await enroll_lead_in_sequences(tenant["id"], lead_id)
+        except Exception:
+            logger.warning("Failed to enroll lead %s in email sequences", lead_id, exc_info=True)
+
     return WidgetLeadResponse(
         lead_id=lead_id,
         updated_fields=list(fields.keys()),

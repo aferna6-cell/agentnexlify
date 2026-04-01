@@ -71,6 +71,10 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | automation_sequences | Multi-step email series | tenant_id, name, trigger_event, is_active |
 | automation_steps | Steps in a sequence | sequence_id, step_order, delay_minutes, action_type |
 | automation_executions | Lead progress through sequence | sequence_id, lead_id, tenant_id, current_step, status |
+| email_sequences | Drip sequence definitions | tenant_id, name, trigger_type (lead_captured/tag_added/manual), trigger_config (JSONB), is_active |
+| email_sequence_steps | Steps in a drip sequence | sequence_id, step_order, delay_days, delay_hours, subject, body, email_type, is_active |
+| email_sequence_enrollments | Lead enrollment in drip sequences | sequence_id, lead_id, tenant_id, status, current_step, enrolled_at, completed_at |
+| email_sequence_sends | Per-send audit trail | enrollment_id, step_id, lead_id, tenant_id, status, scheduled_for, sent_at, error |
 | automations | Simple automation rules | tenant_id, type, name, is_enabled, config (JSONB) |
 | faq_entries | FAQ database | tenant_id, question, answer, category |
 | activity_log | CRM interaction tracking | tenant_id, lead_id, activity_type, description |

@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, pipeline_automations, revenue, reviews, scoring_config, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhooks, widget_chat, widget_config, widget_lead
+from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_sequences, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, pipeline_automations, revenue, reviews, scoring_config, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhooks, widget_chat, widget_config, widget_lead
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -115,6 +115,7 @@ async def _automation_loop():
                 _safe_run("process_scheduled_posts", _process_scheduled_posts),
                 _safe_run("process_scheduled_campaigns", _process_scheduled_campaigns),
                 _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
+                _safe_run("run_sequence_processor", email_sequences.run_sequence_processor),
             ])
 
         # Every 30 min: heavy/infrequent tasks
@@ -409,6 +410,7 @@ app.include_router(automations.router)
 app.include_router(billing.router)
 app.include_router(clients.router)
 app.include_router(email_templates.router)
+app.include_router(email_sequences.router)
 app.include_router(leads.router)
 app.include_router(stripe_webhooks.router)
 app.include_router(sequences.router)

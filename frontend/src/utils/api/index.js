@@ -11,6 +11,7 @@ export * from "./bids";
 export * from "./business-page";
 export * from "./calls";
 export * from "./campaigns";
+export * from "./email-sequences";
 export * from "./chat-flows";
 export * from "./content";
 export * from "./conversations";

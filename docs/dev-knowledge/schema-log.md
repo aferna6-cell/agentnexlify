@@ -416,3 +416,16 @@ Adds `teaser_message` (TEXT, nullable) to `widget_configs`. Stores the text disp
 Adds `custom_instructions` (TEXT, nullable) to `widget_configs`. Stores per-tenant AI system prompt overrides — identity line, business-specific facts, rules, and disclaimers. When set, replaces the generic "You are a friendly AI assistant for X" opener in `_build_system_prompt`. Standard platform rules (lead capture, language matching, handoff) still apply. Wired into `widget_helpers._build_system_prompt` via `custom_instructions` param; passed from `widget_chat.py` as `widget.get("custom_instructions")`.
 
 **Applied:** 2026-03-31 via Supabase MCP. MTOptions tenant (`69411b59-5b0a-4eb2-88a6-525eee47133d`) system prompt set: identity as MTOptions Assistant (Pinpoint Financial Group LLC), pricing/trial facts, risk disclaimers, "never mention AgentNexLiFy" rule.
+
+### 073 — Email Sequences
+Creates four tables for a dedicated email/SMS drip sequence system, separate from the older `automation_sequences` (migration 005) system:
+- `email_sequences`: sequence definitions with `trigger_type` ('lead_captured', 'tag_added', 'manual'), `trigger_config` JSONB, and `is_active`. FK to tenants via `tenant_id`.
+- `email_sequence_steps`: individual steps with `step_order`, `delay_days` + `delay_hours` (separate fields, more granular than the old `delay_minutes`), `subject`, `body`, and `email_type` ('email'/'sms'). FK to email_sequences via `sequence_id`.
+- `email_sequence_enrollments`: tracks lead enrollment with `UNIQUE(sequence_id, lead_id)` dedup constraint, `status` ('active'/'completed'/'cancelled'/'paused'), and `current_step`. FKs to leads(id) and tenants(id).
+- `email_sequence_sends`: per-send audit trail with `scheduled_for` TIMESTAMPTZ (for queue processing), `sent_at`, `error`. FKs to enrollments, steps, leads, and tenants.
+
+Five indexes: tenant lookup on sequences, sequence lookup on steps, tenant+status on enrollments, tenant+status+scheduled_for on sends (covering index for queue worker), enrollment_id on sends.
+
+All four tables: RLS enabled, service_role full access policy. Pattern matches migrations 019, 050, 051.
+
+**Applied:** 2026-03-31 via Supabase MCP (mcp__supabase__apply_migration). All four tables confirmed created.
