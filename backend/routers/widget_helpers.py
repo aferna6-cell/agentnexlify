@@ -1078,6 +1078,7 @@ async def _capture_leads_from_session(
         lead_fields: dict[str, Any] = {
             "client_id": tenant_id,
             "status": "new",
+            "source": "widget",
         }
         for key in ("name", "email", "phone"):
             if combined.get(key):

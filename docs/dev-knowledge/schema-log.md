@@ -163,9 +163,9 @@ Verified live Supabase schema against CLAUDE.md and code. Key findings:
 ### clients table — legacy table
 - `clients` table exists with 2 rows. Has `agent_name`, `service_area`, `bot_name`, `widget_api_key`, etc.
 - This appears to be the original V1 schema before `tenants` was introduced.
-- `conversations` table still has FK to `clients.id` (legacy).
+- ~~`conversations` table still has FK to `clients.id` (legacy).~~ **Fixed in migration 076** — FK now points to `tenants.id`.
 - `leads` table FK `client_id` references `tenants.id` (NOT `clients.id`) per the code.
-- **Risk:** Confusion. The `clients` table should be deprecated/removed in a future cleanup.
+- **Risk:** The `clients` table should be deprecated/removed in a future cleanup.
 
 ### All other tables — confirmed matching
 Tables verified against CLAUDE.md schema table: tenants, widget_configs, leads, chat_messages, conversations, appointments, business_hours, automation_sequences, automation_steps, automation_executions, automations, faq_entries, activity_log, client_notes, integrations, team_members, webhooks, webhook_logs, automation_logs.
@@ -445,3 +445,15 @@ Note: `teaser_message` was already added in migration 071. Migration 075 complet
 MTOptions tenant (both tenant rows) seeded with `teaser_enabled=true`, `teaser_message='Have questions about our options alerts? Ask me!'`, `teaser_delay_seconds=3`.
 
 **Applied:** 2026-04-01 via Supabase MCP (075_widget_teaser_config.sql). File renamed from 074 to avoid collision with existing 074_conversations_lead_captured.sql.
+
+### 076 — Fix conversations FK + add leads.source
+
+**Root cause of analytics showing 0 conversations:**
+`conversations.client_id` had a FK pointing to the legacy `clients` table (leftover from original real-estate platform). Widget chat inserts `client_id = tenant_id` (a UUID from `tenants`). The FK violation caused every insert to fail silently, keeping `conversations` permanently empty. Any endpoint querying `conversations` returned 0.
+
+Changes:
+- Drops `conversations_client_id_fkey` (was → `clients.id`) and re-creates it pointing to `tenants(id) ON DELETE CASCADE`
+- Adds `source TEXT DEFAULT 'widget'` to `leads` table for lead-source analytics
+- Back-fills existing leads with `source = 'widget'`
+
+**Applied:** 2026-04-01 via Supabase MCP.

@@ -822,10 +822,18 @@ async def get_ai_insights(
     except Exception:
         metrics["prev_leads"] = 0
 
-    # Conversations
+    # Conversations — use chat_messages (canonical store); conversations table
+    # was previously empty due to a broken FK and cannot be trusted for counts.
     try:
-        conv_result = db.table("conversations").select("id", count="exact").eq("client_id", tenant_id).gte("created_at", week_ago).limit(1).execute()
-        metrics["conversations"] = conv_result.count or 0
+        conv_msgs = (
+            db.table("chat_messages")
+            .select("session_id")
+            .eq("tenant_id", tenant_id)
+            .gte("created_at", week_ago)
+            .limit(5000)
+            .execute()
+        )
+        metrics["conversations"] = len({r["session_id"] for r in (conv_msgs.data or [])})
     except Exception:
         metrics["conversations"] = 0
 
@@ -938,8 +946,8 @@ async def lead_source_breakdown(
     try:
         result = db.table("leads").select("source").eq("client_id", tenant_id).execute()
     except Exception:
-        logger.exception("Failed to fetch lead sources for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to load lead source data")
+        logger.warning("Failed to fetch lead sources for tenant %s", tenant_id, exc_info=True)
+        return {"breakdown": [], "total": 0}
 
     counts: dict[str, int] = defaultdict(int)
     for lead in result.data or []:
