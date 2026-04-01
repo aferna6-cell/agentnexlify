@@ -1441,12 +1441,20 @@ async def billing_checkout(
         line_items.append({"price": prices["setup"], "quantity": 1})
     line_items.append({"price": prices["monthly"], "quantity": 1})
 
+    source = body.get("source")  # "wizard" | None
+    if source == "wizard":
+        success_url = f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/onboarding?step=5&cancelled=1"
+    else:
+        success_url = f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/billing/cancel"
+
     session_params: dict = {
         "mode": "subscription",
         "customer": customer.id,
         "line_items": line_items,
-        "success_url": f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
-        "cancel_url": f"{settings.frontend_url}/billing/cancel",
+        "success_url": success_url,
+        "cancel_url": cancel_url,
         "metadata": {"tenant_id": tenant_id, "plan": plan},
         "subscription_data": {"metadata": {"tenant_id": tenant_id, "plan": plan}},
     }
