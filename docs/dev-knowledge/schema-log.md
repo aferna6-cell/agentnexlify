@@ -429,3 +429,8 @@ Five indexes: tenant lookup on sequences, sequence lookup on steps, tenant+statu
 All four tables: RLS enabled, service_role full access policy. Pattern matches migrations 019, 050, 051.
 
 **Applied:** 2026-03-31 via Supabase MCP (mcp__supabase__apply_migration). All four tables confirmed created.
+
+### 074 — conversations.lead_captured
+Adds `lead_captured` (BOOLEAN NOT NULL DEFAULT false) to the `conversations` table. Populated by `_capture_leads_from_session()` in `backend/routers/widget_helpers.py` after a lead is successfully inserted (new lead path) or identified (existing lead path). Enables analytics, filtering, and reporting that depend on knowing whether a conversation resulted in a lead capture.
+
+**Applied:** 2026-04-01 via Supabase MCP.

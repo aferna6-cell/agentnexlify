@@ -42,6 +42,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### conversations.lead_captured always false after lead capture
+**Date:** 2026-04-01
+**Symptom:** A lead appears in the dashboard after a widget chat, but the conversation record shows `lead_captured = false`. Analytics and filters that use this flag show 0.
+**Root Cause:** Two issues: (1) `conversations` table had no `lead_captured` column; (2) `_capture_leads_from_session()` in `widget_helpers.py` created/updated the lead but never wrote back to the `conversations` row.
+**Fix:** Migration 074 added the column. Updated both the new-lead and existing-lead paths in `_capture_leads_from_session` to call `db.table("conversations").update({"lead_captured": True}).eq("id", conversation_id).execute()` after successful lead handling.
+**Files Changed:** `migrations/074_conversations_lead_captured.sql`, `backend/routers/widget_helpers.py`
+**Prevention:** After any background task that mutates a child record, check whether the parent/sibling record also needs a status flag updated.
+
+---
+
 ### Dashboard shows FREE when user has paid plan
 **Date:** 2025
 **Symptom:** User pays but dashboard still shows FREE.

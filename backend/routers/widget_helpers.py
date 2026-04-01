@@ -1062,6 +1062,13 @@ async def _capture_leads_from_session(
                         logger.info("lead_capture: tagged existing lead %s with %s", lead["id"], tags)
                 except Exception:
                     logger.warning("lead_capture: tag extraction failed for lead %s", lead["id"], exc_info=True)
+                # Mark conversation as having captured a lead
+                if conversation_id:
+                    try:
+                        db.table("conversations").update({"lead_captured": True}).eq("id", conversation_id).execute()
+                        logger.info("lead_capture: set lead_captured=true on conversation %s (existing lead)", conversation_id)
+                    except Exception:
+                        logger.warning("lead_capture: failed to update lead_captured on conversation %s", conversation_id, exc_info=True)
                 return
 
         # Extract service interest from conversation context
@@ -1172,6 +1179,14 @@ async def _capture_leads_from_session(
                 score_lead_background(lead_id)
             except Exception:
                 logger.warning("Failed to score lead %s in background", lead_id, exc_info=True)
+
+            # Mark conversation as having captured a lead
+            if conversation_id:
+                try:
+                    db.table("conversations").update({"lead_captured": True}).eq("id", conversation_id).execute()
+                    logger.info("lead_capture: set lead_captured=true on conversation %s", conversation_id)
+                except Exception:
+                    logger.warning("lead_capture: failed to update lead_captured on conversation %s", conversation_id, exc_info=True)
         else:
             logger.warning("lead_capture: INSERT returned no data — result=%s", result)
 
