@@ -119,7 +119,8 @@ export default function OnboardingWizardPage() {
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
-      apiKey={apiKey}
+      token={token}
+      tenantId={user?.tenantId}
     />,
     <WizardStepPlan
       key="5"
@@ -132,7 +133,8 @@ export default function OnboardingWizardPage() {
     <WizardStepEmbed
       key="6"
       wizardData={wizardData}
-      apiKey={apiKey}
+      token={token}
+      tenantId={user?.tenantId}
     />,
   ];
 
