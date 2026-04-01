@@ -335,6 +335,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         menu_items, job_listings, bid_templates=bid_templates or None,
         custom_field_defs=custom_field_defs or None,
         custom_instructions=widget.get("custom_instructions") or None,
+        knowledge_base=widget.get("knowledge_base") or None,
     )
 
     # Inject active flow instructions into system prompt

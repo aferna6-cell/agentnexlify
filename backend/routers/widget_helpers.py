@@ -358,6 +358,7 @@ def _build_system_prompt(
     bid_templates: list[dict] | None = None,
     custom_field_defs: list[dict] | None = None,
     custom_instructions: str | None = None,
+    knowledge_base: str | None = None,
 ) -> str:
     business_name = tenant.get("business_name") or "our company"
     business_type = tenant.get("business_type") or ""
@@ -388,6 +389,13 @@ def _build_system_prompt(
         if len(website_content) > 8000:
             content += "\n[Content truncated]"
         website_block = f"\n\nBusiness website content (use this to answer questions about the business):\n{content}"
+
+    knowledge_block = ""
+    if knowledge_base:
+        kb_content = knowledge_base[:6000]
+        if len(knowledge_base) > 6000:
+            kb_content += "\n[Content truncated]"
+        knowledge_block = f"\n\nBusiness Knowledge Base (use this as primary reference for customer questions):\n{kb_content}"
 
     menu_block = ""
     if menu_items:
@@ -548,6 +556,7 @@ def _build_system_prompt(
         f"{hours_block}"
         f"{faq_block}"
         f"{website_block}"
+        f"{knowledge_block}"
         f"{custom_fields_block}"
         f"{menu_block}"
         f"{jobs_block}"
