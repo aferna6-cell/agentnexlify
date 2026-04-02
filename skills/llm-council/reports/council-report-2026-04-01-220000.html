@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Keep Building, Stabilize, or Shift Gears?</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; }
+  .header { background: #1a1a2e; color: #fff; padding: 48px 40px 36px; }
+  .header h1 { font-size: 1.1rem; font-weight: 500; color: #8b9dc3; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+  .header h2 { font-size: 1.75rem; font-weight: 700; color: #fff; max-width: 800px; line-height: 1.35; }
+  .header .meta { margin-top: 16px; font-size: 0.85rem; color: #6b7fa3; }
+  .container { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Chairman Card */
+  .chairman-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 36px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .chairman-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; margin-bottom: 16px; }
+  .verdict-box { background: #1a1a2e; color: #e8f0fe; border-radius: 8px; padding: 24px 28px; margin-bottom: 24px; }
+  .verdict-box h3 { font-size: 1.05rem; font-weight: 700; color: #93c5fd; margin-bottom: 10px; }
+  .verdict-box p { font-size: 1rem; line-height: 1.65; }
+  .one-thing { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 20px 24px; margin-top: 20px; }
+  .one-thing .label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #16a34a; margin-bottom: 8px; }
+  .one-thing p { font-size: 1rem; color: #14532d; font-weight: 500; line-height: 1.55; }
+
+  .section-block { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px 32px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .section-block h3 { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .section-block h3 .icon { font-size: 1.1rem; }
+  .section-block p, .section-block li { font-size: 0.95rem; color: #374151; line-height: 1.7; }
+  .section-block ul { padding-left: 20px; }
+  .section-block ul li { margin-bottom: 6px; }
+
+  /* Agreement grid */
+  .agreement-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 24px; }
+  .advisor-chip { border-radius: 8px; padding: 12px 8px; text-align: center; }
+  .advisor-chip .name { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .advisor-chip .verdict-tag { font-size: 0.65rem; margin-top: 4px; opacity: 0.85; }
+  .chip-contrarian  { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+  .chip-principles  { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; }
+  .chip-expansionist{ background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+  .chip-outsider    { background: #fefce8; border: 1px solid #fcd34d; color: #92400e; }
+  .chip-executor    { background: #f5f3ff; border: 1px solid #c4b5fd; color: #5b21b6; }
+
+  /* Collapsible advisors */
+  details { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  details summary { padding: 16px 20px; cursor: pointer; font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; list-style: none; background: #fff; user-select: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: "▾"; margin-left: auto; font-size: 0.85rem; color: #94a3b8; transition: transform 0.2s; }
+  details[open] summary::after { transform: rotate(180deg); }
+  details summary:hover { background: #f8fafc; }
+  .advisor-body { padding: 0 20px 20px; font-size: 0.93rem; color: #374151; line-height: 1.75; border-top: 1px solid #f1f5f9; background: #fff; }
+  .advisor-body p { margin-top: 14px; }
+
+  .contrarian-accent  summary { border-left: 4px solid #ef4444; }
+  .principles-accent  summary { border-left: 4px solid #3b82f6; }
+  .expansionist-accent summary { border-left: 4px solid #22c55e; }
+  .outsider-accent    summary { border-left: 4px solid #f59e0b; }
+  .executor-accent    summary { border-left: 4px solid #8b5cf6; }
+
+  /* Peer review */
+  .peer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .peer-grid { grid-template-columns: 1fr; } .agreement-grid { grid-template-columns: repeat(2, 1fr); } }
+  .peer-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 18px; }
+  .peer-card .peer-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 8px; }
+  .peer-card p { font-size: 0.87rem; color: #374151; line-height: 1.6; }
+  .peer-card strong { color: #1a1a2e; }
+
+  .section-title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+
+  .clash-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .clash-side { flex: 1; border-radius: 6px; padding: 12px 14px; font-size: 0.88rem; line-height: 1.6; }
+  .clash-a { background: #fef2f2; border: 1px solid #fca5a5; color: #7f1d1d; }
+  .clash-b { background: #eff6ff; border: 1px solid #93c5fd; color: #1e3a5f; }
+  .clash-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; opacity: 0.7; }
+
+  .action-list { counter-reset: action; list-style: none; padding: 0; }
+  .action-list li { counter-increment: action; display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.93rem; color: #374151; }
+  .action-list li::before { content: counter(action); min-width: 26px; height: 26px; background: #1a1a2e; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .action-list li:last-child { border-bottom: none; }
+
+  footer { text-align: center; padding: 40px 24px 24px; font-size: 0.8rem; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LLM Council Report</h1>
+  <h2>Keep Building, Stabilize, or Shift Gears? Post-Sprint Decision After 3,285 Lines in One Session</h2>
+  <div class="meta">April 1, 2026 &nbsp;·&nbsp; Full Protocol &nbsp;·&nbsp; 5 Advisors &nbsp;·&nbsp; 5 Peer Reviewers &nbsp;·&nbsp; Chairman Synthesis</div>
+</div>
+
+<div class="container">
+
+  <!-- Chairman Verdict -->
+  <div class="chairman-card">
+    <div class="chairman-label">Chairman's Verdict</div>
+    <div class="verdict-box">
+      <h3>Recommendation</h3>
+      <p>Enter a 48-hour stabilization window — but "stabilization" does not mean stopping. It means shifting from net-new feature construction to closing the open loops the sprint left behind. Six specific items must be completed before any new feature work begins. These six directly de-risk the live testers or create sales evidence for partners.</p>
+    </div>
+    <div class="section-block" style="margin-top:20px;margin-bottom:0;">
+      <h3><span class="icon">🎯</span>The Six Required Closes (in order)</h3>
+      <ol class="action-list">
+        <li><strong>Manually trigger the weekly digest email</strong> in a test/staging tenant within 2 hours. If it fires cleanly, done. If it breaks, you have until Friday to fix it. This is the only item with a hard deadline and can cause damage while you sleep.</li>
+        <li><strong>Build the auto-KB frontend</strong> — one form, URL input, submit, loading state, success message. 2–4 hours. Turns a backend prototype into a sales-demo-able feature and removes the onboarding friction the First Principles advisor correctly identified.</li>
+        <li><strong>Run the full onboarding flow as a new customer</strong> — create tenant, configure widget, embed on test page, send messages, capture a lead, book an appointment. Time it. Document every friction point. Fix the top 3.</li>
+        <li><strong>Verify the widget on Keys Koffee's actual site</strong> in a real desktop browser. Confirm load, message send, and lead capture. Take a screenshot. This is the first piece of hard sales evidence.</li>
+        <li><strong>Clean up the 2 orphan tenant accounts.</strong> 20 minutes. Eliminates a silent RLS risk and a data integrity landmine.</li>
+        <li><strong>Wrap the tester snapshot into a shareable one-page link</strong> for partners to text or email to prospects. This activates an already-built asset as a sales weapon.</li>
+      </ol>
+    </div>
+    <div class="one-thing">
+      <div class="label">The One Thing to Do First</div>
+      <p>Manually trigger the weekly digest email in a test-tenant environment in the next 2 hours. An untested automated email system is the only item that can cause trust damage while Aidan sleeps. Everything else is lower urgency than this.</p>
+    </div>
+  </div>
+
+  <!-- Advisor Position Grid -->
+  <div class="section-title" style="margin-top:32px;">Advisor Positions at a Glance</div>
+  <div class="agreement-grid">
+    <div class="advisor-chip chip-contrarian">
+      <div class="name">Contrarian</div>
+      <div class="verdict-tag">Stop. Foundation is wet.</div>
+    </div>
+    <div class="advisor-chip chip-principles">
+      <div class="name">First Principles</div>
+      <div class="verdict-tag">Close the loop to first payment.</div>
+    </div>
+    <div class="advisor-chip chip-expansionist">
+      <div class="name">Expansionist</div>
+      <div class="verdict-tag">Activate the assets. Ship the connective tissue.</div>
+    </div>
+    <div class="advisor-chip chip-outsider">
+      <div class="name">Outsider</div>
+      <div class="verdict-tag">Talk to a tester before writing code.</div>
+    </div>
+    <div class="advisor-chip chip-executor">
+      <div class="name">Executor</div>
+      <div class="verdict-tag">Verify → Document → Fix → then Build.</div>
+    </div>
+  </div>
+
+  <!-- Council Agreement -->
+  <div class="section-block" style="margin-bottom:20px;">
+    <h3><span class="icon">✓</span>Where the Council Agrees</h3>
+    <ul>
+      <li><strong>Auto-KB frontend is the highest-leverage incomplete item.</strong> Every advisor, across five different thinking styles, independently landed on this. Backend done, frontend missing, 2–4 hours of work, unlocks sales demos and zero-friction onboarding. Rare convergence.</li>
+      <li><strong>The weekly digest email must be manually validated before Friday.</strong> An untested automated email to live testers is a trust-destroying event, not a minor bug.</li>
+      <li><strong>The orphan tenant accounts must be cleaned up.</strong> 20 minutes eliminates a silent RLS/data integrity risk.</li>
+    </ul>
+  </div>
+
+  <!-- Council Clashes -->
+  <div class="section-block" style="margin-bottom:20px;">
+    <h3><span class="icon">⚡</span>Where the Council Clashes</h3>
+    <div class="clash-row">
+      <div class="clash-side clash-a">
+        <div class="clash-label">Contrarian + Outsider</div>
+        The foundation is wet. 3,285 untested lines under live testers is a ticking clock. Stop adding surface area.
+      </div>
+      <div class="clash-side clash-b">
+        <div class="clash-label">Expansionist</div>
+        The assets are sitting idle. The auto-KB frontend, snapshot API, and digest are already built — activate them. That's not "more building," it's completing what's there.
+      </div>
+    </div>
+    <p style="font-size:0.88rem;color:#6b7280;margin-top:8px;"><em>Chairman's read: This is a sequencing disagreement, not a directional one. Both are right. Verify before activating, but then activate.</em></p>
+
+    <div class="clash-row" style="margin-top:16px;">
+      <div class="clash-side clash-a">
+        <div class="clash-label">First Principles + Outsider</div>
+        No real Stripe payments = no financial validation = no proof the business exists. Prioritize closing the payment loop.
+      </div>
+      <div class="clash-side clash-b">
+        <div class="clash-label">Executor</div>
+        Stripe on an untested system is worse than deferred Stripe. A customer charged but not onboarded is a lawsuit, not a win.
+      </div>
+    </div>
+    <p style="font-size:0.88rem;color:#6b7280;margin-top:8px;"><em>Chairman's read: The Executor wins this round. Stripe is a 72-hour-deferred priority, not a skip. Do the six closes first.</em></p>
+  </div>
+
+  <!-- Blind Spots -->
+  <div class="section-block" style="margin-bottom:20px;">
+    <h3><span class="icon">◎</span>Blind Spots the Council Caught (Peer Review Only)</h3>
+    <ul>
+      <li><strong>The partner sales motion has no tooling.</strong> Partners handle outreach but have no shareable live demo link, no report to screenshot and send, no "here's what your bot would look like" mechanism. The tester snapshot API is the start of this — but it needs a 30-second delivery format (shareable link or one-page HTML) before it helps partners close.</li>
+      <li><strong>There is no incident response process.</strong> UptimeRobot monitors uptime, not logic errors. When Keys Koffee messages at 10pm saying their bot is broken, what's the response path? This needs a simple answer: a direct contact channel and a documented SLA, even if informal.</li>
+      <li><strong>Cognitive fatigue is a risk multiplier.</strong> An exhausted engineer shipping code to a live production system after a 5-hour sprint produces bugs. The best move is sometimes to sleep first, then execute — not because the work isn't urgent, but because decisions made in exhausted states cost more to fix than they save.</li>
+    </ul>
+  </div>
+
+  <!-- Advisor Responses (Collapsible) -->
+  <div class="section-title" style="margin-top:32px;">Full Advisor Responses</div>
+
+  <details class="contrarian-accent">
+    <summary>The Contrarian — "Stop. The Foundation Is Wet."</summary>
+    <div class="advisor-body">
+      <p>3,285 lines of untested code sitting under 3 live testers is not a sprint success story — it's a ticking clock. Let's be specific about what can fail in the next 72 hours.</p>
+      <p>The widget CSS-hardening with <code>!important</code> is a band-aid, not a fix. If the root cause is a Shadow DOM scoping issue, then some embedding scenarios — especially CMS-hosted sites like Squarespace or Wix that Keys Koffee or the power washing business might use — will still break. The first impression a new tester gets is the widget not appearing on their site. That's a credibility kill shot, not a "we'll fix it next sprint."</p>
+      <p>The weekly digest email has never fired. It runs Fridays. Nobody knows if the Resend integration, the query logic, the recipient resolution, or the scheduling hook actually works end to end. If it sends corrupt data, blank emails, or fires to the wrong tenant, you've just spammed a tester's inbox with a broken product.</p>
+      <p>The auto-KB endpoint exists but has no frontend. That means it's either being invoked manually (fragile) or not at all. The feature that was supposed to make onboarding zero-friction is actually zero-accessible to anyone without API access.</p>
+      <p>The orphan tenant accounts are a data integrity landmine. If any query accidentally joins against them or their RLS policies interact unexpectedly with the new migration, you get silent data leakage between tenants. That's a security incident, not a cleanup task.</p>
+      <p>Partners are out selling a platform that has no real Stripe payments flowing. When a prospect says "sign me up," what's the answer? "We'll manually set your plan." That's not a business. That's a demo.</p>
+      <p>Stop building. The foundation you just poured is still wet.</p>
+    </div>
+  </details>
+
+  <details class="principles-accent">
+    <summary>The First Principles Thinker — "Build the Closed Loop to First Payment"</summary>
+    <div class="advisor-body">
+      <p>Strip away the sprint metrics and ask the actual question: what is this company trying to prove right now, and to whom?</p>
+      <p>The answer isn't "prove we can ship fast." It's "prove the product works well enough that real businesses pay for it." That's the job. Everything else is a proxy.</p>
+      <p>From that frame, the build/stabilize/pivot question dissolves into a clearer one: what's the shortest path to a paying customer? Not a tester. Not a manually-set plan. A human who gave a credit card and got value.</p>
+      <p>Three things block that path right now, in order of severity:</p>
+      <p>First, Stripe isn't flowing. No real payments means no business, regardless of how polished the dashboard looks. This isn't a "nice to have" — it's the definition of whether the company exists.</p>
+      <p>Second, the onboarding flow has never been tested end to end. You don't know if a new business owner can go from zero to live widget without Aidan's help. If they can't, every "sale" the partners close becomes a support ticket.</p>
+      <p>Third, the auto-KB frontend is missing. The feature that makes onboarding zero-friction — paste a URL, get a configured bot — requires API access to use. That's not a feature. That's a prototype.</p>
+      <p>The sprint was valuable. The bugs that got fixed were real blockers. But the instinct to keep building more features is the wrong response to the current moment. The platform doesn't need more surface area. It needs a closed loop: prospect → payment → onboarded → live → evidenced value.</p>
+      <p>Build that loop. Test it with one real business. Then build the next feature.</p>
+    </div>
+  </details>
+
+  <details class="expansionist-accent">
+    <summary>The Expansionist — "Activate the Assets. The Sales Weapons Are Already Built."</summary>
+    <div class="advisor-body">
+      <p>Everyone's going to tell Aidan to slow down. I'll tell him what slowing down costs.</p>
+      <p>The auto-KB endpoint is a sleeper hit. Paste a URL, get a fully configured AI chatbot trained on your business — that's a 10-minute onboarding flow that competes directly with GoHighLevel's setup process that takes days and requires a human. The backend is done. The frontend is one form and one API call. That's a 2-hour build, and it unlocks the ability for partners to demo live, on the spot, with any prospect's actual website. That's not a feature — that's a sales weapon.</p>
+      <p>The tester results snapshot API is sitting there unused as a sales artifact. Imagine showing a prospect: "Here's exactly what Keys Koffee's bot handled in its first 24 hours — 47 conversations, 3 leads captured, 2 appointments booked." That's a live proof of concept that sells itself. Right now it's an API endpoint. Wrap it in a one-page HTML report that the partners can screenshot and text to prospects.</p>
+      <p>The weekly digest email, once verified working, becomes a retention flywheel. Every Friday, every tenant gets evidence of value. That's churn prevention at scale. The competitors charge $300/month and don't send this. This feature alone justifies the price point.</p>
+      <p>The power washing business starts Monday. That's 72 hours to build a vertical-specific demo package: pre-loaded FAQs, sample lead capture script, example digest. Show up with a configured product, not a blank canvas.</p>
+      <p>The leverage isn't in stabilizing what's built. It's in connecting the built pieces into a narrative that closes deals.</p>
+    </div>
+  </details>
+
+  <details class="outsider-accent">
+    <summary>The Outsider — "Talk to a Tester Before Writing Code"</summary>
+    <div class="advisor-body">
+      <p>I'm going to say what's obvious from the outside that might be invisible from inside the sprint.</p>
+      <p>You just built a lot of things for testers who are not paying. "6 on paid plans" where the plans are manually set means zero financial validation. It means you have 6 people who said "sure, I'll try this" — which is very different from 6 people who said "here's my credit card, this is worth $249 a month to me."</p>
+      <p>The sprint generated 3,285 lines of code. The question isn't whether to build more or stabilize. The question is: does any of this actually matter to the person who's going to pay? Have you talked to Keys Koffee today? Do they know the bot is live? Do they know what to look for? Do they know how to tell you if something breaks?</p>
+      <p>From the outside, this looks like a very technical team building a very technical product and measuring success in commits, lines of code, and features shipped. Those are not the metrics that predict whether this company survives the next 90 days.</p>
+      <p>The metric that matters is: how many people paid, unprompted, because the product was obviously worth it? Right now that number is zero. Not because the product is bad — it might be great — but because the feedback loop between "product works" and "customer pays" hasn't been closed.</p>
+      <p>Before the next line of code is written, Aidan should call one tester, watch them use the product for 30 minutes, and ask what would make them pull out a credit card today. That conversation is worth more than the next sprint.</p>
+    </div>
+  </details>
+
+  <details class="executor-accent">
+    <summary>The Executor — "Verify → Document → Fix → Then Build"</summary>
+    <div class="advisor-body">
+      <p>Here's the concrete plan for the next 72 hours, in priority order. No theory.</p>
+      <p><strong>Today (next 4 hours):</strong> Manually trigger the weekly digest email in a test environment. If it works, done. If it breaks, fix it before Friday. This is a zero-tolerance item — you can't let untested automated email fire at live testers.</p>
+      <p><strong>Today:</strong> Check the widget on Keys Koffee's actual site (whatever CMS they use). Open it in a desktop browser. Confirm it loads, sends a message, captures a lead. Document the test. Take a screenshot. This is your first piece of sales evidence.</p>
+      <p><strong>Today:</strong> Build the auto-KB frontend. It's one form: URL input + submit button + loading state + success message. Hook it to the existing endpoint. 2–3 hours max. This turns a backend prototype into a usable feature and gives partners a demo-able onboarding story.</p>
+      <p><strong>Tomorrow:</strong> Run the full onboarding flow as if you're a new customer. Create a new tenant, configure the widget, embed it on a test page, send messages, capture a lead, book an appointment. Time it. Document every friction point. Fix the top 3.</p>
+      <p><strong>Tomorrow:</strong> Clean up the 2 orphan tenant accounts. This is 20 minutes, not a project.</p>
+      <p><strong>Monday (before power washing goes live):</strong> Verify the widget is live on their site. Have their FAQs loaded. Send them the tester results snapshot link. Give them something concrete to look at.</p>
+      <p><strong>What to skip for now:</strong> Load testing (you have 8 tenants, not 8,000), new features, Stripe integration (critical but not 72-hour critical), any refactoring.</p>
+      <p>The priority stack is: verify → document → fix → then build.</p>
+    </div>
+  </details>
+
+  <!-- Peer Review -->
+  <div class="section-title" style="margin-top:32px;">Peer Review Highlights</div>
+  <div class="peer-grid">
+    <div class="peer-card">
+      <div class="peer-label">Reviewer 1</div>
+      <p><strong>Strongest:</strong> First Principles — correctly reframes the unit of success as a closed loop to paying customer, not sprint velocity.<br><strong>Blind spot:</strong> Outsider dismisses tester value — real usage data and edge case discovery are signals, not noise.<br><strong>All missed:</strong> Partner tooling gap. Partners close deals but have no shareable demo link or live data report.</p>
+    </div>
+    <div class="peer-card">
+      <div class="peer-label">Reviewer 2</div>
+      <p><strong>Strongest:</strong> Contrarian — only response with specific, code-level failure modes: Shadow DOM, untested email, RLS collision risk.<br><strong>Blind spot:</strong> Expansionist underestimates build time. "2-hour" frontend assumes no debugging or edge cases in a 53-router codebase.<br><strong>All missed:</strong> Cognitive fatigue. Post-5-hour sprint, an exhausted engineer shipping to production is a risk multiplier.</p>
+    </div>
+    <div class="peer-card">
+      <div class="peer-label">Reviewer 3</div>
+      <p><strong>Strongest:</strong> Executor — only response giving actionable next steps within the hour.<br><strong>Blind spot:</strong> First Principles implies Stripe should precede stabilization. Stripe on untested systems creates charged-but-not-onboarded scenarios — worse than deferral.<br><strong>All missed:</strong> Testers finding bugs is the goal, not the risk. The real question is whether there's a response system when they do.</p>
+    </div>
+    <div class="peer-card">
+      <div class="peer-label">Reviewer 4</div>
+      <p><strong>Strongest:</strong> Outsider — asks the most uncomfortable question: does any of this matter to the person who pays?<br><strong>Blind spot:</strong> Contrarian over-indexes on technical failure. Bigger risk: widget works perfectly and nobody buys because sales motion is undefined.<br><strong>All missed:</strong> Human touchpoint gap. Has anyone called Keys Koffee today to say "your bot is live"? Relationship infrastructure matters as much as technical infrastructure at this stage.</p>
+    </div>
+    <div class="peer-card">
+      <div class="peer-label">Reviewer 5</div>
+      <p><strong>Strongest:</strong> Expansionist — only response recognizing built-but-idle assets (snapshot API, auto-KB) as sales weapons.<br><strong>Blind spot:</strong> Executor's 72-hour plan doesn't address Monday morning incident response when power washing hits a logic error UptimeRobot won't catch.<br><strong>All missed:</strong> This is the first week with multiple simultaneous live testers — an irreplaceable data moment. No one suggested instrumenting it with a daily log review to catch patterns before incidents.</p>
+    </div>
+  </div>
+
+  <!-- What to Defer -->
+  <div class="section-block" style="margin-top:24px;">
+    <h3><span class="icon">⏸</span>What to Defer (Not Skip)</h3>
+    <ul>
+      <li><strong>Stripe integration</strong> — Critical, but don't add payment flows to an untested onboarding system. Defer until the six closes are done.</li>
+      <li><strong>Widget Shadow DOM root-cause</strong> — CSS hardening is holding. Investigate after you've confirmed widget works on live tester sites.</li>
+      <li><strong>Load testing</strong> — 8 tenants, not 8,000. Real problem is months away. Skip entirely for now.</li>
+      <li><strong>New net-new features</strong> — The platform doesn't need more surface area. It needs the existing surface area to close deals.</li>
+      <li><strong>Refactoring</strong> — Everything can wait. Stability > elegance at this stage.</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer>
+  LLM Council &nbsp;·&nbsp; April 1, 2026, 22:00 &nbsp;·&nbsp; Full Protocol &nbsp;·&nbsp; AgentNexLiFy
+</footer>
+
+</body>
+</html>

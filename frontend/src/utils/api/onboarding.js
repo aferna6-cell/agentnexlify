@@ -52,3 +52,15 @@ export function trackWizardEvent(tenantId, token, step, action) {
     body: { step, action },
   }).catch(() => {});
 }
+
+/**
+ * Auto-generate knowledge base from a website URL.
+ * Crawls the site, extracts content, and uses AI to generate KB + FAQs.
+ * Returns { knowledge_base, custom_instructions, faqs, pages_crawled, chars_extracted }
+ */
+export function autoGenerateKb(tenantId, token, url) {
+  return apiFetch(`/api/v1/onboarding/${tenantId}/auto-kb`, {
+    token,
+    body: { url },
+  });
+}

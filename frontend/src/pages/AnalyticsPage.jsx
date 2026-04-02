@@ -8,6 +8,7 @@ import {
   fetchAnalyticsWidget,
   fetchMissedCallAnalytics,
   fetchLeadSources,
+  fetchAnalyticsSnapshot,
 } from "../utils/api/analytics";
 import { fetchConversations } from "../utils/api/conversations";
 import { fetchTagDefinitions } from "../utils/api/tags";
@@ -244,6 +245,81 @@ function BusiestHoursHeatMap({ peakHours, chartTheme }) {
   );
 }
 
+function ShareResultsModal({ snapshot, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!snapshot) return null;
+
+  const topQList = (snapshot.top_questions || []).length > 0
+    ? snapshot.top_questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")
+    : "  (No questions yet)";
+
+  const summaryText = [
+    `${snapshot.business_name} -- AI Chat Performance`,
+    `Period: ${snapshot.period}`,
+    "",
+    `Conversations: ${snapshot.total_conversations}`,
+    `Messages: ${snapshot.total_messages}`,
+    `Unique Visitors: ${snapshot.unique_visitors}`,
+    `Leads Captured: ${snapshot.leads_captured}`,
+    `Appointments Booked: ${snapshot.appointments_booked}`,
+    `Avg Messages/Chat: ${snapshot.avg_messages_per_conversation}`,
+    snapshot.busiest_day ? `Busiest Day: ${snapshot.busiest_day}` : null,
+    "",
+    "Top Questions:",
+    topQList,
+    "",
+    "Powered by AgentNexLiFy",
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = summaryText;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="share-modal-overlay" onClick={onClose}>
+      <div className="share-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="share-modal-header">
+          <h2>Share Results</h2>
+          <button className="share-modal-close" onClick={onClose}>
+            &times;
+          </button>
+        </div>
+        <pre className="share-modal-content">{summaryText}</pre>
+        <div className="share-modal-footer">
+          <button
+            className={`btn btn-primary share-copy-btn ${copied ? "copied" : ""}`}
+            onClick={handleCopy}
+          >
+            {copied ? "Copied!" : "Copy to Clipboard"}
+          </button>
+          <button className="btn btn-secondary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   const { user, token } = useAuth();
   const [period, setPeriod] = useState("30d");
@@ -258,6 +334,9 @@ export default function AnalyticsPage() {
   const [missedCallsError, setMissedCallsError] = useState(false);
   const [leadSources, setLeadSources] = useState([]);
   const [error, setError] = useState(null);
+  const [shareSnapshot, setShareSnapshot] = useState(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const [currentTheme, setCurrentTheme] = useState(
     () => document.querySelector(".app")?.getAttribute("data-theme") || "dark"
@@ -344,6 +423,22 @@ export default function AnalyticsPage() {
     loadData();
   }, [loadData]);
 
+  const handleShareResults = useCallback(async () => {
+    if (!user?.tenantId) return;
+    setShareLoading(true);
+    try {
+      const data = await fetchAnalyticsSnapshot(user.tenantId, token, period);
+      setShareSnapshot(data);
+      setShareOpen(true);
+    } catch (err) {
+      // Surface error visually — show a transient message
+      setError(`Failed to generate snapshot: ${err.message}`);
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setShareLoading(false);
+    }
+  }, [user?.tenantId, token, period]);
+
   if (loading) return <SkeletonLoader />;
 
   if (error) {
@@ -392,16 +487,26 @@ export default function AnalyticsPage() {
           <h1>Analytics</h1>
           <p>Performance overview for your business</p>
         </div>
-        <div className="analytics-period-selector">
-          {PERIODS.map(p => (
-            <button
-              key={p.value}
-              className={`analytics-period-btn ${period === p.value ? "active" : ""}`}
-              onClick={() => setPeriod(p.value)}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div className="analytics-period-selector">
+            {PERIODS.map(p => (
+              <button
+                key={p.value}
+                className={`analytics-period-btn ${period === p.value ? "active" : ""}`}
+                onClick={() => setPeriod(p.value)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <button
+            className="btn btn-secondary share-results-btn"
+            onClick={handleShareResults}
+            disabled={shareLoading}
+            title="Generate a shareable performance summary"
+          >
+            {shareLoading ? "Generating..." : "Share Results"}
+          </button>
         </div>
       </div>
 
@@ -821,6 +926,16 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      {shareOpen && (
+        <ShareResultsModal
+          snapshot={shareSnapshot}
+          onClose={() => {
+            setShareOpen(false);
+            setShareSnapshot(null);
+          }}
+        />
+      )}
     </div>
   );
 }

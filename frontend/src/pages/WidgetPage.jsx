@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchDashboard } from "../utils/api/dashboard";
 import { updateWidgetConfig, toggleWidgetOnlineStatus } from "../utils/api/widget-config";
+import { autoGenerateKb } from "../utils/api/onboarding";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const POSITIONS = [
@@ -244,6 +245,9 @@ export default function WidgetPage() {
             {isOnline ? "Live Chat Active" : "Offline Mode"}
           </div>
         </div>
+
+        {/* Auto-Setup from Website */}
+        <AutoKbSection tenantId={user?.tenantId} token={token} onSuccess={load} />
 
         {/* Customization */}
         <div className="settings-card">
@@ -553,6 +557,135 @@ export default function WidgetPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AutoKbSection({ tenantId, token, onSuccess }) {
+  const [url, setUrl] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const handleGenerate = async () => {
+    if (!tenantId || !url.trim()) return;
+    setGenerating(true);
+    setError("");
+    setResult(null);
+    try {
+      const data = await autoGenerateKb(tenantId, token, url.trim());
+      setResult(data);
+      // Refresh the parent page data so updated KB shows up
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      setError(err.message || "Failed to generate knowledge base. Please check the URL and try again.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const isValidUrl = url.trim().startsWith("http://") || url.trim().startsWith("https://");
+
+  return (
+    <div className="settings-card" style={{ gridColumn: "1 / -1" }}>
+      <h3>Auto-Setup from Website</h3>
+      <p className="settings-card-desc">
+        Paste your website URL and we will crawl it to automatically generate your chatbot's knowledge base, FAQs, and custom instructions.
+      </p>
+
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => { setUrl(e.target.value); setError(""); setResult(null); }}
+          placeholder="https://yourbusiness.com"
+          disabled={generating}
+          style={{
+            flex: 1,
+            minWidth: 240,
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--bg-secondary)",
+            color: "var(--text-primary)",
+            fontSize: "0.9rem",
+            outline: "none",
+          }}
+          onKeyDown={(e) => { if (e.key === "Enter" && isValidUrl && !generating) handleGenerate(); }}
+        />
+        <button
+          className="btn-primary"
+          onClick={handleGenerate}
+          disabled={generating || !isValidUrl}
+          style={{ minWidth: 200, padding: "10px 20px", whiteSpace: "nowrap" }}
+        >
+          {generating ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 14,
+                  height: 14,
+                  border: "2px solid rgba(255,255,255,0.3)",
+                  borderTopColor: "#fff",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                }}
+              />
+              Crawling & generating...
+            </span>
+          ) : (
+            "Generate Knowledge Base"
+          )}
+        </button>
+      </div>
+
+      {/* Error state */}
+      {error && (
+        <div style={{
+          marginTop: "1rem",
+          padding: "12px 16px",
+          borderRadius: 8,
+          background: "rgba(239, 68, 68, 0.1)",
+          border: "1px solid rgba(239, 68, 68, 0.3)",
+          color: "#f87171",
+          fontSize: "0.85rem",
+        }}>
+          {error}
+        </div>
+      )}
+
+      {/* Success state */}
+      {result && (
+        <div style={{
+          marginTop: "1rem",
+          padding: "16px",
+          borderRadius: 8,
+          background: "rgba(34, 197, 94, 0.08)",
+          border: "1px solid rgba(34, 197, 94, 0.25)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#22c55e">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <span style={{ color: "#22c55e", fontWeight: 600, fontSize: "0.9rem" }}>
+              Knowledge base generated successfully!
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+            <span>{result.pages_crawled || 0} page{(result.pages_crawled || 0) !== 1 ? "s" : ""} crawled</span>
+            <span>{(result.faqs || []).length} FAQ{(result.faqs || []).length !== 1 ? "s" : ""} created</span>
+            <span>{result.chars_extracted ? `${Math.round(result.chars_extracted / 1000)}k` : "0"} characters extracted</span>
+          </div>
+        </div>
+      )}
+
+      {/* Helpful hint when idle */}
+      {!generating && !result && !error && (
+        <p style={{ marginTop: "0.75rem", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+          This will crawl your homepage and linked pages to build an AI knowledge base. The process typically takes 30-60 seconds.
+        </p>
+      )}
     </div>
   );
 }

@@ -38,3 +38,7 @@ export function fetchRevenue(tenantId, token) {
 export function fetchAnalyticsHealth(tenantId, token) {
   return request(`/api/v1/analytics/${tenantId}/health`, { token });
 }
+
+export function fetchAnalyticsSnapshot(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/snapshot?period=${period}`, { token });
+}
