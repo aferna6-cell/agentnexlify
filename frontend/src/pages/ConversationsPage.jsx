@@ -676,8 +676,32 @@ export default function ConversationsPage() {
       )}
 
       {conversations.length === 0 ? (
-        <div className="empty-card">
-          <p>No conversations yet. Conversations from your widget will appear here.</p>
+        <div style={{
+          background: "var(--bg-secondary)",
+          borderRadius: 12,
+          padding: 48,
+          textAlign: "center",
+          margin: "8px 0",
+        }}>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--text-muted)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginBottom: 12 }}
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--text-primary)", marginBottom: 8 }}>
+            No conversations yet
+          </div>
+          <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", maxWidth: 420, margin: "0 auto" }}>
+            Conversations from your chat widget will appear here in real time. Once a visitor starts chatting, you'll see their messages, lead info, and AI responses.
+          </div>
         </div>
       ) : (
         <div className="conversations-layout">

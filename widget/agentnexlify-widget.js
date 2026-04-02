@@ -61,29 +61,46 @@
     const style = document.createElement("style");
     style.id = "anx-styles";
     style.textContent = `
+      #anx-container {
+        position: fixed !important;
+        bottom: 0 !important;
+        right: 0 !important;
+        z-index: 99997 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        transform: none !important;
+        pointer-events: none;
+        width: 0;
+        height: 0;
+      }
       #anx-container * {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        visibility: visible !important;
       }
 
       #anx-bubble {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: ${BRAND_COLOR};
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-        z-index: 99998;
+        position: fixed !important;
+        bottom: 24px !important;
+        right: 24px !important;
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 50% !important;
+        background: ${BRAND_COLOR} !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.3) !important;
+        z-index: 99998 !important;
         transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
         animation: anx-pulse 2s infinite;
+        pointer-events: auto !important;
+        opacity: 1 !important;
       }
 
       #anx-bubble:hover {

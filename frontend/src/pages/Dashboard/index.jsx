@@ -186,6 +186,11 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
             onNavigate={onNavigate}
             onStageDrop={handleStageDrop}
           />
+          {leads.length === 0 && (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: "-4px 0 12px 0", textAlign: "center" }}>
+              Your first leads will appear here once visitors start chatting with your widget.
+            </p>
+          )}
           <div className="dashboard-bottom-row">
             <ActivityFeed activity={activity} />
             <TodayAppointments tenantId={user.tenantId} token={token} onNavigate={onNavigate} />

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council — Engineer Focus (Tester Conversion)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; }
+  .header { background: #1a1a2e; color: #fff; padding: 2rem; }
+  .header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .header .meta { font-size: 0.85rem; color: #8892b0; }
+  .question-box { background: #fff; border-left: 4px solid #4f8ef7; margin: 1.5rem; padding: 1.2rem 1.5rem; border-radius: 4px; font-size: 1rem; color: #2d2d44; }
+  .verdict { background: #fff; margin: 0 1.5rem 1.5rem; padding: 1.5rem; border-radius: 8px; border: 2px solid #4f8ef7; }
+  .verdict h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.08em; color: #4f8ef7; margin-bottom: 1rem; }
+  .verdict .rec { font-size: 1rem; color: #1a1a2e; margin-bottom: 1rem; }
+  .verdict .one-thing { background: #eef4ff; border-radius: 6px; padding: 1rem 1.2rem; border-left: 3px solid #4f8ef7; }
+  .verdict .one-thing strong { display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: #4f8ef7; margin-bottom: 0.4rem; }
+  .agreement-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0 1.5rem 1.5rem; }
+  .agree-card, .clash-card { background: #fff; padding: 1.2rem; border-radius: 8px; }
+  .agree-card { border-top: 3px solid #22c55e; }
+  .clash-card { border-top: 3px solid #f59e0b; }
+  .agree-card h3, .clash-card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.8rem; }
+  .agree-card h3 { color: #22c55e; }
+  .clash-card h3 { color: #f59e0b; }
+  .agree-card p, .clash-card p { font-size: 0.9rem; color: #444; }
+  .section { margin: 0 1.5rem 1rem; }
+  .section-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.07em; color: #8892b0; margin-bottom: 0.8rem; font-weight: 600; }
+  details { background: #fff; border-radius: 8px; margin-bottom: 0.6rem; border: 1px solid #e5e7eb; overflow: hidden; }
+  summary { padding: 1rem 1.2rem; cursor: pointer; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 0.6rem; user-select: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▶"; font-size: 0.7rem; color: #8892b0; transition: transform 0.2s; flex-shrink: 0; }
+  details[open] summary::before { transform: rotate(90deg); }
+  .advisor-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .advisor-body { padding: 0 1.2rem 1.2rem; font-size: 0.92rem; color: #444; border-top: 1px solid #f3f4f6; margin-top: 0.2rem; padding-top: 1rem; }
+  .advisor-body p { margin-bottom: 0.8rem; }
+  .week-plan { background: #fff; border-radius: 8px; padding: 1.2rem; border: 1px solid #e5e7eb; margin-bottom: 0.6rem; }
+  .week-plan h4 { font-size: 0.85rem; font-weight: 700; color: #4f8ef7; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .week-plan ul { list-style: none; }
+  .week-plan ul li { font-size: 0.9rem; color: #444; padding: 0.3rem 0; border-bottom: 1px solid #f3f4f6; }
+  .week-plan ul li:last-child { border-bottom: none; }
+  .week-plan ul li::before { content: "→ "; color: #4f8ef7; font-weight: 700; }
+  .caught { background: #fff; border-radius: 8px; padding: 1.2rem; border: 1px solid #e5e7eb; margin-bottom: 0.6rem; }
+  .caught-item { display: flex; gap: 0.8rem; margin-bottom: 0.8rem; align-items: flex-start; }
+  .caught-item:last-child { margin-bottom: 0; }
+  .caught-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; margin-top: 0.45rem; }
+  .caught-item p { font-size: 0.9rem; color: #444; }
+  footer { text-align: center; padding: 2rem; font-size: 0.8rem; color: #8892b0; margin-top: 1rem; }
+  @media (max-width: 600px) { .agreement-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LLM Council — Engineer Focus: Tester Conversion</h1>
+  <div class="meta">2026-04-02 &nbsp;·&nbsp; Rapid format (5 advisors, no peer review) &nbsp;·&nbsp; AgentNexLiFy</div>
+</div>
+
+<div class="question-box">
+  <strong>Question:</strong> What should the ENGINEER focus on for the next 1–2 weeks to maximize the chances of converting testers into paying customers?
+</div>
+
+<!-- CHAIRMAN VERDICT -->
+<div class="verdict">
+  <h2>Chairman's Verdict</h2>
+  <div class="rec">
+    <strong>Reliability + Evidence + Onboarding Speed</strong> — in that order. Not features. The product already has more features than the testers will use in a month. What converts a tester is a chatbot that consistently works, a dashboard that shows proof it's working, and an onboarding process that doesn't require Aidan to be on-call for every new client.
+    <br><br>
+    <strong>Week 1:</strong> stability check, uptime monitoring, dashboard audit + empty state fixes, plain-English embed docs, power washing setup with playbook documentation.
+    <br>
+    <strong>Week 2:</strong> auto-KB-populate from URL, client-facing results snapshot for each tester, MTOptions feature usage audit.
+  </div>
+  <div class="one-thing">
+    <strong>The One Thing to Do First</strong>
+    Set up uptime monitoring on the production chatbot endpoint Monday morning — before anything else. If the bot goes down and nobody knows, the rest of this plan is irrelevant.
+  </div>
+</div>
+
+<!-- AGREEMENT / CLASH GRID -->
+<div class="agreement-grid">
+  <div class="agree-card">
+    <h3>Where the Council Agrees</h3>
+    <p>Four of five advisors independently converged: the chatbot must work reliably AND there must be visible evidence that it's working. Three flagged dashboard empty-states as a quiet trust-killer. Two flagged embed instructions as underestimated day-one friction.</p>
+  </div>
+  <div class="clash-card">
+    <h3>Where the Council Clashes</h3>
+    <p>The Expansionist wants auto-KB-populate this week. The Contrarian says stability first after 7 patches. The Executor breaks the tie: week 2 for auto-KB, week 1 for hardening. Both advisors agree: week 1 is not a feature-building week.</p>
+  </div>
+</div>
+
+<!-- WHAT THE COUNCIL CAUGHT -->
+<div class="section">
+  <div class="section-label">Blind Spots the Council Caught</div>
+  <div class="caught">
+    <div class="caught-item">
+      <div class="caught-dot"></div>
+      <p><strong>No uptime monitoring</strong> — one undiscovered outage during Keys Koffee's first real traffic could silently kill the deal. This is 30 minutes of work (UptimeRobot free tier). Do it Monday before anything else.</p>
+    </div>
+    <div class="caught-item">
+      <div class="caught-dot"></div>
+      <p><strong>Embed snippet friction</strong> — the power washing business starts Monday. If the owner is non-technical and can't install the widget, momentum dies before the product gets a chance. Fix the copy-paste snippet before the setup call.</p>
+    </div>
+    <div class="caught-item">
+      <div class="caught-dot"></div>
+      <p><strong>Dashboard empty states</strong> — testers who log in and see blank/broken pages don't file bug reports. They quietly lose confidence. Audit the 5 most-visible pages before partners show the dashboard to clients.</p>
+    </div>
+  </div>
+</div>
+
+<!-- EXECUTION PLAN -->
+<div class="section">
+  <div class="section-label">Executor's 2-Week Plan</div>
+  <div class="week-plan">
+    <h4>Week 1 — Harden &amp; Onboard</h4>
+    <ul>
+      <li>Set up uptime monitoring (UptimeRobot or Railway cron → /health → email alert)</li>
+      <li>Fix embed snippet: one paragraph, plain English, copy-paste, test on blank HTML page</li>
+      <li>Audit 5 key dashboard pages: conversations, leads, analytics, appointments, settings</li>
+      <li>Set up power washing account (manual, but time each step to build playbook)</li>
+      <li>Write 1-page "How to onboard a new client" doc for partners</li>
+      <li>Review Keys Koffee's first conversations — verify KB accuracy, fix wrong answers</li>
+    </ul>
+  </div>
+  <div class="week-plan">
+    <h4>Week 2 — Leverage &amp; Evidence</h4>
+    <ul>
+      <li>Build auto-KB-populate from URL (tight scope: crawl → extract → populate, no fancy UI)</li>
+      <li>Generate results snapshot per tester: X conversations, Y leads captured — give to partners</li>
+      <li>MTOptions feature usage audit — don't fix what they're not touching</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ADVISOR RESPONSES (COLLAPSIBLE) -->
+<div class="section">
+  <div class="section-label">Advisor Responses</div>
+
+  <details>
+    <summary>
+      <span class="advisor-dot" style="background:#ef4444;"></span>
+      The Contrarian — Regression risk is the real danger
+    </summary>
+    <div class="advisor-body">
+      <p>Seven bugs fixed today is impressive, but the dangerous assumption is that "fixed today" means "stable for the next two weeks." With 7 patches applied in one session, the chance of a subtle interaction bug is high. If Keys Koffee gets their first real customer conversation and it fails silently, the partner shows up to a broken demo. That's a lost deal, not a bug report.</p>
+      <p>The second embarrassment risk: the dashboard. Sixty-plus pages and 55+ endpoints means a lot of surface area nobody has audited recently. The odds that several pages are broken or empty with no meaningful state handling is nearly 100%.</p>
+      <p>The third risk is the power washing setup. "Quick turnaround on new client setups" is now a repeatable operational task. If it takes half a day to manually populate a KB, that's a bottleneck that will embarrass the partners when they book the 4th and 5th client.</p>
+      <p>Focus: regression smoke test on the chatbot, audit 5-8 most visible dashboard pages, and time-box the power washing setup to build a repeatable playbook.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-dot" style="background:#8b5cf6;"></span>
+      First Principles — Reliability + Evidence, not features
+    </summary>
+    <div class="advisor-body">
+      <p>What does "converting a tester to a paying customer" actually require? Strip it to the minimum: the tester has to (a) see value, (b) trust the product won't embarrass them, (c) get a clear path to payment. Aidan controls (a) and (b). The sales partners control (c).</p>
+      <p>For value — the chatbot has to do something useful in the first real conversation. For Keys Koffee, that's accurately answering product questions. For the power washing business, that's capturing a lead. Value is delivered or not delivered in those first 10 conversations. Everything else is secondary.</p>
+      <p>For trust — there are two failure modes: the product breaks visibly, or it works but the client can't see evidence of it working. The monitoring gap is the biggest risk: one undiscovered outage during a tester's peak hour is worth 10 bugs fixed.</p>
+      <p>The engineer's job this week is not feature development. It is reliability and evidence.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-dot" style="background:#22c55e;"></span>
+      The Expansionist — Build the evidence that makes testers into case studies
+    </summary>
+    <div class="advisor-body">
+      <p>Three testers is the wrong mental model. Three testers is actually three reference customers in waiting — and reference customers are worth 10x their own revenue if the sales partners can use them as case studies. The engineering play isn't "keep the chatbot from breaking." It's "generate the evidence that makes Keys Koffee and MTOptions into a sales asset."</p>
+      <p>If Keys Koffee gets 50 conversations in two weeks and 8 convert to orders, that's a screenshot. That's a number a sales partner puts in an email. The engineer's job is to make that number visible and shareable.</p>
+      <p>The auto-KB-populate feature is the real leverage multiplier. Right now onboarding is a manual half-day. One basic "paste URL" flow changes the sales conversation from "we need a week to configure it" to "we can have your bot live this afternoon." Build the playbook while doing the power washing setup — what takes 4 hours now should take 30 minutes for the 5th client.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-dot" style="background:#f59e0b;"></span>
+      The Outsider — Most of the product is invisible to testers right now
+    </summary>
+    <div class="advisor-body">
+      <p>You have a product with 60+ pages and 55+ API endpoints. That is a very large surface area for a product with 3 testers. From the outside, the biggest question is: what do the testers actually see and interact with? Most of those 60 pages are irrelevant to them right now.</p>
+      <p>The embed instructions being "confusing for non-technical clients" is a real problem that doesn't sound urgent but is. A client who can't get the widget on their site has no product. The power washing business owner starts Monday. If they're not technical, this is a day-one friction point. There should be a copy-paste snippet with a one-paragraph plain-English instruction — so the partner doesn't have to call Aidan every time.</p>
+      <p>The dashboard empty state problem is also real. Testers who log in and see what looks like a broken product don't file bug reports — they quietly lose confidence. Clean empty states with guidance ("Your first lead will appear here") are more valuable than features right now.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-dot" style="background:#4f8ef7;"></span>
+      The Executor — Here's the day-by-day plan, no theory
+    </summary>
+    <div class="advisor-body">
+      <p><strong>Days 1-2 (Mon-Tue):</strong> Set up the power washing account — do it manually but time every step; that's your playbook draft. Fix the embed snippet — one paragraph, plain English, copy-paste ready, tested on a blank HTML page. Audit the 5 most likely dashboard pages: conversations, leads, analytics, appointments, settings — fix any broken/empty states.</p>
+      <p><strong>Days 3-5 (Wed-Fri):</strong> Set up uptime monitoring (UptimeRobot free or Railway cron → /health → email) — 30 minutes, do it now. Write a 1-page internal "How to onboard a new client" doc for the partners. Check Keys Koffee's first conversations — verify KB accuracy, fix wrong answers.</p>
+      <p><strong>Days 6-10 (Week 2):</strong> Build auto-KB-populate from URL — scope it tight: crawl, extract, populate, done. Audit MTOptions feature usage — don't fix what they're not touching. Generate a results snapshot for each tester: X conversations, Y leads captured — give it to the partners as a talking point.</p>
+    </div>
+  </details>
+</div>
+
+<footer>
+  LLM Council &nbsp;·&nbsp; AgentNexLiFy &nbsp;·&nbsp; 2026-04-02 &nbsp;·&nbsp; Rapid format (no peer review)
+</footer>
+
+</body>
+</html>
