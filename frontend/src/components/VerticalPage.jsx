@@ -9,7 +9,7 @@ const VERTICALS = [
   { slug: "medical-office-chatbot", label: "Medical Offices" },
 ];
 
-export default function VerticalPage({ meta, hero, features, stats, slug, children }) {
+export default function VerticalPage({ meta, hero, features, stats, slug, faqs, children }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -17,6 +17,16 @@ export default function VerticalPage({ meta, hero, features, stats, slug, childr
     description: meta.description,
     url: meta.canonical,
   };
+
+  const faqJsonLd = faqs && faqs.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(f => ({
+      "@type": "Question",
+      "name": f.q,
+      "acceptedAnswer": { "@type": "Answer", "text": f.a }
+    }))
+  } : null;
 
   const otherVerticals = VERTICALS.filter((v) => v.slug !== slug);
 
@@ -31,6 +41,9 @@ export default function VerticalPage({ meta, hero, features, stats, slug, childr
         <meta property="og:url" content={meta.canonical} />
         <meta property="og:type" content="website" />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+        {faqJsonLd && (
+          <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
+        )}
       </Helmet>
 
       <style>{styles}</style>
@@ -83,6 +96,21 @@ export default function VerticalPage({ meta, hero, features, stats, slug, childr
           </div>
         </div>
       </section>
+
+      {/* FAQ */}
+      {faqs && faqs.length > 0 && (
+        <section className="vp-faq">
+          <div className="vp-container">
+            <h2 className="vp-faq__heading">Frequently Asked Questions</h2>
+            {faqs.map((faq, i) => (
+              <details key={i} className="vp-faq__item">
+                <summary className="vp-faq__q">{faq.q}</summary>
+                <p className="vp-faq__a">{faq.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Internal Links */}
       <nav className="vp-links">
@@ -299,6 +327,15 @@ const styles = `
   background: var(--accent-dim);
   border-color: var(--accent);
 }
+
+/* FAQ */
+
+.vp-faq { padding: 4rem 0; }
+.vp-faq__heading { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); text-align: center; margin-bottom: 2rem; }
+.vp-faq__item { border-bottom: 1px solid var(--border); padding: 1rem 0; }
+.vp-faq__q { font-size: 1rem; font-weight: 600; color: var(--text-primary); cursor: pointer; padding: 0.5rem 0; }
+.vp-faq__q:hover { color: var(--accent); }
+.vp-faq__a { font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.7; padding: 0.75rem 0 0.5rem; max-width: 700px; }
 
 /* Disclaimer */
 
