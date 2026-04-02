@@ -457,3 +457,17 @@ Changes:
 - Back-fills existing leads with `source = 'widget'`
 
 **Applied:** 2026-04-01 via Supabase MCP.
+
+### 077 — Widget Knowledge Base
+Adds `knowledge_base` (TEXT, nullable) to `widget_configs`. Stores the AI-generated markdown knowledge base produced during the onboarding wizard (step 3). Injected into the widget chat system prompt via `widget_chat.py` when present, giving the AI business-specific context without requiring manual prompt editing. Editable post-onboarding from the dashboard. Uses `ADD COLUMN IF NOT EXISTS` for safe re-runs.
+
+**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP before onboarding wizard goes live.
+
+### 078 — Expand business_type CHECK constraint
+Drops and recreates the `tenants.business_type` CHECK constraint to include 27 valid values (up from 10). Fixes CHECK constraint violations during signup for the new industries added to the onboarding wizard dropdown.
+
+New values added: accounting, bakery, bar_nightclub, cafe, catering, chiropractic, cleaning, electrical, food_truck, hvac, landscaping, moving, pest_control, photography, roofing, tutoring, veterinary
+
+Existing values retained: auto_shop, dental, fitness, legal, medical, other, plumbing, realestate, restaurant, salon
+
+**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP. **Critical: must be applied before any new signups, otherwise new industry types will fail at DB insert.**

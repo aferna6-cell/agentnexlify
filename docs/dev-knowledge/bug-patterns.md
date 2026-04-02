@@ -703,6 +703,26 @@ Also refactored `trigger_sequence` to batch-fetch first steps: single `.in_("seq
 
 ---
 
+### Direct URL navigation returns 404 on Vercel-hosted SPA
+**Date:** 2026-04-01
+**Symptom:** Users who bookmark or share a direct dashboard URL (e.g., `/dashboard/leads`, `/dashboard/conversations`) receive a Vercel 404 page instead of the React app.
+**Root Cause:** Vercel served static files only and had no catch-all rewrite rule for the SPA. React Router handles routing client-side, but Vercel's CDN has no knowledge of these routes and returns 404 for any path without a matching static file.
+**Files Changed:** `frontend/vercel.json`, `frontend/src/components/App.jsx`
+**Fix:** Added catch-all rewrite in `vercel.json` (`"source": "/(.*)", "destination": "/index.html"`) so all paths serve the SPA shell. Also added missing routes to App.jsx router config.
+**Prevention:** Any Vercel-hosted SPA must have a `vercel.json` catch-all rewrite. Add this on initial project setup, not after discovering the issue from user reports.
+
+---
+
+### Email sequence auto-enrollment not firing on lead capture
+**Date:** 2026-04-01
+**Symptom:** Leads captured via widget chat were not being enrolled in `lead_captured` trigger email sequences, even when active sequences with that trigger type existed.
+**Root Cause:** `_capture_leads_from_session()` in `widget_helpers.py` created/updated the lead but did not call the email sequence enrollment function after successful lead creation. The enrollment trigger only fired for manually-created leads.
+**Files Changed:** `backend/routers/widget_helpers.py`
+**Fix:** Added `await _trigger_email_sequence_enrollment(db, lead_id, tenant_id, "lead_captured")` call in both the new-lead and existing-lead paths of `_capture_leads_from_session`.
+**Prevention:** When a new lead capture trigger point is added (widget, form, import), verify that all downstream trigger hooks (email sequences, automations, activity log) are also called. The `_capture_leads_from_session` function is a multi-trigger aggregation point — any new trigger type must be wired in here.
+
+---
+
 _New entries are auto-appended by the bug logging GitHub Action. Add root cause details with /log-bug._
 
 ---

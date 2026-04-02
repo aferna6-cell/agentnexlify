@@ -1,18 +1,19 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-03-31 (automated evening review)
+Updated: 2026-04-01 (automated evening review)
 
 ## Tomorrow's Top 3 Priorities
 
-1. **Commit the email sequences feature** — 5 new files + 7 modified files are ready to commit. Migration 073 already applied to Supabase. `git add backend/routers/email_sequences.py frontend/src/pages/EmailSequencesPage.jsx frontend/src/utils/api/email-sequences.js migrations/073_email_sequences.sql scripts/seed_mtoptions_sequences.py` + modified files, then commit. Agent: **None needed** — straightforward commit.
-2. **Apply pending migrations 065–070** — 6 migrations stale since 2026-03-23/25, blocking client login (065), waitlist (066), scoring configs (067), invoice unique index + password reset (068 ×2, renumber required), email bounce (069), pipeline automations (070). **NEW duplicate filenames on 066 and 067.** Stale 7–8 days. Agent: **schema-guardian**.
-3. **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook delivery, password reset flow: **7 days unverified.** Agent: **qa-tester**.
+1. **Apply migrations 077 and 078** — Migration 077 (widget knowledge_base) blocks the onboarding wizard from injecting knowledge into the chat prompt. Migration 078 (expanded business_type CHECK) blocks new signups for 17 industries. Both are **critical pre-launch gates** for the onboarding wizard. Agent: **schema-guardian** → apply both via Supabase MCP.
+2. **End-to-end test onboarding wizard** — 15 commits shipped the full 6-step wizard today. Needs a real signup run through all 6 steps: business info → services → KB generation → widget customize → plan → embed. Verify JWT is set correctly, /onboarding route doesn't bounce, widget embed code works. Agent: **qa-tester**.
+3. **Apply pending migrations 065–070** — 6 stale migrations blocking client login (065), waitlist (066), scoring configs (067), invoice unique index + password reset (068 ×2), email bounce (069), pipeline automations (070). Now 9+ days stale. Agent: **schema-guardian**.
 
 ## Active Tasks
 
-### Priority 0 — Uncommitted Work (Needs Commit)
+### Priority 0 — Schema (Critical / Pre-Launch Blocker)
 
-- [ ] **Commit email sequences feature** — Migration 073 applied to Supabase; backend router (`email_sequences.py`), frontend page (`EmailSequencesPage.jsx`), API utils (`email-sequences.js`), seed script (`seed_mtoptions_sequences.py`), and modified files (main.py, App.jsx, Sidebar.jsx, widget_lead.py, api/index.js, CLAUDE.md) all uncommitted. Risk: work lost on branch change or reset. Added: 2026-03-31.
+- [ ] **Apply migration 077 (widget knowledge_base)** — adds `knowledge_base` column to `widget_configs`. Required for onboarding wizard KB injection into chat prompt. Created 2026-04-01. Agent: **schema-guardian** → apply immediately.
+- [ ] **Apply migration 078 (business_type constraint)** — expands CHECK constraint from 10 → 27 industries. New signups for accounting, bakery, bar_nightclub, etc. will fail at DB insert until this is applied. Created 2026-04-01. Agent: **schema-guardian** → apply immediately.
 
 ### Priority 1 — Critical / Blocking
 
@@ -29,10 +30,10 @@ Updated: 2026-03-31 (automated evening review)
 - [ ] **Apply migration 070 (pipeline automations)** — pipeline stage automations. Created 2026-03-25, not yet applied.
   - Agent: **schema-guardian** → manual apply
 
-### Priority 2 — Verification & In-Progress
+### Priority 2 — Verification & QA
 
-- [ ] **Production feature verification** — Revenue analytics, pipeline automations, webhook deliveries, password reset, CTO review fixes. All committed 2026-03-25, none production-verified. **7 days stale.**
-  - Agent: **qa-tester**
+- [ ] **End-to-end test onboarding wizard** — 6-step wizard shipped today (WizardStepBusiness → Services → KB → Customize → Plan → Embed). Needs QA: real signup flow, JWT parsing race condition, /onboarding route guard, KB generation, widget embed code. Agent: **qa-tester**.
+- [ ] **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow: **7+ days unverified.** Agent: **qa-tester**.
 - [ ] **Reduce silent frontend catches (33 remaining)** — `.catch(() => <fallback>)` blocks detected by grep. Architecture decision requires visible error handling. Count steady at 33.
   - Agent: **frontend-dev**
 - [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Still present.
@@ -40,7 +41,7 @@ Updated: 2026-03-31 (automated evening review)
 
 ### Priority 3 — Knowledge & Documentation
 
-- [ ] **Enrich auto-logged bug patterns (#30-41)** — 12 skeleton entries need human enrichment for root cause details. 6 from 2026-03-24, 6 new from 2026-03-25. Carried forward since 2026-03-24.
+- [ ] **Enrich auto-logged bug patterns (#30-41)** — 12 skeleton entries need human enrichment for root cause details. Carried forward since 2026-03-24.
 
 ### Priority 4 — Carried Forward
 
@@ -48,38 +49,43 @@ Updated: 2026-03-31 (automated evening review)
 - [ ] **Fix 16 test isolation failures** — partially addressed by d1a36c6 (12 files patched), may still have remaining failures
 - [ ] **Automated routine reliability** — March 26 evening and March 27 morning both failed due to usage limits. Consider scheduling adjustments or retry mechanism.
 
+## Completed (Recent) — 2026-04-01
+
+- [x] **Onboarding wizard built end-to-end** — 6 step components (WizardStepBusiness, Services, KnowledgeBase, Customize, Plan, Embed), wizard shell with sessionStorage state, API helpers (generateKb, completeOnboarding, checkoutForWizard), /onboarding route with auth-race guard (OnboardingRedirect), billing checkout conditional success_url, generate-kb endpoint, KB injection into widget chat system prompt.
+- [x] **Email sequences feature committed** — backend router, frontend page, API utils, seed script, main.py router registration, sidebar nav (a3a2518). Migration 073 already applied.
+- [x] **Email sequence auto-enrollment trigger fixed** — `_capture_leads_from_session` now calls enrollment trigger on lead capture (0fead79).
+- [x] **lead_captured flag fixed** — `_capture_leads_from_session` now writes back `lead_captured=True` to conversations row (f90a40d). Migration 074 applied.
+- [x] **Analytics tenant_id resolution fixed** — conversations.client_id FK was pointing to legacy `clients` table; migration 076 re-pointed it to `tenants`. Analytics now shows real data (87e6333).
+- [x] **Widget teaser bubble added** — configurable teaser_message, teaser_enabled, teaser_delay_seconds. Migration 075 applied (3911049).
+- [x] **Direct URL navigation fixed** — vercel.json catch-all + App.jsx route additions (b59d969).
+- [x] **Post-signup UX bugs fixed** — post-signup redirect, widget on auth pages, industry options, api key mismatch, onboarding route guard (69a7744).
+- [x] **Non-blocking bugs fixed** — UUID casting in response_metrics, Privacy/ToS pages real links, Schema.org placeholder removal (418d871).
+- [x] **business_type CHECK constraint expanded** — 10 → 27 industries via migration 078. File created; apply pending.
+- [x] **5 post-onboarding bugs documented** in bug-patterns.md (5597ed6).
+- [x] **Demo script created** — client-ready feature walkthrough with Q&A cheat sheet (88e5ef8).
+- [x] **Migration 077 created** — adds knowledge_base column to widget_configs. Apply pending.
+
 ## Completed (Recent) — 2026-03-31
 
-- [x] **Migration 073 created and applied** — `migrations/073_email_sequences.sql` created and applied to Supabase (mcp__supabase__apply_migration). Creates 4 tables: `email_sequences`, `email_sequence_steps`, `email_sequence_enrollments`, `email_sequence_sends`. Schema-log.md updated.
-- [x] **Email sequences feature built** — backend router, frontend page, API utils, and seed script created for MTOptions. Uncommitted but complete.
+- [x] **Migration 073 created and applied** — `migrations/073_email_sequences.sql` creates 4 tables: `email_sequences`, `email_sequence_steps`, `email_sequence_enrollments`, `email_sequence_sends`. Schema-log.md updated.
+- [x] **Email sequences feature built** — backend router, frontend page, API utils, and seed script created for MTOptions. Now committed.
 - [x] **Migrations 071 and 072 applied** — Widget teaser message (071) and custom_instructions (072) both applied and documented in schema-log.md. MTOptions custom system prompt configured.
 
 ## Completed (Recent) — 2026-03-30
 
-- [x] **fix: markdown rendering, analytics 0 count, teaser bubble, lead capture prompting** (2944381) — Analytics now counts unique session_ids in chat_messages; widget + dashboard render AI responses as formatted HTML; greeting teaser bubble added; lead capture prompt improved
-- [x] **fix: correct AgentNexLiFy widget API key in index.html** (097cb62) — Transposed characters in API key caused fallback to "Aria" bot name
-- [x] **feat: re-embed marketing widget (desktop only) and fix floating CTA arrow** (827ab4f) — Marketing site widget restored with proper embed
-- [x] **fix: remove fake testimonials and self-hosted chat widget from marketing site** (b153fc2) — Integrity fix; widget now uses configured greeting_message
-- [x] **fix: update mobile CTA text** (36951b6) — Text copy update
-
-## Completed (Recent) — 2026-03-25
-
-- [x] **Codebase audit and critical fixes** (bcb5857) — Stripe dynamic checkout, SMS import fix, crawl exception sanitization, 4 ADRs, model selection docs
-- [x] **Pre-feature audit** (3b7846d) — 16 new tests (299 total), rate limit tightening, dead link removal, fake scarcity removal, API key redaction
-- [x] **Production site bugs from CTO review** (712b80c) — Pipeline crash fix, Client Portal array guard, onboarding math, FAQ edit, 22 signup verticals
-- [x] **CTO site review UX improvements** (0af2b74) — dashboard UX improvements
-- [x] **Revenue analytics dashboard** (4b54064) — backend router + frontend page + API utils
-- [x] **Rebase merge conflict resolution** (45271d5) — duplicate exports, missing webhook API functions, App.jsx merge
-- [x] **Pipeline automations frontend** (e9945ee, 014f11e, 06d453c, f2ac4b9) — PipelineAutomationsPage, webhook delivery dashboard, sidebar nav
-- [x] **Conversation assignment notification + appointment validation** (4cc6bc3, c0cbf0d) — revenue dashboard, appointment status validation
-- [x] **Evening knowledge base update** — 6 bug patterns (#36-41), 4 schema-log entries (068b, 069, 070)
+- [x] **fix: markdown rendering, analytics 0 count, teaser bubble, lead capture prompting** (2944381)
+- [x] **fix: correct AgentNexLiFy widget API key in index.html** (097cb62)
+- [x] **feat: re-embed marketing widget (desktop only) and fix floating CTA arrow** (827ab4f)
+- [x] **fix: remove fake testimonials and self-hosted chat widget from marketing site** (b153fc2)
+- [x] **fix: update mobile CTA text** (36951b6)
 
 ## Overall Progress (Cycles 116-167+)
 
-- 70+ commits, 299 tests
-- 7 migrations (059-065) + 5 new pending (066-070, with 066/067/068 all having duplicate filenames)
+- 96+ commits today alone (running total 70+ previously), 299 tests
+- 9 migrations applied this cycle (073-076, +073 previously), 4 pending (077, 078, 065-070 backlog)
 - 35 api domain modules (100% split complete)
 - 20+ features shipped, 15+ bug fixes, 5+ security patches
+- **Today's landmark: onboarding wizard complete (6 steps, end-to-end)**
 
 ---
 
