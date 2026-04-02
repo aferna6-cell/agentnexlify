@@ -120,7 +120,7 @@ async def get_config(request: Request, api_key: str):
 
     # Load menu items for restaurant tenants
     menu_items = None
-    if tenant.get("business_type") or "".lower() == "restaurant":
+    if (tenant.get("business_type") or "").lower() == "restaurant":
         try:
             db = get_supabase()
             menu_result = (

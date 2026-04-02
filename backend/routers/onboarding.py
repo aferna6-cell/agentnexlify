@@ -531,6 +531,7 @@ async def auto_populate_kb(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Crawl a website URL and auto-generate KB + FAQs + custom instructions."""
+    _verify_tenant(claims, tenant_id)
     logger.info("auto_kb: starting for tenant=%s url=%s", tenant_id, req.url)
 
     # 1. Crawl the website
