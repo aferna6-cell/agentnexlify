@@ -41,3 +41,14 @@ export function checkoutForWizard(token, plan) {
     body: { plan, source: "wizard" },
   });
 }
+
+/**
+ * Log a wizard step event for drop-off tracking.
+ * Fire-and-forget — never blocks the user's onboarding.
+ */
+export function trackWizardEvent(tenantId, token, step, action) {
+  apiFetch(`/api/v1/wizard/${tenantId}/event`, {
+    token,
+    body: { step, action },
+  }).catch(() => {});
+}

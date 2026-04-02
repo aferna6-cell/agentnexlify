@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { trackWizardEvent } from "../utils/api/onboarding";
 import WizardStepBusiness from "./wizard/WizardStepBusiness";
 import WizardStepServices from "./wizard/WizardStepServices";
 import WizardStepKnowledgeBase from "./wizard/WizardStepKnowledgeBase";
@@ -76,6 +77,17 @@ export default function OnboardingWizardPage() {
   useEffect(() => {
     saveState(step, wizardData);
   }, [step, wizardData]);
+
+  // Track wizard step entries for drop-off analytics
+  const prevStep = useRef(step);
+  useEffect(() => {
+    if (!user?.tenantId || !token) return;
+    if (prevStep.current !== step) {
+      trackWizardEvent(user.tenantId, token, prevStep.current, "complete");
+      prevStep.current = step;
+    }
+    trackWizardEvent(user.tenantId, token, step, "enter");
+  }, [step, user?.tenantId, token]);
 
   const goNext = useCallback((updates = {}) => {
     setWizardData((prev) => ({ ...prev, ...updates }));
