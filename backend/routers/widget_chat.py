@@ -218,6 +218,27 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 handoff=False,
             )
 
+    # 5c. Null-state guard — if bot has no knowledge at all, show a graceful fallback
+    _has_kb = bool(widget.get("knowledge_base"))
+    _has_ci = bool(widget.get("custom_instructions"))
+    if not _has_kb and not _has_ci and len(messages) == 0:
+        _biz = tenant.get("business_name") or "our team"
+        _phone = tenant.get("phone") or ""
+        _phone_msg = f" You can also reach us at {_phone}." if _phone else ""
+        _setup_msg = (
+            f"Thanks for reaching out! Our chat assistant is still being set up. "
+            f"In the meantime, please contact {_biz} directly for assistance.{_phone_msg}"
+        )
+        _save_chat_messages(tenant["id"], req.session_id, req.message, _setup_msg)
+        logger.info("widget_chat: null_state_guard session=%s tenant=%s (no KB or CI)", req.session_id, tenant["id"])
+        return WidgetChatResponse(
+            response=_setup_msg,
+            session_id=req.session_id,
+            lead_captured=False,
+            show_watermark=_watermark,
+            handoff=False,
+        )
+
     # 6. Build system prompt with FAQ (cached per tenant, 5-min TTL)
     tid = tenant["id"]
     db = get_supabase()
