@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { fetchDashboard, fetchActivity, fetchOnboardingStatus, fetchKpiDeltas } from "../../utils/api/dashboard";
+import { fetchAnalyticsHealth } from "../../utils/api/analytics";
 import { fetchLeads, updateLead, deleteLead } from "../../utils/api/leads";
 import { fetchSequenceStats, fetchAutomations } from "../../utils/api/automations";
 import { fetchCrmDashboardWidgets } from "../../utils/api/crm";
@@ -41,6 +42,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   const [seqStats, setSeqStats] = useState(null);
   const [onboardingStatus, setOnboardingStatus] = useState(null);
   const [kpiDeltas, setKpiDeltas] = useState(null);
+  const [lastActivity, setLastActivity] = useState(undefined); // undefined = loading, null = no data
 
   const loadDashboard = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -82,6 +84,14 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  // Fetch last message timestamp for widget status badge
+  useEffect(() => {
+    if (!user?.tenantId || !token) return;
+    fetchAnalyticsHealth(user.tenantId, token)
+      .then((data) => setLastActivity(data.last_message_at || null))
+      .catch(() => setLastActivity(null));
+  }, [user?.tenantId, token]);
 
   const handleStepComplete = useCallback(() => {
     if (user?.tenantId) {
@@ -150,6 +160,58 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         <h1>Dashboard</h1>
         <p>Welcome back{dashData?.business_name ? `, ${dashData.business_name}` : user.businessName ? `, ${user.businessName}` : ""}</p>
       </div>
+
+      {/* Widget Status Badge */}
+      {lastActivity !== undefined && (() => {
+        let dotColor = "#666";
+        let label = "No Activity Yet";
+        let detail = "Your widget is ready — share your website link to start capturing leads";
+
+        if (lastActivity) {
+          const diffMs = Date.now() - new Date(lastActivity).getTime();
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHrs = Math.floor(diffMins / 60);
+
+          if (diffMs < 3600000) {
+            dotColor = "#4caf50";
+            label = "Widget Live";
+            detail = diffMins < 1 ? "Last activity: just now" : `Last activity: ${diffMins}m ago`;
+          } else if (diffMs < 86400000) {
+            dotColor = "#ff9800";
+            label = "Widget Idle";
+            detail = `Last activity: ${diffHrs}h ago`;
+          } else {
+            dotColor = "#666";
+            label = "No Activity Yet";
+            detail = `Last activity: ${Math.floor(diffHrs / 24)}d ago`;
+          }
+        }
+
+        return (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            background: "rgba(255,255,255,0.05)",
+            borderRadius: "8px",
+            padding: "8px 16px",
+            marginBottom: "16px",
+            fontSize: "0.85rem",
+          }}>
+            <span style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: dotColor,
+              display: "inline-block",
+              flexShrink: 0,
+              boxShadow: dotColor === "#4caf50" ? "0 0 6px rgba(76,175,80,0.5)" : "none",
+            }} />
+            <span style={{ color: "#fff", fontWeight: 600 }}>{label}</span>
+            <span style={{ color: "var(--text-muted)" }}>{detail}</span>
+          </div>
+        );
+      })()}
 
       {showOnboarding && dashData && (
         <OnboardingChecklist

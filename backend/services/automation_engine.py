@@ -2469,6 +2469,182 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
 
 
 # ---------------------------------------------------------------------------
+# Weekly digest — chatbot performance stats for paid tenants (Fridays)
+# ---------------------------------------------------------------------------
+
+
+async def send_weekly_digest() -> int:
+    """Send a weekly chatbot performance digest email to paid tenants.
+
+    Runs in the automation loop (30-min tier). Only executes on Fridays
+    (weekday == 4). Gathers 7-day chat metrics and emails a branded
+    summary to each tenant. Deduped via activity_log.
+
+    Returns count of emails sent.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+
+    # Only run on Fridays (weekday() == 4)
+    if now.weekday() != 4:
+        return 0
+
+    week_start = (now - timedelta(days=7)).isoformat()
+    week_tag = f"weekly_digest_{now.date().isoformat()}"
+    sent = 0
+
+    # Fetch paid tenants (not free plan)
+    try:
+        tenants = (
+            db.table("tenants")
+            .select("id, business_name, owner_email, owner_name")
+            .neq("plan", "free")
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("send_weekly_digest: failed to query tenants")
+        return 0
+
+    for tenant in tenants.data or []:
+        tid = tenant["id"]
+        email = tenant.get("owner_email")
+        if not email:
+            continue
+
+        # Dedup — one digest per tenant per week
+        try:
+            existing = (
+                db.table("activity_log")
+                .select("id", count="exact")
+                .eq("tenant_id", tid)
+                .eq("activity_type", week_tag)
+                .limit(1)
+                .execute()
+            )
+            if existing.count and existing.count > 0:
+                continue
+        except Exception:
+            logger.warning("send_weekly_digest: dedup check failed for tenant %s", tid)
+            continue
+
+        # ---- Gather 7-day chatbot metrics ----
+
+        # Total conversations (distinct session_ids) and total messages
+        conversations = 0
+        messages = 0
+        try:
+            msgs_result = (
+                db.table("chat_messages")
+                .select("session_id")
+                .eq("tenant_id", tid)
+                .gte("created_at", week_start)
+                .limit(5000)
+                .execute()
+            )
+            msgs_data = msgs_result.data or []
+            messages = len(msgs_data)
+            conversations = len({m["session_id"] for m in msgs_data if m.get("session_id")})
+        except Exception:
+            logger.warning("send_weekly_digest: failed to count messages for tenant %s", tid, exc_info=True)
+
+        # Leads captured (uses client_id, NOT tenant_id)
+        leads_count = 0
+        try:
+            leads_result = (
+                db.table("leads")
+                .select("id", count="exact")
+                .eq("client_id", tid)
+                .gte("created_at", week_start)
+                .limit(1)
+                .execute()
+            )
+            leads_count = leads_result.count or 0
+        except Exception:
+            logger.warning("send_weekly_digest: failed to count leads for tenant %s", tid, exc_info=True)
+
+        # Top question — most common user message (exclude greetings / single chars)
+        top_question = "N/A"
+        try:
+            user_msgs = (
+                db.table("chat_messages")
+                .select("content")
+                .eq("tenant_id", tid)
+                .eq("role", "user")
+                .gte("created_at", week_start)
+                .limit(500)
+                .execute()
+            )
+            skip_words = {"hi", "hello", "hey", "e", "ok", "yes", "no", "thanks", "thank you"}
+            freq: dict[str, int] = {}
+            for m in user_msgs.data or []:
+                content = (m.get("content") or "").strip()
+                if not content or len(content) <= 2:
+                    continue
+                if content.lower() in skip_words:
+                    continue
+                key = content[:120]  # Normalize long messages
+                freq[key] = freq.get(key, 0) + 1
+            if freq:
+                top_question = max(freq, key=freq.get)  # type: ignore[arg-type]
+        except Exception:
+            logger.warning("send_weekly_digest: failed to find top question for tenant %s", tid, exc_info=True)
+
+        # ---- Build branded HTML email ----
+        owner_name = tenant.get("owner_name") or "there"
+        biz_name = tenant.get("business_name") or "Your Business"
+
+        subject = f"Your weekly chat report — {biz_name}"
+
+        # Truncate top_question for display
+        display_question = top_question if len(top_question) <= 80 else top_question[:77] + "..."
+
+        body_html = (
+            f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
+            f"<h2 style='color:#1e293b;'>Hi {owner_name},</h2>"
+            f"<p style='color:#374151;'>Here's how your AI assistant performed this week:</p>"
+            f"<table style='border-collapse:collapse;width:100%;max-width:500px;margin:16px 0;"
+            f"background:#1e293b;border-radius:8px;overflow:hidden;'>"
+            f"<tr style='border-bottom:1px solid #334155;'>"
+            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Conversations</td>"
+            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{conversations}</td></tr>"
+            f"<tr style='border-bottom:1px solid #334155;'>"
+            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Messages</td>"
+            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{messages}</td></tr>"
+            f"<tr style='border-bottom:1px solid #334155;'>"
+            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Leads Captured</td>"
+            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{leads_count}</td></tr>"
+            f"<tr>"
+            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Top Question</td>"
+            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-style:italic;'>"
+            f"&ldquo;{display_question}&rdquo;</td></tr>"
+            f"</table>"
+            f"<p style='margin-top:24px;'>"
+            f"<a href='https://app.agentnexlify.com/analytics' "
+            f"style='color:#3b82f6;font-weight:600;text-decoration:none;'>View full analytics &rarr;</a></p>"
+            f"<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p>"
+            f"</div>"
+        )
+
+        try:
+            result = await send_email(to=email, subject=subject, body_html=body_html, tenant_id=tid)
+            if result.get("success"):
+                sent += 1
+                logger.info("Sent weekly digest to %s (tenant %s)", email, tid)
+                # Track in activity_log for dedup
+                from backend.services.activity import log_activity
+                log_activity(
+                    tenant_id=tid,
+                    activity_type=week_tag,
+                    description=f"Weekly digest sent: {conversations} conversations, {messages} messages, {leads_count} leads",
+                )
+        except Exception:
+            logger.exception("Failed to send weekly digest to %s (tenant %s)", email, tid)
+
+    return sent
+
+
+# ---------------------------------------------------------------------------
 # Birthday automation — send birthday greetings to leads
 # ---------------------------------------------------------------------------
 

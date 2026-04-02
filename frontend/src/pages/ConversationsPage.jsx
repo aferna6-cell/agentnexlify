@@ -827,6 +827,20 @@ export default function ConversationsPage() {
                             </span>
                           );
                         })()}
+                        {c.lead_id && (
+                          <span style={{
+                            fontSize: "0.62rem",
+                            fontWeight: 600,
+                            padding: "1px 5px",
+                            borderRadius: 4,
+                            color: "#4caf50",
+                            background: "rgba(76, 175, 80, 0.12)",
+                            lineHeight: 1.4,
+                            flexShrink: 0,
+                          }}>
+                            Lead
+                          </span>
+                        )}
                       </div>
                       <span style={{
                         fontSize: "0.7rem",
@@ -983,6 +997,35 @@ export default function ConversationsPage() {
                 {messages.length === 0 && (
                   <div className="conv-empty-state">No messages in this conversation.</div>
                 )}
+
+                {/* Lead Captured banner */}
+                {selected && (() => {
+                  const conv = conversations.find((c) => c.session_id === selected);
+                  return conv?.lead_id ? (
+                    <div style={{
+                      background: "rgba(76, 175, 80, 0.08)",
+                      border: "1px solid rgba(76, 175, 80, 0.25)",
+                      borderRadius: 8,
+                      padding: "8px 12px",
+                      margin: "10px 0 0",
+                      textAlign: "center",
+                      fontSize: "0.8rem",
+                      color: "#4caf50",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span style={{ fontWeight: 600 }}>Lead Captured</span>
+                      <span style={{ color: "rgba(76, 175, 80, 0.7)", fontWeight: 400 }}>
+                        {conv.lead_name ? `\u2014 ${conv.lead_name}` : "\u2014 Contact info detected"}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
 
                 {/* Internal Notes Panel */}
                 {showNotes && (

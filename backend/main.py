@@ -86,6 +86,7 @@ async def _automation_loop():
         send_onboarding_emails,
         send_portal_links,
         send_weekly_intelligence_briefs,
+        send_weekly_digest,
         send_birthday_greetings,
         send_aftercare_instructions,
     )
@@ -123,6 +124,7 @@ async def _automation_loop():
             core_tasks.extend([
                 _safe_run("send_monthly_reports", send_monthly_reports),
                 _safe_run("send_weekly_intelligence_briefs", send_weekly_intelligence_briefs),
+                _safe_run("send_weekly_digest", send_weekly_digest),
                 _safe_run("send_birthday_greetings", send_birthday_greetings),
             ])
 
