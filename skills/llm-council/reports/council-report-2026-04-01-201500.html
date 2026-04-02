@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Priority Sequencing</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 1.6rem; margin-bottom: 8px; }
+  .subtitle { color: #666; font-size: 0.95rem; margin-bottom: 32px; }
+  .question-box { background: #f0f0ff; border-left: 4px solid #6366f1; padding: 20px; border-radius: 0 8px 8px 0; margin-bottom: 32px; font-size: 0.95rem; }
+  .verdict { background: #fff; border: 2px solid #6366f1; border-radius: 12px; padding: 28px; margin-bottom: 32px; }
+  .verdict h2 { color: #6366f1; font-size: 1.3rem; margin-bottom: 12px; }
+  .verdict .action { background: #f0f0ff; padding: 16px; border-radius: 8px; margin-top: 16px; font-weight: 500; }
+  .section { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .section h3 { font-size: 1.1rem; margin-bottom: 12px; color: #1a1a2e; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .advisor-card { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px; }
+  .advisor-card .name { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+  .advisor-card .position { font-size: 0.85rem; color: #555; }
+  .agree { border-left: 3px solid #22c55e; }
+  .clash { border-left: 3px solid #f59e0b; }
+  .blind { border-left: 3px solid #ef4444; }
+  details { margin-bottom: 12px; }
+  summary { cursor: pointer; font-weight: 600; padding: 12px 0; color: #6366f1; font-size: 0.95rem; }
+  summary:hover { text-decoration: underline; }
+  .advisor-full { background: #f9f9f9; padding: 16px; border-radius: 8px; font-size: 0.9rem; margin-top: 8px; white-space: pre-wrap; }
+  .peer-highlight { background: #fffbeb; border: 1px solid #fde68a; padding: 14px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 8px; }
+  .footer { text-align: center; color: #999; font-size: 0.8rem; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+  .tag-unanimous { background: #dcfce7; color: #166534; }
+  .tag-split { background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>LLM Council Report</h1>
+<p class="subtitle">April 1, 2026 — Priority Sequencing for AgentNexLiFy</p>
+
+<div class="question-box">
+<strong>Question:</strong> With 2 active testers, zero paying customers, and a solo engineer — what's the optimal execution order for: Google Review Auto-Import, Social Media (hide or ship), Wizard Drop-Off Tracking, and Vertical SEO Pages?
+</div>
+
+<!-- VERDICT -->
+<div class="verdict">
+<h2>The Verdict</h2>
+<p><strong>Stop building features. Start closing.</strong></p>
+<p style="margin-top: 12px;">You have a functional product, two humans using it, and zero revenue. The four priorities listed are all engineering tasks. None of them are "get someone to pay me money." That is the actual priority, and it is missing from the list.</p>
+
+<div class="action">
+<strong>The One Thing To Do First:</strong> Hide Social Media from the sidebar right now (30 min fix). Then close the code editor, open your phone, and schedule a call with each tester this week.
+</div>
+</div>
+
+<!-- AGREEMENT/DISAGREEMENT GRID -->
+<div class="section">
+<h3>Advisor Alignment</h3>
+<div class="grid">
+  <div class="advisor-card">
+    <div class="name">Hide Social Media NOW</div>
+    <div class="position"><span class="tag tag-unanimous">5/5 UNANIMOUS</span> — Every advisor agrees the fake "Published" state destroys trust</div>
+  </div>
+  <div class="advisor-card">
+    <div class="name">Talk to Testers First</div>
+    <div class="position"><span class="tag tag-unanimous">4/5 AGREE</span> — All except The Expansionist say conversations beat code right now</div>
+  </div>
+  <div class="advisor-card">
+    <div class="name">Skip Wizard Tracking</div>
+    <div class="position"><span class="tag tag-unanimous">4/5 AGREE</span> — n=2 is too small for analytics. Just ask them.</div>
+  </div>
+  <div class="advisor-card">
+    <div class="name">Skip SEO Pages</div>
+    <div class="position"><span class="tag tag-unanimous">5/5 UNANIMOUS</span> — Post-revenue. SEO compounds over 6-12 months.</div>
+  </div>
+  <div class="advisor-card">
+    <div class="name">Ship Social Media</div>
+    <div class="position"><span class="tag tag-split">1/5 — DISPUTED</span> — Only The Expansionist. All 5 peer reviewers called this the biggest blind spot.</div>
+  </div>
+  <div class="advisor-card">
+    <div class="name">Build Google Reviews</div>
+    <div class="position"><span class="tag tag-split">CONDITIONAL</span> — Only if testers actually ask for it. Validate before building.</div>
+  </div>
+</div>
+</div>
+
+<!-- AGREEMENTS -->
+<div class="section agree">
+<h3>Where the Council Agrees</h3>
+<ol style="padding-left: 20px;">
+<li><strong>Hide Social Media immediately.</strong> A feature that visibly does nothing erodes trust with testers evaluating whether to pay.</li>
+<li><strong>Stop sequencing engineering work and start talking to testers.</strong> The information locked in their heads is worth more than any of these four features.</li>
+<li><strong>Wizard tracking for n=2 is premature optimization.</strong> A 15-minute call gives better data than any analytics pipeline.</li>
+<li><strong>SEO pages are post-revenue.</strong> Unanimous. SEO compounds over months. You need signal in days.</li>
+</ol>
+</div>
+
+<!-- CLASHES -->
+<div class="section clash">
+<h3>Where the Council Clashes</h3>
+<p><strong>Should you build Social Media publishing?</strong></p>
+<p>The Expansionist argues breadth wins deals — shipping social media makes you look like a $300/mo platform. Everyone else says depth wins trust, and the "3-4 day" estimate ignores Meta's app review process (weeks), OAuth approval, and platform-specific validation.</p>
+<p style="margin-top: 12px;"><strong>Google Reviews — build now or validate first?</strong></p>
+<p>The Executor says build it (3-4 days). The First Principles Thinker says ask testers if they care. The Contrarian warns that Google Business Profile API requires verified business and OAuth consent review.</p>
+</div>
+
+<!-- BLIND SPOTS -->
+<div class="section blind">
+<h3>Blind Spots Caught in Peer Review</h3>
+<div class="peer-highlight"><strong>1. Are these testers actual customers?</strong> Are they friends, favor-testers, or genuine prospects with budget authority? Optimizing for the wrong signal is worse than building nothing.</div>
+<div class="peer-highlight"><strong>2. Is there a conversion mechanism?</strong> Working Stripe checkout? Trial expiration prompt? A moment where the product asks for money? Features are irrelevant until someone has been asked to pay.</div>
+<div class="peer-highlight"><strong>3. What bugs exist right now?</strong> Nobody asked about the bug backlog. Fixes and UX polish in the core product almost certainly matter more than new features when you're trying to convert.</div>
+</div>
+
+<!-- FULL ADVISOR RESPONSES -->
+<div class="section">
+<h3>Full Advisor Responses</h3>
+
+<details>
+<summary>The Contrarian</summary>
+<div class="advisor-full">Hide social media today (30 min). Then STOP doing priorities 2, 4, and 5 entirely. Google Business Profile API requires verified business, OAuth consent screen review by Google, ongoing quota management. Wizard tracking is premature optimization for n=2. SEO takes 6-12 months. Spend every remaining hour making core product bulletproof. You're not going to convert testers by shipping four half-finished things.</div>
+</details>
+
+<details>
+<summary>The First Principles Thinker</summary>
+<div class="advisor-full">Priority 3 is the only emergency — remove from sidebar immediately. It's an integrity breach, not a feature decision. Priority 4 — ask testers directly, don't build analytics for n=2. Priority 5 — post-revenue activity. Priority 2 — reframe: do your testers actually care about review import? If yes, build it. If not, shelve it. Stop executing priorities. Start executing conversations with your two potential customers.</div>
+</details>
+
+<details>
+<summary>The Expansionist</summary>
+<div class="advisor-full">Ship Social Media — don't hide it. Meta Graph API for Facebook/Instagram is 3-4 day build. The scheduling UI, post creation flow, and database schema already exist. Only missing the API call layer. This makes testers compare you to a $300/mo platform, not a $40/mo widget. Then Google Reviews, then wizard tracking, then SEO pages. The upside nobody's seeing: ship social + reviews in the same week and your testers experience an end-to-end platform they can't unplug from.</div>
+</details>
+
+<details>
+<summary>The Outsider</summary>
+<div class="advisor-full">Remove social media immediately. Stop building for a week. Two testers are the entire universe — get on calls with them, find what makes them pay THIS WEEK. Wizard tracking for n=2 is overkill. SEO is 6-12 months. Everything else is procrastination wearing a product roadmap costume. Progress is exactly one thing — revenue.</div>
+</details>
+
+<details>
+<summary>The Executor</summary>
+<div class="advisor-full">Execution order: Hide social (today, 30 min) → wizard tracking (2-3 hours, sessionStorage + single analytics endpoint) → Google Reviews (3-4 days, cron + dedup via Google Business Profile API) → SEO pages (backlog). Total timeline: 1.5 weeks for priorities 3A, 4, and 2. Priority 5 goes on the backlog.</div>
+</details>
+</div>
+
+<!-- PEER REVIEW -->
+<div class="section">
+<h3>Peer Review Highlights</h3>
+<details>
+<summary>Peer Review Details (5 anonymous reviewers)</summary>
+<div class="advisor-full">
+<strong>Unanimous verdict:</strong> Response E (First Principles Thinker) is the strongest. Response A (Expansionist) has the biggest blind spot.
+
+<strong>Key quotes:</strong>
+- "E correctly reframes the entire question — you should be having conversations, not sequencing engineering priorities."
+- "A assumes building social publishing is the right move based on competitive positioning logic that is irrelevant at n=2."
+- "The '3-4 day' estimate is fantasy once you factor in Meta's app review process."
+- "Features are irrelevant until someone has been asked to pay and either said yes or told you why not."
+- "Bug fixes and UX friction in the core product almost certainly matter more than any of these 4 priorities."
+</div>
+</details>
+</div>
+
+<div class="footer">
+LLM Council Report — Generated 2026-04-01 — AgentNexLiFy<br>
+5 advisors &middot; 5 peer reviewers &middot; 1 chairman synthesis
+</div>
+
+</div>
+</body>
+</html>

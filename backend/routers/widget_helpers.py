@@ -198,10 +198,11 @@ def _get_or_create_conversation(
 ) -> tuple[str, bool]:
     """Return (conversation_id, is_new).
 
-    The live conversations table schema is unreliable (missing columns), so
-    this function tries to look up / create a row but falls back to using the
-    session_id itself as a stable identifier.  Message history is stored in the
+    Looks up or creates a conversations row.  Message history is stored in the
     separate ``chat_messages`` table, not in conversations JSONB.
+
+    If the insert fails, falls back to session_id — but downstream code must
+    validate the conversation_id is a real UUID before using it for updates.
     """
     db = get_supabase()
 
@@ -220,20 +221,26 @@ def _get_or_create_conversation(
     except Exception:
         logger.warning("conversations lookup failed for session %s", session_id, exc_info=True)
 
-    # Try to create one
+    # Try to create one (upsert — safe against race conditions with unique constraint)
     try:
         new_conv = (
             db.table("conversations")
-            .insert({"client_id": tenant_id, "session_id": session_id})
+            .upsert(
+                {"client_id": tenant_id, "session_id": session_id},
+                on_conflict="client_id,session_id",
+            )
             .execute()
         )
         if new_conv.data:
             return new_conv.data[0]["id"], True
+        else:
+            logger.error("conversations upsert returned no data for session %s tenant %s", session_id, tenant_id)
     except Exception:
-        logger.warning("conversations insert failed for session %s", session_id, exc_info=True)
+        logger.error("conversations upsert FAILED for session %s tenant %s", session_id, tenant_id, exc_info=True)
 
     # Fallback: use session_id as a stable conversation identifier.
-    # This lets chat_messages still accumulate history by session_id.
+    # WARNING: This is NOT a UUID — downstream code must validate before DB updates.
+    logger.warning("conversations fallback: using session_id %s as conversation_id (not a UUID)", session_id)
     return session_id, True
 
 
@@ -1092,8 +1099,12 @@ async def _capture_leads_from_session(
                 # Mark conversation as having captured a lead
                 if conversation_id:
                     try:
+                        from uuid import UUID
+                        UUID(conversation_id)  # Validate it's a real UUID, not a session_id fallback
                         db.table("conversations").update({"lead_captured": True}).eq("id", conversation_id).execute()
                         logger.info("lead_capture: set lead_captured=true on conversation %s (existing lead)", conversation_id)
+                    except (ValueError, AttributeError):
+                        logger.warning("lead_capture: conversation_id %r is not a UUID, skipping lead_captured update", conversation_id)
                     except Exception:
                         logger.warning("lead_capture: failed to update lead_captured on conversation %s", conversation_id, exc_info=True)
                 return
@@ -1211,8 +1222,12 @@ async def _capture_leads_from_session(
             # Mark conversation as having captured a lead
             if conversation_id:
                 try:
+                    from uuid import UUID
+                    UUID(conversation_id)  # Validate it's a real UUID, not a session_id fallback
                     db.table("conversations").update({"lead_captured": True}).eq("id", conversation_id).execute()
                     logger.info("lead_capture: set lead_captured=true on conversation %s", conversation_id)
+                except (ValueError, AttributeError):
+                    logger.warning("lead_capture: conversation_id %r is not a UUID, skipping lead_captured update", conversation_id)
                 except Exception:
                     logger.warning("lead_capture: failed to update lead_captured on conversation %s", conversation_id, exc_info=True)
         else:

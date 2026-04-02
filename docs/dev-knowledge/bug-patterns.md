@@ -52,6 +52,26 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Conversations table: RLS enabled with no policies = silent INSERT failures
+**Date:** 2026-04-02
+**Symptom:** 120 out of 146 chat sessions had no conversation record in the conversations table. Chat messages were saved (to chat_messages table) but conversations were silently not created. lead_captured updates also failed silently because the conversation_id fell back to session_id (text) instead of a real UUID.
+**Root Cause:** Three compounding issues: (1) conversations table had RLS enabled (migration 001) but NO policies were ever created, so INSERT from anon role was blocked; (2) `_get_or_create_conversation()` caught the exception and fell back to session_id string; (3) downstream `.eq("id", conversation_id)` compared UUID column against text string, silently matching 0 rows.
+**Fix:** Migration 080 added RLS policies (service_role, authenticated, anon). Added UNIQUE constraint on (client_id, session_id). Changed INSERT to UPSERT. Added UUID validation before lead_captured updates. Backfilled 120 orphaned sessions via SQL.
+**Files Changed:** `migrations/080_conversations_rls_policy_and_unique.sql`, `backend/routers/widget_helpers.py`
+**Prevention:** When enabling RLS on a table, ALWAYS create at least one policy. When catching DB exceptions as fallbacks, log at ERROR level and validate the fallback value before using it in subsequent queries.
+
+---
+
+### Widget chatbot knowledge_base NULL — bot can't answer common questions
+**Date:** 2026-04-02
+**Symptom:** MTOptions chatbot answered "I don't have that information" to 4 out of 7 common questions (returns, track record, leadership, historical data).
+**Root Cause:** Active MTOptions tenant (6d76f24b) had knowledge_base=NULL and custom_instructions=NULL in widget_configs. Data was split across two duplicate tenant records — the old one had custom_instructions, the new one had knowledge_base from onboarding but no custom_instructions. Also, 6 AgentNexLiFy FAQs were mixed into the MTOptions FAQ entries (identity leak).
+**Fix:** Populated knowledge_base with comprehensive MTOptions KB (2777 chars). Copied custom_instructions from old tenant (1882 chars with "NEVER mention AgentNexLiFy" rule). Deleted 6 AgentNexLiFy FAQ entries. Fixed credit card contradiction in FAQ answers.
+**Files Changed:** Supabase data only (widget_configs, faq_entries)
+**Prevention:** When creating duplicate tenant records during testing, document which is canonical. Run a data integrity check on widget_configs before going live (knowledge_base NOT NULL, custom_instructions NOT NULL for active widgets).
+
+---
+
 ### Dashboard shows FREE when user has paid plan
 **Date:** 2025
 **Symptom:** User pays but dashboard still shows FREE.

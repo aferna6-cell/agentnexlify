@@ -476,3 +476,8 @@ Existing values retained: auto_shop, dental, fitness, legal, medical, other, plu
 Creates `wizard_events` table for onboarding wizard funnel analytics. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), step (INTEGER CHECK 1-6), action (TEXT CHECK: enter/complete/skip/abandon), created_at (TIMESTAMPTZ). Indexed on tenant_id and step. RLS enabled with service_role full access. Used by the `POST /api/v1/onboarding/wizard-event` endpoint to track conversion through the 6-step onboarding wizard.
 
 **Applied:** Pending — created 2026-04-01. Apply via Supabase MCP.
+
+### 080 — Conversations RLS Policies + Unique Constraint
+Fixes critical bug: conversations table had RLS enabled (migration 001) but NO policies, causing silent INSERT failures from anon/authenticated roles. Adds three RLS policies (service_role full access, authenticated scoped to client_id=auth.uid(), anon full access for widget). Deduplicates existing (client_id, session_id) pairs and adds UNIQUE constraint `conversations_client_session_unique` on (client_id, session_id) to prevent duplicate conversation records and enable safe UPSERT.
+
+**Applied:** 2026-04-02 via Supabase MCP.

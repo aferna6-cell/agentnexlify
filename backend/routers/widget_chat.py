@@ -6,6 +6,7 @@ BackgroundTasks get treated as query params, causing 422 errors.
 """
 
 import logging
+import re
 
 import anthropic
 from fastapi import APIRouter, BackgroundTasks, Request
@@ -173,6 +174,49 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         req.session_id, len(messages),
         messages[0]["role"] if messages else "NONE",
     )
+
+    # 5b. Spam short-circuit — skip Claude API for junk and repeat greetings
+    _stripped = req.message.strip()
+    _normalized = re.sub(r"[^a-z]", "", _stripped.lower())
+    _is_free = (tenant.get("plan") or "free") == "free"
+    _watermark = True if _is_free else widget.get("show_watermark", True)
+
+    # Single-character or empty messages — never worth a Claude API call
+    if len(_normalized) <= 1 and len(messages) >= 2:
+        _canned_junk = "Could you type out your question? I'm happy to help!"
+        _save_chat_messages(tenant["id"], req.session_id, req.message, _canned_junk)
+        logger.info("widget_chat: junk_shortcircuit=True session=%s msg=%r (skipped Claude API)", req.session_id, _stripped)
+        return WidgetChatResponse(
+            response=_canned_junk,
+            session_id=req.session_id,
+            lead_captured=False,
+            show_watermark=_watermark,
+            handoff=False,
+        )
+
+    # Repeat greeting detection
+    _GREETINGS = {"hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hii", "helo"}
+    if _normalized in _GREETINGS and len(messages) >= 2:
+        # Session already has at least one exchange — this is a repeat greeting
+        _prior_user_greeted = any(
+            m["role"] == "user" and re.sub(r"[^a-z]", "", m.get("content", "").strip().lower()) in _GREETINGS
+            for m in messages
+        )
+        if _prior_user_greeted:
+            _biz_name = tenant.get("business_name") or "us"
+            _canned = (
+                f"I'm still here! Is there something specific I can help you with? "
+                f"I can answer questions about {_biz_name} — pricing, services, how to get started, and more."
+            )
+            _save_chat_messages(tenant["id"], req.session_id, req.message, _canned)
+            logger.info("widget_chat: greeting_shortcircuit=True session=%s (skipped Claude API)", req.session_id)
+            return WidgetChatResponse(
+                response=_canned,
+                session_id=req.session_id,
+                lead_captured=False,
+                show_watermark=_watermark,
+                handoff=False,
+            )
 
     # 6. Build system prompt with FAQ (cached per tenant, 5-min TTL)
     tid = tenant["id"]
