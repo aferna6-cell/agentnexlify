@@ -856,6 +856,26 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 
 ---
 
+### Sidebar showed incomplete features to users
+**Date:** 2026-04-01
+**Symptom:** Dashboard sidebar displayed links to Social Media, Calls, and Local SEO pages — features that are not ready for end-user use.
+**Root Cause:** Sidebar component listed all planned features regardless of implementation status. Users clicking these links saw broken or empty pages.
+**Fix:** Hid the three incomplete feature links from the sidebar. The backend routers and pages still exist but are not exposed in navigation.
+**Files Changed:** `frontend/src/components/Sidebar.jsx`
+**Prevention:** Only add sidebar links for features that are fully functional. Use a feature flag or manual gate — never expose half-built pages to users.
+
+---
+
+### Analytics dashboard showed 0 conversations — conversations.client_id FK pointed to legacy clients table
+**Date:** 2026-04-01
+**Symptom:** Analytics dashboard showed 0 conversations and 0 leads captured despite active widget chat usage.
+**Root Cause:** `conversations.client_id` had a FK pointing to the legacy `clients` table (leftover from the original real-estate V1 platform). Widget chat inserts `client_id = tenant_id` (a UUID from the `tenants` table). The FK violation caused every insert to fail silently, keeping the `conversations` table permanently empty. Any endpoint querying `conversations` returned 0.
+**Fix:** Migration 076 drops the old `conversations_client_id_fkey` (which pointed to `clients.id`) and re-creates it pointing to `tenants(id) ON DELETE CASCADE`. Also adds `source TEXT DEFAULT 'widget'` to `leads` and back-fills existing leads.
+**Files Changed:** `migrations/076_fix_conversations_fk_and_leads_source.sql`
+**Prevention:** After any schema reconciliation, audit all FK constraints to verify they point to the correct table. The legacy `clients` table should be dropped in a future migration to prevent further confusion.
+
+---
+
 ### Schema.org sameAs placeholder URLs in structured data
 **Date:** 2026-04-01
 **Symptom:** JSON-LD Organization schema contained `"sameAs": ["FILL_IN_LINKEDIN", "FILL_IN_TWITTER"]` — fake URLs that search engines would index as broken/invalid structured data.

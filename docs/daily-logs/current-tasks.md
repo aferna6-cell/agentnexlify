@@ -1,12 +1,12 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-01 (automated evening review)
+Updated: 2026-04-02 (automated morning startup)
 
-## Tomorrow's Top 3 Priorities
+## Today's Top 3 Priorities
 
-1. **Apply migrations 077 and 078** — Migration 077 (widget knowledge_base) blocks the onboarding wizard from injecting knowledge into the chat prompt. Migration 078 (expanded business_type CHECK) blocks new signups for 17 industries. Both are **critical pre-launch gates** for the onboarding wizard. Agent: **schema-guardian** → apply both via Supabase MCP.
-2. **End-to-end test onboarding wizard** — 15 commits shipped the full 6-step wizard today. Needs a real signup run through all 6 steps: business info → services → KB generation → widget customize → plan → embed. Verify JWT is set correctly, /onboarding route doesn't bounce, widget embed code works. Agent: **qa-tester**.
-3. **Apply pending migrations 065–070** — 6 stale migrations blocking client login (065), waitlist (066), scoring configs (067), invoice unique index + password reset (068 ×2), email bounce (069), pipeline automations (070). Now 9+ days stale. Agent: **schema-guardian**.
+1. **Apply migrations 077, 078, and 079** — Migration 077 (widget knowledge_base) blocks onboarding wizard KB injection. Migration 078 (expanded business_type CHECK) blocks new signups for 17 industries. Migration 079 (wizard_events) blocks wizard drop-off analytics. All are **critical pre-launch gates**. Agent: **schema-guardian** → apply all three via Supabase MCP.
+2. **End-to-end test onboarding wizard** — 15 commits shipped the full 6-step wizard (2026-04-01). Needs a real signup run through all 6 steps: business info → services → KB generation → widget customize → plan → embed. Verify JWT is set correctly, /onboarding route doesn't bounce, widget embed code works. Agent: **qa-tester**.
+3. **Apply pending migrations 065–070** — 6 stale migrations blocking client login (065), waitlist (066), scoring configs (067), invoice unique index + password reset (068 x2), email bounce (069), pipeline automations (070). Now 10+ days stale. Duplicate file issues at 066, 067, 068 need resolution first. Agent: **schema-guardian**.
 
 ## Active Tasks
 
@@ -14,6 +14,7 @@ Updated: 2026-04-01 (automated evening review)
 
 - [ ] **Apply migration 077 (widget knowledge_base)** — adds `knowledge_base` column to `widget_configs`. Required for onboarding wizard KB injection into chat prompt. Created 2026-04-01. Agent: **schema-guardian** → apply immediately.
 - [ ] **Apply migration 078 (business_type constraint)** — expands CHECK constraint from 10 → 27 industries. New signups for accounting, bakery, bar_nightclub, etc. will fail at DB insert until this is applied. Created 2026-04-01. Agent: **schema-guardian** → apply immediately.
+- [ ] **Apply migration 079 (wizard_events)** — creates `wizard_events` table for onboarding funnel analytics. Created 2026-04-01. Agent: **schema-guardian** → apply immediately.
 
 ### Priority 1 — Critical / Blocking
 
@@ -32,12 +33,10 @@ Updated: 2026-04-01 (automated evening review)
 
 ### Priority 2 — Verification & QA
 
-- [ ] **End-to-end test onboarding wizard** — 6-step wizard shipped today (WizardStepBusiness → Services → KB → Customize → Plan → Embed). Needs QA: real signup flow, JWT parsing race condition, /onboarding route guard, KB generation, widget embed code. Agent: **qa-tester**.
-- [ ] **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow: **7+ days unverified.** Agent: **qa-tester**.
-- [ ] **Reduce silent frontend catches (33 remaining)** — `.catch(() => <fallback>)` blocks detected by grep. Architecture decision requires visible error handling. Count steady at 33.
-  - Agent: **frontend-dev**
-- [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Still present.
-  - Agent: **frontend-dev**
+- [ ] **End-to-end test onboarding wizard** — 6-step wizard shipped 2026-04-01 (WizardStepBusiness → Services → KB → Customize → Plan → Embed). Needs QA: real signup flow, JWT parsing race condition, /onboarding route guard, KB generation, widget embed code. Agent: **qa-tester**.
+- [ ] **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset flow: **8+ days unverified.** Agent: **qa-tester**.
+- [ ] **Reduce silent frontend catches (4 truly silent, 62 total)** — 4 empty `.catch(() => {})` blocks: onboarding.js, ClientLoginPage.jsx, MarketingCampaignsPage.jsx, WizardStepEmbed.jsx. 62 total `.catch` patterns across 35 files. Architecture decision requires visible error handling. Agent: **frontend-dev**.
+- [ ] **Fix silent catch in ClientLoginPage.jsx:25** — `.catch(() => {})` on business name fetch. Still present. Agent: **frontend-dev**.
 
 ### Priority 3 — Knowledge & Documentation
 
@@ -49,9 +48,18 @@ Updated: 2026-04-01 (automated evening review)
 - [ ] **Fix 16 test isolation failures** — partially addressed by d1a36c6 (12 files patched), may still have remaining failures
 - [ ] **Automated routine reliability** — March 26 evening and March 27 morning both failed due to usage limits. Consider scheduling adjustments or retry mechanism.
 
+## Completed (Recent) — 2026-04-02 (Morning Auto)
+
+- [x] **Migration 079 documented in schema-log.md** — wizard_events table entry added.
+- [x] **2 bug fixes documented in bug-patterns.md** — sidebar hide + analytics FK resolution.
+- [x] **Daily log created** — docs/daily-logs/2026-04-02.md with health check results.
+
 ## Completed (Recent) — 2026-04-01
 
 - [x] **Onboarding wizard built end-to-end** — 6 step components (WizardStepBusiness, Services, KnowledgeBase, Customize, Plan, Embed), wizard shell with sessionStorage state, API helpers (generateKb, completeOnboarding, checkoutForWizard), /onboarding route with auth-race guard (OnboardingRedirect), billing checkout conditional success_url, generate-kb endpoint, KB injection into widget chat system prompt.
+- [x] **Wizard drop-off tracking** — migration 079, backend endpoint, frontend instrumentation (44f7553).
+- [x] **5 industry vertical SEO pages enriched** — expanded content, FAQs, structured data (3df8437).
+- [x] **Incomplete features hidden from sidebar** — social media, calls, local SEO (ff75a44).
 - [x] **Email sequences feature committed** — backend router, frontend page, API utils, seed script, main.py router registration, sidebar nav (a3a2518). Migration 073 already applied.
 - [x] **Email sequence auto-enrollment trigger fixed** — `_capture_leads_from_session` now calls enrollment trigger on lead capture (0fead79).
 - [x] **lead_captured flag fixed** — `_capture_leads_from_session` now writes back `lead_captured=True` to conversations row (f90a40d). Migration 074 applied.
@@ -63,29 +71,16 @@ Updated: 2026-04-01 (automated evening review)
 - [x] **business_type CHECK constraint expanded** — 10 → 27 industries via migration 078. File created; apply pending.
 - [x] **5 post-onboarding bugs documented** in bug-patterns.md (5597ed6).
 - [x] **Demo script created** — client-ready feature walkthrough with Q&A cheat sheet (88e5ef8).
-- [x] **Migration 077 created** — adds knowledge_base column to widget_configs. Apply pending.
+- [x] **Migrations 077 created** — adds knowledge_base column to widget_configs. Apply pending.
 
-## Completed (Recent) — 2026-03-31
+## Overall Progress
 
-- [x] **Migration 073 created and applied** — `migrations/073_email_sequences.sql` creates 4 tables: `email_sequences`, `email_sequence_steps`, `email_sequence_enrollments`, `email_sequence_sends`. Schema-log.md updated.
-- [x] **Email sequences feature built** — backend router, frontend page, API utils, and seed script created for MTOptions. Now committed.
-- [x] **Migrations 071 and 072 applied** — Widget teaser message (071) and custom_instructions (072) both applied and documented in schema-log.md. MTOptions custom system prompt configured.
-
-## Completed (Recent) — 2026-03-30
-
-- [x] **fix: markdown rendering, analytics 0 count, teaser bubble, lead capture prompting** (2944381)
-- [x] **fix: correct AgentNexLiFy widget API key in index.html** (097cb62)
-- [x] **feat: re-embed marketing widget (desktop only) and fix floating CTA arrow** (827ab4f)
-- [x] **fix: remove fake testimonials and self-hosted chat widget from marketing site** (b153fc2)
-- [x] **fix: update mobile CTA text** (36951b6)
-
-## Overall Progress (Cycles 116-167+)
-
-- 96+ commits today alone (running total 70+ previously), 299 tests
-- 9 migrations applied this cycle (073-076, +073 previously), 4 pending (077, 078, 065-070 backlog)
-- 35 api domain modules (100% split complete)
-- 20+ features shipped, 15+ bug fixes, 5+ security patches
-- **Today's landmark: onboarding wizard complete (6 steps, end-to-end)**
+- 27 commits in last 24 hours
+- 3 pending migrations (077-079) — critical pre-launch blockers
+- 6 stale migrations (065-070) — 10+ days old, duplicates need resolution
+- 4 silent frontend catches to fix
+- 0 bare excepts, 0 dangerous imports, 0 hardcoded keys
+- Widget files in sync
 
 ---
 

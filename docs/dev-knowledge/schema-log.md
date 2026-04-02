@@ -471,3 +471,8 @@ New values added: accounting, bakery, bar_nightclub, cafe, catering, chiropracti
 Existing values retained: auto_shop, dental, fitness, legal, medical, other, plumbing, realestate, restaurant, salon
 
 **Applied:** Pending — created 2026-04-01. Apply via Supabase MCP. **Critical: must be applied before any new signups, otherwise new industry types will fail at DB insert.**
+
+### 079 — Wizard Drop-Off Events
+Creates `wizard_events` table for onboarding wizard funnel analytics. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), step (INTEGER CHECK 1-6), action (TEXT CHECK: enter/complete/skip/abandon), created_at (TIMESTAMPTZ). Indexed on tenant_id and step. RLS enabled with service_role full access. Used by the `POST /api/v1/onboarding/wizard-event` endpoint to track conversion through the 6-step onboarding wizard.
+
+**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP.
