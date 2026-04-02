@@ -5,11 +5,13 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 
 from backend.dependencies import verify_tenant
+from backend.limiter import limiter
 from backend.models.database import get_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
 
@@ -1154,3 +1156,109 @@ async def analytics_health(
         "last_message_at": last_msg_at,
         "note": "Use this to verify data exists before debugging dashboard card display",
     }
+
+
+@router.get("/{tenant_id}/snapshot")
+@limiter.limit("30/minute")
+async def get_tester_snapshot(
+    request: Request,
+    tenant_id: str,
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Generate a shareable performance snapshot for a tester/client."""
+    verify_tenant(claims, tenant_id)
+
+    cache_key = f"snapshot:{tenant_id}:{period}"
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    db = get_supabase()
+    days = _period_to_days(period)
+    now = datetime.now(timezone.utc)
+    start = (now - timedelta(days=days)).isoformat()
+
+    # Business name
+    biz_name = "Unknown"
+    try:
+        t = db.table("tenants").select("business_name").eq("id", tenant_id).single().execute()
+        biz_name = (t.data or {}).get("business_name", "Unknown")
+    except Exception:
+        pass
+
+    # Chat messages
+    msgs = []
+    try:
+        r = db.table("chat_messages").select("session_id, role, content, created_at").eq("tenant_id", tenant_id).gte("created_at", start).order("created_at").limit(_QUERY_LIMIT).execute()
+        msgs = r.data or []
+    except Exception:
+        logger.warning("snapshot: chat_messages query failed for %s", tenant_id, exc_info=True)
+
+    total_messages = len(msgs)
+    user_msgs = [m for m in msgs if m.get("role") == "user"]
+    sessions = {m["session_id"] for m in msgs}
+    total_conversations = len(sessions)
+    unique_visitors = len({m["session_id"].rsplit("_", 1)[-1] for m in msgs if m.get("session_id")})
+    avg_per_conv = round(total_messages / max(total_conversations, 1), 1)
+
+    # Top questions (exclude greetings/junk)
+    import re as _re
+    _skip = {"hi", "hey", "hello", "yo", "sup", "e", "hiya", "howdy", ""}
+    real_questions = []
+    for m in user_msgs:
+        normalized = _re.sub(r"[^a-z ]", "", (m.get("content") or "").strip().lower())
+        if normalized not in _skip and len(normalized) > 3:
+            real_questions.append(m.get("content", "").strip())
+
+    # Count frequencies
+    from collections import Counter
+    q_counts = Counter(real_questions)
+    top_questions = [q for q, _ in q_counts.most_common(5)]
+
+    # Busiest day
+    day_counts = defaultdict(int)
+    for m in msgs:
+        day = (m.get("created_at") or "")[:10]
+        if day:
+            day_counts[day] += 1
+    busiest_day = ""
+    if day_counts:
+        best = max(day_counts, key=day_counts.get)
+        busiest_day = f"{best} ({day_counts[best]} messages)"
+
+    # Leads
+    total_leads = 0
+    try:
+        r = db.table("leads").select("id").eq("client_id", tenant_id).gte("created_at", start).limit(_QUERY_LIMIT).execute()
+        total_leads = len(r.data or [])
+    except Exception:
+        logger.warning("snapshot: leads query failed for %s", tenant_id, exc_info=True)
+
+    # Appointments
+    total_appointments = 0
+    try:
+        r = db.table("appointments").select("id").eq("tenant_id", tenant_id).gte("created_at", start).limit(_QUERY_LIMIT).execute()
+        total_appointments = len(r.data or [])
+    except Exception:
+        logger.warning("snapshot: appointments query failed for %s", tenant_id, exc_info=True)
+
+    # Period string
+    start_date = (now - timedelta(days=days)).strftime("%B %d")
+    end_date = now.strftime("%B %d, %Y")
+    period_str = f"{start_date} - {end_date}"
+
+    result = {
+        "business_name": biz_name,
+        "period": period_str,
+        "total_conversations": total_conversations,
+        "total_messages": total_messages,
+        "unique_visitors": unique_visitors,
+        "leads_captured": total_leads,
+        "appointments_booked": total_appointments,
+        "avg_messages_per_conversation": avg_per_conv,
+        "top_questions": top_questions,
+        "busiest_day": busiest_day,
+    }
+    _set_cache(cache_key, result)
+    return result

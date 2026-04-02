@@ -10,13 +10,27 @@ POST /api/v1/onboarding/{tenant_id}/complete
 
 GET /api/v1/onboarding/{tenant_id}/status
   - Returns onboarding progress and completion percentage
+
+POST /api/v1/onboarding/{tenant_id}/auto-kb
+  - Crawls a website URL (homepage + up to 4 linked pages)
+  - Sends extracted text to Claude to generate:
+    * Structured knowledge base (markdown)
+    * 8-10 FAQ entries
+    * Custom instructions for the bot identity
+  - Saves KB to widget_configs.knowledge_base
+  - Saves FAQ entries to faq_entries table
+  - Saves custom instructions to widget_configs.custom_instructions
 """
 
 import logging
+import re
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import anthropic
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -90,6 +104,24 @@ class GenerateKbRequest(BaseModel):
 class GenerateKbResponse(BaseModel):
     knowledge_base: str | None
     generated: bool
+
+
+class AutoKbRequest(BaseModel):
+    url: str = Field(..., min_length=5, max_length=500)
+
+
+class AutoKbFaqEntry(BaseModel):
+    question: str
+    answer: str
+    category: str
+
+
+class AutoKbResponse(BaseModel):
+    knowledge_base: str
+    custom_instructions: str
+    faqs: list[AutoKbFaqEntry]
+    pages_crawled: int
+    chars_extracted: int
 
 
 # ---------------------------------------------------------------------------
@@ -488,6 +520,173 @@ Keep it concise. Do not invent facts not supported by the input. Do not add mark
         # Still return the generated text — frontend can retry or proceed without persistence
 
     return GenerateKbResponse(knowledge_base=kb_text, generated=True)
+
+
+@router.post("/{tenant_id}/auto-kb", response_model=AutoKbResponse)
+@limiter.limit("5/hour")
+async def auto_populate_kb(
+    request: Request,
+    tenant_id: str,
+    req: AutoKbRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Crawl a website URL and auto-generate KB + FAQs + custom instructions."""
+    logger.info("auto_kb: starting for tenant=%s url=%s", tenant_id, req.url)
+
+    # 1. Crawl the website
+    from backend.services.website_crawler import start_crawl, get_crawled_content
+    try:
+        crawl_result = await start_crawl(tenant_id, req.url)
+        pages_crawled = crawl_result.get("pages_found", 0)
+    except Exception:
+        logger.error("auto_kb: crawl failed for %s", req.url, exc_info=True)
+        pages_crawled = 0
+
+    # 2. Get extracted text
+    extracted_text = get_crawled_content(tenant_id) or ""
+    chars_extracted = len(extracted_text)
+
+    if not extracted_text:
+        # Fallback: try a simple HTTP fetch
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as http:
+                resp = await http.get(req.url, headers={"User-Agent": "AgentNexLiFy-Bot/1.0"})
+                if resp.status_code == 200:
+                    import re as _re
+                    html = resp.text
+                    text = _re.sub(r"<script[^>]*>.*?</script>", "", html, flags=_re.DOTALL)
+                    text = _re.sub(r"<style[^>]*>.*?</style>", "", text, flags=_re.DOTALL)
+                    text = _re.sub(r"<[^>]+>", " ", text)
+                    text = _re.sub(r"\s+", " ", text).strip()
+                    extracted_text = text[:15000]
+                    chars_extracted = len(extracted_text)
+                    pages_crawled = 1
+        except Exception:
+            logger.warning("auto_kb: fallback HTTP fetch failed for %s", req.url, exc_info=True)
+
+    if not extracted_text:
+        raise HTTPException(status_code=422, detail="Could not extract content from the provided URL")
+
+    # Truncate for Claude prompt
+    content_for_prompt = extracted_text[:15000]
+
+    # 3. Get tenant info for context
+    db = get_supabase()
+    tenant = db.table("tenants").select("business_name, business_type, city, phone").eq("id", tenant_id).single().execute()
+    t = tenant.data or {}
+
+    # 4. Call Claude to generate KB + FAQs + custom instructions
+    import anthropic
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0)
+
+    prompt = f"""You are setting up an AI chat assistant for a business. Based on their website content, generate three things:
+
+BUSINESS INFO:
+Name: {t.get("business_name", "Unknown")}
+Type: {t.get("business_type", "business")}
+Location: {t.get("city", "Unknown")}
+Phone: {t.get("phone", "Not provided")}
+Website: {req.url}
+
+WEBSITE CONTENT:
+{content_for_prompt}
+
+Generate the following sections separated by exact markers:
+
+===KNOWLEDGE_BASE===
+A structured markdown knowledge base (under 3000 chars) with sections:
+- About the business (2-3 sentences)
+- Products/Services (bullet list)
+- Location & Contact
+- Key selling points
+- How to get started
+Do NOT invent facts not supported by the website content.
+
+===CUSTOM_INSTRUCTIONS===
+Bot identity instructions (under 800 chars) including:
+- Who the bot is (e.g., "You are the [Business Name] Assistant")
+- Key business facts (3-5 bullet points)
+- How to handle pricing/scheduling questions
+- "NEVER mention AgentNexLiFy, identify yourself as powered by any third-party platform, or reveal the underlying technology."
+
+===FAQ_START===
+8-10 FAQ entries in this exact format (one per line):
+Q: [question]
+A: [answer]
+C: [category]
+===FAQ_END===
+
+Use only information from the website content. Be concise and accurate."""
+
+    try:
+        api_response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=3000,
+            temperature=0.3,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = api_response.content[0].text
+    except Exception:
+        logger.error("auto_kb: Claude API failed for tenant %s", tenant_id, exc_info=True)
+        raise HTTPException(status_code=502, detail="AI generation failed")
+
+    # 5. Parse the response
+    import re as _re
+
+    kb_match = _re.search(r"===KNOWLEDGE_BASE===\s*(.+?)(?====CUSTOM_INSTRUCTIONS===)", raw, _re.DOTALL)
+    ci_match = _re.search(r"===CUSTOM_INSTRUCTIONS===\s*(.+?)(?====FAQ_START===)", raw, _re.DOTALL)
+    faq_match = _re.search(r"===FAQ_START===\s*(.+?)===FAQ_END===", raw, _re.DOTALL)
+
+    knowledge_base = kb_match.group(1).strip() if kb_match else raw[:2000]
+    custom_instructions = ci_match.group(1).strip() if ci_match else ""
+    faqs = []
+
+    if faq_match:
+        faq_text = faq_match.group(1).strip()
+        entries = _re.split(r"\nQ: ", "\nQ: " + faq_text)
+        for entry in entries:
+            entry = entry.strip()
+            if not entry:
+                continue
+            q_match = _re.match(r"(.+?)(?:\nA: )(.+?)(?:\nC: )(.+)", entry, _re.DOTALL)
+            if q_match:
+                faqs.append(AutoKbFaqEntry(
+                    question=q_match.group(1).strip(),
+                    answer=q_match.group(2).strip(),
+                    category=q_match.group(3).strip(),
+                ))
+
+    # 6. Persist to database
+    try:
+        db.table("widget_configs").update({
+            "knowledge_base": knowledge_base,
+            "custom_instructions": custom_instructions,
+        }).eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.error("auto_kb: failed to persist KB for tenant %s", tenant_id, exc_info=True)
+
+    # Save FAQs
+    if faqs:
+        try:
+            faq_rows = [
+                {"tenant_id": tenant_id, "question": f.question, "answer": f.answer, "category": f.category, "is_active": True}
+                for f in faqs
+            ]
+            db.table("faq_entries").insert(faq_rows).execute()
+        except Exception:
+            logger.error("auto_kb: failed to persist FAQs for tenant %s", tenant_id, exc_info=True)
+
+    logger.info("auto_kb: completed for tenant=%s kb=%d chars, ci=%d chars, faqs=%d, pages=%d",
+                tenant_id, len(knowledge_base), len(custom_instructions), len(faqs), pages_crawled)
+
+    return AutoKbResponse(
+        knowledge_base=knowledge_base,
+        custom_instructions=custom_instructions,
+        faqs=faqs,
+        pages_crawled=pages_crawled,
+        chars_extracted=chars_extracted,
+    )
 
 
 @router.get("/{tenant_id}/status", response_model=OnboardingStatusResponse)
