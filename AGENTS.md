@@ -2,7 +2,24 @@
 
 ## Purpose
 - Use this file to orient quickly before editing code in this repository.
-- Read [`CLAUDE.md`](/home/aidan/agentnexlify/CLAUDE.md) first for project rules, then load the repo-local skills in `.codex/skills/` that match the task.
+- Read `CLAUDE.md` first for complete project rules, then load skills that match the task.
+- For a machine-readable index of all AI resources (skills, agents, workflows), see `.ai/manifest.json`.
+
+## AI Agent Configuration Files
+
+This repo provides instructions for multiple AI coding tools:
+
+| File | Tool |
+|------|------|
+| `CLAUDE.md` | Claude Code (primary, most complete) |
+| `AGENTS.md` | OpenAI Codex / general agents (this file) |
+| `GEMINI.md` | Google Gemini CLI |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+| `.cursorrules` | Cursor AI |
+| `.windsurfrules` | Windsurf / Codeium |
+| `.clinerules` | Cline / Roo Code |
+| `.aider.conf.yml` | Aider CLI |
+| `.ai/manifest.json` | Universal machine-readable manifest |
 
 ## Repo Shape
 - `backend/`: the production FastAPI service. One app in [`backend/main.py`](/home/aidan/agentnexlify/backend/main.py) serves the API, mounts `/widget`, and starts the automation loop.
@@ -63,3 +80,86 @@
 - Frontend build: `cd frontend && npm run build`
 - Demo platform: `cd demo-platform && npm start`
 - Docker stack: `docker compose up --build`
+
+## AI Skills, Agents & Workflows
+
+### Skills (Domain Knowledge Modules)
+
+Skills encode domain expertise and mandatory invariants. Read the relevant skill before working in its area.
+
+**Claude skills** (`.claude/skills/*/SKILL.md`):
+
+| Skill | When to Use |
+|-------|-------------|
+| `schema-guard` | Before any DB query, migration, or Pydantic model |
+| `feature-build` | When building any new feature |
+| `debug-api` | When diagnosing API errors (422s, 500s, CORS, silent data loss) |
+| `migration-workflow` | When creating, applying, or verifying database migrations |
+| `ai-feature-pattern` | When building features that call the Claude API |
+| `widget-test` | When testing or modifying the chat widget |
+| `industry-content` | When adding support for a new business type/industry |
+| `team-orchestration` | When delegating to multiple agents |
+| `build-loop` | Autonomous infinite development loop |
+
+**Codex skills** (`.codex/skills/*/SKILL.md`):
+
+| Skill | When to Use |
+|-------|-------------|
+| `agentnexlify-surface-selector` | Deciding which directory/subsystem to edit |
+| `agentnexlify-schema-guard` | Protecting live schema conventions |
+| `agentnexlify-runtime-constraints` | Multi-worker runtime behavior, in-memory limits |
+| `agentnexlify-widget-integrity` | Preserving production widget contract |
+
+**LLM Council** (`skills/llm-council/SKILL.md`):
+- Five independent AI advisors debate complex decisions with real stakes
+- Triggered by "council this", "pressure-test this", "war room this"
+
+### Agent Definitions (Specialized Roles)
+
+Located in `.claude/agents/`. Each agent has deep domain knowledge encoded in its markdown file.
+
+| Agent | File | Domain |
+|-------|------|--------|
+| schema-guardian | `.claude/agents/schema-guardian.md` | Database schema expert — use FIRST |
+| backend-dev | `.claude/agents/backend-dev.md` | FastAPI, Pydantic, Supabase, Stripe |
+| frontend-dev | `.claude/agents/frontend-dev.md` | React, Vite, Tailwind, dashboard pages |
+| widget-specialist | `.claude/agents/widget-specialist.md` | Chat widget, CORS, embedding |
+| qa-tester | `.claude/agents/qa-tester.md` | Testing, validation, edge cases |
+| devops | `.claude/agents/devops.md` | CI/CD, Railway, Vercel, monitoring |
+
+**Delegation order:** schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester → devops
+
+### Workflows (Step-by-Step Procedures)
+
+Located in `.claude/commands/`. Each workflow is a markdown file with orchestration steps.
+
+| Workflow | Purpose |
+|----------|---------|
+| `new-feature.md` | Schema → Backend → Frontend → QA → Commit |
+| `fix-bug.md` | Check patterns → Diagnose → Fix → Verify → Document |
+| `deploy.md` | QA + DevOps in parallel → Fix blockers → Final gate |
+| `refactor.md` | Analyze → Plan → Execute incrementally → Verify |
+| `delegate.md` | Plan multi-agent delegation for complex tasks |
+| `deploy-check.md` | Pre-deploy checklist and validation |
+| `health-check.md` | Codebase health check |
+| `checkpoint.md` | Save session state for context recovery |
+| `recover.md` | Restore context after session restart |
+| `summary.md` | Comprehensive change summary with metrics |
+| `log-bug.md` | Document a fixed bug for future reference |
+| `script.md` | Generate client-ready demo script |
+
+### Agent Communication
+
+Agents coordinate via `.claude/agent-comms/`:
+- Each agent writes findings to `{agent-name}-output.md`
+- Orchestrator reads outputs and routes to next agent
+- Session state saved to `checkpoint.md`
+
+### Workspace Contexts
+
+Each workspace has a `CONTEXT.md` with local rules and patterns:
+- `backend/CONTEXT.md` — Backend-specific conventions
+- `frontend/CONTEXT.md` — Frontend-specific conventions
+- `widget/CONTEXT.md` — Widget-specific conventions
+- `planning/CONTEXT.md` — Specs and architecture decisions
+- `ops/CONTEXT.md` — Deployment and operations
