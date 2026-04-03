@@ -199,7 +199,7 @@ export default function ConversationsPage({ pageData }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleSelect = async (conv) => {
+  const handleSelect = useCallback(async (conv) => {
     setSelected(conv.session_id);
     setLoadingMessages(true);
     setShowNotes(false);
@@ -212,7 +212,7 @@ export default function ConversationsPage({ pageData }) {
     } finally {
       setLoadingMessages(false);
     }
-  };
+  }, [user?.tenantId, token]);
 
   useEffect(() => {
     const targetSessionId = pageData?.sessionId;
@@ -222,7 +222,7 @@ export default function ConversationsPage({ pageData }) {
     if (!targetConversation) return;
     autoSelectedSessionRef.current = targetSessionId;
     handleSelect(targetConversation);
-  }, [pageData?.sessionId, loading, conversations]);
+  }, [pageData?.sessionId, loading, conversations, handleSelect]);
 
   // Load notes for the selected conversation
   const loadNotes = async (sessionId) => {

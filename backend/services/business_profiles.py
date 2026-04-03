@@ -1,7 +1,5 @@
 """Business-type-aware defaults for widgets and dashboard personalization."""
 
-from __future__ import annotations
-
 from copy import deepcopy
 
 
@@ -381,6 +379,7 @@ def get_dashboard_business_profile(business_type: str | None, business_name: str
     """Return a dashboard-facing preset summary for a tenant."""
     key = resolve_business_profile_key(business_type)
     profile = deepcopy(_BUSINESS_PROFILES[key])
+    profile.pop("widget", None)
     profile["label"] = humanize_business_type(business_type) if business_type else humanize_business_type(key)
     return profile
 

@@ -57,10 +57,23 @@ async def list_webhook_deliveries(
 
     deliveries = result.data or []
 
-    # Compute summary stats
-    total = len(deliveries)
-    succeeded = sum(1 for d in deliveries if d.get("success"))
-    failed = total - succeeded
+    # Compute summary stats from full set (not just the paginated page)
+    try:
+        total_res = (
+            db.table("webhook_logs")
+            .select("success")
+            .eq("webhook_id", webhook_id)
+            .execute()
+        )
+        all_logs = total_res.data or []
+        total = len(all_logs)
+        succeeded = sum(1 for d in all_logs if d.get("success"))
+        failed = total - succeeded
+    except Exception:
+        # Fall back to page-level stats if the count query fails
+        total = len(deliveries)
+        succeeded = sum(1 for d in deliveries if d.get("success"))
+        failed = total - succeeded
 
     return {
         "deliveries": deliveries,
