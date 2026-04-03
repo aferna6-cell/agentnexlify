@@ -37,8 +37,6 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
 async def webhook_events_schema():
     """Public endpoint: returns all webhook events with sample payloads for Zapier/integration setup."""
     now = datetime.now(timezone.utc)
-    tomorrow = now + timedelta(days=1)
-    tomorrow_end = tomorrow + timedelta(hours=1)
 
     schema = {}
     for event in sorted(SUPPORTED_EVENTS):

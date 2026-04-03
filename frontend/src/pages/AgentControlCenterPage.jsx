@@ -16,6 +16,16 @@ const STATUS_META = {
   at_risk: { label: "At Risk", color: "var(--red)", bg: "rgba(239, 68, 68, 0.14)" },
 };
 
+const RESOLUTION_META = {
+  won: { color: "var(--green)", bg: "rgba(34, 197, 94, 0.14)" },
+  booked: { color: "var(--green)", bg: "rgba(34, 197, 94, 0.14)" },
+  resolved: { color: "var(--green)", bg: "rgba(34, 197, 94, 0.14)" },
+  open: { color: "var(--yellow)", bg: "rgba(245, 158, 11, 0.14)" },
+  in_progress: { color: "var(--yellow)", bg: "rgba(245, 158, 11, 0.14)" },
+  abandoned: { color: "var(--red)", bg: "rgba(239, 68, 68, 0.14)" },
+  lost: { color: "var(--red)", bg: "rgba(239, 68, 68, 0.14)" },
+};
+
 const URGENCY_META = {
   high: { label: "High", color: "var(--red)", bg: "rgba(239, 68, 68, 0.14)" },
   medium: { label: "Medium", color: "var(--yellow)", bg: "rgba(245, 158, 11, 0.14)" },
@@ -104,6 +114,7 @@ export default function AgentControlCenterPage({ onNavigate }) {
     async function load() {
       setLoading(true);
       setError("");
+      setData(null);
       try {
         const response = await fetchAgentControlCenter(user.tenantId, token, period);
         if (!cancelled) {
@@ -555,7 +566,7 @@ export default function AgentControlCenterPage({ onNavigate }) {
                       </div>
                       <div className="agent-control-badges">
                         <Badge meta={statusMeta} text={statusMeta.label} />
-                        <Badge meta={STATUS_META.watch} text={card.resolution_status.replace(/_/g, " ")} />
+                        <Badge meta={RESOLUTION_META[card.resolution_status] || STATUS_META.watch} text={card.resolution_status.replace(/_/g, " ")} />
                       </div>
                     </div>
 

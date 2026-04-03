@@ -188,7 +188,7 @@ def _build_control_center_recommendations(
 @router.get("/{tenant_id}/overview")
 async def get_overview(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -384,7 +384,7 @@ async def get_overview(
 @router.get("/{tenant_id}/conversations")
 async def get_conversations_trend(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -444,7 +444,7 @@ async def get_conversations_trend(
 @router.get("/{tenant_id}/leads")
 async def get_leads_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -515,7 +515,7 @@ async def get_leads_analytics(
 @router.get("/{tenant_id}/widget")
 async def get_widget_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -612,7 +612,7 @@ async def get_widget_analytics(
 @router.get("/{tenant_id}/response-times")
 async def get_response_time_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get response time analytics from the response_metrics table."""
@@ -676,7 +676,7 @@ async def get_response_time_analytics(
 @router.get("/{tenant_id}/missed-opportunities")
 async def get_missed_opportunities(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Detect conversations that represent missed business opportunities.
@@ -843,7 +843,7 @@ async def get_missed_opportunities(
 @router.get("/{tenant_id}/missed-calls")
 async def get_missed_call_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Per-day missed call analytics from activity_log."""
@@ -1194,7 +1194,9 @@ async def kpi_deltas(
 
 
 @router.get("/{tenant_id}/control-center", response_model=AgentControlCenterResponse)
+@limiter.limit("30/minute")
 async def get_agent_control_center(
+    request: Request,
     tenant_id: str,
     period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
@@ -1263,9 +1265,7 @@ async def get_agent_control_center(
         all_messages = msgs_res.data or []
     except Exception:
         logger.warning("control-center: failed to fetch chat_messages for %s", tenant_id, exc_info=True)
-        empty = _empty_response()
-        _set_cache(cache_key, empty)
-        return empty
+        return _empty_response()
 
     if not all_messages:
         empty = _empty_response()
@@ -1324,6 +1324,8 @@ async def get_agent_control_center(
             db.table("leads")
             .select("id, conversation_id, name, email, status, lead_temperature, deal_value, assigned_to, source, created_at")
             .eq("client_id", tenant_id)
+            .gte("created_at", start)
+            .order("created_at", desc=True)
             .limit(_QUERY_LIMIT)
             .execute()
         )
@@ -1426,6 +1428,8 @@ async def get_agent_control_center(
     pricing_gap_count = 0
     no_response_count = 0
     at_risk_pipeline_value = 0.0
+    counted_capture_keys: set[str] = set()
+    counted_booked_keys: set[str] = set()
     counted_pipeline_keys: set[str] = set()
     counted_revenue_keys: set[str] = set()
     counted_at_risk_keys: set[str] = set()
@@ -1458,13 +1462,17 @@ async def get_agent_control_center(
             assisted_conversations += 1
 
         lead_captured = bool(lead) or bool(meta.get("lead_captured"))
-        if lead_captured:
+        capture_key = lead_id or session_id
+        if lead_captured and capture_key not in counted_capture_keys:
             lead_capture_count += 1
+            counted_capture_keys.add(capture_key)
 
         non_cancelled_appointments = [appt for appt in appointments if appt.get("status") != "cancelled"]
         booked = bool(non_cancelled_appointments) or (lead or {}).get("status") == "appointment_booked"
-        if booked:
+        booked_key = lead_id or session_id
+        if booked and booked_key not in counted_booked_keys:
             booked_count += 1
+            counted_booked_keys.add(booked_key)
 
         completed = any(appt.get("status") == "completed" for appt in appointments) or (lead or {}).get("status") == "closed"
         paid_revenue = sum(
