@@ -945,3 +945,25 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `backend/routers/widget_chat.py`
 **Fix:** Added null-state guard: if `knowledge_base` and `custom_instructions` are both empty AND this is the first message, return a graceful fallback message directing the visitor to contact the business directly (with phone number if available). Logged as `null_state_guard` event.
 **Prevention:** Any AI-powered endpoint should check that the prompt context is non-trivial before sending to the model. An AI with no domain knowledge is worse than a polite redirect.
+
+---
+
+## 2026-04-03
+
+### Webhook observability regression - specific webhook routes fell behind the generic router
+**Date:** 2026-04-03
+**Symptom:** `POST /api/v1/webhooks/resend` did not reach the Resend bounce handler, the per-webhook deliveries endpoint was unavailable, and the Integrations page "Recent Deliveries" tab generated a broken logs URL.
+**Root Cause:** `backend/main.py` mounted the generic `webhooks.router` without also mounting the dedicated `resend_webhooks.router` and `webhook_deliveries.router`. On the frontend, `fetchWebhookLogs()` incorrectly built `/{tenant_id}/{webhook_id}/logs`, but the backend only exposes tenant-wide recent logs at `/{tenant_id}/logs/recent`.
+**Files Changed:** `backend/main.py`, `frontend/src/utils/api/webhooks.js`
+**Fix:** Registered `webhook_deliveries.router` before the generic webhook CRUD router, kept the Resend webhook mounted ahead of the generic router, and updated `fetchWebhookLogs()` to call `/api/v1/webhooks/{tenant_id}/logs/recent`.
+**Prevention:** Any fixed-path or more-specific `/api/v1/webhooks/*` router must be mounted before the generic tenant/webhook CRUD router. Keep frontend webhook helpers aligned to the exact backend path shape instead of inferring nested log routes.
+
+---
+
+### Missing tzdata dependency broke booking on Windows and other tzdata-light environments
+**Date:** 2026-04-03
+**Symptom:** The full backend suite failed in booking-related tests with `ZoneInfoNotFoundError` for `America/New_York` and `UTC`, and any local environment without a system timezone database would fail when generating appointment slots.
+**Root Cause:** `backend/services/booking.py` correctly uses `zoneinfo.ZoneInfo`, but `backend/requirements.txt` did not install `tzdata`, so environments without bundled zoneinfo data could not resolve business timezones.
+**Files Changed:** `backend/requirements.txt`
+**Fix:** Added `tzdata>=2025.1` to backend requirements so Python can resolve IANA timezone names consistently across Windows and slim environments.
+**Prevention:** Any Python service using `zoneinfo` should explicitly depend on `tzdata` unless the deployment target guarantees a system timezone database.

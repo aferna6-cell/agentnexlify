@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Council Report - Home Services Wedge</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #172033;
+      --muted: #5f6b7a;
+      --border: #dbe2ea;
+      --panel: #f8fafc;
+      --accent: #0f766e;
+      --accent-soft: #e6fffb;
+      --warn: #8a5a00;
+      --warn-soft: #fff7e6;
+      --danger: #9f1239;
+      --danger-soft: #fff1f2;
+      --blue-soft: #eef6ff;
+      --purple-soft: #f5f3ff;
+      --shadow: 0 10px 30px rgba(23, 32, 51, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px 72px;
+    }
+    .hero {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+      box-shadow: var(--shadow);
+    }
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 14px 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 16px;
+      max-width: 840px;
+    }
+    .question, .verdict, .section, .advisor-grid, .footer {
+      margin-top: 24px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+      padding: 20px;
+    }
+    .verdict {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+    }
+    .verdict-main {
+      background: var(--accent-soft);
+      border: 1px solid #b9efe8;
+    }
+    .verdict-main h2, .verdict-side h3, .section h2 {
+      margin-top: 0;
+    }
+    .verdict-side {
+      background: var(--blue-soft);
+    }
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .advisor {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      background: #fff;
+    }
+    .advisor h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+    .tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .tag-focus { background: var(--accent-soft); color: var(--accent); }
+    .tag-risk { background: var(--danger-soft); color: var(--danger); }
+    .tag-upside { background: var(--purple-soft); color: #6d28d9; }
+    .tag-exec { background: var(--warn-soft); color: var(--warn); }
+    .section h2 {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+    .section p, .section li {
+      color: var(--text);
+    }
+    .section ul {
+      margin: 10px 0 0 20px;
+      padding: 0;
+    }
+    details {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+    details + details {
+      margin-top: 12px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .peer {
+      background: #fff;
+    }
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+    @media (max-width: 860px) {
+      .verdict { grid-template-columns: 1fr; }
+      h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <span class="eyebrow">LLM Council Report</span>
+      <h1>AgentNexLiFy Should Narrow to One Home-Services Wedge</h1>
+      <p class="subtitle">
+        The council was asked what AgentNexLiFy should do next as a business over the next 60-90 days, given a now-stable but very broad product surface and strong competitive pressure from better-capitalized horizontal players.
+      </p>
+      <div class="question card">
+        <strong>Question</strong>
+        <p>
+          Should AgentNexLiFy keep acting like a broad SMB automation suite, or should it narrow to a single vertical AI receptionist / lead-capture wedge with white-glove onboarding? If it narrows, what wedge and GTM motion should come first?
+        </p>
+      </div>
+    </section>
+
+    <section class="verdict">
+      <div class="card verdict-main">
+        <h2>The Recommendation</h2>
+        <p>
+          Choose <strong>one sub-vertical in home services</strong> and sell AgentNexLiFy as an
+          <strong>AI receptionist that answers, captures, qualifies, and books jobs 24/7</strong>.
+          Do not keep leading with the broad SMB suite story.
+        </p>
+        <p>
+          The strongest starting lane is <strong>HVAC in one metro</strong>. The product already matches the pain,
+          the ROI is obvious, and the buying motion can be founder-led and white-glove.
+        </p>
+      </div>
+      <div class="card verdict-side">
+        <h3>The One Thing to Do First</h3>
+        <p>
+          Write the paid pilot offer in one sentence:
+        </p>
+        <p>
+          <strong>We install an AI receptionist for HVAC companies that answers missed calls and web leads, qualifies them, and books more jobs within 30 days.</strong>
+        </p>
+        <p>
+          Then build a list of 10 HVAC owners in one metro and start outreach from that sentence.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Where the Council Agrees</h2>
+      <div class="card">
+        <ul>
+          <li>Broad SMB suite positioning is a trap.</li>
+          <li>The next 60-90 days should be about one wedge, not more surface area.</li>
+          <li>The wedge should be phone-heavy home services.</li>
+          <li>The offer should focus on missed calls, booked jobs, and measurable ROI.</li>
+          <li>The GTM should be founder-led and white-glove, not self-serve.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Where the Council Clashes</h2>
+      <div class="grid">
+        <div class="advisor">
+          <span class="tag tag-upside">Expansion Path</span>
+          <h3>Keep a platform story in the background?</h3>
+          <p>
+            The Expansionist wants the wedge framed as an entry point into a bigger revenue layer.
+            The harsher voices think that language is dangerous because it gives permission to drift back into feature sprawl too early.
+          </p>
+        </div>
+        <div class="advisor">
+          <span class="tag tag-exec">GTM Texture</span>
+          <h3>How heavy should the pilot motion be?</h3>
+          <p>
+            The council agrees on white-glove installs, but not on details: 10 vs 20 targets,
+            setup-plus-monthly vs pilot-first pricing, and how fast to rewrite the entire message stack.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Blind Spots the Council Caught</h2>
+      <div class="card">
+        <ul>
+          <li><strong>Home services is still too broad.</strong> Pick one sub-vertical in one metro.</li>
+          <li><strong>The offer boundary must be explicit.</strong> Lead with one promise, not the platform menu.</li>
+          <li><strong>A hard validation rule is missing.</strong> Define paying-pilot count, time-to-live, and success thresholds before starting.</li>
+          <li><strong>Founder capacity matters.</strong> White-glove onboarding is both the product and the bottleneck.</li>
+          <li><strong>Distribution matters.</strong> The first wedge should be the one the founder can reach fastest, not just the one with abstract market logic.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="advisor-grid section">
+      <h2>Advisor Position Map</h2>
+      <div class="grid">
+        <div class="advisor">
+          <span class="tag tag-risk">Contrarian</span>
+          <h3>Sharp spear, not a toolbox</h3>
+          <p>Pick one buyer, one promise, one wedge. Ignore feature sprawl until a pilot demands it.</p>
+        </div>
+        <div class="advisor">
+          <span class="tag tag-focus">First Principles</span>
+          <h3>Buyers purchase pain relief</h3>
+          <p>Small businesses do not buy automation. They buy fewer missed calls and more booked jobs.</p>
+        </div>
+        <div class="advisor">
+          <span class="tag tag-upside">Expansionist</span>
+          <h3>Wedge now, platform later</h3>
+          <p>Use the home-services wedge as a path into a broader revenue layer, but only after proof.</p>
+        </div>
+        <div class="advisor">
+          <span class="tag tag-focus">Outsider</span>
+          <h3>Choose a customer already</h3>
+          <p>The broad suite story sounds like a refusal to choose. Home services is understandable and urgent.</p>
+        </div>
+        <div class="advisor">
+          <span class="tag tag-exec">Executor</span>
+          <h3>Monday morning proof loop</h3>
+          <p>Rewrite the story, target local operators, close paid pilots, and measure if jobs actually get booked.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Advisor Responses</h2>
+      <details>
+        <summary>Contrarian</summary>
+        <p>Broad SMB suite is a trap. Go narrow on phone-first lead capture for HVAC/plumbing/roofing. Founder-led white-glove installs. No more surface-area building unless a pilot demands it.</p>
+      </details>
+      <details>
+        <summary>First Principles Thinker</summary>
+        <p>Small businesses do not buy automation. They buy fewer missed calls and more booked jobs. Focus on one home-services pain, one buyer, one promise, then run concrete founder-led pilots.</p>
+      </details>
+      <details>
+        <summary>Expansionist</summary>
+        <p>Sell an AI revenue layer for high-intent local businesses. Use the wedge as an entry point that can expand after the first live wins.</p>
+      </details>
+      <details>
+        <summary>Outsider</summary>
+        <p>Nobody wakes up wanting invoices, SEO, and webhooks. They want fewer missed calls and more booked appointments. Pick home services and make white-glove onboarding the product.</p>
+      </details>
+      <details>
+        <summary>Executor</summary>
+        <p>Rewrite the homepage, stop pitching features, target 20 local operators, charge for pilots, and use the first three installs as the learning loop.</p>
+      </details>
+    </section>
+
+    <section class="section">
+      <h2>Peer Review Highlights</h2>
+      <details class="peer">
+        <summary>What the reviewers elevated</summary>
+        <ul>
+          <li>The strongest responses either protected focus hard (`D`) or protected focus while preserving upside (`C`).</li>
+          <li>The most repeated criticism was that platform language can quietly reintroduce drift too early.</li>
+          <li>The most repeated missing piece was a real operating model: ICP, pricing, founder capacity, distribution, and kill metrics.</li>
+        </ul>
+      </details>
+    </section>
+
+    <div class="footer">
+      Generated on 2026-04-03 at 09:26:01 local time
+    </div>
+  </div>
+</body>
+</html>

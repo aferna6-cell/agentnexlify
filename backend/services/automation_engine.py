@@ -2800,6 +2800,27 @@ async def process_recurring_invoices() -> int:
             }
             delta = intervals_map.get(interval, relativedelta(months=1))
             due_date = (date.today() + delta).isoformat()
+            original_next_date = parent["next_invoice_date"]
+            next_date = date.fromisoformat(original_next_date) + delta
+
+            # Claim the recurring parent row before inserting the child invoice.
+            # This keeps multiple workers from generating the same invoice twice.
+            claim_result = (
+                db.table("invoices")
+                .update({
+                    "next_invoice_date": next_date.isoformat(),
+                })
+                .eq("id", parent_id)
+                .eq("next_invoice_date", original_next_date)
+                .select("id")
+                .execute()
+            )
+            if not claim_result.data:
+                logger.info(
+                    "Skipping recurring invoice %s because another worker already claimed it",
+                    parent_id,
+                )
+                continue
 
             new_invoice = {
                 "tenant_id": tenant_id,
@@ -2816,13 +2837,23 @@ async def process_recurring_invoices() -> int:
                 "due_date": due_date,
                 "is_recurring": False,  # child is not itself recurring
             }
-            db.table("invoices").insert(new_invoice).execute()
+            try:
+                insert_result = db.table("invoices").insert(new_invoice).execute()
+            except Exception:
+                # Best-effort rollback so the parent can be retried on the next tick.
+                try:
+                    db.table("invoices").update({
+                        "next_invoice_date": original_next_date,
+                    }).eq("id", parent_id).eq("next_invoice_date", next_date.isoformat()).execute()
+                except Exception:
+                    logger.warning(
+                        "Failed to roll back recurring invoice claim for %s",
+                        parent_id,
+                        exc_info=True,
+                    )
+                raise
 
-            # Advance the parent's next_invoice_date
-            next_date = date.fromisoformat(parent["next_invoice_date"]) + delta
-            db.table("invoices").update({
-                "next_invoice_date": next_date.isoformat(),
-            }).eq("id", parent_id).execute()
+            created_invoice = insert_result.data[0] if insert_result.data else {}
 
             created += 1
             logger.info(
@@ -2830,13 +2861,19 @@ async def process_recurring_invoices() -> int:
                 invoice_number, parent_id, tenant_id, next_date.isoformat(),
             )
 
-            fire_event_background(tenant_id, "invoice.created", {
-                "invoice_id": new_invoice.get("id"),
-                "invoice_number": invoice_number,
-                "total": total,
-                "status": "draft",
-                "recurring_from": parent_id,
-            })
+            try:
+                fire_event_background(tenant_id, "invoice.created", {
+                    "invoice_id": created_invoice.get("id"),
+                    "invoice_number": invoice_number,
+                    "total": total,
+                    "status": "draft",
+                    "recurring_from": parent_id,
+                })
+            except Exception:
+                logger.exception(
+                    "Failed to enqueue invoice.created webhook for recurring invoice %s",
+                    parent_id,
+                )
 
         except Exception:
             logger.exception("Failed to process recurring invoice %s", parent_id)

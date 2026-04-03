@@ -646,6 +646,149 @@ class TestSendWeeklyIntelligenceBriefs:
 
 
 # ---------------------------------------------------------------------------
+# process_recurring_invoices
+# ---------------------------------------------------------------------------
+
+
+class _RecurringInvoiceQuery:
+    """Shared-state query mock for recurring invoice workflow tests."""
+
+    def __init__(self, state):
+        self.state = state
+        self.kind = None
+        self.payload = None
+
+    @property
+    def not_(self):
+        return self
+
+    def select(self, *args, **kwargs):
+        if self.kind is None:
+            self.kind = "count_select" if kwargs.get("count") == "exact" else "select"
+        return self
+
+    def update(self, data):
+        self.kind = "update"
+        self.payload = data
+        return self
+
+    def insert(self, data):
+        self.kind = "insert"
+        self.payload = data
+        return self
+
+    def eq(self, *args, **kwargs):
+        return self
+
+    def neq(self, *args, **kwargs):
+        return self
+
+    def lte(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args, **kwargs):
+        return self
+
+    def order(self, *args, **kwargs):
+        return self
+
+    def is_(self, *args, **kwargs):
+        return self
+
+    def execute(self):
+        self.state["operations"].append((self.kind, self.payload))
+        response = self.state["responses"].pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+
+class TestProcessRecurringInvoices:
+    """Tests for process_recurring_invoices()."""
+
+    def _build_db(self, responses):
+        state = {"responses": list(responses), "operations": []}
+        db = MagicMock()
+
+        def table_side_effect(name):
+            if name == "invoices":
+                return _RecurringInvoiceQuery(state)
+            raise AssertionError(f"Unexpected table access: {name}")
+
+        db.table.side_effect = table_side_effect
+        return db, state
+
+    @patch("backend.services.automation_engine.fire_event_background")
+    @patch("backend.services.automation_engine.get_supabase")
+    async def test_claim_lost_skips_duplicate_child_invoice(self, mock_get_db, mock_fire_event):
+        """If another worker advances the parent first, no duplicate child invoice is created."""
+        parent = {
+            "id": "inv-parent-001",
+            "tenant_id": "tenant-001",
+            "lead_id": "lead-001",
+            "items_json": [{"quantity": 1, "unit_price": 125}],
+            "tax_rate": 0,
+            "notes": "Monthly service plan",
+            "recurrence_interval": "monthly",
+            "next_invoice_date": "2026-04-01",
+            "invoice_number": "INV-PARENT-001",
+        }
+        db, state = self._build_db(
+            [
+                MagicMock(data=[parent]),
+                MagicMock(data=[], count=3),
+                MagicMock(data=[]),
+            ]
+        )
+        mock_get_db.return_value = db
+
+        from backend.services.automation_engine import process_recurring_invoices
+
+        result = await process_recurring_invoices()
+
+        assert result == 0
+        assert [kind for kind, _ in state["operations"]] == ["select", "count_select", "update"]
+        mock_fire_event.assert_not_called()
+
+    @patch("backend.services.automation_engine.fire_event_background")
+    @patch("backend.services.automation_engine.get_supabase")
+    async def test_insert_failure_rolls_back_parent_claim(self, mock_get_db, mock_fire_event):
+        """If child invoice creation fails after the claim, next_invoice_date is restored."""
+        parent = {
+            "id": "inv-parent-002",
+            "tenant_id": "tenant-002",
+            "lead_id": "lead-002",
+            "items_json": [{"quantity": 2, "unit_price": 75}],
+            "tax_rate": 10,
+            "notes": "Quarterly tune-up",
+            "recurrence_interval": "monthly",
+            "next_invoice_date": "2026-04-01",
+            "invoice_number": "INV-PARENT-002",
+        }
+        db, state = self._build_db(
+            [
+                MagicMock(data=[parent]),
+                MagicMock(data=[], count=8),
+                MagicMock(data=[{"id": parent["id"]}]),
+                Exception("insert failed"),
+                MagicMock(data=[{"id": parent["id"]}]),
+            ]
+        )
+        mock_get_db.return_value = db
+
+        from backend.services.automation_engine import process_recurring_invoices
+
+        result = await process_recurring_invoices()
+
+        assert result == 0
+        update_payloads = [payload for kind, payload in state["operations"] if kind == "update"]
+        assert len(update_payloads) == 2
+        assert update_payloads[0] == {"next_invoice_date": "2026-05-01"}
+        assert update_payloads[1] == {"next_invoice_date": "2026-04-01"}
+        mock_fire_event.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # check_no_response_leads
 # ---------------------------------------------------------------------------
 
