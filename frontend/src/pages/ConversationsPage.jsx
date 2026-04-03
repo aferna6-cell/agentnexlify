@@ -91,7 +91,7 @@ function renderMarkdown(text) {
   return out.join('');
 }
 
-export default function ConversationsPage() {
+export default function ConversationsPage({ pageData }) {
   const { user, token } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,6 +144,7 @@ export default function ConversationsPage() {
   const snippetPickerRef = useRef(null);
   const replyTextareaRef = useRef(null);
   const snippetSearchRef = useRef(null);
+  const autoSelectedSessionRef = useRef(null);
 
   // Close snippet picker on outside click
   useEffect(() => {
@@ -212,6 +213,16 @@ export default function ConversationsPage() {
       setLoadingMessages(false);
     }
   };
+
+  useEffect(() => {
+    const targetSessionId = pageData?.sessionId;
+    if (!targetSessionId || loading || conversations.length === 0) return;
+    if (autoSelectedSessionRef.current === targetSessionId) return;
+    const targetConversation = conversations.find((conv) => conv.session_id === targetSessionId);
+    if (!targetConversation) return;
+    autoSelectedSessionRef.current = targetSessionId;
+    handleSelect(targetConversation);
+  }, [pageData?.sessionId, loading, conversations]);
 
   // Load notes for the selected conversation
   const loadNotes = async (sessionId) => {

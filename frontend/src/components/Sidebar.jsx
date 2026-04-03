@@ -35,6 +35,7 @@ const roleColors = {
 const allNavItems = [
   { key: "dashboard", icon: <Icon d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" />, label: "Dashboard" },
   { key: "analytics", icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />, label: "Analytics" },
+  { key: "control_center", icon: <Icon d="M12 2l3 7h7l-5.5 4.1 2.1 6.9-6.6-4.8-6.6 4.8 2.1-6.9L2 9h7z" />, label: "Agent Control" },
   { key: "clients", icon: <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />, label: "Clients" },
   { key: "pipeline", icon: <Icon d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />, label: "Pipeline", roles: ["owner", "admin", "member"] },
   { key: "pipeline_automations", icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />, label: "Stage Automations", roles: ["owner", "admin"] },
@@ -79,7 +80,7 @@ const allNavItems = [
 ];
 
 const NAV_GROUPS = [
-  { key: "overview",       label: "OVERVIEW",          items: ["dashboard", "analytics"] },
+  { key: "overview",       label: "OVERVIEW",          items: ["dashboard", "analytics", "control_center"] },
   { key: "crm",            label: "CRM",               items: ["clients", "pipeline", "smart_lists", "client_portal"] },
   { key: "communications", label: "COMMUNICATIONS",    items: ["conversations", "calls", "chat_flows", "widget", "snippets", "faq"] },
   { key: "marketing",      label: "MARKETING",         items: ["content_studio", "social_media", "campaigns", "email_sequences", "form_builder"] },

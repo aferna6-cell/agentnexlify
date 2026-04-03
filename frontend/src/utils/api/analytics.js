@@ -42,3 +42,7 @@ export function fetchAnalyticsHealth(tenantId, token) {
 export function fetchAnalyticsSnapshot(tenantId, token, period = "30d") {
   return request(`/api/v1/analytics/${tenantId}/snapshot?period=${period}`, { token });
 }
+
+export function fetchAgentControlCenter(tenantId, token, period = "30d") {
+  return request(`/api/v1/analytics/${tenantId}/control-center?period=${period}`, { token });
+}

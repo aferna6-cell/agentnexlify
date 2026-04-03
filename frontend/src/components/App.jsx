@@ -50,6 +50,7 @@ const BillingPage = lazy(() => import("../pages/BillingPage"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage"));
 const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
+const AgentControlCenterPage = lazy(() => import("../pages/AgentControlCenterPage"));
 const TeamPage = lazy(() => import("../pages/TeamPage"));
 const BusinessPageSettings = lazy(() => import("../pages/BusinessPageSettings"));
 const ReviewsPage = lazy(() => import("../pages/ReviewsPage"));
@@ -83,6 +84,7 @@ const SupportPage = lazy(() => import("../pages/SupportPage"));
 const pages = {
   dashboard: Dashboard,
   analytics: AnalyticsPage,
+  control_center: AgentControlCenterPage,
   leads: LeadsPage,
   clients: ClientList,
   client_profile: ClientProfile,
@@ -132,6 +134,7 @@ const pages = {
 const PAGE_TO_PATH = {
   dashboard: "/dashboard",
   analytics: "/dashboard/analytics",
+  control_center: "/dashboard/agent-control",
   leads: "/dashboard/leads",
   clients: "/dashboard/clients",
   client_profile: "/dashboard/client-profile",
