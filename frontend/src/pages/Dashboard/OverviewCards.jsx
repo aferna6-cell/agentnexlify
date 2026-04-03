@@ -30,7 +30,7 @@ function DeltaBadge({ deltaPct }) {
   );
 }
 
-export default function OverviewCards({ conversationsUsed, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0, emailsSentToday = 0, missedCallsThisWeek = null, kpiDeltas = null }) {
+export default function OverviewCards({ conversationsUsed, leadCount, automationCount, plan, onNavigate, hotLeadsCount = 0, emailsSentToday = 0, missedCallsThisWeek = null, kpiDeltas = null, businessProfile = null }) {
   const planLabels = {
     free: "Free",
     growth: "Growth",
@@ -39,20 +39,29 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
     foundation: "Growth",
     operations: "Professional",
   };
+  const conversationLabel = businessProfile?.conversation_label || "Conversations This Month";
+  const conversationEmptyHint = businessProfile?.conversation_empty_hint || "Set up your widget to start capturing conversations";
+  const leadLabel = businessProfile?.lead_label || "Leads Captured";
+  const leadEmptyHint = businessProfile?.lead_empty_hint || "Leads appear automatically from widget chats";
+  const automationLabel = businessProfile?.automation_label || "Automations Active";
+  const automationEmptyHint = businessProfile?.automation_empty_hint || "Set up your first automation";
+  const missedCallLabel = businessProfile?.missed_call_label || "Missed Calls This Week";
+  const missedCallEmptyHint = businessProfile?.missed_call_empty_hint || "Enable missed call text-back in Settings";
+  const appointmentLabel = businessProfile?.appointment_label || "Appointments This Week";
 
   return (
     <div className="stats-row">
       {/* Conversations This Month */}
       <div className="stat-card">
         <div className="stat-label">
-          Conversations This Month
+          {conversationLabel}
           {kpiDeltas?.conversations && <DeltaBadge deltaPct={kpiDeltas.conversations.delta_pct} />}
         </div>
         <div className="stat-value">{conversationsUsed}</div>
         <div className="stat-usage-text">Unlimited</div>
         {conversationsUsed === 0 && (
           <div className="stat-empty-hint">
-            Set up your widget to start capturing conversations
+            {conversationEmptyHint}
           </div>
         )}
       </div>
@@ -60,7 +69,7 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
       {/* Leads Captured */}
       <div className="stat-card">
         <div className="stat-label">
-          Leads Captured
+          {leadLabel}
           {kpiDeltas?.leads && <DeltaBadge deltaPct={kpiDeltas.leads.delta_pct} />}
         </div>
         <div className="stat-value">{leadCount}</div>
@@ -78,14 +87,14 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
         )}
         {leadCount === 0 && (
           <div className="stat-empty-hint">
-            Leads appear automatically from widget chats
+            {leadEmptyHint}
           </div>
         )}
       </div>
 
       {/* Automations Active */}
       <div className="stat-card">
-        <div className="stat-label">Automations Active</div>
+        <div className="stat-label">{automationLabel}</div>
         <div className="stat-value">{automationCount}</div>
         <div className="stat-trend neutral">
           {automationCount === 0 ? "Set up your first automation" : emailsSentToday > 0 ? `${emailsSentToday} email${emailsSentToday !== 1 ? "s" : ""} sent today` : "Running"}
@@ -95,7 +104,7 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
             className="stat-empty-link"
             onClick={() => onNavigate?.("automations")}
           >
-            Set up automated follow-ups &rarr;
+            {automationEmptyHint} &rarr;
           </button>
         )}
       </div>
@@ -116,7 +125,7 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
 
       {/* Missed Calls This Week */}
       <div className="stat-card">
-        <div className="stat-label">Missed Calls This Week</div>
+        <div className="stat-label">{missedCallLabel}</div>
         {missedCallsThisWeek !== null ? (
           <>
             <div className="stat-value">{missedCallsThisWeek}</div>
@@ -128,7 +137,7 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
           <>
             <div className="stat-value" style={{ fontSize: "1.2rem", color: "var(--text-muted)" }}>Coming soon</div>
             <div className="stat-trend neutral">
-              Enable missed call text-back in Settings
+              {missedCallEmptyHint}
             </div>
             <button
               className="stat-empty-link"
@@ -144,7 +153,7 @@ export default function OverviewCards({ conversationsUsed, leadCount, automation
       {kpiDeltas?.appointments && (
         <div className="stat-card">
           <div className="stat-label">
-            Appointments This Week
+            {appointmentLabel}
             <DeltaBadge deltaPct={kpiDeltas.appointments.delta_pct} />
           </div>
           <div className="stat-value">{kpiDeltas.appointments.this_week}</div>

@@ -152,6 +152,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
   }
 
   const enabledAutomations = automations.filter((a) => a.is_enabled);
+  const businessProfile = dashData?.business_profile || null;
 
   return (
     <div className="fade-in">
@@ -160,6 +161,52 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         <h1>Dashboard</h1>
         <p>Welcome back{dashData?.business_name ? `, ${dashData.business_name}` : user.businessName ? `, ${user.businessName}` : ""}</p>
       </div>
+
+      {businessProfile && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: "18px",
+            alignItems: "start",
+            marginBottom: "18px",
+            padding: "18px 20px",
+            borderRadius: "16px",
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.88))",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.55)", marginBottom: "8px" }}>
+              Configured for {businessProfile.label}
+            </div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "#fff", marginBottom: "6px" }}>
+              {businessProfile.headline}
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.72)", lineHeight: 1.5 }}>
+              {businessProfile.subheadline}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "flex-end" }}>
+            {businessProfile.focus_areas.map((item) => (
+              <span
+                key={item}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "999px",
+                  background: "rgba(148,163,184,0.12)",
+                  border: "1px solid rgba(148,163,184,0.18)",
+                  color: "#e2e8f0",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                }}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Widget Status Badge */}
       {lastActivity !== undefined && (() => {
@@ -235,6 +282,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         emailsSentToday={seqStats?.emails_sent_today ?? 0}
         missedCallsThisWeek={dashData?.missed_calls_this_week ?? null}
         kpiDeltas={kpiDeltas}
+        businessProfile={businessProfile}
       />
       <div className="analytics-link" onClick={() => onNavigate("analytics")}>
         View Analytics &rarr;
@@ -266,7 +314,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
             />
           </div>
         </div>
-        <QuickActions onNavigate={onNavigate} />
+        <QuickActions onNavigate={onNavigate} businessProfile={businessProfile} />
       </div>
 
       {/* CRM Dashboard Widgets */}

@@ -186,8 +186,34 @@ class WidgetConfigDetail(BaseModel):
     teaser_enabled: bool = True
 
 
+class DashboardQuickAction(BaseModel):
+    label: str
+    description: str
+    action: str
+    page: str | None = None
+
+
+class DashboardBusinessProfile(BaseModel):
+    key: str
+    label: str
+    headline: str
+    subheadline: str
+    focus_areas: list[str] = Field(default_factory=list)
+    conversation_label: str = "Conversations This Month"
+    conversation_empty_hint: str = "Set up your widget to start capturing conversations"
+    lead_label: str = "Leads Captured"
+    lead_empty_hint: str = "Leads appear automatically from widget chats"
+    automation_label: str = "Automations Active"
+    automation_empty_hint: str = "Set up your first automation"
+    appointment_label: str = "Appointments This Week"
+    missed_call_label: str = "Missed Calls This Week"
+    missed_call_empty_hint: str = "Enable missed call text-back in Settings"
+    quick_actions: list[DashboardQuickAction] = Field(default_factory=list)
+
+
 class DashboardResponse(BaseModel):
     business_name: str
+    business_type: str | None = None
     plan: str
     plan_status: str
     conversations_used_this_month: int
@@ -195,6 +221,7 @@ class DashboardResponse(BaseModel):
     widget_api_key: str | None = None
     leads_count: int
     widget_config: WidgetConfigDetail | None = None
+    business_profile: DashboardBusinessProfile | None = None
     faq_count: int = 0
     has_conversations: bool = False
     hot_leads_count: int = 0
