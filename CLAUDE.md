@@ -190,7 +190,7 @@ This repo has automated safety checks:
 - **Pre-commit hook** — blocks commits containing secrets, dangerous imports, or bare except blocks
 - **Pre-push hook** — runs frontend build check and schema consistency check before pushing
 - **GitHub Actions** — daily health check, PR validation, auto bug logging on fix commits, daily AI auto-improve
-- **Claude Code hooks** — pre-edit warns on sensitive files, post-edit scans for dangerous patterns, notification on agent completion, auto-checkpoint before compaction
+- **Claude Code hooks** — pre-edit warns on sensitive files, post-edit scans for dangerous patterns, notification on agent completion, auto-checkpoint before compaction, **anti-desperation on tool failure**
 
 See docs/ai-development.md for full details.
 
@@ -216,6 +216,20 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 - ALL tenant-specific queries MUST use RLS or explicit tenant_id filtering
 - ALL Stripe integration MUST use production keys in production (NEVER test keys)
 - ALL API endpoints MUST have input validation and proper error responses
+
+## Error Handling Philosophy (Anti-Desperation)
+
+A `PostToolUseFailure` hook injects a composure check on every tool failure. This is by design — error spiraling (stacking speculative fixes, abandoning working approaches, escalating complexity) is the #1 cause of AI-generated bad solutions.
+
+**When you hit an error:**
+1. Read the error message — what is it *actually* telling you?
+2. Identify the single smallest fix
+3. Do NOT escalate complexity — the simplest explanation is usually correct
+4. Do NOT abandon your current approach after one failure — diagnose first
+5. Do NOT stack multiple speculative fixes at once
+6. One calm step at a time
+
+This applies to all agents (schema-guardian, backend-dev, frontend-dev, qa-tester, devops, widget-specialist). Composure produces better solutions than urgency.
 
 ## Competitive Intel (Updated 2026-03-25)
 - GoHighLevel: AI Employee (calls + chat), white-label SaaS, $97-497/mo — #1 competitor
