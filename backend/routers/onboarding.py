@@ -276,11 +276,24 @@ async def complete_onboarding(
 
     # Update widget config with customization from wizard
     widget_defaults = get_widget_defaults(req.business_type, req.business_name)
+    existing_widget = {}
+    try:
+        existing_widget_result = (
+            db.table("widget_configs")
+            .select("bot_name, primary_color, greeting_message, position")
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if existing_widget_result.data:
+            existing_widget = existing_widget_result.data[0] or {}
+    except Exception:
+        logger.warning("Failed to read existing widget config during onboarding for %s", tenant_id, exc_info=True)
     widget_updates: dict[str, Any] = {
-        "bot_name": req.widget_bot_name or widget_defaults["bot_name"],
-        "primary_color": req.widget_primary_color or widget_defaults["primary_color"],
-        "greeting_message": req.widget_greeting_message or widget_defaults["greeting_message"],
-        "position": req.widget_position or widget_defaults["position"],
+        "bot_name": req.widget_bot_name or existing_widget.get("bot_name") or widget_defaults["bot_name"],
+        "primary_color": req.widget_primary_color or existing_widget.get("primary_color") or widget_defaults["primary_color"],
+        "greeting_message": req.widget_greeting_message or existing_widget.get("greeting_message") or widget_defaults["greeting_message"],
+        "position": req.widget_position or existing_widget.get("position") or widget_defaults["position"],
     }
     try:
         db.table("widget_configs").update(widget_updates).eq("tenant_id", tenant_id).execute()
