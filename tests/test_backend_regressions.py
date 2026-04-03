@@ -66,6 +66,58 @@ def test_frontend_webhook_helpers_match_backend_routes():
     assert 'method: "PATCH"' in contents
 
 
+def test_dashboard_returns_business_profile_for_hvac(mock_supabase, monkeypatch):
+    """Dashboard should return a business-type-aware profile for industry-specific defaults."""
+    mock_supabase.set_table_data(
+        "tenants",
+        [{
+            "business_name": "Polar Air",
+            "business_type": "hvac",
+            "plan": "free",
+            "plan_status": "active",
+            "conversations_used_this_month": 0,
+            "monthly_conversation_limit": None,
+            "free_trial_started_at": "2026-04-01T00:00:00Z",
+        }],
+    )
+    mock_supabase.set_table_data(
+        "widget_configs",
+        [{
+            "api_key": "anx_test_key",
+            "bot_name": "Polar Air Dispatch",
+            "primary_color": "#f97316",
+            "greeting_message": "Hi! Thanks for contacting Polar Air. Do you need AC repair, heating service, or an estimate for a new system?",
+            "position": "bottom-right",
+            "branding": None,
+            "is_online": True,
+            "offline_message": None,
+            "teaser_message": None,
+            "teaser_delay_seconds": 3,
+            "teaser_enabled": True,
+        }],
+    )
+    mock_supabase.set_table_data("leads", [], count=0)
+    mock_supabase.set_table_data("faq_entries", [], count=0)
+    mock_supabase.set_table_data("chat_messages", [])
+    mock_supabase.set_table_data("activity_log", [], count=0)
+    monkeypatch.setattr("backend.routers.auth.get_supabase", lambda: mock_supabase)
+    app.dependency_overrides[_get_current_tenant] = lambda: {"tenant_id": "tenant-123", "role": "owner"}
+    client = TestClient(app)
+
+    try:
+        response = client.get("/api/v1/auth/dashboard/tenant-123")
+    finally:
+        app.dependency_overrides.pop(_get_current_tenant, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["business_type"] == "hvac"
+    assert body["business_profile"]["key"] == "hvac"
+    assert body["business_profile"]["label"] == "HVAC"
+    assert body["widget_config"]["bot_name"] == "Polar Air Dispatch"
+    assert any(action["label"] == "Book Job" for action in body["business_profile"]["quick_actions"])
+
+
 @pytest.mark.asyncio
 async def test_automation_loop_schedules_recurring_invoices(monkeypatch):
     """Recurring invoices should run in the 30-minute automation tier."""

@@ -1,6 +1,7 @@
 // frontend/src/pages/wizard/WizardStepCustomize.jsx
 import { useState, useEffect } from "react";
 import { fetchDashboard } from "../../utils/api/dashboard";
+import { getPresetWidgetDefaults } from "../../utils/businessPresets";
 
 const POSITIONS = [
   { value: "bottom-right", label: "Bottom Right" },
@@ -8,11 +9,12 @@ const POSITIONS = [
 ];
 
 export default function WizardStepCustomize({ wizardData, onNext, onBack, token, tenantId }) {
+  const presetDefaults = getPresetWidgetDefaults(wizardData.business_type, wizardData.business_name);
   const [form, setForm] = useState({
-    widget_bot_name: wizardData.widget_bot_name || `${wizardData.business_name} Assistant`,
-    widget_primary_color: wizardData.widget_primary_color || "#00BFFF",
-    widget_greeting_message: wizardData.widget_greeting_message || `Hi! Welcome to ${wizardData.business_name}. How can I help you?`,
-    widget_position: wizardData.widget_position || "bottom-right",
+    widget_bot_name: wizardData.widget_bot_name || presetDefaults.widget_bot_name,
+    widget_primary_color: wizardData.widget_primary_color || presetDefaults.widget_primary_color,
+    widget_greeting_message: wizardData.widget_greeting_message || presetDefaults.widget_greeting_message,
+    widget_position: wizardData.widget_position || presetDefaults.widget_position,
   });
   const [apiKey, setApiKey] = useState(null);
 

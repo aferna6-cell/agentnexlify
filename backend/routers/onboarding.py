@@ -38,6 +38,7 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import require_role
+from backend.services.business_profiles import get_widget_defaults
 
 logger = logging.getLogger(__name__)
 
@@ -274,21 +275,17 @@ async def complete_onboarding(
         raise HTTPException(status_code=500, detail="Failed to update business info")
 
     # Update widget config with customization from wizard
-    widget_updates: dict[str, Any] = {}
-    if req.widget_bot_name:
-        widget_updates["bot_name"] = req.widget_bot_name
-    if req.widget_primary_color:
-        widget_updates["primary_color"] = req.widget_primary_color
-    if req.widget_greeting_message:
-        widget_updates["greeting_message"] = req.widget_greeting_message
-    if req.widget_position:
-        widget_updates["position"] = req.widget_position
-
-    if widget_updates:
-        try:
-            db.table("widget_configs").update(widget_updates).eq("tenant_id", tenant_id).execute()
-        except Exception:
-            logger.error("Failed to update widget_configs during onboarding for %s", tenant_id, exc_info=True)
+    widget_defaults = get_widget_defaults(req.business_type, req.business_name)
+    widget_updates: dict[str, Any] = {
+        "bot_name": req.widget_bot_name or widget_defaults["bot_name"],
+        "primary_color": req.widget_primary_color or widget_defaults["primary_color"],
+        "greeting_message": req.widget_greeting_message or widget_defaults["greeting_message"],
+        "position": req.widget_position or widget_defaults["position"],
+    }
+    try:
+        db.table("widget_configs").update(widget_updates).eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.error("Failed to update widget_configs during onboarding for %s", tenant_id, exc_info=True)
 
     # 3. Auto-create business_hours entry from the hours JSONB
     if req.hours:

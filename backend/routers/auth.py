@@ -33,6 +33,11 @@ from backend.models.schemas import (
 )
 from backend.services.stripe_service import PLAN_PRICES, get_or_create_customer
 from backend.services.email_sender import send_email
+from backend.services.business_profiles import (
+    get_dashboard_business_profile,
+    get_widget_defaults,
+    resolve_business_profile_key,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -237,14 +242,15 @@ def _provision_tenant_account(
             logger.warning("Failed to save signup fields for new tenant %s", tenant_id, exc_info=True)
 
     api_key = f"anx_{secrets.token_urlsafe(32)}"
+    widget_defaults = get_widget_defaults(industry, business_name)
     try:
         wc_result = db.table("widget_configs").insert({
             "tenant_id": tenant_id,
             "api_key": api_key,
-            "bot_name": f"{business_name} Assistant",
-            "primary_color": "#00BFFF",
-            "greeting_message": "Hi! How can I help you today?",
-            "position": "bottom-right",
+            "bot_name": widget_defaults["bot_name"],
+            "primary_color": widget_defaults["primary_color"],
+            "greeting_message": widget_defaults["greeting_message"],
+            "position": widget_defaults["position"],
             "show_watermark": True,
         }).execute()
         if not wc_result.data:
@@ -312,6 +318,13 @@ def require_role(*allowed_roles):
 # ── Industry FAQ Seeds ───────────────────────────────────────
 
 INDUSTRY_FAQS: dict[str, list[dict]] = {
+    "hvac": [
+        {"question": "What HVAC services do you offer?", "answer": "We help with AC repair, heating service, tune-ups, indoor air quality, thermostat upgrades, system replacements, and emergency HVAC support.", "category": "Services"},
+        {"question": "Do you offer emergency HVAC service?", "answer": "Yes, we handle urgent heating and cooling issues. Contact us with your issue and we'll respond as quickly as possible.", "category": "Services"},
+        {"question": "Do you service both heating and air conditioning systems?", "answer": "Yes, we work on both heating and cooling equipment, including furnaces, heat pumps, central AC systems, and more.", "category": "Services"},
+        {"question": "Do you provide estimates for new systems?", "answer": "Yes, we can provide an estimate for repairs, replacements, or a new HVAC system based on your needs and property.", "category": "Pricing"},
+        {"question": "What areas do you serve?", "answer": "We serve the local area. Contact us to confirm we can service your location.", "category": "About"},
+    ],
     "plumbing": [
         {"question": "What services do you offer?", "answer": "We offer a full range of plumbing services including drain cleaning, water heater installation and repair, leak detection, pipe repair, sewer line services, faucet and fixture installation, and emergency plumbing.", "category": "Services"},
         {"question": "Do you offer emergency service?", "answer": "Yes, we offer emergency plumbing services. Contact us and we'll get back to you as quickly as possible.", "category": "Services"},
@@ -389,7 +402,12 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
 
 def _seed_industry_faqs(tenant_id: str, industry: str, business_name: str, city: str) -> None:
     """Insert starter FAQ entries for the tenant based on their industry."""
-    faqs = INDUSTRY_FAQS.get(industry, [])
+    normalized = resolve_business_profile_key(industry)
+    faq_key = {
+        "home_services": "plumbing",
+        "real_estate": "realestate",
+    }.get(normalized, normalized)
+    faqs = INDUSTRY_FAQS.get(faq_key, [])
     if not faqs:
         return
     db = get_supabase()
@@ -847,7 +865,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Tenant row
     tenant_result = (
         db.table("tenants")
-        .select("business_name, plan, plan_status, conversations_used_this_month, monthly_conversation_limit, free_trial_started_at")
+        .select("business_name, business_type, plan, plan_status, conversations_used_this_month, monthly_conversation_limit, free_trial_started_at")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -885,18 +903,22 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     else:
         # Auto-create widget_config if missing
         api_key = f"anx_{secrets.token_urlsafe(32)}"
+        widget_defaults = get_widget_defaults(t.get("business_type"), t.get("business_name"))
         logger.info("Dashboard auto-creating widget_config for %s with api_key=%s", tenant_id, api_key)
         db.table("widget_configs").insert({
             "tenant_id": tenant_id,
             "api_key": api_key,
-            "bot_name": f"{t.get('business_name', 'AI')} Assistant",
-            "primary_color": "#00BFFF",
-            "greeting_message": "Hi! How can I help you today?",
-            "position": "bottom-right",
+            "bot_name": widget_defaults["bot_name"],
+            "primary_color": widget_defaults["primary_color"],
+            "greeting_message": widget_defaults["greeting_message"],
+            "position": widget_defaults["position"],
             "show_watermark": True,
         }).execute()
         widget_config = WidgetConfigDetail(
-            bot_name=f"{t.get('business_name', 'AI')} Assistant",
+            bot_name=widget_defaults["bot_name"],
+            primary_color=widget_defaults["primary_color"],
+            greeting_message=widget_defaults["greeting_message"],
+            position=widget_defaults["position"],
         )
 
     # Leads count (live schema uses client_id, not tenant_id)
@@ -977,9 +999,11 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         logger.debug("Missed calls count failed for tenant %s", tenant_id)
 
     trial = _compute_trial_status(t)
+    business_profile = get_dashboard_business_profile(t.get("business_type"), t.get("business_name"))
 
     response = DashboardResponse(
         business_name=t.get("business_name") or "",
+        business_type=t.get("business_type"),
         plan=t.get("plan") or "free",
         plan_status=t.get("plan_status", "active"),
         conversations_used_this_month=conversations_used,
@@ -987,6 +1011,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         widget_api_key=api_key,
         leads_count=leads_count,
         widget_config=widget_config,
+        business_profile=business_profile,
         faq_count=faq_count,
         has_conversations=conversations_used > 0,
         hot_leads_count=hot_leads_count,

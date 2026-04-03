@@ -43,6 +43,20 @@ class TestPipelinePresets:
         assert len(DEFAULT_STAGES) >= 4
         assert any(s.get("is_won") for s in DEFAULT_STAGES)
 
+    def test_home_service_aliases_cover_hvac_and_related_trades(self):
+        from backend.routers.pipeline import _TYPE_ALIASES
+        expected_aliases = {
+            "hvac": "contractor",
+            "electrical": "contractor",
+            "roofing": "contractor",
+            "pest_control": "contractor",
+            "painting": "contractor",
+            "flooring": "contractor",
+            "general_contractor": "contractor",
+        }
+        for alias, target in expected_aliases.items():
+            assert _TYPE_ALIASES.get(alias) == target
+
 
 class TestFormPresets:
     """Verify form presets for all industries."""
@@ -115,3 +129,22 @@ class TestRebookIntervals:
         for industry, (days, desc) in _REBOOK_INTERVALS.items():
             assert days > 0, f"{industry} has non-positive rebook interval"
             assert desc, f"{industry} has empty rebook description"
+
+
+class TestBusinessProfiles:
+    """Verify business-profile dashboard defaults for key verticals."""
+
+    def test_hvac_widget_defaults_are_dispatch_focused(self):
+        from backend.services.business_profiles import get_widget_defaults
+
+        defaults = get_widget_defaults("hvac", "Polar Air")
+
+        assert defaults["bot_name"] == "Polar Air Dispatch"
+        assert defaults["primary_color"] == "#f97316"
+        assert "AC repair" in defaults["greeting_message"]
+
+    def test_real_estate_alias_resolves_cleanly(self):
+        from backend.services.business_profiles import resolve_business_profile_key
+
+        assert resolve_business_profile_key("real_estate") == "real_estate"
+        assert resolve_business_profile_key("realestate") == "real_estate"
