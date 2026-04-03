@@ -903,3 +903,45 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Fix:** Removed the `sameAs` array entirely from both locations. Other Organization schema fields (name, url, description, logo, contactPoint) were already correct.
 **Files Changed:** `demo-platform/src/components/SchemaOrg.jsx`, `landing-page-v2/index.html`
 **Prevention:** Never commit placeholder values in structured data. If real social accounts don't exist yet, omit the field rather than using a placeholder.
+
+---
+
+## 2026-04-02
+
+### IDOR in auto_populate_kb endpoint — missing tenant verification
+**Date:** 2026-04-02 (Commit 4f0eec9)
+**Symptom:** Any authenticated user could call `POST /onboarding/{tenant_id}/auto-kb` with another tenant's ID and populate their knowledge base.
+**Root Cause:** The `auto_populate_kb` endpoint in `onboarding.py` had `Depends(require_role("owner", "admin"))` but never called `_verify_tenant(claims, tenant_id)` to confirm the JWT's tenant matched the path parameter.
+**Files Changed:** `backend/routers/onboarding.py`
+**Fix:** Added `_verify_tenant(claims, tenant_id)` at the top of the handler.
+**Prevention:** Every endpoint with `{tenant_id}` in the path MUST call `_verify_tenant()`. The role dependency only checks role, not tenant ownership.
+
+---
+
+### Operator precedence bug in restaurant menu check — `.get() or "".lower()` pattern
+**Date:** 2026-04-02 (Commit 4f0eec9)
+**Symptom:** Restaurant tenants' menu items never loaded in widget chat or config endpoints. Non-restaurant tenants were unaffected.
+**Root Cause:** `tenant.get("business_type") or "".lower() == "restaurant"` — Python evaluates `"".lower() == "restaurant"` first (False), then `tenant.get("business_type") or False`, which is the business_type string (truthy) but never equals True for the `==` comparison. Same operator precedence pattern as the birthday greeting bug (2026-03-24).
+**Files Changed:** `backend/routers/widget_chat.py`, `backend/routers/widget_config.py`
+**Fix:** Added parentheses: `(tenant.get("business_type") or "").lower() == "restaurant"`.
+**Prevention:** The `x.get("key") or "default"` pattern MUST be wrapped in parentheses when used in comparisons. This is the 3rd occurrence of this pattern (birthday greetings 2026-03-24, now widget_chat + widget_config). Consider a pre-commit regex check for `\.get\(.*\)\s+or\s+.*==`.
+
+---
+
+### Widget CSS overridden by host page styles — bubble/chat invisible on desktop
+**Date:** 2026-04-02 (Commit f16789e)
+**Symptom:** Chat widget bubble and chat window are invisible or mispositioned on certain customer websites, particularly on desktop. The widget loads (JS executes) but is visually hidden.
+**Root Cause:** Host page CSS rules with higher specificity or `!important` declarations overrode the widget's inline styles. The widget used plain CSS properties without `!important`, allowing host pages with aggressive reset stylesheets or `* { display: none; }` selectors to hide widget elements.
+**Files Changed:** `widget/agentnexlify-widget.js`, `frontend/public/widget/agentnexlify-widget.js`
+**Fix:** Added `!important` to all critical layout properties (position, display, visibility, opacity, z-index, dimensions) on `#anx-container`, `#anx-bubble`, and child elements. Added `pointer-events: none` on container with `pointer-events: auto` on interactive children.
+**Prevention:** Embeddable third-party widgets must use `!important` on all visual properties. Host page styles are unpredictable.
+
+---
+
+### Widget null-state — AI sends empty-context responses when tenant has no KB or custom instructions
+**Date:** 2026-04-02 (Commit 4fd5cab)
+**Symptom:** New tenants who haven't completed onboarding get generic, unhelpful AI responses because the system prompt has no business-specific context.
+**Root Cause:** `widget_chat.py` sent the user's message to Claude with a system prompt containing only generic platform rules but no business knowledge, instructions, or FAQ data. The AI would respond with hallucinated or irrelevant answers.
+**Files Changed:** `backend/routers/widget_chat.py`
+**Fix:** Added null-state guard: if `knowledge_base` and `custom_instructions` are both empty AND this is the first message, return a graceful fallback message directing the visitor to contact the business directly (with phone number if available). Logged as `null_state_guard` event.
+**Prevention:** Any AI-powered endpoint should check that the prompt context is non-trivial before sending to the model. An AI with no domain knowledge is worse than a polite redirect.
