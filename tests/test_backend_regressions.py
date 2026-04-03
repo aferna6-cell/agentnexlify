@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from unittest.mock import MagicMock
 
 os.environ["TESTING"] = "1"
 
@@ -116,6 +117,98 @@ def test_dashboard_returns_business_profile_for_hvac(mock_supabase, monkeypatch)
     assert body["business_profile"]["label"] == "HVAC"
     assert body["widget_config"]["bot_name"] == "Polar Air Dispatch"
     assert any(action["label"] == "Book Job" for action in body["business_profile"]["quick_actions"])
+
+
+class _OnboardingRecordingQuery:
+    """Small query double that records onboarding widget updates."""
+
+    def __init__(self, state: dict, table_name: str):
+        self.state = state
+        self.table_name = table_name
+        self.operation = None
+        self.payload = None
+
+    def select(self, *args, **kwargs):
+        self.operation = "select"
+        return self
+
+    def update(self, data):
+        self.operation = "update"
+        self.payload = data
+        return self
+
+    def insert(self, data):
+        self.operation = "insert"
+        self.payload = data
+        return self
+
+    def eq(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args, **kwargs):
+        return self
+
+    def execute(self):
+        if self.table_name == "tenants" and self.operation == "select":
+            return MagicMock(data=[{"id": "tenant-123", "business_name": "Polar Air", "business_page_enabled": False}])
+        if self.table_name == "tenants" and self.operation == "update":
+            self.state["tenant_updates"].append(self.payload)
+            return MagicMock(data=[self.payload])
+        if self.table_name == "widget_configs" and self.operation == "select":
+            return MagicMock(data=[{
+                "bot_name": "Custom Comfort Team",
+                "primary_color": "#123456",
+                "greeting_message": "Custom greeting already configured",
+                "position": "bottom-left",
+            }])
+        if self.table_name == "widget_configs" and self.operation == "update":
+            self.state["widget_updates"].append(self.payload)
+            return MagicMock(data=[self.payload])
+        if self.table_name == "faq_entries" and self.operation == "insert":
+            self.state["faq_inserts"].append(self.payload)
+            return MagicMock(data=[self.payload])
+        raise AssertionError(f"Unexpected onboarding query: {self.table_name} {self.operation}")
+
+
+class _OnboardingRecordingDb:
+    def __init__(self):
+        self.state = {"tenant_updates": [], "widget_updates": [], "faq_inserts": []}
+
+    def table(self, table_name: str):
+        return _OnboardingRecordingQuery(self.state, table_name)
+
+
+def test_onboarding_preserves_existing_widget_customizations_when_fields_are_omitted(monkeypatch):
+    """Preset defaults should not overwrite an already customized widget on re-run."""
+    db = _OnboardingRecordingDb()
+    monkeypatch.setattr("backend.routers.onboarding.get_supabase", lambda: db)
+
+    async def _no_ai_content(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr("backend.routers.onboarding._generate_ai_content", _no_ai_content)
+    app.dependency_overrides[_get_current_tenant] = lambda: {"tenant_id": "tenant-123", "role": "owner"}
+    client = TestClient(app)
+
+    try:
+        response = client.post(
+            "/api/v1/onboarding/tenant-123/complete",
+            json={
+                "business_name": "Polar Air",
+                "business_type": "hvac",
+                "city": "Austin, TX",
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(_get_current_tenant, None)
+
+    assert response.status_code == 200
+    assert db.state["widget_updates"] == [{
+        "bot_name": "Custom Comfort Team",
+        "primary_color": "#123456",
+        "greeting_message": "Custom greeting already configured",
+        "position": "bottom-left",
+    }]
 
 
 @pytest.mark.asyncio
