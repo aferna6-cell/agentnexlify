@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_sequences, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, pipeline_automations, revenue, reviews, scoring_config, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhooks, widget_chat, widget_config, widget_lead, wizard_analytics
+from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, conversation_inbox, crawl, csat, custom_fields, documents, email_sequences, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, pipeline_automations, resend_webhooks, revenue, reviews, scoring_config, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhooks, widget_chat, widget_config, widget_lead, wizard_analytics
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -69,7 +69,8 @@ async def _automation_loop():
       - Every 60s  (every tick): core sequences, no-response leads, reminders
       - Every 5min (tick % 5):   notifications, review requests, onboarding, CSAT,
                                   scheduled post publishing, scheduled campaign sending
-      - Every 30min (tick % 30): heavy/infrequent tasks (monthly reports, briefs)
+      - Every 30min (tick % 30): heavy/infrequent tasks (monthly reports, briefs,
+                                  recurring invoices)
     """
     import random
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
@@ -81,6 +82,7 @@ async def _automation_loop():
         send_csat_surveys,
         send_invoice_payment_reminders,
         send_monthly_reports,
+        process_recurring_invoices,
         send_pending_review_requests,
         send_rebook_suggestions,
         send_onboarding_emails,
@@ -123,6 +125,7 @@ async def _automation_loop():
         if tick % 30 == 0:
             core_tasks.extend([
                 _safe_run("send_monthly_reports", send_monthly_reports),
+                _safe_run("process_recurring_invoices", process_recurring_invoices),
                 _safe_run("send_weekly_intelligence_briefs", send_weekly_intelligence_briefs),
                 _safe_run("send_weekly_digest", send_weekly_digest),
                 _safe_run("send_birthday_greetings", send_birthday_greetings),
@@ -415,6 +418,7 @@ app.include_router(email_templates.router)
 app.include_router(email_sequences.router)
 app.include_router(leads.router)
 app.include_router(stripe_webhooks.router)
+app.include_router(resend_webhooks.router)
 app.include_router(sequences.router)
 app.include_router(sequences.leads_router)
 app.include_router(support.router)
