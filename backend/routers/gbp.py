@@ -9,6 +9,7 @@ Requires Google Business Profile API credentials configured in settings.
 """
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
@@ -19,6 +20,34 @@ from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
+
+_JWT_ALGORITHM = "HS256"
+_STATE_TOKEN_EXPIRY_MINUTES = 10
+
+
+def _encode_oauth_state(tenant_id: str) -> str:
+    """Create a short-lived signed JWT encoding the tenant_id for OAuth state."""
+    from jose import jwt
+
+    payload = {
+        "tenant_id": tenant_id,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
+    }
+    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+
+
+def _decode_oauth_state(state: str) -> str:
+    """Validate the OAuth state token and return the tenant_id."""
+    from jose import JWTError, jwt
+
+    try:
+        payload = jwt.decode(state, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+        tenant_id = payload.get("tenant_id")
+        if not tenant_id:
+            raise HTTPException(status_code=400, detail="Invalid state: missing tenant_id")
+        return tenant_id
+    except JWTError as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired state parameter") from exc
 
 router = APIRouter(prefix="/api/v1/gbp", tags=["google-business-profile"])
 
@@ -45,6 +74,7 @@ async def get_gbp_auth_url(
 
     redirect_uri = f"{settings.api_url}/api/v1/gbp/callback"
     scopes = "https://www.googleapis.com/auth/business.manage"
+    state = _encode_oauth_state(tenant_id)
 
     auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
@@ -52,7 +82,7 @@ async def get_gbp_auth_url(
         f"&redirect_uri={redirect_uri}"
         f"&response_type=code"
         f"&scope={scopes}"
-        f"&state={tenant_id}"
+        f"&state={state}"
         f"&access_type=offline"
         f"&prompt=consent"
     )
@@ -63,7 +93,7 @@ async def get_gbp_auth_url(
 @router.get("/callback")
 async def gbp_oauth_callback(code: str = Query(...), state: str = Query(...)):
     """Handle Google OAuth callback — exchange code for tokens."""
-    tenant_id = state
+    tenant_id = _decode_oauth_state(state)
 
     client_id = getattr(settings, "google_client_id", None)
     client_secret = getattr(settings, "google_client_secret", None)

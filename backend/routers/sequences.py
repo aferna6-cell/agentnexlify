@@ -608,6 +608,7 @@ async def send_campaign(
     - created_after: ISO date string
     - created_before: ISO date string
     """
+    _verify_tenant(tenant_id, tenant)
     db = get_supabase()
 
     # Build filtered query — leads table uses client_id, NOT tenant_id

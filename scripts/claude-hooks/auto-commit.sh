@@ -21,7 +21,7 @@ if ! git diff --cached --quiet; then
     BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
     TIMESTAMP=$(date '+%Y-%m-%d %H:%M')
 
-    git commit -m "chore(ai): auto-commit Claude edits [$BRANCH $TIMESTAMP]" --no-verify 2>/dev/null
+    git commit -m "chore(ai): auto-commit Claude edits [$BRANCH $TIMESTAMP]" 2>/dev/null
 fi
 
 exit 0

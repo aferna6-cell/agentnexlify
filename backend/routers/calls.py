@@ -26,6 +26,7 @@ from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
+from backend.routers.automations import verify_twilio_request
 
 logger = logging.getLogger(__name__)
 
@@ -395,7 +396,7 @@ async def _insert_call_action_items(
 
 @router.post("/voice/incoming")
 @limiter.limit("30/minute")
-async def handle_incoming_call(request: Request):
+async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twilio_request)):
     """Twilio voice webhook -- greets the caller and starts AI conversation.
 
     Twilio POSTs form-encoded data with caller info. We respond with TwiML
@@ -466,7 +467,7 @@ async def handle_incoming_call(request: Request):
 
 @router.post("/voice/respond")
 @limiter.limit("30/minute")
-async def handle_voice_respond(request: Request):
+async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twilio_request)):
     """AI voice conversation handler -- processes speech input and responds.
 
     Twilio POSTs form-encoded data with the caller's SpeechResult from <Gather>.
@@ -671,7 +672,7 @@ async def handle_voice_respond(request: Request):
 
 @router.post("/voice/recording-complete")
 @limiter.limit("30/minute")
-async def handle_recording_complete(request: Request):
+async def handle_recording_complete(request: Request, _sig: None = Depends(verify_twilio_request)):
     """Twilio recording status callback -- fires when a recording is ready.
 
     Stores the call record, creates/updates a lead, sends an SMS notification
