@@ -225,7 +225,7 @@ async def repurpose(
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     message = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=4096,
+        max_tokens=16000,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
     )
@@ -239,8 +239,21 @@ async def repurpose(
     try:
         result = json.loads(raw_text)
     except json.JSONDecodeError:
-        logger.error("Failed to parse Claude repurpose response: %s", raw_text[:500])
-        raise ValueError("AI returned invalid JSON. Please try again.")
+        # Attempt to repair truncated JSON by closing open structures
+        repaired = raw_text
+        open_braces = repaired.count("{") - repaired.count("}")
+        open_brackets = repaired.count("[") - repaired.count("]")
+        # Truncate to last complete value (find last comma or closing bracket)
+        last_complete = max(repaired.rfind("},"), repaired.rfind("],"), repaired.rfind('",'))
+        if last_complete > 0:
+            repaired = repaired[:last_complete + 1]
+        repaired += "]" * max(0, open_brackets) + "}" * max(0, open_braces)
+        try:
+            result = json.loads(repaired)
+            logger.warning("Repaired truncated JSON response (closed %d braces, %d brackets)", open_braces, open_brackets)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse or repair Claude repurpose response: %s", raw_text[:500])
+            raise ValueError("AI returned invalid JSON. Please try again.")
 
     # Only return requested formats
     return {k: v for k, v in result.items() if k in requested_formats}
