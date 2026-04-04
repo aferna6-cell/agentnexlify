@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "last_run": null,
+  "total_runs": 0,
+  "frozen_ideas": [],
+  "active_directions": [],
+  "rejected_paths": [],
+  "config": {
+    "max_ideas_per_run": 5,
+    "max_debate_rounds": 3,
+    "evidence_sources": [
+      "git_log_7d",
+      "skill_discovery_reports",
+      "bug_patterns",
+      "agent_comms",
+      "daily_logs",
+      "test_results"
+    ],
+    "auto_approve": false,
+    "freeze_threshold": 3,
+    "model_routing": {
+      "ideation": "sonnet",
+      "debate": "opus",
+      "synthesis": "opus",
+      "artifact_writing": "sonnet"
+    }
+  }
+}
