@@ -1,6 +1,7 @@
 """Appointment booking service — slot generation, conflict detection, lead linkage."""
 
 
+import asyncio
 import logging
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -289,7 +290,8 @@ def create_appointment(
 
     # Send confirmation to customer (best-effort, background)
     try:
-        _send_appointment_confirmation(tenant_id, appointment)
+        loop = asyncio.get_event_loop()
+        loop.create_task(_send_appointment_confirmation(tenant_id, appointment))
     except Exception:
         logger.warning("Failed to send appointment confirmation for %s", appointment["id"], exc_info=True)
 
@@ -306,7 +308,7 @@ def _reschedule_link_html(appointment: dict) -> str:
         return "please contact us"
 
 
-def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> None:
+async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> None:
     """Send booking confirmation via email and/or SMS to the customer."""
     from backend.services.email_sender import send_email
     from backend.services.twilio_service import send_sms
