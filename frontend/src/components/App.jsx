@@ -1,4 +1,11 @@
-import { useState, useCallback, useEffect, lazy, Suspense, Component } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  lazy,
+  Suspense,
+  Component,
+} from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
 import LoginPage from "./LoginPage";
@@ -22,10 +29,23 @@ class PageErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>
-          <div style={{ fontSize: "1.5rem", marginBottom: 12 }}>Something went wrong</div>
-          <p style={{ marginBottom: 16 }}>{this.state.error?.message || "An unexpected error occurred."}</p>
-          <button className="btn-primary" onClick={() => this.setState({ hasError: false, error: null })}>
+        <div
+          style={{
+            padding: 40,
+            textAlign: "center",
+            color: "var(--text-muted)",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: 12 }}>
+            Something went wrong
+          </div>
+          <p style={{ marginBottom: 16 }}>
+            {this.state.error?.message || "An unexpected error occurred."}
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
             Try Again
           </button>
         </div>
@@ -50,11 +70,18 @@ const BillingPage = lazy(() => import("../pages/BillingPage"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage"));
 const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
-const AgentControlCenterPage = lazy(() => import("../pages/AgentControlCenterPage"));
+const AgentControlCenterPage = lazy(
+  () => import("../pages/AgentControlCenterPage"),
+);
 const TeamPage = lazy(() => import("../pages/TeamPage"));
-const BusinessPageSettings = lazy(() => import("../pages/BusinessPageSettings"));
+const BusinessPageSettings = lazy(
+  () => import("../pages/BusinessPageSettings"),
+);
 const ReviewsPage = lazy(() => import("../pages/ReviewsPage"));
 const ContentStudioPage = lazy(() => import("../pages/ContentStudioPage"));
+const ContentRepurposePage = lazy(
+  () => import("../pages/ContentRepurposePage"),
+);
 const MenuPage = lazy(() => import("../pages/MenuPage"));
 const OrdersPage = lazy(() => import("../pages/OrdersPage"));
 const JobsPage = lazy(() => import("../pages/JobsPage"));
@@ -67,12 +94,16 @@ const ClientPortalPage = lazy(() => import("../pages/ClientPortalPage"));
 const CallsPage = lazy(() => import("../pages/CallsPage"));
 const LocalSEOPage = lazy(() => import("../pages/LocalSEOPage"));
 const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
-const MarketingCampaignsPage = lazy(() => import("../pages/MarketingCampaignsPage"));
+const MarketingCampaignsPage = lazy(
+  () => import("../pages/MarketingCampaignsPage"),
+);
 const EmailSequencesPage = lazy(() => import("../pages/EmailSequencesPage"));
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
 const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
-const PipelineAutomationsPage = lazy(() => import("../pages/PipelineAutomationsPage"));
+const PipelineAutomationsPage = lazy(
+  () => import("../pages/PipelineAutomationsPage"),
+);
 const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
 const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
 const CSATPage = lazy(() => import("../pages/CSATPage"));
@@ -101,6 +132,7 @@ const pages = {
   business_page: BusinessPageSettings,
   reviews: ReviewsPage,
   content_studio: ContentStudioPage,
+  content_repurpose: ContentRepurposePage,
   menu: MenuPage,
   orders: OrdersPage,
   jobs: JobsPage,
@@ -179,7 +211,7 @@ const PAGE_TO_PATH = {
 };
 
 const PATH_TO_PAGE = Object.fromEntries(
-  Object.entries(PAGE_TO_PATH).map(([key, path]) => [path, key])
+  Object.entries(PAGE_TO_PATH).map(([key, path]) => [path, key]),
 );
 
 function pageFromPath(pathname) {
@@ -189,7 +221,12 @@ function pageFromPath(pathname) {
 }
 
 function TrialBanner({ trialData, onNavigate }) {
-  if (!trialData || trialData.plan !== "free" || trialData.days_remaining === null) return null;
+  if (
+    !trialData ||
+    trialData.plan !== "free" ||
+    trialData.days_remaining === null
+  )
+    return null;
 
   const expired = trialData.is_expired;
   const days = trialData.days_remaining;
@@ -237,7 +274,7 @@ function TrialBanner({ trialData, onNavigate }) {
 export default function App() {
   const { user, token } = useAuth();
   const [currentPage, setCurrentPage] = useState(
-    () => pageFromPath(window.location.pathname) || "dashboard"
+    () => pageFromPath(window.location.pathname) || "dashboard",
   );
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -283,7 +320,7 @@ export default function App() {
         setLoading(false);
       }, 200);
     },
-    [currentPage]
+    [currentPage],
   );
 
   if (!user) return <LoginPage />;
@@ -292,16 +329,29 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar currentPage={currentPage} onNavigate={handleNavigate} plan={activePlan} />
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-        <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
-        <div style={{
+      <Sidebar
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        plan={activePlan}
+      />
+      <div
+        style={{
           display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
-          padding: "8px 24px 0",
-          flexShrink: 0,
-        }}>
+          flexDirection: "column",
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            padding: "8px 24px 0",
+            flexShrink: 0,
+          }}
+        >
           <NotificationBell onNavigate={handleNavigate} />
         </div>
         <main className="content">
