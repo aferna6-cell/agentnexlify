@@ -1,0 +1,19 @@
+{
+  "date": "2026-04-04",
+  "run_number": 1,
+  "evidence_sources_checked": 6,
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_survived": 2,
+  "ideas_killed": 1,
+  "winner": "Update 4 stale skills per weekly discovery",
+  "winner_confidence": "HIGH",
+  "winner_category": "workflow",
+  "parking_lot": ["Fix failing test test_resend_webhook_route_is_registered"],
+  "rejected": ["Build AI-to-human handoff feature"],
+  "next_run_questions": [
+    "Did the skill updates get applied?",
+    "Is the failing test still red?",
+    "Are any new tenants onboarding?"
+  ]
+}

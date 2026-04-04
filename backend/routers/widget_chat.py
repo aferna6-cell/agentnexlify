@@ -178,6 +178,78 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             handoff=True,
         )
 
+    # 4c. Content mode detection — repurpose content instead of chatting
+    _content_mode_keywords = ["repurpose", "content mode", "turn this into", "create content from"]
+    _yt_pattern = re.compile(r"(?:youtube\.com/watch|youtu\.be/)")
+    _msg_lower = req.message.lower()
+    _content_mode = getattr(req, "content_mode", False)
+    if not _content_mode:
+        for _kw in _content_mode_keywords:
+            if _kw in _msg_lower:
+                _content_mode = True
+                break
+    if not _content_mode and _yt_pattern.search(req.message):
+        _content_mode = True
+    if not _content_mode and len(req.message) > 500 and "?" not in req.message:
+        _content_mode = True
+
+    if _content_mode:
+        plan = (tenant.get("plan") or "free")
+        if plan not in ("professional", "enterprise"):
+            _save_chat_messages(tenant["id"], req.session_id, req.message, None)
+            return WidgetChatResponse(
+                response="Content repurposing is available on Professional and Enterprise plans. Upgrade to unlock this feature!",
+                session_id=req.session_id,
+                lead_captured=False,
+                show_watermark=widget.get("show_watermark", True),
+            )
+        # Determine source type
+        if _yt_pattern.search(req.message):
+            _src_type = "youtube"
+        elif req.message.strip().startswith(("http://", "https://")):
+            _src_type = "url"
+        else:
+            _src_type = "text"
+        # Create repurpose job
+        try:
+            from backend.services.content_repurposer import extract_source, repurpose as do_repurpose
+            source = await extract_source(_src_type, req.message.strip())
+            outputs = await do_repurpose(
+                source_content=source["content"],
+                title=source["title"],
+                tenant_id=tenant["id"],
+                tone="professional",
+            )
+            db.table("repurpose_jobs").insert({
+                "tenant_id": tenant["id"],
+                "source_type": _src_type,
+                "source_url": source["source_url"],
+                "source_content": source["content"],
+                "source_title": source["title"],
+                "outputs": outputs,
+                "status": "completed",
+                "created_via": "widget",
+            }).execute()
+            resp_text = (
+                f"Done! I've repurposed \"{source['title']}\" into:\n\n"
+                "- X/Twitter thread (7-10 tweets)\n"
+                "- LinkedIn carousel\n"
+                "- Email sequence (3-5 emails)\n"
+                "- TikTok/Reels scripts\n"
+                "- Social posts (Facebook, Instagram, Google Business)\n\n"
+                "View and edit your results in the Content Repurpose page on your dashboard."
+            )
+        except Exception as e:
+            logger.error("Content mode repurpose failed: %s", e, exc_info=True)
+            resp_text = "Sorry, I had trouble repurposing that content. Please try again or paste the text directly."
+        _save_chat_messages(tenant["id"], req.session_id, req.message, resp_text)
+        return WidgetChatResponse(
+            response=resp_text,
+            session_id=req.session_id,
+            lead_captured=False,
+            show_watermark=widget.get("show_watermark", True),
+        )
+
     # 5. Load message history from chat_messages table (last 20 messages)
     messages = _load_chat_history(tenant["id"], req.session_id)
     logger.info(

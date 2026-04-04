@@ -243,6 +243,24 @@
         color: #fff;
       }
 
+      #anx-content-mode-btn.active {
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+      }
+
+      #anx-content-mode-badge {
+        display: none;
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        font-size: 7px;
+        background: #22c55e;
+        color: #fff;
+        border-radius: 50%;
+        width: 10px;
+        height: 10px;
+      }
+
       #anx-messages {
         flex: 1;
         overflow-y: auto;
@@ -746,6 +764,7 @@
             </div>
           </div>
           <div id="anx-header-actions">
+            <button id="anx-content-mode-btn" title="Content Mode" style="display:none;position:relative;">&#9998;<span id="anx-content-mode-badge"></span></button>
             <button id="anx-menu-btn" title="View Menu" style="display:none;">&#127860;</button>
             <button id="anx-booking-btn" title="Book Appointment">&#128197;</button>
             <button id="anx-minimize" title="Minimize">&#8722;</button>
@@ -778,6 +797,7 @@
   let isLoading = false;
   let hasAutoOpened = false;
   let unreadCount = 0;
+  let contentMode = false;
   let msgCounter = 0;
   let botName = "Aria";
   let agentName = "Agent";
@@ -870,6 +890,7 @@
         api_key: API_KEY,
         session_id: getSessionId(),
         message: text,
+        content_mode: contentMode,
       }),
     });
     if (!resp.ok) {
@@ -1767,6 +1788,26 @@
       if (bookBtn) {
         bookBtn.style.display = "flex";
         bookBtn.addEventListener("click", () => showBooking("date"));
+      }
+    }
+
+    // Show content mode button for professional+ plans
+    const _plan = data.plan || "free";
+    if (_plan === "professional" || _plan === "enterprise") {
+      const cmBtn = document.getElementById("anx-content-mode-btn");
+      if (cmBtn) {
+        cmBtn.style.display = "flex";
+        cmBtn.addEventListener("click", function () {
+          contentMode = !contentMode;
+          cmBtn.classList.toggle("active", contentMode);
+          const badge = document.getElementById("anx-content-mode-badge");
+          if (badge) badge.style.display = contentMode ? "block" : "none";
+          const input = document.getElementById("anx-input");
+          if (input)
+            input.placeholder = contentMode
+              ? "Paste content, URL, or YouTube link to repurpose..."
+              : "Type a message...";
+        });
       }
     }
 

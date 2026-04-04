@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "last_run": "2026-04-04T19:30:00Z",
+  "total_runs": 1,
+  "frozen_ideas": [],
+  "active_directions": [
+    {
+      "title": "Update 4 stale skills per weekly discovery",
+      "date": "2026-04-04",
+      "confidence": "HIGH",
+      "status": "pending_approval"
+    }
+  ],
+  "rejected_paths": [
+    {
+      "title": "Build AI-to-human handoff feature",
+      "reason": "Too large for atomic recommendation — belongs in /new-feature pipeline",
+      "date": "2026-04-04",
+      "times_rejected": 1
+    }
+  ],
+  "config": {
+    "max_ideas_per_run": 5,
+    "max_debate_rounds": 3,
+    "evidence_sources": [
+      "git_log_7d",
+      "skill_discovery_reports",
+      "bug_patterns",
+      "agent_comms",
+      "daily_logs",
+      "test_results"
+    ],
+    "auto_approve": false,
+    "freeze_threshold": 3,
+    "model_routing": {
+      "ideation": "sonnet",
+      "debate": "opus",
+      "synthesis": "opus",
+      "artifact_writing": "sonnet"
+    }
+  }
+}

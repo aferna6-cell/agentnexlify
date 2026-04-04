@@ -488,3 +488,8 @@ Fixes critical bug: conversations table had RLS enabled (migration 001) but NO p
 - Created `kb_sources` table: source_url (unique), file_path, category, relevance_score, title, compiled (boolean)
 - HNSW index on kb_articles.embedding for cosine similarity
 - Index on kb_sources.compiled for pending source queries
+
+### Migration 082 — Repurpose Jobs (2026-04-04)
+- Created `repurpose_jobs` table: tenant_id (FK), source_type, source_url, source_content, source_title, tone, outputs (JSONB), status, connected IDs
+- RLS enabled with tenant policy + service role policy
+- Indexes on tenant_id and status

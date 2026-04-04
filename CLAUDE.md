@@ -120,6 +120,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 | invoice_item_templates | Reusable invoice line items | tenant_id, description, unit_price, category |
 | documents | Documents & e-signatures | tenant_id, lead_id, title, template_html, rendered_html, status, signer_name/email, signed_at, signature_data, signing_token |
 | document_templates | Reusable document templates | tenant_id, name, category, template_html, variables (TEXT[]) |
+| repurpose_jobs | Content repurposer | tenant_id, source_type, source_url, source_content, source_title, tone, outputs (JSONB), status, connected_social_post_ids, connected_email_sequence_id, created_via |
 
 > Always verify against live schema — this table may be outdated.
 
