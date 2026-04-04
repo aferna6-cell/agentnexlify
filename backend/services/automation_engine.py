@@ -2,6 +2,7 @@
 
 
 import asyncio
+import html
 import logging
 from datetime import datetime, timedelta, timezone
 from functools import partial
@@ -762,7 +763,7 @@ async def send_appointment_reminders() -> int:
                 if not tenant.data:
                     continue
                 tenant_data = tenant.data[0]
-                business_name = tenant_data.get("business_name") or "Our Team"
+                business_name = html.escape(tenant_data.get("business_name") or "Our Team")
             except Exception:
                 logger.exception("send_appointment_reminders: failed to load tenant %s", tenant_id)
                 continue
@@ -774,7 +775,7 @@ async def send_appointment_reminders() -> int:
             except Exception:
                 time_str = appt["start_time"]
 
-            customer_name = appt.get("customer_name") or "there"
+            customer_name = html.escape(appt.get("customer_name") or "there")
             customer_email = appt.get("customer_email")
             business_type = (tenant_data.get("business_type") or "").lower()
 
@@ -813,15 +814,11 @@ async def send_appointment_reminders() -> int:
                 }
 
                 try:
-                    await asyncio.get_event_loop().run_in_executor(
-                        None,
-                        partial(
-                            send_email,
-                            to=customer_email,
-                            subject=subject_map[window["label"]],
-                            body_html=body_map[window["label"]],
-                            tenant_id=tenant_id,
-                        ),
+                    await send_email(
+                        to=customer_email,
+                        subject=subject_map[window["label"]],
+                        body_html=body_map[window["label"]],
+                        tenant_id=tenant_id,
                     )
                     sent += 1
                     logger.info(
@@ -854,10 +851,7 @@ async def send_appointment_reminders() -> int:
                 }
                 try:
                     if check_sms_rate_limit(tenant_id, tenant_data.get("plan") or "free"):
-                        await asyncio.get_event_loop().run_in_executor(
-                            None,
-                            partial(send_sms, to=customer_phone, body=sms_map[window["label"]]),
-                        )
+                        await send_sms(to=customer_phone, body=sms_map[window["label"]])
                         increment_sms_count(tenant_id)
                         sent += 1
                 except Exception:

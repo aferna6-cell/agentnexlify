@@ -272,10 +272,10 @@ async def notify_waitlisted_customer(
     # Send email notification
     if entry.get("customer_email"):
         try:
-            send_email(
-                to_email=entry["customer_email"],
+            await send_email(
+                to=entry["customer_email"],
                 subject=f"Appointment Available - {business_name}",
-                html_body=f"""
+                body_html=f"""
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #2563eb;">Good News, {entry['customer_name']}!</h2>
                     <p>{message}</p>
@@ -287,6 +287,7 @@ async def notify_waitlisted_customer(
                     <p style="color: #9ca3af; font-size: 12px;">— {business_name}</p>
                 </div>
                 """,
+                tenant_id=tenant_id,
             )
             notified_via.append("email")
         except Exception:
@@ -295,10 +296,9 @@ async def notify_waitlisted_customer(
     # Send SMS notification
     if entry.get("customer_phone"):
         try:
-            send_sms(
-                to_phone=entry["customer_phone"],
+            await send_sms(
+                to=entry["customer_phone"],
                 body=message,
-                tenant_id=tenant_id,
             )
             notified_via.append("sms")
         except Exception:

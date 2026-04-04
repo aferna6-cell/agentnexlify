@@ -350,10 +350,11 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
                 <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">— {business_name}</p>
             </div>
             """
-            send_email(
-                to_email=customer_email,
+            await send_email(
+                to=customer_email,
                 subject=f"Appointment Confirmed - {business_name}",
-                html_body=html_body,
+                body_html=html_body,
+                tenant_id=tenant_id,
             )
             logger.info("Sent appointment confirmation email to %s for tenant %s", customer_email, tenant_id)
         except Exception:
@@ -367,7 +368,7 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
                 f"{display_date} at {display_time}."
                 f"{' Contact us to reschedule: ' + business_phone if business_phone else ''}"
             )
-            send_sms(to_phone=customer_phone, body=sms_body, tenant_id=tenant_id)
+            await send_sms(to=customer_phone, body=sms_body)
             logger.info("Sent appointment confirmation SMS to %s for tenant %s", customer_phone, tenant_id)
         except Exception:
             logger.warning("Failed to send appointment confirmation SMS to %s", customer_phone, exc_info=True)
