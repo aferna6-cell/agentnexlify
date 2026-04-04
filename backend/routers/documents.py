@@ -203,7 +203,7 @@ async def get_document(
     # Attach lead info if linked
     if doc.get("lead_id"):
         try:
-            lead = db.table("leads").select("name, email, phone").eq("id", doc["lead_id"]).limit(1).execute()
+            lead = db.table("leads").select("name, email, phone").eq("id", doc["lead_id"]).eq("client_id", tenant_id).limit(1).execute()
             doc["lead"] = lead.data[0] if lead.data else None
         except Exception:
             doc["lead"] = None

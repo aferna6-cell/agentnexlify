@@ -1,6 +1,6 @@
 """Embedding service for knowledge base semantic search.
 
-Uses Voyage AI (voyage-3-lite, 1024 dimensions) as primary provider.
+Uses Voyage AI (voyage-3-lite, 512 dimensions) as primary provider.
 Shared utility — available for KB and future product features.
 """
 
@@ -19,7 +19,7 @@ MAX_EMBED_CHARS = 32000  # ~8K tokens, safe limit for embedding input
 
 
 async def embed_text(text: str) -> list[float]:
-    """Embed a single text string. Returns 1024-dim vector."""
+    """Embed a single text string. Returns 512-dim vector."""
     truncated = text[:MAX_EMBED_CHARS]
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post(
@@ -37,7 +37,7 @@ async def embed_text(text: str) -> list[float]:
 
 
 async def embed_batch(texts: list[str]) -> list[list[float]]:
-    """Embed multiple texts in one API call. Returns list of 1024-dim vectors."""
+    """Embed multiple texts in one API call. Returns list of 512-dim vectors."""
     truncated = [t[:MAX_EMBED_CHARS] for t in texts]
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
