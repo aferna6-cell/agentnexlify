@@ -481,3 +481,10 @@ Creates `wizard_events` table for onboarding wizard funnel analytics. Columns: t
 Fixes critical bug: conversations table had RLS enabled (migration 001) but NO policies, causing silent INSERT failures from anon/authenticated roles. Adds three RLS policies (service_role full access, authenticated scoped to client_id=auth.uid(), anon full access for widget). Deduplicates existing (client_id, session_id) pairs and adds UNIQUE constraint `conversations_client_session_unique` on (client_id, session_id) to prevent duplicate conversation records and enable safe UPSERT.
 
 **Applied:** 2026-04-02 via Supabase MCP.
+
+### Migration 081 — Knowledge Base Tables (2026-04-04)
+- Enabled pgvector extension
+- Created `kb_articles` table: slug (unique), title, category, summary, content, embedding (vector 1024), source_urls (text[]), tags (text[]), word_count
+- Created `kb_sources` table: source_url (unique), file_path, category, relevance_score, title, compiled (boolean)
+- HNSW index on kb_articles.embedding for cosine similarity
+- Index on kb_sources.compiled for pending source queries
