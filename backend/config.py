@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     facebook_app_secret: str = ""
     facebook_verify_token: str = ""
 
+    twitter_client_id: str = ""
+    twitter_client_secret: str = ""
+    tiktok_client_key: str = ""
+    tiktok_client_secret: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
