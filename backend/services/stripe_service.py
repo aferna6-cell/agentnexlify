@@ -35,12 +35,6 @@ PLAN_PRICES: dict[str, dict[str, str]] = {
     "enterprise": {"monthly": _price_id(settings.stripe_price_enterprise_monthly, "price_enterprise_monthly")},
 }
 
-PLAN_LIMITS: dict[str, int] = {
-    # All plans now have unlimited conversations.
-    # Kept as a reference map only — not enforced.
-}
-
-
 def _ensure_initialized() -> None:
     global _initialized, _warned_placeholder_prices
     if not _initialized:

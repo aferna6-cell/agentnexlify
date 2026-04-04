@@ -22,13 +22,6 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_phone_number: str = ""
 
-    calendly_api_key: str = ""
-
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_pass: str = ""
-
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_growth_monthly: str = ""
@@ -59,7 +52,7 @@ class Settings(BaseSettings):
     facebook_app_secret: str = ""
     facebook_verify_token: str = ""
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

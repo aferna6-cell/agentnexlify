@@ -940,8 +940,8 @@ async def send_rebook_suggestions() -> int:
         except Exception:
             pass
 
-        business_name = tenant.get("business_name") or "Us"
-        customer_name = appt.get("customer_name") or "there"
+        business_name = html.escape(tenant.get("business_name") or "Us")
+        customer_name = html.escape(appt.get("customer_name") or "there")
         customer_email = appt.get("customer_email")
 
         if customer_email:
@@ -1074,13 +1074,13 @@ async def send_aftercare_instructions() -> int:
         if not message:
             continue
 
-        business_name = tenant.get("business_name") or "Us"
-        customer_name = appt.get("customer_name") or "there"
+        business_name = html.escape(tenant.get("business_name") or "Us")
+        customer_name = html.escape(appt.get("customer_name") or "there")
 
         subject = f"Post-visit care instructions from {business_name}"
         body = (
             f"<h2>Hi {customer_name},</h2>"
-            f"<p>{message}</p>"
+            f"<p>{html.escape(message)}</p>"
             f"<p>If you have any questions or concerns, don't hesitate to reach out.</p>"
             f"<p>Best,<br>The {business_name} Team</p>"
         )
@@ -1184,8 +1184,8 @@ async def send_pending_review_requests() -> int:
         if (now - completed_at).total_seconds() < delay_hours * 3600:
             continue
 
-        business_name = tenant.get("business_name") or "Our Team"
-        customer_name = appt.get("customer_name") or "there"
+        business_name = html.escape(tenant.get("business_name") or "Our Team")
+        customer_name = html.escape(appt.get("customer_name") or "there")
         method = config.get("method", "email")
 
         # CAN-SPAM: skip if lead has unsubscribed
@@ -1201,6 +1201,7 @@ async def send_pending_review_requests() -> int:
         # Send email review request
         if method in ("email", "both") and appt.get("customer_email"):
             unsub_url = build_unsubscribe_url(lead_id) if lead_id else ""
+            safe_review_link = html.escape(review_link, quote=True)
             subject = f"How was your experience with {business_name}?"
             body = (
                 f"<h2>Hi {customer_name},</h2>"
@@ -1208,7 +1209,7 @@ async def send_pending_review_requests() -> int:
                 f"We hope everything went well.</p>"
                 f"<p>We'd really appreciate it if you could take a moment to share your experience:</p>"
                 f'<p style="text-align:center;margin:20px 0;">'
-                f'<a href="{review_link}" style="background:#4f46e5;color:#fff;padding:12px 24px;'
+                f'<a href="{safe_review_link}" style="background:#4f46e5;color:#fff;padding:12px 24px;'
                 f'border-radius:6px;text-decoration:none;font-weight:600;">Leave a Review</a></p>'
                 f"<p>Your feedback helps us improve and helps others find us. Thank you!</p>"
                 f"<p>Best,<br>The {business_name} Team</p>"
@@ -1345,8 +1346,8 @@ async def _send_review_followups(
         if not review_link:
             continue
 
-        business_name = tenant.get("business_name") or "Our Team"
-        customer_name = appt.get("customer_name") or "there"
+        business_name = html.escape(tenant.get("business_name") or "Our Team")
+        customer_name = html.escape(appt.get("customer_name") or "there")
         method = config.get("method", "email")
 
         # CAN-SPAM: skip if lead has unsubscribed
@@ -1364,6 +1365,7 @@ async def _send_review_followups(
         # Send follow-up email
         if method in ("email", "both") and appt.get("customer_email"):
             unsub_url = build_unsubscribe_url(lead_id) if lead_id else ""
+            safe_review_link = html.escape(review_link, quote=True)
             subject = f"Still happy to help — leave us a review, {customer_name}!"
             body = (
                 f"<h2>Hi {customer_name},</h2>"
@@ -1371,7 +1373,7 @@ async def _send_review_followups(
                 f"about your experience with <strong>{business_name}</strong>.</p>"
                 f"<p>If you have a moment, we'd really appreciate a quick review:</p>"
                 f'<p style="text-align:center;margin:20px 0;">'
-                f'<a href="{review_link}" style="background:#4f46e5;color:#fff;padding:12px 24px;'
+                f'<a href="{safe_review_link}" style="background:#4f46e5;color:#fff;padding:12px 24px;'
                 f'border-radius:6px;text-decoration:none;font-weight:600;">Leave a Review</a></p>'
                 f"<p>It only takes a minute and means a lot to us. Thank you!</p>"
                 f"<p>Best,<br>The {business_name} Team</p>"
@@ -2873,122 +2875,3 @@ async def process_recurring_invoices() -> int:
             logger.exception("Failed to process recurring invoice %s", parent_id)
 
     return created
-
-
-# ---------------------------------------------------------------------------
-# Auto-Archive Old Conversations
-# ---------------------------------------------------------------------------
-
-async def auto_archive_old_conversations() -> int:
-    """Archive conversations with no activity for 30+ days.
-
-    Sets status to 'archived' for conversations that are still 'open' or
-    'closed' but haven't been updated in over 30 days. Archived
-    conversations remain searchable but won't appear in the main inbox.
-    """
-    db = get_supabase()
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    archived = 0
-
-    try:
-        # Find stale conversations across all tenants
-        stale = (
-            db.table("conversations")
-            .select("id, client_id")
-            .in_("status", ["open", "closed"])
-            .lt("updated_at", cutoff)
-            .limit(200)
-            .execute()
-        )
-
-        if not stale.data:
-            return 0
-
-        ids = [row["id"] for row in stale.data]
-
-        # Batch update status to archived
-        for i in range(0, len(ids), 50):
-            chunk = ids[i:i + 50]
-            for cid in chunk:
-                try:
-                    db.table("conversations").update({
-                        "status": "archived",
-                    }).eq("id", cid).execute()
-                    archived += 1
-                except Exception:
-                    logger.warning("Failed to archive conversation %s", cid, exc_info=True)
-
-        if archived > 0:
-            logger.info("auto_archive: archived %d stale conversations (>30 days inactive)", archived)
-
-    except Exception:
-        logger.exception("auto_archive_old_conversations failed")
-
-    return archived
-
-
-async def prune_stale_widget_sessions() -> int:
-    """Delete chat_messages from widget sessions with no messages in 90+ days.
-
-    Prevents indefinite accumulation of stale sessions. Runs in the 30-min
-    automation tier. Processes up to 500 sessions per run.
-    """
-    db = get_supabase()
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
-    pruned = 0
-
-    try:
-        # Find distinct session_ids where the most recent message is older than 90 days
-        # We look for sessions that start with 'anx_' (widget sessions) to avoid SMS sessions
-        stale_messages = (
-            db.table("chat_messages")
-            .select("session_id")
-            .lt("created_at", cutoff)
-            .limit(500)
-            .execute()
-        )
-
-        if not stale_messages.data:
-            return 0
-
-        # Get unique session IDs from old messages
-        candidate_sessions = list({row["session_id"] for row in stale_messages.data})
-
-        for session_id in candidate_sessions:
-            try:
-                # Verify no recent messages exist for this session
-                recent = (
-                    db.table("chat_messages")
-                    .select("id")
-                    .eq("session_id", session_id)
-                    .gte("created_at", cutoff)
-                    .limit(1)
-                    .execute()
-                )
-                if recent.data:
-                    continue  # Session has recent activity, skip
-
-                # Check if session has a linked conversation that's not archived
-                linked_conv = (
-                    db.table("conversations")
-                    .select("id, status")
-                    .eq("session_id", session_id)
-                    .limit(1)
-                    .execute()
-                )
-                if linked_conv.data and linked_conv.data[0].get("status") not in ("archived",):
-                    continue  # Active conversation, skip
-
-                # Safe to prune — delete old messages for this session
-                db.table("chat_messages").delete().eq("session_id", session_id).lt("created_at", cutoff).execute()
-                pruned += 1
-            except Exception:
-                logger.warning("Failed to prune session %s", session_id, exc_info=True)
-
-        if pruned > 0:
-            logger.info("prune_stale_sessions: cleaned %d stale widget sessions (>90 days inactive)", pruned)
-
-    except Exception:
-        logger.exception("prune_stale_widget_sessions failed")
-
-    return pruned

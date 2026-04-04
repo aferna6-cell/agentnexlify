@@ -473,7 +473,6 @@ async def get_presence(
 
     db = get_supabase()
     # Consider "active" if last_active_at is within the last 5 minutes
-    five_min_ago = datetime(2020, 1, 1, tzinfo=timezone.utc).isoformat()  # placeholder
     from datetime import timedelta
     five_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
 
