@@ -22,6 +22,8 @@ description: "Use this skill when diagnosing any API error — 422s, 500s, CORS 
 | CORS error in browser | Origin not in allowed list | Check main.py CORS config |
 | Data silently not saved | Schema mismatch or swallowed exception | Use schema-guard skill |
 | Webhook fires but DB unchanged | No error logging in handler | Add try/except with logging |
+| Chat sessions not appearing in inbox | Orphaned sessions — chat_messages rows with no matching conversations row | Check for sessions missing from conversations table; backfill or use INSERT ... ON CONFLICT DO NOTHING |
+| RLS enabled but writes silently fail | RLS policies missing on table | Check pg_policies for the table; add policies or use service_role key |
 
 ### Step 2: Check for Known Killers
 

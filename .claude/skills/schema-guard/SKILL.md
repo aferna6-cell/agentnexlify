@@ -37,6 +37,24 @@ Watch for these — they've all caused production bugs before:
 
 **IMPORTANT:** The leads table uses `client_id` (NOT `tenant_id`) and `status` (NOT `lead_stage`). Most other tables use `tenant_id`.
 
+### Step 3.5: Verify RLS Policies
+
+If the table has RLS enabled, verify that policies actually exist. RLS enabled + no policies = all anon/non-service-role INSERTs silently fail (zero rows inserted, no error).
+
+```sql
+-- Check if RLS is enabled
+SELECT relname, relrowsecurity FROM pg_class WHERE relname = 'TABLE_NAME';
+
+-- Check what policies exist
+SELECT tablename, policyname, cmd, roles FROM pg_policies WHERE tablename = 'TABLE_NAME';
+```
+
+If RLS is enabled but no policies exist for the relevant roles (anon, authenticated, service_role), either:
+1. Add appropriate RLS policies via migration
+2. Or ensure the code uses the service_role key for writes
+
+**This is the #1 silent failure class.** The MTOptions audit found 120 of 146 sessions silently failing due to this exact pattern.
+
 ### Step 4: Validate Before Committing
 Before finalizing any database-touching code:
 - [ ] Every column name in code matches the actual DB column name exactly

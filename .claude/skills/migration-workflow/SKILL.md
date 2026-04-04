@@ -53,7 +53,7 @@ SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' O
 
 1. **Creating migration file but not applying it** — This is the #1 failure mode. Features ship, schema doesn't exist, runtime errors.
 2. **Not documenting in schema-log.md** — Future sessions won't know the migration exists.
-3. **Conflicting migration numbers** — Always check existing files first.
+3. **Conflicting migration numbers** — Before creating migration NNN, run `ls migrations/NNN*.sql`. If a file exists at that number, use NNN+1. Duplicate migration numbers exist in this repo (005, 007, 066, 067, 068) and cannot be applied twice.
 4. **Missing RLS** — Every table needs RLS enabled and a tenant-scoped policy.
 5. **Not flagging in commit message** — Makes it hard to track which commits need schema changes.
 
