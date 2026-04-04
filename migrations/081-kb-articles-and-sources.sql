@@ -12,7 +12,7 @@ CREATE TABLE kb_articles (
     category TEXT NOT NULL,
     summary TEXT NOT NULL,
     content TEXT NOT NULL,
-    embedding vector(1024),
+    embedding vector(512),
     source_urls TEXT[] DEFAULT '{}',
     tags TEXT[] DEFAULT '{}',
     word_count INT DEFAULT 0,

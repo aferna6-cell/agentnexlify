@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
 VOYAGE_MODEL = "voyage-3-lite"
-EMBEDDING_DIM = 1024
+EMBEDDING_DIM = 512
 MAX_EMBED_CHARS = 32000  # ~8K tokens, safe limit for embedding input
 
 

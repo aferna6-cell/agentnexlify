@@ -18,7 +18,7 @@ def mock_httpx_response():
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.json.return_value = {
-        "data": [{"embedding": [0.1] * 1024}],
+        "data": [{"embedding": [0.1] * 512}],
         "usage": {"total_tokens": 50}
     }
     mock_resp.raise_for_status = MagicMock()
@@ -32,8 +32,8 @@ def mock_httpx_batch_response():
     mock_resp.status_code = 200
     mock_resp.json.return_value = {
         "data": [
-            {"embedding": [0.1] * 1024},
-            {"embedding": [0.2] * 1024},
+            {"embedding": [0.1] * 512},
+            {"embedding": [0.2] * 512},
         ],
         "usage": {"total_tokens": 100}
     }
@@ -55,7 +55,7 @@ async def test_embed_text_returns_1024_dim_vector(mock_httpx_response):
         result = await embed_text("test query about AI chatbots")
 
         assert isinstance(result, list)
-        assert len(result) == 1024
+        assert len(result) == 512
         assert all(isinstance(x, float) for x in result)
 
 
@@ -73,7 +73,7 @@ async def test_embed_batch_returns_multiple_vectors(mock_httpx_batch_response):
         result = await embed_batch(["text one", "text two"])
 
         assert len(result) == 2
-        assert all(len(v) == 1024 for v in result)
+        assert all(len(v) == 512 for v in result)
 
 
 @pytest.mark.asyncio
@@ -90,7 +90,7 @@ async def test_embed_text_truncates_long_input(mock_httpx_response):
         long_text = "word " * 10000  # ~50K chars
         result = await embed_text(long_text)
 
-        assert len(result) == 1024
+        assert len(result) == 512
         # Verify the API was called with truncated text
         call_args = mock_client.post.call_args
         payload = call_args[1]["json"] if "json" in call_args[1] else call_args[0][1]
