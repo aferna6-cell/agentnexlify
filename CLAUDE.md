@@ -47,6 +47,7 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 - `migrations/` — SQL migration files (001–064, some duplicate numbers at 005/007)
 - `chrome-extension/` — AI Review Responder Chrome Extension (manifest v3)
 - `docs/dev-knowledge/` — Knowledge base (bug-patterns.md, schema-log.md, architecture-decisions.md)
+- `knowledge-base/` — LLM-compiled knowledge base (`raw/` sources, `wiki/` compiled articles, pgvector embeddings)
 - `_archive/`, `landing-page-v2/`, `public/` — Legacy (do not touch)
 
 ## Common Commands
@@ -152,7 +153,7 @@ Before writing any database query, verify the column exists. When creating a mig
 
 ## Skills & Agents
 
-Skills in `.claude/skills/`: **schema-guard**, **debug-api**, **feature-build**, **widget-test**, **team-orchestration**, **industry-content**, **ai-feature-pattern**, **migration-workflow**, **build-loop**. Also `.codex/skills/` for repo-native skills.
+Skills in `.claude/skills/`: **schema-guard**, **debug-api**, **feature-build**, **widget-test**, **team-orchestration**, **industry-content**, **ai-feature-pattern**, **migration-workflow**, **build-loop**, **kb-discover**, **kb-ingest**, **kb-compile**, **kb-query**, **kb-health**. Also `.codex/skills/` for repo-native skills.
 
 Agents in `.claude/agents/`: **schema-guardian**, **backend-dev**, **frontend-dev**, **widget-specialist**, **qa-tester**, **devops**. Use `/delegate` to plan delegation. Agents communicate via `.claude/agent-comms/`.
 
@@ -168,6 +169,11 @@ High-level commands that orchestrate the full agent pipeline:
 | `/fix-bug` | Check known patterns → Diagnose → Fix → Verify → Document → Commit |
 | `/deploy` | QA + DevOps in parallel → Fix blockers → Final gate |
 | `/refactor` | Analyze → Plan → Execute incrementally → Verify → Commit |
+| `/kb-discover` | Search web for new articles relevant to AgentNexLiFy, score and ingest |
+| `/kb-ingest` | Manually add a URL or file to the knowledge base |
+| `/kb-compile` | Compile pending sources into wiki articles with embeddings |
+| `/kb-query` | Semantic Q&A against the knowledge base |
+| `/kb-health` | Audit wiki for staleness, gaps, contradictions |
 | `/checkpoint` | Save current session state to disk (survives compaction) |
 | `/recover` | Restore context after compaction or session restart |
 | `/summary` | Generate a comprehensive change summary with metrics and health check |
