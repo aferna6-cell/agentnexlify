@@ -24,8 +24,8 @@ def test_resend_webhook_route_is_registered():
 
     response = client.post("/api/v1/webhooks/resend", json={})
 
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid webhook signature"}
 
 
 def test_webhook_delivery_route_is_registered_and_returns_summary(mock_supabase, monkeypatch):
