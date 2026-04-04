@@ -9,7 +9,7 @@ os.environ["TESTING"] = "1"
 
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 import bcrypt
 import pytest
@@ -233,6 +233,8 @@ class TestChatEdgeCases:
                 "branding": None,
                 "is_online": True,
                 "offline_message": None,
+                "knowledge_base": "We offer plumbing repairs, replacements, and maintenance.",
+                "custom_instructions": "Keep answers short and helpful.",
             }],
             "tenants": [{
                 "id": "tenant-chat-001",
@@ -261,17 +263,19 @@ class TestChatEdgeCases:
             "leads": [],
         }
 
-    @patch("backend.routers.widget_chat.anthropic")
-    def test_chat_very_long_message(self, mock_anthropic, test_client):
+    @patch("backend.routers.widget_chat.call_claude_messages", new_callable=AsyncMock)
+    def test_chat_very_long_message(self, mock_call_claude, test_client):
         """Message at max_length (10000 chars) should be accepted."""
         client, db_mock = test_client
 
         _setup_table_mock(db_mock, self._widget_and_tenant_tables())
 
-        # Mock the Anthropic API response
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="I received your message!")]
-        mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+        mock_call_claude.return_value = MagicMock(
+            text="I received your message!",
+            duration_ms=111,
+            input_tokens=100,
+            output_tokens=20,
+        )
 
         long_message = "a" * 10000  # max_length boundary
 
@@ -284,6 +288,7 @@ class TestChatEdgeCases:
         data = response.json()
         assert data["session_id"] == "sess-long-msg"
         assert "response" in data
+        mock_call_claude.assert_awaited_once()
 
     def test_chat_invalid_api_key(self, test_client):
         """Chat with a non-existent API key returns 404."""

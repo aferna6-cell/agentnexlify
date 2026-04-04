@@ -31,6 +31,8 @@ def _make_widget_config(api_key=VALID_API_KEY, tenant_id=TENANT_ID):
         "position": "bottom-right",
         "booking_enabled": True,
         "is_online": True,
+        "knowledge_base": "We handle plumbing repairs, installs, and emergency visits.",
+        "custom_instructions": "Answer like a helpful front desk teammate.",
         "branding": {},
     }
 
@@ -195,8 +197,8 @@ class TestWidgetChat:
         # Should return 404 or error, not 500
         assert response.status_code in (404, 400, 403)
 
-    @patch("backend.routers.widget_chat.anthropic")
-    def test_chat_happy_path(self, mock_anthropic, test_client):
+    @patch("backend.routers.widget_chat.call_claude_messages", new_callable=AsyncMock)
+    def test_chat_happy_path(self, mock_call_claude, test_client):
         client, db_mock = test_client
 
         widget_config = _make_widget_config()
@@ -213,11 +215,12 @@ class TestWidgetChat:
             "menu_items": [],
         })
 
-        # Mock Anthropic response
-        mock_msg = MagicMock()
-        mock_msg.content = [MagicMock(text="I can help with your plumbing needs!")]
-        mock_msg.usage = MagicMock(input_tokens=100, output_tokens=50)
-        mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_msg
+        mock_call_claude.return_value = MagicMock(
+            text="I can help with your plumbing needs!",
+            duration_ms=123,
+            input_tokens=100,
+            output_tokens=50,
+        )
 
         response = client.post("/api/v1/widget/chat", json={
             "api_key": VALID_API_KEY,
@@ -227,6 +230,37 @@ class TestWidgetChat:
         assert response.status_code == 200
         data = response.json()
         assert "reply" in data or "response" in data or "message" in data
+        mock_call_claude.assert_awaited_once()
+
+    @patch("backend.routers.widget_chat.call_claude_messages", new_callable=AsyncMock)
+    def test_chat_first_greeting_shortcircuits(self, mock_call_claude, test_client):
+        client, db_mock = test_client
+
+        widget_config = _make_widget_config()
+        tenant = _make_tenant()
+        widget_config["knowledge_base"] = ""
+        widget_config["custom_instructions"] = ""
+
+        _setup_table_mock(db_mock, {
+            "widget_configs": [widget_config],
+            "tenants": [tenant],
+            "chat_messages": [],
+            "conversations": [],
+            "faq_entries": [],
+            "chat_flows": [],
+            "website_content": [],
+            "menu_items": [],
+        })
+
+        response = client.post("/api/v1/widget/chat", json={
+            "api_key": VALID_API_KEY,
+            "session_id": "sess-test-greeting",
+            "message": "Hello",
+        })
+
+        assert response.status_code == 200
+        assert response.json()["response"] == widget_config["greeting_message"]
+        mock_call_claude.assert_not_awaited()
 
 
 class TestWidgetHealth:

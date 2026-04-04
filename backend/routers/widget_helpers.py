@@ -21,6 +21,7 @@ from backend.models.database import get_supabase
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.services.lead_scoring import score_lead_background
+from backend.services.llm_runtime import call_claude_messages_sync, resolve_int_setting
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,74 @@ PHONE_RE = re.compile(
     r"[-.\s]?\d{2,4}"              # number group 3
     r"(?:[-.\s]?\d{1,4})?"         # optional group 4 (longer intl numbers)
 )
+
+_JOB_CONTEXT_KEYWORDS = (
+    "job", "jobs", "career", "careers", "hiring", "apply", "application",
+    "position", "positions", "employment", "work here", "opening", "open role",
+)
+_BID_CONTEXT_KEYWORDS = (
+    "quote", "estimate", "bid", "pricing", "price", "cost", "budget",
+    "proposal", "how much", "remodel", "install", "project",
+)
+
+
+def _truncate_for_prompt(text: str | None, limit: int) -> str:
+    cleaned = (text or "").strip()
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: max(limit - 3, 0)].rstrip() + "..."
+
+
+def _build_intent_window(current_message: str, history: list[dict[str, str]], max_user_messages: int = 2) -> str:
+    """Build a small, recent text window for cheap context-selection heuristics."""
+    recent_users = [
+        (msg.get("content") or "").lower()
+        for msg in history
+        if msg.get("role") == "user" and msg.get("content")
+    ]
+    recent_users = recent_users[-max_user_messages:]
+    recent_users.append((current_message or "").lower())
+    return " ".join(part for part in recent_users if part).strip()
+
+
+def _needs_job_context(intent_window: str) -> bool:
+    return any(keyword in intent_window for keyword in _JOB_CONTEXT_KEYWORDS)
+
+
+def _needs_bid_context(intent_window: str) -> bool:
+    return any(keyword in intent_window for keyword in _BID_CONTEXT_KEYWORDS)
+
+
+def _compact_messages_for_llm(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Keep the most relevant recent history while capping prompt size."""
+    if not messages:
+        return []
+
+    max_messages = resolve_int_setting("widget_prompt_history_messages", 8)
+    max_total_chars = resolve_int_setting("widget_prompt_history_chars", 2200)
+    max_message_chars = resolve_int_setting("widget_prompt_message_chars", 420)
+
+    recent = messages[-max_messages:]
+    compacted_reversed: list[dict[str, str]] = []
+    remaining_chars = max_total_chars
+
+    for msg in reversed(recent):
+        content = _truncate_for_prompt(msg.get("content"), max_message_chars)
+        if not content or remaining_chars <= 0:
+            continue
+
+        if len(content) > remaining_chars:
+            content = _truncate_for_prompt(content, remaining_chars)
+        if not content:
+            continue
+
+        compacted_reversed.append({
+            "role": msg.get("role") or "user",
+            "content": content,
+        })
+        remaining_chars -= len(content)
+
+    return list(reversed(compacted_reversed))
 
 # ---------------------------------------------------------------------------
 # In-memory TTL cache — reduces DB load on hot widget endpoints
@@ -370,13 +439,21 @@ def _build_system_prompt(
     business_name = tenant.get("business_name") or "our company"
     business_type = tenant.get("business_type") or ""
     city = tenant.get("city") or ""
+    faq_limit = resolve_int_setting("widget_prompt_faq_limit", 6)
+    corrections_limit = resolve_int_setting("widget_prompt_corrections_limit", 8)
+    website_chars = resolve_int_setting("widget_prompt_website_chars", 2500)
+    knowledge_chars = resolve_int_setting("widget_prompt_knowledge_chars", 3500)
 
     location = f" in {city}" if city else ""
     btype = f" ({business_type})" if business_type else ""
 
     faq_block = ""
     if faq_entries:
-        lines = [f"Q: {e['question']}\nA: {e['answer']}" for e in faq_entries]
+        lines = [
+            f"Q: {_truncate_for_prompt(e.get('question'), 160)}\n"
+            f"A: {_truncate_for_prompt(e.get('answer'), 280)}"
+            for e in faq_entries[:faq_limit]
+        ]
         faq_block = "\n\nFAQs:\n" + "\n\n".join(lines)
 
     hours_block = ""
@@ -385,22 +462,25 @@ def _build_system_prompt(
 
     corrections_block = ""
     if corrections:
-        lines = [f"- {c['correction']}" for c in corrections if c.get("correction")]
+        lines = [
+            f"- {_truncate_for_prompt(c.get('correction'), 200)}"
+            for c in corrections[:corrections_limit]
+            if c.get("correction")
+        ]
         if lines:
             corrections_block = "\n\nBusiness owner corrections (follow these closely):\n" + "\n".join(lines)
 
     website_block = ""
     if website_content:
-        # Truncate to keep system prompt reasonable (~8KB max for website content)
-        content = website_content[:8000]
-        if len(website_content) > 8000:
+        content = website_content[:website_chars]
+        if len(website_content) > website_chars:
             content += "\n[Content truncated]"
         website_block = f"\n\nBusiness website content (use this to answer questions about the business):\n{content}"
 
     knowledge_block = ""
     if knowledge_base:
-        kb_content = knowledge_base[:6000]
-        if len(knowledge_base) > 6000:
+        kb_content = knowledge_base[:knowledge_chars]
+        if len(knowledge_base) > knowledge_chars:
             kb_content += "\n[Content truncated]"
         knowledge_block = f"\n\nBusiness Knowledge Base (use this as primary reference for customer questions):\n{kb_content}"
 
@@ -548,9 +628,9 @@ def _build_system_prompt(
     return (
         f"{identity_line}\n\n"
         f"Rules:\n"
-        f"- Be helpful, friendly, and concise (2-3 sentences max)\n"
-        f"- Answer questions about the business using the FAQs and website content below\n"
-        f"- Lead capture: When a visitor asks about pricing, cost, free trial, getting started, or shows clear buying intent, naturally ask for their email to send details or get them started. Frame it helpfully, e.g. 'I can send you the full details — what email should I use?' or 'I can set that up for you. What's your email address?'\n"
+        f"- Be helpful, friendly, and concise (2-3 short sentences max)\n"
+        f"- Use the business context below to answer questions accurately\n"
+        f"- When someone shows clear buying intent, naturally ask for contact info so the team can follow up\n"
         f"- Don't ask for email on the first message, casual greetings, or simple questions. Wait for real interest or a question about services/pricing/trial.\n"
         f"- If they provide an email, thank them and move forward. Never ask for it again.\n"
         f"- NEVER re-ask for info already in the conversation. If they said their name, use it. If they gave email, move on.\n"
@@ -787,8 +867,8 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
     transcript = "\n".join(transcript_lines)
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = call_claude_messages_sync(
+            operation="widget.extract_tags",
             model=MODEL,
             max_tokens=200,
             temperature=0,
@@ -802,8 +882,10 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
                 "If no meaningful tags can be extracted, return []. Max 5 tags. Keep each tag under 40 chars."
             ),
             messages=[{"role": "user", "content": transcript}],
+            timeout=30.0,
+            metadata={"message_count": len(messages)},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
         # Handle cases where Claude wraps in markdown code block
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
@@ -856,8 +938,8 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
     transcript = "\n".join(transcript_lines)
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = call_claude_messages_sync(
+            operation="widget.categorize_conversation",
             model=MODEL,
             max_tokens=100,
             temperature=0,
@@ -868,8 +950,10 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
                 "If none match, return []. Use exact tag names from the list."
             ),
             messages=[{"role": "user", "content": transcript}],
+            timeout=30.0,
+            metadata={"tenant_id": tenant_id, "session_id": session_id, "tag_count": len(available_tags)},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         tags = json.loads(raw)
@@ -919,8 +1003,8 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
     transcript = "\n".join(transcript_lines)
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = call_claude_messages_sync(
+            operation="widget.extract_action_items",
             model=MODEL,
             max_tokens=300,
             temperature=0,
@@ -935,8 +1019,10 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
                 "If no action items exist, return []. Max 3 items."
             ),
             messages=[{"role": "user", "content": transcript}],
+            timeout=30.0,
+            metadata={"tenant_id": tenant_id, "session_id": session_id, "message_count": len(messages)},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         items = json.loads(raw)

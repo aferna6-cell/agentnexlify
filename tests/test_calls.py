@@ -641,6 +641,68 @@ class TestTranscriptionComplete:
 
 
 # ---------------------------------------------------------------------------
+# Voice respond tests
+# ---------------------------------------------------------------------------
+
+
+class TestVoiceRespond:
+    """Tests for POST /api/v1/calls/voice/respond."""
+
+    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls._find_tenant_by_phone")
+    def test_voice_respond_uses_llm_runtime(self, mock_find, mock_db, mock_call_claude):
+        mock_find.return_value = {
+            "id": "tenant-001",
+            "business_name": "Acme Plumbing",
+        }
+
+        mock_client = MagicMock()
+        mock_db.return_value = mock_client
+        _setup_table_mock(mock_client, {
+            "chat_messages": (
+                [{"role": "assistant", "content": "Thanks for calling Acme Plumbing!"}],
+                1,
+            ),
+            "tenants": (
+                [{
+                    "business_name": "Acme Plumbing",
+                    "business_type": "plumbing",
+                    "owner_email": "owner@acme.com",
+                }],
+                1,
+            ),
+            "faq_entries": (
+                [{"question": "Do you offer emergency service?", "answer": "Yes, 24/7."}],
+                1,
+            ),
+        })
+
+        mock_call_claude.return_value = MagicMock(
+            text="We can help with that. What address should we send the technician to?",
+            duration_ms=140,
+        )
+
+        form_data = urlencode({
+            "SpeechResult": "I need help with a leaking water heater.",
+            "CallSid": "CA-voice-001",
+            "From": "+15559998888",
+            "To": "+15551234567",
+        })
+
+        resp = client.post(
+            "/api/v1/calls/voice/respond?round=1",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "application/xml"
+        assert "What address should we send the technician to?" in resp.text
+        mock_call_claude.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
 # AI summary generation unit tests
 # ---------------------------------------------------------------------------
 
@@ -651,17 +713,15 @@ class TestGenerateCallSummary:
     @pytest.mark.asyncio
     @patch("backend.routers.calls.log_activity")
     @patch("backend.routers.calls.get_supabase")
-    @patch("backend.routers.calls.anthropic.Anthropic")
-    async def test_summary_parses_json_response(self, mock_anthropic_cls, mock_db, mock_activity):
+    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    async def test_summary_parses_json_response(self, mock_call_claude, mock_db, mock_activity):
         """Summary should parse Claude's JSON response and update the call."""
         from backend.routers.calls import _generate_call_summary
 
-        # Mock Claude response
-        mock_client_instance = MagicMock()
-        mock_anthropic_cls.return_value = mock_client_instance
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text='{"summary": "Caller asked about pricing.", "action_items": ["Send quote by Friday"], "sentiment": "positive", "follow_up": "Email pricing sheet"}')]
-        mock_client_instance.messages.create.return_value = mock_response
+        mock_call_claude.return_value = MagicMock(
+            text='{"summary": "Caller asked about pricing.", "action_items": ["Send quote by Friday"], "sentiment": "positive", "follow_up": "Email pricing sheet"}',
+            duration_ms=175,
+        )
 
         # Mock DB
         mock_client = MagicMock()
@@ -678,8 +738,7 @@ class TestGenerateCallSummary:
             transcript_text="Caller: How much for a kitchen remodel?",
         )
 
-        # Verify Claude was called
-        mock_client_instance.messages.create.assert_called_once()
+        mock_call_claude.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_summary_skips_empty_transcript(self):

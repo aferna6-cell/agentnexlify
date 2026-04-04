@@ -14,6 +14,18 @@ _DEV_FALLBACK_SECRET = "INSECURE-DEV-ONLY-CHANGE-ME-IN-PRODUCTION"
 
 class Settings(BaseSettings):
     anthropic_api_key: str = ""
+    widget_chat_model: str = "claude-sonnet-4-6"
+    widget_chat_max_tokens: int = 320
+    voice_chat_model: str = "claude-sonnet-4-6"
+    voice_chat_max_tokens: int = 160
+    widget_prompt_faq_limit: int = 6
+    widget_prompt_corrections_limit: int = 8
+    widget_prompt_website_chars: int = 2500
+    widget_prompt_knowledge_chars: int = 3500
+    widget_prompt_flow_chars: int = 1500
+    widget_prompt_history_messages: int = 8
+    widget_prompt_history_chars: int = 2200
+    widget_prompt_message_chars: int = 420
     supabase_url: str = ""
     supabase_key: str = ""
     supabase_service_key: str = ""

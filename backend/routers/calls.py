@@ -10,11 +10,9 @@ import json
 import logging
 import re
 from datetime import datetime, timezone
-from functools import partial
+from time import perf_counter
 from typing import Any
 from urllib.parse import parse_qs
-
-import anthropic
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -24,6 +22,11 @@ from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
+from backend.services.llm_runtime import (
+    call_claude_messages,
+    resolve_int_setting,
+    resolve_string_setting,
+)
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.automations import verify_twilio_request
@@ -261,20 +264,20 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
     )
 
     try:
-        client = anthropic.Anthropic(
-            api_key=settings.anthropic_api_key, timeout=30.0
+        llm_result = await call_claude_messages(
+            operation="calls.generate_summary",
+            model=resolve_string_setting("voice_chat_model", "claude-sonnet-4-6"),
+            max_tokens=max(600, resolve_int_setting("voice_chat_max_tokens", 160) * 3),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            timeout=30.0,
+            metadata={
+                "tenant_id": tenant_id,
+                "call_id": call_id,
+                "transcript_chars": len(transcript_text),
+            },
         )
-        loop = asyncio.get_running_loop()
-        resp = await loop.run_in_executor(
-            None,
-            partial(
-                client.messages.create,
-                model="claude-sonnet-4-6",
-                max_tokens=1000,
-                messages=[{"role": "user", "content": prompt}],
-            ),
-        )
-        raw_text = resp.content[0].text.strip()
+        raw_text = llm_result.text.strip()
     except Exception:
         logger.exception("Claude API call failed for call summary, call %s", call_id)
         return
@@ -481,6 +484,7 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
 
     After _MAX_VOICE_ROUNDS rounds or if no speech is detected, end with goodbye.
     """
+    request_started = perf_counter()
     body = await request.body()
 
     try:
@@ -569,6 +573,19 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         # Fall back to just this message
         conversation_messages = [{"role": "user", "content": speech_result}]
 
+    voice_history_limit = resolve_int_setting("widget_prompt_history_messages", 8)
+    voice_message_chars = min(resolve_int_setting("widget_prompt_message_chars", 420), 320)
+    compact_voice_history = []
+    for msg in conversation_messages[-voice_history_limit:]:
+        content = (msg.get("content") or "").strip()
+        if len(content) > voice_message_chars:
+            content = content[: voice_message_chars - 3].rstrip() + "..."
+        compact_voice_history.append({
+            "role": msg.get("role") or "user",
+            "content": content,
+        })
+    conversation_messages = compact_voice_history
+
     # Load business info for system prompt context
     business_info = ""
     try:
@@ -594,12 +611,13 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
             db.table("faq_entries")
             .select("question, answer")
             .eq("tenant_id", tenant_id)
-            .limit(10)
+            .limit(resolve_int_setting("widget_prompt_faq_limit", 6))
             .execute()
         )
         if faq_result.data:
             faq_text = "Frequently Asked Questions:\n" + "\n".join(
-                f"Q: {f['question']}\nA: {f['answer']}" for f in faq_result.data
+                f"Q: {(f.get('question') or '')[:160]}\nA: {(f.get('answer') or '')[:280]}"
+                for f in faq_result.data
             )
     except Exception:
         logger.warning("Failed to load FAQ for voice AI, tenant %s", tenant_id)
@@ -617,20 +635,30 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     # Call Claude for AI response
     ai_response = ""
     try:
-        client = anthropic.Anthropic(
-            api_key=settings.anthropic_api_key, timeout=30.0
+        llm_result = await call_claude_messages(
+            operation="calls.voice_respond",
+            model=resolve_string_setting("voice_chat_model", "claude-sonnet-4-6"),
+            max_tokens=resolve_int_setting("voice_chat_max_tokens", 160),
+            system=system_prompt,
+            messages=conversation_messages,
+            temperature=0.0,
+            timeout=30.0,
+            metadata={
+                "tenant_id": tenant_id,
+                "call_sid": call_sid,
+                "round": round_num,
+                "history_count": len(conversation_messages),
+                "faq_chars": len(faq_text),
+            },
         )
-        resp = await asyncio.get_running_loop().run_in_executor(
-            None,
-            partial(
-                client.messages.create,
-                model="claude-sonnet-4-6",
-                max_tokens=200,
-                system=system_prompt,
-                messages=conversation_messages,
-            ),
+        ai_response = llm_result.text.strip()
+        logger.info(
+            "voice_respond: llm_result call_sid=%s round=%d llm_ms=%d response_chars=%d",
+            call_sid,
+            round_num,
+            llm_result.duration_ms,
+            len(ai_response),
         )
-        ai_response = resp.content[0].text.strip()
     except Exception:
         logger.exception("Claude API call failed for voice respond, call %s", call_sid)
         ai_response = (
@@ -667,6 +695,12 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     next_round = round_num + 1
 
     twiml = _build_twiml_gather(ai_response, respond_url, next_round)
+    logger.info(
+        "voice_respond: timing_summary call_sid=%s total_ms=%d history_count=%d",
+        call_sid,
+        int((perf_counter() - request_started) * 1000),
+        len(conversation_messages),
+    )
     return Response(content=twiml, media_type="application/xml")
 
 

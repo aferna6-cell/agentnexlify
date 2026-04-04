@@ -1,0 +1,5 @@
+{"label":"first_greeting","message":"Hi there","max_sentences":3,"must_not_contain":["as an ai","i am an ai"],"notes":"Greeting should stay short and human-friendly."}
+{"label":"services_question","message":"What services do you offer?","max_sentences":3,"must_not_contain":["as an ai","i am an ai"],"notes":"Generic business question should stay concise."}
+{"label":"pricing_intent","message":"How much does it cost to get started?","max_sentences":3,"must_not_contain":["as an ai","i am an ai"],"must_contain_any":["email","details","help"],"notes":"High-intent pricing question should guide the visitor forward."}
+{"label":"handoff_request","message":"I want to speak with a real person.","max_sentences":3,"must_contain_any":["team member","real person","human"],"notes":"Human handoff request should acknowledge escalation."}
+{"label":"contact_capture","message":"My email is jane@example.com and my phone is 555-123-4567.","max_sentences":3,"must_not_contain":["as an ai","i am an ai"],"notes":"Assistant should acknowledge the contact details without re-asking."}
