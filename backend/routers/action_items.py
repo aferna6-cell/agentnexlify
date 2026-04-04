@@ -84,12 +84,8 @@ async def action_items_summary(
     pending = sum(1 for i in items if i["status"] == "pending")
     overdue = 0
     today = date.today().isoformat()
-    for item in items:
-        if item["status"] == "pending":
-            # Need due_date for overdue check — re-query with due_date
-            pass
 
-    # More efficient: query pending with due_date
+    # Query pending with due_date
     overdue_result = (
         db.table("action_items")
         .select("id", count="exact")

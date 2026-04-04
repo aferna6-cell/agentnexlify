@@ -210,11 +210,6 @@ async def book_appointment(request: Request, tenant_id: str, req: BookAppointmen
 # ── Dashboard endpoints (JWT-protected) ───────────────────────
 
 
-class DashboardBookRequest:
-    """Request model for dashboard-initiated appointment creation."""
-    pass
-
-
 from pydantic import BaseModel as _BaseModel
 
 

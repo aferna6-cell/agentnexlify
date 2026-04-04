@@ -25,9 +25,7 @@ POST /api/v1/onboarding/{tenant_id}/auto-kb
 import logging
 import re
 from datetime import datetime, timezone
-from html.parser import HTMLParser
 from typing import Any
-from urllib.parse import urljoin, urlparse
 
 import anthropic
 import httpx
@@ -542,6 +540,26 @@ async def auto_populate_kb(
 ):
     """Crawl a website URL and auto-generate KB + FAQs + custom instructions."""
     _verify_tenant(claims, tenant_id)
+
+    # SSRF prevention: validate URL before making any outbound requests
+    from urllib.parse import urlparse
+    import ipaddress
+    import socket
+    parsed_url = urlparse(req.url)
+    if parsed_url.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Only http and https URLs are allowed")
+    hostname = parsed_url.hostname or ""
+    if hostname in ("localhost", "0.0.0.0", ""):
+        raise HTTPException(status_code=400, detail="URL hostname is not allowed")
+    try:
+        resolved_ips = socket.getaddrinfo(hostname, None)
+        for _family, _type, _proto, _canonname, sockaddr in resolved_ips:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                raise HTTPException(status_code=400, detail="URL resolves to a private/reserved IP address")
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail="Could not resolve URL hostname")
+
     logger.info("auto_kb: starting for tenant=%s url=%s", tenant_id, req.url)
 
     # 1. Crawl the website

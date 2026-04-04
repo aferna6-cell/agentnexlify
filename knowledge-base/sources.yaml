@@ -1,0 +1,67 @@
+# Knowledge Base Discovery Manifest
+# Defines search queries, competitor blogs, and feeds per category.
+# /kb-discover reads this to find new articles.
+
+competitors:
+  search_queries:
+    - "GoHighLevel AI update 2026"
+    - "AI chatbot small business CRM"
+    - "Drillbit AI contractor"
+    - "Phonely AI receptionist"
+    - "Toma AI receptionist"
+    - "Birdeye AI reviews 2026"
+    - "Podium AI reviews"
+    - "Oscar Chat AI chatbot"
+    - "Tidio AI chatbot update"
+  blogs:
+    - https://www.gohighlevel.com/blog
+    - https://birdeye.com/blog
+    - https://www.podium.com/resources
+
+ai_llm:
+  search_queries:
+    - "Anthropic Claude new features 2026"
+    - "OpenAI GPT update 2026"
+    - "LLM context window improvements"
+    - "AI agent frameworks 2026"
+    - "structured output LLM"
+  blogs:
+    - https://www.anthropic.com/news
+    - https://openai.com/blog
+
+small_biz_saas:
+  search_queries:
+    - "small business SaaS churn 2026"
+    - "PLG small business"
+    - "vertical SaaS trends"
+
+verticals:
+  search_queries:
+    - "AI for contractors 2026"
+    - "dental practice management AI"
+    - "salon booking AI chatbot"
+    - "restaurant AI ordering"
+    - "legal intake AI"
+    - "real estate AI lead capture"
+
+technical:
+  search_queries:
+    - "prompt engineering best practices 2026"
+    - "RAG vs long context"
+    - "LLM streaming structured output"
+    - "AI agent tool use patterns"
+    - "pgvector semantic search"
+
+regulations:
+  search_queries:
+    - "HIPAA AI chatbot compliance"
+    - "TCPA SMS marketing rules 2026"
+    - "AI disclosure laws United States"
+    - "FTC AI guidelines"
+
+growth:
+  search_queries:
+    - "chat widget viral growth"
+    - "embedded SaaS distribution"
+    - "small business SEO AI"
+    - "GEO generative engine optimization"

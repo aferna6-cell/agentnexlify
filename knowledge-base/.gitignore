@@ -1,0 +1,8 @@
+# Large binaries — keep raw .md files tracked, ignore heavy media
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.zip

@@ -29,8 +29,8 @@ def _verify_resend_signature(payload_bytes: bytes, headers: dict) -> bool:
     becomes mandatory).
     """
     if not _RESEND_WEBHOOK_SECRET:
-        logger.warning("RESEND_WEBHOOK_SECRET not set — skipping signature verification")
-        return True
+        logger.error("RESEND_WEBHOOK_SECRET not set — rejecting webhook (misconfiguration)")
+        return False
 
     signature_header = headers.get("svix-signature", "")
     msg_id = headers.get("svix-id", "")
@@ -162,15 +162,16 @@ async def _handle_bounce(event_data: dict, event_type: str) -> None:
                 .eq("email", email_addr)
             )
 
-            # Scope to tenant if we identified one
+            # Scope to tenant if we identified one; skip if unknown to prevent cross-tenant update
             if tenant_id:
                 query = query.eq("client_id", tenant_id)
             else:
                 logger.warning(
                     "Could not determine tenant for bounce event — "
-                    "updating all leads with email %s",
+                    "skipping lead update for email %s to prevent cross-tenant write",
                     email_addr,
                 )
+                continue
 
             result = query.execute()
 

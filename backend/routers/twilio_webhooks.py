@@ -85,6 +85,11 @@ async def handle_missed_call(request: Request):
     """
     body = await request.body()
 
+    # Verify Twilio signature to prevent forged requests
+    if not _verify_twilio_signature(request, body):
+        logger.warning("Twilio signature verification failed for missed-call webhook")
+        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
+
     # Parse form data
     try:
         from urllib.parse import parse_qs
@@ -187,6 +192,11 @@ async def handle_inbound_sms(request: Request):
     AI chat engine and send the AI's response back via SMS.
     """
     body = await request.body()
+
+    # Verify Twilio signature to prevent forged requests
+    if not _verify_twilio_signature(request, body):
+        logger.warning("Twilio signature verification failed for sms-reply webhook")
+        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
 
     try:
         from urllib.parse import parse_qs

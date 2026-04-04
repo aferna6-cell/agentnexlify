@@ -1168,7 +1168,7 @@ async def bulk_send_invoices(
                     subject = f"Invoice {inv_num} from {biz_name}"
                     link_html = f'<a href="{payment_link}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Pay ${total:,.2f}</a>' if payment_link else f"<p>Amount due: ${total:,.2f}</p>"
                     html_body = f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'><h2>Invoice {inv_num}</h2><p>Hi {lead.get('name', 'there')},</p><p>You have an invoice from <strong>{biz_name}</strong> for <strong>${total:,.2f}</strong>.</p>{link_html}<p style='color:#6b7280;font-size:12px;margin-top:24px;'>-- {biz_name}</p></div>"
-                    send_email(to_email=lead["email"], subject=subject, html_body=html_body)
+                    await send_email(to=lead["email"], subject=subject, body_html=html_body, tenant_id=tenant_id)
                 except Exception:
                     logger.warning("Failed to email invoice %s", invoice_id, exc_info=True)
 
@@ -1177,7 +1177,7 @@ async def bulk_send_invoices(
                     msg = f"Hi {lead.get('name', 'there')}! Invoice {inv_num} for ${total:,.2f} from {biz_name}."
                     if payment_link:
                         msg += f" Pay here: {payment_link}"
-                    send_sms(to_phone=lead["phone"], body=msg, tenant_id=tenant_id)
+                    await send_sms(to=lead["phone"], body=msg)
                 except Exception:
                     logger.warning("Failed to SMS invoice %s", invoice_id, exc_info=True)
 

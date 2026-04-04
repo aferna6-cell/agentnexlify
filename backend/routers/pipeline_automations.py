@@ -6,11 +6,10 @@ When a lead moves to a pipeline stage, configured automations fire:
 - notify_team: Email the business owner / team about the stage change
 """
 
-import asyncio
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant

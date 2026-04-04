@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from backend.config import settings
-from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import build_unsubscribe_url, send_email

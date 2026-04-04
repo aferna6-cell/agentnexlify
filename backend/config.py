@@ -1,6 +1,15 @@
 
-import secrets
+import logging
+import os
+
 from pydantic_settings import BaseSettings
+
+_config_logger = logging.getLogger(__name__)
+
+# Deterministic dev-only fallback — production MUST set API_SECRET_KEY env var.
+# Using a random default causes each Uvicorn worker to generate a different key,
+# making JWTs non-portable across workers.
+_DEV_FALLBACK_SECRET = "INSECURE-DEV-ONLY-CHANGE-ME-IN-PRODUCTION"
 
 
 class Settings(BaseSettings):
@@ -12,13 +21,6 @@ class Settings(BaseSettings):
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_phone_number: str = ""
-
-    calendly_api_key: str = ""
-
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_pass: str = ""
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
@@ -32,7 +34,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
 
     widget_allowed_origins: str = "*"
-    api_secret_key: str = secrets.token_urlsafe(32)
+    # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
+    # so all workers share the same key, but it is NOT secure for production use.
+    api_secret_key: str = _DEV_FALLBACK_SECRET
     sentry_dsn: str = ""
 
     google_client_id: str = ""
@@ -41,12 +45,20 @@ class Settings(BaseSettings):
 
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
+    voyage_api_key: str = ""
+    openrouter_api_key: str = ""
 
     facebook_app_id: str = ""
     facebook_app_secret: str = ""
     facebook_verify_token: str = ""
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()
+
+if settings.api_secret_key == _DEV_FALLBACK_SECRET:
+    _config_logger.warning(
+        "API_SECRET_KEY is not set — using insecure dev-only fallback. "
+        "Set the API_SECRET_KEY environment variable before deploying to production!"
+    )

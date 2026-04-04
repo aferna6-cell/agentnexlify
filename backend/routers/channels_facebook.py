@@ -25,6 +25,7 @@ import hashlib
 import hmac
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -60,6 +61,35 @@ class FacebookStatusResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+_JWT_ALGORITHM = "HS256"
+_STATE_TOKEN_EXPIRY_MINUTES = 10
+
+
+def _encode_oauth_state(tenant_id: str) -> str:
+    """Create a short-lived signed JWT encoding the tenant_id for OAuth state."""
+    from jose import jwt
+
+    payload = {
+        "tenant_id": tenant_id,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
+    }
+    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+
+
+def _decode_oauth_state(state: str) -> str:
+    """Validate the OAuth state token and return the tenant_id."""
+    from jose import JWTError, jwt
+
+    try:
+        payload = jwt.decode(state, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+        tenant_id = payload.get("tenant_id")
+        if not tenant_id:
+            raise HTTPException(status_code=400, detail="Invalid state: missing tenant_id")
+        return tenant_id
+    except JWTError as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired state parameter") from exc
 
 
 def _verify_fb_signature(raw_body: bytes, signature_header: str | None) -> bool:
@@ -237,7 +267,7 @@ async def facebook_oauth_callback(
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing code or state parameter")
 
-    tenant_id = state
+    tenant_id = _decode_oauth_state(state)
 
     app_id = getattr(settings, "facebook_app_id", "")
     app_secret = getattr(settings, "facebook_app_secret", "")
@@ -399,12 +429,13 @@ async def get_facebook_auth_url(
 
     redirect_uri = f"{settings.api_url}/api/v1/channels/facebook/callback"
     scopes = "pages_messaging,pages_manage_metadata"
+    state = _encode_oauth_state(tenant_id)
 
     auth_url = (
         f"https://www.facebook.com/dialog/oauth"
         f"?client_id={app_id}"
         f"&redirect_uri={redirect_uri}"
-        f"&state={tenant_id}"
+        f"&state={state}"
         f"&scope={scopes}"
         f"&response_type=code"
     )

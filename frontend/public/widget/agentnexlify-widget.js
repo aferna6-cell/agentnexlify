@@ -8,8 +8,7 @@
   // --- Configuration ---
   const scriptTag = document.currentScript;
   const API_KEY = scriptTag?.getAttribute("data-api-key") || "";
-  const BRAND_COLOR =
-    scriptTag?.getAttribute("data-brand-color") || "#6cff5c";
+  const BRAND_COLOR = scriptTag?.getAttribute("data-brand-color") || "#6cff5c";
   const API_BASE =
     scriptTag?.getAttribute("data-api-base") ||
     scriptTag?.src?.replace(/\/widget\/agentnexlify-widget\.js.*$/, "") ||
@@ -784,7 +783,8 @@
   let agentName = "Agent";
   let greetingMessage = "";
   let widgetIsOnline = true;
-  let offlineMessage = "We are currently offline. Leave your details and we\u2019ll get back to you soon!";
+  let offlineMessage =
+    "We are currently offline. Leave your details and we\u2019ll get back to you soon!";
 
   // Teaser state
   let teaserMessage = "";
@@ -809,7 +809,7 @@
   async function fetchConfig() {
     try {
       const resp = await fetch(
-        `${API_BASE}/api/v1/widget/config/${encodeURIComponent(API_KEY)}`
+        `${API_BASE}/api/v1/widget/config/${encodeURIComponent(API_KEY)}`,
       );
       if (!resp.ok) return;
       const data = await resp.json();
@@ -822,8 +822,10 @@
       if (data.greeting_message) greetingMessage = data.greeting_message;
       if (data.offline_message) offlineMessage = data.offline_message;
       if (data.teaser_message) teaserMessage = data.teaser_message;
-      if (data.teaser_delay_seconds !== undefined) teaserDelaySeconds = data.teaser_delay_seconds;
-      if (data.teaser_enabled !== undefined) teaserEnabled = data.teaser_enabled;
+      if (data.teaser_delay_seconds !== undefined)
+        teaserDelaySeconds = data.teaser_delay_seconds;
+      if (data.teaser_enabled !== undefined)
+        teaserEnabled = data.teaser_enabled;
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
       }
@@ -857,7 +859,9 @@
 
   async function sendMessage(text) {
     if (!API_KEY || !API_BASE) {
-      throw new Error("Widget not configured: missing data-api-key or data-api-base");
+      throw new Error(
+        "Widget not configured: missing data-api-key or data-api-base",
+      );
     }
     const resp = await fetch(`${API_BASE}/api/v1/widget/chat`, {
       method: "POST",
@@ -888,7 +892,7 @@
     const sid = getSessionId();
     const resp = await fetch(
       `${API_BASE}/api/v1/widget/upload?api_key=${encodeURIComponent(API_KEY)}&session_id=${encodeURIComponent(sid)}`,
-      { method: "POST", body: formData }
+      { method: "POST", body: formData },
     );
     if (!resp.ok) {
       const err = await resp.text().catch(() => "");
@@ -951,46 +955,65 @@
 
   function _inlineMd(s) {
     // Escape HTML entities first to prevent XSS
-    s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    s = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     // Bold **text**
-    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
     // Italic *text* (only when not inside bold)
-    s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+    s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
     // Links [text](url) — only https?:// to prevent XSS
-    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    s = s.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    );
     return s;
   }
 
   function _renderMd(text) {
-    const lines = (text || '').split('\n');
+    const lines = (text || "").split("\n");
     const out = [];
     let inList = false;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
-        if (!inList) { out.push('<ul style="margin:4px 0;padding-left:18px;">'); inList = true; }
-        const content = trimmed.replace(/^[-*]\s|^\d+\.\s/, '');
-        out.push('<li>' + _inlineMd(content) + '</li>');
+      if (
+        trimmed.startsWith("- ") ||
+        trimmed.startsWith("* ") ||
+        /^\d+\.\s/.test(trimmed)
+      ) {
+        if (!inList) {
+          out.push('<ul style="margin:4px 0;padding-left:18px;">');
+          inList = true;
+        }
+        const content = trimmed.replace(/^[-*]\s|^\d+\.\s/, "");
+        out.push("<li>" + _inlineMd(content) + "</li>");
       } else {
-        if (inList) { out.push('</ul>'); inList = false; }
-        if (trimmed === '') {
+        if (inList) {
+          out.push("</ul>");
+          inList = false;
+        }
+        if (trimmed === "") {
           // Skip empty lines at start/end, convert internal empty lines to spacing
-          if (out.length > 0 && out[out.length - 1] !== '<br>') out.push('<br>');
+          if (out.length > 0 && out[out.length - 1] !== "<br>")
+            out.push("<br>");
         } else {
           out.push(_inlineMd(line));
           // Add line break after non-empty lines (except before list items)
-          const nextTrimmed = (lines[i + 1] || '').trim();
-          if (nextTrimmed && !nextTrimmed.startsWith('- ') && !nextTrimmed.startsWith('* ') && !/^\d+\.\s/.test(nextTrimmed)) {
-            out.push('<br>');
+          const nextTrimmed = (lines[i + 1] || "").trim();
+          if (
+            nextTrimmed &&
+            !nextTrimmed.startsWith("- ") &&
+            !nextTrimmed.startsWith("* ") &&
+            !/^\d+\.\s/.test(nextTrimmed)
+          ) {
+            out.push("<br>");
           }
         }
       }
     }
-    if (inList) out.push('</ul>');
+    if (inList) out.push("</ul>");
     // Remove trailing <br>
-    while (out.length && out[out.length - 1] === '<br>') out.pop();
-    return out.join('');
+    while (out.length && out[out.length - 1] === "<br>") out.pop();
+    return out.join("");
   }
 
   // --- DOM helpers ---
@@ -1000,7 +1023,10 @@
     div.className = `anx-msg ${role}`;
 
     if (attachment) {
-      if (attachment.content_type && attachment.content_type.startsWith("image/")) {
+      if (
+        attachment.content_type &&
+        attachment.content_type.startsWith("image/")
+      ) {
         const img = document.createElement("img");
         img.src = attachment.url;
         img.alt = attachment.filename || "Image";
@@ -1023,7 +1049,7 @@
         div.appendChild(p);
       }
     } else {
-      if (role === 'assistant') {
+      if (role === "assistant") {
         div.innerHTML = _renderMd(text);
       } else {
         div.textContent = text;
@@ -1041,11 +1067,19 @@
         const btn = document.createElement("button");
         btn.textContent = label;
         btn.className = "anx-fb-btn";
-        btn.style.cssText = "background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;opacity:0.5;transition:opacity 0.2s;";
-        btn.onmouseenter = () => { btn.style.opacity = "1"; };
-        btn.onmouseleave = () => { if (!btn.dataset.selected) btn.style.opacity = "0.5"; };
+        btn.style.cssText =
+          "background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;opacity:0.5;transition:opacity 0.2s;";
+        btn.onmouseenter = () => {
+          btn.style.opacity = "1";
+        };
+        btn.onmouseleave = () => {
+          if (!btn.dataset.selected) btn.style.opacity = "0.5";
+        };
         btn.onclick = () => {
-          fbRow.querySelectorAll(".anx-fb-btn").forEach(b => { b.dataset.selected = ""; b.style.opacity = "0.5"; });
+          fbRow.querySelectorAll(".anx-fb-btn").forEach((b) => {
+            b.dataset.selected = "";
+            b.style.opacity = "0.5";
+          });
           btn.dataset.selected = "1";
           btn.style.opacity = "1";
           sendFeedback(currentIndex, rating);
@@ -1086,7 +1120,8 @@
       bar.style.cssText =
         "padding:10px 16px;text-align:center;background:#1a1a25;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;";
       const btn = document.createElement("a");
-      btn.href = API_BASE.replace(/\/api.*$/, "").replace(/:\d+$/, "") + "/pricing";
+      btn.href =
+        API_BASE.replace(/\/api.*$/, "").replace(/:\d+$/, "") + "/pricing";
       btn.target = "_blank";
       btn.rel = "noopener";
       btn.textContent = "Upgrade Now";
@@ -1137,7 +1172,10 @@
       const msgs = document.getElementById("anx-messages");
       if (msgs && msgs.children.length === 0) triggerGreeting();
       hideTeaser();
-      if (teaserTimer) { clearTimeout(teaserTimer); teaserTimer = null; }
+      if (teaserTimer) {
+        clearTimeout(teaserTimer);
+        teaserTimer = null;
+      }
     } else {
       win.classList.remove("open");
       bubble.classList.remove("hidden");
@@ -1157,12 +1195,12 @@
     sessionStorage.setItem("anx_teaser_shown", "1");
     teaser.style.display = "block";
 
-    document.getElementById("anx-teaser-close").onclick = function(e) {
+    document.getElementById("anx-teaser-close").onclick = function (e) {
       e.stopPropagation();
       teaser.style.display = "none";
     };
 
-    teaser.onclick = function(e) {
+    teaser.onclick = function (e) {
       if (e.target.id === "anx-teaser-close") return;
       teaser.style.display = "none";
       toggleWindow(true);
@@ -1180,11 +1218,18 @@
     if (!text || isLoading) return;
 
     // Booking intent detection
-    if (bookingEnabled && tenantId && /\b(book|appointment|schedule|available|booking)\b/i.test(text)) {
+    if (
+      bookingEnabled &&
+      tenantId &&
+      /\b(book|appointment|schedule|available|booking)\b/i.test(text)
+    ) {
       input.value = "";
       input.style.height = "auto";
       addMessage("user", text);
-      addMessage("assistant", "I can help you book an appointment! Let me show you our available times.");
+      addMessage(
+        "assistant",
+        "I can help you book an appointment! Let me show you our available times.",
+      );
       setTimeout(() => showBooking("date"), 500);
       return;
     }
@@ -1216,7 +1261,7 @@
       hideTyping();
       addMessage(
         "assistant",
-        "Sorry, I'm having trouble connecting. Please try again in a moment!"
+        "Sorry, I'm having trouble connecting. Please try again in a moment!",
       );
       console.error("AgentNexLiFy: Send failed", e);
     } finally {
@@ -1233,7 +1278,10 @@
     fileInput.value = ""; // Reset so same file can be selected again
 
     if (file.size > 5 * 1024 * 1024) {
-      addMessage("assistant", "File is too large. Please send files under 5 MB.");
+      addMessage(
+        "assistant",
+        "File is too large. Please send files under 5 MB.",
+      );
       return;
     }
 
@@ -1254,7 +1302,9 @@
       document.getElementById("anx-send").disabled = true;
       showTyping();
 
-      const data = await sendMessage(`[Attached file: ${result.filename}] ${result.url}`);
+      const data = await sendMessage(
+        `[Attached file: ${result.filename}] ${result.url}`,
+      );
       hideTyping();
       addMessage("assistant", data.response);
 
@@ -1264,7 +1314,10 @@
     } catch (e) {
       if (uploadingMsg.parentNode) msgs.removeChild(uploadingMsg);
       hideTyping();
-      addMessage("assistant", "Sorry, I couldn't upload that file. Please try again.");
+      addMessage(
+        "assistant",
+        "Sorry, I couldn't upload that file. Please try again.",
+      );
       console.error("AgentNexLiFy: File upload failed", e);
     } finally {
       isLoading = false;
@@ -1312,11 +1365,26 @@
 
     const year = viewMonth.getFullYear();
     const month = viewMonth.getMonth();
-    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDow = new Date(year, month, 1).getDay();
-    const today = new Date(); today.setHours(0,0,0,0);
-    const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + bookingMaxDays);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + bookingMaxDays);
 
     let html = `<button class="anx-booking-back" onclick="document.getElementById('anx-booking').__anxBack()">&#8592; Back to chat</button>`;
     html += `<div class="anx-booking-title">Select a Date</div>`;
@@ -1326,19 +1394,24 @@
     html += `<button class="anx-cal-nav" data-dir="1">&#8250;</button>`;
     html += `</div>`;
     html += `<div class="anx-cal-grid">`;
-    ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(d => { html += `<div class="anx-cal-dow">${d}</div>`; });
-    for (let i = 0; i < firstDow; i++) html += `<button class="anx-cal-day empty"></button>`;
+    ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].forEach((d) => {
+      html += `<div class="anx-cal-dow">${d}</div>`;
+    });
+    for (let i = 0; i < firstDow; i++)
+      html += `<button class="anx-cal-day empty"></button>`;
     for (let d = 1; d <= daysInMonth; d++) {
       const dt = new Date(year, month, d);
       const isPast = dt < today;
       const isBeyond = dt > maxDate;
       const isToday = dt.getTime() === today.getTime();
-      const isSel = selectedDate && dt.toDateString() === new Date(selectedDate).toDateString();
+      const isSel =
+        selectedDate &&
+        dt.toDateString() === new Date(selectedDate).toDateString();
       let cls = "anx-cal-day";
       if (isPast || isBeyond) cls += " disabled";
       if (isToday) cls += " today";
       if (isSel) cls += " selected";
-      html += `<button class="${cls}" data-date="${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}">${d}</button>`;
+      html += `<button class="${cls}" data-date="${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}">${d}</button>`;
     }
     html += `</div>`;
 
@@ -1348,7 +1421,7 @@
     booking.__anxBack = () => showBooking(null);
 
     // Month nav
-    booking.querySelectorAll(".anx-cal-nav").forEach(btn => {
+    booking.querySelectorAll(".anx-cal-nav").forEach((btn) => {
       btn.addEventListener("click", () => {
         const dir = parseInt(btn.dataset.dir);
         const nv = new Date(year, month + dir, 1);
@@ -1358,22 +1431,26 @@
     });
 
     // Day selection
-    booking.querySelectorAll(".anx-cal-day:not(.disabled):not(.empty)").forEach(btn => {
-      btn.addEventListener("click", () => {
-        selectedDate = btn.dataset.date;
-        showBooking("slots");
+    booking
+      .querySelectorAll(".anx-cal-day:not(.disabled):not(.empty)")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedDate = btn.dataset.date;
+          showBooking("slots");
+        });
       });
-    });
   }
 
   async function renderSlots() {
     const booking = document.getElementById("anx-booking");
     booking.innerHTML = `<button class="anx-booking-back" onclick="document.getElementById('anx-booking').__anxBack()">&#8592; Back</button><div class="anx-booking-title">Available Times</div><div class="anx-slots-empty">Loading...</div>`;
-    booking.__anxBack = () => { showBooking("date"); };
+    booking.__anxBack = () => {
+      showBooking("date");
+    };
 
     try {
       const resp = await fetch(
-        `${API_BASE}/api/v1/appointments/slots/${tenantId}?date=${selectedDate}&api_key=${encodeURIComponent(API_KEY)}`
+        `${API_BASE}/api/v1/appointments/slots/${tenantId}?date=${selectedDate}&api_key=${encodeURIComponent(API_KEY)}`,
       );
       if (!resp.ok) throw new Error("Failed to fetch slots");
       const data = await resp.json();
@@ -1397,12 +1474,16 @@
     }
 
     booking.innerHTML = html;
-    booking.__anxBack = () => { showBooking("date"); };
+    booking.__anxBack = () => {
+      showBooking("date");
+    };
 
-    booking.querySelectorAll(".anx-slot-btn").forEach(btn => {
+    booking.querySelectorAll(".anx-slot-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         selectedSlot = availableSlots[parseInt(btn.dataset.idx)];
-        booking.querySelectorAll(".anx-slot-btn").forEach(b => b.classList.remove("selected"));
+        booking
+          .querySelectorAll(".anx-slot-btn")
+          .forEach((b) => b.classList.remove("selected"));
         btn.classList.add("selected");
         setTimeout(() => showBooking("form"), 300);
       });
@@ -1417,23 +1498,28 @@
     html += `<div class="anx-form-group"><label class="anx-form-label">Name *</label><input class="anx-form-input" id="anx-book-name" placeholder="Your name" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Email *</label><input class="anx-form-input" id="anx-book-email" type="email" placeholder="your@email.com" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Phone</label><input class="anx-form-input" id="anx-book-phone" type="tel" placeholder="(optional)"></div>`;
-    const reasonPlaceholder = {
-      legal: "e.g. Initial Consultation, Case Review, Document Review",
-      dental: "e.g. Cleaning, Checkup, Consultation",
-      medical: "e.g. Annual Physical, Follow-up, Consultation",
-      salon: "e.g. Haircut, Coloring, Styling",
-      restaurant: "e.g. Reservation, Private Event",
-      contractor: "e.g. Estimate, Inspection, Repair",
-    }[businessType] || "e.g. Consultation, Service, Follow-up";
+    const reasonPlaceholder =
+      {
+        legal: "e.g. Initial Consultation, Case Review, Document Review",
+        dental: "e.g. Cleaning, Checkup, Consultation",
+        medical: "e.g. Annual Physical, Follow-up, Consultation",
+        salon: "e.g. Haircut, Coloring, Styling",
+        restaurant: "e.g. Reservation, Private Event",
+        contractor: "e.g. Estimate, Inspection, Repair",
+      }[businessType] || "e.g. Consultation, Service, Follow-up";
     html += `<div class="anx-form-group"><label class="anx-form-label">Reason for Visit</label><input class="anx-form-input" id="anx-book-reason" placeholder="${reasonPlaceholder}"></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Notes</label><input class="anx-form-input" id="anx-book-notes" placeholder="(optional)"></div>`;
     html += `<button class="anx-book-submit" id="anx-book-confirm">Confirm Appointment</button>`;
     html += `<div id="anx-book-error" style="color:#ff4444;font-size:12px;text-align:center;display:none;"></div>`;
 
     booking.innerHTML = html;
-    booking.__anxBack = () => { showBooking("slots"); };
+    booking.__anxBack = () => {
+      showBooking("slots");
+    };
 
-    document.getElementById("anx-book-confirm").addEventListener("click", submitBooking);
+    document
+      .getElementById("anx-book-confirm")
+      .addEventListener("click", submitBooking);
   }
 
   async function submitBooking() {
@@ -1442,7 +1528,9 @@
     const phone = document.getElementById("anx-book-phone").value.trim();
     const reason = document.getElementById("anx-book-reason").value.trim();
     const rawNotes = document.getElementById("anx-book-notes").value.trim();
-    const notes = [reason ? `Service: ${reason}` : "", rawNotes].filter(Boolean).join(" | ");
+    const notes = [reason ? `Service: ${reason}` : "", rawNotes]
+      .filter(Boolean)
+      .join(" | ");
     const errEl = document.getElementById("anx-book-error");
     const btn = document.getElementById("anx-book-confirm");
 
@@ -1472,7 +1560,8 @@
       });
 
       if (resp.status === 409) {
-        errEl.textContent = "This slot was just taken. Please select another time.";
+        errEl.textContent =
+          "This slot was just taken. Please select another time.";
         errEl.style.display = "block";
         btn.disabled = false;
         btn.textContent = "Confirm Appointment";
@@ -1510,7 +1599,12 @@
 
   function formatBookingDate(dateStr) {
     const d = new Date(dateStr + "T12:00:00");
-    return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
   }
 
   // --- Offline Mode ---
@@ -1533,7 +1627,7 @@
     }
 
     form.innerHTML = `
-      <div class="anx-offline-msg">${offlineMessage}</div>
+      <div class="anx-offline-msg">${_esc(offlineMessage)}</div>
       <div class="anx-form-group">
         <label class="anx-form-label">Name *</label>
         <input class="anx-form-input" id="anx-offline-name" placeholder="Your name" required>
@@ -1555,7 +1649,9 @@
     `;
     form.style.display = "flex";
 
-    document.getElementById("anx-offline-submit").addEventListener("click", submitOfflineForm);
+    document
+      .getElementById("anx-offline-submit")
+      .addEventListener("click", submitOfflineForm);
   }
 
   async function submitOfflineForm() {
@@ -1596,11 +1692,13 @@
         <div class="anx-offline-success">
           <div class="anx-offline-success-icon">&#10003;</div>
           <div class="anx-confirm-title">Message Sent!</div>
-          <div class="anx-confirm-detail" style="margin-top:8px;">Thank you, ${name}. We'll get back to you soon.</div>
+          <div class="anx-confirm-detail" style="margin-top:8px;">Thank you, ${_esc(name)}. We'll get back to you soon.</div>
           <button class="anx-confirm-back" id="anx-offline-reset" style="margin-top:16px;">Send Another Message</button>
         </div>
       `;
-      document.getElementById("anx-offline-reset").addEventListener("click", showOfflineForm);
+      document
+        .getElementById("anx-offline-reset")
+        .addEventListener("click", showOfflineForm);
     } catch (e) {
       console.error("AgentNexLiFy: Offline form submit failed", e);
       errEl.textContent = "Something went wrong. Please try again.";
@@ -1626,17 +1724,30 @@
     // Offline mode — show contact form instead of chat
     if (!widgetIsOnline) {
       const statusEl = document.querySelector("#anx-header-text p");
-      if (statusEl) statusEl.innerHTML = '<span class="anx-header-status" style="background:#ef4444;"></span>Currently offline';
+      if (statusEl)
+        statusEl.innerHTML =
+          '<span class="anx-header-status" style="background:#ef4444;"></span>Currently offline';
       showOfflineForm();
       // Still wire up open/close
-      document.getElementById("anx-bubble").addEventListener("click", () => toggleWindow(true));
-      document.getElementById("anx-minimize").addEventListener("click", () => toggleWindow(false));
-      document.getElementById("anx-close").addEventListener("click", () => toggleWindow(false));
+      document
+        .getElementById("anx-bubble")
+        .addEventListener("click", () => toggleWindow(true));
+      document
+        .getElementById("anx-minimize")
+        .addEventListener("click", () => toggleWindow(false));
+      document
+        .getElementById("anx-close")
+        .addEventListener("click", () => toggleWindow(false));
       // Auto-open after 5s
       const savedState = localStorage.getItem(STATE_KEY);
       if (savedState === "open") toggleWindow(true);
       else if (savedState !== "closed") {
-        setTimeout(() => { if (!isOpen && !hasAutoOpened) { hasAutoOpened = true; toggleWindow(true); } }, 5000);
+        setTimeout(() => {
+          if (!isOpen && !hasAutoOpened) {
+            hasAutoOpened = true;
+            toggleWindow(true);
+          }
+        }, 5000);
       }
       return; // Skip chat setup
     }
@@ -1677,14 +1788,14 @@
     document
       .getElementById("anx-close")
       .addEventListener("click", () => toggleWindow(false));
-    document
-      .getElementById("anx-send")
-      .addEventListener("click", handleSend);
+    document.getElementById("anx-send").addEventListener("click", handleSend);
 
     // File attachment
     document
       .getElementById("anx-attach")
-      .addEventListener("click", () => document.getElementById("anx-file-input").click());
+      .addEventListener("click", () =>
+        document.getElementById("anx-file-input").click(),
+      );
     document
       .getElementById("anx-file-input")
       .addEventListener("change", handleFileUpload);
@@ -1713,7 +1824,11 @@
 
     // Show teaser bubble after configured delay if enabled, widget is closed, not yet shown this session,
     // and a teaser_message has been configured.
-    if (teaserEnabled && teaserMessage && !sessionStorage.getItem("anx_teaser_shown")) {
+    if (
+      teaserEnabled &&
+      teaserMessage &&
+      !sessionStorage.getItem("anx_teaser_shown")
+    ) {
       teaserTimer = setTimeout(showTeaser, teaserDelaySeconds * 1000);
     }
   }
@@ -1723,7 +1838,7 @@
     if (!msgs || msgs.children.length > 0) return;
     addMessage(
       "assistant",
-      greetingMessage || "Hey there! How can I help you today?"
+      greetingMessage || "Hey there! How can I help you today?",
     );
   }
 
