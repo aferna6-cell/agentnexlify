@@ -41,6 +41,8 @@ class Settings(BaseSettings):
 
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
+    voyage_api_key: str = ""
+    openrouter_api_key: str = ""
 
     facebook_app_id: str = ""
     facebook_app_secret: str = ""
