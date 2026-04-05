@@ -1,20 +1,23 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project": "AgentNexLiFy",
-  "description": "AI-powered business automation platform. Chat widget captures leads, books appointments, and automates follow-ups for small businesses.",
-  "updated_at": "2026-04-03",
+  "description": "AI-powered business automation platform for small businesses. Includes customer-facing AI, automations, an embeddable widget, MCP access, and a multi-agent development system.",
+  "updated_at": "2026-04-05",
   "documentation": {
     "primary": "CLAUDE.md",
-    "agents_guide": "AGENTS.md",
+    "codex_adapter": "AGENTS.md",
+    "ai_architecture_audit": "docs/AI_ARCHITECTURE_AUDIT.md",
+    "agent_system_plan": "docs/AGENT_SYSTEM_PLAN.md",
     "architecture": "docs/dev-knowledge/architecture-decisions.md",
     "schema_log": "docs/dev-knowledge/schema-log.md",
     "bug_patterns": "docs/dev-knowledge/bug-patterns.md"
   },
   "tech_stack": {
     "backend": "FastAPI (Python 3.11, Pydantic, Supabase Python client)",
-    "frontend": "React (Vite, Tailwind CSS, Recharts)",
-    "database": "Supabase (PostgreSQL with RLS)",
-    "ai": "Anthropic Claude API (claude-sonnet-4-6)",
+    "frontend": "React (Vite, dashboard + marketing/public pages)",
+    "database": "Supabase/PostgreSQL with RLS",
+    "runtime_ai": "Anthropic Claude API",
+    "embeddings": "Voyage AI",
     "email": "Resend",
     "sms": "Twilio",
     "payments": "Stripe",
@@ -25,241 +28,184 @@
   },
   "directory_map": {
     "backend/": "FastAPI service (main.py, routers/, services/)",
-    "frontend/": "React/Vite dashboard (src/pages/, src/utils/api.js)",
+    "frontend/": "React/Vite dashboard and public pages",
     "widget/": "Embeddable chat widget (must mirror frontend/public/widget/)",
-    "frontend/public/widget/": "Widget mirror (must be identical to widget/)",
-    "migrations/": "SQL migration files (001-064)",
-    "demo-platform/": "Separate demo/sales app (isolated from production)",
-    "chrome-extension/": "AI Review Responder Chrome Extension",
-    "docs/dev-knowledge/": "Knowledge base",
-    "_archive/": "Retired code (do not touch)",
-    "landing-page-v2/": "Legacy frontend (do not touch)",
-    "public/": "Legacy widget (do not touch)"
-  },
-  "commands": {
-    "backend_dev": "uvicorn backend.main:app --reload --port 8000",
-    "frontend_dev": "cd frontend && npm run dev",
-    "frontend_build": "cd frontend && npm run build",
-    "demo_platform": "cd demo-platform && npm start"
+    "frontend/public/widget/": "Widget mirror — keep identical to widget/",
+    "migrations/": "SQL migrations",
+    "docs/dev-knowledge/": "durable engineering memory and research",
+    "knowledge-base/": "structured knowledge inputs and compiled wiki outputs",
+    ".claude/": "Claude-oriented agents, skills, commands, and hooks",
+    ".codex/": "Codex-native repo skills",
+    "skills/": "repo-level shared skills",
+    "_archive/": "retired code; do not touch unless explicitly requested",
+    "landing-page-v2/": "legacy frontend; do not touch unless explicitly requested",
+    "public/": "legacy widget/public assets; do not touch unless explicitly requested"
   },
   "critical_rules": [
-    "NEVER use `from __future__ import annotations` in any Python file — it breaks FastAPI Pydantic model resolution",
-    "Always use `client_id` (not `tenant_id`) when querying the `leads` table",
-    "Always use `client_id` (not `tenant_id`) when querying the `conversations` table",
-    "Always use `status` (not `lead_stage`) for lead status in the `leads` table",
-    "Widget JS in widget/ and frontend/public/widget/ must be identical",
-    "Database schema changes ONLY via numbered migration files in migrations/",
-    "NEVER commit .env files or log secret values",
-    "Production runs with 4 Uvicorn workers — in-memory state is per-process only",
-    "Current plan names: free, growth, professional, autopilot, enterprise",
-    "Valid Claude API model IDs: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001"
+    "NEVER use `from __future__ import annotations` in FastAPI router files",
+    "Always use `client_id` for leads and conversations table queries",
+    "Always use `status` for lead status on the leads table",
+    "Widget JS in widget/ and frontend/public/widget/ must remain identical",
+    "Database schema changes only via numbered migrations in migrations/",
+    "NEVER commit .env files or raw secret values",
+    "Production uses multi-worker Uvicorn; in-memory state is per-process only",
+    "Use dedicated MCP API keys for MCP access; do not use widget API keys for MCP auth"
   ],
-  "agents": {
-    "description": "Specialized AI roles for delegated work. Each agent has deep domain knowledge.",
-    "location": ".claude/agents/",
-    "format": "Markdown with YAML frontmatter (name, description, tools)",
-    "available": [
-      {
-        "name": "schema-guardian",
-        "file": ".claude/agents/schema-guardian.md",
-        "purpose": "Database schema expert. Use BEFORE any database work."
-      },
-      {
-        "name": "backend-dev",
-        "file": ".claude/agents/backend-dev.md",
-        "purpose": "FastAPI backend specialist. API endpoints, Pydantic models, Supabase queries, Stripe."
-      },
-      {
-        "name": "frontend-dev",
-        "file": ".claude/agents/frontend-dev.md",
-        "purpose": "React/Vite frontend specialist. Dashboard pages, components, UI styling."
-      },
-      {
-        "name": "widget-specialist",
-        "file": ".claude/agents/widget-specialist.md",
-        "purpose": "Chat widget expert. Widget behavior, CORS, embedding, chat flow."
-      },
-      {
-        "name": "qa-tester",
-        "file": ".claude/agents/qa-tester.md",
-        "purpose": "Quality assurance. Validates changes, checks for bugs, regressions, edge cases."
-      },
-      {
-        "name": "devops",
-        "file": ".claude/agents/devops.md",
-        "purpose": "Deployment and infrastructure. CI/CD, Railway, Vercel, environment variables."
-      }
+  "runtime_ai": {
+    "customer_facing_surfaces": [
+      "widget chat",
+      "tag extraction",
+      "conversation categorization",
+      "action-item extraction",
+      "AI email generation",
+      "content repurposing",
+      "weekly intelligence summaries"
     ],
-    "delegation_order": "schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester → devops"
-  },
-  "skills": {
-    "description": "Reusable knowledge modules that encode domain expertise and workflows.",
-    "locations": {
-      "claude_skills": ".claude/skills/",
-      "codex_skills": ".codex/skills/",
-      "repo_skills": "skills/"
-    },
-    "format": "Markdown with YAML frontmatter (name, description) in SKILL.md files",
-    "available": [
-      {
-        "name": "schema-guard",
-        "file": ".claude/skills/schema-guard/SKILL.md",
-        "trigger": "Before writing any database query, migration, or Pydantic model"
-      },
-      {
-        "name": "feature-build",
-        "file": ".claude/skills/feature-build/SKILL.md",
-        "trigger": "When building any new feature"
-      },
-      {
-        "name": "debug-api",
-        "file": ".claude/skills/debug-api/SKILL.md",
-        "trigger": "When diagnosing API errors (422s, 500s, CORS, silent data loss)"
-      },
-      {
-        "name": "migration-workflow",
-        "file": ".claude/skills/migration-workflow/SKILL.md",
-        "trigger": "When creating, applying, or verifying database migrations"
-      },
-      {
-        "name": "ai-feature-pattern",
-        "file": ".claude/skills/ai-feature-pattern/SKILL.md",
-        "trigger": "When building features that call the Claude API"
-      },
-      {
-        "name": "team-orchestration",
-        "file": ".claude/skills/team-orchestration/SKILL.md",
-        "trigger": "When a task benefits from delegating to multiple agents"
-      },
-      {
-        "name": "industry-content",
-        "file": ".claude/skills/industry-content/SKILL.md",
-        "trigger": "When adding support for a new business type/industry"
-      },
-      {
-        "name": "widget-test",
-        "file": ".claude/skills/widget-test/SKILL.md",
-        "trigger": "When testing or modifying the chat widget"
-      },
-      {
-        "name": "build-loop",
-        "file": ".claude/skills/build-loop/SKILL.md",
-        "trigger": "Autonomous infinite development loop"
-      },
-      {
-        "name": "agentnexlify-schema-guard",
-        "file": ".codex/skills/agentnexlify-schema-guard/SKILL.md",
-        "trigger": "Protect live schema conventions (Codex-native format)"
-      },
-      {
-        "name": "agentnexlify-surface-selector",
-        "file": ".codex/skills/agentnexlify-surface-selector/SKILL.md",
-        "trigger": "Choose the correct surface/subsystem before editing"
-      },
-      {
-        "name": "agentnexlify-runtime-constraints",
-        "file": ".codex/skills/agentnexlify-runtime-constraints/SKILL.md",
-        "trigger": "Account for multi-worker runtime behavior and in-memory limits"
-      },
-      {
-        "name": "agentnexlify-widget-integrity",
-        "file": ".codex/skills/agentnexlify-widget-integrity/SKILL.md",
-        "trigger": "Preserve production widget contract and mirrored assets"
-      },
-      {
-        "name": "llm-council",
-        "file": "skills/llm-council/SKILL.md",
-        "trigger": "Complex decisions with real stakes — 'council this', 'pressure-test this'"
-      }
+    "primary_wrapper": "backend/services/llm_runtime.py",
+    "known_direct_call_sites": [
+      "backend/services/content_repurposer.py",
+      "parts of backend/services/automation_engine.py"
+    ],
+    "knowledge_sources": [
+      "faq_entries",
+      "business_hours",
+      "ai_feedback corrections",
+      "website_content extracted text",
+      "widget knowledge base/custom instructions",
+      "menu_items",
+      "jobs",
+      "bid_templates",
+      "chat_flows",
+      "recent chat_messages"
     ]
   },
+  "model_routing": {
+    "codex": "Primary implementation/execution engine for code exploration, edits, debugging, refactors, and tests.",
+    "anthropic": "Canonical repo brain, prompt/system-design authority, and production customer-facing runtime AI authority.",
+    "minimax": "Lightweight triage, summarization, and cheap helper/subagent orchestration where throughput matters more than exactness."
+  },
+  "agents": {
+    "location": ".claude/agents/",
+    "core": [
+      "schema-guardian",
+      "backend-dev",
+      "frontend-dev",
+      "widget-specialist",
+      "qa-tester",
+      "devops",
+      "vertical-checker"
+    ],
+    "review": [
+      "security-reviewer",
+      "code-reviewer",
+      "tdd-guide",
+      "performance-optimizer",
+      "refactor-cleaner",
+      "architect"
+    ],
+    "experimental": [
+      "gan-planner",
+      "gan-generator",
+      "gan-evaluator"
+    ],
+    "files": [
+      ".claude/agents/architect.md",
+      ".claude/agents/backend-dev.md",
+      ".claude/agents/code-reviewer.md",
+      ".claude/agents/devops.md",
+      ".claude/agents/frontend-dev.md",
+      ".claude/agents/gan-evaluator.md",
+      ".claude/agents/gan-generator.md",
+      ".claude/agents/gan-planner.md",
+      ".claude/agents/performance-optimizer.md",
+      ".claude/agents/qa-tester.md",
+      ".claude/agents/refactor-cleaner.md",
+      ".claude/agents/schema-guardian.md",
+      ".claude/agents/security-reviewer.md",
+      ".claude/agents/tdd-guide.md",
+      ".claude/agents/vertical-checker.md",
+      ".claude/agents/widget-specialist.md"
+    ]
+  },
+  "skills": {
+    "claude": [
+      "ai-feature-pattern",
+      "buddy",
+      "build-loop",
+      "coding-standards",
+      "compound-engineering",
+      "coordinator",
+      "dead-code-sweep",
+      "debug-api",
+      "deep-research",
+      "e2e-testing",
+      "eval-harness",
+      "feature-build",
+      "industry-content",
+      "kairos",
+      "kb-compile",
+      "kb-discover",
+      "kb-health",
+      "kb-ingest",
+      "kb-query",
+      "kevin-mode",
+      "migration-workflow",
+      "schema-guard",
+      "security-audit",
+      "security-patch-from-review",
+      "strategic-compact",
+      "subconscious",
+      "tdd-workflow",
+      "team-orchestration",
+      "tenant-chatbot-audit",
+      "verification-loop",
+      "widget-test",
+      "worktree-orchestrator"
+    ],
+    "codex": [
+      "agentnexlify-runtime-constraints",
+      "agentnexlify-schema-guard",
+      "agentnexlify-surface-selector",
+      "agentnexlify-widget-integrity"
+    ],
+    "repo": [
+      "llm-council"
+    ],
+    "notes": {
+      "default_orchestration": "coordinator",
+      "experimental": [
+        "build-loop"
+      ]
+    }
+  },
   "workflows": {
-    "description": "High-level command workflows that orchestrate multi-step operations.",
     "location": ".claude/commands/",
-    "format": "Markdown files with step-by-step instructions",
+    "default_path": "coordinator",
     "available": [
-      {
-        "name": "new-feature",
-        "file": ".claude/commands/new-feature.md",
-        "purpose": "Build a new feature end-to-end: Schema → Backend → Frontend → QA → Commit"
-      },
-      {
-        "name": "fix-bug",
-        "file": ".claude/commands/fix-bug.md",
-        "purpose": "Diagnose → Fix → Verify → Document → Commit"
-      },
-      {
-        "name": "deploy",
-        "file": ".claude/commands/deploy.md",
-        "purpose": "Full pre-deploy validation pipeline"
-      },
-      {
-        "name": "refactor",
-        "file": ".claude/commands/refactor.md",
-        "purpose": "Analyze → Plan → Execute incrementally → Verify → Commit"
-      },
-      {
-        "name": "delegate",
-        "file": ".claude/commands/delegate.md",
-        "purpose": "Plan multi-agent delegation for complex tasks"
-      },
-      {
-        "name": "deploy-check",
-        "file": ".claude/commands/deploy-check.md",
-        "purpose": "Pre-deploy checklist and validation"
-      },
-      {
-        "name": "health-check",
-        "file": ".claude/commands/health-check.md",
-        "purpose": "Codebase health check"
-      },
-      {
-        "name": "summary",
-        "file": ".claude/commands/summary.md",
-        "purpose": "Generate comprehensive change summary with metrics"
-      },
-      {
-        "name": "checkpoint",
-        "file": ".claude/commands/checkpoint.md",
-        "purpose": "Save session state to disk"
-      },
-      {
-        "name": "recover",
-        "file": ".claude/commands/recover.md",
-        "purpose": "Restore context after session restart"
-      },
-      {
-        "name": "log-bug",
-        "file": ".claude/commands/log-bug.md",
-        "purpose": "Document a fixed bug for future reference"
-      },
-      {
-        "name": "script",
-        "file": ".claude/commands/script.md",
-        "purpose": "Generate client-ready demo script"
-      },
-      {
-        "name": "morning",
-        "file": ".claude/commands/morning.md",
-        "purpose": "Interactive morning routine with health checks"
-      },
-      {
-        "name": "evening",
-        "file": ".claude/commands/evening.md",
-        "purpose": "Evening routine"
-      }
+      "checkpoint",
+      "delegate",
+      "deploy",
+      "deploy-check",
+      "evening",
+      "fix-bug",
+      "health-check",
+      "log-bug",
+      "morning",
+      "new-feature",
+      "recover",
+      "refactor",
+      "script",
+      "summary"
     ]
   },
   "agent_communication": {
     "directory": ".claude/agent-comms/",
-    "pattern": "Agents write findings to {agent-name}-output.md, orchestrator reads and routes to next agent",
+    "pattern": "Agents write findings to {agent-name}-output.md and the orchestrator synthesizes them.",
     "checkpoint_file": ".claude/agent-comms/checkpoint.md"
   },
   "workspace_contexts": {
     "backend": "backend/CONTEXT.md",
     "frontend": "frontend/CONTEXT.md",
-    "planning": "planning/CONTEXT.md",
-    "ops": "ops/CONTEXT.md",
     "widget": "widget/CONTEXT.md"
   }
 }

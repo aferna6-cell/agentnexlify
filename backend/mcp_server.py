@@ -20,47 +20,27 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP(
     "AgentNexLiFy",
-    instructions="AI-powered business automation — leads, appointments, conversations, and analytics. Use your widget API key to authenticate.",
+    instructions="AI-powered business automation — leads, appointments, conversations, and analytics. Use your dedicated MCP API key to authenticate.",
 )
 
 # --- Auth helper ---
 
 def _get_tenant_by_api_key(api_key: str) -> dict | None:
-    """Look up tenant by MCP API key or widget API key. Returns tenant dict or None."""
+    """Look up tenant by dedicated MCP API key only. Returns tenant dict or None."""
     db = get_supabase()
 
-    # Try MCP key first
-    if api_key.startswith("mcp_"):
-        mcp_result = (
-            db.table("tenants")
-            .select("id, business_name, owner_email, plan, business_type, mcp_enabled")
-            .eq("mcp_api_key", api_key)
-            .eq("mcp_enabled", True)
-            .limit(1)
-            .execute()
-        )
-        if mcp_result.data:
-            return mcp_result.data[0]
-
-    # Fall back to widget API key
-    result = (
-        db.table("widget_configs")
-        .select("tenant_id")
-        .eq("api_key", api_key)
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
+    if not api_key or not api_key.startswith("mcp_"):
         return None
-    tenant_id = result.data[0]["tenant_id"]
-    tenant = (
+
+    result = (
         db.table("tenants")
-        .select("id, business_name, owner_email, plan, business_type")
-        .eq("id", tenant_id)
+        .select("id, business_name, owner_email, plan, business_type, mcp_enabled")
+        .eq("mcp_api_key", api_key)
+        .eq("mcp_enabled", True)
         .limit(1)
         .execute()
     )
-    return tenant.data[0] if tenant.data else None
+    return result.data[0] if result.data else None
 
 
 # --- Tool 1: List Recent Leads ---
@@ -70,13 +50,13 @@ def list_recent_leads(api_key: str, days: int = 7, limit: int = 20) -> str:
     """List recent leads captured by the chat widget.
 
     Args:
-        api_key: Your AgentNexLiFy widget API key
+        api_key: Your AgentNexLiFy MCP API key
         days: Number of days to look back (default 7)
         limit: Maximum number of leads to return (default 20, max 50)
     """
     tenant = _get_tenant_by_api_key(api_key)
     if not tenant:
-        return "Error: Invalid API key. Check your AgentNexLiFy dashboard for your widget API key."
+        return "Error: Invalid MCP API key. Check your AgentNexLiFy dashboard for your dedicated MCP key."
 
     limit = min(limit, 50)
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
@@ -125,7 +105,7 @@ def list_today_appointments(api_key: str) -> str:
     """List today's appointments.
 
     Args:
-        api_key: Your AgentNexLiFy widget API key
+        api_key: Your AgentNexLiFy MCP API key
     """
     tenant = _get_tenant_by_api_key(api_key)
     if not tenant:
@@ -173,7 +153,7 @@ def get_unread_conversations(api_key: str, limit: int = 10) -> str:
     """Get recent conversations that may need attention.
 
     Args:
-        api_key: Your AgentNexLiFy widget API key
+        api_key: Your AgentNexLiFy MCP API key
         limit: Maximum conversations to return (default 10)
     """
     tenant = _get_tenant_by_api_key(api_key)
@@ -212,7 +192,7 @@ def get_action_items(api_key: str, status: str = "pending") -> str:
     """Get AI-extracted action items from conversations.
 
     Args:
-        api_key: Your AgentNexLiFy widget API key
+        api_key: Your AgentNexLiFy MCP API key
         status: Filter by status — "pending", "done", or "all" (default "pending")
     """
     tenant = _get_tenant_by_api_key(api_key)
@@ -254,7 +234,7 @@ def get_analytics_summary(api_key: str, days: int = 30) -> str:
     """Get a summary of business analytics — leads, conversations, appointments.
 
     Args:
-        api_key: Your AgentNexLiFy widget API key
+        api_key: Your AgentNexLiFy MCP API key
         days: Number of days to analyze (default 30)
     """
     tenant = _get_tenant_by_api_key(api_key)
@@ -295,7 +275,7 @@ def reply_to_conversation(api_key: str, session_id: str, message: str) -> str:
     """Send a reply to a chat conversation as the business owner.
 
     Args:
-        api_key: Your AgentNexLiFy widget API key
+        api_key: Your AgentNexLiFy MCP API key
         session_id: The session ID of the conversation to reply to
         message: The reply message text
     """

@@ -10,7 +10,7 @@
         "pxserpybmajixqrmzaly"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_8430ae8d8202ee6ea599bf162148ebf3f828b66d"
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
       }
     },
     "aidesigner": {

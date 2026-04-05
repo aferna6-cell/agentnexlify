@@ -22,22 +22,131 @@ logger = logging.getLogger(__name__)
 
 ORDER_JSON_RE = re.compile(r"<!--ORDER_JSON:(.*?)-->", re.DOTALL)
 
+_ALLOWED_ORDER_TYPES = {"pickup", "delivery"}
+_MAX_ORDER_ITEMS = 25
+
 
 def _extract_order_from_response(response_text: str) -> dict | None:
-    """Extract structured order JSON from AI response, if present."""
+    """Extract structured order JSON from AI response, if present and valid."""
     match = ORDER_JSON_RE.search(response_text)
     if not match:
         return None
     try:
-        return json.loads(match.group(1).strip())
+        data = json.loads(match.group(1).strip())
     except (json.JSONDecodeError, ValueError):
         logger.warning("order_extract: found ORDER_JSON marker but JSON parse failed")
         return None
+    return _validate_order_payload(data)
 
 
 def _strip_order_json_from_response(response_text: str) -> str:
     """Remove the ORDER_JSON marker from the response shown to the user."""
     return ORDER_JSON_RE.sub("", response_text).rstrip()
+
+
+def _coerce_money(value: Any) -> float | None:
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return None
+    if amount < 0 or amount > 100000:
+        return None
+    return round(amount, 2)
+
+
+def _validate_order_payload(order_data: Any) -> dict | None:
+    if not isinstance(order_data, dict):
+        logger.warning("order_extract: order payload is not an object")
+        return None
+
+    raw_items = order_data.get("items")
+    if not isinstance(raw_items, list) or not raw_items or len(raw_items) > _MAX_ORDER_ITEMS:
+        logger.warning("order_extract: invalid items payload")
+        return None
+
+    clean_items = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            logger.warning("order_extract: item payload is not an object")
+            return None
+        name = str(item.get("name") or "").strip()
+        if not name or len(name) > 120:
+            logger.warning("order_extract: invalid item name")
+            return None
+        try:
+            quantity = int(item.get("quantity", 1))
+        except (TypeError, ValueError):
+            logger.warning("order_extract: invalid item quantity")
+            return None
+        if quantity < 1 or quantity > 50:
+            logger.warning("order_extract: quantity out of range")
+            return None
+        price = _coerce_money(item.get("price", 0))
+        if price is None:
+            logger.warning("order_extract: invalid item price")
+            return None
+        clean_items.append({
+            "name": name,
+            "price": price,
+            "quantity": quantity,
+        })
+
+    subtotal = _coerce_money(order_data.get("subtotal", 0))
+    tax = _coerce_money(order_data.get("tax", 0))
+    total = _coerce_money(order_data.get("total", 0))
+    order_type = str(order_data.get("order_type") or "pickup").strip().lower()
+    customer_name = str(order_data.get("customer_name") or "").strip()
+    customer_phone = str(order_data.get("customer_phone") or "").strip()
+    customer_email = str(order_data.get("customer_email") or "").strip()
+    delivery_address = str(order_data.get("delivery_address") or "").strip()
+    notes = str(order_data.get("notes") or "").strip()
+
+    if subtotal is None or tax is None or total is None:
+        logger.warning("order_extract: invalid subtotal/tax/total")
+        return None
+    if order_type not in _ALLOWED_ORDER_TYPES:
+        logger.warning("order_extract: invalid order_type=%s", order_type)
+        return None
+    if not customer_name or len(customer_name) > 120:
+        logger.warning("order_extract: missing or invalid customer_name")
+        return None
+    if not customer_phone or len(customer_phone) > 40:
+        logger.warning("order_extract: missing or invalid customer_phone")
+        return None
+    if customer_email and len(customer_email) > 255:
+        logger.warning("order_extract: invalid customer_email")
+        return None
+    if delivery_address and len(delivery_address) > 500:
+        logger.warning("order_extract: invalid delivery_address")
+        return None
+    if notes and len(notes) > 1000:
+        logger.warning("order_extract: invalid notes")
+        return None
+    if order_type == "delivery" and not delivery_address:
+        logger.warning("order_extract: delivery order missing delivery_address")
+        return None
+
+    computed_subtotal = round(sum(item["price"] * item["quantity"] for item in clean_items), 2)
+    computed_total = round(computed_subtotal + tax, 2)
+    if abs(computed_subtotal - subtotal) > 0.05:
+        logger.warning("order_extract: subtotal mismatch model=%s computed=%s", subtotal, computed_subtotal)
+        return None
+    if abs(computed_total - total) > 0.05:
+        logger.warning("order_extract: total mismatch model=%s computed=%s", total, computed_total)
+        return None
+
+    return {
+        "items": clean_items,
+        "subtotal": computed_subtotal,
+        "tax": tax,
+        "total": computed_total,
+        "order_type": order_type,
+        "customer_name": customer_name,
+        "customer_phone": customer_phone,
+        "customer_email": customer_email,
+        "delivery_address": delivery_address,
+        "notes": notes,
+    }
 
 
 async def _process_order_from_chat(
@@ -208,20 +317,70 @@ BID_REQUEST_RE = re.compile(r"<!--BID_REQUEST:(.*?)-->", re.DOTALL)
 
 
 def _extract_bid_request_from_response(response_text: str) -> dict | None:
-    """Extract structured bid request JSON from AI response, if present."""
+    """Extract structured bid request JSON from AI response, if present and valid."""
     match = BID_REQUEST_RE.search(response_text)
     if not match:
         return None
     try:
-        return json.loads(match.group(1).strip())
+        data = json.loads(match.group(1).strip())
     except (json.JSONDecodeError, ValueError):
         logger.warning("bid_extract: found BID_REQUEST marker but JSON parse failed")
         return None
+    return _validate_bid_request_payload(data)
 
 
 def _strip_bid_request_from_response(response_text: str) -> str:
     """Remove the BID_REQUEST marker from the response shown to the user."""
     return BID_REQUEST_RE.sub("", response_text).rstrip()
+
+
+def _validate_bid_request_payload(bid_data: Any) -> dict | None:
+    if not isinstance(bid_data, dict):
+        logger.warning("bid_extract: payload is not an object")
+        return None
+
+    scope = str(bid_data.get("scope") or "").strip()
+    timeline = str(bid_data.get("timeline") or "").strip()
+    location = str(bid_data.get("location") or "").strip()
+    budget = str(bid_data.get("budget") or "").strip()
+    customer_name = str(bid_data.get("customer_name") or "").strip()
+    customer_email = str(bid_data.get("customer_email") or "").strip()
+    customer_phone = str(bid_data.get("customer_phone") or "").strip()
+
+    if not scope or len(scope) > 1000:
+        logger.warning("bid_extract: missing or invalid scope")
+        return None
+    if not customer_name or len(customer_name) > 120:
+        logger.warning("bid_extract: missing or invalid customer_name")
+        return None
+    if (not customer_email and not customer_phone):
+        logger.warning("bid_extract: missing customer contact info")
+        return None
+    if customer_email and len(customer_email) > 255:
+        logger.warning("bid_extract: invalid customer_email")
+        return None
+    if customer_phone and len(customer_phone) > 40:
+        logger.warning("bid_extract: invalid customer_phone")
+        return None
+    if timeline and len(timeline) > 200:
+        logger.warning("bid_extract: invalid timeline")
+        return None
+    if location and len(location) > 300:
+        logger.warning("bid_extract: invalid location")
+        return None
+    if budget and len(budget) > 120:
+        logger.warning("bid_extract: invalid budget")
+        return None
+
+    return {
+        "scope": scope,
+        "timeline": timeline,
+        "location": location,
+        "budget": budget,
+        "customer_name": customer_name,
+        "customer_email": customer_email,
+        "customer_phone": customer_phone,
+    }
 
 
 def _process_bid_request_from_chat(

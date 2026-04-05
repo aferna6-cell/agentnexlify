@@ -1,267 +1,62 @@
 # AgentNexLiFy Repository Guide
 
-## Purpose
-- Use this file to orient quickly before editing code in this repository.
-- Read `CLAUDE.md` first for complete project rules, then load skills that match the task.
-- For a machine-readable index of all AI resources (skills, agents, workflows), see `.ai/manifest.json`.
+Use this file as a **thin adapter for Codex and general coding agents**.
 
-## AI Agent Configuration Files
+## Start Here
+1. Read `CLAUDE.md` first — it is the canonical human-readable repo brain.
+2. Read `.ai/manifest.json` second — it is the canonical machine-readable index of agents, skills, workflows, and routing policy.
+3. Load the most relevant repo-local skill before editing:
+   - `.codex/skills/agentnexlify-surface-selector/SKILL.md`
+   - `.codex/skills/agentnexlify-schema-guard/SKILL.md`
+   - `.codex/skills/agentnexlify-runtime-constraints/SKILL.md`
+   - `.codex/skills/agentnexlify-widget-integrity/SKILL.md`
 
-This repo provides instructions for multiple AI coding tools:
+## Canonical Sources
+- **Repo brain:** `CLAUDE.md`
+- **Machine-readable index:** `.ai/manifest.json`
+- **Runtime AI audit:** `docs/AI_ARCHITECTURE_AUDIT.md`
+- **Agent-system policy:** `docs/AGENT_SYSTEM_PLAN.md`
+- **Architecture decisions:** `docs/dev-knowledge/architecture-decisions.md`
+- **Schema history:** `docs/dev-knowledge/schema-log.md`
+- **Bug memory:** `docs/dev-knowledge/bug-patterns.md`
 
-| File | Tool |
-|------|------|
-| `CLAUDE.md` | Claude Code (primary, most complete) |
-| `AGENTS.md` | OpenAI Codex / general agents (this file) |
-| `GEMINI.md` | Google Gemini CLI |
-| `.github/copilot-instructions.md` | GitHub Copilot |
-| `.cursorrules` | Cursor AI |
-| `.windsurfrules` | Windsurf / Codeium |
-| `.clinerules` | Cline / Roo Code |
-| `.aider.conf.yml` | Aider CLI |
-| `.ai/manifest.json` | Universal machine-readable manifest |
+## Critical Invariants
+- Never use `from __future__ import annotations` in FastAPI router files.
+- Use `client_id` for `leads` and `conversations` queries.
+- Use `status` for lead status on the `leads` table.
+- Keep `widget/agentnexlify-widget.js` and `frontend/public/widget/agentnexlify-widget.js` identical.
+- Use migrations in `migrations/` for schema changes.
+- Never commit raw secret values.
+- Use dedicated MCP API keys for MCP access — not widget API keys.
 
-## Repo Shape
-- `backend/`: the production FastAPI service. One app in [`backend/main.py`](/home/aidan/agentnexlify/backend/main.py) serves the API, mounts `/widget`, and starts the automation loop.
-- `frontend/`: the primary Vite/React app. It contains public marketing routes, public business pages, and the authenticated dashboard.
-- `widget/`: the production widget bundle served by the backend. This is the live embed surface.
-- `demo-platform/`: a separate demo/sales app with its own optional FastAPI server. Treat it as isolated from production unless the task explicitly targets demos.
-- `landing-page-v2/` and `public/`: older parallel frontend/widget lines. Do not touch them unless the request is explicitly about those surfaces or a migration away from them.
-- `_archive/`: retired code and old scripts kept for reference only.
-- `migrations/`: the clearest record of the live schema, but numbering is not perfectly tidy.
-- `prospects/`: prospecting/import utilities and data, not product runtime code.
+## Surface Map
+- `backend/` — production FastAPI service
+- `frontend/` — dashboard + public React/Vite app
+- `widget/` — production embed widget
+- `frontend/public/widget/` — widget mirror
+- `docs/dev-knowledge/` — durable engineering memory
+- `knowledge-base/` — structured knowledge inputs/outputs
+- `.claude/` — Claude-oriented agents, skills, commands, hooks
+- `.codex/` — Codex-native repo skills
+- `skills/` — repo-level shared skills
 
-## Main Subsystems
-- Widget chat runtime: [`backend/routers/widget.py`](/home/aidan/agentnexlify/backend/routers/widget.py) plus [`widget/agentnexlify-widget.js`](/home/aidan/agentnexlify/widget/agentnexlify-widget.js).
-- Tenant auth and dashboard API: [`backend/routers/auth.py`](/home/aidan/agentnexlify/backend/routers/auth.py).
-- CRM and lead operations: [`backend/routers/clients.py`](/home/aidan/agentnexlify/backend/routers/clients.py), [`backend/routers/leads.py`](/home/aidan/agentnexlify/backend/routers/leads.py), [`backend/routers/analytics.py`](/home/aidan/agentnexlify/backend/routers/analytics.py).
-- Scheduling and Google Calendar: [`backend/routers/appointments.py`](/home/aidan/agentnexlify/backend/routers/appointments.py), [`backend/routers/integrations.py`](/home/aidan/agentnexlify/backend/routers/integrations.py), [`backend/services/booking.py`](/home/aidan/agentnexlify/backend/services/booking.py).
-- Automations, SMS, email: [`backend/routers/sequences.py`](/home/aidan/agentnexlify/backend/routers/sequences.py), [`backend/routers/automations.py`](/home/aidan/agentnexlify/backend/routers/automations.py), [`backend/services/automation_engine.py`](/home/aidan/agentnexlify/backend/services/automation_engine.py).
-- Billing and outbound webhooks: [`backend/routers/billing.py`](/home/aidan/agentnexlify/backend/routers/billing.py), [`backend/routers/stripe_webhooks.py`](/home/aidan/agentnexlify/backend/routers/stripe_webhooks.py), [`backend/routers/webhooks.py`](/home/aidan/agentnexlify/backend/routers/webhooks.py).
-- Hosted business pages: [`backend/routers/business_page.py`](/home/aidan/agentnexlify/backend/routers/business_page.py) and [`frontend/src/pages/BusinessPage.jsx`](/home/aidan/agentnexlify/frontend/src/pages/BusinessPage.jsx).
+## Model Routing Policy
+- **Codex:** primary execution engine for implementation, debugging, refactors, tests
+- **Anthropic:** canonical repo brain and production customer-facing runtime AI authority
+- **MiniMax:** cheap triage, summarization, and lightweight helper/subagent work
 
-## High-Risk Invariants
-- Do not add `from __future__ import annotations` to FastAPI router files. This repo already documents that it breaks request model handling.
-- Auth, JWTs, and most tables use `tenant_id`; the `leads` table still uses `client_id`. Check the existing query pattern before changing lead-related code.
-- Lead stage is stored in `status`, not `lead_stage`.
-- The current production widget contract uses `data-api-key` and optional `data-brand-color` / `data-api-base`.
-- [`widget/agentnexlify-widget.js`](/home/aidan/agentnexlify/widget/agentnexlify-widget.js) and [`frontend/public/widget/agentnexlify-widget.js`](/home/aidan/agentnexlify/frontend/public/widget/agentnexlify-widget.js) must stay identical.
-- Active chat history is stored in `chat_messages`. [`backend/services/conversation.py`](/home/aidan/agentnexlify/backend/services/conversation.py) reflects an older conversation-storage approach and should be treated as stale unless the task is explicitly reviving it.
-- Current plan names are `free`, `growth`, `professional`, `enterprise`. Do not introduce older plan labels.
-- Production backend runs with 4 Uvicorn workers. In-memory counters, caches, and loops are per-process only; do not treat them as globally authoritative.
+## Default Delegation Pattern
+For non-trivial coding work:
+1. `schema-guardian` when schema-sensitive
+2. `backend-dev` and/or `frontend-dev`
+3. `widget-specialist` when the chat widget or embed contract is involved
+4. `qa-tester` before done
+5. `security-reviewer` for auth/payment/MCP/AI trust-boundary work
 
-## Working Rules
-- Prefer source files over committed build output. Ignore `dist/` and `node_modules/` unless the task is explicitly about shipped artifacts.
-- Treat audit documents (`FULL_AUDIT.md`, `PRE_LAUNCH_AUDIT.md`, `CLEANUP_REPORT.md`, `AUDIT_RESULTS.md`) as hints. Re-verify every claim in the live code before acting on it.
-- When a task touches widget behavior, check both the backend widget API and the frontend/business-page embed path.
-- When a task touches schema, migrations, or lead handling, load the schema guard skill before editing.
-- When a task is demo-only, keep production code untouched unless the user asks for shared fixes.
-- Avoid routing new work into `landing-page-v2/`, `public/`, or `_archive/` unless the task is explicitly about legacy cleanup or migration.
-
-## Repo-Local Skills
-- `agentnexlify-surface-selector`: choose the right surface or subsystem before editing.
-- `agentnexlify-schema-guard`: protect live schema conventions and backend data/query invariants.
-- `agentnexlify-widget-integrity`: keep the current production widget contract and mirrored assets consistent.
-- `agentnexlify-runtime-constraints`: account for multi-worker runtime behavior, background jobs, and in-memory limits.
-
-## Autonomous AI Runtime
-- The autonomous development runtime lives in `ai/`.
-- Generated reusable skills live in `skills/generated/`.
-- The skill index lives in `skills/index.json`.
-- Task memory lives in `ai/memory/`.
-- For autonomous task preparation, resolution, recording, and self-improvement, use:
-  - `python -m ai.skill_engine prepare "..."`
-  - `python -m ai.skill_engine complete "..."`
-  - `python -m ai.auto_improve --create-skills --write-report docs/ai-auto-improve-report.md --refresh-docs`
-
-## Common Commands
-- Backend dev server: `uvicorn backend.main:app --reload --port 8000`
-- Frontend dev server: `cd frontend && npm run dev`
+## Commands
+- Backend dev: `uvicorn backend.main:app --reload --port 8000`
+- Frontend dev: `cd frontend && npm run dev`
 - Frontend build: `cd frontend && npm run build`
-- Demo platform: `cd demo-platform && npm start`
-- Docker stack: `docker compose up --build`
 
-## AI Skills, Agents & Workflows
-
-### Skills (Domain Knowledge Modules)
-
-Skills encode domain expertise and mandatory invariants. Read the relevant skill before working in its area.
-
-**Claude skills** (`.claude/skills/*/SKILL.md`):
-
-| Skill | When to Use |
-|-------|-------------|
-| `schema-guard` | Before any DB query, migration, or Pydantic model |
-| `feature-build` | When building any new feature |
-| `debug-api` | When diagnosing API errors (422s, 500s, CORS, silent data loss) |
-| `migration-workflow` | When creating, applying, or verifying database migrations |
-| `ai-feature-pattern` | When building features that call the Claude API |
-| `widget-test` | When testing or modifying the chat widget |
-| `industry-content` | When adding support for a new business type/industry |
-| `team-orchestration` | When delegating to multiple agents |
-| `build-loop` | Autonomous infinite development loop |
-
-**Codex skills** (`.codex/skills/*/SKILL.md`):
-
-| Skill | When to Use |
-|-------|-------------|
-| `agentnexlify-surface-selector` | Deciding which directory/subsystem to edit |
-| `agentnexlify-schema-guard` | Protecting live schema conventions |
-| `agentnexlify-runtime-constraints` | Multi-worker runtime behavior, in-memory limits |
-| `agentnexlify-widget-integrity` | Preserving production widget contract |
-
-**LLM Council** (`skills/llm-council/SKILL.md`):
-- Five independent AI advisors debate complex decisions with real stakes
-- Triggered by "council this", "pressure-test this", "war room this"
-
-### Agent Definitions (Specialized Roles)
-
-Located in `.claude/agents/`. Each agent has deep domain knowledge encoded in its markdown file.
-
-| Agent | File | Domain |
-|-------|------|--------|
-| schema-guardian | `.claude/agents/schema-guardian.md` | Database schema expert — use FIRST |
-| backend-dev | `.claude/agents/backend-dev.md` | FastAPI, Pydantic, Supabase, Stripe |
-| frontend-dev | `.claude/agents/frontend-dev.md` | React, Vite, Tailwind, dashboard pages |
-| widget-specialist | `.claude/agents/widget-specialist.md` | Chat widget, CORS, embedding |
-| qa-tester | `.claude/agents/qa-tester.md` | Testing, validation, edge cases |
-| devops | `.claude/agents/devops.md` | CI/CD, Railway, Vercel, monitoring |
-
-**Delegation order:** schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester → devops
-
-### Workflows (Step-by-Step Procedures)
-
-Located in `.claude/commands/`. Each workflow is a markdown file with orchestration steps.
-
-| Workflow | Purpose |
-|----------|---------|
-| `new-feature.md` | Schema → Backend → Frontend → QA → Commit |
-| `fix-bug.md` | Check patterns → Diagnose → Fix → Verify → Document |
-| `deploy.md` | QA + DevOps in parallel → Fix blockers → Final gate |
-| `refactor.md` | Analyze → Plan → Execute incrementally → Verify |
-| `delegate.md` | Plan multi-agent delegation for complex tasks |
-| `deploy-check.md` | Pre-deploy checklist and validation |
-| `health-check.md` | Codebase health check |
-| `checkpoint.md` | Save session state for context recovery |
-| `recover.md` | Restore context after session restart |
-| `summary.md` | Comprehensive change summary with metrics |
-| `log-bug.md` | Document a fixed bug for future reference |
-| `script.md` | Generate client-ready demo script |
-
-### Agent Communication
-
-Agents coordinate via `.claude/agent-comms/`:
-- Each agent writes findings to `{agent-name}-output.md`
-- Orchestrator reads outputs and routes to next agent
-- Session state saved to `checkpoint.md`
-
-### Workspace Contexts
-
-Each workspace has a `CONTEXT.md` with local rules and patterns:
-- `backend/CONTEXT.md` — Backend-specific conventions
-- `frontend/CONTEXT.md` — Frontend-specific conventions
-- `widget/CONTEXT.md` — Widget-specific conventions
-- `planning/CONTEXT.md` — Specs and architecture decisions
-- `ops/CONTEXT.md` — Deployment and operations
-
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
-
-This project is indexed by GitNexus as **agentnexlify** (7900 symbols, 18223 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
-
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## When Debugging
-
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/agentnexlify/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
-
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/agentnexlify/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/agentnexlify/clusters` | All functional areas |
-| `gitnexus://repo/agentnexlify/processes` | All execution flows |
-| `gitnexus://repo/agentnexlify/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
-```
-
-If the index previously included embeddings, preserve them by adding `--embeddings`:
-
-```bash
-npx gitnexus analyze --embeddings
-```
-
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
-
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+## Note
+If this file and `CLAUDE.md` disagree, **follow `CLAUDE.md`** and then update this adapter.
