@@ -366,6 +366,7 @@ class WidgetConfigResponse(BaseModel):
     teaser_message: str | None = None
     teaser_delay_seconds: int = 3
     teaser_enabled: bool = True
+    plan: str = "free"
 
 
 class WidgetLeadRequest(BaseModel):

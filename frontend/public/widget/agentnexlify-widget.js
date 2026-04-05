@@ -824,6 +824,7 @@
   let availableSlots = [];
   let selectedSlot = null;
   let bookingMaxDays = 30;
+  let tenantPlan = "free";
 
   // --- API calls ---
   async function fetchConfig() {
@@ -846,6 +847,7 @@
         teaserDelaySeconds = data.teaser_delay_seconds;
       if (data.teaser_enabled !== undefined)
         teaserEnabled = data.teaser_enabled;
+      if (data.plan) tenantPlan = data.plan;
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
       }
@@ -1792,7 +1794,7 @@
     }
 
     // Show content mode button for professional+ plans
-    const _plan = data.plan || "free";
+    const _plan = tenantPlan;
     if (_plan === "professional" || _plan === "enterprise") {
       const cmBtn = document.getElementById("anx-content-mode-btn");
       if (cmBtn) {

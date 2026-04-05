@@ -155,6 +155,7 @@ async def get_config(request: Request, api_key: str):
         teaser_message=widget.get("teaser_message"),
         teaser_delay_seconds=widget.get("teaser_delay_seconds", 3),
         teaser_enabled=widget.get("teaser_enabled", True),
+        plan=tenant_plan,
     )
 
 
