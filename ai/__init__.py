@@ -125,7 +125,7 @@ def first_nonempty_line(text: str) -> str:
 
 
 def skill_source_from_path(path: Path) -> str:
-    relative = relative_path(path)
+    relative = relative_path(path).replace("\\", "/")
     if relative.startswith("skills/generated/"):
         return "generated"
     return "repository"

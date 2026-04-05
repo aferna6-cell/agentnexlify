@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-03-11T14:03:12+00:00",
+  "updated_at": "2026-04-05T02:53:21+00:00",
   "skills": [
     {
       "skill_name": "agentnexlify-runtime-constraints",
@@ -93,6 +93,121 @@
       "created_at": "2026-03-11T13:26:43+00:00",
       "last_used": null,
       "source": "repository"
+    },
+    {
+      "skill_name": "caveman",
+      "description": "Force an ultra-brief action-first response style with no preamble, no filler, and a two-sentence default cap.",
+      "tags": [
+        "caveman",
+        "force",
+        "ultra-brief",
+        "action-first",
+        "response",
+        "style",
+        "no",
+        "preamble",
+        "filler",
+        "two-sentence",
+        "default",
+        "cap"
+      ],
+      "path": "skills/generated/caveman/SKILL.md",
+      "created_by": "codex",
+      "created_at": "2026-04-05T02:52:42+00:00",
+      "last_used": null,
+      "source": "generated"
+    },
+    {
+      "skill_name": "diagram-it",
+      "description": "Turn source material into the clearest diagram format and render it quickly without inventing structure.",
+      "tags": [
+        "diagram-it",
+        "turn",
+        "source",
+        "material",
+        "clearest",
+        "diagram",
+        "format",
+        "render",
+        "quickly",
+        "without",
+        "inventing",
+        "structure"
+      ],
+      "path": "skills/generated/diagram-it/SKILL.md",
+      "created_by": "codex",
+      "created_at": "2026-04-05T02:52:42+00:00",
+      "last_used": null,
+      "source": "generated"
+    },
+    {
+      "skill_name": "nano-this",
+      "description": "Turn a document or pasted content into a polished Swiss Pulse-style infographic with a fallback prompt when image generation is unavailable.",
+      "tags": [
+        "nano-this",
+        "turn",
+        "document",
+        "pasted",
+        "content",
+        "polished",
+        "swiss",
+        "pulse-style",
+        "infographic",
+        "fallback",
+        "prompt",
+        "image"
+      ],
+      "path": "skills/generated/nano-this/SKILL.md",
+      "created_by": "codex",
+      "created_at": "2026-04-05T02:52:42+00:00",
+      "last_used": null,
+      "source": "generated"
+    },
+    {
+      "skill_name": "ver-it",
+      "description": "Build a Swiss Pulse-style interactive HTML summary with a hero metric, stats, chart, and dark-mode presentation.",
+      "tags": [
+        "ver-it",
+        "build",
+        "swiss",
+        "pulse-style",
+        "interactive",
+        "html",
+        "summary",
+        "hero",
+        "metric",
+        "stats",
+        "chart",
+        "dark-mode"
+      ],
+      "path": "skills/generated/ver-it/SKILL.md",
+      "created_by": "codex",
+      "created_at": "2026-04-05T02:52:42+00:00",
+      "last_used": null,
+      "source": "generated"
+    },
+    {
+      "skill_name": "vis-it",
+      "description": "Turn content into the best-fit visual explainer or interactive widget, using HTML when true interactivity is needed.",
+      "tags": [
+        "vis-it",
+        "turn",
+        "content",
+        "best-fit",
+        "visual",
+        "explainer",
+        "interactive",
+        "widget",
+        "using",
+        "html",
+        "true",
+        "interactivity"
+      ],
+      "path": "skills/generated/vis-it/SKILL.md",
+      "created_by": "codex",
+      "created_at": "2026-04-05T02:52:42+00:00",
+      "last_used": null,
+      "source": "generated"
     }
   ]
 }
