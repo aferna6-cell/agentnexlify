@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -356,15 +357,15 @@ async def ai_generate_bid(
     )
 
     try:
-        client = anthropic.Anthropic(
-            api_key=settings.anthropic_api_key, timeout=30.0
-        )
-        response = client.messages.create(
+        response = await call_claude_messages(
+            operation="bids.ai_generate",
             model="claude-sonnet-4-6",
             max_tokens=1500,
+            timeout=30.0,
             messages=[{"role": "user", "content": prompt}],
+            metadata={"tenant_id": tenant_id, "has_business_context": bool(context.strip())},
         )
-        text = response.content[0].text.strip()
+        text = response.text.strip()
 
         # Parse JSON -- handle markdown code blocks
         if text.startswith("```"):

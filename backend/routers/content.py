@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 
 import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
+
+from backend.services.llm_runtime import call_claude_messages
 from pydantic import BaseModel, Field
 
 from backend.config import settings
@@ -288,11 +290,12 @@ async def repurpose_content(
     platform_keys = list(PLATFORM_SPECS.keys())
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="content.repurpose_platforms",
             model="claude-sonnet-4-6",
             max_tokens=4000,
             temperature=0.7,
+            timeout=30.0,
             system=(
                 f"You are a social media content expert creating posts{biz_context}. "
                 "Given source content, create optimized versions for each platform below. "
@@ -306,8 +309,13 @@ async def repurpose_content(
                 "role": "user",
                 "content": f"Source content to repurpose:\n\n{source[:10000]}",
             }],
+            metadata={
+                "tenant_id": tenant_id,
+                "content_id": content_id,
+                "platform_count": len(platform_keys),
+            },
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
     except anthropic.RateLimitError:
         raise HTTPException(status_code=429, detail="AI service rate limited — please try again in a moment")
     except anthropic.AuthenticationError:

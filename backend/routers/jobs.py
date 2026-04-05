@@ -10,6 +10,7 @@ from backend.limiter import limiter
 
 from backend.config import settings
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -206,13 +207,15 @@ async def ai_write_job_description(
     )
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        response = client.messages.create(
+        response = await call_claude_messages(
+            operation="jobs.ai_write_description",
             model="claude-sonnet-4-6",
             max_tokens=1000,
+            timeout=30.0,
             messages=[{"role": "user", "content": prompt}],
+            metadata={"tenant_id": tenant_id, "has_business_context": bool(context.strip())},
         )
-        text = response.content[0].text.strip()
+        text = response.text.strip()
 
         # Parse JSON — handle markdown code blocks
         import json

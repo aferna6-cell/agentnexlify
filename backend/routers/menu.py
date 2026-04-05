@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -239,10 +240,11 @@ async def import_menu_from_website(
 
     # Use Claude to extract menu items
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        response = client.messages.create(
+        response = await call_claude_messages(
+            operation="menu.import_from_website",
             model="claude-sonnet-4-6",
             max_tokens=4000,
+            timeout=30.0,
             messages=[{
                 "role": "user",
                 "content": f"""Extract menu items from this restaurant website content. Return ONLY a JSON array of menu items. Each item should have: name (string), description (string or null), price (number), category (string like "Appetizers", "Entrees", "Desserts", "Drinks", etc.).
@@ -255,10 +257,11 @@ Website content:
 Return ONLY valid JSON, no markdown, no explanation. Example:
 [{{"name": "Margherita Pizza", "description": "Fresh mozzarella, basil, tomato sauce", "price": 14.99, "category": "Pizza"}}]""",
             }],
+            metadata={"tenant_id": tenant_id, "website_chars": len(website_text)},
         )
 
         # Parse the response
-        text = response.content[0].text.strip()
+        text = response.text.strip()
         # Handle markdown code blocks
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]

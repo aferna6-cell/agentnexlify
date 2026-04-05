@@ -135,6 +135,12 @@ def _validate_order_payload(order_data: Any) -> dict | None:
         logger.warning("order_extract: total mismatch model=%s computed=%s", total, computed_total)
         return None
 
+    logger.info(
+        "order_extract: accepted order payload items=%d total=%.2f order_type=%s",
+        len(clean_items),
+        computed_total,
+        order_type,
+    )
     return {
         "items": clean_items,
         "subtotal": computed_subtotal,
@@ -372,6 +378,12 @@ def _validate_bid_request_payload(bid_data: Any) -> dict | None:
         logger.warning("bid_extract: invalid budget")
         return None
 
+    logger.info(
+        "bid_extract: accepted bid payload customer_name=%s has_email=%s has_phone=%s",
+        customer_name,
+        bool(customer_email),
+        bool(customer_phone),
+    )
     return {
         "scope": scope,
         "timeline": timeline,

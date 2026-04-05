@@ -2,6 +2,8 @@
 
 import logging
 import time
+
+import anthropic
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
@@ -11,6 +13,7 @@ from backend.dependencies import verify_tenant
 from backend.limiter import limiter
 from backend.models.schemas import AgentControlCenterResponse
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -1006,10 +1009,11 @@ async def get_ai_insights(
         change_text = f"{'up' if lead_change > 0 else 'down'} {abs(lead_change)} from last week" if lead_change != 0 else "same as last week"
 
         try:
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-            response = client.messages.create(
+            response = await call_claude_messages(
+                operation="analytics.ai_insights",
                 model="claude-sonnet-4-6",
                 max_tokens=400,
+                timeout=30.0,
                 messages=[{"role": "user", "content": f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".
 
 This week's metrics:
@@ -1023,8 +1027,9 @@ This week's metrics:
 - Pending action items: {metrics['pending_actions']}
 
 Write 3-4 bullet points: what's going well, what needs attention, one actionable recommendation. Be specific with numbers. Keep it under 200 words."""}],
+                metadata={"tenant_id": tenant_id, "business_type": biz_type, "new_leads": metrics['new_leads'], "conversations": metrics['conversations']},
             )
-            ai_analysis = response.content[0].text if response.content else ""
+            ai_analysis = response.text if response.text else ""
         except Exception:
             logger.warning("AI insights generation failed for tenant %s", tenant_id, exc_info=True)
 

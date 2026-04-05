@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import send_email, build_unsubscribe_url
 from backend.services.twilio_service import send_sms
@@ -336,11 +337,12 @@ async def generate_ai_draft(
     }.get(req.tone, "professional and courteous")
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="reviews.generate_draft",
             model="claude-sonnet-4-6",
             max_tokens=300,
             temperature=0.7,
+            timeout=30.0,
             system=(
                 f"You are writing a review response for {business_name}"
                 f"{f', a {business_type}' if business_type else ''}. "
@@ -359,8 +361,9 @@ async def generate_ai_draft(
                     f"{review.get('review_text', 'No text provided')}"
                 ),
             }],
+            metadata={"tenant_id": tenant_id, "review_id": review_id, "tone": req.tone},
         )
-        draft = resp.content[0].text.strip()
+        draft = resp.text.strip()
     except anthropic.RateLimitError:
         raise HTTPException(status_code=429, detail="AI service rate limited — please try again in a moment")
     except anthropic.AuthenticationError:

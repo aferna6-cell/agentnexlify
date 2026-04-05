@@ -16,6 +16,7 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.services.activity import log_activity
+from backend.services.llm_runtime import call_claude_messages
 from backend.services.twilio_service import format_textback_message, send_sms
 
 logger = logging.getLogger(__name__)
@@ -235,7 +236,6 @@ async def handle_inbound_sms(request: Request):
 
     # Generate AI response using the same chat engine
     try:
-        import anthropic
         from backend.routers.widget_helpers import _build_system_prompt, _load_chat_history
 
         # Load context
@@ -253,14 +253,16 @@ async def handle_inbound_sms(request: Request):
         messages = [{"role": m["role"], "content": m["content"]} for m in history]
         messages.append({"role": "user", "content": message_body})
 
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="twilio.sms_reply",
             model="claude-sonnet-4-6",
-            max_tokens=300,  # Shorter for SMS
+            max_tokens=300,
+            timeout=30.0,
             system=system_prompt + "\n\nIMPORTANT: This conversation is via SMS. Keep responses SHORT (under 160 characters if possible). Be concise.",
             messages=messages,
+            metadata={"tenant_id": tenant_id, "session_id": session_id, "channel": "sms", "message_chars": len(message_body)},
         )
-        ai_response = resp.content[0].text.strip()
+        ai_response = resp.text.strip()
 
         # Truncate for SMS
         if len(ai_response) > 1500:

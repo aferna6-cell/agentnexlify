@@ -37,6 +37,7 @@ from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import require_role
 from backend.services.business_profiles import get_widget_defaults
+from backend.services.llm_runtime import call_claude_messages, call_claude_messages_sync
 
 logger = logging.getLogger(__name__)
 
@@ -165,16 +166,15 @@ async def _generate_ai_content(
     )
 
     try:
-        client = anthropic.Anthropic(
-            api_key=settings.anthropic_api_key,
-            timeout=30.0,
-        )
-        response = client.messages.create(
+        response = await call_claude_messages(
+            operation="onboarding.generate_ai_content",
             model="claude-sonnet-4-6",
             max_tokens=800,
+            timeout=30.0,
             messages=[{"role": "user", "content": prompt}],
+            metadata={"business_name": business_name, "business_type": business_type, "city": city},
         )
-        text = response.content[0].text.strip()
+        text = response.text.strip()
 
         result: dict[str, Any] = {"faqs": []}
         for line in text.split("\n"):
@@ -506,15 +506,16 @@ Generate a knowledge base with these sections (use ## headers):
 
 Keep it concise. Do not invent facts not supported by the input. Do not add markdown formatting beyond headers and bullet lists."""
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     try:
-        message = client.messages.create(
+        message = await call_claude_messages(
+            operation="onboarding.generate_kb",
             model="claude-sonnet-4-6",
             max_tokens=1200,
+            timeout=30.0,
             messages=[{"role": "user", "content": prompt}],
-            timeout=30,
+            metadata={"tenant_id": tenant_id, "business_name": req.business_name, "business_type": req.business_type},
         )
-        kb_text = message.content[0].text.strip()
+        kb_text = message.text.strip()
     except Exception:
         logger.error("KB generation failed for tenant %s", tenant_id, exc_info=True)
         return GenerateKbResponse(knowledge_base=None, generated=False)
@@ -606,8 +607,6 @@ async def auto_populate_kb(
     t = tenant.data or {}
 
     # 4. Call Claude to generate KB + FAQs + custom instructions
-    import anthropic
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0)
 
     prompt = f"""You are setting up an AI chat assistant for a business. Based on their website content, generate three things:
 
@@ -649,13 +648,16 @@ C: [category]
 Use only information from the website content. Be concise and accurate."""
 
     try:
-        api_response = client.messages.create(
+        api_response = await call_claude_messages(
+            operation="onboarding.auto_populate_kb",
             model="claude-sonnet-4-6",
             max_tokens=3000,
             temperature=0.3,
+            timeout=60.0,
             messages=[{"role": "user", "content": prompt}],
+            metadata={"tenant_id": tenant_id, "url": req.url, "pages_crawled": pages_crawled, "chars_extracted": chars_extracted},
         )
-        raw = api_response.content[0].text
+        raw = api_response.text
     except Exception:
         logger.error("auto_kb: Claude API failed for tenant %s", tenant_id, exc_info=True)
         raise HTTPException(status_code=502, detail="AI generation failed")

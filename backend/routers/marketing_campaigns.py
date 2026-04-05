@@ -13,6 +13,7 @@ from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import build_unsubscribe_url, send_email
+from backend.services.llm_runtime import call_claude_messages
 from backend.services.twilio_service import send_sms
 
 logger = logging.getLogger(__name__)
@@ -615,11 +616,12 @@ async def generate_campaign_email(
     }
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="marketing_campaigns.generate_email",
             model="claude-sonnet-4-6",
             max_tokens=2000,
             temperature=0.7,
+            timeout=30.0,
             system=(
                 f"You are an email marketing expert creating campaign emails{biz_context}. "
                 f"{type_instructions.get(req.campaign_type, '')} "
@@ -635,8 +637,9 @@ async def generate_campaign_email(
                 "role": "user",
                 "content": f"Topic: {req.topic}\nCampaign type: {req.campaign_type}",
             }],
+            metadata={"tenant_id": tenant_id, "campaign_type": req.campaign_type, "tone": req.tone},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
     except anthropic.RateLimitError:
         raise HTTPException(status_code=429, detail="AI service rate limited -- please try again in a moment")
     except anthropic.AuthenticationError:

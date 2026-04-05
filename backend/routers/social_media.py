@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -297,11 +298,12 @@ async def generate_post_content(
         hashtag_instruction = "\nDo NOT include any hashtags."
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="social.generate_post",
             model="claude-sonnet-4-6",
             max_tokens=1000,
             temperature=0.7,
+            timeout=30.0,
             system=(
                 f"You are a social media marketing expert creating content{biz_context}. "
                 f"Generate a {req.platform} post about the given topic. "
@@ -315,8 +317,9 @@ async def generate_post_content(
                 "role": "user",
                 "content": f"Create a {req.platform} post about: {req.topic}",
             }],
+            metadata={"tenant_id": tenant_id, "platform": req.platform, "tone": req.tone, "include_hashtags": req.include_hashtags},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
     except anthropic.RateLimitError:
         raise HTTPException(status_code=429, detail="AI service rate limited -- please try again in a moment")
     except anthropic.AuthenticationError:
@@ -369,11 +372,12 @@ async def generate_campaign_content(
     )
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="social.generate_campaign",
             model="claude-sonnet-4-6",
             max_tokens=4000,
             temperature=0.7,
+            timeout=60.0,
             system=(
                 f"You are a social media content strategist{biz_context}. "
                 f"Create a week-long content calendar with {req.posts_per_week} posts about the given topic. "
@@ -392,8 +396,9 @@ async def generate_campaign_content(
                 "role": "user",
                 "content": f"Topic: {req.topic}\nPlatforms: {', '.join(req.platforms)}\nPosts: {req.posts_per_week}",
             }],
+            metadata={"tenant_id": tenant_id, "platform_count": len(req.platforms), "posts_per_week": req.posts_per_week},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
     except anthropic.RateLimitError:
         raise HTTPException(status_code=429, detail="AI service rate limited -- please try again in a moment")
     except anthropic.AuthenticationError:

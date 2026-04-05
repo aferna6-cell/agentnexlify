@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
+from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
 
@@ -224,11 +225,12 @@ async def _generate_keywords(business_type: Optional[str], city: Optional[str]) 
     raw = ""
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="seo.generate_keywords",
             model="claude-sonnet-4-6",
             max_tokens=400,
             temperature=0.5,
+            timeout=30.0,
             system=(
                 "You are a local SEO expert. Return ONLY a JSON array of keyword strings. "
                 "No explanations, no markdown, just the raw JSON array."
@@ -244,8 +246,9 @@ async def _generate_keywords(business_type: Optional[str], city: Optional[str]) 
                     "Return ONLY the JSON array."
                 ),
             }],
+            metadata={"business_type": biz_desc, "city": location_desc},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
         keywords = json.loads(raw)
         if isinstance(keywords, list):
             return [str(k) for k in keywords[:20]]
@@ -357,19 +360,21 @@ Return ONLY the raw JSON object, no markdown fences or explanations."""
     raw = ""
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="seo.run_audit",
             model="claude-sonnet-4-6",
             max_tokens=4000,
             temperature=0.2,
+            timeout=60.0,
             system=(
                 "You are an expert SEO auditor. Analyze websites and return structured JSON audit results. "
                 "Be specific and actionable in your recommendations. Score fairly based on actual evidence in the content. "
                 "Return ONLY valid JSON, no markdown fences."
             ),
             messages=[{"role": "user", "content": prompt}],
+            metadata={"business_name": business_name, "business_type": business_type, "page_count": min(len(pages_json), 20)},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
         # Strip markdown fences if present
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
@@ -464,11 +469,12 @@ Return ONLY the raw JSON object, no markdown fences."""
     raw = ""
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=45.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="seo.geo_score",
             model="claude-sonnet-4-6",
             max_tokens=2000,
             temperature=0.3,
+            timeout=45.0,
             system=(
                 "You are an expert in GEO (Generative Engine Optimization) and AI visibility. "
                 "Score businesses on how likely AI platforms are to recommend them. "
@@ -476,8 +482,9 @@ Return ONLY the raw JSON object, no markdown fences."""
                 "Return ONLY valid JSON."
             ),
             messages=[{"role": "user", "content": prompt}],
+            metadata={"business_name": business_name, "business_type": business_type, "city": city},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
             if raw.endswith("```"):
@@ -541,18 +548,20 @@ Return ONLY the raw JSON array, no markdown fences."""
     raw = ""
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=45.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="seo.analyze_keywords",
             model="claude-sonnet-4-6",
             max_tokens=3000,
             temperature=0.3,
+            timeout=45.0,
             system=(
                 "You are an expert local SEO analyst. Analyze keyword competitiveness for local businesses. "
                 "Be realistic about ranking potential. Return ONLY valid JSON."
             ),
             messages=[{"role": "user", "content": prompt}],
+            metadata={"business_type": business_type, "city": city, "keyword_count": len(keywords)},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
             if raw.endswith("```"):
@@ -1482,11 +1491,12 @@ async def run_competitor_analysis(
     location_context = f" in {city}" if city else ""
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="seo.competitor_analysis",
             model="claude-sonnet-4-6",
             max_tokens=3000,
             temperature=0.3,
+            timeout=60.0,
             system=(
                 "You are a local SEO and business competitive analysis expert. "
                 "Analyze a business against its competitors based on your knowledge. "
@@ -1512,8 +1522,9 @@ async def run_competitor_analysis(
                     f"and local search visibility. Score each business 0-100."
                 ),
             }],
+            metadata={"tenant_id": tenant_id, "business_name": business_name, "competitor_count": len(req.competitors)},
         )
-        raw = resp.content[0].text.strip()
+        raw = resp.text.strip()
     except anthropic.RateLimitError:
         raise HTTPException(status_code=429, detail="AI service rate limited")
     except anthropic.AuthenticationError:

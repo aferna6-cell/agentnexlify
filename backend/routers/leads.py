@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from backend.models.database import get_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
@@ -920,18 +921,18 @@ async def generate_lead_summary(
     )
 
     # Generate AI summary
-    import anthropic
-    from backend.config import settings
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=15.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="leads.generate_summary",
             model="claude-sonnet-4-6",
             max_tokens=150,
             temperature=0,
+            timeout=15.0,
             system="Summarize this customer conversation in 1-2 sentences. Focus on: what the customer needs, any decisions made, and next steps. Be concise.",
             messages=[{"role": "user", "content": transcript[:3000]}],
+            metadata={"tenant_id": tenant_id, "lead_id": lead_id, "message_count": len(messages)},
         )
-        summary = resp.content[0].text.strip()
+        summary = resp.text.strip()
     except Exception:
         logger.exception("Failed to generate AI summary for lead %s", lead_id)
         raise HTTPException(status_code=502, detail="AI summary generation failed")

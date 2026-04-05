@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -208,19 +209,21 @@ async def suggest_snippet(
     )
 
     try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=30.0)
-        resp = client.messages.create(
+        resp = await call_claude_messages(
+            operation="snippets.suggest",
             model="claude-sonnet-4-6",
             max_tokens=50,
             temperature=0,
+            timeout=30.0,
             system=(
                 "You are a snippet suggestion engine. Given a conversation context and a list of available snippets, "
                 "return ONLY the number [N] of the best matching snippet, or 'none' if no snippet is relevant.\n"
                 "Output ONLY the number or 'none'. No explanation."
             ),
             messages=[{"role": "user", "content": f"Conversation:\n{req.conversation_context}\n\nAvailable snippets:\n{snippet_list}"}],
+            metadata={"tenant_id": tenant_id, "snippet_count": len(snippets)},
         )
-        answer = resp.content[0].text.strip().lower()
+        answer = resp.text.strip().lower()
         if answer == "none":
             return {"suggestion": None, "reason": "No relevant snippet found"}
 

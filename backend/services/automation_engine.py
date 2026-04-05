@@ -407,9 +407,8 @@ async def execute_step(execution_id: str) -> None:
 async def _generate_ai_email(
     db, tenant_id: str, lead_id: str, business_name: str, body_template: str | None
 ) -> str:
-    """Generate a personalized email body using Anthropic API."""
-    import anthropic
-    from backend.config import settings as app_settings
+    """Generate a personalized email body using the shared Claude runtime."""
+    from backend.services.llm_runtime import call_claude_messages
 
     # Load recent conversation history for this lead.
     # Path: leads.conversation_id → conversations.session_id → chat_messages
@@ -475,19 +474,23 @@ async def _generate_ai_email(
         user_content += f"\n\nUse this as a guide/template to enhance:\n{body_template}"
 
     try:
-        # Run sync Anthropic call in thread pool to avoid blocking the event loop
-        client = anthropic.Anthropic(api_key=app_settings.anthropic_api_key, timeout=30.0)
-        response = await asyncio.get_running_loop().run_in_executor(
-            None,
-            partial(
-                client.messages.create,
-                model="claude-sonnet-4-6",
-                max_tokens=500,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_content}],
-            ),
+        response = await call_claude_messages(
+            operation="automation.generate_ai_email",
+            model="claude-sonnet-4-6",
+            max_tokens=500,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_content}],
+            timeout=30.0,
+            metadata={
+                "tenant_id": tenant_id,
+                "lead_id": lead_id,
+                "business_name": business_name,
+                "has_template": bool(body_template and body_template.strip()),
+                "conversation_messages": len(conversation),
+                "faq_count": len(faq_result.data or []),
+            },
         )
-        return response.content[0].text
+        return response.text
     except Exception:
         logger.exception("AI email generation failed for tenant %s, lead %s", tenant_id, lead_id)
         # Fallback: use the body_template if provided, else a generic message
@@ -2256,8 +2259,7 @@ async def send_weekly_intelligence_briefs() -> int:
 
     Returns count of briefs sent.
     """
-    import anthropic
-    from backend.config import settings as app_settings
+    from backend.services.llm_runtime import call_claude_messages_sync
 
     db = get_supabase()
     now = datetime.now(timezone.utc)
@@ -2368,10 +2370,8 @@ async def send_weekly_intelligence_briefs() -> int:
 
         # Generate AI insights
         ai_insights = ""
-        if app_settings.anthropic_api_key:
-            try:
-                client = anthropic.Anthropic(api_key=app_settings.anthropic_api_key, timeout=30.0)
-                prompt = f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".
+        try:
+            prompt = f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".
 
 Here are this week's metrics:
 - New leads: {metrics.get('new_leads', 0)} (hot: {metrics.get('hot_leads', 0)})
@@ -2390,14 +2390,25 @@ Write a brief, actionable weekly intelligence summary (3-5 bullet points). Focus
 
 Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
 
-                response = client.messages.create(
-                    model="claude-sonnet-4-6",
-                    max_tokens=500,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-                ai_insights = response.content[0].text if response.content else ""
-            except Exception:
-                logger.warning("weekly brief: AI analysis failed for tenant %s", tid, exc_info=True)
+            response = call_claude_messages_sync(
+                operation="automation.weekly_intelligence_brief",
+                model="claude-sonnet-4-6",
+                max_tokens=500,
+                messages=[{"role": "user", "content": prompt}],
+                timeout=30.0,
+                metadata={
+                    "tenant_id": tid,
+                    "business_type": biz_type,
+                    "new_leads": metrics.get("new_leads", 0),
+                    "conversations": metrics.get("conversations", 0),
+                    "appointments": metrics.get("appointments", 0),
+                    "revenue_collected": metrics.get("revenue_collected", 0),
+                    "pending_actions": metrics.get("pending_actions", 0),
+                },
+            )
+            ai_insights = response.text
+        except Exception:
+            logger.warning("weekly brief: AI analysis failed for tenant %s", tid, exc_info=True)
 
         # Build email
         insights_html = ""

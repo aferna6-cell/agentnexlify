@@ -11,12 +11,11 @@ import logging
 import re
 from urllib.parse import urlparse
 
-import anthropic
 import httpx
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from backend.config import settings
 from backend.models.database import get_supabase
+from backend.services.llm_runtime import call_claude_messages_sync
 
 logger = logging.getLogger(__name__)
 
@@ -222,16 +221,23 @@ async def repurpose(
 
     user_prompt = f"Source title: {title}\n\nSource content:\n{source_content[:30_000]}"
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    message = client.messages.create(
+    result = call_claude_messages_sync(
+        operation="content.repurpose",
         model="claude-sonnet-4-6",
         max_tokens=16000,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
+        timeout=60.0,
+        metadata={
+            "tenant_id": tenant_id,
+            "tone": tone,
+            "formats": sorted(requested_formats),
+            "source_chars": min(len(source_content), 30000),
+        },
     )
 
     # Parse the response
-    raw_text = message.content[0].text
+    raw_text = result.text
     # Strip markdown code fences if present
     raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text.strip())
     raw_text = re.sub(r"\s*```$", "", raw_text.strip())
