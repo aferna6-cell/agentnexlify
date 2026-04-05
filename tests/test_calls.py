@@ -11,6 +11,10 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from tests.conftest import MockSupabaseClient, MockSupabaseResponse, MockSupabaseTable
+from backend.config import settings
+
+
+settings.twilio_auth_token = None
 
 
 client = TestClient(app)

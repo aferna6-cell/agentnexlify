@@ -89,15 +89,8 @@ async def test_repurpose_returns_all_formats():
         "social_posts": {"facebook": "FB post", "instagram": "IG post", "google_business": "GB post"},
     }
 
-    mock_message = MagicMock()
-    mock_message.content = [MagicMock(text=json.dumps(fake_response))]
-
-    with patch("backend.services.content_repurposer.anthropic") as mock_anthropic, \
-         patch("backend.services.content_repurposer.settings") as mock_settings:
-        mock_settings.anthropic_api_key = "test-key"
-        mock_client = MagicMock()
-        mock_anthropic.Anthropic.return_value = mock_client
-        mock_client.messages.create.return_value = mock_message
+    with patch("backend.services.content_repurposer.call_claude_messages_sync") as mock_call:
+        mock_call.return_value = MagicMock(text=json.dumps(fake_response))
 
         result = await repurpose(
             source_content="Some long article content here.",
@@ -117,15 +110,8 @@ async def test_repurpose_respects_format_filter():
         "social_posts": {"facebook": "FB post"},
     }
 
-    mock_message = MagicMock()
-    mock_message.content = [MagicMock(text=json.dumps(fake_response))]
-
-    with patch("backend.services.content_repurposer.anthropic") as mock_anthropic, \
-         patch("backend.services.content_repurposer.settings") as mock_settings:
-        mock_settings.anthropic_api_key = "test-key"
-        mock_client = MagicMock()
-        mock_anthropic.Anthropic.return_value = mock_client
-        mock_client.messages.create.return_value = mock_message
+    with patch("backend.services.content_repurposer.call_claude_messages_sync") as mock_call:
+        mock_call.return_value = MagicMock(text=json.dumps(fake_response))
 
         result = await repurpose(
             source_content="Content here.",
