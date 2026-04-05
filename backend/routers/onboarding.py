@@ -129,6 +129,39 @@ class AutoKbResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _parse_auto_kb_response(raw: str) -> tuple[str, str, list[AutoKbFaqEntry]]:
+    """Parse Claude's auto-KB response into KB text, custom instructions, and FAQ entries."""
+    import re as _re
+
+    kb_match = _re.search(r"===KNOWLEDGE_BASE===\s*(.+?)(?====CUSTOM_INSTRUCTIONS===)", raw, _re.DOTALL)
+    ci_match = _re.search(r"===CUSTOM_INSTRUCTIONS===\s*(.+?)(?====FAQ_START===)", raw, _re.DOTALL)
+    faq_match = _re.search(r"===FAQ_START===\s*(.+?)===FAQ_END===", raw, _re.DOTALL)
+
+    knowledge_base = kb_match.group(1).strip() if kb_match else raw[:2000]
+    custom_instructions = ci_match.group(1).strip() if ci_match else ""
+    faqs: list[AutoKbFaqEntry] = []
+
+    if faq_match:
+        faq_text = faq_match.group(1).strip()
+        entries = _re.split(r"\nQ: ", "\nQ: " + faq_text)
+        for entry in entries:
+            entry = entry.strip()
+            if not entry:
+                continue
+            q_match = _re.match(r"(.+?)(?:\nA: )(.+?)(?:\nC: )(.+)", entry, _re.DOTALL)
+            if q_match:
+                question = q_match.group(1).strip()
+                if question.startswith("Q: "):
+                    question = question[3:].strip()
+                faqs.append(AutoKbFaqEntry(
+                    question=question,
+                    answer=q_match.group(2).strip(),
+                    category=q_match.group(3).strip(),
+                ))
+
+    return knowledge_base, custom_instructions, faqs
+
+
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -663,30 +696,7 @@ Use only information from the website content. Be concise and accurate."""
         raise HTTPException(status_code=502, detail="AI generation failed")
 
     # 5. Parse the response
-    import re as _re
-
-    kb_match = _re.search(r"===KNOWLEDGE_BASE===\s*(.+?)(?====CUSTOM_INSTRUCTIONS===)", raw, _re.DOTALL)
-    ci_match = _re.search(r"===CUSTOM_INSTRUCTIONS===\s*(.+?)(?====FAQ_START===)", raw, _re.DOTALL)
-    faq_match = _re.search(r"===FAQ_START===\s*(.+?)===FAQ_END===", raw, _re.DOTALL)
-
-    knowledge_base = kb_match.group(1).strip() if kb_match else raw[:2000]
-    custom_instructions = ci_match.group(1).strip() if ci_match else ""
-    faqs = []
-
-    if faq_match:
-        faq_text = faq_match.group(1).strip()
-        entries = _re.split(r"\nQ: ", "\nQ: " + faq_text)
-        for entry in entries:
-            entry = entry.strip()
-            if not entry:
-                continue
-            q_match = _re.match(r"(.+?)(?:\nA: )(.+?)(?:\nC: )(.+)", entry, _re.DOTALL)
-            if q_match:
-                faqs.append(AutoKbFaqEntry(
-                    question=q_match.group(1).strip(),
-                    answer=q_match.group(2).strip(),
-                    category=q_match.group(3).strip(),
-                ))
+    knowledge_base, custom_instructions, faqs = _parse_auto_kb_response(raw)
 
     # 6. Persist to database
     try:
