@@ -154,9 +154,22 @@ Before writing any database query, verify the column exists. When creating a mig
 
 ## Skills & Agents
 
-Skills in `.claude/skills/`: **schema-guard**, **debug-api**, **feature-build**, **widget-test**, **team-orchestration**, **industry-content**, **ai-feature-pattern**, **migration-workflow**, **build-loop**, **kb-discover**, **kb-ingest**, **kb-compile**, **kb-query**, **kb-health**. Also `.codex/skills/` for repo-native skills.
+Skills in `.claude/skills/` (32 total):
+- **Core:** schema-guard, debug-api, feature-build, widget-test, migration-workflow
+- **AI/Knowledge:** ai-feature-pattern, kb-discover, kb-ingest, kb-compile, kb-query, kb-health
+- **Quality:** tdd-workflow, verification-loop, e2e-testing, eval-harness, coding-standards
+- **Orchestration:** team-orchestration, coordinator, build-loop, strategic-compact, deep-research
+- **Industry:** industry-content, tenant-chatbot-audit
+- **Security:** security-audit, security-patch-from-review, dead-code-sweep
+- **Meta:** kairos (background agent), buddy (companion), kevin-mode (terse output), subconscious
+- Also `.codex/skills/` for repo-native skills.
 
-Agents in `.claude/agents/`: **schema-guardian**, **backend-dev**, **frontend-dev**, **widget-specialist**, **qa-tester**, **devops**. Use `/delegate` to plan delegation. Agents communicate via `.claude/agent-comms/`.
+Agents in `.claude/agents/` (15 total):
+- **Core team:** schema-guardian, backend-dev, frontend-dev, widget-specialist, qa-tester, devops
+- **Review:** code-reviewer, security-reviewer, tdd-guide
+- **Architecture:** architect, performance-optimizer, refactor-cleaner
+- **GAN harness:** gan-planner, gan-generator, gan-evaluator
+- Use `/delegate` or `/coordinator` to plan delegation. Agents communicate via `.claude/agent-comms/`.
 
 **Delegation order:** schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester. Before deploy: qa-tester + devops in parallel.
 
