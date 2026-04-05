@@ -175,6 +175,11 @@ def _log_error(
     )
 
 
+def _should_retry(exc: Exception) -> bool:
+    name = type(exc).__name__.lower()
+    return any(token in name for token in ("ratelimit", "overloaded", "timeout", "apiconnection", "internalserver"))
+
+
 def call_claude_messages_sync(
     *,
     operation: str,
@@ -185,30 +190,49 @@ def call_claude_messages_sync(
     system: str | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
+    max_retries: int = 0,
+    retry_delay_seconds: float = 0.75,
 ) -> ClaudeCallResult:
     """Run a Claude messages.create call with timing and structured logs."""
     call_id = uuid.uuid4().hex[:12]
     _log_start(call_id, operation, model, max_tokens, temperature, system, messages, metadata)
     started = time.perf_counter()
+    attempts = 0
 
-    try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=timeout)
-        request_kwargs: dict[str, Any] = {
-            "model": model,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "messages": messages,
-        }
-        if system is not None:
-            request_kwargs["system"] = system
+    while True:
+        attempts += 1
+        try:
+            client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=timeout)
+            request_kwargs: dict[str, Any] = {
+                "model": model,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "messages": messages,
+            }
+            if system is not None:
+                request_kwargs["system"] = system
 
-        response = client.messages.create(
-            **request_kwargs,
-        )
-    except Exception as exc:
-        duration_ms = int((time.perf_counter() - started) * 1000)
-        _log_error(call_id, operation, model, duration_ms, messages, system, metadata, exc)
-        raise
+            response = client.messages.create(
+                **request_kwargs,
+            )
+            break
+        except Exception as exc:
+            duration_ms = int((time.perf_counter() - started) * 1000)
+            retryable = _should_retry(exc) and attempts <= max_retries
+            logger.warning(
+                "llm.call.retry_decision id=%s op=%s attempt=%d max_retries=%d retryable=%s error_type=%s",
+                call_id,
+                operation,
+                attempts,
+                max_retries,
+                retryable,
+                type(exc).__name__,
+            )
+            if retryable:
+                time.sleep(retry_delay_seconds * attempts)
+                continue
+            _log_error(call_id, operation, model, duration_ms, messages, system, metadata, exc)
+            raise
 
     duration_ms = int((time.perf_counter() - started) * 1000)
     usage = getattr(response, "usage", None)

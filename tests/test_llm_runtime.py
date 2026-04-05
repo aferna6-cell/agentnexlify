@@ -11,6 +11,7 @@ import pytest
 from backend.services.llm_runtime import (
     _message_role_counts,
     _safe_metadata,
+    _should_retry,
     call_claude_messages_sync,
 )
 
@@ -97,6 +98,21 @@ def test_call_claude_messages_sync_logs_and_returns_result():
         assert "tenant-123" in str(start_args)
 
 
+def test_should_retry_matches_transient_error_types():
+    class RateLimitError(Exception):
+        pass
+
+    class TimeoutError(Exception):
+        pass
+
+    class BadRequestError(Exception):
+        pass
+
+    assert _should_retry(RateLimitError()) is True
+    assert _should_retry(TimeoutError()) is True
+    assert _should_retry(BadRequestError()) is False
+
+
 def test_call_claude_messages_sync_logs_error_with_safe_metadata():
     with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls, \
          patch("backend.services.llm_runtime.logger") as mock_logger:
@@ -114,6 +130,43 @@ def test_call_claude_messages_sync_logs_error_with_safe_metadata():
             )
 
         warning_args = mock_logger.warning.call_args[0]
-        assert warning_args[0].startswith("llm.call.error")
-        assert "hide me" not in str(warning_args)
-        assert "tenant-123" in str(warning_args)
+        assert warning_args[0].startswith("llm.call.retry_decision") or warning_args[0].startswith("llm.call.error")
+        logged = " ".join(str(call[0][0]) for call in mock_logger.warning.call_args_list)
+        assert "llm.call.error" in logged
+        assert "hide me" not in str(mock_logger.warning.call_args_list)
+        assert "tenant-123" in str(mock_logger.warning.call_args_list)
+
+
+def test_call_claude_messages_sync_retries_transient_failures():
+    class RateLimitError(Exception):
+        pass
+
+    fake_usage = SimpleNamespace(
+        input_tokens=10,
+        output_tokens=5,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=0,
+    )
+    fake_response = SimpleNamespace(
+        content=[SimpleNamespace(text="Recovered")],
+        usage=fake_usage,
+        stop_reason="end_turn",
+    )
+
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls, \
+         patch("backend.services.llm_runtime.time.sleep") as mock_sleep:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [RateLimitError("slow down"), fake_response]
+
+        result = call_claude_messages_sync(
+            operation="unit.retry",
+            model="claude-sonnet-4-6",
+            max_tokens=32,
+            messages=[{"role": "user", "content": "hello"}],
+            max_retries=1,
+        )
+
+        assert result.text == "Recovered"
+        assert mock_client.messages.create.call_count == 2
+        mock_sleep.assert_called_once()

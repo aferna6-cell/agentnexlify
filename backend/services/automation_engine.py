@@ -481,6 +481,8 @@ async def _generate_ai_email(
             system=system_prompt,
             messages=[{"role": "user", "content": user_content}],
             timeout=30.0,
+            max_retries=1,
+            retry_delay_seconds=0.75,
             metadata={
                 "tenant_id": tenant_id,
                 "lead_id": lead_id,
@@ -2396,6 +2398,8 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
                 max_tokens=500,
                 messages=[{"role": "user", "content": prompt}],
                 timeout=30.0,
+                max_retries=1,
+                retry_delay_seconds=0.75,
                 metadata={
                     "tenant_id": tid,
                     "business_type": biz_type,

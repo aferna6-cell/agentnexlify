@@ -269,6 +269,8 @@ async def repurpose(
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
         timeout=60.0,
+        max_retries=1,
+        retry_delay_seconds=1.0,
         metadata={
             "tenant_id": tenant_id,
             "tone": tone,

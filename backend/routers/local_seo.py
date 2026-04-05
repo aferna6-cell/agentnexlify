@@ -389,6 +389,8 @@ Return ONLY the raw JSON object, no markdown fences or explanations."""
             max_tokens=4000,
             temperature=0.2,
             timeout=60.0,
+            max_retries=1,
+            retry_delay_seconds=1.0,
             system=(
                 "You are an expert SEO auditor. Analyze websites and return structured JSON audit results. "
                 "Be specific and actionable in your recommendations. Score fairly based on actual evidence in the content. "
@@ -488,6 +490,8 @@ Return ONLY the raw JSON object, no markdown fences."""
             max_tokens=2000,
             temperature=0.3,
             timeout=45.0,
+            max_retries=1,
+            retry_delay_seconds=1.0,
             system=(
                 "You are an expert in GEO (Generative Engine Optimization) and AI visibility. "
                 "Score businesses on how likely AI platforms are to recommend them. "
@@ -558,6 +562,8 @@ Return ONLY the raw JSON array, no markdown fences."""
             max_tokens=3000,
             temperature=0.3,
             timeout=45.0,
+            max_retries=1,
+            retry_delay_seconds=1.0,
             system=(
                 "You are an expert local SEO analyst. Analyze keyword competitiveness for local businesses. "
                 "Be realistic about ranking potential. Return ONLY valid JSON."
@@ -1492,6 +1498,8 @@ async def run_competitor_analysis(
             max_tokens=3000,
             temperature=0.3,
             timeout=60.0,
+            max_retries=1,
+            retry_delay_seconds=1.0,
             system=(
                 "You are a local SEO and business competitive analysis expert. "
                 "Analyze a business against its competitors based on your knowledge. "

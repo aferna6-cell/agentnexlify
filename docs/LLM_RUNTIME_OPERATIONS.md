@@ -131,6 +131,37 @@ When investigating an issue:
 - prompt content should not be logged directly by runtime metadata
 - failures should remain diagnosable via operation + id + safe metadata
 
+## Retry policy
+Retries should be **selective**, not universal.
+
+### Good retry candidates
+Use a single bounded retry (`max_retries=1`) for:
+- long-running content generation
+- intelligence/analysis jobs
+- non-interactive summarization
+- background or operator-triggered tasks where a short retry is acceptable
+
+Examples:
+- content repurposing
+- weekly intelligence briefs
+- local SEO analysis / GEO scoring / competitor analysis
+- AI email drafting for automations
+
+### Bad retry candidates
+Avoid retries by default for:
+- live widget chat
+- SMS reply flows
+- tight latency-sensitive request/response interactions
+- user-facing chat turns where a retry would worsen UX or create duplicate-feeling behavior
+
+### Why
+Retries help with transient provider issues, but they also increase:
+- tail latency
+- perceived sluggishness
+- ambiguity in real-time chat UX
+
+The runtime now supports bounded retries, but callers should opt in only where the product behavior can tolerate them.
+
 ## Recommended future improvements
 - add percentile latency tracking per operation
 - add provider/model dashboards by operation
