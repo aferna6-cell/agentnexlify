@@ -224,6 +224,66 @@ Automated via Task Scheduler: 8 AM morning (`scripts/daily/morning-auto.sh`), 8 
 - ALL Stripe integration MUST use production keys in production (NEVER test keys)
 - ALL API endpoints MUST have input validation and proper error responses
 
+## Decision Engine
+
+### Plan Mode Default
+- Enter plan mode for any non-trivial task (3+ steps or architectural decisions)
+- If something goes wrong, STOP and re-plan immediately — don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### Deterministic-First Rule
+Don't use an LLM for something a deterministic program can do. LLMs are "System 2" (slow, expensive, flexible). Traditional programs are "System 1" (fast, cheap, inflexible). Instead of putting an LLM in the hot loop, write a deterministic tool and call it repeatedly. Code is cheap; tokens are not. If you find yourself generating the same 30 lines of Python to inspect a file, write a 3-line shell script wrapper around jq and check it in.
+
+### Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### Self-Improvement Loop
+- After any correction from the user, update `docs/dev-knowledge/bug-patterns.md` with the pattern
+- Write rules for yourself to prevent repeating the same mistake
+- Review lessons at the start of each session via `/recover`
+- Every bug fixed becomes a permanent rule
+
+### Subagent Strategy
+- Use subagents to keep the main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute via subagents
+- One task per subagent for focused execution
+
+### Quality Gates (Hard Rules — Override Defaults)
+- When evidence contradicts instinct, trust the evidence
+- If a fix feels hacky, ask: "Knowing everything I know now, what's the elegant solution?"
+- No laziness — find root causes, avoid temporary fixes, maintain senior-level standards
+- Simplicity first — make every change as simple as possible, minimize code impact
+
+## Token Optimization (RTK)
+
+RTK (Rust Token Killer) is installed as a PreToolUse hook. It transparently rewrites Bash commands to use `rtk` prefix for 60-90% token savings on terminal output. Claude never sees the rewrite — just compressed output.
+
+Meta commands (use directly):
+- `rtk gain` — show token savings analytics
+- `rtk gain --history` — command usage history with savings
+- `rtk discover` — analyze Claude Code history for missed optimization opportunities
+
+Requires `jq` installed. If RTK hook fails silently, check `which jq` and `which rtk`.
+
+## External Tools & Repos
+
+Installed tools available in `~/`:
+| Tool | Location | Purpose |
+|------|----------|---------|
+| AutoAgent | `~/autoagent/` | Meta-agent that autonomously improves agent harnesses via hill-climbing |
+| RTK | `~/.local/bin/rtk` | CLI proxy for 60-90% token savings on terminal output |
+| GitNexus | `~/GitNexus/` | Knowledge graph engine for codebase — Tree-sitter AST, MCP integration |
+| open-multi-agent | `~/open-multi-agent/` | TypeScript multi-agent framework — runTeam() with auto task decomposition |
+| everything-claude-code | `~/everything-claude-code/` | 27 agents, 64 skills, 33 commands, AgentShield (reference implementation) |
+| AiDesigner | `~/AiDesigner/` | AI designer MCP — generate UI mockups from natural language |
+| obsidian-mind | `~/obsidian-mind/` | Persistent memory vault template for Claude Code sessions |
+| free-coding-models | global npm | 174 free AI models from 23 providers — `free-coding-models` CLI |
+
 ## Error Handling Philosophy (Anti-Desperation)
 
 A `PostToolUseFailure` hook injects a composure check on every tool failure. This is by design — error spiraling (stacking speculative fixes, abandoning working approaches, escalating complexity) is the #1 cause of AI-generated bad solutions.
