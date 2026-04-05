@@ -10,12 +10,14 @@ import {
   createDocTemplate,
 } from "../utils/api/documents";
 import { fetchLeads } from "../utils/api/leads";
+import DOMPurify from "dompurify";
 
 function sanitizeDocHtml(html) {
   if (!html) return "";
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "");
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["iframe", "object", "embed", "form", "link", "meta"],
+  });
 }
 
 const STATUS_FILTERS = [

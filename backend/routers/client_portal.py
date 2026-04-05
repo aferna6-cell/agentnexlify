@@ -436,7 +436,7 @@ async def get_portal_data(token: str, request: Request):
         "service_records": service_records,
         "rebook_enabled": rebook_enabled,
         "widget_api_key": widget_api_key,
-        "api_base": "https://agentnexlify-production.up.railway.app",
+        "api_base": settings.api_url,
         "client_login_enabled": client_login_enabled,
     }
 
@@ -748,7 +748,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
         "documents": doc_result.data or [],
         "rebook_enabled": rebook_enabled,
         "widget_api_key": widget_api_key,
-        "api_base": "https://agentnexlify-production.up.railway.app",
+        "api_base": settings.api_url,
     }
 
 

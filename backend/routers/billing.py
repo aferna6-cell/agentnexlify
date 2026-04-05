@@ -25,7 +25,8 @@ router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 # ---------------------------------------------------------------------------
 
 def _verify_secret(x_api_secret: str = Header(...)):
-    if x_api_secret != settings.api_secret_key:
+    secret = settings.billing_secret or settings.api_secret_key
+    if x_api_secret != secret:
         raise HTTPException(status_code=403, detail="Invalid API secret")
 
 

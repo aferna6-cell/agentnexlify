@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
     # so all workers share the same key, but it is NOT secure for production use.
     api_secret_key: str = _DEV_FALLBACK_SECRET
+    billing_secret: str = ""
     sentry_dsn: str = ""
 
     google_client_id: str = ""

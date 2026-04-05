@@ -154,8 +154,8 @@ Before writing any database query, verify the column exists. When creating a mig
 
 ## Skills & Agents
 
-Skills in `.claude/skills/` (32 total):
-- **Core:** schema-guard, debug-api, feature-build, widget-test, migration-workflow
+Skills in `.claude/skills/` (34 total):
+- **Core:** schema-guard, debug-api, feature-build, widget-test, migration-workflow, compound-engineering, worktree-orchestrator
 - **AI/Knowledge:** ai-feature-pattern, kb-discover, kb-ingest, kb-compile, kb-query, kb-health
 - **Quality:** tdd-workflow, verification-loop, e2e-testing, eval-harness, coding-standards
 - **Orchestration:** team-orchestration, coordinator, build-loop, strategic-compact, deep-research
@@ -164,8 +164,8 @@ Skills in `.claude/skills/` (32 total):
 - **Meta:** kairos (background agent), buddy (companion), kevin-mode (terse output), subconscious
 - Also `.codex/skills/` for repo-native skills.
 
-Agents in `.claude/agents/` (15 total):
-- **Core team:** schema-guardian, backend-dev, frontend-dev, widget-specialist, qa-tester, devops
+Agents in `.claude/agents/` (16 total):
+- **Core team:** schema-guardian, backend-dev, frontend-dev, widget-specialist, qa-tester, devops, vertical-checker
 - **Review:** code-reviewer, security-reviewer, tdd-guide
 - **Architecture:** architect, performance-optimizer, refactor-cleaner
 - **GAN harness:** gan-planner, gan-generator, gan-evaluator
@@ -182,6 +182,8 @@ High-level commands that orchestrate the full agent pipeline:
 | `/new-feature` | Schema → Backend → Frontend → QA → Commit (chains all relevant agents) |
 | `/fix-bug` | Check known patterns → Diagnose → Fix → Verify → Document → Commit |
 | `/deploy` | QA + DevOps in parallel → Fix blockers → Final gate |
+| `/compound` | 5-agent pipeline: Brainstorm → Plan → Execute → Review → Vertical Check |
+| `/orchestrate` | Decompose tasks → parallel worktrees → compound pipeline each → merge |
 | `/refactor` | Analyze → Plan → Execute incrementally → Verify → Commit |
 | `/kb-discover` | Search web for new articles relevant to AgentNexLiFy, score and ingest |
 | `/kb-ingest` | Manually add a URL or file to the knowledge base |
@@ -265,6 +267,31 @@ Don't use an LLM for something a deterministic program can do. LLMs are "System 
 - Offload research, exploration, and parallel analysis to subagents
 - For complex problems, throw more compute via subagents
 - One task per subagent for focused execution
+
+### Compound Engineering (Primary Workflow)
+
+The default workflow for any non-trivial task. 5 focused agents run sequentially, each doing one thing well. Slower per-task, but output quality is dramatically higher because no single agent tries to think about everything.
+
+**The 5 Agents:**
+1. **Brainstormer** — explores problem space, edge cases, constraints, 2-3 approaches
+2. **Planner** — exact files, exact steps, TDD, dependency order
+3. **Executor** — implements plan step-by-step, tests first, commits at milestones
+4. **Reviewer** — code quality, security, correctness (BLOCK on CRITICAL)
+5. **Vertical Checker** — schema, RLS, performance, widget sync, frontend build, integration
+
+**Pipeline:** Each agent writes markdown output. Next agent reads previous output. No skipping.
+
+**Trigger:** `/compound`, "compound this", or any task touching 2+ files/domains.
+
+**Skill:** `.claude/skills/compound-engineering/SKILL.md`
+
+**Worktree Parallelism:** For multiple independent tasks, use `.claude/skills/worktree-orchestrator/SKILL.md` to run 4-8 compound pipelines in parallel across git worktrees. Each worktree = 1 Claude Code session = 1 compound pipeline. Merge back when all complete.
+
+| Command | What It Does |
+|---------|-------------|
+| `/compound` | Run 5-agent pipeline on a single task |
+| `/orchestrate` | Decompose into parallel worktrees, each running compound |
+| `/parallel` | Alias for `/orchestrate` |
 
 ### Quality Gates (Hard Rules — Override Defaults)
 - When evidence contradicts instinct, trust the evidence

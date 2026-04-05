@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import DOMPurify from "dompurify";
 import { useAuth } from "../../context/AuthContext";
 import {
   fetchEmailTemplates,
@@ -184,9 +185,7 @@ const SAMPLE_DATA = {
 
 function sanitizeHtml(html) {
   if (!html) return "";
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "");
+  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
 }
 
 function resolveTemplateVars(text) {

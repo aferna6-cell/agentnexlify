@@ -55,7 +55,9 @@ async def list_snippets(
     if category:
         query = query.eq("category", category)
     if search:
-        query = query.or_(f"title.ilike.%{search}%,content.ilike.%{search}%")
+        safe_search = search.replace(",", "").replace(".", "").replace("%", "").replace("_", "").strip()
+        if safe_search:
+            query = query.or_(f"title.ilike.%{safe_search}%,content.ilike.%{safe_search}%")
 
     result = query.execute()
     return {"snippets": result.data or []}

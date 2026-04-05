@@ -303,12 +303,10 @@ app = FastAPI(
 )
 
 # --- CORS ---
-# Widget is embedded on customer websites (arbitrary origins), so we MUST
-# allow all origins.  Per-widget domain restrictions are enforced at the
-# application level in widget_helpers.py:_check_origin().
-#
-# Note: allow_credentials cannot be True when allow_origins is ["*"], so
-# we disable it.  The widget uses API-key auth, not cookies.
+# allow_origins=["*"] is required because the embeddable widget runs on
+# third-party domains. Dashboard routes are protected by JWT auth in Authorization
+# header, which cannot be sent cross-origin automatically.
+# allow_credentials=False prevents cookie-based CSRF.
 _CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -322,6 +320,46 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# --- Security headers ---
+# Routes that may be embedded in iframes on third-party sites.
+_EMBEDDABLE_PREFIXES = ("/api/v1/widget", "/api/v1/forms/public", "/api/v1/book")
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    is_embeddable = any(path.startswith(p) for p in _EMBEDDABLE_PREFIXES)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data: https:; "
+        "connect-src 'self' https:; "
+        "frame-ancestors 'none'"
+    ) if not is_embeddable else (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data: https:; "
+        "connect-src 'self' https:; "
+        "frame-ancestors *"
+    )
+
+    if is_embeddable:
+        response.headers["X-Frame-Options"] = "ALLOWALL"
+    else:
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    return response
+
 
 # --- Rate limiting ---
 app.state.limiter = limiter

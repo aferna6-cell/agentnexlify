@@ -378,24 +378,19 @@ New table `client_accounts` for client portal authentication. Columns: tenant_id
 ### 066 — Appointment Waitlist
 New table `waitlist_entries` for appointment waitlist management. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL), customer_name (TEXT NOT NULL), customer_email (TEXT), customer_phone (TEXT), preferred_date (DATE NOT NULL), preferred_time_start/end (TEXT), service_type_id (FK→service_types, ON DELETE SET NULL), notes (TEXT), status (TEXT CHECK: waiting/notified/booked/expired/cancelled, DEFAULT 'waiting'), notified_at (TIMESTAMPTZ), booked_appointment_id (FK→appointments, ON DELETE SET NULL), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status) and (tenant_id, preferred_date) for waiting entries. RLS enabled.
 
-**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: DUPLICATE FILE — both `066_appointment_waitlist.sql` and `066_waitlist.sql` exist in migrations/. Verify they are identical before applying; delete the duplicate.**
+**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: Duplicate `066_waitlist.sql` renumbered to `083_waitlist.sql` (2026-04-05).**
 
 ### 067 — Lead Scoring Configuration
 New table `scoring_configs` for per-tenant configurable lead scoring weights. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), factor (TEXT NOT NULL), weight (INTEGER CHECK 0-100, DEFAULT 10), description (TEXT), is_enabled (BOOLEAN DEFAULT true), created_at (TIMESTAMPTZ). Unique index on (tenant_id, factor). Indexed on tenant_id. RLS enabled.
 
-**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: DUPLICATE FILE — both `067_lead_scoring_config.sql` and `067_scoring_configs.sql` exist in migrations/. Verify they are identical before applying; delete the duplicate.**
+**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: Duplicate `067_scoring_configs.sql` renumbered to `084_scoring_configs.sql` (2026-04-05).**
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
 
-### 068 — Invoice Number Unique Index (duplicate number)
+### 068 — Invoice Number Unique Index
 Adds unique index `idx_invoices_tenant_number ON invoices(tenant_id, invoice_number)`. Prevents duplicate invoice numbers under concurrent creation. Backend retries with incremented sequence on conflict.
 
 **Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
-
-### 068 — Password Reset Tokens (duplicate number)
-Adds `reset_token` (TEXT) and `reset_token_expires` (TIMESTAMPTZ) to `tenants`. Partial index on `reset_token` for non-null values. Supports password reset flow via email token.
-
-**Applied:** Pending — created 2026-03-25, not yet applied to Supabase. **Note: duplicate migration number — must renumber before applying.**
 
 ### 069 — Lead Email Bounced
 Adds `email_bounced` (BOOLEAN DEFAULT FALSE) and `email_bounced_at` (TIMESTAMPTZ) to `leads`. Partial index on bounced leads. Resend webhook sets this flag; automation engine and email sender skip bounced leads.
@@ -493,3 +488,27 @@ Fixes critical bug: conversations table had RLS enabled (migration 001) but NO p
 - Created `repurpose_jobs` table: tenant_id (FK), source_type, source_url, source_content, source_title, tone, outputs (JSONB), status, connected IDs
 - RLS enabled with tenant policy + service role policy
 - Indexes on tenant_id and status
+
+### Migration 083 — Waitlist (2026-04-05, renumbered)
+_Renumbered from `066_waitlist.sql` to `083_waitlist.sql` to resolve duplicate numbering with `066_appointment_waitlist.sql`._ Same content as documented under 066 — Appointment Waitlist above.
+
+**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+
+### Migration 084 — Scoring Configs (2026-04-05, renumbered)
+_Renumbered from `067_scoring_configs.sql` to `084_scoring_configs.sql` to resolve duplicate numbering with `067_lead_scoring_config.sql`._ Same content as documented under 067 — Lead Scoring Configuration above.
+
+**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+
+### Migration 085 — Password Reset Tokens (2026-04-05, renumbered)
+Adds `reset_token` (TEXT) and `reset_token_expires` (TIMESTAMPTZ) to `tenants`. Partial index on `reset_token` for non-null values. Supports password reset flow via email token. _Renumbered from `068_password_reset_tokens.sql` to `085_password_reset_tokens.sql` to resolve duplicate numbering with `068_invoice_number_unique.sql`._
+
+**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+
+---
+
+**2026-04-05 — Duplicate Migration Renumbering:**
+Renumbered 3 duplicate migration files to resolve numbering conflicts:
+- `066_waitlist.sql` -> `083_waitlist.sql`
+- `067_scoring_configs.sql` -> `084_scoring_configs.sql`
+- `068_password_reset_tokens.sql` -> `085_password_reset_tokens.sql`
+The "keep" files (`066_appointment_waitlist.sql`, `067_lead_scoring_config.sql`, `068_invoice_number_unique.sql`) retain their original numbers. Historical duplicates at 005 and 007 remain unchanged (documented separately).
