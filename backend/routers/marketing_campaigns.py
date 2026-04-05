@@ -66,6 +66,26 @@ class GenerateEmailRequest(BaseModel):
 
 # --- Helpers ---
 
+def _parse_generated_email(raw: str) -> tuple[str, str]:
+    """Parse generated campaign email output into subject/body."""
+    subject = ""
+    body = raw
+
+    if "SUBJECT:" in raw:
+        lines = raw.split("\n", 1)
+        first_line = lines[0].strip()
+        if first_line.upper().startswith("SUBJECT:"):
+            subject = first_line.split(":", 1)[1].strip()
+            rest = lines[1] if len(lines) > 1 else ""
+            stripped_rest = rest.strip()
+            if stripped_rest.startswith("---"):
+                body = stripped_rest[3:].strip()
+            else:
+                body = stripped_rest
+
+    return subject, body
+
+
 def _validate_campaign_type(campaign_type: str) -> None:
     if campaign_type not in VALID_CAMPAIGN_TYPES:
         raise HTTPException(
@@ -653,20 +673,7 @@ async def generate_campaign_email(
         raise HTTPException(status_code=500, detail="AI email generation failed")
 
     # Parse subject and body
-    subject = ""
-    body = raw
-
-    if "SUBJECT:" in raw:
-        lines = raw.split("\n", 1)
-        first_line = lines[0].strip()
-        if first_line.upper().startswith("SUBJECT:"):
-            subject = first_line.split(":", 1)[1].strip()
-            rest = lines[1] if len(lines) > 1 else ""
-            # Remove the --- separator
-            if rest.strip().startswith("---"):
-                body = rest.strip()[3:].strip()
-            else:
-                body = rest.strip()
+    subject, body = _parse_generated_email(raw)
 
     return {
         "subject": subject,

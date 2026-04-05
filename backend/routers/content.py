@@ -38,6 +38,48 @@ class ContentUpdate(BaseModel):
 
 # --- Helpers ---
 
+def _parse_platform_versions(raw: str, platform_keys: list[str]) -> dict[str, str]:
+    """Parse AI repurpose output separated by ===PLATFORM=== markers."""
+    versions: dict[str, str] = {}
+    current_platform = None
+    current_lines: list[str] = []
+
+    for line in raw.split("\n"):
+        stripped = line.strip()
+        matched = False
+        for key in platform_keys:
+            if key.lower() in stripped.lower() and "===platform===" in stripped.lower():
+                if current_platform and current_lines:
+                    versions[current_platform] = "\n".join(current_lines).strip()
+                current_platform = key
+                current_lines = []
+                matched = True
+                break
+        if not matched:
+            current_lines.append(line)
+
+    if current_platform and current_lines:
+        versions[current_platform] = "\n".join(current_lines).strip()
+
+    if len(versions) < 3:
+        fallback_versions: dict[str, str] = {}
+        sections = raw.split("===PLATFORM===")
+        for i, section in enumerate(sections):
+            section = section.strip()
+            if not section:
+                continue
+            lines = section.split("\n", 1)
+            key = lines[0].strip().lower().replace(" ", "")
+            if key in platform_keys:
+                fallback_versions[key] = lines[1].strip() if len(lines) > 1 else ""
+            elif i - 1 < len(platform_keys):
+                fallback_versions[platform_keys[i - 1 if i > 0 else 0]] = section
+        if fallback_versions:
+            versions = fallback_versions
+
+    return versions
+
+
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -329,45 +371,7 @@ async def repurpose_content(
         raise HTTPException(status_code=500, detail="AI content generation failed")
 
     # Parse the response into platform versions
-    versions = {}
-    current_platform = None
-    current_lines = []
-
-    for line in raw.split("\n"):
-        stripped = line.strip()
-        # Check for platform delimiter
-        matched = False
-        for key in platform_keys:
-            if key.lower() in stripped.lower() and "===platform===" in stripped.lower():
-                if current_platform and current_lines:
-                    versions[current_platform] = "\n".join(current_lines).strip()
-                current_platform = key
-                current_lines = []
-                matched = True
-                break
-        if not matched:
-            current_lines.append(line)
-
-    # Capture the last platform
-    if current_platform and current_lines:
-        versions[current_platform] = "\n".join(current_lines).strip()
-
-    # Fallback: if parsing failed, try to split by platform names
-    if len(versions) < 3:
-        versions = {}
-        sections = raw.split("===PLATFORM===")
-        for i, section in enumerate(sections):
-            section = section.strip()
-            if not section:
-                continue
-            # First line might be the platform key
-            lines = section.split("\n", 1)
-            key = lines[0].strip().lower().replace(" ", "")
-            if key in platform_keys:
-                versions[key] = lines[1].strip() if len(lines) > 1 else ""
-            elif i - 1 < len(platform_keys):
-                # Positional fallback
-                versions[platform_keys[i - 1 if i > 0 else 0]] = section
+    versions = _parse_platform_versions(raw, platform_keys)
 
     # Save platform versions and update status
     db.table("content_items").update({

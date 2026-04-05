@@ -85,6 +85,57 @@ class AICampaignRequest(BaseModel):
 
 # --- Helpers ---
 
+def _parse_generated_campaign_posts(raw: str, default_platforms: list[str]) -> list[dict]:
+    """Parse AI campaign output separated by ===POST=== markers."""
+    posts = []
+    sections = raw.split("===POST===")
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+
+        post = {"day": 1, "platform": default_platforms[0], "content": "", "hashtags": []}
+        lines = section.split("\n")
+        content_lines = []
+        in_content = False
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.upper().startswith("DAY:"):
+                try:
+                    post["day"] = int(stripped.split(":", 1)[1].strip())
+                except (ValueError, IndexError):
+                    pass
+                in_content = False
+            elif stripped.upper().startswith("PLATFORM:"):
+                plat = stripped.split(":", 1)[1].strip().lower().replace(" ", "_")
+                if plat in VALID_PLATFORMS:
+                    post["platform"] = plat
+                in_content = False
+            elif stripped.upper().startswith("CONTENT:"):
+                content_start = stripped.split(":", 1)[1].strip()
+                if content_start:
+                    content_lines.append(content_start)
+                in_content = True
+            elif stripped.upper().startswith("HASHTAGS:"):
+                hashtag_text = stripped.split(":", 1)[1].strip()
+                if hashtag_text.lower() != "none":
+                    post["hashtags"] = [
+                        h.strip() if h.strip().startswith("#") else f"#{h.strip()}"
+                        for h in hashtag_text.split(",")
+                        if h.strip()
+                    ]
+                in_content = False
+            elif in_content:
+                content_lines.append(line)
+
+        post["content"] = "\n".join(content_lines).strip()
+        if post["content"]:
+            posts.append(post)
+
+    return posts
+
+
 def _validate_platform(platform: str) -> None:
     if platform not in VALID_PLATFORMS:
         raise HTTPException(
@@ -412,51 +463,7 @@ async def generate_campaign_content(
         raise HTTPException(status_code=500, detail="AI campaign generation failed")
 
     # Parse the response into individual posts
-    posts = []
-    sections = raw.split("===POST===")
-    for section in sections:
-        section = section.strip()
-        if not section:
-            continue
-
-        post = {"day": 1, "platform": req.platforms[0], "content": "", "hashtags": []}
-        lines = section.split("\n")
-        content_lines = []
-        in_content = False
-
-        for line in lines:
-            stripped = line.strip()
-            if stripped.upper().startswith("DAY:"):
-                try:
-                    post["day"] = int(stripped.split(":", 1)[1].strip())
-                except (ValueError, IndexError):
-                    pass
-                in_content = False
-            elif stripped.upper().startswith("PLATFORM:"):
-                plat = stripped.split(":", 1)[1].strip().lower().replace(" ", "_")
-                if plat in VALID_PLATFORMS:
-                    post["platform"] = plat
-                in_content = False
-            elif stripped.upper().startswith("CONTENT:"):
-                content_start = stripped.split(":", 1)[1].strip()
-                if content_start:
-                    content_lines.append(content_start)
-                in_content = True
-            elif stripped.upper().startswith("HASHTAGS:"):
-                hashtag_text = stripped.split(":", 1)[1].strip()
-                if hashtag_text.lower() != "none":
-                    post["hashtags"] = [
-                        h.strip() if h.strip().startswith("#") else f"#{h.strip()}"
-                        for h in hashtag_text.split(",")
-                        if h.strip()
-                    ]
-                in_content = False
-            elif in_content:
-                content_lines.append(line)
-
-        post["content"] = "\n".join(content_lines).strip()
-        if post["content"]:
-            posts.append(post)
+    posts = _parse_generated_campaign_posts(raw, req.platforms)
 
     return {
         "posts": posts,

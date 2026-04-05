@@ -127,6 +127,32 @@ class KeywordRankingsResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _strip_json_fences(raw: str) -> str:
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        raw = raw.strip()
+    return raw
+
+
+def _parse_json_object_response(raw: str) -> dict:
+    cleaned = _strip_json_fences(raw)
+    result = json.loads(cleaned)
+    if isinstance(result, dict):
+        return result
+    raise ValueError(f"Expected dict response, got {type(result).__name__}")
+
+
+def _parse_json_array_response(raw: str) -> list:
+    cleaned = _strip_json_fences(raw)
+    result = json.loads(cleaned)
+    if isinstance(result, list):
+        return result
+    raise ValueError(f"Expected list response, got {type(result).__name__}")
+
+
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -249,12 +275,9 @@ async def _generate_keywords(business_type: Optional[str], city: Optional[str]) 
             metadata={"business_type": biz_desc, "city": location_desc},
         )
         raw = resp.text.strip()
-        keywords = json.loads(raw)
-        if isinstance(keywords, list):
-            return [str(k) for k in keywords[:20]]
-        logger.warning("Claude returned non-list for keywords: %s", type(keywords))
-        return []
-    except json.JSONDecodeError:
+        keywords = _parse_json_array_response(raw)
+        return [str(k) for k in keywords[:20]]
+    except (json.JSONDecodeError, ValueError):
         logger.error("Failed to parse keyword suggestions JSON from Claude: %.200s", raw)
         return []
     except anthropic.RateLimitError:
@@ -375,18 +398,8 @@ Return ONLY the raw JSON object, no markdown fences or explanations."""
             metadata={"business_name": business_name, "business_type": business_type, "page_count": min(len(pages_json), 20)},
         )
         raw = resp.text.strip()
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-            if raw.endswith("```"):
-                raw = raw[:-3]
-            raw = raw.strip()
-        result = json.loads(raw)
-        if isinstance(result, dict):
-            return result
-        logger.warning("SEO audit AI returned non-dict: %s", type(result))
-        return {}
-    except json.JSONDecodeError:
+        return _parse_json_object_response(raw)
+    except (json.JSONDecodeError, ValueError):
         logger.error("Failed to parse SEO audit JSON from Claude: %.500s", raw)
         return {}
     except anthropic.RateLimitError:
@@ -485,17 +498,8 @@ Return ONLY the raw JSON object, no markdown fences."""
             metadata={"business_name": business_name, "business_type": business_type, "city": city},
         )
         raw = resp.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-            if raw.endswith("```"):
-                raw = raw[:-3]
-            raw = raw.strip()
-        result = json.loads(raw)
-        if isinstance(result, dict):
-            return result
-        logger.warning("GEO score AI returned non-dict: %s", type(result))
-        return {}
-    except json.JSONDecodeError:
+        return _parse_json_object_response(raw)
+    except (json.JSONDecodeError, ValueError):
         logger.error("Failed to parse GEO score JSON from Claude: %.500s", raw)
         return {}
     except anthropic.RateLimitError:
@@ -562,17 +566,8 @@ Return ONLY the raw JSON array, no markdown fences."""
             metadata={"business_type": business_type, "city": city, "keyword_count": len(keywords)},
         )
         raw = resp.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-            if raw.endswith("```"):
-                raw = raw[:-3]
-            raw = raw.strip()
-        result = json.loads(raw)
-        if isinstance(result, list):
-            return result
-        logger.warning("Keyword analysis AI returned non-list: %s", type(result))
-        return []
-    except json.JSONDecodeError:
+        return _parse_json_array_response(raw)
+    except (json.JSONDecodeError, ValueError):
         logger.error("Failed to parse keyword analysis JSON from Claude: %.500s", raw)
         return []
     except anthropic.RateLimitError:
@@ -1536,12 +1531,8 @@ async def run_competitor_analysis(
 
     # Parse JSON response
     try:
-        if "```json" in raw:
-            raw = raw.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw:
-            raw = raw.split("```")[1].split("```")[0].strip()
-        result = json.loads(raw)
-    except (json.JSONDecodeError, IndexError):
+        result = _parse_json_object_response(raw)
+    except (json.JSONDecodeError, ValueError, IndexError):
         logger.error("Failed to parse competitor analysis JSON: %s", raw[:500])
         raise HTTPException(status_code=500, detail="Failed to parse competitor analysis")
 
