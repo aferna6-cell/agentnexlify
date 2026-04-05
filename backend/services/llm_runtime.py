@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import time
+import uuid
 from dataclasses import dataclass
 from functools import partial
 from typing import Any
@@ -63,7 +64,38 @@ def _extract_text(response: Any) -> str:
     return "".join(parts).strip()
 
 
+def _safe_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    if not metadata:
+        return {}
+    safe: dict[str, Any] = {}
+    for key, value in metadata.items():
+        key_l = str(key).lower()
+        if any(token in key_l for token in ("message", "content", "text", "body", "api_key", "token", "secret", "password", "cookie", "authorization")):
+            continue
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            if isinstance(value, str) and len(value) > 200:
+                safe[key] = value[:197] + "..."
+            else:
+                safe[key] = value
+        elif isinstance(value, (list, tuple)):
+            safe[key] = {"type": type(value).__name__, "len": len(value)}
+        elif isinstance(value, dict):
+            safe[key] = {"type": "dict", "keys": sorted(str(k) for k in value.keys())[:20]}
+        else:
+            safe[key] = {"type": type(value).__name__}
+    return safe
+
+
+def _message_role_counts(messages: list[dict[str, str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for msg in messages:
+        role = str(msg.get("role") or "unknown")
+        counts[role] = counts.get(role, 0) + 1
+    return counts
+
+
 def _log_start(
+    call_id: str,
     operation: str,
     model: str,
     max_tokens: int,
@@ -74,22 +106,24 @@ def _log_start(
 ) -> None:
     system_chars = len(system or "")
     message_chars = sum(len(msg.get("content") or "") for msg in messages)
-    extra = metadata or {}
     logger.info(
-        "llm.call.start op=%s model=%s max_tokens=%d temperature=%.2f "
-        "message_count=%d system_chars=%d message_chars=%d metadata=%s",
+        "llm.call.start id=%s op=%s model=%s max_tokens=%d temperature=%.2f "
+        "message_count=%d role_counts=%s system_chars=%d message_chars=%d metadata=%s",
+        call_id,
         operation,
         model,
         max_tokens,
         temperature,
         len(messages),
+        _message_role_counts(messages),
         system_chars,
         message_chars,
-        extra,
+        _safe_metadata(metadata),
     )
 
 
 def _log_finish(
+    call_id: str,
     operation: str,
     model: str,
     duration_ms: int,
@@ -97,8 +131,9 @@ def _log_finish(
     metadata: dict[str, Any] | None,
 ) -> None:
     logger.info(
-        "llm.call.finish op=%s model=%s duration_ms=%d input_tokens=%s output_tokens=%s "
+        "llm.call.finish id=%s op=%s model=%s duration_ms=%d input_tokens=%s output_tokens=%s "
         "cache_create_tokens=%s cache_read_tokens=%s response_chars=%d stop_reason=%s metadata=%s",
+        call_id,
         operation,
         model,
         duration_ms,
@@ -108,11 +143,12 @@ def _log_finish(
         result.cache_read_input_tokens,
         len(result.text),
         result.stop_reason,
-        metadata or {},
+        _safe_metadata(metadata),
     )
 
 
 def _log_error(
+    call_id: str,
     operation: str,
     model: str,
     duration_ms: int,
@@ -122,16 +158,19 @@ def _log_error(
     exc: Exception,
 ) -> None:
     logger.warning(
-        "llm.call.error op=%s model=%s duration_ms=%d message_count=%d system_chars=%d "
-        "message_chars=%d error_type=%s metadata=%s",
+        "llm.call.error id=%s op=%s model=%s duration_ms=%d message_count=%d role_counts=%s system_chars=%d "
+        "message_chars=%d error_type=%s error=%s metadata=%s",
+        call_id,
         operation,
         model,
         duration_ms,
         len(messages),
+        _message_role_counts(messages),
         len(system or ""),
         sum(len(msg.get("content") or "") for msg in messages),
         type(exc).__name__,
-        metadata or {},
+        str(exc)[:300],
+        _safe_metadata(metadata),
         exc_info=True,
     )
 
@@ -148,7 +187,8 @@ def call_claude_messages_sync(
     metadata: dict[str, Any] | None = None,
 ) -> ClaudeCallResult:
     """Run a Claude messages.create call with timing and structured logs."""
-    _log_start(operation, model, max_tokens, temperature, system, messages, metadata)
+    call_id = uuid.uuid4().hex[:12]
+    _log_start(call_id, operation, model, max_tokens, temperature, system, messages, metadata)
     started = time.perf_counter()
 
     try:
@@ -167,7 +207,7 @@ def call_claude_messages_sync(
         )
     except Exception as exc:
         duration_ms = int((time.perf_counter() - started) * 1000)
-        _log_error(operation, model, duration_ms, messages, system, metadata, exc)
+        _log_error(call_id, operation, model, duration_ms, messages, system, metadata, exc)
         raise
 
     duration_ms = int((time.perf_counter() - started) * 1000)
@@ -182,7 +222,7 @@ def call_claude_messages_sync(
         stop_reason=getattr(response, "stop_reason", None),
         raw_response=response,
     )
-    _log_finish(operation, model, duration_ms, result, metadata)
+    _log_finish(call_id, operation, model, duration_ms, result, metadata)
     return result
 
 
