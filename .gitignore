@@ -25,3 +25,4 @@ docs/daily-logs/auto-evening-*.log
 scripts/daily/run-morning.bat
 scripts/daily/run-evening.bat
 .claude/command-log.txt
+.gitnexus
