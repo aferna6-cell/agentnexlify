@@ -19,6 +19,47 @@ from backend.services.llm_runtime import call_claude_messages_sync
 
 logger = logging.getLogger(__name__)
 
+
+def _strip_json_fences(raw_text: str) -> str:
+    cleaned = raw_text.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+    return cleaned.strip()
+
+
+def _repair_truncated_json(raw_text: str) -> str:
+    open_braces = raw_text.count("{") - raw_text.count("}")
+    open_brackets = raw_text.count("[") - raw_text.count("]")
+
+    # First try the least-destructive repair: only close still-open structures.
+    direct_repair = raw_text + "]" * max(0, open_brackets) + "}" * max(0, open_braces)
+    try:
+        json.loads(direct_repair)
+        return direct_repair
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: truncate to the last likely-complete boundary, then close structures.
+    repaired = raw_text
+    last_complete = max(repaired.rfind("},"), repaired.rfind("],"), repaired.rfind('",'))
+    if last_complete > 0:
+        repaired = repaired[:last_complete + 1]
+    repaired += "]" * max(0, open_brackets) + "}" * max(0, open_braces)
+    return repaired
+
+
+def _parse_repurpose_json(raw_text: str) -> dict:
+    cleaned = _strip_json_fences(raw_text)
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        repaired = _repair_truncated_json(cleaned)
+        parsed = json.loads(repaired)
+        logger.warning("Repaired truncated JSON response during repurpose parsing")
+    if not isinstance(parsed, dict):
+        raise ValueError(f"Expected dict response, got {type(parsed).__name__}")
+    return parsed
+
 # --- Tone definitions ---
 TONE_MAP = {
     "professional": "Write in a polished, authoritative, business-appropriate tone. No slang.",
@@ -238,28 +279,11 @@ async def repurpose(
 
     # Parse the response
     raw_text = result.text
-    # Strip markdown code fences if present
-    raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text.strip())
-    raw_text = re.sub(r"\s*```$", "", raw_text.strip())
-
     try:
-        result = json.loads(raw_text)
-    except json.JSONDecodeError:
-        # Attempt to repair truncated JSON by closing open structures
-        repaired = raw_text
-        open_braces = repaired.count("{") - repaired.count("}")
-        open_brackets = repaired.count("[") - repaired.count("]")
-        # Truncate to last complete value (find last comma or closing bracket)
-        last_complete = max(repaired.rfind("},"), repaired.rfind("],"), repaired.rfind('",'))
-        if last_complete > 0:
-            repaired = repaired[:last_complete + 1]
-        repaired += "]" * max(0, open_brackets) + "}" * max(0, open_braces)
-        try:
-            result = json.loads(repaired)
-            logger.warning("Repaired truncated JSON response (closed %d braces, %d brackets)", open_braces, open_brackets)
-        except json.JSONDecodeError:
-            logger.error("Failed to parse or repair Claude repurpose response: %s", raw_text[:500])
-            raise ValueError("AI returned invalid JSON. Please try again.")
+        result = _parse_repurpose_json(raw_text)
+    except (json.JSONDecodeError, ValueError):
+        logger.error("Failed to parse or repair Claude repurpose response: %s", raw_text[:500])
+        raise ValueError("AI returned invalid JSON. Please try again.")
 
     # Only return requested formats
     return {k: v for k, v in result.items() if k in requested_formats}
