@@ -84,8 +84,8 @@ export default function MarketingDashboardPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const openRate = stats.avg_open_rate != null ? `${(stats.avg_open_rate * 100).toFixed(1)}%` : "--";
-  const clickRate = stats.avg_click_rate != null ? `${(stats.avg_click_rate * 100).toFixed(1)}%` : "--";
+  const openRate = stats.avg_open_rate != null ? `${stats.avg_open_rate.toFixed(1)}%` : "--";
+  const clickRate = stats.avg_click_rate != null ? `${stats.avg_click_rate.toFixed(1)}%` : "--";
 
   const pieData = breakdown.map((b) => ({
     name: b.type || b.label || "Unknown",
@@ -144,8 +144,8 @@ export default function MarketingDashboardPage() {
               <LineChart data={trends}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
-                <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)" }} formatter={(v) => [`${(v * 100).toFixed(1)}%`]} />
+                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v.toFixed(0)}%`} />
+                <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)" }} formatter={(v) => [`${v.toFixed(1)}%`]} />
                 <Legend wrapperStyle={{ color: "var(--text-secondary)", fontSize: "0.8rem" }} />
                 <Line type="monotone" dataKey="open_rate" stroke="var(--accent)" strokeWidth={2} dot={false} name="Open Rate" />
                 <Line type="monotone" dataKey="click_rate" stroke="var(--green)" strokeWidth={2} dot={false} name="Click Rate" />
@@ -219,10 +219,10 @@ export default function MarketingDashboardPage() {
                       {c.total_sent?.toLocaleString() ?? "--"}
                     </td>
                     <td style={{ padding: "12px 16px", color: "var(--accent)", fontWeight: 600 }}>
-                      {c.open_rate != null ? `${(c.open_rate * 100).toFixed(1)}%` : "--"}
+                      {c.open_rate != null ? `${c.open_rate.toFixed(1)}%` : "--"}
                     </td>
                     <td style={{ padding: "12px 16px", color: "var(--green)" }}>
-                      {c.click_rate != null ? `${(c.click_rate * 100).toFixed(1)}%` : "--"}
+                      {c.click_rate != null ? `${c.click_rate.toFixed(1)}%` : "--"}
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
                       {c.sent_at ? new Date(c.sent_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "--"}

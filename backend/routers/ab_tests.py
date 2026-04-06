@@ -1,6 +1,5 @@
 """A/B Test CRUD endpoints for marketing campaign experimentation."""
 
-import asyncio
 import hashlib
 import logging
 from datetime import datetime, timezone
@@ -425,12 +424,18 @@ async def complete_ab_test(
             .execute()
         )
 
-        db.table("ab_test_variants").update({"is_winner": True}).eq(
-            "id", req.variant_id
-        ).execute()
-        db.table("ab_test_variants").update({"is_winner": False}).eq(
-            "ab_test_id", test_id
-        ).neq("id", req.variant_id).execute()
+        try:
+            db.table("ab_test_variants").update({"is_winner": True}).eq(
+                "id", req.variant_id
+            ).execute()
+            db.table("ab_test_variants").update({"is_winner": False}).eq(
+                "ab_test_id", test_id
+            ).neq("id", req.variant_id).execute()
+        except Exception:
+            logger.exception(
+                "Failed to update winner variants for A/B test %s", test_id
+            )
+            raise HTTPException(status_code=500, detail="Failed to update winner variants")
 
         return result.data[0]
     except HTTPException:

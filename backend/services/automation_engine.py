@@ -3423,7 +3423,7 @@ async def evaluate_trigger(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -3618,7 +3618,7 @@ async def execute_automation_rule(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -3862,6 +3862,7 @@ async def _send_campaign_for_rule(
             db.table("marketing_campaigns")
             .select("*")
             .eq("id", campaign_id)
+            .eq("tenant_id", tenant_id)
             .limit(1)
             .execute()
         )
@@ -3937,7 +3938,7 @@ async def check_tag_triggers(
     trigger_type = "tag_added" if added else "tag_removed"
 
     try:
-        lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+        lead_result = db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
         lead_data = lead_result.data[0] if lead_result.data else None
     except Exception:
         logger.exception("check_tag_triggers: failed to load lead %s", lead_id)
@@ -4014,7 +4015,7 @@ async def check_form_submission_triggers(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -4097,7 +4098,7 @@ async def check_appointment_triggers(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:

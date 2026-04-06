@@ -275,10 +275,10 @@ function ResultsPanel({ test, onClose }) {
   }, [user?.tenantId, token, test?.id]);
 
   const chartData = results?.variants?.map((v) => ({
-    name: v.name,
-    open_rate: v.open_rate ?? 0,
-    click_rate: v.click_rate ?? 0,
-    sent: v.sent || 0,
+    name: v.variant?.name || v.name || "Unknown",
+    open_rate: (v.metrics?.open_rate ?? v.open_rate ?? 0) / 100,
+    click_rate: (v.metrics?.click_rate ?? v.click_rate ?? 0) / 100,
+    sent: v.metrics?.sent ?? v.sent ?? 0,
   })) || [];
 
   return (
@@ -311,32 +311,34 @@ function ResultsPanel({ test, onClose }) {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200, 1fr))", gap: 12, marginBottom: 20 }}>
             {(results.variants || []).map((v) => {
-              const isWinner = results.winner?.id === v.id;
+              const metrics = v.metrics || {};
+              const variant = v.variant || {};
+              const isWinner = v.is_winner || variant.is_winner || false;
               return (
-                <div key={v.id} style={{
+                <div key={v.variant?.id || v.id} style={{
                   background: isWinner ? "var(--green-dim)" : "var(--bg-primary)",
                   border: `1px solid ${isWinner ? "var(--green)" : "var(--border)"}`,
                   borderRadius: 8, padding: "16px 20px",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{v.name}</span>
+                    <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{variant.name || v.name || "Unknown"}</span>
                     {isWinner && <span style={{ color: "var(--green)", fontSize: "0.75rem", fontWeight: 600 }}>WINNER</span>}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: "0.85rem" }}>
                     <div>
                       <div style={{ color: "var(--text-muted)", marginBottom: 2 }}>Sent</div>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{v.sent || 0}</div>
+                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{metrics.sent ?? 0}</div>
                     </div>
                     <div>
                       <div style={{ color: "var(--text-muted)", marginBottom: 2 }}>Open Rate</div>
                       <div style={{ fontWeight: 600, color: "var(--accent)" }}>
-                        {v.open_rate != null ? `${(v.open_rate * 100).toFixed(1)}%` : "--"}
+                        {metrics.open_rate != null ? `${metrics.open_rate.toFixed(1)}%` : "--"}
                       </div>
                     </div>
                     <div>
                       <div style={{ color: "var(--text-muted)", marginBottom: 2 }}>Click Rate</div>
                       <div style={{ fontWeight: 600, color: "var(--green)" }}>
-                        {v.click_rate != null ? `${(v.click_rate * 100).toFixed(1)}%` : "--"}
+                        {metrics.click_rate != null ? `${metrics.click_rate.toFixed(1)}%` : "--"}
                       </div>
                     </div>
                   </div>
@@ -349,8 +351,8 @@ function ResultsPanel({ test, onClose }) {
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={chartData}>
                 <XAxis dataKey="name" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
-                <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)" }} formatter={(v) => [`${(v * 100).toFixed(1)}%`]} />
+                <YAxis tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v).toFixed(0)}%`} />
+                <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)" }} formatter={(v) => [`${(v).toFixed(1)}%`]} />
                 <Legend wrapperStyle={{ color: "var(--text-secondary)", fontSize: "0.8rem" }} />
                 <Bar dataKey="open_rate" fill="var(--accent)" radius={[4, 4, 0, 0]} name="Open Rate" />
                 <Bar dataKey="click_rate" fill="var(--green)" radius={[4, 4, 0, 0]} name="Click Rate" />
@@ -401,7 +403,26 @@ export default function ABTestsPage() {
   const handleCompleteTest = async (testId) => {
     if (!confirm("Complete this test and select a winner?")) return;
     try {
-      await apiFetch(`/ab-tests/${user.tenantId}/${testId}/complete`, token, { method: "POST" });
+      // Fetch test details to get variants
+      const testRes = await apiFetch(`/ab-tests/${user.tenantId}/${testId}`, token);
+      const variants = testRes.variants || [];
+      if (variants.length === 0) {
+        alert("No variants found for this test");
+        return;
+      }
+      // Show variant selection prompt
+      const options = variants.map((v, i) => `${i + 1}. ${v.name}`).join("\n");
+      const choice = prompt(`Select winner:\n${options}\n\nEnter number:`);
+      const idx = parseInt(choice) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= variants.length) {
+        alert("Invalid selection");
+        return;
+      }
+      const winnerVariantId = variants[idx].id;
+      await apiFetch(`/ab-tests/${user.tenantId}/${testId}/complete`, token, {
+        method: "POST",
+        body: JSON.stringify({ variant_id: winnerVariantId }),
+      });
       loadTests();
       if (selectedTest?.id === testId) {
         setSelectedTest((prev) => ({ ...prev, status: "completed" }));

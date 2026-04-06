@@ -117,6 +117,8 @@ const WaitlistPage = lazy(() => import("../pages/WaitlistPage"));
 const ScoringConfigPage = lazy(() => import("../pages/ScoringConfigPage"));
 const TeamActivityPage = lazy(() => import("../pages/TeamActivityPage"));
 const SupportPage = lazy(() => import("../pages/SupportPage"));
+const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
+const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -168,6 +170,8 @@ const pages = {
   scoring_config: ScoringConfigPage,
   team_activity: TeamActivityPage,
   support: SupportPage,
+  admin_analytics: AdminAnalyticsPage,
+  admin_promotions: AdminPromotionsPage,
 };
 
 // --------------------------------------------------------------------------
@@ -222,6 +226,8 @@ const PAGE_TO_PATH = {
   scoring_config: "/dashboard/scoring",
   team_activity: "/dashboard/team-activity",
   support: "/dashboard/support",
+  admin_analytics: "/admin/analytics",
+  admin_promotions: "/admin/promotions",
 };
 
 const PATH_TO_PAGE = Object.fromEntries(

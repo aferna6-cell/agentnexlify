@@ -284,10 +284,7 @@ async def update_campaign(
     updates = {}
     for k, v in req.model_dump().items():
         if v is not None:
-            if k == "target_filter":
-                updates[k] = v
-            else:
-                updates[k] = v
+            updates[k] = v
 
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -362,6 +359,7 @@ async def _send_campaign_background(
         total_sent = 0
         total_failed = 0
         campaign_type = campaign["type"]
+        campaign_send_records = []
 
         for lead in leads:
             lead_id = lead["id"]
@@ -411,20 +409,26 @@ async def _send_campaign_background(
                 total_failed += 1
                 logger.exception("Failed to send campaign to lead %s", lead_id)
 
-            # Track the individual send
+            # Collect the send record for batch insert
+            campaign_send_records.append(
+                {
+                    "campaign_id": campaign_id,
+                    "tenant_id": tenant_id,
+                    "lead_id": lead_id,
+                    "channel": campaign_type,
+                    "recipient": recipient,
+                    "status": send_status,
+                }
+            )
+
+        # Batch-insert all campaign_sends at once (avoids N+1 queries)
+        if campaign_send_records:
             try:
-                db.table("campaign_sends").insert(
-                    {
-                        "campaign_id": campaign_id,
-                        "tenant_id": tenant_id,
-                        "lead_id": lead_id,
-                        "channel": campaign_type,
-                        "recipient": recipient,
-                        "status": send_status,
-                    }
-                ).execute()
+                db.table("campaign_sends").insert(campaign_send_records).execute()
             except Exception:
-                logger.exception("Failed to track campaign send for lead %s", lead_id)
+                logger.exception(
+                    "Failed to batch-insert campaign sends for campaign %s", campaign_id
+                )
 
         # Update campaign with final results
         final_status = "sent" if total_sent > 0 else "failed"
@@ -458,8 +462,8 @@ async def _send_campaign_background(
             campaign_id,
         )
         try:
-            db = get_supabase()
-            db.table("marketing_campaigns").update(
+            db_bg = get_supabase()
+            db_bg.table("marketing_campaigns").update(
                 {
                     "status": "failed",
                 }
@@ -529,12 +533,25 @@ async def send_campaign(
             }
 
         # Mark as sending with a timestamp before dispatching the background task
-        db.table("marketing_campaigns").update(
-            {
-                "status": "sending",
-                "sending_started_at": datetime.now(timezone.utc).isoformat(),
-            }
-        ).eq("id", campaign_id).execute()
+        # Use conditional update to prevent race conditions (double-send)
+        status_update = (
+            db.table("marketing_campaigns")
+            .update(
+                {
+                    "status": "sending",
+                    "sending_started_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            .eq("id", campaign_id)
+            .eq("tenant_id", tenant_id)
+            .in_("status", ["draft", "scheduled"])
+            .execute()
+        )
+        if not status_update.data:
+            raise HTTPException(
+                status_code=400,
+                detail="Campaign is already being sent or in an invalid state",
+            )
 
         # Dispatch the send loop as a non-blocking background task and return immediately
         asyncio.create_task(
@@ -637,6 +654,7 @@ async def get_campaign_analytics(
                         db.table("email_events")
                         .select("event_type, created_at")
                         .eq("campaign_id", campaign_id)
+                        .eq("tenant_id", tenant_id)
                         .gte("created_at", trend_start)
                         .execute()
                     )
@@ -673,6 +691,7 @@ async def get_campaign_analytics(
                 db.table("email_events")
                 .select("details")
                 .eq("campaign_id", campaign_id)
+                .eq("tenant_id", tenant_id)
                 .limit(500)
                 .execute()
             )

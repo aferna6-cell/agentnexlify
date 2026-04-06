@@ -11,7 +11,7 @@ const cardStyle = {
 
 const inputStyle = {
   width: "100%", padding: "10px 14px", borderRadius: 8,
-  border: "1px solid var(--border)", background: "var(--bg-primary",
+  border: "1px solid var(--border)", background: "var(--bg-primary)",
   color: "var(--text-primary)", fontSize: "0.9rem", boxSizing: "border-box",
 };
 
