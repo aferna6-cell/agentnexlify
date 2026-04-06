@@ -231,7 +231,7 @@ async def _recover_stalled_campaigns():
             db.table("marketing_campaigns")
             .select("id, name, tenant_id")
             .eq("status", "sending")
-            .lt("updated_at", stale_cutoff)
+            .lt("sending_started_at", stale_cutoff)
             .limit(50)
             .execute()
         )
