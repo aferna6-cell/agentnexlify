@@ -236,6 +236,111 @@ async def get_monthly_growth(
         raise HTTPException(status_code=500, detail="Failed to load monthly growth")
 
 
+# --- Weekly Growth (Last 7 Days) ---
+
+
+@router.get("/weekly-growth")
+async def get_weekly_growth(
+    x_api_secret: str | None = Header(None),
+):
+    """Get day-by-day growth for the last 7 days — the quick 'what happened this week' view."""
+    _verify_admin_secret(x_api_secret)
+
+    PLAN_PRICES = {
+        "growth": 24900,
+        "professional": 49900,
+        "autopilot": 29900,
+        "enterprise": 89900,
+    }
+
+    try:
+        db = get_supabase()
+
+        now = datetime.now(timezone.utc)
+        week_ago = now - timedelta(days=7)
+
+        # All tenants created in the last 7 days
+        signups_result = (
+            db.table("tenants")
+            .select("id, business_name, plan, plan_status, created_at, owner_email")
+            .gte("created_at", week_ago.isoformat())
+            .order("created_at", desc=True)
+            .execute()
+        )
+        signups = signups_result.data or []
+
+        # Daily breakdown
+        daily_data: dict[str, dict] = {}
+        for i in range(7):
+            day = (now - timedelta(days=6 - i)).date()
+            key = day.isoformat()
+            daily_data[key] = {
+                "date": key,
+                "label": day.strftime("%a %d"),
+                "signups": 0,
+                "paid": 0,
+                "free": 0,
+                "revenue_cents": 0,
+            }
+
+        for s in signups:
+            created = s.get("created_at", "")
+            if not created:
+                continue
+            key = created[:10]  # YYYY-MM-DD
+            if key in daily_data:
+                daily_data[key]["signups"] += 1
+                plan = s.get("plan", "free")
+                if plan != "free":
+                    daily_data[key]["paid"] += 1
+                    daily_data[key]["revenue_cents"] += PLAN_PRICES.get(plan, 0)
+                else:
+                    daily_data[key]["free"] += 1
+
+        # Current active paid subs
+        active_paid = (
+            db.table("tenants")
+            .select("plan, stripe_subscription_id")
+            .eq("plan_status", "active")
+            .neq("plan", "free")
+            .execute()
+        )
+        active_data = active_paid.data or []
+        active_count = len([t for t in active_data if t.get("stripe_subscription_id")])
+
+        # New this week vs previous week
+        two_weeks_ago = now - timedelta(days=14)
+        prev_week_signups = (
+            db.table("tenants")
+            .select("id", count="exact")
+            .gte("created_at", two_weeks_ago.isoformat())
+            .lt("created_at", week_ago.isoformat())
+            .execute()
+        ).count or 0
+        this_week_signups = len(signups)
+
+        week_delta = this_week_signups - prev_week_signups
+        week_delta_pct = 0
+        if prev_week_signups > 0:
+            week_delta_pct = round((week_delta / prev_week_signups) * 100, 0)
+
+        return {
+            "daily_data": [daily_data[k] for k in sorted(daily_data.keys())],
+            "this_week_signups": this_week_signups,
+            "this_week_paid": sum(d["paid"] for d in daily_data.values()),
+            "this_week_revenue_cents": sum(d["revenue_cents"] for d in daily_data.values()),
+            "active_paid_subscriptions": active_count,
+            "week_delta": week_delta,
+            "week_delta_pct": week_delta_pct,
+        }
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to get weekly growth")
+        raise HTTPException(status_code=500, detail="Failed to load weekly growth")
+
+
 # --- Plan Distribution ---
 
 

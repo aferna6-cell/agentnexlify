@@ -52,6 +52,7 @@ function formatCurrency(cents) {
 export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState(null);
+  const [weeklyGrowth, setWeeklyGrowth] = useState(null);
   const [monthlyGrowth, setMonthlyGrowth] = useState([]);
   const [planDist, setPlanDist] = useState([]);
   const [revenueTrends, setRevenueTrends] = useState([]);
@@ -62,8 +63,9 @@ export default function AdminAnalyticsPage() {
     if (!ADMIN_SECRET) return;
     setLoading(true);
     try {
-      const [overviewRes, growthRes, distRes, revenueRes, industryRes] = await Promise.all([
+      const [overviewRes, weeklyRes, growthRes, distRes, revenueRes, industryRes] = await Promise.all([
         apiFetch("/overview").catch(() => null),
+        apiFetch("/weekly-growth").catch(() => null),
         apiFetch(`/monthly-growth?months=${months}`).catch(() => null),
         apiFetch("/plan-distribution").catch(() => null),
         apiFetch(`/revenue-trends?months=${months}`).catch(() => null),
@@ -71,6 +73,7 @@ export default function AdminAnalyticsPage() {
       ]);
 
       if (overviewRes) setOverview(overviewRes);
+      if (weeklyRes) setWeeklyGrowth(weeklyRes);
       if (growthRes?.monthly_data) setMonthlyGrowth(growthRes.monthly_data);
       if (distRes?.distribution) setPlanDist(distRes.distribution);
       if (revenueRes?.revenue_trends) setRevenueTrends(revenueRes.revenue_trends);
@@ -128,6 +131,13 @@ export default function AdminAnalyticsPage() {
               fontWeight: months === m ? 600 : 400,
             }}>{m}m</button>
           ))}
+          <button onClick={() => setMonths(0)} style={{
+            padding: "6px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.85rem",
+            border: months === 0 ? "2px solid var(--green)" : "1px solid var(--border)",
+            background: months === 0 ? "var(--green-dim)" : "var(--bg-primary)",
+            color: months === 0 ? "var(--green)" : "var(--text-secondary)",
+            fontWeight: months === 0 ? 600 : 400,
+          }}>7d</button>
         </div>
       </div>
 
@@ -146,6 +156,53 @@ export default function AdminAnalyticsPage() {
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>{s.sub}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Weekly Growth Quick View */}
+      {weeklyGrowth && (
+        <div style={{ ...cardStyle, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: "1rem", color: "var(--text-primary)" }}>
+              This Week
+            </h3>
+            {weeklyGrowth.week_delta !== 0 && (
+              <span style={{
+                fontSize: "0.85rem", fontWeight: 600,
+                color: weeklyGrowth.week_delta > 0 ? "var(--green)" : "#f87171",
+                background: weeklyGrowth.week_delta > 0 ? "var(--green-dim)" : "rgba(248,113,113,0.15)",
+                padding: "2px 10px", borderRadius: 8,
+              }}>
+                {weeklyGrowth.week_delta > 0 ? "↑" : "↓"} {Math.abs(weeklyGrowth.week_delta)} ({weeklyGrowth.week_delta_pct > 0 ? "+" : ""}{weeklyGrowth.week_delta_pct}%)
+              </span>
+            )}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 16 }}>
+            {[
+              { label: "New Signups", value: weeklyGrowth.this_week_signups, color: "var(--accent)" },
+              { label: "New Paid", value: weeklyGrowth.this_week_paid, color: "var(--green)" },
+              { label: "Weekly Revenue", value: formatCurrency(weeklyGrowth.this_week_revenue_cents), color: "var(--accent)" },
+              { label: "Active Paid Subs", value: weeklyGrowth.active_paid_subscriptions, color: "var(--purple, #8b5cf6)" },
+            ].map((s) => (
+              <div key={s.label} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 4 }}>{s.label}</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, color: s.color }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          {weeklyGrowth.daily_data.length > 0 && (
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={weeklyGrowth.daily_data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="label" tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)" }} />
+                <Legend wrapperStyle={{ color: "var(--text-secondary)", fontSize: "0.75rem" }} />
+                <Bar dataKey="paid" fill="var(--green)" radius={[3, 3, 0, 0]} name="Paid" />
+                <Bar dataKey="free" fill="var(--text-muted)" radius={[3, 3, 0, 0]} name="Free" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       )}
 
