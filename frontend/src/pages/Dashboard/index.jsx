@@ -260,6 +260,23 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
         );
       })()}
 
+      {/* Resume setup banner for users who haven't completed onboarding */}
+      {onboardingStatus && onboardingStatus.onboarding_completed === false && (
+        <a
+          href="/setup"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "14px 20px", marginBottom: 16,
+            background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))",
+            border: "1px solid rgba(99,102,241,0.3)", borderRadius: "var(--radius, 12px)",
+            color: "#a5b4fc", textDecoration: "none", fontSize: "0.9rem",
+          }}
+        >
+          <span><strong>Complete your setup</strong> — finish the onboarding wizard to activate your AI assistant ({onboardingStatus.completion_percentage || 0}% done)</span>
+          <span style={{ fontSize: "1.2rem" }}>&rarr;</span>
+        </a>
+      )}
+
       {showOnboarding && dashData && (
         <OnboardingChecklist
           dashData={dashData}

@@ -661,7 +661,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         except Exception:
             logger.warning("Failed to tag conversation as handoff for session %s", req.session_id, exc_info=True)
 
-        # Send notification to team (SMS + webhook)
+        # Send notification to team (SMS + email + webhook)
         try:
             owner_phone = tenant.get("notification_phone")
             if owner_phone and tenant.get("sms_notifications_enabled"):
@@ -672,6 +672,22 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 )
         except Exception:
             logger.warning("Failed to send handoff SMS notification", exc_info=True)
+
+        try:
+            owner_email = tenant.get("owner_email")
+            if owner_email:
+                from backend.services.email_service import send_email
+                biz = tenant.get("business_name") or "Your business"
+                await send_email(
+                    to=owner_email,
+                    subject=f"[{biz}] Customer requesting a human",
+                    html=(
+                        f"<p>A customer on your website chat is asking to speak with a team member.</p>"
+                        f"<p>Open the <a href='https://app.agentnexlify.com/dashboard/conversations'>Conversations inbox</a> to reply.</p>"
+                    ),
+                )
+        except Exception:
+            logger.warning("Failed to send handoff email notification", exc_info=True)
 
         fire_event_background(tenant["id"], "conversation.handoff", {
             "session_id": req.session_id,
