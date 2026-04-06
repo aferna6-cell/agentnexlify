@@ -8,6 +8,7 @@ build/
 .DS_Store
 node_modules/
 *.log
+mutants/
 
 # Agent communication files (ephemeral, per-session)
 .claude/agent-comms/*.md

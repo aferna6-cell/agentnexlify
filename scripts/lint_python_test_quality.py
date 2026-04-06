@@ -31,6 +31,50 @@ INTERACTION_ASSERT_PREFIXES = (
     "assert_has_awaits",
 )
 
+INTERACTION_ATTRS = {
+    "called",
+    "call_count",
+    "call_args",
+    "call_args_list",
+    "mock_calls",
+    "await_count",
+    "await_args",
+    "await_args_list",
+    "awaited",
+}
+
+MOCK_FACTORIES = {"Mock", "MagicMock", "AsyncMock", "create_autospec"}
+PATCH_CONTEXT_CALLS = {
+    "patch",
+    "patch.object",
+    "mock.patch",
+    "mock.patch.object",
+    "unittest.mock.patch",
+    "unittest.mock.patch.object",
+    "mocker.patch",
+    "mocker.patch.object",
+}
+
+EXPRESSION_HELPER_NAMES = {
+    "len",
+    "all",
+    "any",
+    "sum",
+    "sorted",
+    "set",
+    "list",
+    "tuple",
+    "dict",
+    "str",
+    "int",
+    "float",
+    "bool",
+    "min",
+    "max",
+    "round",
+    "isinstance",
+}
+
 TRIVIAL_ASSERT_METHODS = {
     "assertEqual",
     "assertNotEqual",
@@ -73,6 +117,37 @@ def same_ast(left: ast.AST, right: ast.AST) -> bool:
     )
 
 
+def qualified_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent = qualified_name(node.value)
+        return f"{parent}.{node.attr}" if parent else node.attr
+    return ""
+
+
+def call_name(node: ast.Call) -> str:
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    if isinstance(node.func, ast.Name):
+        return node.func.id
+    return ""
+
+
+def expression_root_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return expression_root_name(node.value)
+    if isinstance(node, ast.Subscript):
+        return expression_root_name(node.value)
+    if isinstance(node, ast.Call):
+        return expression_root_name(node.func)
+    if isinstance(node, ast.Await):
+        return expression_root_name(node.value)
+    return None
+
+
 def is_echo_expression(expr: ast.AST, params: set[str]) -> bool:
     if isinstance(expr, ast.Name):
         return expr.id in params
@@ -89,28 +164,43 @@ def is_echo_expression(expr: ast.AST, params: set[str]) -> bool:
 
 
 def is_echo_callable(node: ast.AST) -> bool:
-    if isinstance(node, ast.Lambda):
-        params = {arg.arg for arg in node.args.args}
-        if node.args.vararg:
-            params.add(node.args.vararg.arg)
-        if not params:
-            return False
-        return is_echo_expression(node.body, params)
-    return False
+    if not isinstance(node, ast.Lambda):
+        return False
+    params = {arg.arg for arg in node.args.args}
+    if node.args.vararg:
+        params.add(node.args.vararg.arg)
+    if not params:
+        return False
+    return is_echo_expression(node.body, params)
 
 
-def call_name(node: ast.Call) -> str:
-    if isinstance(node.func, ast.Attribute):
-        return node.func.attr
-    if isinstance(node.func, ast.Name):
-        return node.func.id
-    return ""
+def is_mock_factory_call(node: ast.AST) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    name = qualified_name(node.func)
+    short = name.rsplit(".", 1)[-1]
+    if short in MOCK_FACTORIES:
+        return True
+    return short.endswith("Mock") and short != "Mocker"
+
+
+def is_patch_context_call(node: ast.AST) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    return qualified_name(node.func) in PATCH_CONTEXT_CALLS
+
+
+def is_monkeypatch_setattr_call(node: ast.Call) -> bool:
+    return (
+        isinstance(node.func, ast.Attribute)
+        and node.func.attr == "setattr"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "monkeypatch"
+    )
 
 
 def is_pytest_raises(call: ast.Call) -> bool:
-    if isinstance(call.func, ast.Attribute):
-        return isinstance(call.func.value, ast.Name) and call.func.value.id == "pytest" and call.func.attr == "raises"
-    return False
+    return qualified_name(call.func) == "pytest.raises"
 
 
 def is_trivial_assert_stmt(node: ast.Assert) -> bool:
@@ -139,15 +229,121 @@ def is_trivial_assert_call(node: ast.Call) -> bool:
     return same_ast(node.args[0], node.args[1])
 
 
+def iter_assigned_names(target: ast.AST) -> list[str]:
+    if isinstance(target, ast.Name):
+        return [target.id]
+    if isinstance(target, (ast.Tuple, ast.List)):
+        names: list[str] = []
+        for elt in target.elts:
+            names.extend(iter_assigned_names(elt))
+        return names
+    return []
+
+
+def collect_mock_symbols(node: ast.AST) -> set[str]:
+    symbols: set[str] = set()
+
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs):
+            if arg.arg.startswith("mock_") or arg.arg.endswith("_mock"):
+                symbols.add(arg.arg)
+        if node.args.vararg and node.args.vararg.arg.endswith("_mock"):
+            symbols.add(node.args.vararg.arg)
+        if node.args.kwarg and node.args.kwarg.arg.endswith("_mock"):
+            symbols.add(node.args.kwarg.arg)
+
+    for child in ast.walk(node):
+        if isinstance(child, ast.Assign) and is_mock_factory_call(child.value):
+            for target in child.targets:
+                symbols.update(iter_assigned_names(target))
+        elif isinstance(child, ast.AnnAssign) and child.value and is_mock_factory_call(child.value):
+            symbols.update(iter_assigned_names(child.target))
+        elif isinstance(child, (ast.With, ast.AsyncWith)):
+            for item in child.items:
+                if item.optional_vars and is_patch_context_call(item.context_expr):
+                    symbols.update(iter_assigned_names(item.optional_vars))
+
+    return symbols
+
+
+def is_literal_expression(node: ast.AST) -> bool:
+    if isinstance(node, ast.Constant):
+        return True
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(is_literal_expression(elt) for elt in node.elts)
+    if isinstance(node, ast.Dict):
+        keys_ok = all(key is None or is_literal_expression(key) for key in node.keys)
+        values_ok = all(is_literal_expression(value) for value in node.values)
+        return keys_ok and values_ok
+    return False
+
+
+class InteractionExpressionVisitor(ast.NodeVisitor):
+    def __init__(self, mock_symbols: set[str]) -> None:
+        self.mock_symbols = mock_symbols
+        self.saw_mock_reference = False
+        self.saw_interaction_attr = False
+        self.saw_non_mock_name = False
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if isinstance(node.ctx, ast.Load):
+            if node.id in self.mock_symbols:
+                self.saw_mock_reference = True
+            elif node.id in EXPRESSION_HELPER_NAMES:
+                return
+            else:
+                self.saw_non_mock_name = True
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if node.attr in INTERACTION_ATTRS:
+            self.saw_interaction_attr = True
+        root = expression_root_name(node)
+        if root and root in self.mock_symbols:
+            self.saw_mock_reference = True
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        root = expression_root_name(node.func)
+        if root and root in self.mock_symbols:
+            self.saw_mock_reference = True
+        self.generic_visit(node)
+
+
+def is_interaction_expression(expr: ast.AST, mock_symbols: set[str]) -> bool:
+    inspector = InteractionExpressionVisitor(mock_symbols)
+    inspector.visit(expr)
+    if inspector.saw_non_mock_name:
+        return False
+    return inspector.saw_mock_reference or inspector.saw_interaction_attr
+
+
+def is_assertion_call_interaction_only(call: ast.Call, mock_symbols: set[str]) -> bool:
+    exprs = list(call.args)
+    exprs.extend(keyword.value for keyword in call.keywords if keyword.value is not None)
+    if not exprs:
+        return False
+
+    saw_interaction = False
+    for expr in exprs:
+        if is_interaction_expression(expr, mock_symbols):
+            saw_interaction = True
+            continue
+        if is_literal_expression(expr):
+            continue
+        return False
+    return saw_interaction
+
+
 class FunctionAssertionAnalyzer(ast.NodeVisitor):
-    def __init__(self) -> None:
+    def __init__(self, mock_symbols: set[str]) -> None:
+        self.mock_symbols = mock_symbols
         self.total_assertions = 0
         self.outcome_assertions = 0
         self.interaction_assertions = 0
         self.trivial_asserts: list[tuple[int, int]] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        # Skip nested functions for interaction-only classification.
+        # Skip nested function defs for interaction-only classification.
         return
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
@@ -157,6 +353,9 @@ class FunctionAssertionAnalyzer(ast.NodeVisitor):
         self.total_assertions += 1
         if is_trivial_assert_stmt(node):
             self.trivial_asserts.append((node.lineno, node.col_offset + 1))
+            return
+        if is_interaction_expression(node.test, self.mock_symbols):
+            self.interaction_assertions += 1
         else:
             self.outcome_assertions += 1
 
@@ -167,6 +366,8 @@ class FunctionAssertionAnalyzer(ast.NodeVisitor):
             if is_trivial_assert_call(node):
                 self.trivial_asserts.append((node.lineno, node.col_offset + 1))
             elif name.startswith(INTERACTION_ASSERT_PREFIXES):
+                self.interaction_assertions += 1
+            elif is_assertion_call_interaction_only(node, self.mock_symbols):
                 self.interaction_assertions += 1
             else:
                 self.outcome_assertions += 1
@@ -181,7 +382,7 @@ class FunctionAssertionAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_AsyncWith(self, node: ast.AsyncWith) -> None:
-        self.visit_With(node)  # same semantics
+        self.visit_With(node)
 
 
 class TestQualityVisitor(ast.NodeVisitor):
@@ -215,18 +416,41 @@ class TestQualityVisitor(ast.NodeVisitor):
         name = call_name(node)
         if name in {"Mock", "MagicMock", "AsyncMock"}:
             for keyword in node.keywords:
-                if keyword.arg == "side_effect" and keyword.value and is_echo_callable(keyword.value):
+                if (
+                    keyword.arg in {"side_effect", "new"}
+                    and keyword.value
+                    and is_echo_callable(keyword.value)
+                ):
                     self.add(
                         keyword.value,
                         "no-mock-echo-implementation",
-                        "mock side_effect echoes test input; model real behavior instead",
+                        "mock side_effect/new echoes test input; model real behavior instead",
                     )
+
+        if is_monkeypatch_setattr_call(node):
+            patch_value: ast.AST | None = None
+            if len(node.args) >= 3:
+                patch_value = node.args[2]
+            else:
+                for keyword in node.keywords:
+                    if keyword.arg == "value":
+                        patch_value = keyword.value
+                        break
+            if patch_value and is_echo_callable(patch_value):
+                self.add(
+                    patch_value,
+                    "no-mock-echo-implementation",
+                    "monkeypatch setattr uses echo lambda; model real behavior instead",
+                )
+
         self.generic_visit(node)
 
     def _analyze_test_function(self, node: ast.AST, name: str) -> None:
         if not name.startswith("test_"):
             return
-        analyzer = FunctionAssertionAnalyzer()
+
+        mock_symbols = collect_mock_symbols(node)
+        analyzer = FunctionAssertionAnalyzer(mock_symbols)
         for stmt in getattr(node, "body", []):
             analyzer.visit(stmt)
 
@@ -241,11 +465,15 @@ class TestQualityVisitor(ast.NodeVisitor):
                 )
             )
 
-        if analyzer.total_assertions > 0 and analyzer.outcome_assertions == 0 and analyzer.interaction_assertions > 0:
+        if (
+            analyzer.total_assertions > 0
+            and analyzer.outcome_assertions == 0
+            and analyzer.interaction_assertions > 0
+        ):
             self.add(
                 node,
                 "no-interaction-only-tests",
-                "test only checks mock/spies interactions; assert observable behavior",
+                "test only checks mocks/interactions; assert observable behavior or state",
             )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:

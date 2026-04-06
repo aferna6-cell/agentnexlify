@@ -288,3 +288,4 @@ class TestDeliver:
 
         mock_sleep.assert_not_awaited()
         assert mock_client.post.call_count == 1
+        assert _daily_deliveries["tenant-1"] == 1

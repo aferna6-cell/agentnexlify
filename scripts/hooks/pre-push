@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # AgentNexLiFy pre-push hook
-# Runs deploy-check before pushing to remote
+# Blocks push on weak test quality and critical regressions.
 # Install: bash scripts/install-hooks.sh
 
 set -e
@@ -11,80 +11,163 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 
 ERRORS=0
+WARNINGS=0
 
 echo "Running AgentNexLiFy pre-push checks..."
 echo ""
 
-# CHECK 1: Frontend build
+detect_python_bin() {
+    if [ -f ".venv313/Scripts/python.exe" ]; then
+        echo ".venv313/Scripts/python.exe"
+        return 0
+    fi
+    if [ -f ".venv/Scripts/python.exe" ]; then
+        echo ".venv/Scripts/python.exe"
+        return 0
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        echo "python3"
+        return 0
+    fi
+    if command -v python >/dev/null 2>&1; then
+        echo "python"
+        return 0
+    fi
+    return 1
+}
+
+detect_node_bin() {
+    if command -v node >/dev/null 2>&1; then
+        echo "node"
+        return 0
+    fi
+    if command -v node.cmd >/dev/null 2>&1; then
+        echo "node.cmd"
+        return 0
+    fi
+    return 1
+}
+
+detect_npm_bin() {
+    if command -v npm >/dev/null 2>&1; then
+        echo "npm"
+        return 0
+    fi
+    if command -v npm.cmd >/dev/null 2>&1; then
+        echo "npm.cmd"
+        return 0
+    fi
+    return 1
+}
+
+PY_BIN="$(detect_python_bin || true)"
+NODE_BIN="$(detect_node_bin || true)"
+NPM_BIN="$(detect_npm_bin || true)"
+
+# CHECK 1: JS/TS test quality lint
+echo -n "Linting JS/TS test quality... "
+if [ -z "$NODE_BIN" ] || [ -z "$NPM_BIN" ]; then
+    echo -e "${RED}FAILED${NC}"
+    echo "  Node.js and npm are required for JS/TS test-quality linting."
+    ERRORS=$((ERRORS + 1))
+elif "$NPM_BIN" run -s lint:test-quality; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAILED${NC}"
+    echo "  JS/TS test-quality lint failed."
+    ERRORS=$((ERRORS + 1))
+fi
+
+# CHECK 2: Python test quality lint
+echo -n "Linting Python test quality... "
+if [ -z "$PY_BIN" ]; then
+    echo -e "${RED}FAILED${NC}"
+    echo "  Python is required for Python test-quality linting."
+    ERRORS=$((ERRORS + 1))
+elif "$PY_BIN" scripts/lint_python_test_quality.py; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAILED${NC}"
+    echo "  Python test-quality lint failed."
+    ERRORS=$((ERRORS + 1))
+fi
+
+# CHECK 3: Fast critical pytest subset
+echo -n "Running fast critical backend tests... "
+DEFAULT_FAST_TESTS=(
+    tests/test_admin_analytics.py
+    tests/test_widget_api.py
+    tests/test_marketing_infrastructure.py
+    tests/test_stripe_webhook.py
+)
+
+if [ -n "${AGENTNEXLIFY_FAST_TESTS:-}" ]; then
+    # shellcheck disable=SC2206
+    FAST_TESTS=(${AGENTNEXLIFY_FAST_TESTS})
+else
+    FAST_TESTS=("${DEFAULT_FAST_TESTS[@]}")
+fi
+
+if [ -z "$PY_BIN" ]; then
+    echo -e "${RED}FAILED${NC}"
+    echo "  Python is required to run fast critical tests."
+    ERRORS=$((ERRORS + 1))
+elif "$PY_BIN" -m pytest -q "${FAST_TESTS[@]}"; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAILED${NC}"
+    echo "  Critical pytest subset failed."
+    ERRORS=$((ERRORS + 1))
+fi
+
+# CHECK 4: Frontend build
 echo -n "Checking frontend build... "
 if [ -d "frontend" ]; then
-    if (cd frontend && npm run build --silent 2>/dev/null); then
+    if [ -z "$NPM_BIN" ]; then
+        echo -e "${RED}FAILED${NC}"
+        echo "  npm is required for frontend build checks."
+        ERRORS=$((ERRORS + 1))
+    elif (cd frontend && "$NPM_BIN" run build --silent 2>/dev/null); then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAILED${NC}"
-        echo "  Frontend build failed. Fix build errors before pushing."
+        echo "  Frontend build failed."
         ERRORS=$((ERRORS + 1))
     fi
 else
     echo -e "${YELLOW}SKIPPED (no frontend dir found)${NC}"
 fi
 
-# CHECK 2: Backend imports (warning only — may fail if deps not installed locally)
-echo -n "Checking backend imports... "
-if [ -d "backend" ]; then
-    if python -c "import sys; sys.path.insert(0, '.'); from backend.main import app" 2>/dev/null; then
-        echo -e "${GREEN}OK${NC}"
-    else
-        echo -e "${YELLOW}SKIPPED (dependencies not available locally)${NC}"
-    fi
-else
-    echo -e "${YELLOW}SKIPPED (no backend dir found)${NC}"
-fi
-
-# CHECK 3: Full repo scan for dangerous patterns (exclude comments)
+# CHECK 5: Scan for dangerous __future__ imports in routers
 echo -n "Scanning for __future__ annotations in routers... "
 if grep -rn "from __future__ import annotations" backend/routers/ 2>/dev/null | grep -v "^.*:#" | grep -q .; then
     echo -e "${RED}FAILED${NC}"
-    echo "  from __future__ import annotations found in router files — this breaks FastAPI"
+    echo "  from __future__ import annotations found in router files (breaks FastAPI)."
     grep -rn "from __future__ import annotations" backend/routers/ 2>/dev/null | grep -v "^.*:#"
     ERRORS=$((ERRORS + 1))
 else
     echo -e "${GREEN}OK${NC}"
 fi
 
-# CHECK 4: Schema consistency — leads table should use client_id and status
-echo -n "Checking for known schema mismatches... "
-MISMATCHES=0
-# Check if leads queries incorrectly use lead_stage as a DB column (should be status)
-# Exclude: event names, function names, comments, docstrings, constants
-if grep -rn "lead_stage" backend/ --include="*.py" 2>/dev/null | grep -v "#" | grep -v "trigger_event" | grep -v "lead_stage_change" | grep -v "VALID_TRIGGER_EVENTS" | grep -v "def .*lead_stage" | grep -v "not lead_stage" | grep -q .; then
-    echo ""
-    echo -e "  ${YELLOW}WARNING: Found lead_stage references (should be status for leads table)${NC}"
-    MISMATCHES=$((MISMATCHES + 1))
-fi
-if [ $MISMATCHES -eq 0 ]; then
-    echo -e "${GREEN}OK${NC}"
-fi
-
-# CHECK 5: .env in .gitignore
+# CHECK 6: .env in .gitignore
 echo -n "Checking .gitignore includes .env... "
 if grep -q "\.env" .gitignore 2>/dev/null; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAILED${NC}"
-    echo "  .env is NOT in .gitignore!"
+    echo "  .env is NOT in .gitignore."
     ERRORS=$((ERRORS + 1))
 fi
 
-# CHECK 6: Widget file sync
+# CHECK 7: Widget file sync (warning only)
 echo -n "Checking widget file sync... "
 if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then
     if diff -q "widget/agentnexlify-widget.js" "frontend/public/widget/agentnexlify-widget.js" > /dev/null 2>&1; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${YELLOW}WARNING${NC}"
-        echo "  widget/agentnexlify-widget.js and frontend/public/widget/agentnexlify-widget.js are out of sync!"
-        MISMATCHES=$((MISMATCHES + 1))
+        echo "  widget/ and frontend/public/widget/ versions differ."
+        WARNINGS=$((WARNINGS + 1))
     fi
 else
     echo -e "${YELLOW}SKIPPED (widget files not found)${NC}"
@@ -97,6 +180,10 @@ if [ $ERRORS -gt 0 ]; then
     echo "Fix the issues above before pushing."
     echo "To bypass in an emergency: git push --no-verify"
     exit 1
-else
-    echo -e "${GREEN}All pre-push checks passed.${NC}"
 fi
+
+if [ $WARNINGS -gt 0 ]; then
+    echo -e "${YELLOW}$WARNINGS warning(s) found.${NC}"
+fi
+
+echo -e "${GREEN}All pre-push checks passed.${NC}"

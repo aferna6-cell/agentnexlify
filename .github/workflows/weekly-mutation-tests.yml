@@ -1,0 +1,39 @@
+name: Weekly Mutation Tests
+
+on:
+  schedule:
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+jobs:
+  mutation-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend and mutation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
+          python -m pip install pytest mutmut
+
+      - name: Run mutation tests on critical backend modules
+        run: |
+          rm -rf mutants
+          mutmut run --max-children 2
+
+      - name: Fail on surviving or suspicious mutants
+        run: |
+          RESULTS="$(mutmut results || true)"
+          if [ -n "$RESULTS" ]; then
+            echo "$RESULTS"
+            echo "::error::Surviving/suspicious mutants detected. Strengthen tests for these paths."
+            exit 1
+          fi
+          echo "No surviving or suspicious mutants."

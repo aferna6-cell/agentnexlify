@@ -26,8 +26,9 @@ async def test_generate_ai_email_uses_single_retry(mock_call):
         raise AssertionError(name)
     db.table.side_effect = table
 
-    await _generate_ai_email(db, "tenant-1", "lead-1", "Test Biz", None)
+    body = await _generate_ai_email(db, "tenant-1", "lead-1", "Test Biz", None)
 
+    assert body == "Hello there"
     assert mock_call.await_args.kwargs["max_retries"] == 1
 
 

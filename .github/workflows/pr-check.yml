@@ -11,14 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure compare branch is available
+        run: |
+          git fetch --no-tags --prune --depth=1 origin main || true
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install test-quality lint dependencies
         run: npm ci
@@ -35,7 +41,7 @@ jobs:
 
           # __future__ annotations in routers
           if grep -r "from __future__ import annotations" backend/routers/ 2>/dev/null; then
-            echo "::error::from __future__ import annotations found in router files — this breaks FastAPI"
+            echo "::error::from __future__ import annotations found in router files. This breaks FastAPI request parsing."
             ERRORS=$((ERRORS + 1))
           fi
 
@@ -47,20 +53,20 @@ jobs:
 
           # .env files in PR
           if git diff --name-only origin/main...HEAD 2>/dev/null | grep -q "\.env"; then
-            echo "::error::.env file in PR — never commit env files"
+            echo "::error::.env file in diff. Never commit env files."
             ERRORS=$((ERRORS + 1))
           fi
 
           # Bare except blocks (warning only)
           BARE=$(grep -rn "except.*:.*pass" backend/ --include="*.py" 2>/dev/null || true)
           if [ -n "$BARE" ]; then
-            echo "::warning::Bare except blocks found — these hide real errors"
+            echo "::warning::Bare except blocks found. These can hide real errors."
             echo "$BARE"
           fi
 
           # Schema: lead_stage usage (should be status)
           if grep -rn "lead_stage" backend/ --include="*.py" 2>/dev/null | grep -v "#"; then
-            echo "::warning::Found lead_stage references — leads table uses 'status' not 'lead_stage'"
+            echo "::warning::Found lead_stage references. Leads table uses status, not lead_stage."
           fi
 
           if [ $ERRORS -gt 0 ]; then
@@ -68,6 +74,43 @@ jobs:
             echo "$ERRORS critical issue(s) found. Fix before merging."
             exit 1
           fi
+
+      - name: Install backend test and coverage dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
+          python -m pip install pytest pytest-cov diff-cover
+
+      - name: Run backend tests with coverage
+        run: |
+          python -m pytest tests -q --cov=backend --cov-report=xml:coverage-python.xml
+
+      - name: Run JS coverage tests when configured
+        run: |
+          if [ -f "frontend/package.json" ] && node -e "const p=require('./frontend/package.json'); process.exit(p.scripts && p.scripts['test:coverage'] ? 0 : 1)"; then
+            echo "Running frontend test:coverage"
+            (cd frontend && npm ci && npm run test:coverage)
+          else
+            echo "frontend test:coverage is not configured."
+          fi
+
+          if [ -f "demo-platform/package.json" ] && node -e "const p=require('./demo-platform/package.json'); process.exit(p.scripts && p.scripts['test:coverage'] ? 0 : 1)"; then
+            echo "Running demo-platform test:coverage"
+            (cd demo-platform && npm ci && npm run test:coverage)
+          else
+            echo "demo-platform test:coverage is not configured."
+          fi
+
+      - name: Enforce changed-lines coverage
+        run: |
+          python scripts/check_changed_lines_coverage.py \
+            --compare-branch origin/main \
+            --python-report coverage-python.xml \
+            --python-fail-under 85 \
+            --js-report frontend/coverage/lcov.info \
+            --js-report demo-platform/coverage/lcov.info \
+            --js-report coverage/lcov.info \
+            --js-fail-under 80
 
       - name: Frontend build check
         run: |
@@ -92,6 +135,6 @@ jobs:
         run: |
           if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then
             if ! diff -q "widget/agentnexlify-widget.js" "frontend/public/widget/agentnexlify-widget.js" > /dev/null 2>&1; then
-              echo "::warning::Widget files are out of sync — widget/ and frontend/public/widget/ must be identical"
+              echo "::warning::Widget files are out of sync. widget/ and frontend/public/widget/ should be identical."
             fi
           fi
