@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite --port 3001 --open",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.1",
@@ -18,6 +20,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.0.0"
+    "@vitest/coverage-v8": "^2.1.8",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.8"
   }
 }

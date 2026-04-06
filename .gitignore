@@ -9,6 +9,7 @@ build/
 node_modules/
 *.log
 mutants/
+coverage/
 
 # Agent communication files (ephemeral, per-session)
 .claude/agent-comms/*.md
