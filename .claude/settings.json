@@ -92,6 +92,17 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"CAVEMAN MODE ACTIVE. Use caveman skill rules: drop articles/filler/pleasantries, fragments OK, short synonyms, technical terms exact, code unchanged. Pattern: [thing] [action] [reason]. [next step].\"}}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
