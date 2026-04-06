@@ -18,6 +18,12 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Install test-quality lint dependencies
+        run: npm ci
+
+      - name: Lint JS/TS test quality
+        run: npm run lint:test-quality
+
       - name: Check for dangerous patterns
         run: |
           ERRORS=0

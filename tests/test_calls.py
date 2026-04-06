@@ -727,13 +727,38 @@ class TestGenerateCallSummary:
             duration_ms=175,
         )
 
-        # Mock DB
+        calls_table = MagicMock()
+        action_items_table = MagicMock()
+        for table in (calls_table, action_items_table):
+            for method in [
+                "select", "insert", "update", "delete",
+                "eq", "neq", "gte", "lte", "gt", "lt",
+                "limit", "order", "ilike", "range",
+                "in_", "is_", "or_", "contains",
+            ]:
+                getattr(table, method).return_value = table
+
+        calls_result = MagicMock()
+        calls_result.data = [{"id": "call-001"}]
+        calls_result.count = 1
+        calls_table.execute.return_value = calls_result
+
+        action_result = MagicMock()
+        action_result.data = [{"id": "ai-001"}]
+        action_result.count = 1
+        action_items_table.execute.return_value = action_result
+
         mock_client = MagicMock()
         mock_db.return_value = mock_client
-        _setup_table_mock(mock_client, {
-            "calls": ([{"id": "call-001"}], 1),
-            "action_items": ([{"id": "ai-001"}], 1),
-        })
+
+        def table_lookup(name):
+            if name == "calls":
+                return calls_table
+            if name == "action_items":
+                return action_items_table
+            raise AssertionError(f"Unexpected table requested: {name}")
+
+        mock_client.table.side_effect = table_lookup
 
         await _generate_call_summary(
             call_id="call-001",
@@ -743,31 +768,62 @@ class TestGenerateCallSummary:
         )
 
         mock_call_claude.assert_awaited_once()
+        calls_table.update.assert_called_once()
+        update_payload = calls_table.update.call_args.args[0]
+        assert update_payload["summary"] == "Caller asked about pricing."
+        assert update_payload["sentiment"] == "positive"
+        assert update_payload["action_taken"] == (
+            "Follow-up: Email pricing sheet | Action items: Send quote by Friday"
+        )
+        assert calls_table.eq.call_args_list[0].args == ("id", "call-001")
+
+        action_items_table.insert.assert_called_once()
+        insert_payload = action_items_table.insert.call_args.args[0]
+        assert insert_payload["description"] == "Send quote by Friday"
+        assert insert_payload["priority"] == "high"
+        assert insert_payload["status"] == "pending"
+        assert insert_payload["tenant_id"] == "tenant-001"
+        assert insert_payload["lead_id"] == "lead-001"
+
+        mock_activity.assert_called_once()
+        activity_kwargs = mock_activity.call_args.kwargs
+        assert activity_kwargs["tenant_id"] == "tenant-001"
+        assert activity_kwargs["activity_type"] == "call_action_items"
+        assert activity_kwargs["metadata"]["action_item_count"] == 1
 
     @pytest.mark.asyncio
-    async def test_summary_skips_empty_transcript(self):
+    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    async def test_summary_skips_empty_transcript(self, mock_call_claude, mock_db):
         """Empty transcript should skip summary generation."""
         from backend.routers.calls import _generate_call_summary
 
-        # Should return without error
-        await _generate_call_summary(
+        result = await _generate_call_summary(
             call_id="call-001",
             tenant_id="tenant-001",
             lead_id=None,
             transcript_text="",
         )
+        assert result is None
+        mock_call_claude.assert_not_awaited()
+        mock_db.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_summary_skips_whitespace_transcript(self):
+    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    async def test_summary_skips_whitespace_transcript(self, mock_call_claude, mock_db):
         """Whitespace-only transcript should skip summary generation."""
         from backend.routers.calls import _generate_call_summary
 
-        await _generate_call_summary(
+        result = await _generate_call_summary(
             call_id="call-001",
             tenant_id="tenant-001",
             lead_id=None,
             transcript_text="   \n  ",
         )
+        assert result is None
+        mock_call_claude.assert_not_awaited()
+        mock_db.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -811,13 +867,14 @@ class TestInsertCallActionItems:
         """Empty item list should not insert anything."""
         from backend.routers.calls import _insert_call_action_items
 
-        await _insert_call_action_items(
+        result = await _insert_call_action_items(
             tenant_id="tenant-001",
             lead_id=None,
             call_id="call-001",
             items=[],
         )
 
+        assert result is None
         # Should not call DB or log activity
         mock_db.assert_not_called()
         mock_activity.assert_not_called()

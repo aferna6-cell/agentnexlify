@@ -30,7 +30,7 @@ fi
 
 echo ""
 echo "Done. Hooks installed:"
-echo "  pre-commit — blocks secrets, dangerous imports, bare excepts, .env files"
-echo "  pre-push   — checks frontend build, backend imports, schema consistency, widget sync"
+echo "  pre-commit - blocks secrets, dangerous imports, weak JS/TS tests, .env files"
+echo "  pre-push   - checks frontend build, backend imports, schema consistency, widget sync"
 echo ""
 echo "To bypass in an emergency: git commit/push --no-verify"

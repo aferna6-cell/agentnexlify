@@ -1,5 +1,7 @@
 """Tests for webhook delivery and retry logic."""
 
+import asyncio
+import json
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -111,8 +113,10 @@ class TestFireEvent:
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher.get_supabase")
     async def test_unknown_event_skipped(self, mock_db):
+        assert _daily_deliveries.get("tenant-1", 0) == 0
         await fire_event("tenant-1", "not.a.real.event", {})
         mock_db.assert_not_called()
+        assert _daily_deliveries.get("tenant-1", 0) == 0
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher.get_supabase")
@@ -126,6 +130,8 @@ class TestFireEvent:
         await fire_event("tenant-1", "lead.created", {"lead_id": "123"})
         # Should query webhooks but not deliver
         mock_table.select.assert_called_once()
+        assert _daily_deliveries.get("tenant-1", 0) == 0
+        assert mock_table.eq.call_count >= 2
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher._deliver")
@@ -142,6 +148,15 @@ class TestFireEvent:
 
         _daily_deliveries.clear()
         await fire_event("tenant-1", "lead.created", {"lead_id": "123"})
+        await asyncio.sleep(0)
+
+        mock_deliver.assert_awaited_once()
+        assert mock_deliver.await_args.args[0] == "tenant-1"
+        assert mock_deliver.await_args.args[1]["id"] == "wh-1"
+        payload = mock_deliver.await_args.args[2]
+        assert payload["event"] == "lead.created"
+        assert payload["data"] == {"lead_id": "123"}
+        assert "timestamp" in payload
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher.get_supabase")
@@ -149,6 +164,7 @@ class TestFireEvent:
         _daily_deliveries["tenant-full"] = _DAILY_LIMIT
         await fire_event("tenant-full", "lead.created", {"lead_id": "123"})
         mock_db.assert_not_called()
+        assert _daily_deliveries["tenant-full"] == _DAILY_LIMIT
 
 
 # ── _deliver tests ───────────────────────────────────────────
@@ -187,6 +203,22 @@ class TestDeliver:
 
         # Should have posted to the URL
         mock_client.post.assert_called_once()
+        post_kwargs = mock_client.post.call_args.kwargs
+        assert post_kwargs["headers"]["X-Webhook-Signature"]
+        assert json.loads(post_kwargs["content"].decode()) == payload
+
+        assert _daily_deliveries["tenant-1"] == 1
+        mock_table.insert.assert_called_once()
+        insert_payload = mock_table.insert.call_args.args[0]
+        assert insert_payload["webhook_id"] == "wh-1"
+        assert insert_payload["event"] == "lead.created"
+        assert insert_payload["response_status"] == 200
+        assert insert_payload["success"] is True
+
+        mock_table.update.assert_called_once()
+        update_payload = mock_table.update.call_args.args[0]
+        assert update_payload["failure_count"] == 0
+        assert "last_triggered_at" in update_payload
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher.asyncio.sleep", new_callable=AsyncMock)

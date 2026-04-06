@@ -149,6 +149,27 @@ else
     echo -e "${GREEN}OK (no migrations staged)${NC}"
 fi
 
+# CHECK 6: JS/TS test quality gates (custom ESLint rules)
+echo -n "Checking JS/TS test quality... "
+STAGED_TEST_FILES=$(echo "$STAGED_FILES" | grep -E "(^|/)(__tests__/.*\.(js|jsx|ts|tsx)$|.*\.(test|spec)\.(js|jsx|ts|tsx)$)" || true)
+if [ -n "$STAGED_TEST_FILES" ]; then
+    if command -v node >/dev/null 2>&1; then
+        if node scripts/lint-test-quality-staged.cjs; then
+            echo -e "${GREEN}OK${NC}"
+        else
+            echo -e "${RED}BLOCKED${NC}"
+            echo "  JS/TS test quality lint failed. Fix issues above before committing."
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo -e "${RED}BLOCKED${NC}"
+        echo "  Node.js is required to lint staged JS/TS tests."
+        ERRORS=$((ERRORS + 1))
+    fi
+else
+    echo -e "${GREEN}OK (no JS/TS tests staged)${NC}"
+fi
+
 echo ""
 
 if [ $ERRORS -gt 0 ]; then

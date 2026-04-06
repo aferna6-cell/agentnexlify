@@ -142,8 +142,14 @@ class TestStripeEventRouting:
 
         request.body = mock_body
 
-        await stripe_webhook(request)
-        mock_handler.assert_called_once()
+        db_client = MagicMock()
+        mock_db.return_value = db_client
+
+        result = await stripe_webhook(request)
+
+        assert result == {"status": "ok"}
+        mock_handler.assert_called_once_with(db_client, event["data"]["object"])
+        mock_construct.assert_called_once()
 
     @patch("backend.routers.stripe_webhooks.get_supabase")
     @patch("backend.routers.stripe_webhooks._handle_subscription_deleted")
@@ -165,8 +171,14 @@ class TestStripeEventRouting:
 
         request.body = mock_body
 
-        await stripe_webhook(request)
-        mock_handler.assert_called_once()
+        db_client = MagicMock()
+        mock_db.return_value = db_client
+
+        result = await stripe_webhook(request)
+
+        assert result == {"status": "ok"}
+        mock_handler.assert_called_once_with(db_client, event["data"]["object"])
+        mock_construct.assert_called_once()
 
     @patch("backend.routers.stripe_webhooks.get_supabase")
     @patch("backend.routers.stripe_webhooks._handle_payment_failed", new_callable=AsyncMock)
@@ -188,8 +200,14 @@ class TestStripeEventRouting:
 
         request.body = mock_body
 
-        await stripe_webhook(request)
-        mock_handler.assert_called_once()
+        db_client = MagicMock()
+        mock_db.return_value = db_client
+
+        result = await stripe_webhook(request)
+
+        assert result == {"status": "ok"}
+        mock_handler.assert_awaited_once_with(db_client, event["data"]["object"])
+        mock_construct.assert_called_once()
 
     @patch("backend.routers.stripe_webhooks.get_supabase")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
