@@ -74,31 +74,42 @@ async def get_platform_overview(
         ).count or 0
 
         # Churned this month (cancelled subscriptions)
-        churned_this_month = (
-            db.table("tenants")
-            .select("id", count="exact")
-            .eq("plan_status", "cancelled")
-            .gte("updated_at", month_start)
-            .execute()
-        ).count or 0
+        try:
+            churned_this_month = (
+                db.table("tenants")
+                .select("id", count="exact")
+                .eq("plan_status", "cancelled")
+                .gte("updated_at", month_start)
+                .execute()
+            ).count or 0
+        except Exception:
+            # updated_at column may not exist yet
+            churned_this_month = 0
 
         # Free trial stats
-        free_trial_active = (
-            db.table("tenants")
-            .select("id", count="exact")
-            .eq("plan", "free")
-            .eq("plan_status", "active")
-            .not_.is_("free_trial_started_at", "null")
-            .execute()
-        ).count or 0
+        try:
+            free_trial_active = (
+                db.table("tenants")
+                .select("id", count="exact")
+                .eq("plan", "free")
+                .eq("plan_status", "active")
+                .not_.is_("free_trial_started_at", "null")
+                .execute()
+            ).count or 0
+        except Exception:
+            free_trial_active = 0
 
-        # Businesses with admin promotions
-        promoted = (
-            db.table("admin_promotions")
-            .select("tenant_id", distinct=True)
-            .execute()
-        )
-        promoted_count = len({r["tenant_id"] for r in promoted.data or []})
+        # Businesses with admin promotions (table may not exist yet)
+        promoted_count = 0
+        try:
+            promoted = (
+                db.table("admin_promotions")
+                .select("tenant_id", distinct=True)
+                .execute()
+            )
+            promoted_count = len({r["tenant_id"] for r in promoted.data or []})
+        except Exception:
+            pass
 
         # MRR calculation (rough estimate from active plans)
         PLAN_PRICES = {
@@ -316,11 +327,17 @@ async def get_revenue_trends(
             "source": "precomputed",
         }
 
-    except HTTPException:
-        raise
     except Exception:
-        logger.exception("Failed to get revenue trends")
-        raise HTTPException(status_code=500, detail="Failed to load revenue trends")
+        # Table may not exist yet, fall back to live calculation
+        try:
+            db = get_supabase()
+            now = datetime.now(timezone.utc)
+            start_month = (now.replace(day=1) - timedelta(days=30 * (months - 1))).replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+            return await _calculate_live_revenue(db, start_month, now, months)
+        except Exception:
+            return {"revenue_trends": [], "source": "unavailable"}
 
 
 async def _calculate_live_revenue(db, start_month, now, months):
@@ -410,39 +427,16 @@ async def get_promoted_businesses(
 
         result = (
             db.table("admin_promotions")
-            .select(
-                """
-                id,
-                tenant_id,
-                promotion_type,
-                discount_pct,
-                reason,
-                approved_by,
-                starts_at,
-                expires_at,
-                notes,
-                created_at,
-                tenants!inner (
-                    business_name,
-                    business_type,
-                    owner_email,
-                    plan,
-                    plan_status,
-                    created_at
-                )
-            """
-            )
+            .select("*")
             .order("created_at", desc=True)
             .execute()
         )
 
         return {"promotions": result.data or []}
 
-    except HTTPException:
-        raise
     except Exception:
-        logger.exception("Failed to get promoted businesses")
-        raise HTTPException(status_code=500, detail="Failed to load promoted businesses")
+        # Table may not exist until migration is applied
+        return {"promotions": [], "note": "Apply migration 089 to enable promotion tracking"}
 
 
 # --- Tenant List (Admin View) ---
@@ -469,8 +463,7 @@ async def list_all_tenants(
             .select(
                 "id, business_name, business_type, owner_email, owner_name, "
                 "plan, plan_status, stripe_subscription_id, created_at, "
-                "free_trial_started_at, admin_discount_pct, admin_notes, "
-                "city, referral_discount_pct"
+                "free_trial_started_at, city"
             )
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)

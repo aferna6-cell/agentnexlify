@@ -8,7 +8,8 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS acquired_at TIMESTAMPTZ;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS first_paid_at TIMESTAMPTZ;
 
 -- Index for month-by-month growth queries
-CREATE INDEX IF NOT EXISTS idx_tenants_created_month ON tenants(DATE_TRUNC('month', created_at));
+-- DATE_TRUNC not IMMUTABLE, index on created_at directly instead
+CREATE INDEX IF NOT EXISTS idx_tenants_created_at ON tenants(created_at);
 CREATE INDEX IF NOT EXISTS idx_tenants_plan_status ON tenants(plan, plan_status);
 
 -- Track promotional arrangements (free tiers, discounts, partner deals)

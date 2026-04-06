@@ -237,6 +237,11 @@ const PATH_TO_PAGE = Object.fromEntries(
 function pageFromPath(pathname) {
   if (PATH_TO_PAGE[pathname]) return PATH_TO_PAGE[pathname];
   if (pathname.startsWith("/dashboard")) return "dashboard";
+  if (pathname.startsWith("/admin/")) {
+    // Map /admin/analytics -> admin_analytics, /admin/promotions -> admin_promotions
+    const slug = pathname.replace("/admin/", "").replace(/-/g, "_");
+    return `admin_${slug}`;
+  }
   return null;
 }
 
@@ -343,7 +348,14 @@ export default function App() {
     [currentPage],
   );
 
-  if (!user) return <LoginPage />;
+  if (!user) {
+    // Allow admin pages to render without tenant auth (they use API secret key)
+    if (currentPage && currentPage.startsWith("admin_")) {
+      const PageComponent = pages[currentPage];
+      return PageComponent ? <PageComponent /> : <div style={{ padding: 40, color: "var(--text-primary)" }}>Page not found</div>;
+    }
+    return <LoginPage />;
+  }
 
   const PageComponent = pages[currentPage] || Dashboard;
 
