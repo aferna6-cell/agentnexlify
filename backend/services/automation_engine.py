@@ -1,6 +1,5 @@
 """Automation engine — triggers, processes, and executes email sequences."""
 
-
 import asyncio
 import html
 import logging
@@ -9,7 +8,13 @@ from functools import partial
 from typing import Any
 
 from backend.models.database import get_supabase
-from backend.services.email_sender import build_branded_email_html, build_unsubscribe_url, render_sms_template, render_template, send_email
+from backend.services.email_sender import (
+    build_branded_email_html,
+    build_unsubscribe_url,
+    render_sms_template,
+    render_template,
+    send_email,
+)
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
@@ -18,7 +23,12 @@ logger = logging.getLogger(__name__)
 
 BATCH_LIMIT = 50
 
-VALID_TRIGGER_EVENTS = {"new_lead", "lead_stage_change", "no_response_24h", "appointment_completed"}
+VALID_TRIGGER_EVENTS = {
+    "new_lead",
+    "lead_stage_change",
+    "no_response_24h",
+    "appointment_completed",
+}
 
 
 async def trigger_sequence(
@@ -88,18 +98,22 @@ async def trigger_sequence(
         next_run = datetime.now(timezone.utc) + timedelta(minutes=delay)
 
         try:
-            db.table("automation_executions").insert({
-                "sequence_id": seq["id"],
-                "lead_id": lead_id,
-                "tenant_id": tenant_id,
-                "current_step": 1,
-                "status": "in_progress",
-                "next_run_at": next_run.isoformat(),
-            }).execute()
+            db.table("automation_executions").insert(
+                {
+                    "sequence_id": seq["id"],
+                    "lead_id": lead_id,
+                    "tenant_id": tenant_id,
+                    "current_step": 1,
+                    "status": "in_progress",
+                    "next_run_at": next_run.isoformat(),
+                }
+            ).execute()
             enrolled += 1
             logger.info(
                 "Enrolled lead %s in sequence %s (trigger: %s)",
-                lead_id, seq["id"], trigger_event,
+                lead_id,
+                seq["id"],
+                trigger_event,
             )
         except Exception:
             # UNIQUE constraint violation means already enrolled — skip
@@ -162,10 +176,12 @@ async def execute_step(execution_id: str) -> None:
     )
     if not steps_result.data:
         # No active step at this order — mark completed
-        db.table("automation_executions").update({
-            "status": "completed",
-            "completed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", execution_id).execute()
+        db.table("automation_executions").update(
+            {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ).eq("id", execution_id).execute()
         return
     step = steps_result.data[0]
 
@@ -178,24 +194,30 @@ async def execute_step(execution_id: str) -> None:
         .execute()
     )
     if not lead_result.data:
-        db.table("automation_executions").update({
-            "status": "failed",
-        }).eq("id", execution_id).execute()
+        db.table("automation_executions").update(
+            {
+                "status": "failed",
+            }
+        ).eq("id", execution_id).execute()
         return
     lead = lead_result.data[0]
 
     # CAN-SPAM: skip unsubscribed leads
     if lead.get("unsubscribed"):
-        db.table("automation_logs").insert({
-            "execution_id": execution_id,
-            "step_id": step["id"] if steps_result.data else None,
-            "action": "skipped",
-            "details": {"reason": "unsubscribed"},
-        }).execute()
-        db.table("automation_executions").update({
-            "status": "completed",
-            "completed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", execution_id).execute()
+        db.table("automation_logs").insert(
+            {
+                "execution_id": execution_id,
+                "step_id": step["id"] if steps_result.data else None,
+                "action": "skipped",
+                "details": {"reason": "unsubscribed"},
+            }
+        ).execute()
+        db.table("automation_executions").update(
+            {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ).eq("id", execution_id).execute()
         return
 
     # Load tenant for business_name, plan, and google_review_link
@@ -222,23 +244,27 @@ async def execute_step(execution_id: str) -> None:
     if action_type == "sms":
         # --- SMS path ---
         if not lead.get("phone"):
-            db.table("automation_logs").insert({
-                "execution_id": execution_id,
-                "step_id": step["id"],
-                "action": "skipped",
-                "details": {"reason": "no_phone"},
-            }).execute()
+            db.table("automation_logs").insert(
+                {
+                    "execution_id": execution_id,
+                    "step_id": step["id"],
+                    "action": "skipped",
+                    "details": {"reason": "no_phone"},
+                }
+            ).execute()
             _advance_execution(db, execution, step)
             return
 
         plan = tenant.get("plan") or "free"
         if not check_sms_rate_limit(execution["tenant_id"], plan):
-            db.table("automation_logs").insert({
-                "execution_id": execution_id,
-                "step_id": step["id"],
-                "action": "skipped",
-                "details": {"reason": "sms_rate_limit"},
-            }).execute()
+            db.table("automation_logs").insert(
+                {
+                    "execution_id": execution_id,
+                    "step_id": step["id"],
+                    "action": "skipped",
+                    "details": {"reason": "sms_rate_limit"},
+                }
+            ).execute()
             _advance_execution(db, execution, step)
             return
 
@@ -246,41 +272,53 @@ async def execute_step(execution_id: str) -> None:
         sms_ok = await send_sms(to=lead["phone"], body=body)
 
         action = "sms_sent" if sms_ok else "sms_failed"
-        db.table("automation_logs").insert({
-            "execution_id": execution_id,
-            "step_id": step["id"],
-            "action": action,
-            "details": {"phone": lead["phone"]},
-        }).execute()
+        db.table("automation_logs").insert(
+            {
+                "execution_id": execution_id,
+                "step_id": step["id"],
+                "action": action,
+                "details": {"phone": lead["phone"]},
+            }
+        ).execute()
 
         if sms_ok:
             increment_sms_count(execution["tenant_id"])
-            fire_event_background(execution["tenant_id"], "automation.sms_sent", {
-                "lead_id": execution["lead_id"],
-                "lead_phone": lead["phone"],
-                "sequence_id": execution["sequence_id"],
-                "step_order": execution["current_step"],
-            })
+            fire_event_background(
+                execution["tenant_id"],
+                "automation.sms_sent",
+                {
+                    "lead_id": execution["lead_id"],
+                    "lead_phone": lead["phone"],
+                    "sequence_id": execution["sequence_id"],
+                    "step_order": execution["current_step"],
+                },
+            )
         else:
             logger.warning(
                 "SMS failed for execution %s step %s",
-                execution_id, step["id"],
+                execution_id,
+                step["id"],
             )
     elif action_type == "ai_email":
         # --- AI Email path ---
         if not lead.get("email"):
-            db.table("automation_logs").insert({
-                "execution_id": execution_id,
-                "step_id": step["id"],
-                "action": "skipped",
-                "details": {"reason": "no_email"},
-            }).execute()
+            db.table("automation_logs").insert(
+                {
+                    "execution_id": execution_id,
+                    "step_id": step["id"],
+                    "action": "skipped",
+                    "details": {"reason": "no_email"},
+                }
+            ).execute()
             _advance_execution(db, execution, step)
             return
 
         ai_body = await _generate_ai_email(
-            db, execution["tenant_id"], execution["lead_id"],
-            tenant.get("business_name") or "", step.get("body_template"),
+            db,
+            execution["tenant_id"],
+            execution["lead_id"],
+            tenant.get("business_name") or "",
+            step.get("body_template"),
         )
 
         subject = render_template(step["subject_template"], context)
@@ -296,11 +334,17 @@ async def execute_step(execution_id: str) -> None:
                     .limit(1)
                     .execute()
                 )
-                wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
+                wc_branding = (
+                    (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
+                )
                 if wc_branding:
-                    ai_body = build_branded_email_html(ai_body, wc_branding, tenant.get("business_name") or "")
+                    ai_body = build_branded_email_html(
+                        ai_body, wc_branding, tenant.get("business_name") or ""
+                    )
             except Exception:
-                logger.debug("Failed to load branding for AI email, sending plain", exc_info=True)
+                logger.debug(
+                    "Failed to load branding for AI email, sending plain", exc_info=True
+                )
 
         unsub_url = build_unsubscribe_url(lead["id"])
         result = await send_email(
@@ -314,36 +358,46 @@ async def execute_step(execution_id: str) -> None:
         )
 
         action = "ai_email_sent" if result["success"] else "ai_email_failed"
-        db.table("automation_logs").insert({
-            "execution_id": execution_id,
-            "step_id": step["id"],
-            "action": action,
-            "details": {**result, "ai_generated_body": ai_body[:500]},
-        }).execute()
+        db.table("automation_logs").insert(
+            {
+                "execution_id": execution_id,
+                "step_id": step["id"],
+                "action": action,
+                "details": {**result, "ai_generated_body": ai_body[:500]},
+            }
+        ).execute()
 
         if result["success"]:
-            fire_event_background(execution["tenant_id"], "automation.email_sent", {
-                "lead_id": execution["lead_id"],
-                "lead_email": lead["email"],
-                "subject": subject,
-                "sequence_id": execution["sequence_id"],
-                "step_order": execution["current_step"],
-                "ai_generated": True,
-            })
+            fire_event_background(
+                execution["tenant_id"],
+                "automation.email_sent",
+                {
+                    "lead_id": execution["lead_id"],
+                    "lead_email": lead["email"],
+                    "subject": subject,
+                    "sequence_id": execution["sequence_id"],
+                    "step_order": execution["current_step"],
+                    "ai_generated": True,
+                },
+            )
         else:
             logger.warning(
                 "AI email failed for execution %s step %s: %s",
-                execution_id, step["id"], result.get("detail"),
+                execution_id,
+                step["id"],
+                result.get("detail"),
             )
     else:
         # --- Email path (default) ---
         if not lead.get("email"):
-            db.table("automation_logs").insert({
-                "execution_id": execution_id,
-                "step_id": step["id"],
-                "action": "skipped",
-                "details": {"reason": "no_email"},
-            }).execute()
+            db.table("automation_logs").insert(
+                {
+                    "execution_id": execution_id,
+                    "step_id": step["id"],
+                    "action": "skipped",
+                    "details": {"reason": "no_email"},
+                }
+            ).execute()
             _advance_execution(db, execution, step)
             return
 
@@ -361,11 +415,17 @@ async def execute_step(execution_id: str) -> None:
                     .limit(1)
                     .execute()
                 )
-                wc_branding = (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
+                wc_branding = (
+                    (wc_result.data[0].get("branding") or {}) if wc_result.data else {}
+                )
                 if wc_branding:
-                    body = build_branded_email_html(body, wc_branding, tenant.get("business_name") or "")
+                    body = build_branded_email_html(
+                        body, wc_branding, tenant.get("business_name") or ""
+                    )
             except Exception:
-                logger.debug("Failed to load branding for email, sending plain", exc_info=True)
+                logger.debug(
+                    "Failed to load branding for email, sending plain", exc_info=True
+                )
 
         unsub_url = build_unsubscribe_url(lead["id"])
         result = await send_email(
@@ -379,26 +439,34 @@ async def execute_step(execution_id: str) -> None:
         )
 
         action = "email_sent" if result["success"] else "email_failed"
-        db.table("automation_logs").insert({
-            "execution_id": execution_id,
-            "step_id": step["id"],
-            "action": action,
-            "details": result,
-        }).execute()
+        db.table("automation_logs").insert(
+            {
+                "execution_id": execution_id,
+                "step_id": step["id"],
+                "action": action,
+                "details": result,
+            }
+        ).execute()
 
         if result["success"]:
-            fire_event_background(execution["tenant_id"], "automation.email_sent", {
-                "lead_id": execution["lead_id"],
-                "lead_email": lead["email"],
-                "subject": subject,
-                "sequence_id": execution["sequence_id"],
-                "step_order": execution["current_step"],
-            })
+            fire_event_background(
+                execution["tenant_id"],
+                "automation.email_sent",
+                {
+                    "lead_id": execution["lead_id"],
+                    "lead_email": lead["email"],
+                    "subject": subject,
+                    "sequence_id": execution["sequence_id"],
+                    "step_order": execution["current_step"],
+                },
+            )
 
         if not result["success"]:
             logger.warning(
                 "Email failed for execution %s step %s: %s",
-                execution_id, step["id"], result.get("detail"),
+                execution_id,
+                step["id"],
+                result.get("detail"),
             )
 
     _advance_execution(db, execution, step)
@@ -421,7 +489,7 @@ async def _generate_ai_email(
             .limit(1)
             .execute()
         )
-        conv_id = (lead_row.data[0].get("conversation_id") if lead_row.data else None)
+        conv_id = lead_row.data[0].get("conversation_id") if lead_row.data else None
         session_id = None
         if conv_id:
             conv_row = (
@@ -431,7 +499,7 @@ async def _generate_ai_email(
                 .limit(1)
                 .execute()
             )
-            session_id = (conv_row.data[0].get("session_id") if conv_row.data else None)
+            session_id = conv_row.data[0].get("session_id") if conv_row.data else None
         if session_id:
             msg_result = (
                 db.table("chat_messages")
@@ -444,11 +512,15 @@ async def _generate_ai_email(
             )
             conversation = msg_result.data or []
     except Exception:
-        logger.warning("Failed to load conversation context for lead %s", lead_id, exc_info=True)
+        logger.warning(
+            "Failed to load conversation context for lead %s", lead_id, exc_info=True
+        )
 
-    conv_text = "\n".join(
-        f"{m['role']}: {m['content']}" for m in conversation
-    ) if conversation else "No conversation history available."
+    conv_text = (
+        "\n".join(f"{m['role']}: {m['content']}" for m in conversation)
+        if conversation
+        else "No conversation history available."
+    )
 
     # Load FAQ entries for context
     faq_result = (
@@ -458,9 +530,13 @@ async def _generate_ai_email(
         .limit(20)
         .execute()
     )
-    faq_text = "\n".join(
-        f"Q: {f['question']}\nA: {f['answer']}" for f in (faq_result.data or [])
-    ) if faq_result.data else "No FAQ entries available."
+    faq_text = (
+        "\n".join(
+            f"Q: {f['question']}\nA: {f['answer']}" for f in (faq_result.data or [])
+        )
+        if faq_result.data
+        else "No FAQ entries available."
+    )
 
     system_prompt = (
         f"You are a helpful assistant for {business_name}. "
@@ -494,7 +570,9 @@ async def _generate_ai_email(
         )
         return response.text
     except Exception:
-        logger.exception("AI email generation failed for tenant %s, lead %s", tenant_id, lead_id)
+        logger.exception(
+            "AI email generation failed for tenant %s, lead %s", tenant_id, lead_id
+        )
         # Fallback: use the body_template if provided, else a generic message
         if body_template and body_template.strip():
             return body_template
@@ -522,16 +600,22 @@ def _advance_execution(db, execution: dict, current_step: dict) -> None:
 
     if next_steps.data:
         next_step = next_steps.data[0]
-        next_run = datetime.now(timezone.utc) + timedelta(minutes=next_step["delay_minutes"])
-        db.table("automation_executions").update({
-            "current_step": next_step["step_order"],
-            "next_run_at": next_run.isoformat(),
-        }).eq("id", execution["id"]).execute()
+        next_run = datetime.now(timezone.utc) + timedelta(
+            minutes=next_step["delay_minutes"]
+        )
+        db.table("automation_executions").update(
+            {
+                "current_step": next_step["step_order"],
+                "next_run_at": next_run.isoformat(),
+            }
+        ).eq("id", execution["id"]).execute()
     else:
-        db.table("automation_executions").update({
-            "status": "completed",
-            "completed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", execution["id"]).execute()
+        db.table("automation_executions").update(
+            {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ).eq("id", execution["id"]).execute()
 
 
 async def check_no_response_leads() -> int:
@@ -574,7 +658,9 @@ async def check_no_response_leads() -> int:
         return 0
 
     all_lead_ids = [lead["id"] for lead in leads]
-    all_conv_ids = [lead["conversation_id"] for lead in leads if lead.get("conversation_id")]
+    all_conv_ids = [
+        lead["conversation_id"] for lead in leads if lead.get("conversation_id")
+    ]
 
     # Q2a: batch fetch active/in_progress executions for all leads
     already_enrolled_lead_ids: set[str] = set()
@@ -588,7 +674,10 @@ async def check_no_response_leads() -> int:
         )
         exec_rows = exec_result.data or []
     except Exception:
-        logger.warning("check_no_response_leads: batch enrollment check failed, proceeding without dedup", exc_info=True)
+        logger.warning(
+            "check_no_response_leads: batch enrollment check failed, proceeding without dedup",
+            exc_info=True,
+        )
         exec_rows = []
 
     if exec_rows:
@@ -602,11 +691,15 @@ async def check_no_response_leads() -> int:
                 .execute()
             )
             no_response_seq_ids: set[str] = {
-                s["id"] for s in (seq_result.data or [])
+                s["id"]
+                for s in (seq_result.data or [])
                 if s.get("trigger_event") == "no_response_24h"
             }
         except Exception:
-            logger.warning("check_no_response_leads: batch sequence trigger_event check failed", exc_info=True)
+            logger.warning(
+                "check_no_response_leads: batch sequence trigger_event check failed",
+                exc_info=True,
+            )
             no_response_seq_ids = set()
 
         for row in exec_rows:
@@ -627,7 +720,10 @@ async def check_no_response_leads() -> int:
                 if row.get("session_id"):
                     conv_to_session[row["id"]] = row["session_id"]
         except Exception:
-            logger.warning("check_no_response_leads: batch conversations lookup failed", exc_info=True)
+            logger.warning(
+                "check_no_response_leads: batch conversations lookup failed",
+                exc_info=True,
+            )
 
     # Q4: batch fetch latest chat_messages per session_id
     # Supabase returns rows in order; we take the first occurrence per session_id (latest).
@@ -651,7 +747,10 @@ async def check_no_response_leads() -> int:
                         raw_ts.replace("Z", "+00:00")
                     )
         except Exception:
-            logger.warning("check_no_response_leads: batch chat_messages lookup failed", exc_info=True)
+            logger.warning(
+                "check_no_response_leads: batch chat_messages lookup failed",
+                exc_info=True,
+            )
 
     # Now evaluate each lead entirely in Python (no more DB calls in this loop)
     for lead in leads:
@@ -680,10 +779,13 @@ async def check_no_response_leads() -> int:
                 triggered += count
                 logger.info(
                     "check_no_response_leads: triggered sequence for lead %s (tenant %s)",
-                    lead_id, tenant_id,
+                    lead_id,
+                    tenant_id,
                 )
         except Exception:
-            logger.exception("check_no_response_leads: trigger_sequence failed for lead %s", lead_id)
+            logger.exception(
+                "check_no_response_leads: trigger_sequence failed for lead %s", lead_id
+            )
 
     return triggered
 
@@ -694,12 +796,20 @@ async def check_no_response_leads() -> int:
 
 _REMINDER_EXTRAS: dict[str, list[str]] = {
     "dental": ["Insurance card", "Photo ID", "List of current medications"],
-    "medical": ["Insurance card", "Photo ID", "List of current medications", "Medical records if transferring"],
+    "medical": [
+        "Insurance card",
+        "Photo ID",
+        "List of current medications",
+        "Medical records if transferring",
+    ],
     "salon": ["Arrive 5-10 minutes early", "Photos of desired style (if applicable)"],
     "auto_shop": ["Vehicle registration", "Description of any issues"],
     "legal": ["Relevant documents or contracts", "Photo ID", "List of questions"],
     "realestate": ["Pre-approval letter (if buying)", "Photo ID"],
-    "plumbing": ["Photos of the issue (if possible)", "Clear access to the problem area"],
+    "plumbing": [
+        "Photos of the issue (if possible)",
+        "Clear access to the problem area",
+    ],
     "contractor": ["Photos of the project area", "Any permits or HOA approvals"],
     "fitness": ["Comfortable workout clothes", "Water bottle", "Towel"],
 }
@@ -745,14 +855,19 @@ async def send_appointment_reminders() -> int:
         try:
             appointments = (
                 db.table("appointments")
-                .select("id, tenant_id, customer_name, customer_email, customer_phone, start_time, end_time, notes, status")
+                .select(
+                    "id, tenant_id, customer_name, customer_email, customer_phone, start_time, end_time, notes, status"
+                )
                 .gte("start_time", window_start.isoformat())
                 .lte("start_time", window_end.isoformat())
                 .eq("status", "booked")
                 .execute()
             )
         except Exception:
-            logger.exception("send_appointment_reminders: failed to query appointments for %s window", window["label"])
+            logger.exception(
+                "send_appointment_reminders: failed to query appointments for %s window",
+                window["label"],
+            )
             continue
 
         for appt in appointments.data or []:
@@ -764,18 +879,30 @@ async def send_appointment_reminders() -> int:
             tenant_id = appt["tenant_id"]
 
             try:
-                tenant = db.table("tenants").select("business_name, owner_email, plan, business_type").eq("id", tenant_id).limit(1).execute()
+                tenant = (
+                    db.table("tenants")
+                    .select("business_name, owner_email, plan, business_type")
+                    .eq("id", tenant_id)
+                    .limit(1)
+                    .execute()
+                )
                 if not tenant.data:
                     continue
                 tenant_data = tenant.data[0]
-                business_name = html.escape(tenant_data.get("business_name") or "Our Team")
+                business_name = html.escape(
+                    tenant_data.get("business_name") or "Our Team"
+                )
             except Exception:
-                logger.exception("send_appointment_reminders: failed to load tenant %s", tenant_id)
+                logger.exception(
+                    "send_appointment_reminders: failed to load tenant %s", tenant_id
+                )
                 continue
 
             # Format the appointment time nicely
             try:
-                start_dt = datetime.fromisoformat(appt["start_time"].replace("Z", "+00:00"))
+                start_dt = datetime.fromisoformat(
+                    appt["start_time"].replace("Z", "+00:00")
+                )
                 time_str = start_dt.strftime("%B %d at %I:%M %p")
             except Exception:
                 time_str = appt["start_time"]
@@ -795,7 +922,11 @@ async def send_appointment_reminders() -> int:
                 }
                 bring_html = ""
                 if bring_items and window["label"] == "24h":
-                    bring_html = "<p><strong>Please remember to bring:</strong></p><ul>" + "".join(f"<li>{item}</li>" for item in bring_items) + "</ul>"
+                    bring_html = (
+                        "<p><strong>Please remember to bring:</strong></p><ul>"
+                        + "".join(f"<li>{item}</li>" for item in bring_items)
+                        + "</ul>"
+                    )
 
                 body_map = {
                     "24h": (
@@ -828,12 +959,15 @@ async def send_appointment_reminders() -> int:
                     sent += 1
                     logger.info(
                         "Sent %s reminder for appointment %s to %s",
-                        window["label"], appt["id"], customer_email,
+                        window["label"],
+                        appt["id"],
+                        customer_email,
                     )
                 except Exception:
                     logger.exception(
                         "Failed to send %s reminder for appointment %s",
-                        window["label"], appt["id"],
+                        window["label"],
+                        appt["id"],
                     )
 
             # Send SMS reminder if phone available
@@ -855,22 +989,31 @@ async def send_appointment_reminders() -> int:
                     ),
                 }
                 try:
-                    if check_sms_rate_limit(tenant_id, tenant_data.get("plan") or "free"):
+                    if check_sms_rate_limit(
+                        tenant_id, tenant_data.get("plan") or "free"
+                    ):
                         await send_sms(to=customer_phone, body=sms_map[window["label"]])
                         increment_sms_count(tenant_id)
                         sent += 1
                 except Exception:
                     logger.exception(
                         "Failed to send SMS %s reminder for appointment %s",
-                        window["label"], appt["id"],
+                        window["label"],
+                        appt["id"],
                     )
 
             # Mark reminder as sent in notes
-            updated_notes = f"{notes}\n{reminder_tag}".strip() if notes else reminder_tag
+            updated_notes = (
+                f"{notes}\n{reminder_tag}".strip() if notes else reminder_tag
+            )
             try:
-                db.table("appointments").update({"notes": updated_notes}).eq("id", appt["id"]).execute()
+                db.table("appointments").update({"notes": updated_notes}).eq(
+                    "id", appt["id"]
+                ).execute()
             except Exception:
-                logger.exception("Failed to mark reminder sent for appointment %s", appt["id"])
+                logger.exception(
+                    "Failed to mark reminder sent for appointment %s", appt["id"]
+                )
 
     return sent
 
@@ -904,7 +1047,9 @@ async def send_rebook_suggestions() -> int:
     try:
         appts = (
             db.table("appointments")
-            .select("id, tenant_id, customer_name, customer_email, customer_phone, lead_id, updated_at")
+            .select(
+                "id, tenant_id, customer_name, customer_email, customer_phone, lead_id, updated_at"
+            )
             .eq("status", "completed")
             .gte("updated_at", window_start.isoformat())
             .lte("updated_at", window_end.isoformat())
@@ -912,7 +1057,9 @@ async def send_rebook_suggestions() -> int:
             .execute()
         )
     except Exception:
-        logger.exception("send_rebook_suggestions: failed to query completed appointments")
+        logger.exception(
+            "send_rebook_suggestions: failed to query completed appointments"
+        )
         return 0
 
     tenant_cache: dict[str, dict | None] = {}
@@ -922,7 +1069,13 @@ async def send_rebook_suggestions() -> int:
 
         if tenant_id not in tenant_cache:
             try:
-                t = db.table("tenants").select("business_name, business_type, plan").eq("id", tenant_id).limit(1).execute()
+                t = (
+                    db.table("tenants")
+                    .select("business_name, business_type, plan")
+                    .eq("id", tenant_id)
+                    .limit(1)
+                    .execute()
+                )
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
                 tenant_cache[tenant_id] = None
@@ -939,7 +1092,15 @@ async def send_rebook_suggestions() -> int:
 
         # Dedup: check if we already sent a rebook for this appointment
         try:
-            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("lead_id", appt.get("lead_id")).eq("activity_type", "rebook_suggestion_sent").limit(1).execute()
+            existing = (
+                db.table("activity_log")
+                .select("id")
+                .eq("tenant_id", tenant_id)
+                .eq("lead_id", appt.get("lead_id"))
+                .eq("activity_type", "rebook_suggestion_sent")
+                .limit(1)
+                .execute()
+            )
             if existing.data:
                 continue
         except Exception:
@@ -960,22 +1121,35 @@ async def send_rebook_suggestions() -> int:
                 f"<p>Best,<br>The {business_name} Team</p>"
             )
             try:
-                result = await send_email(to=customer_email, subject=subject, body_html=body, tenant_id=tenant_id)
+                result = await send_email(
+                    to=customer_email,
+                    subject=subject,
+                    body_html=body,
+                    tenant_id=tenant_id,
+                )
                 if result.get("success"):
                     sent += 1
             except Exception:
-                logger.exception("Failed to send rebook suggestion for appointment %s", appt["id"])
+                logger.exception(
+                    "Failed to send rebook suggestion for appointment %s", appt["id"]
+                )
 
         # Log to prevent duplicates
         try:
-            db.table("activity_log").insert({
-                "tenant_id": tenant_id,
-                "lead_id": appt.get("lead_id"),
-                "activity_type": "rebook_suggestion_sent",
-                "description": f"Rebook suggestion sent: {suggestion} in {days} days",
-            }).execute()
+            db.table("activity_log").insert(
+                {
+                    "tenant_id": tenant_id,
+                    "lead_id": appt.get("lead_id"),
+                    "activity_type": "rebook_suggestion_sent",
+                    "description": f"Rebook suggestion sent: {suggestion} in {days} days",
+                }
+            ).execute()
         except Exception:
-            logger.warning("Failed to log rebook suggestion for appointment %s", appt["id"], exc_info=True)
+            logger.warning(
+                "Failed to log rebook suggestion for appointment %s",
+                appt["id"],
+                exc_info=True,
+            )
 
     return sent
 
@@ -1043,7 +1217,14 @@ async def send_aftercare_instructions() -> int:
 
         # Dedup
         try:
-            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("activity_type", f"aftercare_sent_{appt_id}").limit(1).execute()
+            existing = (
+                db.table("activity_log")
+                .select("id")
+                .eq("tenant_id", tenant_id)
+                .eq("activity_type", f"aftercare_sent_{appt_id}")
+                .limit(1)
+                .execute()
+            )
             if existing.data:
                 continue
         except Exception:
@@ -1051,7 +1232,13 @@ async def send_aftercare_instructions() -> int:
 
         if tenant_id not in tenant_cache:
             try:
-                t = db.table("tenants").select("business_name, business_type, plan").eq("id", tenant_id).limit(1).execute()
+                t = (
+                    db.table("tenants")
+                    .select("business_name, business_type, plan")
+                    .eq("id", tenant_id)
+                    .limit(1)
+                    .execute()
+                )
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
                 tenant_cache[tenant_id] = None
@@ -1091,20 +1278,29 @@ async def send_aftercare_instructions() -> int:
         )
 
         try:
-            result = await send_email(to=appt["customer_email"], subject=subject, body_html=body, tenant_id=tenant_id)
+            result = await send_email(
+                to=appt["customer_email"],
+                subject=subject,
+                body_html=body,
+                tenant_id=tenant_id,
+            )
             if result.get("success"):
                 sent += 1
         except Exception:
             logger.exception("Failed to send aftercare for appointment %s", appt_id)
 
         try:
-            db.table("activity_log").insert({
-                "tenant_id": tenant_id,
-                "activity_type": f"aftercare_sent_{appt_id}",
-                "description": f"Aftercare instructions sent to {customer_name}",
-            }).execute()
+            db.table("activity_log").insert(
+                {
+                    "tenant_id": tenant_id,
+                    "activity_type": f"aftercare_sent_{appt_id}",
+                    "description": f"Aftercare instructions sent to {customer_name}",
+                }
+            ).execute()
         except Exception:
-            logger.warning("Failed to log aftercare for appointment %s", appt_id, exc_info=True)
+            logger.warning(
+                "Failed to log aftercare for appointment %s", appt_id, exc_info=True
+            )
 
     return sent
 
@@ -1126,7 +1322,9 @@ async def send_pending_review_requests() -> int:
         # Get completed appointments that haven't had review requests sent
         appts = (
             db.table("appointments")
-            .select("id, tenant_id, customer_name, customer_email, customer_phone, updated_at, lead_id")
+            .select(
+                "id, tenant_id, customer_name, customer_email, customer_phone, updated_at, lead_id"
+            )
             .eq("status", "completed")
             .is_("review_request_sent_at", "null")
             .limit(BATCH_LIMIT)
@@ -1147,14 +1345,18 @@ async def send_pending_review_requests() -> int:
             try:
                 t = (
                     db.table("tenants")
-                    .select("business_name, google_review_link, google_place_id, review_request_config, plan")
+                    .select(
+                        "business_name, google_review_link, google_place_id, review_request_config, plan"
+                    )
                     .eq("id", tenant_id)
                     .limit(1)
                     .execute()
                 )
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
-                logger.exception("send_pending_review_requests: failed to load tenant %s", tenant_id)
+                logger.exception(
+                    "send_pending_review_requests: failed to load tenant %s", tenant_id
+                )
                 tenant_cache[tenant_id] = None
 
         tenant = tenant_cache.get(tenant_id)
@@ -1169,7 +1371,9 @@ async def send_pending_review_requests() -> int:
         # otherwise fall back to the manually configured google_review_link.
         place_id = tenant.get("google_place_id")
         if place_id:
-            review_link = f"https://search.google.com/local/writereview?placeid={place_id}"
+            review_link = (
+                f"https://search.google.com/local/writereview?placeid={place_id}"
+            )
         else:
             review_link = tenant.get("google_review_link") or ""
 
@@ -1197,7 +1401,13 @@ async def send_pending_review_requests() -> int:
         lead_id = appt.get("lead_id")
         if lead_id:
             try:
-                lr = db.table("leads").select("unsubscribed").eq("id", lead_id).limit(1).execute()
+                lr = (
+                    db.table("leads")
+                    .select("unsubscribed")
+                    .eq("id", lead_id)
+                    .limit(1)
+                    .execute()
+                )
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
@@ -1229,9 +1439,13 @@ async def send_pending_review_requests() -> int:
                 )
                 if result.get("success"):
                     sent += 1
-                    logger.info("Sent review request email for appointment %s", appt["id"])
+                    logger.info(
+                        "Sent review request email for appointment %s", appt["id"]
+                    )
             except Exception:
-                logger.exception("Failed to send review request email for appointment %s", appt["id"])
+                logger.exception(
+                    "Failed to send review request email for appointment %s", appt["id"]
+                )
 
         # Send SMS review request
         if method in ("sms", "both") and appt.get("customer_phone"):
@@ -1246,17 +1460,25 @@ async def send_pending_review_requests() -> int:
                     if sms_ok:
                         increment_sms_count(tenant_id)
                         sent += 1
-                        logger.info("Sent review request SMS for appointment %s", appt["id"])
+                        logger.info(
+                            "Sent review request SMS for appointment %s", appt["id"]
+                        )
             except Exception:
-                logger.exception("Failed to send review request SMS for appointment %s", appt["id"])
+                logger.exception(
+                    "Failed to send review request SMS for appointment %s", appt["id"]
+                )
 
         # Mark as sent regardless of success to avoid retry loops
         try:
-            db.table("appointments").update({
-                "review_request_sent_at": now.isoformat(),
-            }).eq("id", appt["id"]).execute()
+            db.table("appointments").update(
+                {
+                    "review_request_sent_at": now.isoformat(),
+                }
+            ).eq("id", appt["id"]).execute()
         except Exception:
-            logger.exception("Failed to mark review request sent for appointment %s", appt["id"])
+            logger.exception(
+                "Failed to mark review request sent for appointment %s", appt["id"]
+            )
 
     # --- Follow-up reminder loop ---
     # Find appointments where a review request was sent 48+ hours ago but no
@@ -1282,7 +1504,9 @@ async def _send_review_followups(
     try:
         followup_appts = (
             db.table("appointments")
-            .select("id, tenant_id, customer_name, customer_email, customer_phone, lead_id, review_request_sent_at")
+            .select(
+                "id, tenant_id, customer_name, customer_email, customer_phone, lead_id, review_request_sent_at"
+            )
             .eq("status", "completed")
             .not_.is_("review_request_sent_at", "null")
             .lte("review_request_sent_at", followup_cutoff.isoformat())
@@ -1323,14 +1547,18 @@ async def _send_review_followups(
             try:
                 t = (
                     db.table("tenants")
-                    .select("business_name, google_review_link, google_place_id, review_request_config, plan")
+                    .select(
+                        "business_name, google_review_link, google_place_id, review_request_config, plan"
+                    )
                     .eq("id", tenant_id)
                     .limit(1)
                     .execute()
                 )
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
-                logger.exception("_send_review_followups: failed to load tenant %s", tenant_id)
+                logger.exception(
+                    "_send_review_followups: failed to load tenant %s", tenant_id
+                )
                 tenant_cache[tenant_id] = None
 
         tenant = tenant_cache.get(tenant_id)
@@ -1344,7 +1572,9 @@ async def _send_review_followups(
         # Build review link (same logic as main loop)
         place_id = tenant.get("google_place_id")
         if place_id:
-            review_link = f"https://search.google.com/local/writereview?placeid={place_id}"
+            review_link = (
+                f"https://search.google.com/local/writereview?placeid={place_id}"
+            )
         else:
             review_link = tenant.get("google_review_link") or ""
 
@@ -1359,7 +1589,13 @@ async def _send_review_followups(
         lead_id = appt.get("lead_id")
         if lead_id:
             try:
-                lr = db.table("leads").select("unsubscribed").eq("id", lead_id).limit(1).execute()
+                lr = (
+                    db.table("leads")
+                    .select("unsubscribed")
+                    .eq("id", lead_id)
+                    .limit(1)
+                    .execute()
+                )
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
@@ -1394,9 +1630,13 @@ async def _send_review_followups(
                 if result.get("success"):
                     sent += 1
                     followup_sent = True
-                    logger.info("Sent review follow-up email for appointment %s", appt_id)
+                    logger.info(
+                        "Sent review follow-up email for appointment %s", appt_id
+                    )
             except Exception:
-                logger.exception("Failed to send review follow-up email for appointment %s", appt_id)
+                logger.exception(
+                    "Failed to send review follow-up email for appointment %s", appt_id
+                )
 
         # Send follow-up SMS
         if method in ("sms", "both") and appt.get("customer_phone"):
@@ -1412,9 +1652,13 @@ async def _send_review_followups(
                         increment_sms_count(tenant_id)
                         sent += 1
                         followup_sent = True
-                        logger.info("Sent review follow-up SMS for appointment %s", appt_id)
+                        logger.info(
+                            "Sent review follow-up SMS for appointment %s", appt_id
+                        )
             except Exception:
-                logger.exception("Failed to send review follow-up SMS for appointment %s", appt_id)
+                logger.exception(
+                    "Failed to send review follow-up SMS for appointment %s", appt_id
+                )
 
         # Record the follow-up in activity_log for dedup on future loop iterations
         if followup_sent:
@@ -1611,7 +1855,11 @@ async def send_monthly_reports() -> int:
                 unique_sessions = {m["session_id"] for m in conv_result.data}
                 conversations_count = len(unique_sessions)
         except Exception:
-            logger.warning("send_monthly_reports: failed to count conversations for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "send_monthly_reports: failed to count conversations for tenant %s",
+                tid,
+                exc_info=True,
+            )
 
         try:
             # leads table uses client_id, not tenant_id
@@ -1625,7 +1873,11 @@ async def send_monthly_reports() -> int:
             )
             leads_count = leads_result.count or 0
         except Exception:
-            logger.warning("send_monthly_reports: failed to count leads for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "send_monthly_reports: failed to count leads for tenant %s",
+                tid,
+                exc_info=True,
+            )
 
         try:
             appt_result = (
@@ -1638,7 +1890,11 @@ async def send_monthly_reports() -> int:
             )
             appointments_count = appt_result.count or 0
         except Exception:
-            logger.warning("send_monthly_reports: failed to count appointments for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "send_monthly_reports: failed to count appointments for tenant %s",
+                tid,
+                exc_info=True,
+            )
 
         try:
             rev_result = (
@@ -1651,7 +1907,11 @@ async def send_monthly_reports() -> int:
             )
             reviews_count = rev_result.count or 0
         except Exception:
-            logger.warning("send_monthly_reports: failed to count reviews for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "send_monthly_reports: failed to count reviews for tenant %s",
+                tid,
+                exc_info=True,
+            )
 
         # Build report email
         subject = f"Monthly Performance Report for {business_name}"
@@ -1690,20 +1950,39 @@ async def send_monthly_reports() -> int:
             )
             if result.get("success"):
                 sent += 1
-                logger.info("Sent monthly report to %s (tenant %s): convos=%d leads=%d appts=%d reviews=%d",
-                            email, tid, conversations_count, leads_count, appointments_count, reviews_count)
+                logger.info(
+                    "Sent monthly report to %s (tenant %s): convos=%d leads=%d appts=%d reviews=%d",
+                    email,
+                    tid,
+                    conversations_count,
+                    leads_count,
+                    appointments_count,
+                    reviews_count,
+                )
 
                 # Update last_monthly_report_at on the tenant
                 try:
-                    db.table("tenants").update({
-                        "last_monthly_report_at": now.isoformat(),
-                    }).eq("id", tid).execute()
+                    db.table("tenants").update(
+                        {
+                            "last_monthly_report_at": now.isoformat(),
+                        }
+                    ).eq("id", tid).execute()
                 except Exception:
-                    logger.exception("send_monthly_reports: failed to update last_monthly_report_at for tenant %s", tid)
+                    logger.exception(
+                        "send_monthly_reports: failed to update last_monthly_report_at for tenant %s",
+                        tid,
+                    )
             else:
-                logger.warning("send_monthly_reports: email send returned failure for tenant %s", tid)
+                logger.warning(
+                    "send_monthly_reports: email send returned failure for tenant %s",
+                    tid,
+                )
         except Exception:
-            logger.exception("send_monthly_reports: failed to send report email to %s (tenant %s)", email, tid)
+            logger.exception(
+                "send_monthly_reports: failed to send report email to %s (tenant %s)",
+                email,
+                tid,
+            )
 
     return sent
 
@@ -1776,8 +2055,16 @@ async def send_portal_links() -> int:
 
         # Get business name
         try:
-            t_result = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
-            biz_name = t_result.data[0]["business_name"] if t_result.data else "Our Team"
+            t_result = (
+                db.table("tenants")
+                .select("business_name")
+                .eq("id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            biz_name = (
+                t_result.data[0]["business_name"] if t_result.data else "Our Team"
+            )
         except Exception:
             biz_name = "Our Team"
 
@@ -1795,15 +2082,28 @@ async def send_portal_links() -> int:
         )
 
         try:
-            result = await send_email(to=customer_email, subject=subject, body_html=body, tenant_id=tenant_id)
+            result = await send_email(
+                to=customer_email, subject=subject, body_html=body, tenant_id=tenant_id
+            )
             if result.get("success"):
                 sent += 1
                 # Track delivery
                 from backend.services.activity import log_activity
-                log_activity(tenant_id=tenant_id, activity_type="portal_link_sent", description=activity_key)
-                logger.info("Sent portal link to %s for appointment %s", customer_email, appt["id"])
+
+                log_activity(
+                    tenant_id=tenant_id,
+                    activity_type="portal_link_sent",
+                    description=activity_key,
+                )
+                logger.info(
+                    "Sent portal link to %s for appointment %s",
+                    customer_email,
+                    appt["id"],
+                )
         except Exception:
-            logger.exception("Failed to send portal link for appointment %s", appt["id"])
+            logger.exception(
+                "Failed to send portal link for appointment %s", appt["id"]
+            )
 
     return sent
 
@@ -1861,7 +2161,13 @@ async def send_csat_surveys() -> int:
 
         # Get business name
         try:
-            t = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+            t = (
+                db.table("tenants")
+                .select("business_name")
+                .eq("id", tenant_id)
+                .limit(1)
+                .execute()
+            )
             biz_name = t.data[0]["business_name"] if t.data else "us"
         except Exception:
             biz_name = "us"
@@ -1887,14 +2193,25 @@ async def send_csat_surveys() -> int:
         )
 
         try:
-            result = await send_email(to=email, subject=subject, body_html=body, tenant_id=tenant_id)
+            result = await send_email(
+                to=email, subject=subject, body_html=body, tenant_id=tenant_id
+            )
             if result.get("success"):
                 sent += 1
                 from backend.services.activity import log_activity
-                log_activity(tenant_id=tenant_id, activity_type="csat_sent", description=activity_key)
-                logger.info("Sent CSAT survey to %s for appointment %s", email, appt["id"])
+
+                log_activity(
+                    tenant_id=tenant_id,
+                    activity_type="csat_sent",
+                    description=activity_key,
+                )
+                logger.info(
+                    "Sent CSAT survey to %s for appointment %s", email, appt["id"]
+                )
         except Exception:
-            logger.exception("Failed to send CSAT survey for appointment %s", appt["id"])
+            logger.exception(
+                "Failed to send CSAT survey for appointment %s", appt["id"]
+            )
 
     return sent
 
@@ -1939,7 +2256,9 @@ async def check_new_reviews() -> int:
                 .execute()
             )
         except Exception:
-            logger.exception("check_new_reviews: failed to look up tenant %s", tenant_id)
+            logger.exception(
+                "check_new_reviews: failed to look up tenant %s", tenant_id
+            )
             continue
 
         if not tenant_result.data:
@@ -1952,16 +2271,17 @@ async def check_new_reviews() -> int:
         author_name = review.get("author_name", "Someone")
         platform = review.get("platform", "unknown")
         review_text = review.get("review_text") or ""
-        truncated_text = review_text[:80] + "..." if len(review_text) > 80 else review_text
+        truncated_text = (
+            review_text[:80] + "..." if len(review_text) > 80 else review_text
+        )
 
         # Log activity regardless of whether SMS is sent
         from backend.services.activity import log_activity
+
         log_activity(
             tenant_id=tenant_id,
             activity_type="new_review_alert",
-            description=(
-                f"New {rating}-star review from {author_name} on {platform}"
-            ),
+            description=(f"New {rating}-star review from {author_name} on {platform}"),
             metadata={
                 "review_id": review.get("id"),
                 "rating": rating,
@@ -1982,12 +2302,15 @@ async def check_new_reviews() -> int:
                     sent += 1
                     logger.info(
                         "Sent new review alert SMS to %s for tenant %s (review %s)",
-                        notification_phone, tenant_id, review.get("id"),
+                        notification_phone,
+                        tenant_id,
+                        review.get("id"),
                     )
             except Exception:
                 logger.exception(
                     "check_new_reviews: failed to send SMS to %s for tenant %s",
-                    notification_phone, tenant_id,
+                    notification_phone,
+                    tenant_id,
                 )
 
     return sent
@@ -2019,7 +2342,10 @@ async def send_onboarding_emails() -> int:
                 .execute()
             )
         except Exception:
-            logger.exception("send_onboarding_emails: failed to query tenants for day %d", step["day"])
+            logger.exception(
+                "send_onboarding_emails: failed to query tenants for day %d",
+                step["day"],
+            )
             continue
 
         for tenant in tenants.data or []:
@@ -2041,7 +2367,10 @@ async def send_onboarding_emails() -> int:
                 if existing.count and existing.count > 0:
                     continue
             except Exception:
-                logger.warning("send_onboarding_emails: couldn't check activity_log for %s, skipping", tid)
+                logger.warning(
+                    "send_onboarding_emails: couldn't check activity_log for %s, skipping",
+                    tid,
+                )
                 continue
 
             owner_name = tenant.get("owner_name") or "there"
@@ -2060,15 +2389,24 @@ async def send_onboarding_emails() -> int:
                 )
                 if result.get("success"):
                     sent += 1
-                    logger.info("Sent onboarding day %d email to %s (tenant %s)", step["day"], email, tid)
+                    logger.info(
+                        "Sent onboarding day %d email to %s (tenant %s)",
+                        step["day"],
+                        email,
+                        tid,
+                    )
                     # Track in activity_log
-                    db.table("activity_log").insert({
-                        "tenant_id": tid,
-                        "activity_type": activity_type,
-                        "description": f"Onboarding email Day {step['day']} sent to {email}",
-                    }).execute()
+                    db.table("activity_log").insert(
+                        {
+                            "tenant_id": tid,
+                            "activity_type": activity_type,
+                            "description": f"Onboarding email Day {step['day']} sent to {email}",
+                        }
+                    ).execute()
             except Exception:
-                logger.exception("Failed to send onboarding day %d email to %s", step["day"], email)
+                logger.exception(
+                    "Failed to send onboarding day %d email to %s", step["day"], email
+                )
 
     return sent
 
@@ -2094,7 +2432,9 @@ async def send_invoice_payment_reminders() -> int:
     try:
         invoices = (
             db.table("invoices")
-            .select("id, tenant_id, lead_id, invoice_number, total, due_date, status, stripe_payment_link")
+            .select(
+                "id, tenant_id, lead_id, invoice_number, total, due_date, status, stripe_payment_link"
+            )
             .eq("status", "sent")
             .lte("due_date", tomorrow)
             .limit(BATCH_LIMIT)
@@ -2127,14 +2467,19 @@ async def send_invoice_payment_reminders() -> int:
             if existing.count and existing.count > 0:
                 continue
         except Exception:
-            logger.warning("send_invoice_payment_reminders: dedup check failed for invoice %s", inv_id)
+            logger.warning(
+                "send_invoice_payment_reminders: dedup check failed for invoice %s",
+                inv_id,
+            )
             continue
 
         # Mark overdue if due_date <= today
         is_overdue = due_date <= today
         if is_overdue:
             try:
-                db.table("invoices").update({"status": "overdue"}).eq("id", inv_id).execute()
+                db.table("invoices").update({"status": "overdue"}).eq(
+                    "id", inv_id
+                ).execute()
             except Exception:
                 logger.warning("Failed to mark invoice %s as overdue", inv_id)
 
@@ -2148,7 +2493,9 @@ async def send_invoice_payment_reminders() -> int:
                 .execute()
             )
         except Exception:
-            logger.exception("send_invoice_payment_reminders: failed to look up lead %s", lead_id)
+            logger.exception(
+                "send_invoice_payment_reminders: failed to look up lead %s", lead_id
+            )
             continue
 
         if not lead_result.data:
@@ -2165,7 +2512,9 @@ async def send_invoice_payment_reminders() -> int:
                 .execute()
             )
         except Exception:
-            logger.exception("send_invoice_payment_reminders: failed to look up tenant %s", tenant_id)
+            logger.exception(
+                "send_invoice_payment_reminders: failed to look up tenant %s", tenant_id
+            )
             continue
 
         if not tenant_result.data:
@@ -2207,7 +2556,9 @@ async def send_invoice_payment_reminders() -> int:
                     f"<a href='{pay_link}' style='background:#3b82f6;color:white;padding:12px 24px;"
                     f"border-radius:8px;text-decoration:none;font-weight:bold;'>Pay Now</a></p>"
                 )
-            html_body += f"<p style='color:#6b7280;margin-top:24px;'>— {biz_name}</p></div>"
+            html_body += (
+                f"<p style='color:#6b7280;margin-top:24px;'>— {biz_name}</p></div>"
+            )
 
             try:
                 result = await send_email(
@@ -2218,9 +2569,13 @@ async def send_invoice_payment_reminders() -> int:
                 )
                 if result.get("success"):
                     sent += 1
-                    logger.info("Sent invoice reminder email for %s to %s", inv_num, email)
+                    logger.info(
+                        "Sent invoice reminder email for %s to %s", inv_num, email
+                    )
             except Exception:
-                logger.exception("Failed to send invoice reminder email for %s", inv_num)
+                logger.exception(
+                    "Failed to send invoice reminder email for %s", inv_num
+                )
 
         # Send SMS
         phone = lead.get("phone")
@@ -2230,13 +2585,16 @@ async def send_invoice_payment_reminders() -> int:
                 sms_ok = await send_sms(to=phone, body=sms_body)
                 if sms_ok:
                     sent += 1
-                    logger.info("Sent invoice reminder SMS for %s to %s", inv_num, phone)
+                    logger.info(
+                        "Sent invoice reminder SMS for %s to %s", inv_num, phone
+                    )
             except Exception:
                 logger.exception("Failed to send invoice reminder SMS for %s", inv_num)
 
         # Track in activity_log for dedup
         try:
             from backend.services.activity import log_activity
+
             log_activity(
                 tenant_id=tenant_id,
                 lead_id=lead_id,
@@ -2306,7 +2664,9 @@ async def send_weekly_intelligence_briefs() -> int:
             if existing.count and existing.count > 0:
                 continue
         except Exception:
-            logger.warning("send_weekly_intelligence_briefs: dedup check failed for tenant %s", tid)
+            logger.warning(
+                "send_weekly_intelligence_briefs: dedup check failed for tenant %s", tid
+            )
             continue
 
         # Gather 7-day metrics
@@ -2314,36 +2674,78 @@ async def send_weekly_intelligence_briefs() -> int:
 
         # Leads (uses client_id, not tenant_id)
         try:
-            leads_result = db.table("leads").select("id, status, lead_temperature, deal_value", count="exact").eq("client_id", tid).gte("created_at", week_start).limit(200).execute()
+            leads_result = (
+                db.table("leads")
+                .select("id, status, lead_temperature, deal_value", count="exact")
+                .eq("client_id", tid)
+                .gte("created_at", week_start)
+                .limit(200)
+                .execute()
+            )
             leads_data = leads_result.data or []
             metrics["new_leads"] = len(leads_data)
-            metrics["hot_leads"] = sum(1 for l in leads_data if l.get("lead_temperature") == "hot")
-            metrics["total_deal_value"] = sum(float(l.get("deal_value") or 0) for l in leads_data)
+            metrics["hot_leads"] = sum(
+                1 for l in leads_data if l.get("lead_temperature") == "hot"
+            )
+            metrics["total_deal_value"] = sum(
+                float(l.get("deal_value") or 0) for l in leads_data
+            )
         except Exception:
             metrics["new_leads"] = 0
-            logger.warning("weekly brief: failed to count leads for %s", tid, exc_info=True)
+            logger.warning(
+                "weekly brief: failed to count leads for %s", tid, exc_info=True
+            )
 
         # Conversations
         try:
-            conv_result = db.table("conversations").select("id, status", count="exact").eq("client_id", tid).gte("created_at", week_start).limit(1).execute()
+            conv_result = (
+                db.table("conversations")
+                .select("id, status", count="exact")
+                .eq("client_id", tid)
+                .gte("created_at", week_start)
+                .limit(1)
+                .execute()
+            )
             metrics["conversations"] = conv_result.count or 0
         except Exception:
             metrics["conversations"] = 0
 
         # Appointments
         try:
-            appt_result = db.table("appointments").select("id, status", count="exact").eq("tenant_id", tid).gte("created_at", week_start).limit(1).execute()
+            appt_result = (
+                db.table("appointments")
+                .select("id, status", count="exact")
+                .eq("tenant_id", tid)
+                .gte("created_at", week_start)
+                .limit(1)
+                .execute()
+            )
             metrics["appointments"] = appt_result.count or 0
         except Exception:
             metrics["appointments"] = 0
 
         # Invoices
         try:
-            inv_result = db.table("invoices").select("id, status, total", count="exact").eq("tenant_id", tid).gte("created_at", week_start).limit(200).execute()
+            inv_result = (
+                db.table("invoices")
+                .select("id, status, total", count="exact")
+                .eq("tenant_id", tid)
+                .gte("created_at", week_start)
+                .limit(200)
+                .execute()
+            )
             inv_data = inv_result.data or []
-            metrics["invoices_sent"] = sum(1 for i in inv_data if i.get("status") in ("sent", "viewed", "paid"))
-            metrics["invoices_paid"] = sum(1 for i in inv_data if i.get("status") == "paid")
-            metrics["revenue_collected"] = sum(float(i.get("total") or 0) for i in inv_data if i.get("status") == "paid")
+            metrics["invoices_sent"] = sum(
+                1 for i in inv_data if i.get("status") in ("sent", "viewed", "paid")
+            )
+            metrics["invoices_paid"] = sum(
+                1 for i in inv_data if i.get("status") == "paid"
+            )
+            metrics["revenue_collected"] = sum(
+                float(i.get("total") or 0)
+                for i in inv_data
+                if i.get("status") == "paid"
+            )
         except Exception:
             metrics["invoices_sent"] = 0
             metrics["invoices_paid"] = 0
@@ -2351,17 +2753,33 @@ async def send_weekly_intelligence_briefs() -> int:
 
         # Reviews
         try:
-            rev_result = db.table("reviews").select("id, rating", count="exact").eq("tenant_id", tid).gte("created_at", week_start).limit(50).execute()
+            rev_result = (
+                db.table("reviews")
+                .select("id, rating", count="exact")
+                .eq("tenant_id", tid)
+                .gte("created_at", week_start)
+                .limit(50)
+                .execute()
+            )
             rev_data = rev_result.data or []
             metrics["new_reviews"] = len(rev_data)
-            metrics["avg_rating"] = round(sum(r.get("rating", 0) for r in rev_data) / max(len(rev_data), 1), 1)
+            metrics["avg_rating"] = round(
+                sum(r.get("rating", 0) for r in rev_data) / max(len(rev_data), 1), 1
+            )
         except Exception:
             metrics["new_reviews"] = 0
             metrics["avg_rating"] = 0
 
         # Action items pending
         try:
-            actions_result = db.table("action_items").select("id", count="exact").eq("tenant_id", tid).eq("status", "pending").limit(1).execute()
+            actions_result = (
+                db.table("action_items")
+                .select("id", count="exact")
+                .eq("tenant_id", tid)
+                .eq("status", "pending")
+                .limit(1)
+                .execute()
+            )
             metrics["pending_actions"] = actions_result.count or 0
         except Exception:
             metrics["pending_actions"] = 0
@@ -2376,14 +2794,14 @@ async def send_weekly_intelligence_briefs() -> int:
             prompt = f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".
 
 Here are this week's metrics:
-- New leads: {metrics.get('new_leads', 0)} (hot: {metrics.get('hot_leads', 0)})
-- Conversations: {metrics.get('conversations', 0)}
-- Appointments booked: {metrics.get('appointments', 0)}
-- Invoices sent: {metrics.get('invoices_sent', 0)}, paid: {metrics.get('invoices_paid', 0)}
-- Revenue collected: ${metrics.get('revenue_collected', 0):.2f}
-- Pipeline value (new leads): ${metrics.get('total_deal_value', 0):.2f}
-- New reviews: {metrics.get('new_reviews', 0)} (avg rating: {metrics.get('avg_rating', 0)})
-- Pending action items: {metrics.get('pending_actions', 0)}
+- New leads: {metrics.get("new_leads", 0)} (hot: {metrics.get("hot_leads", 0)})
+- Conversations: {metrics.get("conversations", 0)}
+- Appointments booked: {metrics.get("appointments", 0)}
+- Invoices sent: {metrics.get("invoices_sent", 0)}, paid: {metrics.get("invoices_paid", 0)}
+- Revenue collected: ${metrics.get("revenue_collected", 0):.2f}
+- Pipeline value (new leads): ${metrics.get("total_deal_value", 0):.2f}
+- New reviews: {metrics.get("new_reviews", 0)} (avg rating: {metrics.get("avg_rating", 0)})
+- Pending action items: {metrics.get("pending_actions", 0)}
 
 Write a brief, actionable weekly intelligence summary (3-5 bullet points). Focus on:
 1. What went well this week
@@ -2412,7 +2830,9 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
             )
             ai_insights = response.text
         except Exception:
-            logger.warning("weekly brief: AI analysis failed for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "weekly brief: AI analysis failed for tenant %s", tid, exc_info=True
+            )
 
         # Build email
         insights_html = ""
@@ -2423,10 +2843,14 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
             for line in lines:
                 line = line.strip()
                 if line.startswith("- ") or line.startswith("* "):
-                    formatted_lines.append(f"<li style='margin-bottom:8px;color:#374151;'>{line[2:]}</li>")
+                    formatted_lines.append(
+                        f"<li style='margin-bottom:8px;color:#374151;'>{line[2:]}</li>"
+                    )
                 elif line:
                     formatted_lines.append(f"<p style='color:#374151;'>{line}</p>")
-            insights_html = "<ul style='padding-left:20px;'>" + "".join(formatted_lines) + "</ul>"
+            insights_html = (
+                "<ul style='padding-left:20px;'>" + "".join(formatted_lines) + "</ul>"
+            )
 
         subject = f"Weekly Intelligence Brief — {biz_name}"
         body_html = (
@@ -2462,19 +2886,26 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
         )
 
         try:
-            result = await send_email(to=email, subject=subject, body_html=body_html, tenant_id=tid)
+            result = await send_email(
+                to=email, subject=subject, body_html=body_html, tenant_id=tid
+            )
             if result.get("success"):
                 sent += 1
-                logger.info("Sent weekly intelligence brief to %s (tenant %s)", email, tid)
+                logger.info(
+                    "Sent weekly intelligence brief to %s (tenant %s)", email, tid
+                )
                 # Track in activity_log for dedup
                 from backend.services.activity import log_activity
+
                 log_activity(
                     tenant_id=tid,
                     activity_type=week_tag,
                     description=f"Weekly intelligence brief sent: {metrics.get('new_leads', 0)} leads, ${metrics.get('revenue_collected', 0):.2f} revenue",
                 )
         except Exception:
-            logger.exception("Failed to send weekly brief to %s (tenant %s)", email, tid)
+            logger.exception(
+                "Failed to send weekly brief to %s (tenant %s)", email, tid
+            )
 
     return sent
 
@@ -2555,9 +2986,15 @@ async def send_weekly_digest() -> int:
             )
             msgs_data = msgs_result.data or []
             messages = len(msgs_data)
-            conversations = len({m["session_id"] for m in msgs_data if m.get("session_id")})
+            conversations = len(
+                {m["session_id"] for m in msgs_data if m.get("session_id")}
+            )
         except Exception:
-            logger.warning("send_weekly_digest: failed to count messages for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "send_weekly_digest: failed to count messages for tenant %s",
+                tid,
+                exc_info=True,
+            )
 
         # Leads captured (uses client_id, NOT tenant_id)
         leads_count = 0
@@ -2572,7 +3009,11 @@ async def send_weekly_digest() -> int:
             )
             leads_count = leads_result.count or 0
         except Exception:
-            logger.warning("send_weekly_digest: failed to count leads for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "send_weekly_digest: failed to count leads for tenant %s",
+                tid,
+                exc_info=True,
+            )
 
         # Top question — most common user message (exclude greetings / single chars)
         top_question = "N/A"
@@ -2586,7 +3027,17 @@ async def send_weekly_digest() -> int:
                 .limit(500)
                 .execute()
             )
-            skip_words = {"hi", "hello", "hey", "e", "ok", "yes", "no", "thanks", "thank you"}
+            skip_words = {
+                "hi",
+                "hello",
+                "hey",
+                "e",
+                "ok",
+                "yes",
+                "no",
+                "thanks",
+                "thank you",
+            }
             freq: dict[str, int] = {}
             for m in user_msgs.data or []:
                 content = (m.get("content") or "").strip()
@@ -2599,7 +3050,11 @@ async def send_weekly_digest() -> int:
             if freq:
                 top_question = max(freq, key=freq.get)  # type: ignore[arg-type]
         except Exception:
-            logger.warning("send_weekly_digest: failed to find top question for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "send_weekly_digest: failed to find top question for tenant %s",
+                tid,
+                exc_info=True,
+            )
 
         # ---- Build branded HTML email ----
         owner_name = tenant.get("owner_name") or "there"
@@ -2608,7 +3063,9 @@ async def send_weekly_digest() -> int:
         subject = f"Your weekly chat report — {biz_name}"
 
         # Truncate top_question for display
-        display_question = top_question if len(top_question) <= 80 else top_question[:77] + "..."
+        display_question = (
+            top_question if len(top_question) <= 80 else top_question[:77] + "..."
+        )
 
         body_html = (
             f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
@@ -2638,19 +3095,24 @@ async def send_weekly_digest() -> int:
         )
 
         try:
-            result = await send_email(to=email, subject=subject, body_html=body_html, tenant_id=tid)
+            result = await send_email(
+                to=email, subject=subject, body_html=body_html, tenant_id=tid
+            )
             if result.get("success"):
                 sent += 1
                 logger.info("Sent weekly digest to %s (tenant %s)", email, tid)
                 # Track in activity_log for dedup
                 from backend.services.activity import log_activity
+
                 log_activity(
                     tenant_id=tid,
                     activity_type=week_tag,
                     description=f"Weekly digest sent: {conversations} conversations, {messages} messages, {leads_count} leads",
                 )
         except Exception:
-            logger.exception("Failed to send weekly digest to %s (tenant %s)", email, tid)
+            logger.exception(
+                "Failed to send weekly digest to %s (tenant %s)", email, tid
+            )
 
     return sent
 
@@ -2686,7 +3148,8 @@ async def send_birthday_greetings() -> int:
         return 0
 
     birthday_leads = [
-        lead for lead in (leads.data or [])
+        lead
+        for lead in (leads.data or [])
         if lead.get("date_of_birth", "")[5:10] == today_mmdd
     ]
 
@@ -2702,7 +3165,15 @@ async def send_birthday_greetings() -> int:
         # Dedup: check if already sent this year
         try:
             tag = f"birthday_greeting_{current_year}"
-            existing = db.table("activity_log").select("id").eq("tenant_id", tenant_id).eq("lead_id", lead_id).eq("activity_type", tag).limit(1).execute()
+            existing = (
+                db.table("activity_log")
+                .select("id")
+                .eq("tenant_id", tenant_id)
+                .eq("lead_id", lead_id)
+                .eq("activity_type", tag)
+                .limit(1)
+                .execute()
+            )
             if existing.data:
                 continue
         except Exception:
@@ -2710,7 +3181,13 @@ async def send_birthday_greetings() -> int:
 
         if tenant_id not in tenant_cache:
             try:
-                t = db.table("tenants").select("business_name, plan").eq("id", tenant_id).limit(1).execute()
+                t = (
+                    db.table("tenants")
+                    .select("business_name, plan")
+                    .eq("id", tenant_id)
+                    .limit(1)
+                    .execute()
+                )
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
                 tenant_cache[tenant_id] = None
@@ -2732,21 +3209,27 @@ async def send_birthday_greetings() -> int:
         )
 
         try:
-            result = await send_email(to=lead["email"], subject=subject, body_html=body, tenant_id=tenant_id)
+            result = await send_email(
+                to=lead["email"], subject=subject, body_html=body, tenant_id=tenant_id
+            )
             if result.get("success"):
                 sent += 1
         except Exception:
             logger.exception("Failed to send birthday greeting to lead %s", lead_id)
 
         try:
-            db.table("activity_log").insert({
-                "tenant_id": tenant_id,
-                "lead_id": lead_id,
-                "activity_type": f"birthday_greeting_{current_year}",
-                "description": f"Birthday greeting sent to {customer_name}",
-            }).execute()
+            db.table("activity_log").insert(
+                {
+                    "tenant_id": tenant_id,
+                    "lead_id": lead_id,
+                    "activity_type": f"birthday_greeting_{current_year}",
+                    "description": f"Birthday greeting sent to {customer_name}",
+                }
+            ).execute()
         except Exception:
-            logger.warning("Failed to log birthday greeting for lead %s", lead_id, exc_info=True)
+            logger.warning(
+                "Failed to log birthday greeting for lead %s", lead_id, exc_info=True
+            )
 
     return sent
 
@@ -2768,7 +3251,9 @@ async def process_recurring_invoices() -> int:
     try:
         due = (
             db.table("invoices")
-            .select("id, tenant_id, lead_id, items_json, tax_rate, notes, recurrence_interval, next_invoice_date, invoice_number")
+            .select(
+                "id, tenant_id, lead_id, items_json, tax_rate, notes, recurrence_interval, next_invoice_date, invoice_number"
+            )
             .eq("is_recurring", True)
             .lte("next_invoice_date", today_str)
             .not_.is_("next_invoice_date", "null")
@@ -2790,18 +3275,27 @@ async def process_recurring_invoices() -> int:
         try:
             items = parent.get("items_json") or []
             tax_rate = float(parent.get("tax_rate") or 0)
-            subtotal = sum(float(i.get("quantity", 1)) * float(i.get("unit_price", 0)) for i in items)
+            subtotal = sum(
+                float(i.get("quantity", 1)) * float(i.get("unit_price", 0))
+                for i in items
+            )
             tax_amount = round(subtotal * tax_rate / 100, 2)
             total = round(subtotal + tax_amount, 2)
 
             # Generate invoice number
             prefix = f"INV-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
-            count_result = db.table("invoices").select("id", count="exact").eq("tenant_id", tenant_id).execute()
+            count_result = (
+                db.table("invoices")
+                .select("id", count="exact")
+                .eq("tenant_id", tenant_id)
+                .execute()
+            )
             seq = (count_result.count or 0) + 1
             invoice_number = f"{prefix}-{seq:04d}"
 
             # Calculate due date (same offset as recurrence interval)
             from dateutil.relativedelta import relativedelta
+
             interval = parent.get("recurrence_interval", "monthly")
             intervals_map = {
                 "weekly": relativedelta(weeks=1),
@@ -2818,9 +3312,11 @@ async def process_recurring_invoices() -> int:
             # This keeps multiple workers from generating the same invoice twice.
             claim_result = (
                 db.table("invoices")
-                .update({
-                    "next_invoice_date": next_date.isoformat(),
-                })
+                .update(
+                    {
+                        "next_invoice_date": next_date.isoformat(),
+                    }
+                )
                 .eq("id", parent_id)
                 .eq("next_invoice_date", original_next_date)
                 .select("id")
@@ -2853,9 +3349,13 @@ async def process_recurring_invoices() -> int:
             except Exception:
                 # Best-effort rollback so the parent can be retried on the next tick.
                 try:
-                    db.table("invoices").update({
-                        "next_invoice_date": original_next_date,
-                    }).eq("id", parent_id).eq("next_invoice_date", next_date.isoformat()).execute()
+                    db.table("invoices").update(
+                        {
+                            "next_invoice_date": original_next_date,
+                        }
+                    ).eq("id", parent_id).eq(
+                        "next_invoice_date", next_date.isoformat()
+                    ).execute()
                 except Exception:
                     logger.warning(
                         "Failed to roll back recurring invoice claim for %s",
@@ -2869,17 +3369,24 @@ async def process_recurring_invoices() -> int:
             created += 1
             logger.info(
                 "Created recurring invoice %s from parent %s for tenant %s (next: %s)",
-                invoice_number, parent_id, tenant_id, next_date.isoformat(),
+                invoice_number,
+                parent_id,
+                tenant_id,
+                next_date.isoformat(),
             )
 
             try:
-                fire_event_background(tenant_id, "invoice.created", {
-                    "invoice_id": created_invoice.get("id"),
-                    "invoice_number": invoice_number,
-                    "total": total,
-                    "status": "draft",
-                    "recurring_from": parent_id,
-                })
+                fire_event_background(
+                    tenant_id,
+                    "invoice.created",
+                    {
+                        "invoice_id": created_invoice.get("id"),
+                        "invoice_number": invoice_number,
+                        "total": total,
+                        "status": "draft",
+                        "recurring_from": parent_id,
+                    },
+                )
             except Exception:
                 logger.exception(
                     "Failed to enqueue invoice.created webhook for recurring invoice %s",
@@ -2890,3 +3397,806 @@ async def process_recurring_invoices() -> int:
             logger.exception("Failed to process recurring invoice %s", parent_id)
 
     return created
+
+
+# ---------------------------------------------------------------------------
+# Automation Rules — trigger evaluation and action execution
+# ---------------------------------------------------------------------------
+
+
+async def evaluate_trigger(
+    trigger_type: str,
+    trigger_config: dict,
+    tenant_id: str,
+    lead_id: str | None = None,
+    context: dict | None = None,
+) -> tuple[bool, dict | None]:
+    """Evaluate whether a trigger condition is met for a given lead/context.
+
+    Returns (matches, lead_data) where lead_data is the lead record if a lead
+    was involved in the evaluation.
+    """
+    db = get_supabase()
+    context = context or {}
+    lead_data = None
+
+    if lead_id:
+        try:
+            lead_result = (
+                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+            )
+            lead_data = lead_result.data[0] if lead_result.data else None
+        except Exception:
+            logger.warning("evaluate_trigger: failed to load lead %s", lead_id)
+
+    if trigger_type == "lead_captured":
+        return bool(lead_id and lead_data), lead_data
+
+    elif trigger_type == "tag_added":
+        target_tag = trigger_config.get("tag", "")
+        if not lead_data:
+            return False, None
+        lead_tags = lead_data.get("tags") or []
+        return target_tag in lead_tags, lead_data
+
+    elif trigger_type == "tag_removed":
+        return False, lead_data
+
+    elif trigger_type == "form_submitted":
+        target_form_id = trigger_config.get("form_id")
+        submitted_form_id = context.get("form_id")
+        return submitted_form_id == target_form_id, lead_data
+
+    elif trigger_type in ("appointment_created", "appointment_completed"):
+        appt_id = context.get("appointment_id")
+        if not appt_id:
+            return False, None
+        try:
+            appt_result = (
+                db.table("appointments")
+                .select("id, status")
+                .eq("id", appt_id)
+                .limit(1)
+                .execute()
+            )
+            if not appt_result.data:
+                return False, None
+            appt = appt_result.data[0]
+            expected_status = (
+                "booked" if trigger_type == "appointment_created" else "completed"
+            )
+            return appt.get("status") == expected_status, lead_data
+        except Exception:
+            return False, None
+
+    elif trigger_type == "pipeline_stage_changed":
+        from_stage = trigger_config.get("from_stage")
+        to_stage = trigger_config.get("to_stage")
+        ctx_from = context.get("from_stage")
+        ctx_to = context.get("to_stage")
+        if from_stage and ctx_from != from_stage:
+            return False, lead_data
+        if to_stage and ctx_to != to_stage:
+            return False, lead_data
+        return True, lead_data
+
+    elif trigger_type == "lead_score_threshold":
+        direction = trigger_config.get("direction")
+        threshold = float(trigger_config.get("threshold", 0))
+        if not lead_data:
+            return False, None
+        score = float(lead_data.get("lead_score") or 0)
+        if direction == "above":
+            return score > threshold, lead_data
+        elif direction == "below":
+            return score < threshold, lead_data
+        return False, lead_data
+
+    elif trigger_type == "email_opened":
+        campaign_id = trigger_config.get("campaign_id")
+        sequence_id = trigger_config.get("sequence_id")
+        event_campaign_id = context.get("campaign_id")
+        event_sequence_id = context.get("sequence_id")
+        if campaign_id and event_campaign_id != campaign_id:
+            return False, lead_data
+        if sequence_id and event_sequence_id != sequence_id:
+            return False, lead_data
+        return True, lead_data
+
+    elif trigger_type == "email_clicked":
+        campaign_id = trigger_config.get("campaign_id")
+        sequence_id = trigger_config.get("sequence_id")
+        event_campaign_id = context.get("campaign_id")
+        event_sequence_id = context.get("sequence_id")
+        if campaign_id and event_campaign_id != campaign_id:
+            return False, lead_data
+        if sequence_id and event_sequence_id != sequence_id:
+            return False, lead_data
+        return True, lead_data
+
+    elif trigger_type == "scheduled_daily":
+        return True, None
+
+    elif trigger_type == "scheduled_weekly":
+        return True, None
+
+    elif trigger_type == "smart_list_matched":
+        return False, lead_data
+
+    else:
+        logger.warning("evaluate_trigger: unknown trigger_type %s", trigger_type)
+        return False, None
+
+
+def _evaluate_conditions(conditions: list[dict], lead_data: dict | None) -> bool:
+    """Evaluate a list of AND conditions against a lead record."""
+    if not conditions:
+        return True
+    if not lead_data:
+        return False
+
+    for cond in conditions:
+        field = cond.get("field", "")
+        operator = cond.get("operator", "")
+        value = cond.get("value")
+
+        field_value = _get_nested_field(lead_data, field)
+        operator = str(operator)
+
+        if operator == "equals":
+            if str(field_value) != str(value):
+                return False
+        elif operator == "not_equals":
+            if str(field_value) == str(value):
+                return False
+        elif operator == "contains":
+            if str(value) not in str(field_value):
+                return False
+        elif operator == "not_contains":
+            if str(value) in str(field_value):
+                return False
+        elif operator == "greater_than":
+            try:
+                if float(field_value) <= float(value):
+                    return False
+            except (TypeError, ValueError):
+                return False
+        elif operator == "less_than":
+            try:
+                if float(field_value) >= float(value):
+                    return False
+            except (TypeError, ValueError):
+                return False
+        elif operator == "is_empty":
+            if field_value not in (None, "", [], {}):
+                return False
+        elif operator == "is_not_empty":
+            if field_value in (None, "", [], {}):
+                return False
+
+    return True
+
+
+def _get_nested_field(data: dict, field: str) -> any:
+    """Get a field from a dict, supporting dot notation for nested fields."""
+    parts = field.split(".")
+    value = data
+    for part in parts:
+        if isinstance(value, dict):
+            value = value.get(part)
+        else:
+            return None
+    return value
+
+
+async def execute_automation_rule(
+    rule_id: str, lead_id: str | None = None, context: dict | None = None
+) -> dict:
+    """Execute an automation rule's actions for a given lead.
+
+    Returns a dict with status, actions_run, and error_message.
+    """
+    db = get_supabase()
+    context = context or {}
+    start_time = datetime.now(timezone.utc)
+
+    try:
+        rule_result = (
+            db.table("automation_rules")
+            .select("*")
+            .eq("id", rule_id)
+            .limit(1)
+            .execute()
+        )
+        if not rule_result.data:
+            return {"status": "failed", "error_message": "Rule not found"}
+        rule = rule_result.data[0]
+    except Exception as e:
+        return {"status": "failed", "error_message": str(e)}
+
+    lead_data = None
+    if lead_id:
+        try:
+            lead_result = (
+                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+            )
+            lead_data = lead_result.data[0] if lead_result.data else None
+        except Exception:
+            pass
+
+    actions = rule.get("actions") or []
+    actions_run = []
+    has_failure = False
+    has_partial = False
+
+    for action in actions:
+        action_type = action.get("type", "")
+        action_config = action.get("config") or {}
+        try:
+            result = await _execute_action(
+                action_type=action_type,
+                action_config=action_config,
+                lead_data=lead_data,
+                tenant_id=rule["tenant_id"],
+                context=context,
+            )
+            actions_run.append({"action_type": action_type, "result": result})
+            if result.get("status") == "failed":
+                has_failure = True
+            elif result.get("status") == "partial":
+                has_partial = True
+        except Exception as e:
+            actions_run.append(
+                {
+                    "action_type": action_type,
+                    "result": {"status": "failed", "error": str(e)},
+                }
+            )
+            has_failure = True
+            logger.exception("Action %s failed for rule %s", action_type, rule_id)
+
+    end_time = datetime.now(timezone.utc)
+    execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+
+    if has_failure:
+        status = "failed"
+    elif has_partial:
+        status = "partial"
+    else:
+        status = "success"
+
+    trigger_event = {
+        "trigger_type": rule.get("trigger_type"),
+        "trigger_config": rule.get("trigger_config"),
+        "lead_id": lead_id,
+        "context": context,
+    }
+
+    try:
+        db.table("automation_rule_executions").insert(
+            {
+                "automation_rule_id": rule_id,
+                "tenant_id": rule["tenant_id"],
+                "trigger_event": trigger_event,
+                "actions_run": actions_run,
+                "status": status,
+                "execution_time_ms": execution_time_ms,
+            }
+        ).execute()
+    except Exception:
+        logger.exception("Failed to log automation rule execution for rule %s", rule_id)
+
+    try:
+        db.table("automation_rules").update(
+            {
+                "last_triggered_at": end_time.isoformat(),
+                "triggered_count": (rule.get("triggered_count") or 0) + 1,
+            }
+        ).eq("id", rule_id).execute()
+    except Exception:
+        logger.exception("Failed to update trigger stats for rule %s", rule_id)
+
+    return {
+        "status": status,
+        "actions_run": actions_run,
+        "execution_time_ms": execution_time_ms,
+    }
+
+
+async def _execute_action(
+    action_type: str,
+    action_config: dict,
+    lead_data: dict | None,
+    tenant_id: str,
+    context: dict,
+) -> dict:
+    """Execute a single automation action and return result."""
+    db = get_supabase()
+
+    if action_type == "send_email":
+        if not lead_data or not lead_data.get("email"):
+            return {"status": "skipped", "reason": "no_email"}
+        subject = action_config.get("subject", "")
+        body = action_config.get("body", "")
+        unsub_url = build_unsubscribe_url(lead_data["id"])
+        result = await send_email(
+            to=lead_data["email"],
+            subject=subject,
+            body_html=body,
+            tenant_id=tenant_id,
+            unsubscribe_url=unsub_url,
+            lead_id=lead_data.get("id"),
+        )
+        return {
+            "status": "sent" if result.get("success") else "failed",
+            "detail": result,
+        }
+
+    elif action_type == "add_tag":
+        if not lead_data:
+            return {"status": "skipped", "reason": "no_lead"}
+        tag = action_config.get("tag", "")
+        if not tag:
+            return {"status": "failed", "reason": "no_tag"}
+        current_tags = set(lead_data.get("tags") or [])
+        current_tags.add(tag)
+        db.table("leads").update({"tags": list(current_tags)}).eq(
+            "id", lead_data["id"]
+        ).execute()
+        return {"status": "success", "tag": tag}
+
+    elif action_type == "remove_tag":
+        if not lead_data:
+            return {"status": "skipped", "reason": "no_lead"}
+        tag = action_config.get("tag", "")
+        if not tag:
+            return {"status": "failed", "reason": "no_tag"}
+        current_tags = set(lead_data.get("tags") or [])
+        current_tags.discard(tag)
+        db.table("leads").update({"tags": list(current_tags)}).eq(
+            "id", lead_data["id"]
+        ).execute()
+        return {"status": "success", "tag": tag}
+
+    elif action_type == "update_lead_status":
+        if not lead_data:
+            return {"status": "skipped", "reason": "no_lead"}
+        new_status = action_config.get("status", "")
+        if not new_status:
+            return {"status": "failed", "reason": "no_status"}
+        db.table("leads").update({"status": new_status}).eq(
+            "id", lead_data["id"]
+        ).execute()
+        return {"status": "success", "status": new_status}
+
+    elif action_type == "enroll_in_sequence":
+        sequence_id = action_config.get("sequence_id")
+        if not sequence_id or not lead_data:
+            return {"status": "failed", "reason": "missing_sequence_id_or_lead"}
+        try:
+            db.table("automation_executions").insert(
+                {
+                    "sequence_id": sequence_id,
+                    "lead_id": lead_data["id"],
+                    "tenant_id": tenant_id,
+                    "status": "in_progress",
+                }
+            ).execute()
+            return {"status": "success", "sequence_id": sequence_id}
+        except Exception:
+            return {"status": "failed", "reason": "already_enrolled_or_error"}
+
+    elif action_type == "create_task":
+        description = action_config.get("description", "Automation task")
+        priority = action_config.get("priority", "medium")
+        assigned_to = action_config.get("assigned_to")
+        task_payload: dict[str, any] = {
+            "tenant_id": tenant_id,
+            "description": description,
+            "priority": priority,
+        }
+        if lead_data:
+            task_payload["lead_id"] = lead_data["id"]
+        if assigned_to:
+            task_payload["assigned_to"] = assigned_to
+        db.table("action_items").insert(task_payload).execute()
+        return {"status": "success", "description": description}
+
+    elif action_type == "notify_team":
+        message = action_config.get("message", "")
+        channel = action_config.get("channel", "dashboard")
+        if channel == "sms":
+            tenant_result = (
+                db.table("tenants")
+                .select("notification_phone")
+                .eq("id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            phone = (
+                tenant_result.data[0].get("notification_phone")
+                if tenant_result.data
+                else None
+            )
+            if phone:
+                sms_ok = await send_sms(to=phone, body=message)
+                return {"status": "sent" if sms_ok else "failed"}
+        return {"status": "success", "message": message}
+
+    elif action_type == "send_campaign":
+        campaign_id = action_config.get("campaign_id")
+        if not campaign_id:
+            return {"status": "failed", "reason": "no_campaign_id"}
+        asyncio.create_task(_send_campaign_for_rule(campaign_id, tenant_id, lead_data))
+        return {"status": "dispatched", "campaign_id": campaign_id}
+
+    elif action_type == "update_lead_score":
+        if not lead_data:
+            return {"status": "skipped", "reason": "no_lead"}
+        delta = action_config.get("delta", 0)
+        current_score = float(lead_data.get("lead_score") or 0)
+        new_score = current_score + delta
+        db.table("leads").update({"lead_score": new_score}).eq(
+            "id", lead_data["id"]
+        ).execute()
+        return {"status": "success", "new_score": new_score}
+
+    else:
+        return {"status": "failed", "reason": f"unknown_action_type: {action_type}"}
+
+
+async def _send_campaign_for_rule(
+    campaign_id: str, tenant_id: str, lead_data: dict | None
+) -> None:
+    """Background task to send a campaign to a specific lead (from automation rule)."""
+    if not lead_data:
+        return
+    try:
+        from backend.routers.marketing_campaigns import (
+            _query_target_leads,
+            _send_campaign_background,
+        )
+
+        db = get_supabase()
+        campaign_result = (
+            db.table("marketing_campaigns")
+            .select("*")
+            .eq("id", campaign_id)
+            .limit(1)
+            .execute()
+        )
+        if not campaign_result.data:
+            return
+        campaign = campaign_result.data[0]
+        await _send_campaign_background(campaign_id, tenant_id, [lead_data], campaign)
+    except Exception:
+        logger.exception("Failed to send campaign %s for rule automation", campaign_id)
+
+
+async def check_lead_captured_triggers(lead_id: str) -> int:
+    """Check and fire automation rules when a lead is captured."""
+    db = get_supabase()
+    triggered = 0
+
+    try:
+        lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+        if not lead_result.data:
+            return 0
+        lead_data = lead_result.data[0]
+        tenant_id = lead_data.get("client_id")
+    except Exception:
+        logger.exception(
+            "check_lead_captured_triggers: failed to load lead %s", lead_id
+        )
+        return 0
+
+    if not tenant_id:
+        return 0
+
+    try:
+        rules_result = (
+            db.table("automation_rules")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .eq("trigger_type", "lead_captured")
+            .eq("is_active", True)
+            .order("priority", desc=True)
+            .execute()
+        )
+        rules = rules_result.data or []
+    except Exception:
+        logger.exception(
+            "check_lead_captured_triggers: failed to load rules for tenant %s",
+            tenant_id,
+        )
+        return 0
+
+    for rule in rules:
+        conditions = rule.get("conditions") or []
+        if not _evaluate_conditions(conditions, lead_data):
+            continue
+        try:
+            await execute_automation_rule(
+                rule["id"], lead_id, {"trigger": "lead_captured"}
+            )
+            triggered += 1
+        except Exception:
+            logger.exception(
+                "check_lead_captured_triggers: failed to execute rule %s", rule["id"]
+            )
+
+    return triggered
+
+
+async def check_tag_triggers(
+    tenant_id: str, lead_id: str, tag: str, added: bool = True
+) -> int:
+    """Check and fire automation rules when a tag is added or removed from a lead."""
+    db = get_supabase()
+    triggered = 0
+    trigger_type = "tag_added" if added else "tag_removed"
+
+    try:
+        lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+        lead_data = lead_result.data[0] if lead_result.data else None
+    except Exception:
+        logger.exception("check_tag_triggers: failed to load lead %s", lead_id)
+        return 0
+
+    try:
+        rules_result = (
+            db.table("automation_rules")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .eq("trigger_type", trigger_type)
+            .eq("is_active", True)
+            .order("priority", desc=True)
+            .execute()
+        )
+        rules = rules_result.data or []
+    except Exception:
+        logger.exception(
+            "check_tag_triggers: failed to load rules for tenant %s", tenant_id
+        )
+        return 0
+
+    for rule in rules:
+        rule_tag = (rule.get("trigger_config") or {}).get("tag", "")
+        if rule_tag and rule_tag != tag:
+            continue
+        conditions = rule.get("conditions") or []
+        if not _evaluate_conditions(conditions, lead_data):
+            continue
+        try:
+            await execute_automation_rule(
+                rule["id"], lead_id, {"trigger": trigger_type, "tag": tag}
+            )
+            triggered += 1
+        except Exception:
+            logger.exception(
+                "check_tag_triggers: failed to execute rule %s", rule["id"]
+            )
+
+    return triggered
+
+
+async def check_form_submission_triggers(
+    submission_id: str, form_id: str | None = None
+) -> int:
+    """Check and fire automation rules when a form is submitted."""
+    db = get_supabase()
+    triggered = 0
+
+    try:
+        form_result = (
+            db.table("form_submissions")
+            .select("*")
+            .eq("id", submission_id)
+            .limit(1)
+            .execute()
+        )
+        if not form_result.data:
+            return 0
+        submission = form_result.data[0]
+        tenant_id = submission.get("tenant_id")
+        lead_id = submission.get("lead_id")
+    except Exception:
+        logger.exception(
+            "check_form_submission_triggers: failed to load submission %s",
+            submission_id,
+        )
+        return 0
+
+    if not tenant_id:
+        return 0
+
+    lead_data = None
+    if lead_id:
+        try:
+            lead_result = (
+                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+            )
+            lead_data = lead_result.data[0] if lead_result.data else None
+        except Exception:
+            pass
+
+    try:
+        rules_result = (
+            db.table("automation_rules")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .eq("trigger_type", "form_submitted")
+            .eq("is_active", True)
+            .order("priority", desc=True)
+            .execute()
+        )
+        rules = rules_result.data or []
+    except Exception:
+        logger.exception(
+            "check_form_submission_triggers: failed to load rules for tenant %s",
+            tenant_id,
+        )
+        return 0
+
+    for rule in rules:
+        config_form_id = (rule.get("trigger_config") or {}).get("form_id")
+        if config_form_id and config_form_id != form_id:
+            continue
+        conditions = rule.get("conditions") or []
+        if not _evaluate_conditions(conditions, lead_data):
+            continue
+        try:
+            await execute_automation_rule(
+                rule["id"],
+                lead_id,
+                {
+                    "trigger": "form_submitted",
+                    "form_id": form_id,
+                    "submission_id": submission_id,
+                },
+            )
+            triggered += 1
+        except Exception:
+            logger.exception(
+                "check_form_submission_triggers: failed to execute rule %s", rule["id"]
+            )
+
+    return triggered
+
+
+async def check_appointment_triggers(
+    appointment_id: str, completed: bool = False
+) -> int:
+    """Check and fire automation rules when an appointment is completed."""
+    db = get_supabase()
+    triggered = 0
+
+    try:
+        appt_result = (
+            db.table("appointments")
+            .select("*")
+            .eq("id", appointment_id)
+            .limit(1)
+            .execute()
+        )
+        if not appt_result.data:
+            return 0
+        appointment = appt_result.data[0]
+        tenant_id = appointment.get("tenant_id")
+        lead_id = appointment.get("lead_id")
+    except Exception:
+        logger.exception(
+            "check_appointment_triggers: failed to load appointment %s", appointment_id
+        )
+        return 0
+
+    if not tenant_id:
+        return 0
+
+    lead_data = None
+    if lead_id:
+        try:
+            lead_result = (
+                db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+            )
+            lead_data = lead_result.data[0] if lead_result.data else None
+        except Exception:
+            pass
+
+    trigger_type = "appointment_completed" if completed else "appointment_created"
+
+    try:
+        rules_result = (
+            db.table("automation_rules")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .eq("trigger_type", trigger_type)
+            .eq("is_active", True)
+            .order("priority", desc=True)
+            .execute()
+        )
+        rules = rules_result.data or []
+    except Exception:
+        logger.exception(
+            "check_appointment_triggers: failed to load rules for tenant %s", tenant_id
+        )
+        return 0
+
+    for rule in rules:
+        conditions = rule.get("conditions") or []
+        if not _evaluate_conditions(conditions, lead_data):
+            continue
+        try:
+            await execute_automation_rule(
+                rule["id"],
+                lead_id,
+                {"trigger": trigger_type, "appointment_id": appointment_id},
+            )
+            triggered += 1
+        except Exception:
+            logger.exception(
+                "check_appointment_triggers: failed to execute rule %s", rule["id"]
+            )
+
+    return triggered
+
+
+async def schedule_automation_check() -> int:
+    """Periodic check for scheduled automation triggers (daily/weekly).
+
+    Called every 5 minutes from the automation loop to evaluate
+    scheduled_daily and scheduled_weekly triggers.
+    """
+    db = get_supabase()
+    now = datetime.now(timezone.utc)
+    triggered = 0
+
+    try:
+        rules_result = (
+            db.table("automation_rules")
+            .select("*")
+            .eq("is_active", True)
+            .in_("trigger_type", ["scheduled_daily", "scheduled_weekly"])
+            .execute()
+        )
+        rules = rules_result.data or []
+    except Exception:
+        logger.exception("schedule_automation_check: failed to load scheduled rules")
+        return 0
+
+    for rule in rules:
+        tenant_id = rule.get("tenant_id")
+        trigger_type = rule.get("trigger_type")
+        trigger_config = rule.get("trigger_config") or {}
+
+        should_fire = False
+        if trigger_type == "scheduled_daily":
+            target_time = trigger_config.get("time", "09:00")
+            target_days = trigger_config.get(
+                "days", ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+            )
+            current_time = now.strftime("%H:%M")
+            current_day = now.strftime("%a").lower()[:3]
+            if current_time == target_time and current_day in target_days:
+                should_fire = True
+
+        elif trigger_type == "scheduled_weekly":
+            target_day = trigger_config.get("day", "monday")
+            target_time = trigger_config.get("time", "09:00")
+            current_time = now.strftime("%H:%M")
+            current_day = now.strftime("%A").lower()
+            if current_time == target_time and current_day == target_day:
+                should_fire = True
+
+        if not should_fire:
+            continue
+
+        try:
+            await execute_automation_rule(rule["id"], None, {"trigger": trigger_type})
+            triggered += 1
+        except Exception:
+            logger.exception(
+                "schedule_automation_check: failed to execute rule %s", rule["id"]
+            )
+
+    return triggered

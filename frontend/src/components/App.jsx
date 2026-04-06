@@ -97,6 +97,12 @@ const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
 const MarketingCampaignsPage = lazy(
   () => import("../pages/MarketingCampaignsPage"),
 );
+const MarketingDashboardPage = lazy(
+  () => import("../pages/MarketingDashboardPage"),
+);
+const ABTestsPage = lazy(() => import("../pages/ABTestsPage"));
+const AutomationRulesPage = lazy(() => import("../pages/AutomationRulesPage"));
+const TriggerLogsPage = lazy(() => import("../pages/TriggerLogsPage"));
 const EmailSequencesPage = lazy(() => import("../pages/EmailSequencesPage"));
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
 const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
@@ -146,6 +152,10 @@ const pages = {
   local_seo: LocalSEOPage,
   social_media: SocialMediaPage,
   campaigns: MarketingCampaignsPage,
+  marketing_dashboard: MarketingDashboardPage,
+  ab_tests: ABTestsPage,
+  automation_rules: AutomationRulesPage,
+  trigger_logs: TriggerLogsPage,
   email_sequences: EmailSequencesPage,
   invoices: InvoicesPage,
   documents: DocumentsPage,
@@ -198,6 +208,10 @@ const PAGE_TO_PATH = {
   local_seo: "/dashboard/local-seo",
   social_media: "/dashboard/social-media",
   campaigns: "/dashboard/campaigns",
+  marketing_dashboard: "/dashboard/marketing",
+  ab_tests: "/dashboard/ab-tests",
+  automation_rules: "/dashboard/automation-rules",
+  trigger_logs: "/dashboard/trigger-logs",
   email_sequences: "/dashboard/sequences",
   invoices: "/dashboard/invoices",
   documents: "/dashboard/documents",

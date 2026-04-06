@@ -1,0 +1,77 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "minimax": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "MiniMax",
+      "options": {
+        "baseURL": "https://api.minimax.io/v1"
+      }
+    },
+    "moonshot": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Kimi (Moonshot)",
+      "options": {
+        "baseURL": "https://api.moonshot.cn/v1"
+      }
+    },
+    "zhipu": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Z.AI (GLM)",
+      "options": {
+        "baseURL": "https://open.bigmodel.cn/api/paas/v4"
+      }
+    }
+  },
+  "model": "minimax/MiniMax-M2.7",
+  "small_model": "minimax/MiniMax-M2.7",
+  "models": {
+    "minimax/MiniMax-M2.7": {
+      "name": "MiniMax M2.7",
+      "attach": true
+    },
+    "moonshot/kimi-k2.5": {
+      "name": "Kimi K2.5",
+      "attach": true
+    },
+    "zhipu/glm-5": {
+      "name": "GLM-5",
+      "attach": true
+    }
+  },
+  "routing": {
+    "enabled": true,
+    "rules": [
+      {
+        "model": "minimax/MiniMax-M2.7",
+        "description": "Default - Fast, cheap model for general queries",
+        "pattern": "^(status|list|show|find|search|what|how|where|when|who|help|hello|hi|hey|explain|tell me|quick|simple|brief|short|check|get|read|view|display|count|ls|cat|pwd|cd|echo|print|basic|easy|fast|now|today|status|ping|version|time|date)"
+      },
+      {
+        "model": "moonshot/kimi-k2.5",
+        "description": "Medium - Good for coding and implementation tasks",
+        "pattern": "(implement|build|create|write|fix|debug|refactor|modify|change|add|update|edit|code|function|class|component|module|file|script|api|endpoint|route|handler|test|spec|unit|integration|feature|enhancement|improve|optimize|clean|format|lint|type|interface|schema|model|migration|seed|fixture)"
+      },
+      {
+        "model": "zhipu/glm-5",
+        "description": "Large - Complex architecture, design, planning, multi-step",
+        "pattern": "(architecture|design|plan|strategy|roadmap|complex|multi|multi-step|multi-file|system|framework|platform|infrastructure|microservices|database|schema|migration|full-stack|end-to-end|comprehensive|complete|rewrite|rebuild|restructure|redesign|analyze|analysis|audit|review|evaluate|assess|research|investigate|deep|thorough|comprehensive|extensive|large|big|major|critical|core|fundamental|baseline|setup|init|bootstrap|config|configuration|workflow|pipeline|automation|orchestration|deployment|ci|cd|devops|security|performance|scalability|reliability)"
+      }
+    ],
+    "default_model": "minimax/MiniMax-M2.7"
+  },
+  "agents": {
+    "codex": {
+      "model": "moonshot/kimi-k2.5",
+      "description": "Primary execution engine for implementation, debugging, refactors, tests"
+    },
+    "anthropic": {
+      "model": "zhipu/glm-5",
+      "description": "Canonical repo brain and production customer-facing runtime AI authority"
+    },
+    "minimax": {
+      "model": "minimax/MiniMax-M2.7",
+      "description": "Cheap triage, summarization, and lightweight helper/subagent work"
+    }
+  }
+}

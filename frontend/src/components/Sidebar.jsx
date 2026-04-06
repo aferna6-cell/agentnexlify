@@ -83,7 +83,7 @@ const NAV_GROUPS = [
   { key: "overview",       label: "OVERVIEW",          items: ["dashboard", "analytics", "control_center"] },
   { key: "crm",            label: "CRM",               items: ["clients", "pipeline", "smart_lists", "client_portal"] },
   { key: "communications", label: "COMMUNICATIONS",    items: ["conversations", "calls", "chat_flows", "widget", "snippets", "faq"] },
-  { key: "marketing",      label: "MARKETING",         items: ["content_studio", "social_media", "campaigns", "email_sequences", "form_builder"] },
+  { key: "marketing",      label: "MARKETING",         items: ["marketing_dashboard", "campaigns", "ab_tests", "automation_rules", "trigger_logs", "email_sequences", "form_builder"] },
   { key: "operations",     label: "OPERATIONS",        items: ["calendar", "automations", "action_items", "invoices", "documents", "bids", "jobs", "menu", "orders"] },
   { key: "reviews_seo",    label: "REVIEWS & SEO",     items: ["reviews", "csat", "local_seo"] },
   { key: "settings",       label: "SETTINGS",          items: ["team", "billing", "business_page", "integrations", "mcp_setup", "settings", "support"] },

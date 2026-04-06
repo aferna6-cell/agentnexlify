@@ -1,6 +1,5 @@
 """AgentNexLiFy — FastAPI application entry point."""
 
-
 import asyncio
 import logging
 import os
@@ -17,7 +16,70 @@ from slowapi.errors import RateLimitExceeded
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.routers import action_items, analytics, appointments, auth, automations, bids, billing, booking_page, business_page, calls, channels_facebook, chat_flows, client_portal, clients, content, content_repurpose, conversation_inbox, crawl, csat, custom_fields, documents, email_sequences, email_templates, forms, gbp, integrations, invoices, jobs, leads, local_seo, marketing_campaigns, menu, notifications, onboarding, orders, phone, pipeline, pipeline_automations, resend_webhooks, revenue, reviews, scoring_config, sequences, smart_lists, sms, snippets, social_media, stripe_webhooks, support, tag_definitions, team, twilio_webhooks, waitlist, webhook_deliveries, webhooks, widget_chat, widget_config, widget_lead, wizard_analytics
+from backend.routers import (
+    action_items,
+    analytics,
+    appointments,
+    auth,
+    automations,
+    bids,
+    billing,
+    booking_page,
+    business_page,
+    calls,
+    channels_facebook,
+    chat_flows,
+    client_portal,
+    clients,
+    content,
+    content_repurpose,
+    conversation_inbox,
+    crawl,
+    csat,
+    custom_fields,
+    documents,
+    email_sequences,
+    email_templates,
+    forms,
+    gbp,
+    integrations,
+    invoices,
+    jobs,
+    leads,
+    local_seo,
+    marketing_analytics,
+    marketing_campaigns,
+    menu,
+    notifications,
+    onboarding,
+    orders,
+    phone,
+    pipeline,
+    pipeline_automations,
+    resend_webhooks,
+    revenue,
+    reviews,
+    scoring_config,
+    sequences,
+    smart_lists,
+    sms,
+    snippets,
+    social_media,
+    stripe_webhooks,
+    support,
+    tag_definitions,
+    team,
+    twilio_webhooks,
+    waitlist,
+    webhook_deliveries,
+    webhooks,
+    widget_chat,
+    widget_config,
+    widget_lead,
+    wizard_analytics,
+    ab_tests,
+    automation_rules,
+)
 
 # --- JSON logging ---
 _handler = logging.StreamHandler()
@@ -73,6 +135,7 @@ async def _automation_loop():
                                   recurring invoices)
     """
     import random
+
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
     from backend.services.automation_engine import (
         check_new_reviews,
@@ -91,6 +154,7 @@ async def _automation_loop():
         send_weekly_digest,
         send_birthday_greetings,
         send_aftercare_instructions,
+        schedule_automation_check,
     )
 
     tick = 0
@@ -106,30 +170,48 @@ async def _automation_loop():
 
         # Every 5 min: notifications, reminders, scheduled content, campaign recovery
         if tick % 5 == 0:
-            core_tasks.extend([
-                _safe_run("send_pending_review_requests", send_pending_review_requests),
-                _safe_run("send_rebook_suggestions", send_rebook_suggestions),
-                _safe_run("send_onboarding_emails", send_onboarding_emails),
-                _safe_run("send_portal_links", send_portal_links),
-                _safe_run("send_csat_surveys", send_csat_surveys),
-                _safe_run("check_new_reviews", check_new_reviews),
-                _safe_run("send_invoice_payment_reminders", send_invoice_payment_reminders),
-                _safe_run("send_aftercare_instructions", send_aftercare_instructions),
-                _safe_run("process_scheduled_posts", _process_scheduled_posts),
-                _safe_run("process_scheduled_campaigns", _process_scheduled_campaigns),
-                _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
-                _safe_run("run_sequence_processor", email_sequences.run_sequence_processor),
-            ])
+            core_tasks.extend(
+                [
+                    _safe_run(
+                        "send_pending_review_requests", send_pending_review_requests
+                    ),
+                    _safe_run("send_rebook_suggestions", send_rebook_suggestions),
+                    _safe_run("send_onboarding_emails", send_onboarding_emails),
+                    _safe_run("send_portal_links", send_portal_links),
+                    _safe_run("send_csat_surveys", send_csat_surveys),
+                    _safe_run("check_new_reviews", check_new_reviews),
+                    _safe_run(
+                        "send_invoice_payment_reminders", send_invoice_payment_reminders
+                    ),
+                    _safe_run(
+                        "send_aftercare_instructions", send_aftercare_instructions
+                    ),
+                    _safe_run("process_scheduled_posts", _process_scheduled_posts),
+                    _safe_run(
+                        "process_scheduled_campaigns", _process_scheduled_campaigns
+                    ),
+                    _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
+                    _safe_run(
+                        "run_sequence_processor", email_sequences.run_sequence_processor
+                    ),
+                    _safe_run("schedule_automation_check", schedule_automation_check),
+                ]
+            )
 
         # Every 30 min: heavy/infrequent tasks
         if tick % 30 == 0:
-            core_tasks.extend([
-                _safe_run("send_monthly_reports", send_monthly_reports),
-                _safe_run("process_recurring_invoices", process_recurring_invoices),
-                _safe_run("send_weekly_intelligence_briefs", send_weekly_intelligence_briefs),
-                _safe_run("send_weekly_digest", send_weekly_digest),
-                _safe_run("send_birthday_greetings", send_birthday_greetings),
-            ])
+            core_tasks.extend(
+                [
+                    _safe_run("send_monthly_reports", send_monthly_reports),
+                    _safe_run("process_recurring_invoices", process_recurring_invoices),
+                    _safe_run(
+                        "send_weekly_intelligence_briefs",
+                        send_weekly_intelligence_briefs,
+                    ),
+                    _safe_run("send_weekly_digest", send_weekly_digest),
+                    _safe_run("send_birthday_greetings", send_birthday_greetings),
+                ]
+            )
 
         await asyncio.gather(*core_tasks)
         await asyncio.sleep(60)
@@ -154,7 +236,9 @@ async def _recover_stalled_campaigns():
         if not stalled.data:
             return 0
         stalled_ids = [r["id"] for r in stalled.data]
-        db.table("marketing_campaigns").update({"status": "failed"}).in_("id", stalled_ids).execute()
+        db.table("marketing_campaigns").update({"status": "failed"}).in_(
+            "id", stalled_ids
+        ).execute()
         for cid in stalled_ids:
             logger.warning("Marked stalled campaign %s as failed", cid)
         return len(stalled_ids)
@@ -190,14 +274,18 @@ async def _process_scheduled_posts():
         published = 0
         for post in due_posts.data:
             try:
-                db.table("social_posts").update({
-                    "status": "published",
-                    "published_at": now_iso,
-                }).eq("id", post["id"]).execute()
+                db.table("social_posts").update(
+                    {
+                        "status": "published",
+                        "published_at": now_iso,
+                    }
+                ).eq("id", post["id"]).execute()
                 published += 1
                 logger.info(
                     "Auto-published scheduled social post %s (%s) for tenant %s",
-                    post["id"], post["platform"], post["tenant_id"],
+                    post["id"],
+                    post["platform"],
+                    post["tenant_id"],
                 )
             except Exception:
                 logger.exception("Failed to auto-publish social post %s", post["id"])
@@ -245,12 +333,14 @@ async def _process_scheduled_campaigns():
             leads = _query_target_leads(db, tenant_id, target_filter)
             if not leads:
                 # No matching leads — mark as sent with zero recipients
-                db.table("marketing_campaigns").update({
-                    "status": "sent",
-                    "sent_at": now_iso,
-                    "total_recipients": 0,
-                    "total_sent": 0,
-                }).eq("id", campaign_id).execute()
+                db.table("marketing_campaigns").update(
+                    {
+                        "status": "sent",
+                        "sent_at": now_iso,
+                        "total_recipients": 0,
+                        "total_sent": 0,
+                    }
+                ).eq("id", campaign_id).execute()
                 logger.info(
                     "Scheduled campaign %s had no matching leads — marked as sent",
                     campaign_id,
@@ -258,10 +348,12 @@ async def _process_scheduled_campaigns():
                 continue
 
             # Mark as sending and dispatch background task
-            db.table("marketing_campaigns").update({
-                "status": "sending",
-                "sending_started_at": now_iso,
-            }).eq("id", campaign_id).execute()
+            db.table("marketing_campaigns").update(
+                {
+                    "status": "sending",
+                    "sending_started_at": now_iso,
+                }
+            ).eq("id", campaign_id).execute()
 
             asyncio.create_task(
                 _send_campaign_background(campaign_id, tenant_id, leads, campaign)
@@ -269,7 +361,9 @@ async def _process_scheduled_campaigns():
             dispatched += 1
             logger.info(
                 "Auto-dispatched scheduled campaign %s for tenant %s (%d leads)",
-                campaign_id, tenant_id, len(leads),
+                campaign_id,
+                tenant_id,
+                len(leads),
             )
 
         return dispatched
@@ -326,6 +420,7 @@ app.add_middleware(
 # Routes that may be embedded in iframes on third-party sites.
 _EMBEDDABLE_PREFIXES = ("/api/v1/widget", "/api/v1/forms/public", "/api/v1/book")
 
+
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -335,28 +430,34 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: https:; "
-        "font-src 'self' data: https:; "
-        "connect-src 'self' https:; "
-        "frame-ancestors 'none'"
-    ) if not is_embeddable else (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: https:; "
-        "font-src 'self' data: https:; "
-        "connect-src 'self' https:; "
-        "frame-ancestors *"
+        (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' data: https:; "
+            "connect-src 'self' https:; "
+            "frame-ancestors 'none'"
+        )
+        if not is_embeddable
+        else (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' data: https:; "
+            "connect-src 'self' https:; "
+            "frame-ancestors *"
+        )
     )
 
     if is_embeddable:
         response.headers["X-Frame-Options"] = "ALLOWALL"
     else:
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
 
     return response
 
@@ -496,6 +597,9 @@ app.include_router(csat.router)
 app.include_router(custom_fields.router)
 app.include_router(social_media.router)
 app.include_router(marketing_campaigns.router)
+app.include_router(marketing_analytics.router)
+app.include_router(ab_tests.router)
+app.include_router(automation_rules.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)
 app.include_router(pipeline.router)

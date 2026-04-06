@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -34,6 +34,7 @@ MAX_RECIPIENTS_PER_BLAST = 500
 
 # --- Pydantic Models ---
 
+
 class CampaignTargetFilter(BaseModel):
     status: list[str] | None = None
     tags: list[str] | None = None
@@ -61,10 +62,14 @@ class CampaignUpdate(BaseModel):
 class GenerateEmailRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=1000)
     tone: str = Field("professional", max_length=100)
-    campaign_type: str = Field("promotional", description="promotional, newsletter, announcement, follow_up, seasonal")
+    campaign_type: str = Field(
+        "promotional",
+        description="promotional, newsletter, announcement, follow_up, seasonal",
+    )
 
 
 # --- Helpers ---
+
 
 def _parse_generated_email(raw: str) -> tuple[str, str]:
     """Parse generated campaign email output into subject/body."""
@@ -127,7 +132,8 @@ def _query_target_leads(db, tenant_id: str, target_filter: dict | None) -> list[
     if target_filter and target_filter.get("tags"):
         target_tags = set(target_filter["tags"])
         leads = [
-            lead for lead in leads
+            lead
+            for lead in leads
             if lead.get("tags") and set(lead["tags"]) & target_tags
         ]
 
@@ -135,6 +141,7 @@ def _query_target_leads(db, tenant_id: str, target_filter: dict | None) -> list[
 
 
 # --- Campaign CRUD ---
+
 
 @router.post("/{tenant_id}")
 async def create_campaign(
@@ -147,7 +154,9 @@ async def create_campaign(
     _validate_campaign_type(req.type)
 
     if req.type == "email" and not req.subject:
-        raise HTTPException(status_code=400, detail="Email campaigns require a subject line")
+        raise HTTPException(
+            status_code=400, detail="Email campaigns require a subject line"
+        )
 
     payload = {
         "tenant_id": tenant_id,
@@ -247,7 +256,9 @@ async def get_campaign(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to get campaign %s for tenant %s", campaign_id, tenant_id)
+        logger.exception(
+            "Failed to get campaign %s for tenant %s", campaign_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to get campaign")
 
 
@@ -266,7 +277,9 @@ async def update_campaign(
         if req.status not in VALID_CAMPAIGN_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status: {req.status}")
         if req.status in ("sent", "sending"):
-            raise HTTPException(status_code=400, detail="Cannot manually set status to sent/sending")
+            raise HTTPException(
+                status_code=400, detail="Cannot manually set status to sent/sending"
+            )
 
     updates = {}
     for k, v in req.model_dump().items():
@@ -294,7 +307,9 @@ async def update_campaign(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to update campaign %s for tenant %s", campaign_id, tenant_id)
+        logger.exception(
+            "Failed to update campaign %s for tenant %s", campaign_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to update campaign")
 
 
@@ -321,11 +336,14 @@ async def delete_campaign(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to delete campaign %s for tenant %s", campaign_id, tenant_id)
+        logger.exception(
+            "Failed to delete campaign %s for tenant %s", campaign_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to delete campaign")
 
 
 # --- Send Campaign ---
+
 
 async def _send_campaign_background(
     campaign_id: str,
@@ -372,7 +390,8 @@ async def _send_campaign_background(
                         total_failed += 1
                         logger.warning(
                             "Campaign email failed for lead %s: %s",
-                            lead_id, result.get("detail"),
+                            lead_id,
+                            result.get("detail"),
                         )
 
                 elif campaign_type == "sms":
@@ -394,34 +413,43 @@ async def _send_campaign_background(
 
             # Track the individual send
             try:
-                db.table("campaign_sends").insert({
-                    "campaign_id": campaign_id,
-                    "tenant_id": tenant_id,
-                    "lead_id": lead_id,
-                    "channel": campaign_type,
-                    "recipient": recipient,
-                    "status": send_status,
-                }).execute()
+                db.table("campaign_sends").insert(
+                    {
+                        "campaign_id": campaign_id,
+                        "tenant_id": tenant_id,
+                        "lead_id": lead_id,
+                        "channel": campaign_type,
+                        "recipient": recipient,
+                        "status": send_status,
+                    }
+                ).execute()
             except Exception:
                 logger.exception("Failed to track campaign send for lead %s", lead_id)
 
         # Update campaign with final results
         final_status = "sent" if total_sent > 0 else "failed"
         try:
-            db.table("marketing_campaigns").update({
-                "status": final_status,
-                "sent_at": datetime.now(timezone.utc).isoformat(),
-                "total_recipients": len(leads),
-                "total_sent": total_sent,
-            }).eq("id", campaign_id).execute()
+            db.table("marketing_campaigns").update(
+                {
+                    "status": final_status,
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                    "total_recipients": len(leads),
+                    "total_sent": total_sent,
+                }
+            ).eq("id", campaign_id).execute()
             logger.info(
                 "Campaign %s completed: status=%s sent=%d failed=%d",
-                campaign_id, final_status, total_sent, total_failed,
+                campaign_id,
+                final_status,
+                total_sent,
+                total_failed,
             )
         except Exception:
             logger.exception(
                 "Failed to update final status for campaign %s (sent=%d, failed=%d)",
-                campaign_id, total_sent, total_failed,
+                campaign_id,
+                total_sent,
+                total_failed,
             )
 
     except Exception:
@@ -431,11 +459,16 @@ async def _send_campaign_background(
         )
         try:
             db = get_supabase()
-            db.table("marketing_campaigns").update({
-                "status": "failed",
-            }).eq("id", campaign_id).execute()
+            db.table("marketing_campaigns").update(
+                {
+                    "status": "failed",
+                }
+            ).eq("id", campaign_id).execute()
         except Exception:
-            logger.exception("Failed to mark campaign %s as failed after background error", campaign_id)
+            logger.exception(
+                "Failed to mark campaign %s as failed after background error",
+                campaign_id,
+            )
 
 
 @router.post("/{tenant_id}/{campaign_id}/send")
@@ -470,19 +503,23 @@ async def send_campaign(
         campaign = campaign_result.data[0]
 
         if campaign["status"] in ("sending", "sent"):
-            raise HTTPException(status_code=400, detail=f"Campaign already {campaign['status']}")
+            raise HTTPException(
+                status_code=400, detail=f"Campaign already {campaign['status']}"
+            )
 
         # Query target leads (uses client_id, not tenant_id) before changing status
         target_filter = campaign.get("target_filter") or {}
         leads = _query_target_leads(db, tenant_id, target_filter)
 
         if not leads:
-            db.table("marketing_campaigns").update({
-                "status": "sent",
-                "sent_at": datetime.now(timezone.utc).isoformat(),
-                "total_recipients": 0,
-                "total_sent": 0,
-            }).eq("id", campaign_id).execute()
+            db.table("marketing_campaigns").update(
+                {
+                    "status": "sent",
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                    "total_recipients": 0,
+                    "total_sent": 0,
+                }
+            ).eq("id", campaign_id).execute()
             return {
                 "campaign_id": campaign_id,
                 "status": "sent",
@@ -492,10 +529,12 @@ async def send_campaign(
             }
 
         # Mark as sending with a timestamp before dispatching the background task
-        db.table("marketing_campaigns").update({
-            "status": "sending",
-            "sending_started_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", campaign_id).execute()
+        db.table("marketing_campaigns").update(
+            {
+                "status": "sending",
+                "sending_started_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ).eq("id", campaign_id).execute()
 
         # Dispatch the send loop as a non-blocking background task and return immediately
         asyncio.create_task(
@@ -507,18 +546,26 @@ async def send_campaign(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to initiate campaign %s for tenant %s", campaign_id, tenant_id)
+        logger.exception(
+            "Failed to initiate campaign %s for tenant %s", campaign_id, tenant_id
+        )
         try:
             db = get_supabase()
-            db.table("marketing_campaigns").update({
-                "status": "failed",
-            }).eq("id", campaign_id).execute()
+            db.table("marketing_campaigns").update(
+                {
+                    "status": "failed",
+                }
+            ).eq("id", campaign_id).execute()
         except Exception:
-            logger.exception("Failed to mark campaign %s as failed after initiation error", campaign_id)
+            logger.exception(
+                "Failed to mark campaign %s as failed after initiation error",
+                campaign_id,
+            )
         raise HTTPException(status_code=500, detail="Campaign send failed")
 
 
 # --- Campaign Analytics ---
+
 
 @router.get("/{tenant_id}/{campaign_id}/analytics")
 async def get_campaign_analytics(
@@ -535,7 +582,9 @@ async def get_campaign_analytics(
         # Verify campaign belongs to tenant
         campaign_result = (
             db.table("marketing_campaigns")
-            .select("id, name, type, status, total_recipients, total_sent, total_opened, total_clicked, sent_at")
+            .select(
+                "id, name, type, status, total_recipients, total_sent, total_opened, total_clicked, sent_at"
+            )
             .eq("id", campaign_id)
             .eq("tenant_id", tenant_id)
             .limit(1)
@@ -566,7 +615,78 @@ async def get_campaign_analytics(
         total_clicked = by_status.get("clicked", 0)
 
         open_rate = round((total_opened / total_sent * 100), 1) if total_sent > 0 else 0
-        click_rate = round((total_clicked / total_sent * 100), 1) if total_sent > 0 else 0
+        click_rate = (
+            round((total_clicked / total_sent * 100), 1) if total_sent > 0 else 0
+        )
+
+        trend_data = []
+        if campaign.get("sent_at"):
+            try:
+                sent_date = datetime.fromisoformat(
+                    campaign["sent_at"].replace("Z", "+00:00")
+                )
+                days_since_sent = (datetime.now(timezone.utc) - sent_date).days
+                lookback = min(days_since_sent, 30)
+                if lookback > 0:
+                    trend_start = (
+                        (datetime.now(timezone.utc) - timedelta(days=lookback))
+                        .date()
+                        .isoformat()
+                    )
+                    email_events_result = (
+                        db.table("email_events")
+                        .select("event_type, created_at")
+                        .eq("campaign_id", campaign_id)
+                        .gte("created_at", trend_start)
+                        .execute()
+                    )
+                    events = email_events_result.data or []
+                    date_event_map: dict[str, dict] = {}
+                    for evt in events:
+                        date_key = evt.get("created_at", "")[:10]
+                        if date_key not in date_event_map:
+                            date_event_map[date_key] = {"opens": 0, "clicks": 0}
+                        if evt.get("event_type") == "open":
+                            date_event_map[date_key]["opens"] += 1
+                        elif evt.get("event_type") == "click":
+                            date_event_map[date_key]["clicks"] += 1
+
+                    for i in range(lookback + 1):
+                        date = (
+                            datetime.now(timezone.utc).date() - timedelta(days=i)
+                        ).isoformat()
+                        data = date_event_map.get(date, {"opens": 0, "clicks": 0})
+                        trend_data.append(
+                            {
+                                "date": date,
+                                "opens": data["opens"],
+                                "clicks": data["clicks"],
+                            }
+                        )
+                    trend_data.reverse()
+            except Exception:
+                pass
+
+        device_breakdown = {}
+        try:
+            email_events_result = (
+                db.table("email_events")
+                .select("details")
+                .eq("campaign_id", campaign_id)
+                .limit(500)
+                .execute()
+            )
+            for evt in email_events_result.data or []:
+                details = evt.get("details") or {}
+                device = details.get("device") or details.get("user_agent", "unknown")
+                if "iPhone" in device or "Android" in device:
+                    device_breakdown["mobile"] = device_breakdown.get("mobile", 0) + 1
+                elif "Desktop" in device or "computer" in device.lower():
+                    device_breakdown["desktop"] = device_breakdown.get("desktop", 0) + 1
+                else:
+                    device_breakdown["other"] = device_breakdown.get("other", 0) + 1
+        except Exception:
+            pass
 
         return {
             "campaign": campaign,
@@ -578,6 +698,8 @@ async def get_campaign_analytics(
             "open_rate": open_rate,
             "click_rate": click_rate,
             "by_status": by_status,
+            "trend_data": trend_data,
+            "device_breakdown": device_breakdown,
         }
     except HTTPException:
         raise
@@ -587,6 +709,7 @@ async def get_campaign_analytics(
 
 
 # --- Recipient Estimate ---
+
 
 @router.post("/{tenant_id}/estimate")
 async def estimate_recipients(
@@ -608,6 +731,7 @@ async def estimate_recipients(
 
 # --- AI Email Generation ---
 
+
 @router.post("/{tenant_id}/generate-email")
 async def generate_campaign_email(
     tenant_id: str,
@@ -625,7 +749,9 @@ async def generate_campaign_email(
 
     db = get_supabase()
     business_name, business_type = get_business_context(db, tenant_id)
-    biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
+    biz_context = f" for {business_name}" + (
+        f", a {business_type}" if business_type else ""
+    )
 
     type_instructions = {
         "promotional": "Create a compelling promotional email that highlights a special offer or service. Include urgency and a clear call to action.",
@@ -653,21 +779,32 @@ async def generate_campaign_email(
                 "The email body should be 150-300 words. Use clean, responsive-friendly HTML. "
                 "Include a clear call to action. Do not include <html>, <head>, or <body> tags -- just the inner content."
             ),
-            messages=[{
-                "role": "user",
-                "content": f"Topic: {req.topic}\nCampaign type: {req.campaign_type}",
-            }],
-            metadata={"tenant_id": tenant_id, "campaign_type": req.campaign_type, "tone": req.tone},
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Topic: {req.topic}\nCampaign type: {req.campaign_type}",
+                }
+            ],
+            metadata={
+                "tenant_id": tenant_id,
+                "campaign_type": req.campaign_type,
+                "tone": req.tone,
+            },
         )
         raw = resp.text.strip()
     except anthropic.RateLimitError:
-        raise HTTPException(status_code=429, detail="AI service rate limited -- please try again in a moment")
+        raise HTTPException(
+            status_code=429,
+            detail="AI service rate limited -- please try again in a moment",
+        )
     except anthropic.AuthenticationError:
         logger.error("Anthropic API auth failure during email generation")
         raise HTTPException(status_code=502, detail="AI service configuration error")
     except anthropic.APIError as e:
         logger.error("Anthropic API error during email generation: %s", str(e))
-        raise HTTPException(status_code=502, detail="AI service temporarily unavailable")
+        raise HTTPException(
+            status_code=502, detail="AI service temporarily unavailable"
+        )
     except Exception:
         logger.exception("Campaign email AI generation failed for tenant %s", tenant_id)
         raise HTTPException(status_code=500, detail="AI email generation failed")
