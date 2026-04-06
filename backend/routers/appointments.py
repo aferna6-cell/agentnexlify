@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import date as date_type
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.limiter import limiter
 from backend.models.database import get_supabase
@@ -31,31 +31,12 @@ from backend.services.booking import (
     upsert_business_hours,
 )
 
+from backend.routers.auth import _get_current_tenant
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/appointments", tags=["appointments"])
-
-_JWT_ALGORITHM = "HS256"
-
-
-# ── Auth helpers ──────────────────────────────────────────────
-
-def _get_current_tenant(authorization: str = Header(...)) -> dict:
-    """Extract tenant claims from Bearer token."""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    from jose import JWTError, jwt
-    from backend.config import settings
-    try:
-        return jwt.decode(
-            authorization.removeprefix("Bearer ").strip(),
-            settings.api_secret_key,
-            algorithms=[_JWT_ALGORITHM],
-        )
-    except JWTError as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
 
 def _verify_tenant(claims: dict, tenant_id: str) -> None:

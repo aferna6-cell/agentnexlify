@@ -1,9 +1,19 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = "anx_token";
 const TENANT_KEY = "anx_tenant_id";
+
+// Check token expiry every 60 seconds
+const EXPIRY_CHECK_INTERVAL_MS = 60_000;
 
 function parseJwt(token) {
   try {
@@ -17,6 +27,17 @@ function parseJwt(token) {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState(null);
+  const logoutRef = useRef(null);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TENANT_KEY);
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  // Keep ref in sync so interval callback always has latest logout
+  logoutRef.current = logout;
 
   useEffect(() => {
     if (!token) {
@@ -41,18 +62,22 @@ export function AuthProvider({ children }) {
       name: payload.name || "",
       userId: payload.user_id || null,
     });
-  }, [token]);
+
+    // Proactive expiry check — logs out before next API call can 401
+    const intervalId = setInterval(() => {
+      const p = parseJwt(token);
+      if (!p || (p.exp && p.exp * 1000 < Date.now())) {
+        logoutRef.current();
+        window.location.href = "/login?expired=1";
+      }
+    }, EXPIRY_CHECK_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [token, logout]);
 
   const login = useCallback((jwt) => {
     localStorage.setItem(TOKEN_KEY, jwt);
     setToken(jwt);
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(TENANT_KEY);
-    setToken(null);
-    setUser(null);
   }, []);
 
   return (

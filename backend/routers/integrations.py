@@ -3,10 +3,13 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from jose import JWTError, jwt
+
 from backend.config import settings
+from backend.routers.auth import _get_current_tenant
 from backend.services.google_calendar import (
     delete_integration,
     exchange_code,
@@ -28,26 +31,8 @@ _STATE_TOKEN_EXPIRY_MINUTES = 10
 # ── Auth helpers ──────────────────────────────────────────────
 
 
-def _get_current_tenant(authorization: str = Header(...)) -> dict:
-    """Extract tenant claims from Bearer token."""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    from jose import JWTError, jwt
-
-    try:
-        return jwt.decode(
-            authorization.removeprefix("Bearer ").strip(),
-            settings.api_secret_key,
-            algorithms=[_JWT_ALGORITHM],
-        )
-    except JWTError as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
-
-
 def _encode_state(tenant_id: str) -> str:
     """Create a short-lived signed JWT encoding the tenant_id for OAuth state."""
-    from jose import jwt
-
     payload = {
         "tenant_id": tenant_id,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
@@ -57,8 +42,6 @@ def _encode_state(tenant_id: str) -> str:
 
 def _decode_state(state: str) -> str:
     """Validate the OAuth state token and return the tenant_id."""
-    from jose import JWTError, jwt
-
     try:
         payload = jwt.decode(state, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
         tenant_id = payload.get("tenant_id")

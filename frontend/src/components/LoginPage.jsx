@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://agentnexlify-production.up.railway.app";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -14,7 +16,9 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("google_error")) {
+    if (searchParams.get("expired")) {
+      setError("Your session has expired. Please sign in again.");
+    } else if (searchParams.get("google_error")) {
       setError("Google sign-in could not be completed. Please try again.");
     }
   }, [searchParams]);
@@ -69,14 +73,32 @@ export default function LoginPage() {
           className="login-btn"
           onClick={handleGoogleLogin}
           disabled={loading || googleLoading}
-          style={{ marginBottom: "1rem", background: "#fff", color: "#111827", border: "1px solid rgba(255,255,255,0.18)" }}
+          style={{
+            marginBottom: "1rem",
+            background: "#fff",
+            color: "#111827",
+            border: "1px solid rgba(255,255,255,0.18)",
+          }}
         >
           {googleLoading ? "Redirecting to Google..." : "Continue with Google"}
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
-          <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+            color: "var(--text-muted)",
+            fontSize: "0.85rem",
+          }}
+        >
+          <span
+            style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }}
+          />
           <span>or sign in with email</span>
-          <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+          <span
+            style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }}
+          />
         </div>
         <form onSubmit={handleSubmit}>
           <div className="login-field">
@@ -102,11 +124,22 @@ export default function LoginPage() {
             />
           </div>
           {error && <div className="login-error">{error}</div>}
-          <button type="submit" className="login-btn" disabled={loading || googleLoading}>
+          <button
+            type="submit"
+            className="login-btn"
+            disabled={loading || googleLoading}
+          >
             {loading ? "Signing in..." : "Sign In"}
           </button>
           <div style={{ textAlign: "right", marginTop: "0.5rem" }}>
-            <Link to="/forgot-password" style={{ fontSize: "0.85rem", color: "var(--accent)", textDecoration: "none" }}>
+            <Link
+              to="/forgot-password"
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--accent)",
+                textDecoration: "none",
+              }}
+            >
               Forgot password?
             </Link>
           </div>
