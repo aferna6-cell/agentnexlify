@@ -1,14 +1,28 @@
 {
   "version": 1,
-  "last_run": "2026-04-04T19:30:00Z",
-  "total_runs": 1,
+  "last_run": "2026-04-06T00:00:00Z",
+  "total_runs": 2,
   "frozen_ideas": [],
   "active_directions": [
     {
-      "title": "Update 4 stale skills per weekly discovery",
-      "date": "2026-04-04",
+      "title": "Add Lead Source Analytics Chart to Dashboard",
+      "date": "2026-04-06",
       "confidence": "HIGH",
       "status": "pending_approval"
+    }
+  ],
+  "ideas_explored": [
+    {
+      "title": "Update 4 stale skills per weekly discovery",
+      "date": "2026-04-04",
+      "status": "recommended",
+      "run": 1
+    },
+    {
+      "title": "Add Lead Source Analytics Chart to Dashboard",
+      "date": "2026-04-06",
+      "status": "recommended",
+      "run": 2
     }
   ],
   "rejected_paths": [
@@ -17,6 +31,20 @@
       "reason": "Too large for atomic recommendation — belongs in /new-feature pipeline",
       "date": "2026-04-04",
       "times_rejected": 1
+    }
+  ],
+  "parking_lot": [
+    {
+      "title": "Widget Click Regression Guard (Playwright E2E)",
+      "date": "2026-04-06",
+      "roi": 2.0,
+      "note": "Survived debate. Highest severity but medium effort. Pick next for code_health run."
+    },
+    {
+      "title": "Onboarding AI Parser Edge Case Tests",
+      "date": "2026-04-06",
+      "roi": 1.5,
+      "note": "Survived debate (weakened). Parser seam extracted; tests not yet written."
     }
   ],
   "config": {
