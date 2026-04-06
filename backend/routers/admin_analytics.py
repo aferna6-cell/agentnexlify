@@ -5,11 +5,13 @@ internal admin tools for AgentNexLiFy staff only.
 """
 
 import logging
+from starlette.requests import Request
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 
 logger = logging.getLogger(__name__)
@@ -28,9 +30,8 @@ def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
 
 
 @router.get("/overview")
-async def get_platform_overview(
-    x_api_secret: str | None = Header(None),
-):
+@limiter.limit("10/minute")
+async def get_platform_overview(request: Request, x_api_secret: str | None = Header(None)):
     """Get platform-wide overview: total tenants, active subscriptions, MRR."""
     _verify_admin_secret(x_api_secret)
 
