@@ -145,8 +145,10 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
 # --- Monthly Growth Trends ---
 
 
+@limiter.limit("10/minute")
 @router.get("/monthly-growth")
 async def get_monthly_growth(
+    request: Request,
     x_api_secret: str | None = Header(None),
     months: int = Query(12, ge=1, le=36),
 ):
@@ -244,8 +246,10 @@ async def get_monthly_growth(
 # --- Weekly Growth (Last 7 Days) ---
 
 
+@limiter.limit("10/minute")
 @router.get("/weekly-growth")
 async def get_weekly_growth(
+    request: Request,
     x_api_secret: str | None = Header(None),
 ):
     """Get day-by-day growth for the last 7 days — the quick 'what happened this week' view."""
@@ -349,8 +353,10 @@ async def get_weekly_growth(
 # --- Plan Distribution ---
 
 
+@limiter.limit("10/minute")
 @router.get("/plan-distribution")
 async def get_plan_distribution(
+    request: Request,
     x_api_secret: str | None = Header(None),
 ):
     """Get current distribution of plans across all tenants."""
@@ -402,8 +408,10 @@ async def get_plan_distribution(
 # --- Revenue Trends ---
 
 
+@limiter.limit("10/minute")
 @router.get("/revenue-trends")
 async def get_revenue_trends(
+    request: Request,
     x_api_secret: str | None = Header(None),
     months: int = Query(12, ge=1, le=36),
 ):
@@ -529,8 +537,10 @@ async def _calculate_live_revenue(db, start_month, now, months):
 # --- Promoted / Free Businesses ---
 
 
+@limiter.limit("10/minute")
 @router.get("/promoted-businesses")
 async def get_promoted_businesses(
+    request: Request,
     x_api_secret: str | None = Header(None),
 ):
     """Get all businesses that have been given free access or discounts."""
@@ -556,8 +566,10 @@ async def get_promoted_businesses(
 # --- Tenant List (Admin View) ---
 
 
+@limiter.limit("10/minute")
 @router.get("/tenants")
 async def list_all_tenants(
+    request: Request,
     x_api_secret: str | None = Header(None),
     plan: str | None = Query(None),
     plan_status: str | None = Query(None),
@@ -625,8 +637,10 @@ async def list_all_tenants(
 # --- Industry Breakdown ---
 
 
+@limiter.limit("10/minute")
 @router.get("/industry-breakdown")
 async def get_industry_breakdown(
+    request: Request,
     x_api_secret: str | None = Header(None),
 ):
     """Get tenant distribution by industry/business type."""
