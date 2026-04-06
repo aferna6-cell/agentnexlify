@@ -643,7 +643,7 @@ async def send_campaign(
             if not lead.get("email"):
                 skipped += 1
                 continue
-            unsub_url = build_unsubscribe_url(lead["id"])
+            unsub_url = build_unsubscribe_url(lead["id"], tenant_id)
             email_result = await send_email(
                 to=lead["email"],
                 subject=req.subject,

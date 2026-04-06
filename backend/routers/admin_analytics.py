@@ -19,10 +19,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/admin", tags=["platform-admin"])
 
 
+def _admin_secret() -> str:
+    admin_secret = getattr(settings, "admin_api_secret_key", "")
+    if isinstance(admin_secret, str) and admin_secret:
+        return admin_secret
+    api_secret = getattr(settings, "api_secret_key", "")
+    return api_secret if isinstance(api_secret, str) else ""
+
+
 def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
     """Verify the caller has the platform admin secret."""
     import hmac as _hmac
-    if not x_api_secret or not _hmac.compare_digest(x_api_secret, settings.api_secret_key):
+    admin_secret = _admin_secret()
+    if not admin_secret or not x_api_secret or not _hmac.compare_digest(x_api_secret, admin_secret):
         raise HTTPException(status_code=401, detail="Invalid admin secret")
 
 
@@ -105,10 +114,15 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
         try:
             promoted = (
                 db.table("admin_promotions")
-                .select("tenant_id", distinct=True)
+                .select("tenant_id")
+                .not_.is_("tenant_id", "null")
                 .execute()
             )
-            promoted_count = len({r["tenant_id"] for r in promoted.data or []})
+            promoted_count = len({
+                row.get("tenant_id")
+                for row in (promoted.data or [])
+                if row.get("tenant_id")
+            })
         except Exception:
             pass
 
@@ -584,18 +598,11 @@ async def list_all_tenants(
     try:
         db = get_supabase()
 
-        # When search is provided, fetch more rows to post-filter from,
-        # since search is applied in Python after the DB query.
-        fetch_limit = limit * 5 if search else limit
-        query = (
-            db.table("tenants")
-            .select(
-                "id, business_name, business_type, owner_email, owner_name, "
-                "plan, plan_status, stripe_subscription_id, created_at, "
-                "free_trial_started_at, city"
-            )
-            .order("created_at", desc=True)
-            .range(0, fetch_limit - 1)
+        query = db.table("tenants").select(
+            "id, business_name, business_type, owner_email, owner_name, "
+            "plan, plan_status, stripe_subscription_id, created_at, "
+            "free_trial_started_at, city",
+            count="exact",
         )
 
         if plan:
@@ -604,26 +611,25 @@ async def list_all_tenants(
             query = query.eq("plan_status", plan_status)
         if business_type:
             query = query.eq("business_type", business_type)
+        if search:
+            # PostgREST OR expression; comma must be removed to avoid splitting clauses.
+            search_term = search.strip().replace(",", " ")
+            search_pattern = f"%{search_term}%"
+            query = query.or_(
+                "business_name.ilike.{p},owner_email.ilike.{p},owner_name.ilike.{p}".format(
+                    p=search_pattern
+                )
+            )
+
+        query = (
+            query
+            .order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
+        )
 
         result = query.execute()
         tenants = result.data or []
-
-        # Post-filter by search
-        if search:
-            search_lower = search.lower()
-            tenants = [
-                t
-                for t in tenants
-                if search_lower in (t.get("business_name") or "").lower()
-                or search_lower in (t.get("owner_email") or "").lower()
-                or search_lower in (t.get("owner_name") or "").lower()
-            ]
-
-        # Total count reflects the search filter
-        total = len(tenants)
-
-        # Apply pagination to the filtered results
-        tenants = tenants[offset:offset + limit]
+        total = result.count or 0
 
         return {"tenants": tenants, "total": total}
 

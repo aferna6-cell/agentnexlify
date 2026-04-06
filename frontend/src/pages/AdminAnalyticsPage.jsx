@@ -50,19 +50,17 @@ const PIE_COLORS = [
 ];
 
 // Admin secret is entered at runtime via prompt — never baked into the JS bundle.
-let _adminSecret = sessionStorage.getItem("_adminSecret") || "";
+let _adminSecret = "";
 
 function getAdminSecret() {
   if (!_adminSecret) {
     _adminSecret = window.prompt("Enter admin secret:") || "";
-    if (_adminSecret) sessionStorage.setItem("_adminSecret", _adminSecret);
   }
   return _adminSecret;
 }
 
 function clearAdminSecret() {
   _adminSecret = "";
-  sessionStorage.removeItem("_adminSecret");
 }
 
 async function apiFetch(path) {
@@ -84,6 +82,13 @@ async function apiFetch(path) {
 
 function formatCurrency(cents) {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
+}
+
+function formatDollars(amount) {
+  return `$${Number(amount || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export default function AdminAnalyticsPage() {
@@ -222,25 +227,6 @@ export default function AdminAnalyticsPage() {
               {m}m
             </button>
           ))}
-          <button
-            onClick={() => setMonths(0)}
-            style={{
-              padding: "6px 16px",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontSize: "0.85rem",
-              border:
-                months === 0
-                  ? "2px solid var(--green)"
-                  : "1px solid var(--border)",
-              background:
-                months === 0 ? "var(--green-dim)" : "var(--bg-primary)",
-              color: months === 0 ? "var(--green)" : "var(--text-secondary)",
-              fontWeight: months === 0 ? 600 : 400,
-            }}
-          >
-            7d
-          </button>
         </div>
       </div>
 
@@ -642,7 +628,14 @@ export default function AdminAnalyticsPage() {
                 tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v) => formatCurrency(v)}
+                tickFormatter={(v) => formatDollars(v)}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
               />
               <Tooltip
                 contentStyle={{
@@ -651,7 +644,9 @@ export default function AdminAnalyticsPage() {
                   borderRadius: 8,
                   color: "var(--text-primary)",
                 }}
-                formatter={(v) => formatCurrency(v)}
+                formatter={(v, name) =>
+                  name === "MRR ($)" ? formatDollars(v) : v
+                }
               />
               <Legend
                 wrapperStyle={{

@@ -26,10 +26,19 @@ VALID_PROMOTION_TYPES = {
 }
 
 
+def _admin_secret() -> str:
+    admin_secret = getattr(settings, "admin_api_secret_key", "")
+    if isinstance(admin_secret, str) and admin_secret:
+        return admin_secret
+    api_secret = getattr(settings, "api_secret_key", "")
+    return api_secret if isinstance(api_secret, str) else ""
+
+
 def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
     """Verify the caller has the platform admin secret."""
     import hmac as _hmac
-    if not x_api_secret or not _hmac.compare_digest(x_api_secret, settings.api_secret_key):
+    admin_secret = _admin_secret()
+    if not admin_secret or not x_api_secret or not _hmac.compare_digest(x_api_secret, admin_secret):
         raise HTTPException(status_code=401, detail="Invalid admin secret")
 
 
@@ -69,7 +78,9 @@ async def list_promotions(
 
         query = (
             db.table("admin_promotions")
-            .select("*")
+            .select(
+                "*,tenants:tenant_id(id,business_name,owner_email,business_type,plan)"
+            )
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)
         )
@@ -195,7 +206,7 @@ async def get_promotion(
 
         result = (
             db.table("admin_promotions")
-            .select("*")
+            .select("*,tenants:tenant_id(id,business_name,owner_email,business_type,plan)")
             .eq("id", promotion_id)
             .limit(1)
             .execute()

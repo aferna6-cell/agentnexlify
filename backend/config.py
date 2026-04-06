@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
     # so all workers share the same key, but it is NOT secure for production use.
     api_secret_key: str = _DEV_FALLBACK_SECRET
+    # Optional dedicated JWT signing key. Falls back to API secret when unset.
+    jwt_secret_key: str = ""
+    # Optional dedicated admin API secret for /api/v1/admin routes.
+    # Falls back to API secret when unset for backward compatibility.
+    admin_api_secret_key: str = ""
+    # Transitional switch for old unsubscribe links that only sign lead_id.
+    # New links are tenant-bound and this should stay disabled in production.
+    allow_legacy_unsubscribe_signatures: bool = False
     billing_secret: str = ""
     sentry_dsn: str = ""
 
@@ -79,4 +87,16 @@ if settings.api_secret_key == _DEV_FALLBACK_SECRET:
     _config_logger.warning(
         "API_SECRET_KEY is not set — using insecure dev-only fallback. "
         "Set the API_SECRET_KEY environment variable before deploying to production!"
+    )
+
+if not settings.jwt_secret_key:
+    _config_logger.warning(
+        "JWT_SECRET_KEY is not set — falling back to API_SECRET_KEY. "
+        "Set JWT_SECRET_KEY to isolate JWT signing from other secrets."
+    )
+
+if not settings.admin_api_secret_key:
+    _config_logger.warning(
+        "ADMIN_API_SECRET_KEY is not set — falling back to API_SECRET_KEY. "
+        "Set ADMIN_API_SECRET_KEY to isolate admin access."
     )

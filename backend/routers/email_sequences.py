@@ -865,7 +865,7 @@ async def process_sequences(
 
         # Send the email
         try:
-            unsub_url = build_unsubscribe_url(lead_id)
+            unsub_url = build_unsubscribe_url(lead_id, tenant_id)
             result = await send_email(
                 to=lead_email,
                 subject=step["subject"],
@@ -989,7 +989,7 @@ async def run_sequence_processor() -> dict:
                 subject=step["subject"],
                 body_html=step["body"],
                 tenant_id=tenant_id,
-                unsubscribe_url=build_unsubscribe_url(lead_id),
+                unsubscribe_url=build_unsubscribe_url(lead_id, tenant_id),
                 lead_id=lead_id,
             )
             if result.get("success"):

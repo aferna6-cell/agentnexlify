@@ -434,7 +434,7 @@ async def send_review_request(
 
     # Send email
     if lead.get("email"):
-        unsub_url = build_unsubscribe_url(lead_id)
+        unsub_url = build_unsubscribe_url(lead_id, tenant_id)
         safe_name = html_mod.escape(customer_name)
         safe_biz = html_mod.escape(business_name)
         subject = f"How was your experience with {business_name}?"

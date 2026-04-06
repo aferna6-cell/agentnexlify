@@ -227,7 +227,7 @@ async def _recover_stalled_campaigns():
     db = get_supabase()
     stale_cutoff = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
     try:
-        stalled = (
+        stale_started = (
             db.table("marketing_campaigns")
             .select("id, name, tenant_id")
             .eq("status", "sending")
@@ -235,9 +235,25 @@ async def _recover_stalled_campaigns():
             .limit(50)
             .execute()
         )
-        if not stalled.data:
+        stale_missing_start = []
+        try:
+            stale_missing_start = (
+                db.table("marketing_campaigns")
+                .select("id, name, tenant_id")
+                .eq("status", "sending")
+                .is_("sending_started_at", "null")
+                .lt("created_at", stale_cutoff)
+                .limit(50)
+                .execute()
+            ).data or []
+        except Exception:
+            # Some environments may not have created_at on this table yet.
+            stale_missing_start = []
+
+        stalled_rows = (stale_started.data or []) + stale_missing_start
+        if not stalled_rows:
             return 0
-        stalled_ids = [r["id"] for r in stalled.data]
+        stalled_ids = list({row["id"] for row in stalled_rows if row.get("id")})
         db.table("marketing_campaigns").update({"status": "failed"}).in_(
             "id", stalled_ids
         ).execute()

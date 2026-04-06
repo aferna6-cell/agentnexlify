@@ -170,6 +170,32 @@ else
     echo -e "${GREEN}OK (no JS/TS tests staged)${NC}"
 fi
 
+# CHECK 7: Python test quality gates
+echo -n "Checking Python test quality... "
+STAGED_PY_TEST_FILES=$(echo "$STAGED_FILES" | grep -E "(^|/)(tests/.*\\.py|test_.*\\.py)$" || true)
+if [ -n "$STAGED_PY_TEST_FILES" ]; then
+    PY_BIN=""
+    if command -v python3 >/dev/null 2>&1; then
+        PY_BIN="python3"
+    elif command -v python >/dev/null 2>&1; then
+        PY_BIN="python"
+    fi
+
+    if [ -z "$PY_BIN" ]; then
+        echo -e "${RED}BLOCKED${NC}"
+        echo "  Python is required to lint staged Python tests."
+        ERRORS=$((ERRORS + 1))
+    elif $PY_BIN scripts/lint_python_test_quality.py $STAGED_PY_TEST_FILES; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}BLOCKED${NC}"
+        echo "  Python test-quality lint failed. Fix issues above before committing."
+        ERRORS=$((ERRORS + 1))
+    fi
+else
+    echo -e "${GREEN}OK (no Python tests staged)${NC}"
+fi
+
 echo ""
 
 if [ $ERRORS -gt 0 ]; then

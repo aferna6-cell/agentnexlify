@@ -108,19 +108,17 @@ const PROMOTION_TYPES = [
 ];
 
 // Admin secret is entered at runtime via prompt — never baked into the JS bundle.
-let _adminSecret = sessionStorage.getItem("_adminSecret") || "";
+let _adminSecret = "";
 
 function getAdminSecret() {
   if (!_adminSecret) {
     _adminSecret = window.prompt("Enter admin secret:") || "";
-    if (_adminSecret) sessionStorage.setItem("_adminSecret", _adminSecret);
   }
   return _adminSecret;
 }
 
 function clearAdminSecret() {
   _adminSecret = "";
-  sessionStorage.removeItem("_adminSecret");
 }
 
 async function apiFetch(path, opts = {}) {
@@ -601,7 +599,9 @@ export default function AdminPromotionsPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {promotions.map((p) => {
-            const tenant = p.tenants || {};
+            const tenant = Array.isArray(p.tenants)
+              ? (p.tenants[0] || {})
+              : (p.tenants || {});
             const isExpired =
               p.expires_at && new Date(p.expires_at) <= new Date();
             return (

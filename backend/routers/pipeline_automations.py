@@ -282,7 +282,7 @@ async def _execute_email_action(
 
     subject = render_template(action.get("subject") or "Update from {{business_name}}", context)
     body_html = render_template(action.get("body") or "<p>Hi {{name}}, we have an update for you.</p>", context)
-    unsub_url = build_unsubscribe_url(lead["id"])
+    unsub_url = build_unsubscribe_url(lead["id"], tenant_id)
 
     await send_email(
         to=lead["email"],

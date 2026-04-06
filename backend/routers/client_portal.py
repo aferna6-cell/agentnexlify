@@ -24,6 +24,14 @@ _JWT_ALGORITHM = "HS256"
 _CLIENT_JWT_EXPIRE_DAYS = 30
 
 
+def _jwt_secret() -> str:
+    jwt_secret = getattr(settings, "jwt_secret_key", "")
+    if isinstance(jwt_secret, str) and jwt_secret:
+        return jwt_secret
+    api_secret = getattr(settings, "api_secret_key", "")
+    return api_secret if isinstance(api_secret, str) else ""
+
+
 # ── Pydantic models ──────────────────────────────────────────
 
 
@@ -472,7 +480,7 @@ def _create_client_token(tenant_id: str, lead_id: str, email: str) -> str:
         "scope": "client",
         "exp": datetime.now(timezone.utc) + timedelta(days=_CLIENT_JWT_EXPIRE_DAYS),
     }
-    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
 def _get_current_client(authorization: str = Header(...)) -> dict:
@@ -481,7 +489,7 @@ def _get_current_client(authorization: str = Header(...)) -> dict:
         raise HTTPException(status_code=401, detail="Invalid authorization header")
     token = authorization[7:]
     try:
-        payload = jwt.decode(token, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+        payload = jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     if payload.get("scope") != "client":

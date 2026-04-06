@@ -349,11 +349,6 @@ export default function App() {
   );
 
   if (!user) {
-    // Allow admin pages to render without tenant auth (they use API secret key)
-    if (currentPage && currentPage.startsWith("admin_")) {
-      const PageComponent = pages[currentPage];
-      return PageComponent ? <PageComponent /> : <div style={{ padding: 40, color: "var(--text-primary)" }}>Page not found</div>;
-    }
     return <LoginPage />;
   }
 

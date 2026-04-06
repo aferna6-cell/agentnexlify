@@ -67,10 +67,14 @@ def _get_jwt_claims(authorization: str = Header(...)) -> dict:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
     from jose import JWTError, jwt as jose_jwt
+    jwt_secret = getattr(settings, "jwt_secret_key", "")
+    if not (isinstance(jwt_secret, str) and jwt_secret):
+        api_secret = getattr(settings, "api_secret_key", "")
+        jwt_secret = api_secret if isinstance(api_secret, str) else ""
     try:
         return jose_jwt.decode(
             authorization.removeprefix("Bearer ").strip(),
-            settings.api_secret_key,
+            jwt_secret,
             algorithms=["HS256"],
         )
     except JWTError:
@@ -253,25 +257,50 @@ async def unsubscribe_lead(
     tid: str = Query("", description="Tenant ID", max_length=50),
 ):
     """Public endpoint clicked from email unsubscribe links."""
-    # Verify signature — try tenant-bound first, then legacy (lead-only) for backwards compat
-    expected_bound = _make_unsub_sig(lid, tid) if tid else ""
-    expected_legacy = _make_unsub_sig(lid, "")
-    valid = (tid and hmac.compare_digest(sig, expected_bound)) or hmac.compare_digest(sig, expected_legacy)
-    if not valid:
-        return HTMLResponse(
-            "<html><body><h2>Invalid unsubscribe link.</h2></body></html>",
-            status_code=400,
-        )
-
     db = get_supabase()
-    result = db.table("leads").select("id, unsubscribed").eq("id", lid).limit(1).execute()
+    result = (
+        db.table("leads")
+        .select("id, tenant_id, unsubscribed")
+        .eq("id", lid)
+        .limit(1)
+        .execute()
+    )
     if not result.data:
         return HTMLResponse(
             "<html><body><h2>Lead not found.</h2></body></html>",
             status_code=404,
         )
 
-    if not result.data[0].get("unsubscribed"):
+    lead = result.data[0]
+    lead_tenant_id = str(lead.get("tenant_id") or "")
+
+    expected_bound = _make_unsub_sig(lid, lead_tenant_id) if lead_tenant_id else ""
+    tid_matches = (not tid) or (tid == lead_tenant_id)
+    valid_bound = (
+        bool(expected_bound)
+        and tid_matches
+        and hmac.compare_digest(sig, expected_bound)
+    )
+
+    allow_legacy = getattr(settings, "allow_legacy_unsubscribe_signatures", False)
+    if isinstance(allow_legacy, str):
+        allow_legacy = allow_legacy.strip().lower() in {"1", "true", "yes", "on"}
+    elif not isinstance(allow_legacy, bool):
+        allow_legacy = False
+
+    valid_legacy = (
+        allow_legacy
+        and not tid
+        and hmac.compare_digest(sig, _make_unsub_sig(lid, ""))
+    )
+
+    if not (valid_bound or valid_legacy):
+        return HTMLResponse(
+            "<html><body><h2>Invalid unsubscribe link.</h2></body></html>",
+            status_code=400,
+        )
+
+    if not lead.get("unsubscribed"):
         db.table("leads").update({
             "unsubscribed": True,
             "unsubscribed_at": datetime.now(timezone.utc).isoformat(),

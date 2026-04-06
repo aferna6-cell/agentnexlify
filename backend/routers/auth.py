@@ -50,6 +50,14 @@ _GOOGLE_SETUP_EXPIRY_HOURS = 1
 _GOOGLE_OAUTH_SCOPE = "openid email profile"
 
 
+def _jwt_secret() -> str:
+    jwt_secret = getattr(settings, "jwt_secret_key", "")
+    if isinstance(jwt_secret, str) and jwt_secret:
+        return jwt_secret
+    api_secret = getattr(settings, "api_secret_key", "")
+    return api_secret if isinstance(api_secret, str) else ""
+
+
 # ── Helpers ──────────────────────────────────────────────────
 
 
@@ -88,12 +96,12 @@ def _create_token(
         payload["name"] = name
     if business_type:
         payload["business_type"] = business_type
-    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
 def _decode_token(token: str) -> dict:
     try:
-        return jwt.decode(token, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+        return jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
@@ -135,12 +143,12 @@ def _encode_google_state(mode: str, plan: str | None = None) -> str:
         "plan": _normalize_paid_plan(plan),
         "exp": datetime.now(timezone.utc) + timedelta(minutes=_GOOGLE_STATE_EXPIRY_MINUTES),
     }
-    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
 def _decode_google_state(state: str) -> dict:
     try:
-        payload = jwt.decode(state, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+        payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=400, detail="Invalid or expired Google OAuth state") from exc
 
@@ -165,12 +173,12 @@ def _encode_google_setup_token(email: str, owner_name: str, plan: str | None = N
         "plan": _normalize_paid_plan(plan),
         "exp": datetime.now(timezone.utc) + timedelta(hours=_GOOGLE_SETUP_EXPIRY_HOURS),
     }
-    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
 def _decode_google_setup_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+        payload = jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=400, detail="Invalid or expired Google signup token") from exc
 

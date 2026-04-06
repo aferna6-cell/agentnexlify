@@ -3,28 +3,34 @@
 
 -- ── RLS for ab_tests tables ──
 ALTER TABLE ab_tests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ab_tests_tenant_isolation ON ab_tests;
 CREATE POLICY ab_tests_tenant_isolation ON ab_tests
     FOR ALL USING (tenant_id = auth.uid());
 
 ALTER TABLE ab_test_variants ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ab_test_variants_isolation ON ab_test_variants;
 CREATE POLICY ab_test_variants_isolation ON ab_test_variants
     FOR ALL USING (ab_test_id IN (SELECT id FROM ab_tests WHERE tenant_id = auth.uid()));
 
 ALTER TABLE ab_test_sends ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ab_test_sends_tenant_isolation ON ab_test_sends;
 CREATE POLICY ab_test_sends_tenant_isolation ON ab_test_sends
     FOR ALL USING (tenant_id = auth.uid());
 
 -- ── RLS for automation_rules tables ──
 ALTER TABLE automation_rules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS automation_rules_tenant_isolation ON automation_rules;
 CREATE POLICY automation_rules_tenant_isolation ON automation_rules
     FOR ALL USING (tenant_id = auth.uid());
 
 ALTER TABLE automation_rule_executions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS automation_rule_executions_tenant_isolation ON automation_rule_executions;
 CREATE POLICY automation_rule_executions_tenant_isolation ON automation_rule_executions
     FOR ALL USING (tenant_id = auth.uid());
 
 -- ── RLS for campaign analytics aggregates ──
 ALTER TABLE campaign_analytics_aggregates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS campaign_analytics_agg_tenant_isolation ON campaign_analytics_aggregates;
 CREATE POLICY campaign_analytics_agg_tenant_isolation ON campaign_analytics_aggregates
     FOR ALL USING (tenant_id = auth.uid());
 

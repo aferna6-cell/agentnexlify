@@ -3,6 +3,8 @@ name: PR Validation
 on:
   pull_request:
     branches: [main, master]
+  push:
+    branches: [main, master]
 
 jobs:
   validate:
@@ -23,6 +25,9 @@ jobs:
 
       - name: Lint JS/TS test quality
         run: npm run lint:test-quality
+
+      - name: Lint Python test quality
+        run: python scripts/lint_python_test_quality.py
 
       - name: Check for dangerous patterns
         run: |

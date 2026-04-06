@@ -103,11 +103,13 @@ def _make_unsub_sig(lead_id: str, tenant_id: str = "") -> str:
     ).hexdigest()[:16]
 
 
-def build_unsubscribe_url(lead_id: str, tenant_id: str = "") -> str:
-    """Build a signed unsubscribe URL for a lead."""
+def build_unsubscribe_url(lead_id: str, tenant_id: str) -> str:
+    """Build a tenant-bound signed unsubscribe URL for a lead."""
+    if not lead_id or not tenant_id:
+        raise ValueError("lead_id and tenant_id are required for unsubscribe links")
     sig = _make_unsub_sig(lead_id, tenant_id)
     base = settings.frontend_url.rstrip("/")
-    tid_param = f"&tid={tenant_id}" if tenant_id else ""
+    tid_param = f"&tid={tenant_id}"
     return f"{base}/api/v1/widget/unsubscribe?lid={lead_id}{tid_param}&sig={sig}"
 
 

@@ -346,7 +346,7 @@ async def execute_step(execution_id: str) -> None:
                     "Failed to load branding for AI email, sending plain", exc_info=True
                 )
 
-        unsub_url = build_unsubscribe_url(lead["id"])
+        unsub_url = build_unsubscribe_url(lead["id"], execution["tenant_id"])
         result = await send_email(
             to=lead["email"],
             subject=subject,
@@ -427,7 +427,7 @@ async def execute_step(execution_id: str) -> None:
                     "Failed to load branding for email, sending plain", exc_info=True
                 )
 
-        unsub_url = build_unsubscribe_url(lead["id"])
+        unsub_url = build_unsubscribe_url(lead["id"], execution["tenant_id"])
         result = await send_email(
             to=lead["email"],
             subject=subject,
@@ -1431,7 +1431,7 @@ async def send_pending_review_requests() -> int:
 
         # Send email review request
         if method in ("email", "both") and appt.get("customer_email"):
-            unsub_url = build_unsubscribe_url(lead_id) if lead_id else ""
+            unsub_url = build_unsubscribe_url(lead_id, tenant_id) if lead_id else ""
             safe_review_link = html.escape(review_link, quote=True)
             subject = f"How was your experience with {business_name}?"
             body = (
@@ -1621,7 +1621,7 @@ async def _send_review_followups(
 
         # Send follow-up email
         if method in ("email", "both") and appt.get("customer_email"):
-            unsub_url = build_unsubscribe_url(lead_id) if lead_id else ""
+            unsub_url = build_unsubscribe_url(lead_id, tenant_id) if lead_id else ""
             safe_review_link = html.escape(review_link, quote=True)
             subject = f"Still happy to help — leave us a review, {customer_name}!"
             body = (
@@ -3734,7 +3734,7 @@ async def _execute_action(
             return {"status": "skipped", "reason": "no_email"}
         subject = action_config.get("subject", "")
         body = action_config.get("body", "")
-        unsub_url = build_unsubscribe_url(lead_data["id"])
+        unsub_url = build_unsubscribe_url(lead_data["id"], tenant_id)
         result = await send_email(
             to=lead_data["email"],
             subject=subject,

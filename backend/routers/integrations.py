@@ -28,6 +28,14 @@ _JWT_ALGORITHM = "HS256"
 _STATE_TOKEN_EXPIRY_MINUTES = 10
 
 
+def _jwt_secret() -> str:
+    jwt_secret = getattr(settings, "jwt_secret_key", "")
+    if isinstance(jwt_secret, str) and jwt_secret:
+        return jwt_secret
+    api_secret = getattr(settings, "api_secret_key", "")
+    return api_secret if isinstance(api_secret, str) else ""
+
+
 # ── Auth helpers ──────────────────────────────────────────────
 
 
@@ -37,13 +45,13 @@ def _encode_state(tenant_id: str) -> str:
         "tenant_id": tenant_id,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
     }
-    return jwt.encode(payload, settings.api_secret_key, algorithm=_JWT_ALGORITHM)
+    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
 def _decode_state(state: str) -> str:
     """Validate the OAuth state token and return the tenant_id."""
     try:
-        payload = jwt.decode(state, settings.api_secret_key, algorithms=[_JWT_ALGORITHM])
+        payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
         tenant_id = payload.get("tenant_id")
         if not tenant_id:
             raise HTTPException(status_code=400, detail="Invalid state: missing tenant_id")
