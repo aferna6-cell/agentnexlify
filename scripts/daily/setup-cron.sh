@@ -7,6 +7,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 MORNING_SCRIPT="$REPO_DIR/scripts/daily/morning-auto.sh"
 EVENING_SCRIPT="$REPO_DIR/scripts/daily/evening-auto.sh"
+SMOKE_SCRIPT="$REPO_DIR/scripts/daily/e2e-smoke.sh"
 
 # Default times
 MORNING_HOUR="${1:-8}"
@@ -24,6 +25,7 @@ echo ""
 # Make scripts executable
 chmod +x "$MORNING_SCRIPT"
 chmod +x "$EVENING_SCRIPT"
+chmod +x "$SMOKE_SCRIPT"
 
 # Check if claude is available
 if ! command -v claude &> /dev/null; then
@@ -49,6 +51,10 @@ printf '%s %s * * 1-5 AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-Morn
 
 echo "# AgentNexLiFy Evening Review (weekdays)" >> "$TMP_CRONTAB"
 printf '%s %s * * 1-5 AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-Evening\n' "$EVENING_MIN" "$EVENING_HOUR" "$claude_bin_q" "$evening_cmd" >> "$TMP_CRONTAB"
+
+printf -v smoke_cmd 'cd %q && bash %q' "$REPO_DIR" "$SMOKE_SCRIPT"
+echo "# AgentNexLiFy Nightly E2E Smoke Test (daily)" >> "$TMP_CRONTAB"
+printf '0 6 * * * bash -lc %q # AgentNexLiFy-E2E-Smoke\n' "$smoke_cmd" >> "$TMP_CRONTAB"
 
 # Install
 crontab "$TMP_CRONTAB"

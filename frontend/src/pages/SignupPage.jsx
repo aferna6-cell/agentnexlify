@@ -146,7 +146,7 @@ export default function SignupPage() {
         }
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = "/setup";
     } catch (err) {
       setError(err.message);
     } finally {

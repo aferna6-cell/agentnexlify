@@ -142,6 +142,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/client/:token" element={<ClientPortalPublicPage />} />
             {/* Public business pages — no auth, standalone */}
             <Route path="/biz/:slug" element={<BusinessPage />} />
+            {/* /setup — onboarding wizard for new tenants */}
+            <Route path="/setup" element={<AuthProvider><OnboardingWizardPage /></AuthProvider>} />
             {/* /onboarding — redirect authenticated users to dashboard, others to signup */}
             <Route path="/onboarding" element={<AuthProvider><OnboardingRedirect /></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}

@@ -93,7 +93,7 @@ export default function WizardStepPlan({ wizardData, onNext, onBack, token, tena
 
       {error && <div style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 10, padding: 14, marginBottom: 20, color: "#f87171", fontSize: "0.9rem" }}>{error}</div>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginBottom: 24 }}>
         {PLANS.map(plan => (
           <div
             key={plan.key}
