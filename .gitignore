@@ -28,3 +28,4 @@ scripts/daily/run-evening.bat
 .gitnexus
 .mcp.json
 .env
+graphify-out/cache/
