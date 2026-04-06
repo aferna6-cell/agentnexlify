@@ -5,10 +5,11 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import anthropic
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
@@ -361,10 +362,14 @@ async def _send_campaign_background(
         campaign_type = campaign["type"]
         campaign_send_records = []
 
-        for lead in leads:
+        for i, lead in enumerate(leads):
             lead_id = lead["id"]
             send_status = "failed"
             recipient = ""
+
+            # Yield control every 10 sends to prevent event loop starvation
+            if i > 0 and i % 10 == 0:
+                await asyncio.sleep(0)
 
             try:
                 if campaign_type == "email":
@@ -372,7 +377,7 @@ async def _send_campaign_background(
                     if not recipient:
                         continue
 
-                    unsub_url = build_unsubscribe_url(lead_id)
+                    unsub_url = build_unsubscribe_url(lead_id, tenant_id)
                     result = await send_email(
                         to=recipient,
                         subject=campaign.get("subject", ""),
@@ -480,6 +485,7 @@ async def send_campaign(
     tenant_id: str,
     campaign_id: str,
     claims: dict = Depends(_get_current_tenant),
+    background_tasks: BackgroundTasks = None,
 ):
     """Execute/send a marketing campaign to matching leads.
 
@@ -554,8 +560,8 @@ async def send_campaign(
             )
 
         # Dispatch the send loop as a non-blocking background task and return immediately
-        asyncio.create_task(
-            _send_campaign_background(campaign_id, tenant_id, leads, campaign)
+        background_tasks.add_task(
+            _send_campaign_background, campaign_id, tenant_id, leads, campaign
         )
 
         return {"status": "sending", "campaign_id": campaign_id}
@@ -752,7 +758,9 @@ async def estimate_recipients(
 
 
 @router.post("/{tenant_id}/generate-email")
+@limiter.limit("10/minute")
 async def generate_campaign_email(
+    request: Request,
     tenant_id: str,
     req: GenerateEmailRequest,
     claims: dict = Depends(_get_current_tenant),

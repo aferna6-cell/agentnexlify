@@ -296,7 +296,9 @@ async def delete_review(
 
 
 @router.post("/{tenant_id}/{review_id}/ai-draft")
+@limiter.limit("10/minute")
 async def generate_ai_draft(
+    request: Request,
     tenant_id: str,
     review_id: str,
     req: AIDraftRequest,

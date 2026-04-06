@@ -381,6 +381,15 @@ async def sign_document(request: Request, token: str, req: SignDocumentRequest):
     if doc["status"] in ("cancelled", "expired"):
         raise HTTPException(status_code=400, detail=f"Document is {doc['status']}")
 
+    # Verify signer identity matches the intended signer on the document
+    expected_signer = (doc.get("signer_name") or "").strip().lower()
+    provided_signer = (req.signer_name or "").strip().lower()
+    if expected_signer and provided_signer and expected_signer != provided_signer:
+        raise HTTPException(
+            status_code=400,
+            detail="Signer name does not match the expected signer for this document",
+        )
+
     # Record signature
     client_ip = request.client.host if request.client else "unknown"
     db.table("documents").update({

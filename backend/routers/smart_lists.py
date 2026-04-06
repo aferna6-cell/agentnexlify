@@ -114,10 +114,12 @@ def _apply_filters(query, filters: dict):
     # search — ILIKE on name, email, phone (uses or_ filter)
     search = filters.get("search")
     if search and isinstance(search, str) and search.strip():
-        term = search.strip()
-        query = query.or_(
-            f"name.ilike.%{term}%,email.ilike.%{term}%,phone.ilike.%{term}%"
-        )
+        import re
+        term = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
+        if term:
+            query = query.or_(
+                f"name.ilike.%{term}%,email.ilike.%{term}%,phone.ilike.%{term}%"
+            )
 
     return query
 

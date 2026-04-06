@@ -1,7 +1,7 @@
 -- 087: Automation Rules Tables
 -- Event-driven automation rules with trigger conditions and action execution
 
-CREATE TABLE automation_rules (
+CREATE TABLE IF NOT EXISTS automation_rules (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE automation_rules (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE automation_rule_executions (
+CREATE TABLE IF NOT EXISTS automation_rule_executions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     automation_rule_id UUID REFERENCES automation_rules(id) ON DELETE CASCADE,
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
@@ -37,8 +37,8 @@ CREATE TABLE automation_rule_executions (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_automation_rules_tenant ON automation_rules(tenant_id);
-CREATE INDEX idx_automation_rules_trigger ON automation_rules(tenant_id, trigger_type);
-CREATE INDEX idx_automation_rules_active ON automation_rules(tenant_id, is_active) WHERE is_active = TRUE;
-CREATE INDEX idx_automation_rule_executions_rule ON automation_rule_executions(automation_rule_id);
-CREATE INDEX idx_automation_rule_executions_tenant ON automation_rule_executions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_automation_rules_tenant ON automation_rules(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_automation_rules_trigger ON automation_rules(tenant_id, trigger_type);
+CREATE INDEX IF NOT EXISTS idx_automation_rules_active ON automation_rules(tenant_id, is_active) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_automation_rule_executions_rule ON automation_rule_executions(automation_rule_id);
+CREATE INDEX IF NOT EXISTS idx_automation_rule_executions_tenant ON automation_rule_executions(tenant_id);

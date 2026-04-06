@@ -89,20 +89,26 @@ def build_branded_email_html(
     )
 
 
-def _make_unsub_sig(lead_id: str) -> str:
-    """HMAC-SHA256 signature for unsubscribe links to prevent abuse."""
+def _make_unsub_sig(lead_id: str, tenant_id: str = "") -> str:
+    """HMAC-SHA256 signature for unsubscribe links to prevent abuse.
+
+    Binds to (lead_id, tenant_id) so a signature from one tenant cannot
+    be used to unsubscribe a lead belonging to another tenant.
+    """
+    msg = f"{lead_id}:{tenant_id}" if tenant_id else lead_id
     return _hmac.new(
         settings.api_secret_key.encode(),
-        lead_id.encode(),
+        msg.encode(),
         hashlib.sha256,
     ).hexdigest()[:16]
 
 
-def build_unsubscribe_url(lead_id: str) -> str:
+def build_unsubscribe_url(lead_id: str, tenant_id: str = "") -> str:
     """Build a signed unsubscribe URL for a lead."""
-    sig = _make_unsub_sig(lead_id)
+    sig = _make_unsub_sig(lead_id, tenant_id)
     base = settings.frontend_url.rstrip("/")
-    return f"{base}/api/v1/widget/unsubscribe?lid={lead_id}&sig={sig}"
+    tid_param = f"&tid={tenant_id}" if tenant_id else ""
+    return f"{base}/api/v1/widget/unsubscribe?lid={lead_id}{tid_param}&sig={sig}"
 
 
 def _check_rate_limit(tenant_id: str) -> bool:

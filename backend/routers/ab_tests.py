@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+import math
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -48,7 +49,6 @@ class ABTestCreate(BaseModel):
 class ABTestUpdate(BaseModel):
     name: str | None = Field(None, max_length=200)
     description: str | None = None
-    status: str | None = None
 
 
 class WinnerSelection(BaseModel):
@@ -222,12 +222,6 @@ async def update_ab_test(
     """Update an A/B test."""
     verify_tenant(claims, tenant_id)
 
-    if req.status and req.status not in VALID_STATUSES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid status. Must be one of: {', '.join(sorted(VALID_STATUSES))}",
-        )
-
     updates = {}
     for k, v in req.model_dump().items():
         if v is not None:
@@ -317,6 +311,7 @@ async def start_ab_test(
             db.table("ab_tests")
             .update({"status": "running", "started_at": now})
             .eq("id", test_id)
+            .eq("tenant_id", tenant_id)
             .execute()
         )
         return result.data[0]
@@ -358,6 +353,7 @@ async def pause_ab_test(
             db.table("ab_tests")
             .update({"status": "paused"})
             .eq("id", test_id)
+            .eq("tenant_id", tenant_id)
             .execute()
         )
         return result.data[0]
@@ -421,6 +417,7 @@ async def complete_ab_test(
                 }
             )
             .eq("id", test_id)
+            .eq("tenant_id", tenant_id)
             .execute()
         )
 
@@ -485,6 +482,7 @@ async def get_ab_test_results(
                 .select("variant_id, outcome")
                 .eq("ab_test_id", test_id)
                 .in_("variant_id", variant_ids)
+                .limit(10000)
                 .execute()
             )
         else:
@@ -576,8 +574,6 @@ def _calculate_significance(
 
 def _normal_cdf(z: float) -> float:
     """Approximation of the normal cumulative distribution function."""
-    import math
-
     t = 1 / (1 + 0.2316419 * abs(z))
     d = 0.3989422804014327 * math.exp(-z * z / 2)
     p = (

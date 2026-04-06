@@ -4,12 +4,13 @@ import logging
 from datetime import datetime, timezone
 
 import anthropic
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.services.llm_runtime import call_claude_messages
 from pydantic import BaseModel, Field
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 
@@ -289,7 +290,9 @@ PLATFORM_SPECS = {
 
 
 @router.post("/{tenant_id}/{content_id}/repurpose")
+@limiter.limit("10/minute")
 async def repurpose_content(
+    request: Request,
     tenant_id: str,
     content_id: str,
     claims: dict = Depends(_get_current_tenant),

@@ -62,6 +62,27 @@ class MockSupabaseTable:
     def order(self, *args, **kwargs):
         return self
 
+    def in_(self, *args):
+        return self
+
+    def or_(self, *args):
+        return self
+
+    def range(self, *args):
+        return self
+
+    def not_(self):
+        return self
+
+    def is_(self, *args):
+        return self
+
+    def lt(self, *args):
+        return self
+
+    def gt(self, *args):
+        return self
+
     def execute(self):
         return MockSupabaseResponse(data=self._data, count=self._count)
 

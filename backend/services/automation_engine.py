@@ -852,11 +852,15 @@ async def send_appointment_reminders() -> int:
         window_start = now + timedelta(hours=window["min_hours"])
         window_end = now + timedelta(hours=window["max_hours"])
 
+        # Use dedicated columns for dedup (falls back to notes field for pre-migration rows)
+        reminder_col = f"reminder_{window['label']}_sent_at"
+
         try:
             appointments = (
                 db.table("appointments")
                 .select(
-                    "id, tenant_id, customer_name, customer_email, customer_phone, start_time, end_time, notes, status"
+                    "id, tenant_id, customer_name, customer_email, customer_phone, "
+                    "start_time, end_time, notes, status, reminder_24h_sent_at, reminder_1h_sent_at"
                 )
                 .gte("start_time", window_start.isoformat())
                 .lte("start_time", window_end.isoformat())
@@ -871,6 +875,9 @@ async def send_appointment_reminders() -> int:
             continue
 
         for appt in appointments.data or []:
+            # Skip if already sent — check column first, fall back to notes field
+            if appt.get(reminder_col):
+                continue
             reminder_tag = f"reminder_{window['label']}_sent"
             notes = appt.get("notes") or ""
             if reminder_tag in notes:
@@ -1002,18 +1009,27 @@ async def send_appointment_reminders() -> int:
                         appt["id"],
                     )
 
-            # Mark reminder as sent in notes
-            updated_notes = (
-                f"{notes}\n{reminder_tag}".strip() if notes else reminder_tag
-            )
+            # Mark reminder as sent using dedicated column (+ notes fallback for compat)
+            update_payload = {
+                reminder_col: datetime.now(timezone.utc).isoformat(),
+            }
             try:
-                db.table("appointments").update({"notes": updated_notes}).eq(
+                db.table("appointments").update(update_payload).eq(
                     "id", appt["id"]
                 ).execute()
             except Exception:
-                logger.exception(
-                    "Failed to mark reminder sent for appointment %s", appt["id"]
+                # Column may not exist yet (pre-migration) — fall back to notes
+                updated_notes = (
+                    f"{notes}\n{reminder_tag}".strip() if notes else reminder_tag
                 )
+                try:
+                    db.table("appointments").update({"notes": updated_notes}).eq(
+                        "id", appt["id"]
+                    ).execute()
+                except Exception:
+                    logger.exception(
+                        "Failed to mark reminder sent for appointment %s", appt["id"]
+                    )
 
     return sent
 

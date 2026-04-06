@@ -250,10 +250,14 @@ async def unsubscribe_lead(
     request: Request,
     lid: str = Query(..., description="Lead ID", max_length=50),
     sig: str = Query(..., description="Signature", max_length=200),
+    tid: str = Query("", description="Tenant ID", max_length=50),
 ):
     """Public endpoint clicked from email unsubscribe links."""
-    expected = _make_unsub_sig(lid)
-    if not hmac.compare_digest(sig, expected):
+    # Verify signature — try tenant-bound first, then legacy (lead-only) for backwards compat
+    expected_bound = _make_unsub_sig(lid, tid) if tid else ""
+    expected_legacy = _make_unsub_sig(lid, "")
+    valid = (tid and hmac.compare_digest(sig, expected_bound)) or hmac.compare_digest(sig, expected_legacy)
+    if not valid:
         return HTMLResponse(
             "<html><body><h2>Invalid unsubscribe link.</h2></body></html>",
             status_code=400,

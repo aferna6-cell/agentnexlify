@@ -28,8 +28,8 @@ VALID_PROMOTION_TYPES = {
 
 def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
     """Verify the caller has the platform admin secret."""
-    secret = x_api_secret or settings.api_secret_key
-    if not secret or secret != settings.api_secret_key:
+    import hmac as _hmac
+    if not x_api_secret or not _hmac.compare_digest(x_api_secret, settings.api_secret_key):
         raise HTTPException(status_code=401, detail="Invalid admin secret")
 
 

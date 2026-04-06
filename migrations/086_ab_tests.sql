@@ -1,7 +1,7 @@
 -- 086: A/B Testing Tables
 -- Support for multivariate marketing campaign testing with variant tracking
 
-CREATE TABLE ab_tests (
+CREATE TABLE IF NOT EXISTS ab_tests (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE ab_tests (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE ab_test_variants (
+CREATE TABLE IF NOT EXISTS ab_test_variants (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     ab_test_id UUID REFERENCES ab_tests(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE ab_test_variants (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE ab_test_sends (
+CREATE TABLE IF NOT EXISTS ab_test_sends (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     ab_test_id UUID REFERENCES ab_tests(id) ON DELETE CASCADE,
     variant_id UUID REFERENCES ab_test_variants(id) ON DELETE CASCADE,
@@ -37,7 +37,7 @@ CREATE TABLE ab_test_sends (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_ab_tests_tenant ON ab_tests(tenant_id);
-CREATE INDEX idx_ab_test_variants_test ON ab_test_variants(ab_test_id);
-CREATE INDEX idx_ab_test_sends_test ON ab_test_sends(ab_test_id);
-CREATE INDEX idx_ab_test_sends_variant ON ab_test_sends(variant_id);
+CREATE INDEX IF NOT EXISTS idx_ab_tests_tenant ON ab_tests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_ab_test_variants_test ON ab_test_variants(ab_test_id);
+CREATE INDEX IF NOT EXISTS idx_ab_test_sends_test ON ab_test_sends(ab_test_id);
+CREATE INDEX IF NOT EXISTS idx_ab_test_sends_variant ON ab_test_sends(variant_id);

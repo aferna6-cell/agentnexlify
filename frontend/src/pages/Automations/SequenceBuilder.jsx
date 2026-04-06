@@ -229,11 +229,9 @@ function EmailPreview({ body, subject }) {
         <div>
           <strong>To:</strong> Alex Johnson &lt;alex@example.com&gt;
         </div>
-        <div
-          dangerouslySetInnerHTML={{
-            __html: `<strong>Subject:</strong> ${resolvedSubject || "(no subject)"}`,
-          }}
-        />
+        <div>
+          <strong>Subject:</strong> {resolvedSubject || "(no subject)"}
+        </div>
       </div>
       <div
         style={{

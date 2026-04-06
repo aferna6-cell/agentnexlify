@@ -1,10 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import DOMPurify from "dompurify";
 import { useAuth } from "../context/AuthContext";
-import { fetchConversations, fetchConversationMessages, updateConversationTags } from "../utils/api/conversations";
+import {
+  fetchConversations,
+  fetchConversationMessages,
+  updateConversationTags,
+} from "../utils/api/conversations";
 import { fetchTeamMembers } from "../utils/api/team";
 import {
-  assignConversation, fetchConversationNotes,
-  createConversationNote, deleteConversationNote, replyToConversation,
+  assignConversation,
+  fetchConversationNotes,
+  createConversationNote,
+  deleteConversationNote,
+  replyToConversation,
 } from "../utils/api/inbox";
 import { addClientNote } from "../utils/api/crm";
 import { fetchSnippets } from "../utils/api/snippets";
@@ -51,44 +59,62 @@ function formatNoteTime(dateStr) {
 
 function _inlineMd(s) {
   // Escape HTML entities to prevent XSS
-  s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  s = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // Bold **text**
-  s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
   // Italic *text* (not inside bold markers)
-  s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+  s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
   // Links [text](url) — only allow https?:// to prevent XSS
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  s = s.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+  );
   return s;
 }
 
 function renderMarkdown(text) {
-  if (!text) return '';
-  const lines = text.split('\n');
+  if (!text) return "";
+  const lines = text.split("\n");
   const out = [];
   let inList = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
-      if (!inList) { out.push('<ul style="margin:4px 0 4px 16px;padding:0;">'); inList = true; }
-      const content = trimmed.replace(/^[-*]\s|^\d+\.\s/, '');
-      out.push('<li>' + _inlineMd(content) + '</li>');
+    if (
+      trimmed.startsWith("- ") ||
+      trimmed.startsWith("* ") ||
+      /^\d+\.\s/.test(trimmed)
+    ) {
+      if (!inList) {
+        out.push('<ul style="margin:4px 0 4px 16px;padding:0;">');
+        inList = true;
+      }
+      const content = trimmed.replace(/^[-*]\s|^\d+\.\s/, "");
+      out.push("<li>" + _inlineMd(content) + "</li>");
     } else {
-      if (inList) { out.push('</ul>'); inList = false; }
-      if (trimmed === '') {
-        if (out.length > 0) out.push('<br>');
+      if (inList) {
+        out.push("</ul>");
+        inList = false;
+      }
+      if (trimmed === "") {
+        if (out.length > 0) out.push("<br>");
       } else {
         out.push(_inlineMd(line));
-        const nextTrimmed = (lines[i + 1] || '').trim();
-        if (nextTrimmed && !nextTrimmed.startsWith('- ') && !nextTrimmed.startsWith('* ') && !/^\d+\.\s/.test(nextTrimmed)) {
-          out.push('<br>');
+        const nextTrimmed = (lines[i + 1] || "").trim();
+        if (
+          nextTrimmed &&
+          !nextTrimmed.startsWith("- ") &&
+          !nextTrimmed.startsWith("* ") &&
+          !/^\d+\.\s/.test(nextTrimmed)
+        ) {
+          out.push("<br>");
         }
       }
     }
   }
-  if (inList) out.push('</ul>');
-  while (out.length && out[out.length - 1] === '<br>') out.pop();
-  return out.join('');
+  if (inList) out.push("</ul>");
+  while (out.length && out[out.length - 1] === "<br>") out.pop();
+  return out.join("");
 }
 
 export default function ConversationsPage({ pageData }) {
@@ -150,7 +176,10 @@ export default function ConversationsPage({ pageData }) {
   useEffect(() => {
     if (!showSnippetPicker) return;
     const handleClickOutside = (e) => {
-      if (snippetPickerRef.current && !snippetPickerRef.current.contains(e.target)) {
+      if (
+        snippetPickerRef.current &&
+        !snippetPickerRef.current.contains(e.target)
+      ) {
         setShowSnippetPicker(false);
         setSnippetSearch("");
       }
@@ -171,7 +200,10 @@ export default function ConversationsPage({ pageData }) {
     setLoading(true);
     try {
       const [convRes, tagRes, teamRes] = await Promise.all([
-        fetchConversations(user.tenantId, token, { channel: channelFilter || undefined, search: serverSearch.length >= 3 ? serverSearch : undefined }),
+        fetchConversations(user.tenantId, token, {
+          channel: channelFilter || undefined,
+          search: serverSearch.length >= 3 ? serverSearch : undefined,
+        }),
         fetchTagDefinitions(user.tenantId, token).catch(() => ({ tags: [] })),
         fetchTeamMembers(user.tenantId, token).catch(() => ({ members: [] })),
       ]);
@@ -197,28 +229,39 @@ export default function ConversationsPage({ pageData }) {
     }
   }, [user?.tenantId, token, channelFilter, serverSearch]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const handleSelect = useCallback(async (conv) => {
-    setSelected(conv.session_id);
-    setLoadingMessages(true);
-    setShowNotes(false);
-    setNotes([]);
-    try {
-      const res = await fetchConversationMessages(user.tenantId, conv.session_id, token);
-      setMessages(res.messages || []);
-    } catch (err) {
-      console.error("Failed to load messages", err);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, [user?.tenantId, token]);
+  const handleSelect = useCallback(
+    async (conv) => {
+      setSelected(conv.session_id);
+      setLoadingMessages(true);
+      setShowNotes(false);
+      setNotes([]);
+      try {
+        const res = await fetchConversationMessages(
+          user.tenantId,
+          conv.session_id,
+          token,
+        );
+        setMessages(res.messages || []);
+      } catch (err) {
+        console.error("Failed to load messages", err);
+      } finally {
+        setLoadingMessages(false);
+      }
+    },
+    [user?.tenantId, token],
+  );
 
   useEffect(() => {
     const targetSessionId = pageData?.sessionId;
     if (!targetSessionId || loading || conversations.length === 0) return;
     if (autoSelectedSessionRef.current === targetSessionId) return;
-    const targetConversation = conversations.find((conv) => conv.session_id === targetSessionId);
+    const targetConversation = conversations.find(
+      (conv) => conv.session_id === targetSessionId,
+    );
     if (!targetConversation) return;
     autoSelectedSessionRef.current = targetSessionId;
     handleSelect(targetConversation);
@@ -252,7 +295,12 @@ export default function ConversationsPage({ pageData }) {
     if (!content || !selected) return;
     setAddingNote(true);
     try {
-      const res = await createConversationNote(user.tenantId, token, selected, content);
+      const res = await createConversationNote(
+        user.tenantId,
+        token,
+        selected,
+        content,
+      );
       // Append the new note; the API may return the note object or we re-fetch
       if (res && res.id) {
         setNotes((prev) => [...prev, res]);
@@ -427,11 +475,18 @@ export default function ConversationsPage({ pageData }) {
   const handleAssign = async (sessionId, assignedTo) => {
     setAssigning(true);
     try {
-      await assignConversation(user.tenantId, token, sessionId, assignedTo || null);
+      await assignConversation(
+        user.tenantId,
+        token,
+        sessionId,
+        assignedTo || null,
+      );
       setConversations((prev) =>
         prev.map((c) =>
-          c.session_id === sessionId ? { ...c, assigned_to: assignedTo || null } : c
-        )
+          c.session_id === sessionId
+            ? { ...c, assigned_to: assignedTo || null }
+            : c,
+        ),
       );
     } catch (err) {
       console.error("Failed to assign conversation", err);
@@ -446,7 +501,12 @@ export default function ConversationsPage({ pageData }) {
     if (!conv?.lead_id) return;
     setAddingLeadNote(true);
     try {
-      await addClientNote(user.tenantId, conv.lead_id, token, leadNoteInput.trim());
+      await addClientNote(
+        user.tenantId,
+        conv.lead_id,
+        token,
+        leadNoteInput.trim(),
+      );
       setLeadNoteInput("");
       setLeadNoteSuccess(true);
       setTimeout(() => setLeadNoteSuccess(false), 3000);
@@ -468,7 +528,9 @@ export default function ConversationsPage({ pageData }) {
       "",
       ...messages.map((m) => {
         const role = m.role === "user" ? "Visitor" : "AI";
-        const time = m.created_at ? new Date(m.created_at).toLocaleString() : "";
+        const time = m.created_at
+          ? new Date(m.created_at).toLocaleString()
+          : "";
         return `[${time}] ${role}:\n${m.content}\n`;
       }),
     ];
@@ -490,7 +552,9 @@ export default function ConversationsPage({ pageData }) {
     try {
       await updateConversationTags(user.tenantId, sessionId, token, newTags);
       setConversations((prev) =>
-        prev.map((c) => (c.session_id === sessionId ? { ...c, tags: newTags } : c))
+        prev.map((c) =>
+          c.session_id === sessionId ? { ...c, tags: newTags } : c,
+        ),
       );
       setTagInput("");
     } catch (err) {
@@ -505,7 +569,9 @@ export default function ConversationsPage({ pageData }) {
     try {
       await updateConversationTags(user.tenantId, sessionId, token, newTags);
       setConversations((prev) =>
-        prev.map((c) => (c.session_id === sessionId ? { ...c, tags: newTags } : c))
+        prev.map((c) =>
+          c.session_id === sessionId ? { ...c, tags: newTags } : c,
+        ),
       );
     } catch (err) {
       console.error("Failed to remove tag", err);
@@ -572,7 +638,11 @@ export default function ConversationsPage({ pageData }) {
     }
     if (search) {
       const q = search.toLowerCase();
-      if (!(c.lead_name || "").toLowerCase().includes(q) && !(c.preview || "").toLowerCase().includes(q)) return false;
+      if (
+        !(c.lead_name || "").toLowerCase().includes(q) &&
+        !(c.preview || "").toLowerCase().includes(q)
+      )
+        return false;
     }
     if (tagFilter && !(c.tags || []).includes(tagFilter)) return false;
     return true;
@@ -590,7 +660,10 @@ export default function ConversationsPage({ pageData }) {
       <div className="page-header">
         <div>
           <h1>Conversations</h1>
-          <p>{conversations.length} chat session{conversations.length !== 1 ? "s" : ""}</p>
+          <p>
+            {conversations.length} chat session
+            {conversations.length !== 1 ? "s" : ""}
+          </p>
         </div>
         <button
           className="btn-primary"
@@ -616,21 +689,33 @@ export default function ConversationsPage({ pageData }) {
             <h3 style={{ margin: "0 0 16px" }}>New SMS Message</h3>
 
             {smsError && (
-              <div style={{
-                marginBottom: 12, padding: "8px 12px", borderRadius: 6, fontSize: "0.85rem",
-                background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
-                color: "var(--red, #ef4444)",
-              }}>
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  fontSize: "0.85rem",
+                  background: "rgba(239,68,68,0.08)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  color: "var(--red, #ef4444)",
+                }}
+              >
                 {smsError}
               </div>
             )}
 
             {smsSent && (
-              <div style={{
-                marginBottom: 12, padding: "8px 12px", borderRadius: 6, fontSize: "0.85rem",
-                background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)",
-                color: "var(--green, #4ade80)",
-              }}>
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  fontSize: "0.85rem",
+                  background: "rgba(34,197,94,0.08)",
+                  border: "1px solid rgba(34,197,94,0.2)",
+                  color: "var(--green, #4ade80)",
+                }}
+              >
                 SMS sent successfully.
               </div>
             )}
@@ -687,13 +772,15 @@ export default function ConversationsPage({ pageData }) {
       )}
 
       {conversations.length === 0 ? (
-        <div style={{
-          background: "var(--bg-secondary)",
-          borderRadius: 12,
-          padding: 48,
-          textAlign: "center",
-          margin: "8px 0",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-secondary)",
+            borderRadius: 12,
+            padding: 48,
+            textAlign: "center",
+            margin: "8px 0",
+          }}
+        >
           <svg
             width="24"
             height="24"
@@ -707,25 +794,43 @@ export default function ConversationsPage({ pageData }) {
           >
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--text-primary)", marginBottom: 8 }}>
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: "1rem",
+              color: "var(--text-primary)",
+              marginBottom: 8,
+            }}
+          >
             No conversations yet
           </div>
-          <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", maxWidth: 420, margin: "0 auto" }}>
-            Conversations from your chat widget will appear here in real time. Once a visitor starts chatting, you'll see their messages, lead info, and AI responses.
+          <div
+            style={{
+              fontSize: "0.875rem",
+              color: "var(--text-muted)",
+              maxWidth: 420,
+              margin: "0 auto",
+            }}
+          >
+            Conversations from your chat widget will appear here in real time.
+            Once a visitor starts chatting, you'll see their messages, lead
+            info, and AI responses.
           </div>
         </div>
       ) : (
         <div className="conversations-layout">
           <div className="conv-sidebar">
             {/* Inbox filter toggle */}
-            <div style={{
-              display: "flex",
-              gap: 0,
-              marginBottom: 8,
-              borderRadius: 8,
-              overflow: "hidden",
-              border: "1px solid var(--border)",
-            }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 0,
+                marginBottom: 8,
+                borderRadius: 8,
+                overflow: "hidden",
+                border: "1px solid var(--border)",
+              }}
+            >
               <button
                 onClick={() => setInboxFilter("all")}
                 style={{
@@ -735,12 +840,12 @@ export default function ConversationsPage({ pageData }) {
                   fontWeight: 600,
                   border: "none",
                   cursor: "pointer",
-                  background: inboxFilter === "all"
-                    ? "var(--accent, #00BFFF)"
-                    : "var(--bg-secondary)",
-                  color: inboxFilter === "all"
-                    ? "#fff"
-                    : "var(--text-secondary)",
+                  background:
+                    inboxFilter === "all"
+                      ? "var(--accent, #00BFFF)"
+                      : "var(--bg-secondary)",
+                  color:
+                    inboxFilter === "all" ? "#fff" : "var(--text-secondary)",
                   transition: "background 0.15s, color 0.15s",
                 }}
               >
@@ -756,12 +861,12 @@ export default function ConversationsPage({ pageData }) {
                   border: "none",
                   borderLeft: "1px solid var(--border)",
                   cursor: "pointer",
-                  background: inboxFilter === "mine"
-                    ? "var(--accent, #00BFFF)"
-                    : "var(--bg-secondary)",
-                  color: inboxFilter === "mine"
-                    ? "#fff"
-                    : "var(--text-secondary)",
+                  background:
+                    inboxFilter === "mine"
+                      ? "var(--accent, #00BFFF)"
+                      : "var(--bg-secondary)",
+                  color:
+                    inboxFilter === "mine" ? "#fff" : "var(--text-secondary)",
                   transition: "background 0.15s, color 0.15s",
                 }}
               >
@@ -783,8 +888,20 @@ export default function ConversationsPage({ pageData }) {
             />
             <select
               value={channelFilter}
-              onChange={(e) => { setChannelFilter(e.target.value); setSelected(null); }}
-              style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
+              onChange={(e) => {
+                setChannelFilter(e.target.value);
+                setSelected(null);
+              }}
+              style={{
+                width: "100%",
+                padding: "6px 8px",
+                marginBottom: 8,
+                borderRadius: 6,
+                border: "1px solid var(--border)",
+                background: "var(--bg-secondary)",
+                color: "var(--text-primary)",
+                fontSize: "0.8rem",
+              }}
             >
               <option value="">All Channels</option>
               <option value="widget">Widget (Chat)</option>
@@ -795,11 +912,22 @@ export default function ConversationsPage({ pageData }) {
               <select
                 value={tagFilter}
                 onChange={(e) => setTagFilter(e.target.value)}
-                style={{ width: "100%", padding: "6px 8px", marginBottom: 8, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)", fontSize: "0.8rem" }}
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  marginBottom: 8,
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-primary)",
+                  fontSize: "0.8rem",
+                }}
               >
                 <option value="">All tags ({conversations.length})</option>
                 {allTags.map((t) => (
-                  <option key={t} value={t}>{t} ({tagCounts[t]})</option>
+                  <option key={t} value={t}>
+                    {t} ({tagCounts[t]})
+                  </option>
                 ))}
               </select>
             )}
@@ -813,62 +941,102 @@ export default function ConversationsPage({ pageData }) {
                     onClick={() => handleSelect(c)}
                   >
                     <div className="conv-item-header">
-                      <span className="conv-item-name">{c.lead_name || "Visitor"}</span>
-                      <span className="conv-item-time">{timeAgo(c.last_message_at)}</span>
+                      <span className="conv-item-name">
+                        {c.lead_name || "Visitor"}
+                      </span>
+                      <span className="conv-item-time">
+                        {timeAgo(c.last_message_at)}
+                      </span>
                     </div>
-                    <div className="conv-item-preview">{c.preview || c.last_message || "No messages"}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <span className="conv-item-count">{c.message_count} message{c.message_count !== 1 ? "s" : ""}</span>
+                    <div className="conv-item-preview">
+                      {c.preview || c.last_message || "No messages"}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: 2,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                        }}
+                      >
+                        <span className="conv-item-count">
+                          {c.message_count} message
+                          {c.message_count !== 1 ? "s" : ""}
+                        </span>
                         {(() => {
                           const ch = c.channel || "widget";
-                          const badge = CHANNEL_BADGE[ch] || CHANNEL_BADGE.widget;
+                          const badge =
+                            CHANNEL_BADGE[ch] || CHANNEL_BADGE.widget;
                           return (
-                            <span style={{
-                              fontSize: "0.62rem",
-                              fontWeight: 600,
-                              padding: "1px 5px",
-                              borderRadius: 4,
-                              color: badge.color,
-                              background: badge.bg,
-                              lineHeight: 1.4,
-                              flexShrink: 0,
-                            }}>
+                            <span
+                              style={{
+                                fontSize: "0.62rem",
+                                fontWeight: 600,
+                                padding: "1px 5px",
+                                borderRadius: 4,
+                                color: badge.color,
+                                background: badge.bg,
+                                lineHeight: 1.4,
+                                flexShrink: 0,
+                              }}
+                            >
                               {badge.label}
                             </span>
                           );
                         })()}
                         {c.lead_id && (
-                          <span style={{
-                            fontSize: "0.62rem",
-                            fontWeight: 600,
-                            padding: "1px 5px",
-                            borderRadius: 4,
-                            color: "#4caf50",
-                            background: "rgba(76, 175, 80, 0.12)",
-                            lineHeight: 1.4,
-                            flexShrink: 0,
-                          }}>
+                          <span
+                            style={{
+                              fontSize: "0.62rem",
+                              fontWeight: 600,
+                              padding: "1px 5px",
+                              borderRadius: 4,
+                              color: "#4caf50",
+                              background: "rgba(76, 175, 80, 0.12)",
+                              lineHeight: 1.4,
+                              flexShrink: 0,
+                            }}
+                          >
                             Lead
                           </span>
                         )}
                       </div>
-                      <span style={{
-                        fontSize: "0.7rem",
-                        color: assigneeName ? "var(--accent, #00BFFF)" : "var(--text-muted)",
-                        fontStyle: assigneeName ? "normal" : "italic",
-                        maxWidth: 100,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}>
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          color: assigneeName
+                            ? "var(--accent, #00BFFF)"
+                            : "var(--text-muted)",
+                          fontStyle: assigneeName ? "normal" : "italic",
+                          maxWidth: 100,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {assigneeName || "Unassigned"}
                       </span>
                     </div>
                     {(c.tags || []).length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 4,
+                          marginTop: 4,
+                        }}
+                      >
                         {c.tags.map((tag) => (
-                          <span key={tag} style={tagPillStyle(tag)}>{tag}</span>
+                          <span key={tag} style={tagPillStyle(tag)}>
+                            {tag}
+                          </span>
                         ))}
                       </div>
                     )}
@@ -876,14 +1044,20 @@ export default function ConversationsPage({ pageData }) {
                 );
               })}
               {filtered.length === 0 && (
-                <div style={{ padding: "1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                <div
+                  style={{
+                    padding: "1rem",
+                    color: "var(--text-muted)",
+                    fontSize: "0.85rem",
+                  }}
+                >
                   {inboxFilter === "mine" && myCount === 0
-                    ? "No conversations assigned to you yet. Assign conversations from the conversation view, or switch to \"All\" to see all conversations."
+                    ? 'No conversations assigned to you yet. Assign conversations from the conversation view, or switch to "All" to see all conversations.'
                     : channelFilter
-                    ? `No ${CHANNEL_BADGE[channelFilter]?.label || channelFilter} conversations found. Switch to "All Channels" to see all conversations.`
-                    : tagFilter
-                    ? `No conversations tagged "${tagFilter}". Try selecting "All tags" to clear the filter.`
-                    : "No conversations match your search."}
+                      ? `No ${CHANNEL_BADGE[channelFilter]?.label || channelFilter} conversations found. Switch to "All Channels" to see all conversations.`
+                      : tagFilter
+                        ? `No conversations tagged "${tagFilter}". Try selecting "All tags" to clear the filter.`
+                        : "No conversations match your search."}
                 </div>
               )}
             </div>
@@ -891,17 +1065,46 @@ export default function ConversationsPage({ pageData }) {
 
           <div className="conv-messages">
             {!selected ? (
-              <div className="conv-empty-state">Select a conversation to view messages</div>
+              <div className="conv-empty-state">
+                Select a conversation to view messages
+              </div>
             ) : loadingMessages ? (
               <div className="conv-empty-state">Loading...</div>
             ) : (
               <div className="conv-message-list">
                 {/* Toolbar: Assign dropdown + Tag management + Export + Notes toggle */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 0 0.5rem", gap: 8, flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "0 0 0.5rem",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      flex: 1,
+                    }}
+                  >
                     {/* Assign to dropdown */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>Assign:</label>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <label
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Assign:
+                      </label>
                       <select
                         value={selectedConv?.assigned_to || ""}
                         onChange={(e) => handleAssign(selected, e.target.value)}
@@ -931,55 +1134,98 @@ export default function ConversationsPage({ pageData }) {
                     </div>
 
                     {/* Divider */}
-                    <span style={{ width: 1, height: 16, background: "var(--border)", flexShrink: 0 }} />
+                    <span
+                      style={{
+                        width: 1,
+                        height: 16,
+                        background: "var(--border)",
+                        flexShrink: 0,
+                      }}
+                    />
 
                     {/* Tags */}
                     {(selectedConv?.tags || []).map((tag) => {
                       const color = getTagColor(tag);
-                      const pillBg = color ? color + "26" : "var(--accent-dim, rgba(0,191,255,0.15))";
+                      const pillBg = color
+                        ? color + "26"
+                        : "var(--accent-dim, rgba(0,191,255,0.15))";
                       const pillColor = color || "var(--accent, #00BFFF)";
                       return (
-                        <span key={tag} style={{
-                          display: "inline-flex", alignItems: "center", gap: 4,
-                          padding: "2px 8px", borderRadius: 10, fontSize: "0.75rem",
-                          background: pillBg,
-                          color: pillColor,
-                        }}>
+                        <span
+                          key={tag}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "2px 8px",
+                            borderRadius: 10,
+                            fontSize: "0.75rem",
+                            background: pillBg,
+                            color: pillColor,
+                          }}
+                        >
                           {tag}
-                          <span onClick={() => removeTag(selected, tag)} style={{ cursor: "pointer", fontWeight: 700 }}>&times;</span>
+                          <span
+                            onClick={() => removeTag(selected, tag)}
+                            style={{ cursor: "pointer", fontWeight: 700 }}
+                          >
+                            &times;
+                          </span>
                         </span>
                       );
                     })}
                     <input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") addTag(selected); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addTag(selected);
+                      }}
                       placeholder="Add tag..."
-                      style={{ width: 80, padding: "2px 6px", fontSize: "0.75rem", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+                      style={{
+                        width: 80,
+                        padding: "2px 6px",
+                        fontSize: "0.75rem",
+                        borderRadius: 6,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-secondary)",
+                        color: "var(--text-primary)",
+                      }}
                     />
                   </div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <div
+                    style={{ display: "flex", gap: 6, alignItems: "center" }}
+                  >
                     <button
                       className="btn-sm"
                       onClick={toggleNotes}
                       style={{
-                        background: showNotes ? "rgba(139,92,246,0.15)" : undefined,
+                        background: showNotes
+                          ? "rgba(139,92,246,0.15)"
+                          : undefined,
                         color: showNotes ? "rgba(167,139,250,1)" : undefined,
-                        borderColor: showNotes ? "rgba(139,92,246,0.3)" : undefined,
+                        borderColor: showNotes
+                          ? "rgba(139,92,246,0.3)"
+                          : undefined,
                       }}
                     >
                       Notes {notes.length > 0 ? `(${notes.length})` : ""}
                     </button>
                     {(() => {
-                      const conv = conversations.find((c) => c.session_id === selected);
+                      const conv = conversations.find(
+                        (c) => c.session_id === selected,
+                      );
                       return conv?.lead_id ? (
                         <button
                           className="btn-sm"
                           onClick={() => setShowLeadNote(!showLeadNote)}
                           style={{
-                            background: showLeadNote ? "rgba(16,185,129,0.15)" : undefined,
+                            background: showLeadNote
+                              ? "rgba(16,185,129,0.15)"
+                              : undefined,
                             color: showLeadNote ? "#10b981" : undefined,
-                            borderColor: showLeadNote ? "rgba(16,185,129,0.3)" : undefined,
+                            borderColor: showLeadNote
+                              ? "rgba(16,185,129,0.3)"
+                              : undefined,
                           }}
                           title="Add a note to the linked lead"
                         >
@@ -988,7 +1234,9 @@ export default function ConversationsPage({ pageData }) {
                       ) : null;
                     })()}
                     {messages.length > 0 && (
-                      <button className="btn-sm" onClick={exportConversation}>Export</button>
+                      <button className="btn-sm" onClick={exportConversation}>
+                        Export
+                      </button>
                     )}
                   </div>
                 </div>
@@ -996,72 +1244,127 @@ export default function ConversationsPage({ pageData }) {
                 {/* Chat messages */}
                 {messages.map((m) => (
                   <div key={m.id} className={`conv-msg ${m.role}`}>
-                    <div className="conv-msg-role">{m.role === "user" ? "Visitor" : "AI"}</div>
-                  {m.role === "assistant" ? (
-                    <div className="conv-msg-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content || '') }} />
-                  ) : (
-                    <div className="conv-msg-content">{m.content}</div>
-                  )}
+                    <div className="conv-msg-role">
+                      {m.role === "user" ? "Visitor" : "AI"}
+                    </div>
+                    {m.role === "assistant" ? (
+                      <div
+                        className="conv-msg-content"
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(
+                            renderMarkdown(m.content || ""),
+                          ),
+                        }}
+                      />
+                    ) : (
+                      <div className="conv-msg-content">{m.content}</div>
+                    )}
                     <div className="conv-msg-time">{timeAgo(m.created_at)}</div>
                   </div>
                 ))}
                 {messages.length === 0 && (
-                  <div className="conv-empty-state">No messages in this conversation.</div>
+                  <div className="conv-empty-state">
+                    No messages in this conversation.
+                  </div>
                 )}
 
                 {/* Lead Captured banner */}
-                {selected && (() => {
-                  const conv = conversations.find((c) => c.session_id === selected);
-                  return conv?.lead_id ? (
-                    <div style={{
-                      background: "rgba(76, 175, 80, 0.08)",
-                      border: "1px solid rgba(76, 175, 80, 0.25)",
-                      borderRadius: 8,
-                      padding: "8px 12px",
-                      margin: "10px 0 0",
-                      textAlign: "center",
-                      fontSize: "0.8rem",
-                      color: "#4caf50",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 6,
-                    }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      <span style={{ fontWeight: 600 }}>Lead Captured</span>
-                      <span style={{ color: "rgba(76, 175, 80, 0.7)", fontWeight: 400 }}>
-                        {conv.lead_name ? `\u2014 ${conv.lead_name}` : "\u2014 Contact info detected"}
-                      </span>
-                    </div>
-                  ) : null;
-                })()}
+                {selected &&
+                  (() => {
+                    const conv = conversations.find(
+                      (c) => c.session_id === selected,
+                    );
+                    return conv?.lead_id ? (
+                      <div
+                        style={{
+                          background: "rgba(76, 175, 80, 0.08)",
+                          border: "1px solid rgba(76, 175, 80, 0.25)",
+                          borderRadius: 8,
+                          padding: "8px 12px",
+                          margin: "10px 0 0",
+                          textAlign: "center",
+                          fontSize: "0.8rem",
+                          color: "#4caf50",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#4caf50"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span style={{ fontWeight: 600 }}>Lead Captured</span>
+                        <span
+                          style={{
+                            color: "rgba(76, 175, 80, 0.7)",
+                            fontWeight: 400,
+                          }}
+                        >
+                          {conv.lead_name
+                            ? `\u2014 ${conv.lead_name}`
+                            : "\u2014 Contact info detected"}
+                        </span>
+                      </div>
+                    ) : null;
+                  })()}
 
                 {/* Internal Notes Panel */}
                 {showNotes && (
-                  <div style={{
-                    marginTop: "1rem",
-                    padding: "1rem",
-                    borderRadius: 10,
-                    background: "rgba(139,92,246,0.06)",
-                    border: "1px solid rgba(139,92,246,0.2)",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      padding: "1rem",
+                      borderRadius: 10,
+                      background: "rgba(139,92,246,0.06)",
+                      border: "1px solid rgba(139,92,246,0.2)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            color: "var(--text-primary)",
+                          }}
+                        >
                           Internal Notes
                         </span>
-                        <span style={{
-                          fontSize: "0.65rem",
-                          padding: "2px 6px",
-                          borderRadius: 4,
-                          background: "rgba(139,92,246,0.15)",
-                          color: "rgba(167,139,250,1)",
-                          fontWeight: 600,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
-                        }}>
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                            background: "rgba(139,92,246,0.15)",
+                            color: "rgba(167,139,250,1)",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
                           Internal
                         </span>
                       </div>
@@ -1083,28 +1386,71 @@ export default function ConversationsPage({ pageData }) {
                     </div>
 
                     {loadingNotes ? (
-                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "0.5rem 0" }}>
+                      <div
+                        style={{
+                          color: "var(--text-muted)",
+                          fontSize: "0.85rem",
+                          padding: "0.5rem 0",
+                        }}
+                      >
                         Loading notes...
                       </div>
                     ) : notes.length === 0 ? (
-                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "0.5rem 0" }}>
-                        No internal notes yet. Use notes to share context with your team about this conversation.
+                      <div
+                        style={{
+                          color: "var(--text-muted)",
+                          fontSize: "0.85rem",
+                          padding: "0.5rem 0",
+                        }}
+                      >
+                        No internal notes yet. Use notes to share context with
+                        your team about this conversation.
                       </div>
                     ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "0.75rem" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                          marginBottom: "0.75rem",
+                        }}
+                      >
                         {notes.map((note) => (
-                          <div key={note.id} style={{
-                            padding: "10px 12px",
-                            borderRadius: 8,
-                            background: "rgba(139,92,246,0.08)",
-                            border: "1px solid rgba(139,92,246,0.12)",
-                          }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <div
+                            key={note.id}
+                            style={{
+                              padding: "10px 12px",
+                              borderRadius: 8,
+                              background: "rgba(139,92,246,0.08)",
+                              border: "1px solid rgba(139,92,246,0.12)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                              }}
+                            >
                               <div>
-                                <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "rgba(167,139,250,1)" }}>
-                                  {note.author_name || note.author_email || "Team Member"}
+                                <span
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    fontWeight: 600,
+                                    color: "rgba(167,139,250,1)",
+                                  }}
+                                >
+                                  {note.author_name ||
+                                    note.author_email ||
+                                    "Team Member"}
                                 </span>
-                                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: 8 }}>
+                                <span
+                                  style={{
+                                    fontSize: "0.7rem",
+                                    color: "var(--text-muted)",
+                                    marginLeft: 8,
+                                  }}
+                                >
                                   {formatNoteTime(note.created_at)}
                                 </span>
                               </div>
@@ -1124,7 +1470,15 @@ export default function ConversationsPage({ pageData }) {
                                 &times;
                               </button>
                             </div>
-                            <div style={{ fontSize: "0.85rem", color: "var(--text-primary)", marginTop: 4, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                            <div
+                              style={{
+                                fontSize: "0.85rem",
+                                color: "var(--text-primary)",
+                                marginTop: 4,
+                                lineHeight: 1.5,
+                                whiteSpace: "pre-wrap",
+                              }}
+                            >
                               {note.content}
                             </div>
                           </div>
@@ -1133,7 +1487,13 @@ export default function ConversationsPage({ pageData }) {
                     )}
 
                     {/* Add note input */}
-                    <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "flex-end",
+                      }}
+                    >
                       <textarea
                         value={noteInput}
                         onChange={(e) => setNoteInput(e.target.value)}
@@ -1176,101 +1536,186 @@ export default function ConversationsPage({ pageData }) {
                 )}
 
                 {/* Quick Lead Note Panel */}
-                {showLeadNote && (() => {
-                  const conv = conversations.find((c) => c.session_id === selected);
-                  return conv?.lead_id ? (
-                    <div style={{
-                      marginTop: "1rem",
-                      padding: "1rem",
-                      borderRadius: 10,
-                      background: "rgba(16,185,129,0.06)",
-                      border: "1px solid rgba(16,185,129,0.2)",
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>
-                            Quick Lead Note
-                          </span>
-                          <span style={{
-                            fontSize: "0.65rem", padding: "2px 6px", borderRadius: 4,
-                            background: "rgba(16,185,129,0.15)", color: "#10b981",
-                            fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px",
-                          }}>
-                            {conv.lead_name || "Lead"}
-                          </span>
-                        </div>
-                        <button onClick={() => setShowLeadNote(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "1rem", padding: "0 4px", lineHeight: 1 }} title="Close">&times;</button>
-                      </div>
-                      {leadNoteSuccess && (
-                        <div style={{ color: "#10b981", fontSize: "0.8rem", marginBottom: "0.5rem", fontWeight: 500 }}>
-                          Note added to lead successfully!
-                        </div>
-                      )}
-                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                        <textarea
-                          value={leadNoteInput}
-                          onChange={(e) => setLeadNoteInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddLeadNote(); } }}
-                          placeholder="Add a note about this lead..."
-                          rows={2}
+                {showLeadNote &&
+                  (() => {
+                    const conv = conversations.find(
+                      (c) => c.session_id === selected,
+                    );
+                    return conv?.lead_id ? (
+                      <div
+                        style={{
+                          marginTop: "1rem",
+                          padding: "1rem",
+                          borderRadius: 10,
+                          background: "rgba(16,185,129,0.06)",
+                          border: "1px solid rgba(16,185,129,0.2)",
+                        }}
+                      >
+                        <div
                           style={{
-                            flex: 1, padding: "8px 10px", fontSize: "0.85rem", borderRadius: 8,
-                            border: "1px solid rgba(16,185,129,0.3)", background: "var(--bg-primary)",
-                            color: "var(--text-primary)", resize: "vertical",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "0.5rem",
                           }}
-                        />
-                        <button
-                          className="btn-primary"
-                          onClick={handleAddLeadNote}
-                          disabled={addingLeadNote || !leadNoteInput.trim()}
-                          style={{ padding: "8px 14px", fontSize: "0.8rem", whiteSpace: "nowrap", height: "fit-content" }}
                         >
-                          {addingLeadNote ? "Adding..." : "Save"}
-                        </button>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                fontSize: "0.9rem",
+                                color: "var(--text-primary)",
+                              }}
+                            >
+                              Quick Lead Note
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                                background: "rgba(16,185,129,0.15)",
+                                color: "#10b981",
+                                fontWeight: 600,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                              }}
+                            >
+                              {conv.lead_name || "Lead"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => setShowLeadNote(false)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "var(--text-muted)",
+                              cursor: "pointer",
+                              fontSize: "1rem",
+                              padding: "0 4px",
+                              lineHeight: 1,
+                            }}
+                            title="Close"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                        {leadNoteSuccess && (
+                          <div
+                            style={{
+                              color: "#10b981",
+                              fontSize: "0.8rem",
+                              marginBottom: "0.5rem",
+                              fontWeight: 500,
+                            }}
+                          >
+                            Note added to lead successfully!
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <textarea
+                            value={leadNoteInput}
+                            onChange={(e) => setLeadNoteInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleAddLeadNote();
+                              }
+                            }}
+                            placeholder="Add a note about this lead..."
+                            rows={2}
+                            style={{
+                              flex: 1,
+                              padding: "8px 10px",
+                              fontSize: "0.85rem",
+                              borderRadius: 8,
+                              border: "1px solid rgba(16,185,129,0.3)",
+                              background: "var(--bg-primary)",
+                              color: "var(--text-primary)",
+                              resize: "vertical",
+                            }}
+                          />
+                          <button
+                            className="btn-primary"
+                            onClick={handleAddLeadNote}
+                            disabled={addingLeadNote || !leadNoteInput.trim()}
+                            style={{
+                              padding: "8px 14px",
+                              fontSize: "0.8rem",
+                              whiteSpace: "nowrap",
+                              height: "fit-content",
+                            }}
+                          >
+                            {addingLeadNote ? "Adding..." : "Save"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : null;
-                })()}
+                    ) : null;
+                  })()}
 
                 {/* Reply area with snippet picker */}
-                <div style={{
-                  marginTop: "1rem",
-                  padding: "0.75rem",
-                  borderRadius: 10,
-                  background: "var(--bg-secondary)",
-                  border: "1px solid var(--border)",
-                  position: "relative",
-                }}>
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "0.75rem",
+                    borderRadius: 10,
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
+                    position: "relative",
+                  }}
+                >
                   {/* Channel indicator for outbound reply */}
                   {(() => {
                     const convChannel = selectedConv?.channel || "widget";
-                    const badge = CHANNEL_BADGE[convChannel] || CHANNEL_BADGE.widget;
+                    const badge =
+                      CHANNEL_BADGE[convChannel] || CHANNEL_BADGE.widget;
                     return (
-                      <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 5,
-                        marginBottom: 8,
-                        fontSize: "0.72rem",
-                        color: "var(--text-muted)",
-                      }}>
-                        <span>Reply via</span>
-                        <span style={{
-                          fontWeight: 600,
-                          padding: "1px 6px",
-                          borderRadius: 4,
-                          color: badge.color,
-                          background: badge.bg,
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          marginBottom: 8,
                           fontSize: "0.72rem",
-                        }}>
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        <span>Reply via</span>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            color: badge.color,
+                            background: badge.bg,
+                            fontSize: "0.72rem",
+                          }}
+                        >
                           {badge.label}
                         </span>
                       </div>
                     );
                   })()}
-                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "flex-end" }}
+                  >
                     {/* Snippet picker button */}
-                    <div style={{ position: "relative" }} ref={snippetPickerRef}>
+                    <div
+                      style={{ position: "relative" }}
+                      ref={snippetPickerRef}
+                    >
                       <button
                         onClick={toggleSnippetPicker}
                         title="Insert snippet (or type / in the reply box)"
@@ -1297,54 +1742,73 @@ export default function ConversationsPage({ pageData }) {
                           transition: "all 0.15s ease",
                         }}
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
                           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                         </svg>
                       </button>
 
                       {/* Snippet picker dropdown */}
                       {showSnippetPicker && (
-                        <div style={{
-                          position: "absolute",
-                          bottom: "calc(100% + 8px)",
-                          left: 0,
-                          width: 360,
-                          maxHeight: 380,
-                          background: "var(--bg-primary)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 12,
-                          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                          display: "flex",
-                          flexDirection: "column",
-                          overflow: "hidden",
-                          zIndex: 100,
-                        }}>
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: "calc(100% + 8px)",
+                            left: 0,
+                            width: 360,
+                            maxHeight: 380,
+                            background: "var(--bg-primary)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 12,
+                            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                            display: "flex",
+                            flexDirection: "column",
+                            overflow: "hidden",
+                            zIndex: 100,
+                          }}
+                        >
                           {/* Picker header */}
-                          <div style={{
-                            padding: "10px 12px",
-                            borderBottom: "1px solid var(--border)",
-                          }}>
-                            <div style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              marginBottom: 8,
-                            }}>
-                              <span style={{
-                                fontWeight: 600,
-                                fontSize: "0.85rem",
-                                color: "var(--text-primary)",
-                              }}>
+                          <div
+                            style={{
+                              padding: "10px 12px",
+                              borderBottom: "1px solid var(--border)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: 8,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: "0.85rem",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
                                 Insert Snippet
                               </span>
-                              <span style={{
-                                fontSize: "0.65rem",
-                                color: "var(--text-muted)",
-                                padding: "2px 6px",
-                                borderRadius: 4,
-                                background: "var(--bg-secondary)",
-                                fontFamily: "monospace",
-                              }}>
+                              <span
+                                style={{
+                                  fontSize: "0.65rem",
+                                  color: "var(--text-muted)",
+                                  padding: "2px 6px",
+                                  borderRadius: 4,
+                                  background: "var(--bg-secondary)",
+                                  fontFamily: "monospace",
+                                }}
+                              >
                                 / shortcut
                               </span>
                             </div>
@@ -1371,7 +1835,10 @@ export default function ConversationsPage({ pageData }) {
                                   replyTextareaRef.current?.focus();
                                 }
                                 // Enter selects first filtered snippet
-                                if (e.key === "Enter" && filteredSnippets.length > 0) {
+                                if (
+                                  e.key === "Enter" &&
+                                  filteredSnippets.length > 0
+                                ) {
                                   e.preventDefault();
                                   insertSnippet(filteredSnippets[0]);
                                 }
@@ -1380,36 +1847,46 @@ export default function ConversationsPage({ pageData }) {
                           </div>
 
                           {/* Picker body */}
-                          <div style={{
-                            flex: 1,
-                            overflowY: "auto",
-                            padding: "4px 0",
-                          }}>
+                          <div
+                            style={{
+                              flex: 1,
+                              overflowY: "auto",
+                              padding: "4px 0",
+                            }}
+                          >
                             {snippetsLoading ? (
-                              <div style={{
-                                padding: "1.5rem",
-                                textAlign: "center",
-                                color: "var(--text-muted)",
-                                fontSize: "0.85rem",
-                              }}>
+                              <div
+                                style={{
+                                  padding: "1.5rem",
+                                  textAlign: "center",
+                                  color: "var(--text-muted)",
+                                  fontSize: "0.85rem",
+                                }}
+                              >
                                 Loading snippets...
                               </div>
                             ) : filteredSnippets.length === 0 ? (
-                              <div style={{
-                                padding: "1.5rem 1rem",
-                                textAlign: "center",
-                                color: "var(--text-muted)",
-                                fontSize: "0.85rem",
-                                lineHeight: 1.6,
-                              }}>
+                              <div
+                                style={{
+                                  padding: "1.5rem 1rem",
+                                  textAlign: "center",
+                                  color: "var(--text-muted)",
+                                  fontSize: "0.85rem",
+                                  lineHeight: 1.6,
+                                }}
+                              >
                                 {(snippetsCache || []).length === 0
                                   ? "No snippets created yet. Go to Snippets in the sidebar to create reusable reply templates."
                                   : "No snippets match your search. Try a different keyword."}
                               </div>
                             ) : (
                               filteredSnippets.map((snippet) => {
-                                const catKey = (snippet.category || "general").toLowerCase();
-                                const catColor = SNIPPET_CATEGORY_COLORS[catKey] || SNIPPET_CATEGORY_COLORS.general;
+                                const catKey = (
+                                  snippet.category || "general"
+                                ).toLowerCase();
+                                const catColor =
+                                  SNIPPET_CATEGORY_COLORS[catKey] ||
+                                  SNIPPET_CATEGORY_COLORS.general;
                                 return (
                                   <button
                                     key={snippet.id}
@@ -1427,68 +1904,81 @@ export default function ConversationsPage({ pageData }) {
                                       color: "inherit",
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = "var(--bg-secondary)";
+                                      e.currentTarget.style.background =
+                                        "var(--bg-secondary)";
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.background = "transparent";
+                                      e.currentTarget.style.background =
+                                        "transparent";
                                     }}
                                   >
-                                    <div style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      marginBottom: 4,
-                                    }}>
-                                      <span style={{
-                                        fontWeight: 600,
-                                        fontSize: "0.85rem",
-                                        color: "var(--text-primary)",
-                                        flex: 1,
-                                        minWidth: 0,
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        whiteSpace: "nowrap",
-                                      }}>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        marginBottom: 4,
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          fontWeight: 600,
+                                          fontSize: "0.85rem",
+                                          color: "var(--text-primary)",
+                                          flex: 1,
+                                          minWidth: 0,
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
                                         {snippet.title}
                                       </span>
-                                      <span style={{
-                                        display: "inline-block",
-                                        padding: "1px 6px",
-                                        borderRadius: 4,
-                                        fontSize: "0.65rem",
-                                        fontWeight: 600,
-                                        color: catColor.color,
-                                        background: catColor.bg,
-                                        textTransform: "capitalize",
-                                        whiteSpace: "nowrap",
-                                        flexShrink: 0,
-                                      }}>
+                                      <span
+                                        style={{
+                                          display: "inline-block",
+                                          padding: "1px 6px",
+                                          borderRadius: 4,
+                                          fontSize: "0.65rem",
+                                          fontWeight: 600,
+                                          color: catColor.color,
+                                          background: catColor.bg,
+                                          textTransform: "capitalize",
+                                          whiteSpace: "nowrap",
+                                          flexShrink: 0,
+                                        }}
+                                      >
                                         {snippet.category || "general"}
                                       </span>
                                       {snippet.shortcut && (
-                                        <span style={{
-                                          fontSize: "0.65rem",
-                                          fontFamily: "monospace",
-                                          color: "var(--accent, #00BFFF)",
-                                          background: "var(--accent-dim, rgba(0,191,255,0.1))",
-                                          padding: "1px 5px",
-                                          borderRadius: 3,
-                                          flexShrink: 0,
-                                        }}>
+                                        <span
+                                          style={{
+                                            fontSize: "0.65rem",
+                                            fontFamily: "monospace",
+                                            color: "var(--accent, #00BFFF)",
+                                            background:
+                                              "var(--accent-dim, rgba(0,191,255,0.1))",
+                                            padding: "1px 5px",
+                                            borderRadius: 3,
+                                            flexShrink: 0,
+                                          }}
+                                        >
                                           /{snippet.shortcut}
                                         </span>
                                       )}
                                     </div>
-                                    <div style={{
-                                      fontSize: "0.78rem",
-                                      color: "var(--text-secondary)",
-                                      lineHeight: 1.4,
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      display: "-webkit-box",
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: "vertical",
-                                    }}>
+                                    <div
+                                      style={{
+                                        fontSize: "0.78rem",
+                                        color: "var(--text-secondary)",
+                                        lineHeight: 1.4,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: "vertical",
+                                      }}
+                                    >
                                       {snippet.content}
                                     </div>
                                   </button>

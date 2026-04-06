@@ -56,7 +56,8 @@ async def list_snippets(
     if category:
         query = query.eq("category", category)
     if search:
-        safe_search = search.replace(",", "").replace(".", "").replace("%", "").replace("_", "").strip()
+        import re
+        safe_search = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
         if safe_search:
             query = query.or_(f"title.ilike.%{safe_search}%,content.ilike.%{safe_search}%")
 

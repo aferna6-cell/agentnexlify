@@ -434,7 +434,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = (
         (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "script-src 'self'; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https:; "
             "font-src 'self' data: https:; "
@@ -646,8 +646,6 @@ async def health():
         "uptime_seconds": uptime,
         "checks": {
             "supabase": supabase_status,
-            "anthropic_api_key": bool(settings.anthropic_api_key),
-            "stripe_configured": bool(settings.stripe_secret_key),
         },
     }
 

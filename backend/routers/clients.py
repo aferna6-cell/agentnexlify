@@ -58,7 +58,8 @@ async def get_clients(
         query = query.eq("status", stage)
 
     if search:
-        safe_search = search.replace(",", "").replace(".", "").strip()
+        import re
+        safe_search = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
         if safe_search:
             query = query.or_(
                 f"name.ilike.%{safe_search}%,email.ilike.%{safe_search}%,phone.ilike.%{safe_search}%"

@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 _JWT_ALGORITHM = "HS256"
-_JWT_EXPIRE_DAYS = 7
+_JWT_EXPIRE_HOURS = 24  # Short-lived to prevent stale plan claims after downgrade
 _GOOGLE_STATE_EXPIRY_MINUTES = 10
 _GOOGLE_SETUP_EXPIRY_HOURS = 1
 _GOOGLE_OAUTH_SCOPE = "openid email profile"
@@ -80,7 +80,7 @@ def _create_token(
         "business_name": business_name,
         "role": role,
         "is_team_member": is_team_member,
-        "exp": datetime.now(timezone.utc) + timedelta(days=_JWT_EXPIRE_DAYS),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=_JWT_EXPIRE_HOURS),
     }
     if user_id:
         payload["user_id"] = user_id
@@ -744,10 +744,12 @@ async def forgot_password(request: Request):
     reset_token = secrets.token_urlsafe(32)
     expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
 
-    # Store token in tenant record
+    # Store hashed token in tenant record (compare hashes on redemption)
+    import hashlib as _hashlib
+    hashed_token = _hashlib.sha256(reset_token.encode()).hexdigest()
     try:
         db.table("tenants").update({
-            "reset_token": reset_token,
+            "reset_token": hashed_token,
             "reset_token_expires": expires_at,
         }).eq("id", tenant_id).execute()
     except Exception:
@@ -791,11 +793,14 @@ async def reset_password(request: Request):
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
     db = get_supabase()
+    # Hash the incoming token to match stored hash
+    import hashlib as _hashlib
+    hashed_token = _hashlib.sha256(token.encode()).hexdigest()
     try:
         result = (
             db.table("tenants")
             .select("id, reset_token_expires")
-            .eq("reset_token", token)
+            .eq("reset_token", hashed_token)
             .limit(1)
             .execute()
         )

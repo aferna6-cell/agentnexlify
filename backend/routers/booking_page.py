@@ -760,8 +760,8 @@ async def booking_submit(
 
 def _generate_reschedule_token(appointment_id: str) -> str:
     """Generate HMAC token for appointment reschedule link."""
-    secret = os.environ.get("API_SECRET_KEY", "agentnexlify-dev-secret")
-    return hmac.new(secret.encode(), f"reschedule:{appointment_id}".encode(), hashlib.sha256).hexdigest()[:32]
+    from backend.config import settings
+    return hmac.new(settings.api_secret_key.encode(), f"reschedule:{appointment_id}".encode(), hashlib.sha256).hexdigest()
 
 
 def _verify_reschedule_token(appointment_id: str, token: str) -> bool:

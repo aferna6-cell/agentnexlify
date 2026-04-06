@@ -19,8 +19,8 @@ router = APIRouter(prefix="/api/v1/admin", tags=["platform-admin"])
 
 def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
     """Verify the caller has the platform admin secret."""
-    secret = x_api_secret or settings.api_secret_key
-    if not secret or secret != settings.api_secret_key:
+    import hmac as _hmac
+    if not x_api_secret or not _hmac.compare_digest(x_api_secret, settings.api_secret_key):
         raise HTTPException(status_code=401, detail="Invalid admin secret")
 
 
@@ -50,11 +50,11 @@ async def get_platform_overview(
             .neq("plan", "free")
             .execute()
         )
-        active_paid = active_result.data or []
-        active_count = len(active_count_data := [
+        active_paid = [
             t for t in active_result.data or []
             if t.get("stripe_subscription_id")
-        ])
+        ]
+        active_count = len(active_paid)
 
         # Plan breakdown
         plan_breakdown = {}
@@ -119,7 +119,7 @@ async def get_platform_overview(
             "enterprise": 89900,
         }
         mrr_cents = 0
-        for t in active_result.data or []:
+        for t in active_paid:
             mrr_cents += PLAN_PRICES.get(t.get("plan", ""), 0)
 
         return {
@@ -157,9 +157,13 @@ async def get_monthly_growth(
 
         # Calculate the start month
         now = datetime.now(timezone.utc)
-        start_month = (now.replace(day=1) - timedelta(days=30 * (months - 1))).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
+        # Step back by calendar months (not timedelta) to avoid skipping months
+        m = now.month - (months - 1)
+        y = now.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        start_month = now.replace(year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
 
         # New signups per month
         signups_result = (
@@ -409,9 +413,13 @@ async def get_revenue_trends(
         db = get_supabase()
 
         now = datetime.now(timezone.utc)
-        start_month = (now.replace(day=1) - timedelta(days=30 * (months - 1))).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
+        # Step back by calendar months (not timedelta) to avoid skipping months
+        m = now.month - (months - 1)
+        y = now.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        start_month = now.replace(year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
 
         result = (
             db.table("platform_monthly_revenue")
@@ -563,6 +571,9 @@ async def list_all_tenants(
     try:
         db = get_supabase()
 
+        # When search is provided, fetch more rows to post-filter from,
+        # since search is applied in Python after the DB query.
+        fetch_limit = limit * 5 if search else limit
         query = (
             db.table("tenants")
             .select(
@@ -571,7 +582,7 @@ async def list_all_tenants(
                 "free_trial_started_at, city"
             )
             .order("created_at", desc=True)
-            .range(offset, offset + limit - 1)
+            .range(0, fetch_limit - 1)
         )
 
         if plan:
@@ -580,9 +591,6 @@ async def list_all_tenants(
             query = query.eq("plan_status", plan_status)
         if business_type:
             query = query.eq("business_type", business_type)
-        if search:
-            # Supabase doesn't support ILIKE easily; filter post-query
-            pass
 
         result = query.execute()
         tenants = result.data or []
@@ -598,15 +606,11 @@ async def list_all_tenants(
                 or search_lower in (t.get("owner_name") or "").lower()
             ]
 
-        # Total count
-        count_query = db.table("tenants").select("id", count="exact")
-        if plan:
-            count_query = count_query.eq("plan", plan)
-        if plan_status:
-            count_query = count_query.eq("plan_status", plan_status)
-        if business_type:
-            count_query = count_query.eq("business_type", business_type)
-        total = (count_query.execute()).count or 0
+        # Total count reflects the search filter
+        total = len(tenants)
+
+        # Apply pagination to the filtered results
+        tenants = tenants[offset:offset + limit]
 
         return {"tenants": tenants, "total": total}
 

@@ -2,9 +2,10 @@
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.content_repurposer import extract_source, repurpose, connect_outputs
@@ -76,7 +77,9 @@ async def _run_repurpose_job(
 
 
 @router.post("/{tenant_id}")
+@limiter.limit("5/minute")
 async def create_repurpose_job(
+    request: Request,
     tenant_id: str,
     req: RepurposeCreate,
     background_tasks: BackgroundTasks,

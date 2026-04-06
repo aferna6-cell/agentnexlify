@@ -4,7 +4,7 @@ import csv
 import io
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 
 from pydantic import BaseModel, Field
@@ -15,6 +15,7 @@ from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
+from backend.limiter import limiter
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -61,7 +62,8 @@ async def get_leads(
                 query = query.eq("assigned_to", assigned_to)
 
         if search:
-            safe_search = search.replace(",", "").replace(".", "").strip()
+            import re
+            safe_search = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
             if safe_search:
                 query = query.or_(
                     f"name.ilike.%{safe_search}%,email.ilike.%{safe_search}%,phone.ilike.%{safe_search}%"
@@ -117,7 +119,8 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
 
 
 @router.post("/{tenant_id}/score-all", response_model=ScoreAllResponse)
-async def rescore_all(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+@limiter.limit("3/minute")
+async def rescore_all(request: Request, tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """Re-score all leads for a tenant."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
