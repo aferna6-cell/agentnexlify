@@ -7,10 +7,11 @@
         "-y",
         "@supabase/mcp-server-supabase@latest",
         "--project-ref",
-        "pxserpybmajixqrmzaly",
-        "--access-token",
-        "sbp_159f4d641911ea89cea1a8fe8677ab6dcef80937"
-      ]
+        "pxserpybmajixqrmzaly"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
     },
     "aidesigner": {
       "type": "stdio",
