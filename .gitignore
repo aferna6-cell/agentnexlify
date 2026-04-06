@@ -27,3 +27,4 @@ scripts/daily/run-evening.bat
 .claude/command-log.txt
 .gitnexus
 .mcp.json
+.env
