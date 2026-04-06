@@ -468,6 +468,83 @@ async def complete_onboarding(
     except Exception:
         logger.exception("AI content generation failed for tenant %s", tenant_id)
 
+    # 7. Auto-create a default "Welcome" email sequence so drip campaigns work out of the box
+    try:
+        existing_seqs = (
+            db.table("email_sequences")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not existing_seqs.data:
+            biz = req.business_name or "our team"
+            seq_result = db.table("email_sequences").insert({
+                "tenant_id": tenant_id,
+                "name": "Welcome Series",
+                "trigger_type": "lead_captured",
+                "is_active": True,
+            }).execute()
+            if seq_result.data:
+                seq_id = seq_result.data[0]["id"]
+                welcome_steps = [
+                    {
+                        "sequence_id": seq_id,
+                        "step_order": 1,
+                        "delay_days": 0,
+                        "delay_hours": 0,
+                        "subject": f"Thanks for reaching out to {biz}!",
+                        "body": (
+                            f"<p>Hi {{{{name}}}},</p>"
+                            f"<p>Thanks for getting in touch with {biz}! We received your message and "
+                            f"wanted to make sure you know we're here to help.</p>"
+                            f"<p>If you have any questions, just reply to this email or chat with us on our website.</p>"
+                            f"<p>Best,<br/>{biz}</p>"
+                        ),
+                        "email_type": "html",
+                        "is_active": True,
+                    },
+                    {
+                        "sequence_id": seq_id,
+                        "step_order": 2,
+                        "delay_days": 2,
+                        "delay_hours": 0,
+                        "subject": f"Here's what {biz} can do for you",
+                        "body": (
+                            f"<p>Hi {{{{name}}}},</p>"
+                            f"<p>We wanted to share a bit more about what we offer and how we can help.</p>"
+                            f"<p>Whether you're looking for a quick question answered or ready to get started, "
+                            f"we're just a message away.</p>"
+                            f"<p>Visit our website to learn more or book a time that works for you.</p>"
+                            f"<p>Best,<br/>{biz}</p>"
+                        ),
+                        "email_type": "html",
+                        "is_active": True,
+                    },
+                    {
+                        "sequence_id": seq_id,
+                        "step_order": 3,
+                        "delay_days": 5,
+                        "delay_hours": 0,
+                        "subject": f"Ready to get started with {biz}?",
+                        "body": (
+                            f"<p>Hi {{{{name}}}},</p>"
+                            f"<p>Just checking in! If you're ready to move forward or have any questions, "
+                            f"we'd love to hear from you.</p>"
+                            f"<p>You can reply to this email, give us a call, or book an appointment "
+                            f"directly through our website.</p>"
+                            f"<p>Looking forward to working with you!</p>"
+                            f"<p>Best,<br/>{biz}</p>"
+                        ),
+                        "email_type": "html",
+                        "is_active": True,
+                    },
+                ]
+                db.table("email_sequence_steps").insert(welcome_steps).execute()
+                logger.info("Auto-created Welcome Series with 3 steps for tenant %s", tenant_id)
+    except Exception:
+        logger.warning("Failed to auto-create welcome email sequence for tenant %s", tenant_id, exc_info=True)
+
     return OnboardingCompleteResponse(
         tenant_id=tenant_id,
         business_name=req.business_name,
