@@ -23,6 +23,7 @@ from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.services.lead_scoring import score_lead_background
 from backend.services.llm_runtime import call_claude_messages_sync, resolve_int_setting
+from backend.services.tenant_scope import tenant_insert, tenant_select, tenant_update, tenant_upsert
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -315,9 +316,7 @@ def _get_or_create_conversation(
     # Try to find an existing conversation
     try:
         result = (
-            db.table("conversations")
-            .select("id")
-            .eq("client_id", tenant_id)
+            tenant_select(db, "conversations", tenant_id, "id")
             .eq("session_id", session_id)
             .limit(1)
             .execute()
@@ -330,8 +329,10 @@ def _get_or_create_conversation(
     # Try to create one (upsert — safe against race conditions with unique constraint)
     try:
         new_conv = (
-            db.table("conversations")
-            .upsert(
+            tenant_upsert(
+                db,
+                "conversations",
+                tenant_id,
                 {"client_id": tenant_id, "session_id": session_id},
                 on_conflict="client_id,session_id",
             )
@@ -357,9 +358,7 @@ def _load_chat_history(
     try:
         db = get_supabase()
         result = (
-            db.table("chat_messages")
-            .select("role, content")
-            .eq("tenant_id", tenant_id)
+            tenant_select(db, "chat_messages", tenant_id, "role, content")
             .eq("session_id", session_id)
             .order("created_at")
             .limit(limit)
@@ -380,9 +379,7 @@ def _load_chat_history(
         try:
             db = get_supabase()
             result = (
-                db.table("chat_messages")
-                .select("role, content")
-                .eq("tenant_id", tenant_id)
+                tenant_select(db, "chat_messages", tenant_id, "role, content")
                 .eq("session_id", session_id)
                 .limit(limit)
                 .execute()
@@ -407,7 +404,7 @@ def _save_chat_messages(
         if assistant_text:
             rows.append({"tenant_id": tenant_id, "session_id": session_id, "role": "assistant", "content": assistant_text})
         if rows:
-            db.table("chat_messages").insert(rows).execute()
+            tenant_insert(db, "chat_messages", tenant_id, rows).execute()
         logger.info("chat_save: OK tenant=%s session=%s msgs=%d", tenant_id, session_id, len(rows))
     except Exception as e:
         logger.error("chat_save FAILED: tenant=%s session=%s error=%s", tenant_id, session_id, e, exc_info=True)
@@ -430,7 +427,7 @@ def _format_hours_block(bh: dict) -> str:
 
     now = datetime.now(tz)
     day_name = now.strftime("%A").lower()
-    current_time = now.strftime("%-I:%M %p")
+    current_time = now.strftime("%I:%M %p").lstrip("0")
 
     hours = bh.get("hours", {})
     day_config = hours.get(day_name, {})
@@ -785,9 +782,7 @@ def _record_response_metric(tenant_id: str, session_id: str, conversation_id: st
     try:
         db = get_supabase()
         messages = (
-            db.table("chat_messages")
-            .select("role, created_at")
-            .eq("tenant_id", tenant_id)
+            tenant_select(db, "chat_messages", tenant_id, "role, created_at")
             .eq("session_id", session_id)
             .order("created_at")
             .limit(5)
@@ -827,7 +822,7 @@ def _record_response_metric(tenant_id: str, session_id: str, conversation_id: st
             )
             safe_conversation_id = None
 
-        db.table("response_metrics").insert({
+        tenant_insert(db, "response_metrics", tenant_id, {
             "tenant_id": tenant_id,
             "session_id": session_id,
             "conversation_id": safe_conversation_id,
@@ -959,9 +954,7 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
     db = get_supabase()
     try:
         tag_defs = (
-            db.table("tenant_tag_definitions")
-            .select("tag_name")
-            .eq("tenant_id", tenant_id)
+            tenant_select(db, "tenant_tag_definitions", tenant_id, "tag_name")
             .eq("is_enabled", True)
             .execute()
         )
@@ -1009,9 +1002,7 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
 
         # Update conversation tags (merge with existing)
         conv = (
-            db.table("conversations")
-            .select("tags")
-            .eq("client_id", tenant_id)
+            tenant_select(db, "conversations", tenant_id, "tags")
             .eq("session_id", session_id)
             .limit(1)
             .execute()
@@ -1021,9 +1012,9 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
             existing = conv.data[0].get("tags") or []
 
         merged = list(set(existing + valid_tags))
-        db.table("conversations").update({"tags": merged}).eq(
-            "client_id", tenant_id
-        ).eq("session_id", session_id).execute()
+        tenant_update(db, "conversations", tenant_id, {"tags": merged}).eq(
+            "session_id", session_id
+        ).execute()
 
     except json.JSONDecodeError:
         logger.warning("conversation_categorize: non-JSON response")
@@ -1075,9 +1066,7 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
 
         # Find conversation_id for this session
         conv = (
-            db.table("conversations")
-            .select("id")
-            .eq("client_id", tenant_id)
+            tenant_select(db, "conversations", tenant_id, "id")
             .eq("session_id", session_id)
             .limit(1)
             .execute()
@@ -1094,7 +1083,7 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
             }
             if conv_id:
                 data["conversation_id"] = conv_id
-            db.table("action_items").insert(data).execute()
+            tenant_insert(db, "action_items", tenant_id, data).execute()
 
     except json.JSONDecodeError:
         logger.warning("action_item_extract: non-JSON response")
@@ -1155,9 +1144,7 @@ async def _capture_leads_from_session(
             )
             try:
                 existing = (
-                    db.table("leads")
-                    .select("id, name, phone, areas_of_interest, conversation_summary")
-                    .eq("client_id", tenant_id)
+                    tenant_select(db, "leads", tenant_id, "id, name, phone, areas_of_interest, conversation_summary")
                     .eq("email", combined["email"])
                     .limit(1)
                     .execute()
@@ -1202,7 +1189,7 @@ async def _capture_leads_from_session(
                     except Exception:
                         logger.warning("lead_capture: failed to create suggestion", exc_info=True)
                 if updates:
-                    db.table("leads").update(updates).eq("id", lead["id"]).execute()
+                    tenant_update(db, "leads", tenant_id, updates).eq("id", lead["id"]).execute()
                     log_activity(
                         tenant_id=tenant_id,
                         activity_type="lead_updated",
@@ -1220,7 +1207,7 @@ async def _capture_leads_from_session(
                 try:
                     tags = _extract_tags_from_conversation(messages)
                     if tags:
-                        db.table("leads").update({"tags": tags}).eq("id", lead["id"]).execute()
+                        tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead["id"]).execute()
                         logger.info("lead_capture: tagged existing lead %s with %s", lead["id"], tags)
                 except Exception:
                     logger.warning("lead_capture: tag extraction failed for lead %s", lead["id"], exc_info=True)
@@ -1229,7 +1216,7 @@ async def _capture_leads_from_session(
                     try:
                         from uuid import UUID
                         UUID(conversation_id)  # Validate it's a real UUID, not a session_id fallback
-                        db.table("conversations").update({"lead_captured": True}).eq("id", conversation_id).execute()
+                        tenant_update(db, "conversations", tenant_id, {"lead_captured": True}).eq("id", conversation_id).execute()
                         logger.info("lead_capture: set lead_captured=true on conversation %s (existing lead)", conversation_id)
                     except (ValueError, AttributeError):
                         logger.warning("lead_capture: conversation_id %r is not a UUID, skipping lead_captured update", conversation_id)
@@ -1266,7 +1253,7 @@ async def _capture_leads_from_session(
 
         logger.info("lead_capture: inserting new lead with fields=%s", lead_fields)
         try:
-            result = db.table("leads").insert(lead_fields).execute()
+            result = tenant_insert(db, "leads", tenant_id, lead_fields).execute()
         except Exception as insert_err:
             logger.error(
                 "lead_capture: INSERT FAILED: %s — fields were %s",
@@ -1336,7 +1323,7 @@ async def _capture_leads_from_session(
             try:
                 tags = _extract_tags_from_conversation(messages)
                 if tags:
-                    db.table("leads").update({"tags": tags}).eq("id", lead_id).execute()
+                    tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead_id).execute()
                     logger.info("lead_capture: tagged new lead %s with %s", lead_id, tags)
             except Exception:
                 logger.warning("lead_capture: tag extraction failed for new lead %s", lead_id, exc_info=True)
@@ -1352,7 +1339,7 @@ async def _capture_leads_from_session(
                 try:
                     from uuid import UUID
                     UUID(conversation_id)  # Validate it's a real UUID, not a session_id fallback
-                    db.table("conversations").update({"lead_captured": True}).eq("id", conversation_id).execute()
+                    tenant_update(db, "conversations", tenant_id, {"lead_captured": True}).eq("id", conversation_id).execute()
                     logger.info("lead_capture: set lead_captured=true on conversation %s", conversation_id)
                 except (ValueError, AttributeError):
                     logger.warning("lead_capture: conversation_id %r is not a UUID, skipping lead_captured update", conversation_id)

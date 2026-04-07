@@ -3,7 +3,7 @@
 import os
 os.environ["TESTING"] = "1"
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -106,8 +106,8 @@ class TestAIGeneration:
 
     @patch("backend.routers.auth.settings")
     @patch("backend.routers.social_media.get_supabase")
-    @patch("backend.routers.social_media.anthropic")
-    def test_generate_content(self, mock_anthropic, mock_db, mock_settings):
+    @patch("backend.routers.social_media.call_claude_messages", new_callable=AsyncMock)
+    def test_generate_content(self, mock_call_claude, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
         mock_db.return_value = db
@@ -115,11 +115,7 @@ class TestAIGeneration:
             data={"business_name": "Test Biz", "business_type": "plumber"}
         )
 
-        mock_client = MagicMock()
-        mock_anthropic.Anthropic.return_value = mock_client
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text="Great plumbing tips!\nHASHTAGS: #plumbing #local")]
-        )
+        mock_call_claude.return_value = MagicMock(text="Great plumbing tips!\nHASHTAGS: #plumbing #local")
 
         resp = client.post(
             "/api/v1/social/tenant-001/generate",

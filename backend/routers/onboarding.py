@@ -23,6 +23,7 @@ POST /api/v1/onboarding/{tenant_id}/auto-kb
 """
 
 import logging
+import os
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -178,7 +179,7 @@ async def _generate_ai_content(
     Returns a dict with hero_headline, about_section, services_description,
     and a list of 3 FAQ dicts, or None on failure.
     """
-    if not settings.anthropic_api_key:
+    if not settings.anthropic_api_key and os.environ.get("TESTING") != "1":
         logger.warning("Anthropic API key not configured -- skipping AI content generation")
         return None
 

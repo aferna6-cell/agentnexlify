@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.activity import log_activity
+from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +37,8 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
 def _find_conversation(db, conversation_id: str, tenant_id: str, select: str = "id"):
     """Look up a conversation by UUID id or session_id (frontend passes session_id)."""
     conv = (
-        db.table("conversations")
-        .select(select)
+        tenant_select(db, "conversations", tenant_id, select)
         .eq("id", conversation_id)
-        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -47,10 +46,8 @@ def _find_conversation(db, conversation_id: str, tenant_id: str, select: str = "
         return conv.data[0]
     # Fallback: try session_id
     conv = (
-        db.table("conversations")
-        .select(select)
+        tenant_select(db, "conversations", tenant_id, select)
         .eq("session_id", conversation_id)
-        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -134,10 +131,8 @@ async def assign_conversation(
     assignee_email = None
     if req.assigned_to:
         member = (
-            db.table("team_members")
-            .select("id, name, email")
+            tenant_select(db, "team_members", tenant_id, "id, name, email")
             .eq("id", req.assigned_to)
-            .eq("tenant_id", tenant_id)
             .limit(1)
             .execute()
         )
@@ -148,17 +143,15 @@ async def assign_conversation(
 
     # Update assignment
     result = (
-        db.table("conversations")
-        .update({"assigned_to": req.assigned_to})
+        tenant_update(db, "conversations", tenant_id, {"assigned_to": req.assigned_to})
         .eq("id", conv_uuid)
-        .eq("client_id", tenant_id)
         .execute()
     )
 
     # Log activity
     action = f"Assigned to {assignee_name}" if req.assigned_to else "Unassigned"
     try:
-        db.table("activity_log").insert({
+        tenant_insert(db, "activity_log", tenant_id, {
             "tenant_id": tenant_id,
             "activity_type": "conversation_assigned",
             "description": action,
@@ -175,9 +168,7 @@ async def assign_conversation(
             session_id = conv_row.get("session_id")
             if session_id:
                 last_msg = (
-                    db.table("chat_messages")
-                    .select("content, role")
-                    .eq("tenant_id", tenant_id)
+                    tenant_select(db, "chat_messages", tenant_id, "content, role")
                     .eq("session_id", session_id)
                     .order("created_at", desc=True)
                     .limit(1)
@@ -190,8 +181,7 @@ async def assign_conversation(
             lead_id = conv_row.get("lead_id")
             if lead_id:
                 lead_row = (
-                    db.table("leads")
-                    .select("name")
+                    tenant_select(db, "leads", tenant_id, "name")
                     .eq("id", lead_id)
                     .limit(1)
                     .execute()
@@ -231,10 +221,8 @@ async def list_notes(
     conv_uuid = conv_row["id"]
 
     result = (
-        db.table("conversation_notes")
-        .select("*, team_members(name)")
+        tenant_select(db, "conversation_notes", tenant_id, "*, team_members(name)")
         .eq("conversation_id", conv_uuid)
-        .eq("tenant_id", tenant_id)
         .order("created_at", desc=False)
         .execute()
     )
@@ -264,9 +252,7 @@ async def create_note(
     if not team_member_id:
         # Owner might not have a team_member record — use tenant owner
         owner = (
-            db.table("team_members")
-            .select("id")
-            .eq("tenant_id", tenant_id)
+            tenant_select(db, "team_members", tenant_id, "id")
             .eq("role", "owner")
             .limit(1)
             .execute()
@@ -282,7 +268,7 @@ async def create_note(
         "author_id": team_member_id,
         "content": req.content.strip(),
     }
-    result = db.table("conversation_notes").insert(data).execute()
+    result = tenant_insert(db, "conversation_notes", tenant_id, data).execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create note")
     return result.data[0]
@@ -298,7 +284,7 @@ async def delete_note(
     _verify_tenant(claims, tenant_id)
 
     db = get_supabase()
-    db.table("conversation_notes").delete().eq("id", note_id).eq("tenant_id", tenant_id).execute()
+    tenant_delete(db, "conversation_notes", tenant_id).eq("id", note_id).execute()
     return {"deleted": True}
 
 
@@ -320,10 +306,8 @@ def _resolve_replier_name(claims: dict, db, tenant_id: str) -> str:
     if user_id:
         try:
             member = (
-                db.table("team_members")
-                .select("name")
+                tenant_select(db, "team_members", tenant_id, "name")
                 .eq("id", user_id)
-                .eq("tenant_id", tenant_id)
                 .limit(1)
                 .execute()
             )
@@ -371,8 +355,7 @@ async def reply_to_conversation(
     # 2. Insert into chat_messages with role "assistant"
     try:
         msg_result = (
-            db.table("chat_messages")
-            .insert({
+            tenant_insert(db, "chat_messages", tenant_id, {
                 "tenant_id": tenant_id,
                 "session_id": session_id,
                 "role": "assistant",
@@ -400,10 +383,10 @@ async def reply_to_conversation(
             "content": reply_content,
         })
 
-        db.table("conversations").update({
+        tenant_update(db, "conversations", tenant_id, {
             "messages": existing_messages,
             "last_message_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", conversation["id"]).eq("client_id", tenant_id).execute()
+        }).eq("id", conversation["id"]).execute()
     except Exception:
         # Non-fatal: chat_messages is the canonical store.
         # The conversations JSONB is legacy and unreliable.
@@ -453,10 +436,10 @@ async def update_presence(
     db = get_supabase()
     now = datetime.now(timezone.utc).isoformat()
     try:
-        db.table("team_members").update({
+        tenant_update(db, "team_members", tenant_id, {
             "last_active_conversation_id": conversation_id,
             "last_active_at": now,
-        }).eq("id", team_member_id).eq("tenant_id", tenant_id).execute()
+        }).eq("id", team_member_id).execute()
     except Exception:
         logger.warning("Presence update failed for member %s", team_member_id, exc_info=True)
 
@@ -477,9 +460,7 @@ async def get_presence(
     five_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
 
     result = (
-        db.table("team_members")
-        .select("id, name, last_active_conversation_id, last_active_at")
-        .eq("tenant_id", tenant_id)
+        tenant_select(db, "team_members", tenant_id, "id, name, last_active_conversation_id, last_active_at")
         .gte("last_active_at", five_min_ago)
         .execute()
     )

@@ -17,6 +17,7 @@ from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
 from backend.services.lead_scoring import score_all_leads, score_lead
+from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -46,11 +47,14 @@ async def get_leads(
 
     db = get_supabase()
     try:
-        query = db.table("leads").select(
+        query = tenant_select(
+            db,
+            "leads",
+            tenant_id,
             "id, client_id, name, email, phone, status, lead_score, lead_temperature, "
             "areas_of_interest, tags, assigned_to, deal_value, created_at, updated_at",
             count="exact",
-        ).eq("client_id", tenant_id)
+        )
 
         if stage:
             query = query.eq("status", stage)
@@ -98,12 +102,7 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
 
     db = get_supabase()
     try:
-        result = (
-            db.table("leads")
-            .select("status, lead_score")
-            .eq("client_id", tenant_id)
-            .execute()
-        )
+        result = tenant_select(db, "leads", tenant_id, "status, lead_score").execute()
         leads = result.data or []
         return {
             "total": len(leads),
@@ -185,7 +184,7 @@ async def create_lead(
     # Remove None values
     lead_data = {k: v for k, v in lead_data.items() if v is not None}
 
-    result = db.table("leads").insert(lead_data).execute()
+    result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create lead")
 
@@ -215,13 +214,7 @@ async def update_lead(
         raise HTTPException(status_code=400, detail="No fields to update")
 
     db = get_supabase()
-    result = (
-        db.table("leads")
-        .update(updates)
-        .eq("id", lead_id)
-        .eq("client_id", tenant_id)
-        .execute()
-    )
+    result = tenant_update(db, "leads", tenant_id, updates).eq("id", lead_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
@@ -253,13 +246,7 @@ async def delete_lead(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_supabase()
-    result = (
-        db.table("leads")
-        .delete()
-        .eq("id", lead_id)
-        .eq("client_id", tenant_id)
-        .execute()
-    )
+    result = tenant_delete(db, "leads", tenant_id).eq("id", lead_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
     return Response(status_code=204)
@@ -283,10 +270,8 @@ async def send_lead_email(
 
     db = get_supabase()
     lead_result = (
-        db.table("leads")
-        .select("id, email, name")
+        tenant_select(db, "leads", tenant_id, "id, email, name")
         .eq("id", lead_id)
-        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -335,9 +320,9 @@ async def send_lead_email(
 
     # Auto-update lead status from "new" to "contacted"
     try:
-        current = db.table("leads").select("status").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+        current = tenant_select(db, "leads", tenant_id, "status").eq("id", lead_id).limit(1).execute()
         if current.data and current.data[0].get("status") == "new":
-            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).eq("client_id", tenant_id).execute()
+            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq("id", lead_id).execute()
     except Exception:
         logger.warning("Failed to auto-update lead status after email", exc_info=True)
 
@@ -361,10 +346,8 @@ async def send_lead_sms(
 
     db = get_supabase()
     lead_result = (
-        db.table("leads")
-        .select("id, phone, name")
+        tenant_select(db, "leads", tenant_id, "id, phone, name")
         .eq("id", lead_id)
-        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -389,9 +372,9 @@ async def send_lead_sms(
 
     # Auto-update lead status from "new" to "contacted"
     try:
-        current = db.table("leads").select("status").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+        current = tenant_select(db, "leads", tenant_id, "status").eq("id", lead_id).limit(1).execute()
         if current.data and current.data[0].get("status") == "new":
-            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).eq("client_id", tenant_id).execute()
+            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq("id", lead_id).execute()
     except Exception:
         logger.warning("Failed to auto-update lead status after SMS", exc_info=True)
 
@@ -405,12 +388,12 @@ async def find_duplicate_leads(tenant_id: str, claims: dict = Depends(_get_curre
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_supabase()
-    result = (
-        db.table("leads")
-        .select("id, name, email, phone, status, lead_score, created_at")
-        .eq("client_id", tenant_id)
-        .execute()
-    )
+    result = tenant_select(
+        db,
+        "leads",
+        tenant_id,
+        "id, name, email, phone, status, lead_score, created_at",
+    ).execute()
     leads = result.data or []
 
     # Group by email and phone
@@ -464,8 +447,8 @@ async def merge_leads(
     db = get_supabase()
 
     # Fetch both leads
-    keep_result = db.table("leads").select("*").eq("id", req.keep_id).eq("client_id", tenant_id).limit(1).execute()
-    merge_result = db.table("leads").select("*").eq("id", req.merge_id).eq("client_id", tenant_id).limit(1).execute()
+    keep_result = tenant_select(db, "leads", tenant_id).eq("id", req.keep_id).limit(1).execute()
+    merge_result = tenant_select(db, "leads", tenant_id).eq("id", req.merge_id).limit(1).execute()
 
     if not keep_result.data:
         raise HTTPException(status_code=404, detail="Primary lead not found")
@@ -495,28 +478,28 @@ async def merge_leads(
         updates["lead_score"] = merge["lead_score"]
 
     if updates:
-        db.table("leads").update(updates).eq("id", req.keep_id).execute()
+        tenant_update(db, "leads", tenant_id, updates).eq("id", req.keep_id).execute()
 
     # Reassign appointments from merge to keep
     try:
-        db.table("appointments").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).eq("tenant_id", tenant_id).execute()
+        tenant_update(db, "appointments", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
     except Exception:
         logger.warning("Failed to reassign appointments during merge", exc_info=True)
 
     # Reassign activity log entries
     try:
-        db.table("activity_log").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).eq("tenant_id", tenant_id).execute()
+        tenant_update(db, "activity_log", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
     except Exception:
         logger.warning("Failed to reassign activity_log during merge", exc_info=True)
 
     # Reassign client notes
     try:
-        db.table("client_notes").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).eq("tenant_id", tenant_id).execute()
+        tenant_update(db, "client_notes", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
     except Exception:
         logger.warning("Failed to reassign client_notes during merge", exc_info=True)
 
     # Delete the merged lead
-    db.table("leads").delete().eq("id", req.merge_id).eq("client_id", tenant_id).execute()
+    tenant_delete(db, "leads", tenant_id).eq("id", req.merge_id).execute()
 
     log_activity(
         tenant_id=tenant_id,
@@ -567,14 +550,13 @@ async def export_leads_csv(
 
     db = get_supabase()
 
-    query = (
-        db.table("leads")
-        .select(
-            "name, email, phone, status, lead_score, lead_temperature, "
-            "areas_of_interest, tags, conversation_summary, deal_value, "
-            "source, created_at, updated_at"
-        )
-        .eq("client_id", tenant_id)
+    query = tenant_select(
+        db,
+        "leads",
+        tenant_id,
+        "name, email, phone, status, lead_score, lead_temperature, "
+        "areas_of_interest, tags, conversation_summary, deal_value, "
+        "source, created_at, updated_at",
     )
 
     if stage:
@@ -700,9 +682,7 @@ async def import_leads_csv(
     if all_emails:
         try:
             existing_result = (
-                db.table("leads")
-                .select("id, email")
-                .eq("client_id", tenant_id)
+                tenant_select(db, "leads", tenant_id, "id, email")
                 .in_("email", list(set(all_emails)))
                 .execute()
             )
@@ -719,7 +699,7 @@ async def import_leads_csv(
             updates = {k: v for k, v in lead_data.items() if k != "email"}
             if updates:
                 try:
-                    db.table("leads").update(updates).eq("id", existing_by_email[email]).execute()
+                    tenant_update(db, "leads", tenant_id, updates).eq("id", existing_by_email[email]).execute()
                 except Exception as e:
                     errors.append({"row": i, "error": str(e)[:100]})
                     continue
@@ -727,10 +707,9 @@ async def import_leads_csv(
             continue
 
         # Insert new lead
-        lead_data["client_id"] = tenant_id
         lead_data.setdefault("status", "new")
         try:
-            result = db.table("leads").insert(lead_data).execute()
+            result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
             if result.data:
                 created += 1
                 fire_event_background(tenant_id, "lead.created", {
@@ -772,10 +751,8 @@ async def assign_lead(
     # Verify team member exists if assigning
     if req.assigned_to:
         member = (
-            db.table("team_members")
-            .select("id, name, email")
+            tenant_select(db, "team_members", tenant_id, "id, name, email")
             .eq("id", req.assigned_to)
-            .eq("tenant_id", tenant_id)
             .limit(1)
             .execute()
         )
@@ -783,10 +760,8 @@ async def assign_lead(
             raise HTTPException(status_code=404, detail="Team member not found")
 
     result = (
-        db.table("leads")
-        .update({"assigned_to": req.assigned_to})
+        tenant_update(db, "leads", tenant_id, {"assigned_to": req.assigned_to})
         .eq("id", lead_id)
-        .eq("client_id", tenant_id)
         .execute()
     )
     if not result.data:
@@ -829,9 +804,7 @@ async def list_lead_suggestions(
 
     db = get_supabase()
     result = (
-        db.table("activity_log")
-        .select("id, lead_id, description, metadata, created_at")
-        .eq("tenant_id", tenant_id)
+        tenant_select(db, "activity_log", tenant_id, "id, lead_id, description, metadata, created_at")
         .eq("activity_type", "lead_suggestion")
         .order("created_at", desc=True)
         .limit(50)
@@ -861,10 +834,8 @@ async def handle_suggestion(
 
     # Fetch the suggestion
     suggestion = (
-        db.table("activity_log")
-        .select("id, lead_id, metadata")
+        tenant_select(db, "activity_log", tenant_id, "id, lead_id, metadata")
         .eq("id", suggestion_id)
-        .eq("tenant_id", tenant_id)
         .eq("activity_type", "lead_suggestion")
         .limit(1)
         .execute()
@@ -879,11 +850,11 @@ async def handle_suggestion(
         suggestions = (entry.get("metadata") or {}).get("suggestions", {})
         if suggestions and entry.get("lead_id"):
             updates = {field: s["new"] for field, s in suggestions.items()}
-            db.table("leads").update(updates).eq("id", entry["lead_id"]).execute()
+            tenant_update(db, "leads", tenant_id, updates).eq("id", entry["lead_id"]).execute()
             logger.info("Approved suggestion %s: updated lead %s with %s", suggestion_id, entry["lead_id"], list(updates.keys()))
 
     # Delete the suggestion (both approve and dismiss)
-    db.table("activity_log").delete().eq("id", suggestion_id).execute()
+    tenant_delete(db, "activity_log", tenant_id).eq("id", suggestion_id).execute()
 
     return {"success": True, "action": req.action}
 
@@ -901,7 +872,12 @@ async def generate_lead_summary(
     db = get_supabase()
 
     # Get the lead's conversation
-    lead = db.table("leads").select("conversation_id, name").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+    lead = (
+        tenant_select(db, "leads", tenant_id, "conversation_id, name")
+        .eq("id", lead_id)
+        .limit(1)
+        .execute()
+    )
     if not lead.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
@@ -910,7 +886,12 @@ async def generate_lead_summary(
         raise HTTPException(status_code=400, detail="Lead has no linked conversation")
 
     # Fetch messages
-    conv = db.table("conversations").select("messages").eq("id", conv_id).limit(1).execute()
+    conv = (
+        tenant_select(db, "conversations", tenant_id, "messages")
+        .eq("id", conv_id)
+        .limit(1)
+        .execute()
+    )
     if not conv.data or not conv.data[0].get("messages"):
         raise HTTPException(status_code=400, detail="No conversation messages found")
 
@@ -942,7 +923,7 @@ async def generate_lead_summary(
         raise HTTPException(status_code=502, detail="AI summary generation failed")
 
     # Save the summary
-    db.table("leads").update({"conversation_summary": summary}).eq("id", lead_id).execute()
+    tenant_update(db, "leads", tenant_id, {"conversation_summary": summary}).eq("id", lead_id).execute()
 
     return {"summary": summary}
 
@@ -964,10 +945,8 @@ async def get_lead_activity(
 
     # Verify lead exists
     lead = (
-        db.table("leads")
-        .select("id")
+        tenant_select(db, "leads", tenant_id, "id")
         .eq("id", lead_id)
-        .eq("client_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -976,9 +955,7 @@ async def get_lead_activity(
 
     # Fetch activity log entries for this lead
     activity = (
-        db.table("activity_log")
-        .select("id, activity_type, description, metadata, created_at")
-        .eq("tenant_id", tenant_id)
+        tenant_select(db, "activity_log", tenant_id, "id, activity_type, description, metadata, created_at")
         .eq("lead_id", lead_id)
         .order("created_at", desc=True)
         .limit(50)
@@ -987,9 +964,7 @@ async def get_lead_activity(
 
     # Also fetch appointments for this lead
     appointments = (
-        db.table("appointments")
-        .select("id, customer_name, start_time, status, created_at")
-        .eq("tenant_id", tenant_id)
+        tenant_select(db, "appointments", tenant_id, "id, customer_name, start_time, status, created_at")
         .eq("lead_id", lead_id)
         .order("start_time", desc=True)
         .limit(20)
@@ -998,9 +973,7 @@ async def get_lead_activity(
 
     # Also fetch email events for this lead
     email_events = (
-        db.table("email_events")
-        .select("id, event_type, details, created_at")
-        .eq("tenant_id", tenant_id)
+        tenant_select(db, "email_events", tenant_id, "id, event_type, details, created_at")
         .eq("lead_id", lead_id)
         .order("created_at", desc=True)
         .limit(20)
@@ -1075,7 +1048,7 @@ async def bulk_update_leads(
 
             if req.tags_add:
                 # Fetch existing tags and merge
-                existing = db.table("leads").select("tags").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                existing = tenant_select(db, "leads", tenant_id, "tags").eq("id", lead_id).limit(1).execute()
                 if existing.data:
                     current_tags = existing.data[0].get("tags") or []
                     merged = list(set(current_tags + req.tags_add))
@@ -1083,10 +1056,8 @@ async def bulk_update_leads(
 
             if update_data:
                 result = (
-                    db.table("leads")
-                    .update(update_data)
+                    tenant_update(db, "leads", tenant_id, update_data)
                     .eq("id", lead_id)
-                    .eq("client_id", tenant_id)
                     .execute()
                 )
                 if result.data:
@@ -1120,9 +1091,7 @@ async def debug_lead_capture(
     try:
         # Total leads count
         total_result = (
-            db.table("leads")
-            .select("id", count="exact")
-            .eq("client_id", tenant_id)
+            tenant_select(db, "leads", tenant_id, "id", count="exact")
             .execute()
         )
         total_leads = total_result.count or 0
@@ -1135,9 +1104,7 @@ async def debug_lead_capture(
         from datetime import datetime, timedelta, timezone
         week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         recent_result = (
-            db.table("leads")
-            .select("id", count="exact")
-            .eq("client_id", tenant_id)
+            tenant_select(db, "leads", tenant_id, "id", count="exact")
             .gte("created_at", week_ago)
             .execute()
         )
@@ -1149,9 +1116,7 @@ async def debug_lead_capture(
     try:
         # Most recent lead created_at timestamp
         latest_result = (
-            db.table("leads")
-            .select("id, created_at, email, phone")
-            .eq("client_id", tenant_id)
+            tenant_select(db, "leads", tenant_id, "id, created_at, email, phone")
             .order("created_at", desc=True)
             .limit(5)
             .execute()
