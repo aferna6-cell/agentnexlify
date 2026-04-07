@@ -24,8 +24,9 @@ Use this file as a **thin adapter for Codex and general coding agents**.
 - Never use `from __future__ import annotations` in FastAPI router files.
 - Use `client_id` for `leads` and `conversations` queries.
 - Use `status` for lead status on the `leads` table.
-- Keep `widget/agentnexlify-widget.js` and `frontend/public/widget/agentnexlify-widget.js` identical.
+- `frontend/public/widget/` contains symlinks to `widget/` — always edit files in `widget/` directly.
 - Use migrations in `migrations/` for schema changes.
+- See `docs/dev-knowledge/canonical-schema.md` for authoritative database schema.
 - Never commit raw secret values.
 - Use dedicated MCP API keys for MCP access — not widget API keys.
 
