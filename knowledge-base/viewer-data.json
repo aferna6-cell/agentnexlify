@@ -1,0 +1,189 @@
+{
+  "generated": "2026-04-07T04:03:14Z",
+  "stats": {
+    "total_articles": 4,
+    "total_words": 2693,
+    "categories": 4,
+    "last_updated": "2026-04-06"
+  },
+  "articles": [
+    {
+      "slug": "ai-llm/llm-wiki-karpathy-pattern",
+      "title": "LLM Wiki — Karpathy's Compounding Knowledge Base Pattern",
+      "category": "ai-llm",
+      "summary": "LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every new source updates multiple interconnected entity pages simultaneously, causing knowledge to compound rather than restart.",
+      "tags": [
+        "knowledge-management",
+        "rag",
+        "llm-wiki",
+        "karpathy",
+        "compounding-knowledge",
+        "obsidian",
+        "embeddings"
+      ],
+      "created": "2026-04-06",
+      "updated": "2026-04-06",
+      "word_count": 995,
+      "path": "wiki/ai-llm/llm-wiki-karpathy-pattern.md",
+      "cross_refs": [
+        "competitive-landscape-march-2026",
+        "post-launch-growth-strategy",
+        "challenge-assumptions"
+      ]
+    },
+    {
+      "slug": "competitors/competitive-landscape-march-2026",
+      "title": "Competitive Landscape — March 2026",
+      "category": "competitors",
+      "summary": "Analysis of 8 major competitors: Intercom, Drift, Tidio, LiveChat, Crisp, Freshchat, HubSpot, and gohighlevel. Focus: features relevant to small business owners, feasible with AgentNexLiFy's stack.",
+      "tags": [
+        "intercom",
+        "drift",
+        "tidio",
+        "livechat",
+        "crisp",
+        "freshchat",
+        "hubspot",
+        "gohighlevel",
+        "feature-comparison"
+      ],
+      "created": "2026-04-04",
+      "updated": "2026-04-04",
+      "word_count": 422,
+      "path": "wiki/competitors/competitive-landscape-march-2026.md",
+      "cross_refs": [
+        "gohighlevel"
+      ]
+    },
+    {
+      "slug": "growth/post-launch-growth-strategy",
+      "title": "Post-Launch Growth Strategy — Top 10 Features",
+      "category": "growth",
+      "summary": "Research-backed feature recommendations for driving signup activation, viral growth, daily engagement, premium pricing justification, and data lock-in.",
+      "tags": [
+        "activation",
+        "retention",
+        "viral-growth",
+        "pricing",
+        "lock-in",
+        "onboarding",
+        "quickbooks",
+        "reviews",
+        "referrals",
+        "multi-location"
+      ],
+      "created": "2026-04-04",
+      "updated": "2026-04-04",
+      "word_count": 702,
+      "path": "wiki/growth/post-launch-growth-strategy.md",
+      "cross_refs": [
+        "competitive-landscape-march-2026",
+        "gohighlevel",
+        "customer-gaps-by-industry"
+      ]
+    },
+    {
+      "slug": "verticals/customer-gaps-by-industry",
+      "title": "Customer Gaps by Industry — Consolidated",
+      "category": "verticals",
+      "summary": "Findings from customer simulations across 7 industries. 15 gaps have been resolved through the build loop; remaining gaps are prioritized by cross-industry impact.",
+      "tags": [
+        "salon",
+        "plumber",
+        "dental",
+        "restaurant",
+        "fitness",
+        "lawyer",
+        "real-estate",
+        "product-market-fit",
+        "gaps"
+      ],
+      "created": "2026-04-04",
+      "updated": "2026-04-04",
+      "word_count": 574,
+      "path": "wiki/verticals/customer-gaps-by-industry.md",
+      "cross_refs": [
+        "competitive-landscape-march-2026"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "name": "competitors",
+      "color": "#ef4444",
+      "count": 1
+    },
+    {
+      "name": "ai-llm",
+      "color": "#8b5cf6",
+      "count": 1
+    },
+    {
+      "name": "small-biz-saas",
+      "color": "#f59e0b",
+      "count": 0
+    },
+    {
+      "name": "verticals",
+      "color": "#10b981",
+      "count": 1
+    },
+    {
+      "name": "technical",
+      "color": "#06b6d4",
+      "count": 0
+    },
+    {
+      "name": "regulations",
+      "color": "#ec4899",
+      "count": 0
+    },
+    {
+      "name": "growth",
+      "color": "#f97316",
+      "count": 1
+    },
+    {
+      "name": "general",
+      "color": "#6b7280",
+      "count": 0
+    }
+  ],
+  "tag_frequencies": {
+    "knowledge-management": 1,
+    "rag": 1,
+    "llm-wiki": 1,
+    "karpathy": 1,
+    "compounding-knowledge": 1,
+    "obsidian": 1,
+    "embeddings": 1,
+    "intercom": 1,
+    "drift": 1,
+    "tidio": 1,
+    "livechat": 1,
+    "crisp": 1,
+    "freshchat": 1,
+    "hubspot": 1,
+    "gohighlevel": 1,
+    "feature-comparison": 1,
+    "activation": 1,
+    "retention": 1,
+    "viral-growth": 1,
+    "pricing": 1,
+    "lock-in": 1,
+    "onboarding": 1,
+    "quickbooks": 1,
+    "reviews": 1,
+    "referrals": 1,
+    "multi-location": 1,
+    "salon": 1,
+    "plumber": 1,
+    "dental": 1,
+    "restaurant": 1,
+    "fitness": 1,
+    "lawyer": 1,
+    "real-estate": 1,
+    "product-market-fit": 1,
+    "gaps": 1
+  }
+}

@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 3
-- Last compiled: 2026-04-04
+- Total articles: 4
+- Last compiled: 2026-04-06
 
 ## Articles by Category
 
@@ -12,7 +12,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Competitive Landscape — March 2026](wiki/competitors/competitive-landscape-march-2026.md) — Analysis of 8 major competitors; AgentNexLiFy is feature-complete, gap is engagement/stickiness. Tags: intercom, drift, tidio, livechat, crisp, freshchat, hubspot, gohighlevel
 
 ### AI/LLM Developments
-_No articles yet._
+- [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
 
 ### Small Business SaaS
 _No articles yet._
@@ -30,6 +30,7 @@ _No articles yet._
 - [Post-Launch Growth Strategy](wiki/growth/post-launch-growth-strategy.md) — Top 10 features for activation, viral growth, daily engagement, and lock-in. Tags: activation, retention, viral-growth, onboarding, quickbooks, reviews
 
 ## Cross-Reference Map
-- [[competitive-landscape-march-2026]] ← referenced by: [[customer-gaps-by-industry]], [[post-launch-growth-strategy]]
+- [[competitive-landscape-march-2026]] ← referenced by: [[customer-gaps-by-industry]], [[post-launch-growth-strategy]], [[llm-wiki-karpathy-pattern]]
 - [[customer-gaps-by-industry]] ← referenced by: [[post-launch-growth-strategy]]
-- [[post-launch-growth-strategy]] ← referenced by: [[customer-gaps-by-industry]]
+- [[post-launch-growth-strategy]] ← referenced by: [[customer-gaps-by-industry]], [[llm-wiki-karpathy-pattern]]
+- [[llm-wiki-karpathy-pattern]] ← referenced by: (new — no backlinks yet)
