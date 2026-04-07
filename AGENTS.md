@@ -29,6 +29,16 @@ Use this file as a **thin adapter for Codex and general coding agents**.
 - Never commit raw secret values.
 - Use dedicated MCP API keys for MCP access — not widget API keys.
 
+## Implementation Discipline
+- Prefer the smallest concrete change that solves the observed problem.
+- Do not add abstraction layers, adapter interfaces, factories, registries, or generic helpers for a single current call site.
+- Do not add "just in case" fallbacks, legacy compatibility branches, broad coercion, or multi-shape input handling unless an existing production path or failing test proves the need.
+- If a fallback is required, name the real failure mode in code or test context and add a regression test for that exact behavior.
+- Fix the caller or data contract directly when possible instead of wrapping bad inputs with defensive normalization.
+- Avoid catch-all `try`/`except` blocks that hide errors. If an exception is expected, catch the narrow type and assert/log the behavior being preserved.
+- Tests should validate observable behavior and real contracts, not fallback plumbing or mock-only interactions.
+- Before introducing a new helper, check whether the same logic is already expressed locally. If it is only used once, inline it unless it materially improves readability.
+
 ## Surface Map
 - `backend/` — production FastAPI service
 - `frontend/` — dashboard + public React/Vite app
