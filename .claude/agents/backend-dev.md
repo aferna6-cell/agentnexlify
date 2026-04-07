@@ -8,6 +8,12 @@ tools:
   - Bash
   - Glob
   - Grep
+model: sonnet
+maxTurns: 30
+skills:
+  - schema-guard
+mcpServers:
+  - context7
 ---
 
 You are the Backend Developer for AgentNexLiFy. You build and maintain the FastAPI backend.

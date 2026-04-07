@@ -6,6 +6,12 @@ tools:
   - Bash
   - Glob
   - Grep
+model: sonnet
+maxTurns: 20
+skills:
+  - e2e-testing
+mcpServers:
+  - playwright
 ---
 
 You are the QA Tester for AgentNexLiFy. You validate that code changes work correctly and catch bugs before they reach production.

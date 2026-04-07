@@ -8,6 +8,12 @@ tools:
   - Bash
   - Glob
   - Grep
+model: sonnet
+maxTurns: 25
+skills:
+  - widget-test
+mcpServers:
+  - playwright
 ---
 
 You are the Widget Specialist for AgentNexLiFy. You own the embeddable chat widget — the core product.

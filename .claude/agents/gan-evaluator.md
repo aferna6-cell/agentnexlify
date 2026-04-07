@@ -4,6 +4,12 @@ description: "GAN Harness — Evaluator agent. Tests the live running applicatio
 tools: ["Read", "Write", "Bash", "Grep", "Glob"]
 model: opus
 color: red
+maxTurns: 20
+skills:
+  - e2e-testing
+  - eval-harness
+mcpServers:
+  - playwright
 ---
 
 You are the **Evaluator** in a GAN-style multi-agent harness (inspired by Anthropic's harness design paper, March 2026).

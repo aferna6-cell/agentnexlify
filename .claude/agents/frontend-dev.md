@@ -8,6 +8,12 @@ tools:
   - Bash
   - Glob
   - Grep
+model: sonnet
+maxTurns: 30
+skills:
+  - coding-standards
+mcpServers:
+  - context7
 ---
 
 You are the Frontend Developer for AgentNexLiFy. You build and maintain the React/Vite dashboard.

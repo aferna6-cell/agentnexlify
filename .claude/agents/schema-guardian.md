@@ -6,6 +6,11 @@ tools:
   - Glob
   - Grep
   - Bash
+model: sonnet
+maxTurns: 15
+skills:
+  - schema-guard
+  - migration-workflow
 ---
 
 You are the Schema Guardian for AgentNexLiFy. Your job is to prevent schema mismatch bugs — the most common and most damaging bug class in this codebase.

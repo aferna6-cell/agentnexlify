@@ -180,9 +180,14 @@
       "Bash(ls *)",
       "Bash(which *)",
       "Bash(echo *)",
-      "Bash(cat /dev/stdin*)"
+      "Bash(cat /dev/stdin*)",
+      "mcp__context7__*",
+      "mcp__playwright__*",
+      "mcp__deepwiki__*",
+      "mcp__supabase__*"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true
   }
