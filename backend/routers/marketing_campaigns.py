@@ -497,6 +497,12 @@ async def send_campaign(
     """
     verify_tenant(claims, tenant_id)
 
+    # Plan gate: free plan cannot send campaigns
+    _PAID_PLANS = {"growth", "professional", "autopilot", "enterprise"}
+    tenant_plan = claims.get("plan", "free")
+    if tenant_plan not in _PAID_PLANS:
+        raise HTTPException(status_code=403, detail="Campaign sending requires a paid plan")
+
     try:
         db = get_supabase()
 

@@ -115,9 +115,13 @@ async def trigger_sequence(
                 seq["id"],
                 trigger_event,
             )
-        except Exception:
-            # UNIQUE constraint violation means already enrolled — skip
-            logger.debug("Lead %s already enrolled in sequence %s", lead_id, seq["id"])
+        except Exception as _enroll_exc:
+            # UNIQUE constraint = already enrolled (expected). Other errors = real problems.
+            err_str = str(_enroll_exc).lower()
+            if "unique" in err_str or "duplicate" in err_str:
+                logger.debug("Lead %s already enrolled in sequence %s", lead_id, seq["id"])
+            else:
+                logger.warning("Failed to enroll lead %s in sequence %s: %s", lead_id, seq["id"], _enroll_exc, exc_info=True)
 
     return enrolled
 
@@ -3732,6 +3736,9 @@ async def _execute_action(
     if action_type == "send_email":
         if not lead_data or not lead_data.get("email"):
             return {"status": "skipped", "reason": "no_email"}
+        # CAN-SPAM: never send to unsubscribed leads
+        if lead_data.get("unsubscribed"):
+            return {"status": "skipped", "reason": "unsubscribed"}
         subject = action_config.get("subject", "")
         body = action_config.get("body", "")
         unsub_url = build_unsubscribe_url(lead_data["id"], tenant_id)

@@ -1,5 +1,6 @@
 """Invoicing & Text-to-Pay — create, send, and track invoices with Stripe Payment Links."""
 
+import html as _html
 import logging
 from datetime import datetime, timezone, date
 
@@ -153,11 +154,11 @@ def _build_invoice_email_html(invoice: dict, business: dict, lead: dict) -> str:
     biz_name = business.get("business_name") or "Your Service Provider"
     biz_email = business.get("owner_email") or ""
 
-    cust_name = lead.get("name") or "Valued Customer"
-    invoice_number = invoice.get("invoice_number") or "N/A"
+    cust_name = _html.escape(lead.get("name") or "Valued Customer")
+    invoice_number = _html.escape(invoice.get("invoice_number") or "N/A")
     total = invoice.get("total", 0)
-    due_date = invoice.get("due_date") or ""
-    notes = invoice.get("notes") or ""
+    due_date = _html.escape(invoice.get("due_date") or "")
+    notes = _html.escape(invoice.get("notes") or "")
     payment_link = invoice.get("stripe_payment_link") or ""
     items = invoice.get("items_json") or []
     subtotal = invoice.get("subtotal", 0)
@@ -1075,8 +1076,12 @@ async def record_partial_payment(
     if current["status"] in ("paid", "cancelled"):
         raise HTTPException(status_code=400, detail=f"Cannot record payment on {current['status']} invoice")
 
-    new_paid = round(float(current.get("amount_paid") or 0) + req.amount, 2)
     total = float(current.get("total") or 0)
+    already_paid = float(current.get("amount_paid") or 0)
+    remaining = round(total - already_paid, 2)
+    if req.amount > remaining + 0.01:
+        raise HTTPException(status_code=400, detail=f"Payment amount exceeds remaining balance of ${remaining:.2f}")
+    new_paid = min(round(already_paid + req.amount, 2), total)
 
     update_data = {
         "amount_paid": new_paid,
