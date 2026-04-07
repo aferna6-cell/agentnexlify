@@ -15,6 +15,10 @@
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/log-commands.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/pre-commit-review.sh"
           }
         ]
       },
@@ -108,6 +112,16 @@
           {
             "type": "command",
             "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"NO ASSUMPTIONS RULE: When a task is ambiguous, has multiple valid interpretations, or could cause destructive changes — ASK the user before proceeding. Never guess at: which files to delete, which branch to target, which env to deploy to, what the user meant by vague instructions, schema changes that could break production. If confidence in the correct interpretation is below 80%, ask a clarifying question. One question now saves hours of wrong-direction work.\"}}'",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"OPUS-PLAN SONNET-EXECUTE: For non-trivial tasks, use a two-phase approach: (1) PLAN phase — use model=opus for Agent calls doing planning, architecture decisions, and design. Think deeply, consider tradeoffs, write detailed specs. (2) EXECUTE phase — use model=sonnet for Agent calls doing implementation. Fast, focused, follow the plan exactly. Pattern: spawn planning agent with model=opus, get the plan back, then spawn execution agents with model=sonnet. This gives you Opus-quality thinking with Sonnet-speed execution.\"}}'",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"PARALLEL APPROACHES: When facing a complex or uncertain task with multiple valid solutions, spawn 2 agents in parallel (using isolation=worktree), each trying a different approach. Compare results — take the one that passes tests, is simpler, or performs better. Use this when: the best approach is genuinely unclear, there are 2+ viable architectures, or the task is risky enough that a fallback is worth the compute. Do NOT use for straightforward tasks with one obvious solution.\"}}'",
             "timeout": 5
           }
         ]

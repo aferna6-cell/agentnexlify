@@ -243,12 +243,19 @@ Enable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Create teams with roles — UX,
 - **Skill delegates to subagent:** `context: fork` in skill frontmatter spawns isolated agent. Skill = task prompt, agent = executor. Main context stays clean.
 - **Rule:** If you need a role with baked-in knowledge → agent with skills. If you need isolation for a verbose task → skill with `context: fork`.
 
-### Quality Hooks
-- **UltraPlan + UltraThink** (UserPromptSubmit) — extended thinking, break problems into subproblems, consider 2-3 approaches, edge cases, failure modes before acting
-- **90% Confidence Gate** (Stop) — self-rate confidence before shipping. < 90% = keep working. Tests pass? Regressions checked? Edge cases handled? Staff engineer would approve?
-- **TaskCompleted** — exit code 2 blocks completion with feedback. "Tests still failing, not done." Claude keeps working without you watching.
-- **FileChanged** — matcher watches specific files. `package-lock.json` changes → auto security audit. Config changes → auto revalidation.
-- **CwdChanged** — auto-reload env (direnv) when Claude moves between monorepo packages.
+### Quality Hooks (Active)
+- **UltraPlan + UltraThink** (UserPromptSubmit) — extended thinking, subproblems, 2-3 approaches, edge cases before acting
+- **No Assumptions** (UserPromptSubmit) — ask clarifying questions when ambiguous, never guess at destructive actions
+- **Opus-Plan Sonnet-Execute** (UserPromptSubmit) — plan/design in Opus (model=opus), implement in Sonnet (model=sonnet). Opus-quality thinking + Sonnet-speed execution.
+- **Parallel Approaches** (UserPromptSubmit) — for uncertain/complex tasks, spawn 2 agents in parallel worktrees with different approaches, take the winner
+- **Pre-Commit Triple Review** (PreToolUse on git commit) — before any commit, spawn 3 agents in parallel: architecture review, duplication scan, performance check. CRITICAL blocks commit.
+- **90% Confidence Gate** (Stop) — self-rate confidence before shipping. < 90% = keep working.
+- **Anti-Desperation** (PostToolUseFailure) — composure check on every failure, prevent error spiraling
+
+### Quality Hooks (Available but not yet wired)
+- **TaskCompleted** — exit code 2 blocks completion with feedback
+- **FileChanged** — matcher watches specific files for auto-reactions
+- **CwdChanged** — auto-reload env on directory changes
 
 ## Daily Routine
 
