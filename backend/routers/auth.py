@@ -895,7 +895,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     if not tenant_result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     t = tenant_result.data[0]
-    logger.info("Dashboard tenant row for %s: %s", tenant_id, t)
+    logger.info("Dashboard tenant row loaded for %s", tenant_id)
 
     # Widget config — full details for onboarding
     widget_result = (
@@ -905,7 +905,11 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         .limit(1)
         .execute()
     )
-    logger.info("Dashboard widget_configs query for tenant_id=%s: data=%s", tenant_id, widget_result.data)
+    logger.info(
+        "Dashboard widget_configs query for tenant_id=%s found=%s",
+        tenant_id,
+        bool(widget_result.data),
+    )
 
     if widget_result.data:
         w = widget_result.data[0]
@@ -926,7 +930,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         # Auto-create widget_config if missing
         api_key = f"anx_{secrets.token_urlsafe(32)}"
         widget_defaults = get_widget_defaults(t.get("business_type"), t.get("business_name"))
-        logger.info("Dashboard auto-creating widget_config for %s with api_key=%s", tenant_id, api_key)
+        logger.info("Dashboard auto-creating widget_config for %s", tenant_id)
         db.table("widget_configs").insert({
             "tenant_id": tenant_id,
             "api_key": api_key,
@@ -1041,7 +1045,12 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         trial_expired=trial["trial_expired"],
         missed_calls_this_week=missed_calls,
     )
-    logger.info("Dashboard response for %s: %s", tenant_id, response.model_dump())
+    logger.info(
+        "Dashboard response assembled for %s leads=%s conversations=%s",
+        tenant_id,
+        leads_count,
+        conversations_used,
+    )
     return response
 
 
@@ -1431,7 +1440,7 @@ async def update_settings(
         raise HTTPException(status_code=400, detail="No valid fields to update")
 
     db = get_supabase()
-    logger.info("update_settings tenant_id=%s updates=%s", tenant_id, updates)
+    logger.info("update_settings tenant_id=%s fields=%s", tenant_id, sorted(updates))
     try:
         result = db.table("tenants").update(updates).eq("id", tenant_id).execute()
     except Exception:

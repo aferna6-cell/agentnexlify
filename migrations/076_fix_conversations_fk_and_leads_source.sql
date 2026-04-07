@@ -11,6 +11,9 @@
 -- Fix 2: Add leads.source column for lead source analytics.
 
 -- Fix 1: Re-point conversations.client_id FK to tenants
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+UPDATE conversations SET client_id = tenant_id WHERE client_id IS NULL AND tenant_id IS NOT NULL;
+
 ALTER TABLE conversations DROP CONSTRAINT IF EXISTS conversations_client_id_fkey;
 ALTER TABLE conversations
   ADD CONSTRAINT conversations_client_id_fkey

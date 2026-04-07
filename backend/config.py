@@ -10,6 +10,7 @@ _config_logger = logging.getLogger(__name__)
 # Using a random default causes each Uvicorn worker to generate a different key,
 # making JWTs non-portable across workers.
 _DEV_FALLBACK_SECRET = "INSECURE-DEV-ONLY-CHANGE-ME-IN-PRODUCTION"
+_WEAK_SECRET_MIN_LEN = 32
 
 
 class Settings(BaseSettings):
@@ -57,6 +58,9 @@ class Settings(BaseSettings):
     # Transitional switch for old unsubscribe links that only sign lead_id.
     # New links are tenant-bound and this should stay disabled in production.
     allow_legacy_unsubscribe_signatures: bool = False
+    # Transitional switch for old appointment links signed only with appointment_id.
+    # Keep disabled in production; old tokens are bearer credentials with no expiry.
+    allow_legacy_reschedule_tokens: bool = False
     billing_secret: str = ""
     sentry_dsn: str = ""
 
@@ -82,6 +86,45 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def is_production() -> bool:
+    """Return True when the process is running in a production deployment."""
+    candidates = (
+        os.environ.get("ENV"),
+        os.environ.get("APP_ENV"),
+        os.environ.get("ENVIRONMENT"),
+        os.environ.get("RAILWAY_ENVIRONMENT"),
+        os.environ.get("VERCEL_ENV"),
+    )
+    return any((value or "").strip().lower() in {"prod", "production"} for value in candidates)
+
+
+def _is_weak_secret(value: str | None) -> bool:
+    value = (value or "").strip()
+    return not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
+
+
+def _enforce_production_secrets() -> None:
+    if not is_production():
+        return
+
+    failures: list[str] = []
+    if _is_weak_secret(settings.api_secret_key):
+        failures.append("API_SECRET_KEY")
+    if _is_weak_secret(settings.jwt_secret_key):
+        failures.append("JWT_SECRET_KEY")
+    if _is_weak_secret(settings.admin_api_secret_key):
+        failures.append("ADMIN_API_SECRET_KEY")
+
+    if failures:
+        raise RuntimeError(
+            "Refusing to start production with missing or weak secrets: "
+            + ", ".join(failures)
+        )
+
+
+_enforce_production_secrets()
 
 if settings.api_secret_key == _DEV_FALLBACK_SECRET:
     _config_logger.warning(

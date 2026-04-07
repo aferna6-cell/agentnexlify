@@ -8,6 +8,7 @@ BackgroundTasks get treated as query params, causing 422 errors.
 
 import hmac
 import logging
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, UploadFile
@@ -20,6 +21,7 @@ from backend.models.database import get_supabase
 from backend.models.schemas import OnlineStatusRequest, WidgetConfigResponse
 from backend.services.email_sender import _make_unsub_sig
 from backend.routers.widget_helpers import (
+    _check_origin,
     _filter_branding_for_plan,
     _get_tenant,
     _get_widget_config,
@@ -42,6 +44,34 @@ _ALLOWED_TYPES = {
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+_CONTENT_TYPE_EXTENSIONS = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+    "application/pdf": "pdf",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+}
+_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,200}$")
+
+
+def _content_matches_type(content_type: str, data: bytes) -> bool:
+    if content_type == "image/jpeg":
+        return data.startswith(b"\xff\xd8\xff")
+    if content_type == "image/png":
+        return data.startswith(b"\x89PNG\r\n\x1a\n")
+    if content_type == "image/gif":
+        return data.startswith((b"GIF87a", b"GIF89a"))
+    if content_type == "image/webp":
+        return data.startswith(b"RIFF") and data[8:12] == b"WEBP"
+    if content_type == "application/pdf":
+        return data.startswith(b"%PDF-")
+    if content_type == "application/msword":
+        return data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")
+    if content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        return data.startswith(b"PK\x03\x04")
+    return False
 
 # ---------------------------------------------------------------------------
 # Email tracking pixel
@@ -212,10 +242,21 @@ async def upload_file(
     """
     # Validate API key
     db = get_supabase()
-    wc = db.table("widget_configs").select("tenant_id").eq("api_key", api_key).limit(1).execute()
+    wc = (
+        db.table("widget_configs")
+        .select("tenant_id, allowed_domains")
+        .eq("api_key", api_key)
+        .limit(1)
+        .execute()
+    )
     if not wc.data:
         raise HTTPException(status_code=404, detail="Widget not found")
-    tenant_id = wc.data[0]["tenant_id"]
+    widget = wc.data[0]
+    _check_origin(request, widget.get("allowed_domains"), require_origin=True)
+    tenant_id = widget["tenant_id"]
+
+    if not _SESSION_ID_RE.match(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session id")
 
     # Validate file type
     content_type = file.content_type or ""
@@ -223,12 +264,16 @@ async def upload_file(
         raise HTTPException(status_code=400, detail=f"File type not allowed: {content_type}")
 
     # Read file with size check
-    data = await file.read()
+    data = await file.read(_MAX_UPLOAD_SIZE + 1)
     if len(data) > _MAX_UPLOAD_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
+    if not data:
+        raise HTTPException(status_code=400, detail="File is empty")
+    if not _content_matches_type(content_type, data):
+        raise HTTPException(status_code=400, detail="File content does not match declared type")
 
     # Generate unique path
-    ext = (file.filename or "file").rsplit(".", 1)[-1][:10]
+    ext = _CONTENT_TYPE_EXTENSIONS[content_type]
     unique_name = f"{uuid.uuid4().hex[:12]}.{ext}"
     path = f"{tenant_id}/{session_id}/{unique_name}"
 

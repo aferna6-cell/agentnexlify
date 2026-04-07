@@ -12,6 +12,7 @@ import logging
 import re
 import time as _time
 from typing import Any
+from urllib.parse import urlparse
 
 import anthropic
 from fastapi import HTTPException, Request
@@ -258,7 +259,7 @@ def _get_tenant(tenant_id: str) -> dict[str, Any]:
         result = db.table("tenants").select(
             "id, business_name, business_type, city, plan, plan_status, "
             "free_trial_started_at, conversations_used_this_month, "
-            "sms_notifications_enabled, notification_phone"
+            "sms_notifications_enabled, notification_phone, owner_email"
         ).eq("id", tenant_id).limit(1).execute()
     except Exception:
         logger.warning("Database unreachable in _get_tenant", exc_info=True)
@@ -269,16 +270,30 @@ def _get_tenant(tenant_id: str) -> dict[str, Any]:
     return result.data[0]
 
 
-def _check_origin(request: Request, allowed_domains: list[str] | None) -> None:
+def _normalize_origin_host(value: str) -> str:
+    value = (value or "").strip().lower().rstrip("/")
+    if not value:
+        return ""
+    parsed = urlparse(value if "://" in value else f"//{value}")
+    return (parsed.netloc or parsed.path).strip().lower().rstrip("/")
+
+
+def _check_origin(
+    request: Request,
+    allowed_domains: list[str] | None,
+    *,
+    require_origin: bool = False,
+) -> None:
     if not allowed_domains:
         return
     origin = request.headers.get("origin", "")
     if not origin:
+        if require_origin:
+            raise HTTPException(status_code=403, detail="Origin required")
         return
-    # Strip protocol for comparison
-    origin_host = origin.replace("https://", "").replace("http://", "").rstrip("/")
+    origin_host = _normalize_origin_host(origin)
     for domain in allowed_domains:
-        domain_clean = domain.replace("https://", "").replace("http://", "").rstrip("/")
+        domain_clean = _normalize_origin_host(domain)
         if origin_host == domain_clean:
             return
     raise HTTPException(status_code=403, detail="Origin not allowed")

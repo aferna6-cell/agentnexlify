@@ -1,14 +1,14 @@
 # Canonical Database Schema Reference
 
 **Last updated:** 2026-04-07  
-**Migration number:** 094  
+**Migration number:** 096
 **Status:** Authoritative — this file reflects PRODUCTION reality, not historical migration intent.
 
 ---
 
 ## ⚠️ Important Notes
 
-1. **DO NOT run migrations 001-003 from scratch on a new environment.** They contain historical column names that differ from production. Use this file as the source for new environments instead.
+1. Run the full migration chain for new environments. Historical migrations start with legacy `tenant_id` columns on `leads` and `conversations`; later migrations reconcile them to canonical `client_id`.
 2. The `leads` and `conversations` tables use `client_id` (not `tenant_id`) as the FK to `tenants.id`. This is intentional and was fixed in migration 076.
 3. Lead status uses `status` column (not `lead_stage`). Values: `new`, `visited`, `contacted`, `appointment_booked`, `closed`, `lost`.
 4. Service interest uses `areas_of_interest` (not `service_interest`).
@@ -176,9 +176,10 @@ Team member accounts for a tenant.
 
 ## Migration History Notes
 
-- **001-003:** Historical baseline — column names differ from production. Do not run from scratch.
+- **001-003:** Historical baseline; later migrations reconcile legacy column names.
 - **076:** Fixed `conversations.client_id` FK to point to `tenants.id` instead of `clients.id`.
 - **094:** Reconciled 8 ad-hoc columns on `leads` that existed in production but had no migration.
+- **096:** Makes `client_id` reconciliation fresh-deploy safe and adds DB-backed automation/email quota locks.
 
 ---
 

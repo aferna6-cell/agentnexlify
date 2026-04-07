@@ -11,7 +11,7 @@ from typing import Any
 
 import resend
 
-from backend.config import settings
+from backend.config import is_production, settings
 from backend.services.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ def build_unsubscribe_url(lead_id: str, tenant_id: str) -> str:
     if not lead_id or not tenant_id:
         raise ValueError("lead_id and tenant_id are required for unsubscribe links")
     sig = _make_unsub_sig(lead_id, tenant_id)
-    base = settings.frontend_url.rstrip("/")
+    base = (settings.api_url or settings.frontend_url).rstrip("/")
     tid_param = f"&tid={tenant_id}"
     return f"{base}/api/v1/widget/unsubscribe?lid={lead_id}{tid_param}&sig={sig}"
 
@@ -125,6 +125,50 @@ def _check_rate_limit(tenant_id: str) -> bool:
 
 def _increment_send_count(tenant_id: str) -> None:
     _daily_sends[tenant_id] = _daily_sends.get(tenant_id, 0) + 1
+
+
+def _coerce_rpc_bool(data: Any) -> bool:
+    if isinstance(data, bool):
+        return data
+    if isinstance(data, str):
+        return data.strip().lower() == "true"
+    if isinstance(data, list) and data:
+        first = data[0]
+        if isinstance(first, bool):
+            return first
+        if isinstance(first, dict):
+            value = next(iter(first.values()), False)
+            return _coerce_rpc_bool(value)
+    return bool(data)
+
+
+def _reserve_send_quota(tenant_id: str) -> bool:
+    """Atomically reserve one email send for this tenant/day."""
+    if not tenant_id:
+        return False
+
+    try:
+        from backend.models.database import get_supabase
+
+        result = get_supabase().rpc(
+            "reserve_email_send_quota",
+            {"p_tenant_id": tenant_id, "p_daily_limit": DAILY_LIMIT},
+        ).execute()
+        return _coerce_rpc_bool(result.data)
+    except Exception:
+        if is_production():
+            logger.exception("DB-backed email quota unavailable for tenant %s", tenant_id)
+            return False
+
+        logger.warning(
+            "DB-backed email quota unavailable; using local dev fallback for tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
+        if not _check_rate_limit(tenant_id):
+            return False
+        _increment_send_count(tenant_id)
+        return True
 
 
 def _append_unsubscribe_footer(body_html: str, unsubscribe_url: str) -> str:
@@ -144,7 +188,7 @@ def _append_unsubscribe_footer(body_html: str, unsubscribe_url: str) -> str:
 
 def _build_tracking_pixel(tenant_id: str, lead_id: str = "", execution_id: str = "") -> str:
     """Build a 1x1 tracking pixel <img> tag for email open tracking."""
-    base = settings.frontend_url.rstrip("/")
+    base = (settings.api_url or settings.frontend_url).rstrip("/")
     params = f"tid={tenant_id}"
     if lead_id:
         params += f"&lid={lead_id}"
@@ -168,7 +212,7 @@ async def send_email(
         logger.warning("Resend API key not configured, skipping email to %s", to)
         return {"success": False, "detail": "resend_api_key not configured"}
 
-    if not _check_rate_limit(tenant_id):
+    if not _reserve_send_quota(tenant_id):
         logger.warning("Daily email limit reached for tenant %s", tenant_id)
         return {"success": False, "detail": "daily_limit_reached"}
 
@@ -208,7 +252,6 @@ async def send_email(
             backoff_base=1.0,
             label=f"resend.send:{to}",
         )
-        _increment_send_count(tenant_id)
         logger.info("Email sent to %s for tenant %s", to, tenant_id)
         return {"success": True, "detail": "sent", "resend_id": result.get("id", "")}
     except Exception as e:

@@ -5,6 +5,7 @@ import asyncio
 from backend.services.task_utils import safe_create_task
 import logging
 import os
+import socket
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -16,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pythonjsonlogger.jsonlogger import JsonFormatter
 from slowapi.errors import RateLimitExceeded
 
-from backend.config import settings
+from backend.config import is_production, settings
 from backend.limiter import limiter
 from backend.routers import (
     action_items,
@@ -110,6 +111,22 @@ if settings.sentry_dsn:
     )
 
 _startup_time: float = 0.0
+_LOCK_OWNER = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex}"
+
+
+def _coerce_rpc_bool(data) -> bool:
+    if isinstance(data, bool):
+        return data
+    if isinstance(data, str):
+        return data.strip().lower() == "true"
+    if isinstance(data, list) and data:
+        first = data[0]
+        if isinstance(first, bool):
+            return first
+        if isinstance(first, dict):
+            value = next(iter(first.values()), False)
+            return _coerce_rpc_bool(value)
+    return bool(data)
 
 
 async def _safe_run(name: str, fn, timeout: float = 30.0):
@@ -124,12 +141,45 @@ async def _safe_run(name: str, fn, timeout: float = 30.0):
         logger.exception("Automation loop: %s failed", name)
 
 
+def _try_acquire_automation_lock(lock_name: str, ttl_seconds: int = 90) -> bool:
+    """Acquire a short DB-backed lock so only one worker runs scheduler work."""
+    try:
+        from backend.models.database import get_supabase
+
+        result = get_supabase().rpc(
+            "try_acquire_automation_lock",
+            {
+                "p_name": lock_name,
+                "p_owner": _LOCK_OWNER,
+                "p_ttl_seconds": ttl_seconds,
+            },
+        ).execute()
+        return _coerce_rpc_bool(result.data)
+    except Exception:
+        if is_production():
+            logger.exception("Automation lock unavailable in production")
+            return False
+        logger.warning("Automation lock unavailable; using dev fallback", exc_info=True)
+        return True
+
+
+def _release_automation_lock(lock_name: str) -> None:
+    try:
+        from backend.models.database import get_supabase
+
+        get_supabase().rpc(
+            "release_automation_lock",
+            {"p_name": lock_name, "p_owner": _LOCK_OWNER},
+        ).execute()
+    except Exception:
+        logger.warning("Failed to release automation lock %s", lock_name, exc_info=True)
+
+
 async def _automation_loop():
     """Background loop that runs automation tasks on a tiered schedule.
 
-    With multiple Uvicorn workers, each worker runs its own loop. We use a
-    random jitter (0-30s) to spread execution across workers and rely on
-    idempotent operations (dedup checks in each function) to prevent duplicates.
+    With multiple Uvicorn workers, each worker runs its own loop. A DB-backed
+    short lease ensures only one worker performs scheduler work per tick.
 
     Tiers:
       - Every 60s  (every tick): core sequences, no-response leads, reminders
@@ -164,60 +214,67 @@ async def _automation_loop():
     tick = 0
     while True:
         tick += 1
+        lock_name = "automation_loop_tick"
+        if not _try_acquire_automation_lock(lock_name):
+            await asyncio.sleep(60)
+            continue
 
-        # Every 60s: core automation tasks run in parallel
-        core_tasks = [
-            _safe_run("process_pending_steps", process_pending_steps),
-            _safe_run("check_no_response_leads", check_no_response_leads),
-            _safe_run("send_appointment_reminders", send_appointment_reminders),
-        ]
+        try:
+            # Every 60s: core automation tasks run in parallel
+            core_tasks = [
+                _safe_run("process_pending_steps", process_pending_steps),
+                _safe_run("check_no_response_leads", check_no_response_leads),
+                _safe_run("send_appointment_reminders", send_appointment_reminders),
+            ]
 
-        # Every 5 min: notifications, reminders, scheduled content, campaign recovery
-        if tick % 5 == 0:
-            core_tasks.extend(
-                [
-                    _safe_run(
-                        "send_pending_review_requests", send_pending_review_requests
-                    ),
-                    _safe_run("send_rebook_suggestions", send_rebook_suggestions),
-                    _safe_run("send_onboarding_emails", send_onboarding_emails),
-                    _safe_run("send_portal_links", send_portal_links),
-                    _safe_run("send_csat_surveys", send_csat_surveys),
-                    _safe_run("check_new_reviews", check_new_reviews),
-                    _safe_run(
-                        "send_invoice_payment_reminders", send_invoice_payment_reminders
-                    ),
-                    _safe_run(
-                        "send_aftercare_instructions", send_aftercare_instructions
-                    ),
-                    _safe_run("process_scheduled_posts", _process_scheduled_posts),
-                    _safe_run(
-                        "process_scheduled_campaigns", _process_scheduled_campaigns
-                    ),
-                    _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
-                    _safe_run(
-                        "run_sequence_processor", email_sequences.run_sequence_processor
-                    ),
-                    _safe_run("schedule_automation_check", schedule_automation_check),
-                ]
-            )
+            # Every 5 min: notifications, reminders, scheduled content, campaign recovery
+            if tick % 5 == 0:
+                core_tasks.extend(
+                    [
+                        _safe_run(
+                            "send_pending_review_requests", send_pending_review_requests
+                        ),
+                        _safe_run("send_rebook_suggestions", send_rebook_suggestions),
+                        _safe_run("send_onboarding_emails", send_onboarding_emails),
+                        _safe_run("send_portal_links", send_portal_links),
+                        _safe_run("send_csat_surveys", send_csat_surveys),
+                        _safe_run("check_new_reviews", check_new_reviews),
+                        _safe_run(
+                            "send_invoice_payment_reminders", send_invoice_payment_reminders
+                        ),
+                        _safe_run(
+                            "send_aftercare_instructions", send_aftercare_instructions
+                        ),
+                        _safe_run("process_scheduled_posts", _process_scheduled_posts),
+                        _safe_run(
+                            "process_scheduled_campaigns", _process_scheduled_campaigns
+                        ),
+                        _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
+                        _safe_run(
+                            "run_sequence_processor", email_sequences.run_sequence_processor
+                        ),
+                        _safe_run("schedule_automation_check", schedule_automation_check),
+                    ]
+                )
 
-        # Every 30 min: heavy/infrequent tasks
-        if tick % 30 == 0:
-            core_tasks.extend(
-                [
-                    _safe_run("send_monthly_reports", send_monthly_reports),
-                    _safe_run("process_recurring_invoices", process_recurring_invoices),
-                    _safe_run(
-                        "send_weekly_intelligence_briefs",
-                        send_weekly_intelligence_briefs,
-                    ),
-                    _safe_run("send_weekly_digest", send_weekly_digest),
-                    _safe_run("send_birthday_greetings", send_birthday_greetings),
-                ]
-            )
+            # Every 30 min: heavy/infrequent tasks
+            if tick % 30 == 0:
+                core_tasks.extend(
+                    [
+                        _safe_run("send_monthly_reports", send_monthly_reports),
+                        _safe_run("process_recurring_invoices", process_recurring_invoices),
+                        _safe_run(
+                            "send_weekly_intelligence_briefs",
+                            send_weekly_intelligence_briefs,
+                        ),
+                        _safe_run("send_weekly_digest", send_weekly_digest),
+                        _safe_run("send_birthday_greetings", send_birthday_greetings),
+                    ]
+                )
 
-        await asyncio.gather(*core_tasks)
+            await asyncio.gather(*core_tasks)
+        finally:
+            _release_automation_lock(lock_name)
         await asyncio.sleep(60)
 
 
@@ -400,7 +457,7 @@ async def lifespan(app: FastAPI):
     logger.info("AgentNexLiFy starting up")
     if not os.environ.get("API_SECRET_KEY"):
         logger.warning(
-            "API_SECRET_KEY is not set; using a per-process fallback secret will invalidate JWTs across workers."
+            "API_SECRET_KEY is not set; dev fallback is enabled outside production only."
         )
     if not os.environ.get("TESTING"):
         task = asyncio.create_task(_automation_loop())
@@ -509,13 +566,9 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
         request.url.path,
         exc.errors(),
     )
-    # Try to log the raw body for widget endpoints
+    # Do not log raw widget bodies; they can contain PII and contact details.
     if request.url.path.startswith("/api/v1/widget"):
-        try:
-            body = await request.body()
-            logger.error("Request body was: %s", body[:2000])
-        except Exception as e:
-            logger.warning("Could not read request body for debugging: %s", e)
+        logger.error("Widget validation failed; request body redacted")
     return JSONResponse(
         status_code=422,
         content={"detail": exc.errors()},

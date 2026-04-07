@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
+from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.services.booking import generate_available_slots, link_appointment_to_lead
@@ -26,6 +27,7 @@ from backend.services.webhook_dispatcher import fire_event_background
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/book", tags=["booking-page"])
+_RESCHEDULE_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -759,15 +761,46 @@ async def booking_submit(
 
 
 def _generate_reschedule_token(appointment_id: str) -> str:
-    """Generate HMAC token for appointment reschedule link."""
-    from backend.config import settings
-    return hmac.new(settings.api_secret_key.encode(), f"reschedule:{appointment_id}".encode(), hashlib.sha256).hexdigest()
+    """Generate an expiring HMAC token for appointment reschedule links."""
+    issued_at = int(datetime.now(timezone.utc).timestamp())
+    payload = f"reschedule:{appointment_id}:{issued_at}"
+    signature = hmac.new(
+        settings.api_secret_key.encode(),
+        payload.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{issued_at}.{signature}"
 
 
 def _verify_reschedule_token(appointment_id: str, token: str) -> bool:
     """Verify HMAC reschedule token."""
-    expected = _generate_reschedule_token(appointment_id)
-    return hmac.compare_digest(expected, token)
+    if "." not in token:
+        allow_legacy = getattr(settings, "allow_legacy_reschedule_tokens", False)
+        if not allow_legacy:
+            return False
+        expected = hmac.new(
+            settings.api_secret_key.encode(),
+            f"reschedule:{appointment_id}".encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return hmac.compare_digest(expected, token)
+
+    issued_at_raw, signature = token.split(".", 1)
+    try:
+        issued_at = int(issued_at_raw)
+    except ValueError:
+        return False
+    now = int(datetime.now(timezone.utc).timestamp())
+    if issued_at > now or now - issued_at > _RESCHEDULE_TOKEN_TTL_SECONDS:
+        return False
+
+    payload = f"reschedule:{appointment_id}:{issued_at}"
+    expected = hmac.new(
+        settings.api_secret_key.encode(),
+        payload.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 
 def build_reschedule_url(appointment_id: str, business_slug: str) -> str:

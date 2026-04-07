@@ -66,9 +66,7 @@ router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
 async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks: BackgroundTasks):
     """Process a chat message through the multi-tenant widget pipeline."""
     request_started = perf_counter()
-    logger.info("widget_chat: received request session=%s api_key=%s...%s",
-                req.session_id, req.api_key[:8] if req.api_key else "NONE",
-                req.api_key[-4:] if req.api_key else "")
+    logger.info("widget_chat: received request session=%s", req.session_id)
 
     # 1. Look up widget config + tenant
     widget = _get_widget_config(req.api_key)

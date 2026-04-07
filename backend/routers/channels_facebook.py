@@ -25,6 +25,7 @@ import hashlib
 import hmac
 import json
 import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -75,27 +76,34 @@ def _jwt_secret() -> str:
     return api_secret if isinstance(api_secret, str) else ""
 
 
-def _encode_oauth_state(tenant_id: str) -> str:
+def _encode_oauth_state(tenant_id: str, nonce: str) -> str:
     """Create a short-lived signed JWT encoding the tenant_id for OAuth state."""
     from jose import jwt
 
     payload = {
         "tenant_id": tenant_id,
+        "nonce": nonce,
+        "provider": "facebook",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
     }
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-def _decode_oauth_state(state: str) -> str:
-    """Validate the OAuth state token and return the tenant_id."""
+def _decode_oauth_state(state: str) -> tuple[str, str]:
+    """Validate the OAuth state token and return (tenant_id, nonce)."""
     from jose import JWTError, jwt
 
     try:
         payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
         tenant_id = payload.get("tenant_id")
+        nonce = payload.get("nonce")
         if not tenant_id:
             raise HTTPException(status_code=400, detail="Invalid state: missing tenant_id")
-        return tenant_id
+        if not nonce:
+            raise HTTPException(status_code=400, detail="Invalid state: missing nonce")
+        if payload.get("provider") != "facebook":
+            raise HTTPException(status_code=400, detail="Invalid state provider")
+        return tenant_id, nonce
     except JWTError as exc:
         raise HTTPException(status_code=400, detail="Invalid or expired state parameter") from exc
 
@@ -275,7 +283,30 @@ async def facebook_oauth_callback(
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing code or state parameter")
 
-    tenant_id = _decode_oauth_state(state)
+    tenant_id, nonce = _decode_oauth_state(state)
+    db = get_supabase()
+    try:
+        state_row = (
+            db.table("oauth_states")
+            .select("nonce")
+            .eq("provider", "facebook")
+            .eq("tenant_id", tenant_id)
+            .eq("nonce", nonce)
+            .is_("consumed_at", "null")
+            .gt("expires_at", datetime.now(timezone.utc).isoformat())
+            .limit(1)
+            .execute()
+        )
+        if not state_row.data:
+            raise HTTPException(status_code=400, detail="Invalid or already used state parameter")
+        db.table("oauth_states").update({
+            "consumed_at": datetime.now(timezone.utc).isoformat()
+        }).eq("provider", "facebook").eq("nonce", nonce).execute()
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Facebook OAuth: state validation failed for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to validate OAuth state")
 
     app_id = getattr(settings, "facebook_app_id", "")
     app_secret = getattr(settings, "facebook_app_secret", "")
@@ -341,7 +372,6 @@ async def facebook_oauth_callback(
     page_access_token: str = page["access_token"]
 
     # Step 3: Store in integrations table (upsert pattern from gbp.py)
-    db = get_supabase()
     try:
         existing = (
             db.table("integrations")
@@ -437,7 +467,21 @@ async def get_facebook_auth_url(
 
     redirect_uri = f"{settings.api_url}/api/v1/channels/facebook/callback"
     scopes = "pages_messaging,pages_manage_metadata"
-    state = _encode_oauth_state(tenant_id)
+    nonce = secrets.token_urlsafe(32)
+    state = _encode_oauth_state(tenant_id, nonce)
+
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES)
+    db = get_supabase()
+    try:
+        db.table("oauth_states").insert({
+            "provider": "facebook",
+            "tenant_id": tenant_id,
+            "nonce": nonce,
+            "expires_at": expires_at.isoformat(),
+        }).execute()
+    except Exception:
+        logger.exception("Facebook OAuth: failed to persist state for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to initialize Facebook OAuth")
 
     auth_url = (
         f"https://www.facebook.com/dialog/oauth"

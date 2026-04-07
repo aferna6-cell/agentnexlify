@@ -5,7 +5,7 @@ AI-powered lead capture and qualification chatbot for real estate agents. Each c
 ## Quick Start
 
 ### 1. Prerequisites
-- Python 3.11+
+- Python 3.11 or 3.12. Python 3.14 is not supported by the pinned backend dependency set.
 - A [Supabase](https://supabase.com) project
 - An [Anthropic API key](https://console.anthropic.com)
 
@@ -21,7 +21,7 @@ pip install -r backend/requirements.txt
 
 ### 3. Database
 
-Run the SQL in `backend/models/tables.sql` in your Supabase SQL Editor.
+Apply the SQL files in `migrations/` in numeric order. The active schema is documented in `docs/dev-knowledge/canonical-schema.md`; do not use the old archived `backend/models/tables.sql` path.
 
 Verify connectivity:
 ```bash
@@ -50,9 +50,9 @@ python -m scripts.test_conversation --api-key <YOUR_API_KEY>
 
 ### 7. Test the Widget
 
-Open `widget/demo.html` in a browser (update the `data-api-key` attribute first), or visit:
+Open the checked-in widget preview in a browser (update the `data-api-key` attribute first), or visit:
 ```
-http://localhost:8000/widget/demo.html
+http://localhost:8000/widget/preview.html
 ```
 
 ## Docker

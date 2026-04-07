@@ -129,8 +129,8 @@ async def invite_member(req: TeamInviteRequest, claims: dict = Depends(_get_curr
         body_html = _build_invite_email_html(business_name, req.role, invite_url)
 
         logger.info(
-            "Sending invite email to=%s tenant_id=%s business=%s invite_url=%s",
-            recipient, tenant_id, business_name, invite_url,
+            "Sending invite email to=%s tenant_id=%s business=%s",
+            recipient, tenant_id, business_name,
         )
         try:
             email_result = await send_email(
@@ -447,8 +447,8 @@ async def resend_invite(
     body_html = _build_invite_email_html(business_name, m["role"], invite_url)
 
     logger.info(
-        "Re-sending invite email to=%s tenant_id=%s business=%s invite_url=%s",
-        recipient, tenant_id, business_name, invite_url,
+        "Re-sending invite email to=%s tenant_id=%s business=%s",
+        recipient, tenant_id, business_name,
     )
     try:
         email_result = await send_email(
