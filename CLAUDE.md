@@ -212,9 +212,43 @@ This repo has automated safety checks:
 - **Pre-commit hook** — blocks commits containing secrets, dangerous imports, or bare except blocks
 - **Pre-push hook** — runs frontend build check and schema consistency check before pushing
 - **GitHub Actions** — daily health check, PR validation, auto bug logging on fix commits, daily AI auto-improve
-- **Claude Code hooks** — pre-edit warns on sensitive files, post-edit scans for dangerous patterns, notification on agent completion, auto-checkpoint before compaction, **anti-desperation on tool failure**
+- **Claude Code hooks** — pre-edit warns on sensitive files, post-edit scans for dangerous patterns, notification on agent completion, auto-checkpoint before compaction, **anti-desperation on tool failure**, **UltraPlan/UltraThink on every prompt**, **90% confidence gate on Stop**
 
 See docs/ai-development.md for full details.
+
+## Advanced Claude Code Workflow
+
+### Parallel Agent Engineering (Git Worktrees)
+Use `/orchestrate` or the worktree-orchestrator skill for parallel execution:
+- Each agent gets its own branch, workspace, context, and task
+- 4-8 agents run simultaneously via compound engineering pipelines
+- No conflicts, no overwriting — just parallel progress
+- 10x from Claude Code * parallel agents = 30-50x throughput
+- **Pattern:** Brainstorm agent → Planning agent → Implementation agent → Review agent → Testing agent
+
+### /batch — Parallel PRs
+Type `/batch` + instruction. Claude decomposes codebase into independent units, spawns one agent per unit in a separate worktree, each opens its own PR. Get a stack of PRs, not one 4000-line diff.
+
+### Agent Teams (Experimental)
+Enable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Create teams with roles — UX, architecture, security, devil's advocate. Unlike subagents, teammates share a task list and message each other directly. Require plan approval before code: "only approve plans that include test coverage."
+
+### Channels — Reach Claude from Telegram/Discord/iMessage
+`claude --channels plugin:telegram@claude-plugins-official` — Claude becomes reachable by DM. CI fails at 2am, Claude diagnoses and sends fix on Telegram. Reply "do it" and it applies.
+
+### /loop with Skills
+`/loop 20m /simplify focus on auth module` — any skill on a timer. Security checker, doc linter, PR reviewer, all running on intervals while you work.
+
+### Subagent + Skill Composition
+- **Subagent preloads skills:** `skills:` field in agent frontmatter injects domain knowledge at startup. Use for recurring roles (code reviewer + style guide, migration agent + schema conventions).
+- **Skill delegates to subagent:** `context: fork` in skill frontmatter spawns isolated agent. Skill = task prompt, agent = executor. Main context stays clean.
+- **Rule:** If you need a role with baked-in knowledge → agent with skills. If you need isolation for a verbose task → skill with `context: fork`.
+
+### Quality Hooks
+- **UltraPlan + UltraThink** (UserPromptSubmit) — extended thinking, break problems into subproblems, consider 2-3 approaches, edge cases, failure modes before acting
+- **90% Confidence Gate** (Stop) — self-rate confidence before shipping. < 90% = keep working. Tests pass? Regressions checked? Edge cases handled? Staff engineer would approve?
+- **TaskCompleted** — exit code 2 blocks completion with feedback. "Tests still failing, not done." Claude keeps working without you watching.
+- **FileChanged** — matcher watches specific files. `package-lock.json` changes → auto security audit. Config changes → auto revalidation.
+- **CwdChanged** — auto-reload env (direnv) when Claude moves between monorepo packages.
 
 ## Daily Routine
 
