@@ -2,6 +2,10 @@
 
 
 import asyncio
+
+from backend.services.task_utils import safe_create_task
+
+from backend.services.task_utils import safe_create_task
 import logging
 from datetime import date as date_type
 
@@ -277,11 +281,12 @@ async def patch_appointment(
 
     # Fire automation trigger when appointment is completed
     if data.get("status") == "completed" and updated.get("lead_id"):
-        asyncio.create_task(
+        safe_create_task(
             trigger_sequence(
                 tenant_id, updated["lead_id"], "appointment_completed",
                 {"appointment_id": appointment_id},
-            )
+            ),
+            name="trigger_appointment_completed",
         )
 
     return updated

@@ -1,6 +1,8 @@
 """Webhook dispatcher — delivers event payloads to registered webhook URLs."""
 
 import asyncio
+
+from backend.services.task_utils import safe_create_task
 import hashlib
 import hmac
 import json
@@ -100,7 +102,7 @@ async def fire_event(
     for webhook in webhooks:
         if not _check_daily_limit(tenant_id):
             break
-        asyncio.create_task(_deliver(tenant_id, webhook, payload))
+        safe_create_task(_deliver(tenant_id, webhook, payload), name="webhook_deliver")
 
 
 async def _deliver(

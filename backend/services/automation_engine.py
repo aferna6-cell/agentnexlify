@@ -1,6 +1,8 @@
 """Automation engine — triggers, processes, and executes email sequences."""
 
 import asyncio
+
+from backend.services.task_utils import safe_create_task
 import html
 import logging
 from datetime import datetime, timedelta, timezone
@@ -3915,7 +3917,7 @@ async def _execute_action(
         campaign_id = action_config.get("campaign_id")
         if not campaign_id:
             return {"status": "failed", "reason": "no_campaign_id"}
-        asyncio.create_task(_send_campaign_for_rule(campaign_id, tenant_id, lead_data))
+        safe_create_task(_send_campaign_for_rule(campaign_id, tenant_id, lead_data), name="campaign_for_rule")
         return {"status": "dispatched", "campaign_id": campaign_id}
 
     elif action_type == "update_lead_score":

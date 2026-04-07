@@ -1,6 +1,8 @@
 """AgentNexLiFy — FastAPI application entry point."""
 
 import asyncio
+
+from backend.services.task_utils import safe_create_task
 import logging
 import os
 import time
@@ -373,8 +375,9 @@ async def _process_scheduled_campaigns():
                 }
             ).eq("id", campaign_id).execute()
 
-            asyncio.create_task(
-                _send_campaign_background(campaign_id, tenant_id, leads, campaign)
+            safe_create_task(
+                _send_campaign_background(campaign_id, tenant_id, leads, campaign),
+                name=f"campaign_{campaign_id}",
             )
             dispatched += 1
             logger.info(

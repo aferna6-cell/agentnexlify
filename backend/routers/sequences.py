@@ -2,6 +2,8 @@
 
 
 import asyncio
+
+from backend.services.task_utils import safe_create_task
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -572,11 +574,12 @@ async def update_lead_stage(
 
     # Fire automation trigger
     if old_stage != req.stage:
-        asyncio.create_task(
+        safe_create_task(
             trigger_sequence(
                 tenant_id, lead_id, "lead_stage_change",
                 {"old_stage": old_stage, "new_stage": req.stage},
-            )
+            ),
+            name="trigger_lead_stage_change",
         )
 
     return {"lead_id": lead_id, "old_stage": old_stage, "new_stage": req.stage}
