@@ -311,7 +311,7 @@ async def send_document(
         "sent_at": datetime.now(timezone.utc).isoformat(),
         "sent_via": ", ".join(sent_via),
         "updated_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", document_id).execute()
+    }).eq("id", document_id).eq("tenant_id", tenant_id).execute()
 
     return {"sent_via": sent_via, "signing_url": signing_url}
 
@@ -341,7 +341,7 @@ async def get_document_for_signing(request: Request, token: str):
     if doc.get("expires_at"):
         expires = datetime.fromisoformat(doc["expires_at"].replace("Z", "+00:00"))
         if datetime.now(timezone.utc) > expires:
-            db.table("documents").update({"status": "expired"}).eq("id", doc["id"]).execute()
+            db.table("documents").update({"status": "expired"}).eq("id", doc["id"]).eq("tenant_id", doc["tenant_id"]).execute()
             raise HTTPException(status_code=400, detail="This document has expired")
 
     # Mark as viewed
@@ -349,7 +349,7 @@ async def get_document_for_signing(request: Request, token: str):
         db.table("documents").update({
             "status": "viewed",
             "viewed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", doc["id"]).execute()
+        }).eq("id", doc["id"]).eq("tenant_id", doc["tenant_id"]).execute()
 
     # Load business name
     tenant = db.table("tenants").select("business_name").eq("id", doc["tenant_id"]).limit(1).execute()
@@ -390,7 +390,7 @@ async def sign_document(request: Request, token: str, req: SignDocumentRequest):
             detail="Signer name does not match the expected signer for this document",
         )
 
-    # Record signature
+    # Record signature and invalidate the signing token so it cannot be reused
     client_ip = request.client.host if request.client else "unknown"
     db.table("documents").update({
         "status": "signed",
@@ -398,8 +398,9 @@ async def sign_document(request: Request, token: str, req: SignDocumentRequest):
         "signature_data": req.signature_data,
         "signature_ip": client_ip,
         "signer_name": req.signer_name,
+        "signing_token": None,
         "updated_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", doc["id"]).execute()
+    }).eq("id", doc["id"]).eq("tenant_id", doc["tenant_id"]).execute()
 
     # Log activity
     try:

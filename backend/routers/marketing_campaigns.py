@@ -691,7 +691,7 @@ async def get_campaign_analytics(
                         )
                     trend_data.reverse()
             except Exception:
-                pass
+                logger.warning("Failed to load trend data for campaign %s", campaign_id, exc_info=True)
 
         device_breakdown = {}
         try:
@@ -713,7 +713,7 @@ async def get_campaign_analytics(
                 else:
                     device_breakdown["other"] = device_breakdown.get("other", 0) + 1
         except Exception:
-            pass
+            logger.warning("Failed to load device breakdown for campaign %s", campaign_id, exc_info=True)
 
         return {
             "campaign": campaign,

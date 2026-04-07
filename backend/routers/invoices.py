@@ -479,6 +479,9 @@ async def create_invoice(
     items = [item.model_dump() for item in req.items]
     subtotal, tax_amount, total = _compute_invoice_totals(items, req.tax_rate)
 
+    if req.deposit_amount > total:
+        raise HTTPException(status_code=400, detail="deposit_amount cannot exceed invoice total")
+
     db = get_supabase()
     invoice_number = await _get_next_invoice_number(db, tenant_id)
 

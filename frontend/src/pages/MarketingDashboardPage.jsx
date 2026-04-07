@@ -111,10 +111,19 @@ export default function MarketingDashboardPage() {
           );
         }
         if (dashRes.email_vs_sms_breakdown) {
-          setBreakdown(dashRes.email_vs_sms_breakdown);
+          // Backend returns a plain dict {email: N, sms: N} — convert to array for Recharts
+          const raw = dashRes.email_vs_sms_breakdown;
+          setBreakdown(
+            Array.isArray(raw)
+              ? raw
+              : Object.entries(raw).map(([type, count]) => ({ type, count })),
+          );
         }
       }
-      if (trendsRes?.trend_data) {
+      // Backend key is "trends" not "trend_data"
+      if (trendsRes?.trends) {
+        setTrends(trendsRes.trends);
+      } else if (trendsRes?.trend_data) {
         setTrends(trendsRes.trend_data);
       } else if (trendsRes && Array.isArray(trendsRes)) {
         setTrends(trendsRes);

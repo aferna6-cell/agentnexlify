@@ -621,7 +621,7 @@ async def get_response_time_analytics(
     """Get response time analytics from the response_metrics table."""
     verify_tenant(claims, tenant_id)
 
-    days = {"7d": 7, "30d": 30, "90d": 90}[period]
+    days = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}[period]
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     db = get_supabase()
@@ -857,7 +857,7 @@ async def get_missed_call_analytics(
     if cached:
         return cached
 
-    days = {"7d": 7, "30d": 30, "90d": 90}[period]
+    days = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}[period]
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     db = get_supabase()

@@ -335,9 +335,9 @@ async def send_lead_email(
 
     # Auto-update lead status from "new" to "contacted"
     try:
-        current = db.table("leads").select("status").eq("id", lead_id).limit(1).execute()
+        current = db.table("leads").select("status").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
         if current.data and current.data[0].get("status") == "new":
-            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).execute()
+            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).eq("client_id", tenant_id).execute()
     except Exception:
         logger.warning("Failed to auto-update lead status after email", exc_info=True)
 
@@ -389,9 +389,9 @@ async def send_lead_sms(
 
     # Auto-update lead status from "new" to "contacted"
     try:
-        current = db.table("leads").select("status").eq("id", lead_id).limit(1).execute()
+        current = db.table("leads").select("status").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
         if current.data and current.data[0].get("status") == "new":
-            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).execute()
+            db.table("leads").update({"status": "contacted"}).eq("id", lead_id).eq("client_id", tenant_id).execute()
     except Exception:
         logger.warning("Failed to auto-update lead status after SMS", exc_info=True)
 
@@ -499,19 +499,19 @@ async def merge_leads(
 
     # Reassign appointments from merge to keep
     try:
-        db.table("appointments").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+        db.table("appointments").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.warning("Failed to reassign appointments during merge", exc_info=True)
 
     # Reassign activity log entries
     try:
-        db.table("activity_log").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+        db.table("activity_log").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.warning("Failed to reassign activity_log during merge", exc_info=True)
 
     # Reassign client notes
     try:
-        db.table("client_notes").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+        db.table("client_notes").update({"lead_id": req.keep_id}).eq("lead_id", req.merge_id).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.warning("Failed to reassign client_notes during merge", exc_info=True)
 

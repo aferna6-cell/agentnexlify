@@ -326,7 +326,7 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
         if action_taken:
             update_data["action_taken"] = action_taken
 
-        db.table("calls").update(update_data).eq("id", call_id).execute()
+        db.table("calls").update(update_data).eq("id", call_id).eq("tenant_id", tenant_id).execute()
         logger.info(
             "Updated call %s with AI summary (sentiment=%s, %d action items)",
             call_id, sentiment, len(action_items),
@@ -894,6 +894,7 @@ async def handle_recording_complete(request: Request, _sig: None = Depends(verif
 async def handle_transcription_complete(
     request: Request,
     background_tasks: BackgroundTasks,
+    _sig: None = Depends(verify_twilio_request),
 ):
     """Twilio transcription callback -- fires when a recording transcription is ready.
 
@@ -992,7 +993,7 @@ async def handle_transcription_complete(
         db.table("calls").update({
             "transcript": transcript_entry,
             "summary": "Transcription received. AI summary generating...",
-        }).eq("id", call_id).execute()
+        }).eq("id", call_id).eq("tenant_id", tenant_id).execute()
         logger.info("Stored transcript for call %s (tenant %s)", call_id, tenant_id)
     except Exception:
         logger.exception("Failed to update call %s with transcript", call_id)

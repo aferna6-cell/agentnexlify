@@ -227,6 +227,10 @@ async def accept_invite(request: Request, req: AcceptInviteRequest):
     if member["invite_accepted"]:
         raise HTTPException(status_code=400, detail="Invite already accepted")
 
+    # Verify the email matches the invitation — prevents token-only account takeover
+    if member["email"].lower().strip() != req.email.lower().strip():
+        raise HTTPException(status_code=403, detail="Email does not match invitation")
+
     # Set password and mark accepted
     password_hash = _hash_password(req.password)
     db.table("team_members").update({

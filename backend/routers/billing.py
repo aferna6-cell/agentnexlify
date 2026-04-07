@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
+from backend.routers.auth import _get_current_tenant
 from backend.services.stripe_service import (
     PLAN_PRICES,
     get_or_create_customer,
@@ -381,8 +382,10 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
 # ---------------------------------------------------------------------------
 
 @router.get("/portal/{tenant_id}", response_model=PortalResponse)
-async def billing_portal(tenant_id: str, _=Depends(_verify_secret)):
+async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """Create a Stripe Customer Portal session for managing subscriptions."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     db = get_supabase()
     result = db.table("tenants").select("stripe_customer_id").eq("id", tenant_id).limit(1).execute()
     if not result.data:

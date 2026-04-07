@@ -481,6 +481,7 @@ async def get_ab_test_results(
                 db.table("ab_test_sends")
                 .select("variant_id, outcome")
                 .eq("ab_test_id", test_id)
+                .eq("tenant_id", tenant_id)
                 .in_("variant_id", variant_ids)
                 .limit(10000)
                 .execute()
