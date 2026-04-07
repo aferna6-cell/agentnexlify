@@ -13,17 +13,36 @@ BEGIN
   END IF;
 END $$;
 
+-- Existing production/staging data can contain orphaned client_id values.
+-- Add the FK as NOT VALID first so new writes are protected without deleting
+-- historical rows; validate only after the existing data is clean.
 DO $$
+DECLARE
+  orphan_count INTEGER;
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'leads_client_id_fkey'
   ) THEN
     ALTER TABLE leads
       ADD CONSTRAINT leads_client_id_fkey
-      FOREIGN KEY (client_id) REFERENCES tenants(id) ON DELETE CASCADE;
+      FOREIGN KEY (client_id) REFERENCES tenants(id) ON DELETE CASCADE
+      NOT VALID;
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM leads WHERE client_id IS NULL) THEN
+  SELECT COUNT(*) INTO orphan_count
+    FROM leads l
+   WHERE l.client_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM tenants t WHERE t.id = l.client_id
+     );
+
+  IF orphan_count = 0 THEN
+    ALTER TABLE leads VALIDATE CONSTRAINT leads_client_id_fkey;
+  ELSE
+    RAISE NOTICE 'leads_client_id_fkey left NOT VALID: % existing leads.client_id values do not reference tenants.id', orphan_count;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM leads WHERE client_id IS NULL) AND orphan_count = 0 THEN
     ALTER TABLE leads ALTER COLUMN client_id SET NOT NULL;
   END IF;
 END $$;
@@ -41,17 +60,34 @@ BEGIN
   END IF;
 END $$;
 
+-- Same strategy for historical conversations that predate the client_id schema.
 DO $$
+DECLARE
+  orphan_count INTEGER;
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'conversations_client_id_fkey'
   ) THEN
     ALTER TABLE conversations
       ADD CONSTRAINT conversations_client_id_fkey
-      FOREIGN KEY (client_id) REFERENCES tenants(id) ON DELETE CASCADE;
+      FOREIGN KEY (client_id) REFERENCES tenants(id) ON DELETE CASCADE
+      NOT VALID;
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM conversations WHERE client_id IS NULL) THEN
+  SELECT COUNT(*) INTO orphan_count
+    FROM conversations c
+   WHERE c.client_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM tenants t WHERE t.id = c.client_id
+     );
+
+  IF orphan_count = 0 THEN
+    ALTER TABLE conversations VALIDATE CONSTRAINT conversations_client_id_fkey;
+  ELSE
+    RAISE NOTICE 'conversations_client_id_fkey left NOT VALID: % existing conversations.client_id values do not reference tenants.id', orphan_count;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM conversations WHERE client_id IS NULL) AND orphan_count = 0 THEN
     ALTER TABLE conversations ALTER COLUMN client_id SET NOT NULL;
   END IF;
 END $$;
