@@ -1009,3 +1009,125 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `migrations/090_add_autopilot_plan.sql`
 **Fix:** Migration 090 drops and recreates the CHECK constraint to include `autopilot`.
 **Prevention:** When adding a new plan tier to code/Stripe, ALWAYS update the DB CHECK constraint in the same PR. Add to the pre-launch checklist.
+
+---
+
+## 2026-04-07 (from commits 2ab39dd + d7572eb + d4463d7)
+
+### 46. IDOR — tenant-scoped writes missing tenant_id filter
+**Date:** 2026-04-07 (Commit 2ab39dd)
+**Symptom:** Lead merge reassignment, document send/view/expire/sign, call transcript/summary update, and A/B test sends queries could target records belonging to any tenant if the attacker supplied a different `{tenant_id}` path param.
+**Root Cause:** Multiple endpoints updated rows by record ID only (e.g. `WHERE id = $1`) without also filtering by `tenant_id`. FastAPI auth confirmed the caller was authenticated but didn't re-verify ownership.
+**Files Changed:** `backend/routers/leads.py`, `backend/routers/documents.py`, `backend/routers/calls.py`, `backend/routers/ab_tests.py`
+**Fix:** Added `.eq("tenant_id", tenant_id)` to all UPDATE/SELECT queries that operate on a specific record. Auto-status email/SMS updates in leads.py also corrected to use `client_id` (leads table FK pattern).
+**Prevention:** Every UPDATE/DELETE must scope by tenant_id (or client_id for leads/conversations). `require_role` only checks role — it does NOT check tenant ownership. Always add `_verify_tenant()` + tenant-scoped WHERE clause.
+
+---
+
+### 47. Signing token not invalidated after document signing — replay attack
+**Date:** 2026-04-07 (Commit 2ab39dd)
+**Symptom:** A signing link could be reused after the document was already signed, allowing duplicate/fraudulent signatures.
+**Root Cause:** `documents.py` sign endpoint updated `status`, `signed_at`, and `signature_data` but left `signing_token` intact. The token remained valid for re-use.
+**Files Changed:** `backend/routers/documents.py`
+**Fix:** After successful signing, set `signing_token = NULL` to invalidate the link.
+**Prevention:** All one-time-use tokens (signing, password reset, invite) MUST be invalidated (set to NULL or deleted) immediately after successful use.
+
+---
+
+### 48. Twilio transcription webhook missing signature verification
+**Date:** 2026-04-07 (Commit 2ab39dd)
+**Symptom:** Any HTTP client could POST to the Twilio transcription callback endpoint and inject arbitrary transcripts/summaries into the calls table.
+**Root Cause:** `calls.py` transcription webhook had no Twilio signature verification — unlike the voice webhook handler which did verify.
+**Files Changed:** `backend/routers/calls.py`
+**Fix:** Added `twilio.request_validator.RequestValidator` check to transcription webhook (same pattern as voice webhook).
+**Prevention:** All Twilio webhook endpoints must verify the `X-Twilio-Signature` header. Missing verification on one endpoint while another has it is a common oversight — audit all webhook handlers together.
+
+---
+
+### 49. Team invite acceptance didn't validate email matches invitation
+**Date:** 2026-04-07 (Commit 2ab39dd)
+**Symptom:** A user could accept a team invitation sent to a different email address if they had a valid JWT.
+**Root Cause:** `team.py` invite acceptance only validated the invite token and JWT role, not that the JWT's email matched the invite's target email.
+**Files Changed:** `backend/routers/team.py`
+**Fix:** Added check that `claims["email"] == invite["email"]` before accepting.
+**Prevention:** Invite acceptance must verify the accepting user's identity matches the invitation target. Never trust JWT role alone for invite flows.
+
+---
+
+### 50. Billing portal used shared secret instead of JWT auth
+**Date:** 2026-04-07 (Commit 2ab39dd)
+**Symptom:** Billing portal endpoint was protected by a shared secret (header value comparison) rather than the standard JWT tenant authentication.
+**Root Cause:** Shared secret approach is weaker than JWT — it's a single credential with no per-tenant scoping or expiry.
+**Files Changed:** `backend/routers/billing.py`
+**Fix:** Replaced shared secret check with standard `require_role("owner")` JWT dependency.
+**Prevention:** All tenant-facing endpoints must use JWT auth. Shared secrets are acceptable only for server-to-server webhooks, not for user-facing endpoints.
+
+---
+
+### 51. CAN-SPAM — email sequences sent without checking unsubscribed flag
+**Date:** 2026-04-07 (Commits 2ab39dd + d7572eb)
+**Symptom:** Email sequences and automation engine send_email action would send to leads who had unsubscribed, violating CAN-SPAM.
+**Root Cause:** Both `email_sequences.py` processors and `automation_engine.py`'s `_execute_action` for `send_email` type did not check the `email_unsubscribed` flag on the lead before sending.
+**Files Changed:** `backend/routers/email_sequences.py`, `backend/services/automation_engine.py`
+**Fix:** Added `lead.get("email_unsubscribed")` check before sending. Skip and mark step as `skipped_unsubscribed` if true.
+**Prevention:** EVERY email send path must check the unsubscribed flag. This is a legal requirement (CAN-SPAM, GDPR). Add it to the email-send checklist: (1) bounced? (2) unsubscribed? (3) valid email?
+
+---
+
+### 52. Email sequence template variables not rendered before send
+**Date:** 2026-04-07 (Commit 2ab39dd)
+**Symptom:** Emails sent by drip sequences contained raw `{{name}}`, `{{business_name}}` placeholders instead of the lead's actual data.
+**Root Cause:** `email_sequences.py` sent `step["body"]` directly without applying `str.replace("{{name}}", ...)` substitutions.
+**Files Changed:** `backend/routers/email_sequences.py`
+**Fix:** Added template variable rendering (name, business_name, phone, etc.) before send.
+**Prevention:** Any email body containing `{{...}}` template vars must be rendered before send. Write a shared `render_template(body, lead)` helper to enforce this consistently.
+
+---
+
+### 53. billing.py timing attack — string comparison for webhook secret
+**Date:** 2026-04-07 (Commit d7572eb)
+**Symptom:** Stripe webhook secret comparison used `==` operator (variable-time), enabling timing attacks to enumerate the secret.
+**Root Cause:** `if computed_sig == header_sig` — Python `==` short-circuits on the first differing character.
+**Files Changed:** `backend/routers/billing.py`
+**Fix:** Changed to `hmac.compare_digest(computed_sig, header_sig)` (constant-time).
+**Prevention:** All HMAC/secret comparisons must use `hmac.compare_digest()`. Never use `==` for security-sensitive string comparisons.
+
+---
+
+### 54. Stripe subscription status written to DB without allowlist check
+**Date:** 2026-04-07 (Commit d7572eb)
+**Symptom:** Any `subscription.updated` event could write arbitrary strings to `tenants.plan_status` if Stripe ever sends an unexpected status value.
+**Root Cause:** `billing.py` wrote `event_data["status"]` directly to the DB without validating against known values.
+**Files Changed:** `backend/routers/billing.py`
+**Fix:** Added allowlist: `VALID_STATUSES = {"active", "trialing", "past_due", "canceled", "incomplete", "paused"}`. Unknown statuses logged but not written.
+**Prevention:** Enum/status fields written from external sources (Stripe, Twilio, webhooks) must be validated against an allowlist before DB write.
+
+---
+
+### 55. Invoice overpayment — record-payment not capped at remaining balance
+**Date:** 2026-04-07 (Commit d7572eb)
+**Symptom:** Calling record-payment with an amount larger than the invoice total would set `amount_paid > total`, creating negative balance invoices.
+**Root Cause:** No server-side cap on the payment amount.
+**Files Changed:** `backend/routers/invoices.py`
+**Fix:** Added `amount = min(amount, invoice["total"] - invoice["amount_paid"])` cap.
+**Prevention:** Any financial calculation that adds/subtracts from a bounded value must validate bounds server-side. Client-side caps are cosmetic only.
+
+---
+
+### 56. Real API secret committed to .env.example
+**Date:** 2026-04-07 (Commit d4463d7)
+**Symptom:** A real production API key (`ab0lhhx7UC...`) was committed to `.env.example` in commit `9c87335`. Key must be treated as compromised and rotated in Railway.
+**Root Cause:** `.env.example` was modified with a real key instead of a placeholder during admin analytics work.
+**Files Changed:** `.env.example`
+**Fix:** Replaced real key with `your_admin_api_key_here` placeholder. Production key must be rotated in Railway env vars.
+**Prevention:** `.env.example` must ONLY contain placeholder strings. Pre-commit hook already scans for `sk_live_`, `sk_test_`, `sk-ant-` — extend it to cover admin API key patterns. Never copy real keys into example files.
+
+---
+
+### 57. RLS policies used auth.uid() — wrong for service_role architecture
+**Date:** 2026-04-07 (Commit 093 migration)
+**Symptom:** Migration 091 added RLS policies using `auth.uid() = tenant_id` pattern. This would silently return 0 rows for PostgREST queries with anon/authenticated roles, and is wrong for this codebase's architecture.
+**Root Cause:** This codebase uses FastAPI + service_role key for all DB access — Supabase Auth (auth.uid()) is not used. Migration 091 incorrectly applied the PostgREST/Supabase Auth pattern.
+**Files Changed:** `migrations/093_fix_rls_policies.sql`
+**Fix:** Migration 093 replaces all `auth.uid()` policies with `auth.role() = 'service_role'` — deny all non-service-role access, let FastAPI handle tenant isolation in application code.
+**Prevention:** This codebase's RLS pattern: `FOR ALL USING (auth.role() = 'service_role')`. NEVER use `auth.uid()` — there are no Supabase Auth users. Document this in every migration template.

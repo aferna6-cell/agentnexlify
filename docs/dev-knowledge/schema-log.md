@@ -575,3 +575,20 @@ Policies use `auth.uid()` which is a Supabase Auth function. This codebase uses 
 
 ### 091 — References `automation_rule_logs` in entry above
 Should be `automation_rule_executions`. The actual SQL file correctly uses `automation_rule_executions`.
+
+---
+
+### 093 — Fix RLS Policies (Corrective Migration for 091)
+**Date:** 2026-04-07
+Replaces the incorrect `auth.uid()` RLS policies from migration 091 with the correct `auth.role() = 'service_role'` pattern. All tables from 091 are fixed: ab_tests, ab_test_variants, ab_test_sends, automation_rules, automation_rule_executions, campaign_analytics_aggregates, admin_promotions.
+
+**Why the fix was needed:** Migration 091 used `auth.uid()` (Supabase Auth pattern) but this codebase uses custom FastAPI JWT auth with service_role key. The `auth.uid()` policies would silently return 0 rows for any PostgREST query with anon/authenticated roles. The service_role key bypasses RLS, so FastAPI queries were unaffected, but the policies were semantically wrong and created security confusion.
+
+**Correct RLS pattern for this codebase:**
+```sql
+CREATE POLICY table_policy ON table_name
+    FOR ALL USING (auth.role() = 'service_role');
+```
+All tenant isolation is enforced at application layer in FastAPI, not at RLS layer.
+
+**Applied:** Pending — created 2026-04-07. Apply via Supabase MCP. Must apply before 091 creates a false sense of security.
