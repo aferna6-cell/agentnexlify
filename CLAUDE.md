@@ -12,6 +12,7 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 - All new pip packages need `--break-system-packages` flag
 - NEVER commit .env files or log secret values
 - Database schema changes ONLY via numbered migration files in migrations/
+- NEVER use WebFetch or WebSearch — use `agent-browser` via Bash instead (real browser, JS execution, redirect handling)
 
 ### Claude API Model IDs
 Valid model IDs (March 2026): claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001. NEVER use a model ID not on this list. If Anthropic releases new models, update this list AFTER verifying the ID works.
@@ -152,6 +153,7 @@ Before writing any database query, verify the column exists. When creating a mig
 - Dashboard uses a dark theme — match it for any new components
 - Plan/subscription data must come from live API calls, never stale JWT claims
 - Empty states should be helpful with CTAs, not just "0" or "No data"
+- ALWAYS reference `design.md` in the project root before making any frontend visual changes — it defines colors, typography, spacing, components, and layout rules
 
 ## Skills & Agents
 

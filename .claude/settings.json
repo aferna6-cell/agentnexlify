@@ -28,6 +28,11 @@
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/protect-files.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/validate-skill.sh",
+            "statusMessage": "Validating skill template..."
           }
         ]
       },
@@ -37,6 +42,16 @@
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/require-tests-for-pr.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Use agent-browser via Bash instead\",\"additionalContext\":\"BLOCKED: Use agent-browser CLI via Bash instead of WebFetch/WebSearch. agent-browser gives real browser rendering, JS execution, redirect handling. Commands: agent-browser open <url> | agent-browser text | agent-browser screenshot | agent-browser links | agent-browser click <sel> | agent-browser fill <sel> <text>\"}}'",
+            "statusMessage": "Routing to agent-browser..."
           }
         ]
       }
@@ -49,6 +64,16 @@
             "type": "command",
             "command": "bash scripts/claude-hooks/kb-viewer-sync.sh",
             "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "knowledge-base/raw",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"FileChanged\",\"additionalContext\":\"New raw source added to knowledge-base/raw/. Run /kb-compile to update wiki articles, or queue it for the next session. Check PENDING.md for unprocessed sources.\"}}'",
+            "timeout": 5
           }
         ]
       }
@@ -77,6 +102,11 @@
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/run-tests-after-edit.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/reference-design.sh",
+            "timeout": 5
           }
         ]
       },
@@ -145,6 +175,29 @@
             "type": "command",
             "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"PARALLEL APPROACHES: When facing a complex or uncertain task with multiple valid solutions, spawn 2 agents in parallel (using isolation=worktree), each trying a different approach. Compare results — take the one that passes tests, is simpler, or performs better. Use this when: the best approach is genuinely unclear, there are 2+ viable architectures, or the task is risky enough that a fallback is worth the compute. Do NOT use for straightforward tasks with one obvious solution.\"}}'",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/ultrathink-trigger.sh",
+            "timeout": 5,
+            "statusMessage": "Checking complexity..."
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/kb-first-check.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/task-completed-veto.sh",
+            "timeout": 60,
+            "statusMessage": "Verifying build before completion..."
           }
         ]
       }
@@ -195,5 +248,7 @@
   "enableAllProjectMcpServers": true,
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true
-  }
+  },
+  "effortLevel": "high",
+  "autoCompactWindow": 400000
 }
