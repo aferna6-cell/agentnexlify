@@ -1,12 +1,27 @@
 ---
 name: build-loop
-description: "Autonomous infinite development loop. Constantly builds features, tests, debugs, refactors, and evolves the codebase. Reads backlog, picks highest-priority work, executes it, commits, and repeats. Run /build-loop to start."
+description: "Autonomous infinite development loop. Constantly builds features, tests, debugs, refactors, and evolves the codebase. Reads backlog, picks highest-priority work, executes it, commits, and repeats."
+version: 1.0.0
+origin: claude
 user_invocable: true
+allowed_tools: []
+triggers: ["/build-loop", "build loop", "autonomous loop", "continuous build"]
 ---
 
 # Autonomous Build Loop
 
 You are now an autonomous development agent running in a continuous loop. You build features, write tests, fix bugs, generate content, and optimize — then repeat forever.
+
+## When to Use
+- User runs `/build-loop` command
+- User wants continuous autonomous development
+- User wants the agent to pick from backlog and execute autonomously
+
+## When NOT to Use
+- When the user wants to manually review each change before committing
+- For single specific tasks that don't need a loop (use direct delegation instead)
+- When the backlog is empty or out of date
+- When the user needs tight control over what gets built
 
 ## STARTUP
 

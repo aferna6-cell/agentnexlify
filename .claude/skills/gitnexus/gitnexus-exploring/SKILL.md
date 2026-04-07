@@ -1,6 +1,9 @@
 ---
 name: gitnexus-exploring
-description: "Use when the user asks how code works, wants to understand architecture, trace execution flows, or explore unfamiliar parts of the codebase. Examples: \"How does X work?\", \"What calls this function?\", \"Show me the auth flow\""
+description: "Explore unfamiliar codebases, understand architecture, trace execution flows, and answer how code works using GitNexus."
+version: 1.0.0
+origin: claude
+triggers: ["how does this work", "project structure", "show me the auth flow", "explore codebase", "understand architecture", "what calls this function"]
 ---
 
 # Exploring Codebases with GitNexus
@@ -12,6 +15,12 @@ description: "Use when the user asks how code works, wants to understand archite
 - "Show me the main components"
 - "Where is the database logic?"
 - Understanding code you haven't seen before
+
+## When NOT to Use
+
+- Debugging a specific bug or error (use gitnexus-debugging instead)
+- Analyzing what will break before making changes (use gitnexus-impact-analysis instead)
+- Renaming or restructuring code (use gitnexus-refactoring instead)
 
 ## Workflow
 

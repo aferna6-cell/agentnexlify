@@ -1,6 +1,10 @@
 ---
 name: feature-build
 description: "Use this skill when building any new feature. Ensures schema safety, consistent patterns, and proper documentation."
+version: 1.0.0
+origin: claude
+allowed_tools: []
+triggers: ["new feature", "new API endpoint", "new dashboard page", "new integration", "build feature", "feature build"]
 ---
 
 # Feature Build
@@ -9,6 +13,12 @@ description: "Use this skill when building any new feature. Ensures schema safet
 - Adding a new API endpoint or dashboard page
 - Adding a new integration
 - Extending an existing feature
+
+## When NOT to Use
+- Simple bug fixes that don't add new endpoints or pages
+- Configuration-only changes (env vars, deploy settings)
+- Refactoring existing code without adding new surface area
+- Data migrations that don't touch API or UI
 
 ## Pre-Build Checklist
 - [ ] Identify which database tables this feature touches

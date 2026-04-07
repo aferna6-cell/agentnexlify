@@ -1,14 +1,17 @@
 ---
 name: coordinator
-description: Multi-agent orchestrator. Auto-decomposes complex tasks into parallel workstreams with dependency resolution. Use when user says "coordinate this", "orchestrate", or gives a complex multi-part task. Also activates for /new-feature and /refactor commands.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, TaskCreate, TaskUpdate, TaskList
+description: "Multi-agent orchestrator. Auto-decomposes complex tasks into parallel workstreams with dependency resolution."
+version: 1.0.0
+origin: claude
+allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "TaskCreate", "TaskUpdate", "TaskList"]
+triggers: ["coordinate this", "orchestrate", "/new-feature", "/refactor", "multi-part task", "complex task"]
 ---
 
 # Coordinator Mode
 
 Multi-agent orchestrator that auto-decomposes complex tasks into a dependency DAG and dispatches them to specialized agents in parallel.
 
-## When to Activate
+## When to Use
 
 - User says "coordinate this", "orchestrate", or similar
 - `/new-feature` command (full-stack feature build)
@@ -22,6 +25,12 @@ Multi-agent orchestrator that auto-decomposes complex tasks into a dependency DA
 - Simple questions about the codebase
 - Tasks clearly within one domain (just delegate directly to that agent)
 - The user explicitly says to do it directly
+
+## When NOT to Use
+- Simple single-agent tasks that one person can handle end-to-end
+- Exploratory tasks where the scope is still unclear
+- When there is no clear dependency ordering between subtasks
+- For tasks where all subtasks are independent and can be delegated directly without DAG management
 
 ---
 

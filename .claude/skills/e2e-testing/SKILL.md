@@ -1,12 +1,28 @@
 ---
 name: e2e-testing
-description: Playwright E2E testing patterns, Page Object Model, configuration, CI/CD integration, artifact management, and flaky test strategies.
-origin: ECC
+description: "Playwright E2E testing patterns, Page Object Model, configuration, CI/CD integration, artifact management, and flaky test strategies."
+version: 1.0.0
+origin: claude
+allowed_tools: []
+triggers: ["e2e test", "end-to-end test", "playwright test", "page object model", "flaky test", "E2E configuration"]
 ---
 
 # E2E Testing Patterns
 
 Comprehensive Playwright patterns for building stable, fast, and maintainable E2E test suites.
+
+## When to Use
+- Writing integration tests for user-facing flows
+- Testing critical paths like authentication, payments, and data management
+- Setting up CI/CD test pipelines
+- Debugging flaky E2E tests
+- Creating Page Object Models for reusable test components
+
+## When NOT to Use
+- Unit testing individual functions or components (use Jest/Vitest instead)
+- API-only testing without UI interaction (use backend unit tests)
+- Testing internal implementation details that users don't interact with
+- When tests would be slower to write and maintain than the feature itself
 
 ## Test File Organization
 

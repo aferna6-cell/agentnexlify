@@ -1,8 +1,11 @@
 ---
 name: worktree-orchestrator
-description: "Manage 4-8 parallel git worktrees, each running its own compound engineering pipeline. The real multiplier — if Claude Code makes you 10x, worktrees multiply that again. Use when you have multiple independent tasks to execute simultaneously."
+description: "Manage 4-8 parallel git worktrees, each running its own compound engineering pipeline for high quality at high throughput."
+version: 1.0.0
+origin: claude
 user_invocable: true
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, TaskCreate, TaskUpdate, TaskList
+allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "TaskCreate", "TaskUpdate", "TaskList"]
+triggers: ["worktree", "parallel worktrees", "orchestrate worktrees", "run in parallel", "compound engineering", "worktree setup"]
 ---
 
 # Worktree Orchestrator
@@ -20,7 +23,7 @@ Combined:           compound + worktrees = high quality * high throughput
 
 The skill is managing multiple AI agents in parallel without losing track. That's the next evolution of engineering.
 
-## When to Activate
+## When to Use
 
 - User has 2+ independent tasks to work on
 - `/orchestrate` or `/parallel` command
@@ -28,7 +31,7 @@ The skill is managing multiple AI agents in parallel without losing track. That'
 - Any batch of work where tasks don't share files
 - End-to-end codebase testing (each vertical in its own worktree)
 
-## When NOT to Activate
+## When NOT to Use
 
 - Tasks that modify the same files (will cause merge conflicts)
 - Tasks with strict ordering dependencies

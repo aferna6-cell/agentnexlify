@@ -128,49 +128,82 @@
     ]
   },
   "skills": {
-    "claude": [
-      "ai-feature-pattern",
-      "buddy",
-      "build-loop",
-      "coding-standards",
-      "compound-engineering",
-      "coordinator",
-      "dead-code-sweep",
-      "debug-api",
-      "deep-research",
-      "e2e-testing",
-      "eval-harness",
-      "feature-build",
-      "industry-content",
-      "kairos",
-      "kb-compile",
-      "kb-discover",
-      "kb-health",
-      "kb-ingest",
-      "kb-query",
-      "kevin-mode",
-      "migration-workflow",
-      "schema-guard",
-      "security-audit",
-      "security-patch-from-review",
-      "strategic-compact",
-      "subconscious",
-      "tdd-workflow",
-      "team-orchestration",
-      "tenant-chatbot-audit",
-      "verification-loop",
-      "widget-test",
-      "worktree-orchestrator"
-    ],
-    "codex": [
-      "agentnexlify-runtime-constraints",
-      "agentnexlify-schema-guard",
-      "agentnexlify-surface-selector",
-      "agentnexlify-widget-integrity"
-    ],
-    "repo": [
-      "llm-council"
-    ],
+    "schema_version": "1.0.0",
+    "standard": "All skills follow docs/SKILL-STANDARD.md with frontmatter: name, description, version, origin, triggers",
+    "claude": {
+      "location": ".claude/skills/",
+      "skills": [
+        "ai-feature-pattern",
+        "buddy",
+        "build-loop",
+        "challenge-assumptions",
+        "coding-standards",
+        "compound-engineering",
+        "coordinator",
+        "dead-code-sweep",
+        "debug-api",
+        "deep-research",
+        "e2e-testing",
+        "eval-harness",
+        "feature-build",
+        "industry-content",
+        "kairos",
+        "kb-compile",
+        "kb-discover",
+        "kb-health",
+        "kb-ingest",
+        "kb-query",
+        "kevin-mode",
+        "last30days",
+        "migration-workflow",
+        "obsidian-sync",
+        "schema-guard",
+        "security-audit",
+        "security-patch-from-review",
+        "strategic-compact",
+        "subconscious",
+        "tdd-workflow",
+        "team-orchestration",
+        "tenant-chatbot-audit",
+        "verification-loop",
+        "widget-test",
+        "wiki",
+        "worktree-orchestrator"
+      ],
+      "gitnexus": [
+        "gitnexus-cli",
+        "gitnexus-debugging",
+        "gitnexus-exploring",
+        "gitnexus-guide",
+        "gitnexus-impact-analysis",
+        "gitnexus-refactoring"
+      ]
+    },
+    "codex": {
+      "location": ".codex/skills/",
+      "skills": [
+        "agentnexlify-runtime-constraints",
+        "agentnexlify-schema-guard",
+        "agentnexlify-surface-selector",
+        "agentnexlify-widget-integrity"
+      ]
+    },
+    "repo": {
+      "location": "skills/",
+      "skills": [
+        "llm-council"
+      ]
+    },
+    "generated": {
+      "location": "skills/generated/",
+      "skills": [
+        "caveman",
+        "diagram-it",
+        "nano-this",
+        "ver-it",
+        "vis-it"
+      ]
+    },
     "notes": {
       "default_orchestration": "coordinator",
       "experimental": [

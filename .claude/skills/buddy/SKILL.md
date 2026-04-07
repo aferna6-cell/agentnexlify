@@ -1,12 +1,25 @@
 ---
 name: buddy
-description: Tamagotchi-style coding companion. Deterministic creature generated from user ID. Has species, rarity, stats, and personality. Shows up in responses with mood based on session health. Use when user says "buddy", "companion", "pet", or at session start to show buddy status.
-allowed-tools: Read, Write, Bash, Glob
+description: "Tamagotchi-style coding companion. Deterministic creature generated from user ID. Has species, rarity, stats, and personality. Shows up in responses with mood based on session health."
+version: 1.0.0
+origin: claude
+allowed_tools: ["Read", "Write", "Bash", "Glob"]
+triggers: ["buddy", "companion", "pet", "buddy status", "buddy stats", "buddy feed", "buddy name"]
 ---
 
 # Buddy — Your Coding Companion
 
 A deterministic creature companion generated from the user's identity. Lives across sessions, has stats that evolve based on coding activity.
+
+## When to Use
+- User says "buddy" or asks about buddy status
+- Session start when buddy is enabled
+- User requests buddy-related commands (buddy stats, buddy feed, buddy rename)
+
+## When NOT to Use
+- During critical debugging sessions where fun additions distract from the work
+- When the user is asking for a serious, production-focused response only
+- If the user has not explicitly enabled or asked for buddy
 
 ## Creature Generation
 

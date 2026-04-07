@@ -1,11 +1,26 @@
 ---
 name: gitnexus-cli
-description: "Use when the user needs to run GitNexus CLI commands like analyze/index a repo, check status, clean the index, generate a wiki, or list indexed repos. Examples: \"Index this repo\", \"Reanalyze the codebase\", \"Generate a wiki\""
+description: "Run GitNexus CLI commands for analyzing, indexing, checking status, cleaning the index, generating a wiki, or listing indexed repos."
+version: 1.0.0
+origin: claude
+triggers: ["gitnexus analyze", "gitnexus index", "gitnexus status", "gitnexus clean", "gitnexus wiki", "gitnexus list", "index this repo", "reanalyze codebase"]
 ---
 
 # GitNexus CLI Commands
 
 All commands work via `npx` — no global install required.
+
+## When to Use
+- First time using GitNexus in a project (run `npx gitnexus analyze`)
+- Checking if the index is stale or needs rebuilding
+- Generating documentation from the knowledge graph
+- Listing all indexed repos
+
+## When NOT to Use
+- Exploring code architecture (use gitnexus-exploring instead)
+- Debugging bugs (use gitnexus-debugging instead)
+- Analyzing impact of changes (use gitnexus-impact-analysis instead)
+- Refactoring code (use gitnexus-refactoring instead)
 
 ## Commands
 

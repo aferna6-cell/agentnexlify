@@ -1,11 +1,23 @@
 ---
 name: gitnexus-guide
-description: "Use when the user asks about GitNexus itself — available tools, how to query the knowledge graph, MCP resources, graph schema, or workflow reference. Examples: \"What GitNexus tools are available?\", \"How do I use GitNexus?\""
+description: "Reference guide for all GitNexus MCP tools, resources, graph schema, and the skill routing table for different code tasks."
+version: 1.0.0
+origin: claude
+triggers: ["what gitnexus tools", "gitnexus reference", "gitnexus schema", "gitnexus tools available", "how to use gitnexus", "gitnexus guide"]
 ---
 
 # GitNexus Guide
 
 Quick reference for all GitNexus MCP tools, resources, and the knowledge graph schema.
+
+## When to Use
+- Looking up available GitNexus tools and their capabilities
+- Understanding the graph schema for writing Cypher queries
+- Finding which GitNexus skill to use for a specific task
+
+## When NOT to Use
+- Performing a specific code task (read the task-specific skill instead: exploring, debugging, impact-analysis, refactoring)
+- Running CLI commands (use gitnexus-cli instead)
 
 ## Always Start Here
 

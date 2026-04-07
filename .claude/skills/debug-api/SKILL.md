@@ -1,6 +1,10 @@
 ---
 name: debug-api
 description: "Use this skill when diagnosing any API error — 422s, 500s, CORS failures, silent data loss, or webhook issues."
+version: 1.0.0
+origin: claude
+allowed_tools: []
+triggers: ["422 error", "500 error", "API error", "CORS error", "webhook issue", "silent data loss", "debug API", "API not working"]
 ---
 
 # Debug API
@@ -10,6 +14,12 @@ description: "Use this skill when diagnosing any API error — 422s, 500s, CORS 
 - Widget not saving data
 - Stripe webhooks not updating the database
 - CORS errors in browser console
+
+## When NOT to Use
+- Frontend-only bugs with no API involvement
+- Database connection or infrastructure issues (check Railway/logs directly)
+- Authentication errors caused by expired tokens (check client-side token handling)
+- Performance issues that are not errors (use profiling tools instead)
 
 ## Diagnostic Workflow
 

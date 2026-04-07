@@ -1,21 +1,29 @@
 ---
 name: eval-harness
-description: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles
-origin: ECC
-tools: Read, Write, Edit, Bash, Grep, Glob
+description: "Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles."
+version: 1.0.0
+origin: claude
+allowed_tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+triggers: ["/eval define", "/eval check", "/eval report", "eval-driven", "pass@k", "eval framework", "regression eval"]
 ---
 
 # Eval Harness Skill
 
 A formal evaluation framework for Claude Code sessions, implementing eval-driven development (EDD) principles.
 
-## When to Activate
+## When to Use
 
 - Setting up eval-driven development (EDD) for AI-assisted workflows
 - Defining pass/fail criteria for Claude Code task completion
 - Measuring agent reliability with pass@k metrics
 - Creating regression test suites for prompt or agent changes
 - Benchmarking agent performance across model versions
+
+## When NOT to Use
+- For simple code changes where standard unit tests already cover the behavior
+- When the success criteria are too subjective to measure reliably
+- For one-off tasks that won't be repeated or iterated on
+- When running evals would take longer than the implementation itself
 
 ## Philosophy
 

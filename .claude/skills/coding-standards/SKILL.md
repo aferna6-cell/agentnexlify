@@ -1,14 +1,17 @@
 ---
 name: coding-standards
-description: Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development.
-origin: ECC
+description: "Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development."
+version: 1.0.0
+origin: claude
+allowed_tools: []
+triggers: ["coding standards", "code style", "best practices", "linting rules", "naming conventions", "new project standards", "onboarding conventions"]
 ---
 
 # Coding Standards & Best Practices
 
 Universal coding standards applicable across all projects.
 
-## When to Activate
+## When to Use
 
 - Starting a new project or module
 - Reviewing code for quality and maintainability
@@ -16,6 +19,12 @@ Universal coding standards applicable across all projects.
 - Enforcing naming, formatting, or structural consistency
 - Setting up linting, formatting, or type-checking rules
 - Onboarding new contributors to coding conventions
+
+## When NOT to Use
+- Quick scripts or one-off prototypes where speed matters more than quality
+- Legacy code you're just reading for context, not modifying
+- When working on a codebase with its own documented style guide that differs
+- During exploratory debugging where the focus is understanding, not writing
 
 ## Code Quality Principles
 

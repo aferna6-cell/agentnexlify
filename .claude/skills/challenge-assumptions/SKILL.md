@@ -1,7 +1,11 @@
 ---
 name: challenge-assumptions
 description: "Generate steelman counterarguments for recent wiki articles. Prevents echo-chamber thinking by challenging assumptions in the knowledge base."
+version: 1.0.0
+origin: claude
 user_invocable: true
+allowed_tools: []
+triggers: ["/challenge-assumptions", "challenge assumptions", "assumption review", "challenge wiki"]
 ---
 
 # challenge-assumptions
@@ -19,6 +23,12 @@ counterarguments, alternative explanations, and blind spots for each one. Append
 ```
 
 Can also be triggered by cron via `scripts/daily/challenge-assumptions.sh`.
+
+## When NOT to Use
+- The knowledge base is brand new with no articles to challenge yet
+- During active brainstorming sessions where you want to generate ideas without pushback
+- When the user wants a quick answer and not a thorough debate
+- For articles that are purely technical reference (no claims to challenge)
 
 ---
 

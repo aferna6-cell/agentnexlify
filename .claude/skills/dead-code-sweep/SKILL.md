@@ -1,12 +1,28 @@
 ---
 name: dead-code-sweep
 description: "Scan the codebase for dead code — unused files, unreachable functions, orphan imports, dead config. Verify each item is truly dead, then remove."
+version: 1.0.0
+origin: claude
 user_invocable: true
+allowed_tools: []
+triggers: ["/dead-code-sweep", "dead code", "unused code", "remove dead", "orphan imports", "cleanup unused"]
 ---
 
 # Dead Code Sweep
 
 Systematic dead code detection and removal with false-positive verification.
+
+## When to Use
+- During refactoring cycles to clean up unused code
+- Before major releases to reduce maintenance burden
+- After renaming or restructuring to find orphaned files and functions
+- When the codebase feels bloated with forgotten code
+
+## When NOT to Use
+- On a freshly initialized project with no history
+- During active development where code may be used soon
+- Without understanding external consumers (APIs, webhooks, third-party integrations)
+- As a substitute for writing clean code in the first place
 
 ## Usage
 

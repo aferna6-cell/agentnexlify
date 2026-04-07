@@ -1,6 +1,9 @@
 ---
 name: gitnexus-debugging
-description: "Use when the user is debugging a bug, tracing an error, or asking why something fails. Examples: \"Why is X failing?\", \"Where does this error come from?\", \"Trace this bug\""
+description: "Debug bugs, trace errors, and investigate unexpected behavior using GitNexus query, context, and process tools."
+version: 1.0.0
+origin: claude
+triggers: ["why is this failing", "trace this error", "who calls this method", "trace this bug", "debug with gitnexus", "500 error investigation"]
 ---
 
 # Debugging with GitNexus
@@ -12,6 +15,12 @@ description: "Use when the user is debugging a bug, tracing an error, or asking 
 - "Who calls this method?"
 - "This endpoint returns 500"
 - Investigating bugs, errors, or unexpected behavior
+
+## When NOT to Use
+
+- Understanding how code works without a specific bug (use gitnexus-exploring instead)
+- Analyzing impact before making changes (use gitnexus-impact-analysis instead)
+- Renaming or restructuring code (use gitnexus-refactoring instead)
 
 ## Workflow
 

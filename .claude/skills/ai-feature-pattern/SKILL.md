@@ -1,6 +1,10 @@
 ---
 name: ai-feature-pattern
 description: "Use this skill when building any feature that calls the Claude API for AI-powered functionality (text generation, categorization, extraction, analysis). Ensures consistent prompt engineering, JSON parsing, and error handling."
+version: 1.0.0
+origin: claude
+allowed_tools: []
+triggers: ["AI-powered feature", "Claude API", "text generation", "categorization", "extraction", "AI job writer", "content repurposer", "review response"]
 ---
 
 # AI Feature Pattern
@@ -9,6 +13,12 @@ description: "Use this skill when building any feature that calls the Claude API
 - Building a feature that calls the Anthropic Claude API
 - Adding AI-powered text generation, categorization, extraction, or analysis
 - Examples: AI job writer, conversation categorizer, content repurposer, review response drafting
+
+## When NOT to Use
+- Simple CRUD features with no AI calls
+- Features using non-Anthropic LLMs (OpenAI, etc.)
+- One-off scripts or local AI experiments outside the production service
+- Tasks that only involve prompt engineering without API integration
 
 ## Standard Pattern
 

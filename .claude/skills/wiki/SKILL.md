@@ -32,7 +32,16 @@ Where `<input>` is one of:
 And `[category]` is optional (auto-detected if omitted):
 - `competitors`, `ai-llm`, `small-biz-saas`, `verticals`, `technical`, `regulations`, `growth`, `general`
 
----
+## When to Use
+- Capturing knowledge from any source directly into a formatted wiki article
+- Fast-path ingestion that skips the raw-then-compile flow
+- Merging new information into existing wiki articles
+
+## When NOT to Use
+- Adding a source for later compilation (use kb-ingest instead)
+- Compiling pending raw sources (use kb-compile instead)
+- Automated web discovery (use kb-discover instead)
+- Querying existing knowledge (use kb-query instead)
 
 ## Full Workflow (11 Steps)
 
