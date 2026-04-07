@@ -177,7 +177,7 @@ export default function TriggerLogsPage() {
     if (!user?.tenantId || !token) return;
     try {
       const res = await apiFetch(`/automation-rules/${user.tenantId}`, token);
-      setRules(Array.isArray(res) ? res : (res.rules || []));
+      setRules(Array.isArray(res) ? res : (res.automation_rules || res.rules || []));
     } catch {
       setRules([]);
     }

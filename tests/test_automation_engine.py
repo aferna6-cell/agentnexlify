@@ -892,6 +892,7 @@ class TestCheckNoResponseLeads:
         assert result == 0
         mock_trigger.assert_not_awaited()
 
+
     @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
     @patch("backend.services.automation_engine.get_supabase")
     async def test_already_enrolled_in_progress_execution_skips(
@@ -950,10 +951,11 @@ class TestCheckNoResponseLeads:
         assert result == 0
         mock_trigger.assert_not_awaited()
 
+
     @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
     @patch("backend.services.automation_engine.get_supabase")
     async def test_no_candidate_leads_returns_zero(self, mock_get_db, mock_trigger):
-        """No 'new' leads older than 24h → returns 0, trigger_sequence not called."""
+        """No new leads older than 24h returns 0 and does not trigger a sequence."""
         db, table = _make_db_mock()
         mock_get_db.return_value = db
         table.execute.return_value = MagicMock(data=[])
@@ -964,3 +966,134 @@ class TestCheckNoResponseLeads:
 
         assert result == 0
         mock_trigger.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Automation rules
+# ---------------------------------------------------------------------------
+
+
+def _chain_table(result=None):
+    table = MagicMock()
+    for method in (
+        "select", "insert", "update", "delete",
+        "eq", "neq", "gte", "lte", "gt", "lt",
+        "limit", "order", "in_", "is_", "not_",
+    ):
+        getattr(table, method).return_value = table
+    table.execute.return_value = result or MagicMock(data=[])
+    return table
+
+
+class TestAutomationRules:
+    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation_engine.get_supabase")
+    async def test_execute_rule_loads_lead_with_rule_tenant(
+        self, mock_get_db, mock_send_email
+    ):
+        """Rule execution should load lead data using the rule tenant before actions."""
+        db = MagicMock()
+        mock_get_db.return_value = db
+        mock_send_email.return_value = {"success": True, "detail": "sent"}
+
+        rule = {
+            "id": "rule-001",
+            "tenant_id": "tenant-001",
+            "trigger_type": "lead_captured",
+            "trigger_config": {},
+            "triggered_count": 0,
+            "actions": [
+                {
+                    "type": "send_email",
+                    "config": {"subject": "Welcome", "body": "<p>Hello</p>"},
+                }
+            ],
+        }
+        lead = {
+            "id": "lead-001",
+            "client_id": "tenant-001",
+            "email": "lead@example.com",
+        }
+
+        table_queue = {
+            "automation_rules": [
+                _chain_table(MagicMock(data=[rule])),
+                _chain_table(MagicMock(data=[{"id": "rule-001"}])),
+            ],
+            "leads": [_chain_table(MagicMock(data=[lead]))],
+            "automation_rule_executions": [
+                _chain_table(MagicMock(data=[{"id": "exec-001"}]))
+            ],
+        }
+
+        def table_side_effect(name):
+            return table_queue[name].pop(0)
+
+        db.table.side_effect = table_side_effect
+
+        from backend.services.automation_engine import execute_automation_rule
+
+        result = await execute_automation_rule("rule-001", "lead-001")
+
+        assert result["status"] == "success"
+        assert result["actions_run"][0]["result"]["status"] == "sent"
+        mock_send_email.assert_awaited_once()
+        assert mock_send_email.call_args.kwargs["to"] == "lead@example.com"
+        assert mock_send_email.call_args.kwargs["tenant_id"] == "tenant-001"
+
+    @patch("backend.services.automation_engine.get_supabase")
+    async def test_enroll_in_sequence_action_creates_processable_execution(
+        self, mock_get_db
+    ):
+        """Sequence enrollment actions need current_step and next_run_at."""
+        db = MagicMock()
+        mock_get_db.return_value = db
+        inserted = []
+
+        sequence_table = _chain_table(MagicMock(data=[{"id": "seq-001"}]))
+        step_table = _chain_table(
+            MagicMock(data=[{"step_order": 2, "delay_minutes": 15}])
+        )
+        execution_table = _chain_table(MagicMock(data=[{"id": "exec-001"}]))
+
+        def capture_insert(payload):
+            inserted.append(payload)
+            return execution_table
+
+        execution_table.insert.side_effect = capture_insert
+
+        table_queue = {
+            "automation_sequences": [sequence_table],
+            "automation_steps": [step_table],
+            "automation_executions": [execution_table],
+        }
+        db.table.side_effect = lambda name: table_queue[name].pop(0)
+
+        from backend.services.automation_engine import _execute_action
+
+        result = await _execute_action(
+            action_type="enroll_in_sequence",
+            action_config={"sequence_id": "seq-001"},
+            lead_data={"id": "lead-001"},
+            tenant_id="tenant-001",
+            context={},
+        )
+
+        assert result == {"status": "success", "sequence_id": "seq-001"}
+        assert inserted[0]["sequence_id"] == "seq-001"
+        assert inserted[0]["lead_id"] == "lead-001"
+        assert inserted[0]["tenant_id"] == "tenant-001"
+        assert inserted[0]["current_step"] == 2
+        assert inserted[0]["status"] == "in_progress"
+        assert inserted[0]["next_run_at"]
+
+    def test_scheduled_rule_skips_when_already_fired_today(self):
+        from backend.services.automation_engine import _scheduled_rule_already_fired
+
+        now = datetime(2026, 4, 7, 9, 0, tzinfo=timezone.utc)
+        rule = {
+            "trigger_type": "scheduled_daily",
+            "last_triggered_at": "2026-04-07T08:55:00+00:00",
+        }
+
+        assert _scheduled_rule_already_fired(rule, now) is True

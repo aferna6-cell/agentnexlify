@@ -3593,7 +3593,7 @@ def _evaluate_conditions(conditions: list[dict], lead_data: dict | None) -> bool
     return True
 
 
-def _get_nested_field(data: dict, field: str) -> any:
+def _get_nested_field(data: dict, field: str) -> Any:
     """Get a field from a dict, supporting dot notation for nested fields."""
     parts = field.split(".")
     value = data
@@ -3603,6 +3603,34 @@ def _get_nested_field(data: dict, field: str) -> any:
         else:
             return None
     return value
+
+
+def _parse_utc_datetime(value: str | None) -> datetime | None:
+    """Parse a database timestamp and normalize it to UTC."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _scheduled_rule_already_fired(rule: dict, now: datetime) -> bool:
+    """Return True when a scheduled rule already fired in its current period."""
+    last_triggered = _parse_utc_datetime(rule.get("last_triggered_at"))
+    if not last_triggered:
+        return False
+
+    now = now.astimezone(timezone.utc)
+    trigger_type = rule.get("trigger_type")
+    if trigger_type == "scheduled_daily":
+        return last_triggered.date() == now.date()
+    if trigger_type == "scheduled_weekly":
+        return last_triggered.isocalendar()[:2] == now.isocalendar()[:2]
+    return False
 
 
 async def execute_automation_rule(
@@ -3630,15 +3658,23 @@ async def execute_automation_rule(
     except Exception as e:
         return {"status": "failed", "error_message": str(e)}
 
+    tenant_id = rule["tenant_id"]
     lead_data = None
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                db.table("leads")
+                .select("*")
+                .eq("id", lead_id)
+                .eq("client_id", tenant_id)
+                .limit(1)
+                .execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
-            pass
+            logger.exception(
+                "Failed to load lead %s for automation rule %s", lead_id, rule_id
+            )
 
     actions = rule.get("actions") or []
     actions_run = []
@@ -3653,7 +3689,7 @@ async def execute_automation_rule(
                 action_type=action_type,
                 action_config=action_config,
                 lead_data=lead_data,
-                tenant_id=rule["tenant_id"],
+                tenant_id=tenant_id,
                 context=context,
             )
             actions_run.append({"action_type": action_type, "result": result})
@@ -3692,7 +3728,7 @@ async def execute_automation_rule(
         db.table("automation_rule_executions").insert(
             {
                 "automation_rule_id": rule_id,
-                "tenant_id": rule["tenant_id"],
+                "tenant_id": tenant_id,
                 "trigger_event": trigger_event,
                 "actions_run": actions_run,
                 "status": status,
@@ -3758,7 +3794,7 @@ async def _execute_action(
         current_tags.add(tag)
         db.table("leads").update({"tags": list(current_tags)}).eq(
             "id", lead_data["id"]
-        ).execute()
+        ).eq("client_id", tenant_id).execute()
         return {"status": "success", "tag": tag}
 
     elif action_type == "remove_tag":
@@ -3771,7 +3807,7 @@ async def _execute_action(
         current_tags.discard(tag)
         db.table("leads").update({"tags": list(current_tags)}).eq(
             "id", lead_data["id"]
-        ).execute()
+        ).eq("client_id", tenant_id).execute()
         return {"status": "success", "tag": tag}
 
     elif action_type == "update_lead_status":
@@ -3782,7 +3818,7 @@ async def _execute_action(
             return {"status": "failed", "reason": "no_status"}
         db.table("leads").update({"status": new_status}).eq(
             "id", lead_data["id"]
-        ).execute()
+        ).eq("client_id", tenant_id).execute()
         return {"status": "success", "status": new_status}
 
     elif action_type == "enroll_in_sequence":
@@ -3790,12 +3826,41 @@ async def _execute_action(
         if not sequence_id or not lead_data:
             return {"status": "failed", "reason": "missing_sequence_id_or_lead"}
         try:
+            sequence_result = (
+                db.table("automation_sequences")
+                .select("id")
+                .eq("id", sequence_id)
+                .eq("tenant_id", tenant_id)
+                .eq("is_active", True)
+                .limit(1)
+                .execute()
+            )
+            if not sequence_result.data:
+                return {"status": "failed", "reason": "sequence_not_found"}
+
+            first_step_result = (
+                db.table("automation_steps")
+                .select("step_order, delay_minutes")
+                .eq("sequence_id", sequence_id)
+                .eq("is_active", True)
+                .order("step_order")
+                .limit(1)
+                .execute()
+            )
+            if not first_step_result.data:
+                return {"status": "failed", "reason": "sequence_has_no_active_steps"}
+
+            first_step = first_step_result.data[0]
+            delay = first_step.get("delay_minutes") or 0
+            next_run = datetime.now(timezone.utc) + timedelta(minutes=delay)
             db.table("automation_executions").insert(
                 {
                     "sequence_id": sequence_id,
                     "lead_id": lead_data["id"],
                     "tenant_id": tenant_id,
+                    "current_step": first_step["step_order"],
                     "status": "in_progress",
+                    "next_run_at": next_run.isoformat(),
                 }
             ).execute()
             return {"status": "success", "sequence_id": sequence_id}
@@ -3806,7 +3871,7 @@ async def _execute_action(
         description = action_config.get("description", "Automation task")
         priority = action_config.get("priority", "medium")
         assigned_to = action_config.get("assigned_to")
-        task_payload: dict[str, any] = {
+        task_payload: dict[str, Any] = {
             "tenant_id": tenant_id,
             "description": description,
             "priority": priority,
@@ -3854,7 +3919,7 @@ async def _execute_action(
         new_score = current_score + delta
         db.table("leads").update({"lead_score": new_score}).eq(
             "id", lead_data["id"]
-        ).execute()
+        ).eq("client_id", tenant_id).execute()
         return {"status": "success", "new_score": new_score}
 
     else:
@@ -4206,6 +4271,8 @@ async def schedule_automation_check() -> int:
                 should_fire = True
 
         if not should_fire:
+            continue
+        if _scheduled_rule_already_fired(rule, now):
             continue
 
         try:
