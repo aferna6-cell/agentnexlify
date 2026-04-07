@@ -253,9 +253,9 @@ function EmailPreview({ body, subject }) {
           overflowY: "auto",
         }}
         dangerouslySetInnerHTML={{
-          __html:
-            resolvedBody ||
-            '<p style="color:#94a3b8;font-style:italic">Start typing to see a preview...</p>',
+          __html: resolvedBody
+            ? DOMPurify.sanitize(resolvedBody)
+            : '<p style="color:#94a3b8;font-style:italic">Start typing to see a preview...</p>',
         }}
       />
     </div>

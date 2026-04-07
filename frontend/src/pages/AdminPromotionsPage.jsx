@@ -461,7 +461,7 @@ export default function AdminPromotionsPage() {
     }
   };
 
-  if (!getAdminSecret()) {
+  if (!_adminSecret) {
     return (
       <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
         <div
@@ -600,8 +600,8 @@ export default function AdminPromotionsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {promotions.map((p) => {
             const tenant = Array.isArray(p.tenants)
-              ? (p.tenants[0] || {})
-              : (p.tenants || {});
+              ? p.tenants[0] || {}
+              : p.tenants || {};
             const isExpired =
               p.expires_at && new Date(p.expires_at) <= new Date();
             return (

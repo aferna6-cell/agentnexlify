@@ -554,3 +554,24 @@ Enables RLS and creates tenant isolation policies on all tables from migrations 
 Adds `reminder_24h_sent_at` (TIMESTAMPTZ) and `reminder_1h_sent_at` (TIMESTAMPTZ) to `appointments`. Replaces fragile notes-field string matching for reminder deduplication. Partial indexes on tenant_id for unsent reminders.
 
 **Applied:** Pending — created 2026-04-06.
+
+---
+
+## Schema Guardian Audit — 2026-04-06 (Migrations 086-092)
+
+**Corrections to entries above (documented here to avoid rewriting history):**
+
+### 086 — ab_test_variants columns are WRONG in the entry above
+The entry says `variant_config (JSONB), traffic_pct, sends/opens/clicks/conversions counters`. The actual migration SQL has: `name TEXT, subject TEXT, body TEXT, send_time_override TIME, allocation_percent INTEGER DEFAULT 50 (CHECK 0-100), is_winner BOOLEAN DEFAULT FALSE`. The backend code (`backend/routers/ab_tests.py`) matches the SQL, not the log entry.
+
+### 087 — Table name is WRONG in the entry above
+The entry says `automation_rule_logs`. The actual table is `automation_rule_executions`. Column names also differ: `automation_rule_id` (not `rule_id`), `trigger_event` (not `trigger_data`), `actions_run` (not `actions_executed`), status values are `success/partial/failed` (not `success/partial_failure/failed`). Backend code matches the SQL.
+
+### 089 — admin_promotions does NOT have `is_active` column
+The entry above incorrectly lists `is_active` as a column. The actual migration has: `id, tenant_id, promotion_type, discount_pct, reason, approved_by, starts_at, expires_at, notes, created_at`. No `is_active`.
+
+### 091 — RLS policies use wrong pattern
+Policies use `auth.uid()` which is a Supabase Auth function. This codebase uses custom JWT auth and service_role key. Every other migration uses `current_setting('role', true) = 'service_role'`. The `auth.uid()` policies will never match for any caller. A corrective migration (093) is needed.
+
+### 091 — References `automation_rule_logs` in entry above
+Should be `automation_rule_executions`. The actual SQL file correctly uses `automation_rule_executions`.

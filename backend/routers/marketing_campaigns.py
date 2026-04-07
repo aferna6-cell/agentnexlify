@@ -481,7 +481,9 @@ async def _send_campaign_background(
 
 
 @router.post("/{tenant_id}/{campaign_id}/send")
+@limiter.limit("3/minute")
 async def send_campaign(
+    request: Request,
     tenant_id: str,
     campaign_id: str,
     claims: dict = Depends(_get_current_tenant),

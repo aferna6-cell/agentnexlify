@@ -128,8 +128,8 @@ export default function AdminAnalyticsPage() {
       if (revenueRes?.revenue_trends)
         setRevenueTrends(revenueRes.revenue_trends);
       if (industryRes?.breakdown) setIndustryBreakdown(industryRes.breakdown);
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error("Admin analytics load failed:", err.message);
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ export default function AdminAnalyticsPage() {
     loadData();
   }, [loadData]);
 
-  if (!getAdminSecret()) {
+  if (!_adminSecret) {
     return (
       <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
         <div
