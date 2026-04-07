@@ -8,6 +8,7 @@ REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 MORNING_SCRIPT="$REPO_DIR/scripts/daily/morning-auto.sh"
 EVENING_SCRIPT="$REPO_DIR/scripts/daily/evening-auto.sh"
 SMOKE_SCRIPT="$REPO_DIR/scripts/daily/e2e-smoke.sh"
+CHALLENGES_SCRIPT="$REPO_DIR/scripts/daily/challenge-assumptions.sh"
 
 # Default times
 MORNING_HOUR="${1:-8}"
@@ -26,6 +27,7 @@ echo ""
 chmod +x "$MORNING_SCRIPT"
 chmod +x "$EVENING_SCRIPT"
 chmod +x "$SMOKE_SCRIPT"
+chmod +x "$CHALLENGES_SCRIPT"
 
 # Check if claude is available
 if ! command -v claude &> /dev/null; then
@@ -56,6 +58,10 @@ printf -v smoke_cmd 'cd %q && bash %q' "$REPO_DIR" "$SMOKE_SCRIPT"
 echo "# AgentNexLiFy Nightly E2E Smoke Test (daily)" >> "$TMP_CRONTAB"
 printf '0 6 * * * bash -lc %q # AgentNexLiFy-E2E-Smoke\n' "$smoke_cmd" >> "$TMP_CRONTAB"
 
+printf -v challenges_cmd 'cd %q && bash %q' "$REPO_DIR" "$CHALLENGES_SCRIPT"
+echo "# AgentNexLiFy Challenge Assumptions — 9 PM daily (after evening review)" >> "$TMP_CRONTAB"
+printf '0 21 * * * AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-ChallengeAssumptions\n' "$claude_bin_q" "$challenges_cmd" >> "$TMP_CRONTAB"
+
 # Install
 crontab "$TMP_CRONTAB"
 
@@ -66,4 +72,4 @@ echo ""
 echo "To remove: crontab -l | grep -v AgentNexLiFy | crontab -"
 echo ""
 echo "IMPORTANT: Machine must be on at scheduled times."
-echo "Logs: docs/daily-logs/auto-morning-*.log and auto-evening-*.log"
+echo "Logs: docs/daily-logs/auto-morning-*.log, auto-evening-*.log, challenges-*.log"
