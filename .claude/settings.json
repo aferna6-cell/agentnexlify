@@ -118,6 +118,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"PROMPT LIBRARY — BEFORE starting any task: 1) Read PROMPTLIBRARY.md 2) Find the matching prompt for this task (Research/Debug/Write/Review/Build/Test/Reason/Summarize) 3) Follow its Context needed and Steps sections exactly 4) After completing the task, update the prompt with what you learned 5) If no prompt exists, create one. Treat prompts as versioned software components — improve them every time you use them.\"}}'",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"CAVEMAN MODE ACTIVE. Use caveman skill rules: drop articles/filler/pleasantries, fragments OK, short synonyms, technical terms exact, code unchanged. Pattern: [thing] [action] [reason]. [next step].\"}}'",
             "timeout": 5
           },

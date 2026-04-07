@@ -3,9 +3,11 @@
 Use this file as a **thin adapter for Codex and general coding agents**.
 
 ## Start Here
-1. Read `CLAUDE.md` first — it is the canonical human-readable repo brain.
-2. Read `.ai/manifest.json` second — it is the canonical machine-readable index of agents, skills, workflows, and routing policy.
-3. Load the most relevant repo-local skill before editing:
+1. Read `PROMPTLIBRARY.md` first — it contains battle-tested prompts for every recurring task type.
+2. Read `CLAUDE.md` second — it is the canonical human-readable repo brain.
+3. Read `.ai/manifest.json` third — it is the canonical machine-readable index of agents, skills, workflows, and routing policy.
+4. Load the most relevant repo-local skill before editing:
+   - `.claude/skills/prompt-library/SKILL.md` — use this workflow for ALL tasks
    - `.codex/skills/agentnexlify-surface-selector/SKILL.md`
    - `.codex/skills/agentnexlify-schema-guard/SKILL.md`
    - `.codex/skills/agentnexlify-runtime-constraints/SKILL.md`

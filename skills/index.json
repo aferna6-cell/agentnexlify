@@ -208,6 +208,29 @@
       "created_at": "2026-04-05T02:52:42+00:00",
       "last_used": null,
       "source": "generated"
+    },
+    {
+      "skill_name": "prompt-library",
+      "description": "Reusable prompt library for consistent AI agent workflows. Always consult PROMPTLIBRARY.md before starting tasks to pick the right prompt, gather context, and execute with proven patterns.",
+      "tags": [
+        "prompt-library",
+        "reusable",
+        "prompts",
+        "workflows",
+        "consistency",
+        "research",
+        "debugging",
+        "writing",
+        "reasoning",
+        "review",
+        "testing",
+        "documentation"
+      ],
+      "path": ".claude/skills/prompt-library/SKILL.md",
+      "created_by": "claude",
+      "created_at": "2026-04-07T10:30:00+00:00",
+      "last_used": null,
+      "source": "repository"
     }
   ]
 }
