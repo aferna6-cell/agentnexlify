@@ -22,6 +22,7 @@ from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.services.booking import generate_available_slots, link_appointment_to_lead
 from backend.services.email_sender import send_email
+from backend.services.tenant_scope import tenant_table
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -76,9 +77,8 @@ def _fetch_widget_color(tenant_id: str) -> str:
     db = get_supabase()
     try:
         result = (
-            db.table("widget_configs")
+            tenant_table(db, "widget_configs", tenant_id)
             .select("primary_color")
-            .eq("tenant_id", tenant_id)
             .limit(1)
             .execute()
         )
@@ -94,9 +94,8 @@ def _slot_available(tenant_id: str, target_date: date, start_time_str: str, end_
     db = get_supabase()
     try:
         result = (
-            db.table("appointments")
+            tenant_table(db, "appointments", tenant_id)
             .select("id")
-            .eq("tenant_id", tenant_id)
             .eq("status", "confirmed")
             .lt("start_time", end_time_str)
             .gt("end_time", start_time_str)
@@ -560,9 +559,8 @@ async def booking_page(request: Request, business_slug: str):
     try:
         db = get_supabase()
         st_result = (
-            db.table("service_types")
+            tenant_table(db, "service_types", tenant_id)
             .select("id, name, duration_minutes, description, price")
-            .eq("tenant_id", tenant_id)
             .eq("is_active", True)
             .order("sort_order")
             .execute()
@@ -645,10 +643,9 @@ async def booking_submit(
     if body.service_type_id:
         try:
             st_row = (
-                db.table("service_types")
+                tenant_table(db, "service_types", tenant_id)
                 .select("name, duration_minutes")
                 .eq("id", body.service_type_id)
-                .eq("tenant_id", tenant_id)
                 .limit(1)
                 .execute()
             )
@@ -659,7 +656,7 @@ async def booking_submit(
 
     # Create appointment (with double-booking safety net at DB level)
     try:
-        appt_result = db.table("appointments").insert({
+        appt_result = tenant_table(db, "appointments", tenant_id).insert({
             "tenant_id": tenant_id,
             "customer_name": body.name.strip(),
             "customer_email": body.email.strip(),
@@ -697,7 +694,7 @@ async def booking_submit(
             "customer_phone": body.phone.strip() if body.phone else None,
         })
         if lead_id:
-            db.table("appointments").update({"lead_id": lead_id}).eq("id", appointment_id).execute()
+            tenant_table(db, "appointments", tenant_id).update({"lead_id": lead_id}).eq("id", appointment_id).execute()
     except Exception:
         logger.warning(
             "Could not link appointment %s to lead for tenant %s",
@@ -828,7 +825,7 @@ async def reschedule_page(request: Request, appointment_id: str, token: str = Qu
     if appointment.get("status") in ("cancelled", "no_show", "completed"):
         return HTMLResponse(f"<h2>This appointment has already been {appointment['status']}.</h2>", status_code=400)
 
-    tenant = db.table("tenants").select("business_name, business_phone").eq("id", tenant_id).limit(1).execute()
+    tenant = tenant_table(db, "tenants", tenant_id).select("business_name, business_phone").limit(1).execute()
     biz_name = html.escape((tenant.data[0].get("business_name") or "Our Business") if tenant.data else "Our Business")
     biz_phone = html.escape((tenant.data[0].get("business_phone") or "") if tenant.data else "")
 
@@ -990,9 +987,8 @@ async def reschedule_submit(request: Request, appointment_id: str, body: _Resche
 
     # Check slot availability (pre-insert check)
     existing = (
-        db.table("appointments")
+        tenant_table(db, "appointments", tenant_id)
         .select("id")
-        .eq("tenant_id", tenant_id)
         .neq("id", appointment_id)
         .neq("status", "cancelled")
         .lt("start_time", body.new_end)
@@ -1006,7 +1002,7 @@ async def reschedule_submit(request: Request, appointment_id: str, body: _Resche
     # Update the appointment
     try:
         result = (
-            db.table("appointments")
+            tenant_table(db, "appointments", tenant_id)
             .update({
                 "start_time": body.new_start,
                 "end_time": body.new_end,
@@ -1062,15 +1058,16 @@ async def reschedule_cancel(request: Request, appointment_id: str, body: _Cancel
         raise HTTPException(status_code=404, detail="Appointment not found")
 
     appointment = appt.data[0]
+    tenant_id = appointment["tenant_id"]
     if appointment.get("status") == "cancelled":
         return {"success": True, "message": "Already cancelled"}
 
-    db.table("appointments").update({"status": "cancelled"}).eq("id", appointment_id).execute()
+    tenant_table(db, "appointments", tenant_id).update({"status": "cancelled"}).eq("id", appointment_id).execute()
 
     try:
         from backend.services.activity import log_activity
         log_activity(
-            tenant_id=appointment["tenant_id"],
+            tenant_id=tenant_id,
             activity_type="appointment_cancelled",
             description="Customer cancelled appointment via reschedule link",
             lead_id=appointment.get("lead_id"),
@@ -1078,6 +1075,6 @@ async def reschedule_cancel(request: Request, appointment_id: str, body: _Cancel
     except Exception:
         logger.warning("Failed to log cancel activity", exc_info=True)
 
-    fire_event_background(appointment["tenant_id"], "appointment.cancelled", {"appointment_id": appointment_id})
+    fire_event_background(tenant_id, "appointment.cancelled", {"appointment_id": appointment_id})
 
     return {"success": True, "message": "Appointment cancelled"}

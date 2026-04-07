@@ -8,6 +8,8 @@ from backend.services.tenant_scope import (
     tenant_insert,
     tenant_scope_column,
     tenant_select,
+    tenant_client,
+    tenant_table,
     tenant_update,
     tenant_upsert,
 )
@@ -65,6 +67,7 @@ class FakeDB:
 def test_tenant_scope_column_handles_live_schema_overrides():
     assert tenant_scope_column("leads") == "client_id"
     assert tenant_scope_column("conversations") == "client_id"
+    assert tenant_scope_column("tenants") == "id"
     assert tenant_scope_column("activity_log") == "tenant_id"
 
 
@@ -123,12 +126,43 @@ def test_tenant_upsert_injects_scope_and_preserves_options():
     assert query.upsert_kwargs == {"on_conflict": "client_id,session_id"}
 
 
+def test_tenant_table_facade_scopes_table_operations():
+    db = FakeDB()
+    scoped = tenant_table(db, "invoices", "tenant-1")
+
+    selected = scoped.select("id")
+    updated = scoped.update({"status": "paid"})
+    deleted = scoped.delete()
+    inserted = scoped.insert({"total": 12})
+
+    assert selected.filters == [("tenant_id", "tenant-1")]
+    assert updated.filters == [("tenant_id", "tenant-1")]
+    assert deleted.filters == [("tenant_id", "tenant-1")]
+    assert inserted.insert_payload == {"total": 12, "tenant_id": "tenant-1"}
+
+
+def test_tenant_client_facade_scopes_table_access_and_preserves_rpc_storage():
+    db = FakeDB()
+    db.rpc = lambda *args, **kwargs: ("rpc", args, kwargs)
+    db.storage = object()
+
+    scoped = tenant_client(db, "tenant-1")
+    selected = scoped.table("leads").select("id")
+
+    assert selected.filters == [("client_id", "tenant-1")]
+    assert scoped.rpc("fn", {"x": 1}) == ("rpc", ("fn", {"x": 1}), {})
+    assert scoped.storage is db.storage
+
+
 def test_high_risk_routes_do_not_bypass_tenant_scope_helpers():
     repo_root = Path(__file__).resolve().parent.parent
     high_risk_files = [
         repo_root / "backend" / "routers" / "conversation_inbox.py",
         repo_root / "backend" / "routers" / "leads.py",
         repo_root / "backend" / "routers" / "widget_helpers.py",
+        repo_root / "backend" / "routers" / "analytics.py",
+        repo_root / "backend" / "routers" / "invoices.py",
+        repo_root / "backend" / "services" / "booking.py",
     ]
     direct_table_patterns = [
         'db.table("action_items"',

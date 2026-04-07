@@ -13,6 +13,7 @@ from backend.dependencies import verify_tenant
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
+from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -99,7 +100,7 @@ async def _get_next_invoice_number(db, tenant_id: str, attempt: int = 0) -> str:
     """
     try:
         result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("invoice_number")
             .eq("tenant_id", tenant_id)
             .order("created_at", desc=True)
@@ -264,7 +265,7 @@ async def invoice_stats(
     db = get_supabase()
     try:
         result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("status, total, created_at, paid_at, sent_at")
             .eq("tenant_id", tenant_id)
             .execute()
@@ -326,7 +327,7 @@ async def create_invoice_from_bid(
     # Fetch the bid
     try:
         bid_result = (
-            db.table("bids")
+            tenant_table(db, "bids", tenant_id)
             .select("*")
             .eq("id", bid_id)
             .eq("tenant_id", tenant_id)
@@ -352,7 +353,7 @@ async def create_invoice_from_bid(
     # Prevent duplicate invoice creation from the same bid
     try:
         existing_invoice = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("id, invoice_number")
             .eq("tenant_id", tenant_id)
             .eq("bid_id", bid_id)
@@ -398,7 +399,7 @@ async def create_invoice_from_bid(
     }
 
     try:
-        result = db.table("invoices").insert(data).execute()
+        result = tenant_table(db, "invoices", tenant_id).insert(data).execute()
     except Exception:
         logger.exception("Failed to create invoice from bid %s for tenant %s", bid_id, tenant_id)
         raise HTTPException(status_code=500, detail="Failed to create invoice from bid")
@@ -423,7 +424,7 @@ async def list_invoices(
     db = get_supabase()
     try:
         query = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("*", count="exact")
             .eq("tenant_id", tenant_id)
             .order("created_at", desc=True)
@@ -446,7 +447,7 @@ async def list_invoices(
     if lead_ids:
         try:
             leads_result = (
-                db.table("leads")
+                tenant_table(db, "leads", tenant_id)
                 .select("id, name")
                 .in_("id", lead_ids)
                 .eq("client_id", tenant_id)
@@ -521,7 +522,7 @@ async def create_invoice(
         if retry > 0:
             data["invoice_number"] = await _get_next_invoice_number(db, tenant_id, attempt=retry)
         try:
-            result = db.table("invoices").insert(data).execute()
+            result = tenant_table(db, "invoices", tenant_id).insert(data).execute()
             break
         except Exception as exc:
             error_msg = str(exc).lower()
@@ -560,7 +561,7 @@ async def list_item_templates(
     verify_tenant(claims, tenant_id)
     db = get_supabase()
     result = (
-        db.table("invoice_item_templates")
+        tenant_table(db, "invoice_item_templates", tenant_id)
         .select("*")
         .eq("tenant_id", tenant_id)
         .eq("is_active", True)
@@ -580,7 +581,7 @@ async def create_item_template(
     """Create a reusable line item template."""
     verify_tenant(claims, tenant_id)
     db = get_supabase()
-    result = db.table("invoice_item_templates").insert({
+    result = tenant_table(db, "invoice_item_templates", tenant_id).insert({
         "tenant_id": tenant_id,
         "description": req.description,
         "unit_price": float(req.unit_price),
@@ -604,7 +605,7 @@ async def update_item_template(
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     db = get_supabase()
     result = (
-        db.table("invoice_item_templates")
+        tenant_table(db, "invoice_item_templates", tenant_id)
         .update(updates)
         .eq("id", template_id)
         .eq("tenant_id", tenant_id)
@@ -625,7 +626,7 @@ async def delete_item_template(
     verify_tenant(claims, tenant_id)
     db = get_supabase()
     result = (
-        db.table("invoice_item_templates")
+        tenant_table(db, "invoice_item_templates", tenant_id)
         .update({"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()})
         .eq("id", template_id)
         .eq("tenant_id", tenant_id)
@@ -653,7 +654,7 @@ async def get_invoice(
     db = get_supabase()
     try:
         result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("*")
             .eq("id", invoice_id)
             .eq("tenant_id", tenant_id)
@@ -674,7 +675,7 @@ async def get_invoice(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads")
+                tenant_table(db, "leads", tenant_id)
                 .select("id, name, email, phone")
                 .eq("id", lead_id)
                 .eq("client_id", tenant_id)
@@ -706,7 +707,7 @@ async def update_invoice(
     # Verify invoice exists and is in draft status
     try:
         existing_result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("status, tax_rate, items_json")
             .eq("id", invoice_id)
             .eq("tenant_id", tenant_id)
@@ -759,7 +760,7 @@ async def update_invoice(
 
     try:
         result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .update(updates)
             .eq("id", invoice_id)
             .eq("tenant_id", tenant_id)
@@ -788,7 +789,7 @@ async def delete_invoice(
     # Verify invoice exists and is in draft status
     try:
         existing_result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("status")
             .eq("id", invoice_id)
             .eq("tenant_id", tenant_id)
@@ -809,7 +810,7 @@ async def delete_invoice(
         )
 
     try:
-        db.table("invoices").delete().eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+        tenant_table(db, "invoices", tenant_id).delete().eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.exception("Failed to delete invoice %s for tenant %s", invoice_id, tenant_id)
         raise HTTPException(status_code=500, detail="Failed to delete invoice")
@@ -836,7 +837,7 @@ async def send_invoice(
     # Fetch invoice
     try:
         inv_result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("*")
             .eq("id", invoice_id)
             .eq("tenant_id", tenant_id)
@@ -862,7 +863,7 @@ async def send_invoice(
     business: dict = {}
     try:
         tenant_result = (
-            db.table("tenants")
+            tenant_table(db, "tenants", tenant_id)
             .select("business_name, owner_email, phone")
             .eq("id", tenant_id)
             .limit(1)
@@ -879,7 +880,7 @@ async def send_invoice(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads")
+                tenant_table(db, "leads", tenant_id)
                 .select("id, name, email, phone")
                 .eq("id", lead_id)
                 .eq("client_id", tenant_id)
@@ -970,7 +971,7 @@ async def send_invoice(
         update_data["stripe_payment_link"] = payment_link_url
 
     try:
-        db.table("invoices").update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+        tenant_table(db, "invoices", tenant_id).update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.exception("Failed to update invoice %s status after send", invoice_id)
         # Don't raise here — the send may have succeeded, we just failed to update status
@@ -999,7 +1000,7 @@ async def mark_invoice_paid(
     # Verify the invoice belongs to this tenant
     try:
         existing_result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("status")
             .eq("id", invoice_id)
             .eq("tenant_id", tenant_id)
@@ -1032,7 +1033,7 @@ async def mark_invoice_paid(
 
     try:
         result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .update(update_data)
             .eq("id", invoice_id)
             .eq("tenant_id", tenant_id)
@@ -1068,7 +1069,7 @@ async def record_partial_payment(
     db = get_supabase()
 
     # Load current invoice
-    inv = db.table("invoices").select("total, amount_paid, status").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
+    inv = tenant_table(db, "invoices", tenant_id).select("total, amount_paid, status").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
     if not inv.data:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
@@ -1094,7 +1095,7 @@ async def record_partial_payment(
         if req.payment_method:
             update_data["payment_method"] = req.payment_method
 
-    result = db.table("invoices").update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+    result = tenant_table(db, "invoices", tenant_id).update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to record payment")
 
@@ -1128,7 +1129,7 @@ async def bulk_send_invoices(
     # Fetch tenant info once
     business = {}
     try:
-        t = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+        t = tenant_table(db, "tenants", tenant_id).select("business_name").eq("id", tenant_id).limit(1).execute()
         business = t.data[0] if t.data else {}
     except Exception:
         pass
@@ -1136,7 +1137,7 @@ async def bulk_send_invoices(
 
     for invoice_id in req.invoice_ids:
         try:
-            inv = db.table("invoices").select("*").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
+            inv = tenant_table(db, "invoices", tenant_id).select("*").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
             if not inv.data:
                 failed += 1
                 errors.append(f"{invoice_id}: not found")
@@ -1151,7 +1152,7 @@ async def bulk_send_invoices(
             lead_id = invoice.get("lead_id")
             lead = None
             if lead_id:
-                lead_row = db.table("leads").select("name, email, phone").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                lead_row = tenant_table(db, "leads", tenant_id).select("name, email, phone").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
                 lead = lead_row.data[0] if lead_row.data else None
 
             if not lead or (not lead.get("email") and not lead.get("phone")):
@@ -1189,7 +1190,7 @@ async def bulk_send_invoices(
                 except Exception:
                     logger.warning("Failed to SMS invoice %s", invoice_id, exc_info=True)
 
-            db.table("invoices").update({
+            tenant_table(db, "invoices", tenant_id).update({
                 "status": "sent",
                 "sent_at": datetime.now(timezone.utc).isoformat(),
                 "sent_via": req.channel,

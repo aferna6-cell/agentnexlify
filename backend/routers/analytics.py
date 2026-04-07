@@ -14,6 +14,7 @@ from backend.limiter import limiter
 from backend.models.schemas import AgentControlCenterResponse
 from backend.models.database import get_supabase
 from backend.services.llm_runtime import call_claude_messages
+from backend.services.tenant_scope import tenant_table
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -212,7 +213,7 @@ async def get_overview(
     # authoritative source here.
     try:
         curr_msgs_for_count = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -229,7 +230,7 @@ async def get_overview(
     # Avg messages per conversation via chat_messages (bounded query)
     try:
         curr_msgs = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -247,7 +248,7 @@ async def get_overview(
     # Previous period conversations — same approach: unique sessions in chat_messages
     try:
         prev_msgs_for_count = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", prev_start)
@@ -264,7 +265,7 @@ async def get_overview(
     # Current period leads (leads use client_id, not tenant_id)
     try:
         curr_leads = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("id")
             .eq("client_id", tenant_id)
             .gte("created_at", start)
@@ -280,7 +281,7 @@ async def get_overview(
     # Previous period leads
     try:
         prev_leads_res = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("id")
             .eq("client_id", tenant_id)
             .gte("created_at", prev_start)
@@ -300,7 +301,7 @@ async def get_overview(
     # Appointments
     try:
         curr_appts = (
-            db.table("appointments")
+            tenant_table(db, "appointments", tenant_id)
             .select("id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -316,7 +317,7 @@ async def get_overview(
 
     try:
         prev_appts = (
-            db.table("appointments")
+            tenant_table(db, "appointments", tenant_id)
             .select("id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", prev_start)
@@ -333,7 +334,7 @@ async def get_overview(
     # Emails sent (from automation_logs via automation_executions)
     try:
         curr_emails = (
-            db.table("automation_logs")
+            tenant_table(db, "automation_logs", tenant_id)
             .select("id, execution_id!inner(tenant_id)")
             .eq("execution_id.tenant_id", tenant_id)
             .eq("action", "email_sent")
@@ -346,7 +347,7 @@ async def get_overview(
         # Fallback: count email_sent from activity_log
         try:
             email_acts = (
-                db.table("activity_log")
+                tenant_table(db, "activity_log", tenant_id)
                 .select("id")
                 .eq("tenant_id", tenant_id)
                 .eq("activity_type", "email_sent")
@@ -407,7 +408,7 @@ async def get_conversations_trend(
         # is not reliably populated for all tenants, but chat_messages is the
         # canonical message store and is always written to.
         convos = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id, created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -465,7 +466,7 @@ async def get_leads_analytics(
     # All leads in period
     try:
         leads_res = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("id, status, lead_score, created_at")
             .eq("client_id", tenant_id)
             .gte("created_at", start)
@@ -536,7 +537,7 @@ async def get_widget_analytics(
     # Conversations started (unique sessions with messages)
     try:
         msgs = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id, created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -582,7 +583,7 @@ async def get_widget_analytics(
     # Widget loads — use conversations_used_this_month as proxy if no dedicated tracking
     try:
         tenant_res = (
-            db.table("tenants")
+            tenant_table(db, "tenants", tenant_id)
             .select("conversations_used_this_month")
             .eq("id", tenant_id)
             .limit(1)
@@ -627,7 +628,7 @@ async def get_response_time_analytics(
     db = get_supabase()
     try:
         result = (
-            db.table("response_metrics")
+            tenant_table(db, "response_metrics", tenant_id)
             .select("response_time_seconds, first_message_at, outcome")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -704,7 +705,7 @@ async def get_missed_opportunities(
     # --- Batch query 1: All chat messages in the period ---
     try:
         msgs_res = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id, role, content, created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -746,7 +747,7 @@ async def get_missed_opportunities(
         for i in range(0, len(session_ids), chunk_size):
             chunk = session_ids[i : i + chunk_size]
             convos_res = (
-                db.table("conversations")
+                tenant_table(db, "conversations", tenant_id)
                 .select("session_id, lead_id")
                 .eq("client_id", tenant_id)
                 .in_("session_id", chunk)
@@ -767,7 +768,7 @@ async def get_missed_opportunities(
             for i in range(0, len(all_lead_ids), chunk_size):
                 chunk = all_lead_ids[i : i + chunk_size]
                 appts_res = (
-                    db.table("appointments")
+                    tenant_table(db, "appointments", tenant_id)
                     .select("lead_id")
                     .eq("tenant_id", tenant_id)
                     .in_("lead_id", chunk)
@@ -863,7 +864,7 @@ async def get_missed_call_analytics(
     db = get_supabase()
     try:
         entries = (
-            db.table("activity_log")
+            tenant_table(db, "activity_log", tenant_id)
             .select("created_at")
             .eq("tenant_id", tenant_id)
             .eq("activity_type", "missed_call_textback")
@@ -919,7 +920,7 @@ async def get_ai_insights(
 
     # Current week leads (uses client_id)
     try:
-        leads_result = db.table("leads").select("id, status, lead_temperature, deal_value").eq("client_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
+        leads_result = tenant_table(db, "leads", tenant_id).select("id, status, lead_temperature, deal_value").eq("client_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
         leads_data = leads_result.data or []
         metrics["new_leads"] = len(leads_data)
         metrics["hot_leads"] = sum(1 for l in leads_data if l.get("lead_temperature") == "hot")
@@ -931,7 +932,7 @@ async def get_ai_insights(
 
     # Previous week leads for comparison
     try:
-        prev_leads = db.table("leads").select("id", count="exact").eq("client_id", tenant_id).gte("created_at", prev_week_start).lt("created_at", week_ago).limit(1).execute()
+        prev_leads = tenant_table(db, "leads", tenant_id).select("id", count="exact").eq("client_id", tenant_id).gte("created_at", prev_week_start).lt("created_at", week_ago).limit(1).execute()
         metrics["prev_leads"] = prev_leads.count or 0
     except Exception:
         metrics["prev_leads"] = 0
@@ -940,7 +941,7 @@ async def get_ai_insights(
     # was previously empty due to a broken FK and cannot be trusted for counts.
     try:
         conv_msgs = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id")
             .eq("tenant_id", tenant_id)
             .gte("created_at", week_ago)
@@ -953,7 +954,7 @@ async def get_ai_insights(
 
     # Appointments
     try:
-        appt_result = db.table("appointments").select("id, status").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
+        appt_result = tenant_table(db, "appointments", tenant_id).select("id, status").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
         appt_data = appt_result.data or []
         metrics["appointments"] = len(appt_data)
         metrics["completed_appointments"] = sum(1 for a in appt_data if a.get("status") == "completed")
@@ -963,7 +964,7 @@ async def get_ai_insights(
 
     # Invoices
     try:
-        inv_result = db.table("invoices").select("id, status, total").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
+        inv_result = tenant_table(db, "invoices", tenant_id).select("id, status, total").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(500).execute()
         inv_data = inv_result.data or []
         metrics["invoices_created"] = len(inv_data)
         metrics["invoices_paid"] = sum(1 for i in inv_data if i.get("status") == "paid")
@@ -977,7 +978,7 @@ async def get_ai_insights(
 
     # Reviews
     try:
-        rev_result = db.table("reviews").select("id, rating").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(50).execute()
+        rev_result = tenant_table(db, "reviews", tenant_id).select("id, rating").eq("tenant_id", tenant_id).gte("created_at", week_ago).limit(50).execute()
         rev_data = rev_result.data or []
         metrics["reviews"] = len(rev_data)
         metrics["avg_rating"] = round(sum(r.get("rating", 0) for r in rev_data) / max(len(rev_data), 1), 1) if rev_data else 0
@@ -987,14 +988,14 @@ async def get_ai_insights(
 
     # Pending action items
     try:
-        actions_result = db.table("action_items").select("id", count="exact").eq("tenant_id", tenant_id).eq("status", "pending").limit(1).execute()
+        actions_result = tenant_table(db, "action_items", tenant_id).select("id", count="exact").eq("tenant_id", tenant_id).eq("status", "pending").limit(1).execute()
         metrics["pending_actions"] = actions_result.count or 0
     except Exception:
         metrics["pending_actions"] = 0
 
     # Get tenant info for AI context
     try:
-        tenant_result = db.table("tenants").select("business_name, business_type").eq("id", tenant_id).limit(1).execute()
+        tenant_result = tenant_table(db, "tenants", tenant_id).select("business_name, business_type").eq("id", tenant_id).limit(1).execute()
         tenant_info = tenant_result.data[0] if tenant_result.data else {}
     except Exception:
         tenant_info = {}
@@ -1060,7 +1061,7 @@ async def lead_source_breakdown(
 
     db = get_supabase()
     try:
-        result = db.table("leads").select("source").eq("client_id", tenant_id).execute()
+        result = tenant_table(db, "leads", tenant_id).select("source").eq("client_id", tenant_id).execute()
     except Exception:
         logger.warning("Failed to fetch lead sources for tenant %s", tenant_id, exc_info=True)
         return {"breakdown": [], "total": 0}
@@ -1123,7 +1124,7 @@ async def kpi_deltas(
 
     def _count_leads(start: str, end: str | None = None, hot: bool = False) -> int:
         try:
-            q = db.table("leads").select("id", count="exact").eq("client_id", tenant_id).gte("created_at", start)
+            q = tenant_table(db, "leads", tenant_id).select("id", count="exact").eq("client_id", tenant_id).gte("created_at", start)
             if end:
                 q = q.lt("created_at", end)
             if hot:
@@ -1147,7 +1148,7 @@ async def kpi_deltas(
     def _count_sessions_in_range(start: str, end: str | None = None) -> int:
         try:
             q = (
-                db.table("chat_messages")
+                tenant_table(db, "chat_messages", tenant_id)
                 .select("session_id")
                 .eq("tenant_id", tenant_id)
                 .gte("created_at", start)
@@ -1259,7 +1260,7 @@ async def get_agent_control_center(
 
     try:
         msgs_res = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id, role, content, created_at")
             .eq("tenant_id", tenant_id)
             .gte("created_at", start)
@@ -1301,7 +1302,7 @@ async def get_agent_control_center(
     try:
         for chunk in _chunks(session_ids):
             conv_res = (
-                db.table("conversations")
+                tenant_table(db, "conversations", tenant_id)
                 .select("id, session_id, lead_id, assigned_to, channel, lead_captured, created_at, last_message_at")
                 .eq("client_id", tenant_id)
                 .in_("session_id", chunk)
@@ -1326,7 +1327,7 @@ async def get_agent_control_center(
 
     try:
         leads_res = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("id, conversation_id, name, email, status, lead_temperature, deal_value, assigned_to, source, created_at")
             .eq("client_id", tenant_id)
             .gte("created_at", start)
@@ -1369,7 +1370,7 @@ async def get_agent_control_center(
         try:
             for chunk in _chunks(lead_ids):
                 appt_res = (
-                    db.table("appointments")
+                    tenant_table(db, "appointments", tenant_id)
                     .select("id, lead_id, status, created_at, start_time")
                     .eq("tenant_id", tenant_id)
                     .in_("lead_id", chunk)
@@ -1386,7 +1387,7 @@ async def get_agent_control_center(
         try:
             for chunk in _chunks(lead_ids):
                 invoice_res = (
-                    db.table("invoices")
+                    tenant_table(db, "invoices", tenant_id)
                     .select("id, lead_id, status, total, amount_paid, created_at, paid_at")
                     .eq("tenant_id", tenant_id)
                     .in_("lead_id", chunk)
@@ -1403,7 +1404,7 @@ async def get_agent_control_center(
         try:
             for chunk in _chunks(sorted(assigned_ids)):
                 member_res = (
-                    db.table("team_members")
+                    tenant_table(db, "team_members", tenant_id)
                     .select("id, name, email")
                     .eq("tenant_id", tenant_id)
                     .in_("id", chunk)
@@ -1784,7 +1785,7 @@ async def analytics_health(
     # Count unique sessions from chat_messages
     try:
         msgs = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("session_id")
             .eq("tenant_id", tenant_id)
             .limit(5000)
@@ -1798,7 +1799,7 @@ async def analytics_health(
     # Count leads (uses client_id, not tenant_id)
     try:
         leads_res = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("id", count="exact")
             .eq("client_id", tenant_id)
             .execute()
@@ -1811,7 +1812,7 @@ async def analytics_health(
     # Count appointments
     try:
         appts_res = (
-            db.table("appointments")
+            tenant_table(db, "appointments", tenant_id)
             .select("id", count="exact")
             .eq("tenant_id", tenant_id)
             .execute()
@@ -1824,7 +1825,7 @@ async def analytics_health(
     # Most recent message timestamp
     try:
         recent = (
-            db.table("chat_messages")
+            tenant_table(db, "chat_messages", tenant_id)
             .select("created_at")
             .eq("tenant_id", tenant_id)
             .order("created_at", desc=True)
@@ -1870,7 +1871,7 @@ async def get_tester_snapshot(
     # Business name
     biz_name = "Unknown"
     try:
-        t = db.table("tenants").select("business_name").eq("id", tenant_id).single().execute()
+        t = tenant_table(db, "tenants", tenant_id).select("business_name").eq("id", tenant_id).single().execute()
         biz_name = (t.data or {}).get("business_name", "Unknown")
     except Exception:
         pass
@@ -1878,7 +1879,7 @@ async def get_tester_snapshot(
     # Chat messages
     msgs = []
     try:
-        r = db.table("chat_messages").select("session_id, role, content, created_at").eq("tenant_id", tenant_id).gte("created_at", start).order("created_at").limit(_QUERY_LIMIT).execute()
+        r = tenant_table(db, "chat_messages", tenant_id).select("session_id, role, content, created_at").eq("tenant_id", tenant_id).gte("created_at", start).order("created_at").limit(_QUERY_LIMIT).execute()
         msgs = r.data or []
     except Exception:
         logger.warning("snapshot: chat_messages query failed for %s", tenant_id, exc_info=True)
@@ -1918,7 +1919,7 @@ async def get_tester_snapshot(
     # Leads
     total_leads = 0
     try:
-        r = db.table("leads").select("id").eq("client_id", tenant_id).gte("created_at", start).limit(_QUERY_LIMIT).execute()
+        r = tenant_table(db, "leads", tenant_id).select("id").eq("client_id", tenant_id).gte("created_at", start).limit(_QUERY_LIMIT).execute()
         total_leads = len(r.data or [])
     except Exception:
         logger.warning("snapshot: leads query failed for %s", tenant_id, exc_info=True)
@@ -1926,7 +1927,7 @@ async def get_tester_snapshot(
     # Appointments
     total_appointments = 0
     try:
-        r = db.table("appointments").select("id").eq("tenant_id", tenant_id).gte("created_at", start).limit(_QUERY_LIMIT).execute()
+        r = tenant_table(db, "appointments", tenant_id).select("id").eq("tenant_id", tenant_id).gte("created_at", start).limit(_QUERY_LIMIT).execute()
         total_appointments = len(r.data or [])
     except Exception:
         logger.warning("snapshot: appointments query failed for %s", tenant_id, exc_info=True)

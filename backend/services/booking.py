@@ -8,6 +8,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from backend.models.database import get_supabase
+from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +29,8 @@ def get_business_hours(tenant_id: str) -> dict | None:
     """Fetch business hours config for a tenant. Returns None if not configured."""
     db = get_supabase()
     result = (
-        db.table("business_hours")
+        tenant_table(db, "business_hours", tenant_id)
         .select("*")
-        .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -53,13 +53,12 @@ def upsert_business_hours(tenant_id: str, data: dict) -> dict:
 
     if existing:
         result = (
-            db.table("business_hours")
+            tenant_table(db, "business_hours", tenant_id)
             .update(payload)
-            .eq("tenant_id", tenant_id)
             .execute()
         )
     else:
-        result = db.table("business_hours").insert(payload).execute()
+        result = tenant_table(db, "business_hours", tenant_id).insert(payload).execute()
 
     return result.data[0] if result.data else payload
 
@@ -169,9 +168,8 @@ def generate_available_slots(
 
     db = get_supabase()
     booked = (
-        db.table("appointments")
+        tenant_table(db, "appointments", tenant_id)
         .select("start_time, end_time")
-        .eq("tenant_id", tenant_id)
         .eq("status", "confirmed")
         .gte("start_time", day_start_utc.isoformat())
         .lte("start_time", day_end_utc.isoformat())
@@ -227,9 +225,8 @@ def create_appointment(
 
     # Pre-insert overlap check — catch most races before hitting DB constraint
     existing = (
-        db.table("appointments")
+        tenant_table(db, "appointments", tenant_id)
         .select("id")
-        .eq("tenant_id", tenant_id)
         .neq("status", "cancelled")
         .lt("start_time", end_time)
         .gt("end_time", start_time)
@@ -251,7 +248,7 @@ def create_appointment(
     }
 
     try:
-        result = db.table("appointments").insert(payload).execute()
+        result = tenant_table(db, "appointments", tenant_id).insert(payload).execute()
     except Exception as e:
         error_msg = str(e).lower()
         if "exclude" in error_msg or "overlap" in error_msg or "conflicting" in error_msg:
@@ -263,7 +260,7 @@ def create_appointment(
     try:
         lead_id = link_appointment_to_lead(tenant_id, appointment)
         if lead_id:
-            db.table("appointments").update({"lead_id": lead_id}).eq("id", appointment["id"]).execute()
+            tenant_table(db, "appointments", tenant_id).update({"lead_id": lead_id}).eq("id", appointment["id"]).execute()
             appointment["lead_id"] = lead_id
     except Exception:
         logger.warning("Failed to link appointment %s to lead", appointment["id"], exc_info=True)
@@ -284,15 +281,20 @@ def create_appointment(
                 + (f"\nNotes: {notes}" if notes else ""),
             )
             if google_event_id:
-                db.table("appointments").update({"google_event_id": google_event_id}).eq("id", appointment["id"]).execute()
+                tenant_table(db, "appointments", tenant_id).update({"google_event_id": google_event_id}).eq("id", appointment["id"]).execute()
                 appointment["google_event_id"] = google_event_id
     except Exception:
         logger.warning("Failed to sync appointment %s to Google Calendar", appointment["id"], exc_info=True)
 
     # Send confirmation to customer (best-effort, background)
     try:
-        loop = asyncio.get_event_loop()
-        loop.create_task(_send_appointment_confirmation(tenant_id, appointment))
+        confirmation = _send_appointment_confirmation(tenant_id, appointment)
+        loop = asyncio.get_running_loop()
+        loop.create_task(confirmation)
+    except RuntimeError:
+        if hasattr(confirmation, "close"):
+            confirmation.close()
+        logger.info("No running event loop; skipping async confirmation for %s", appointment["id"])
     except Exception:
         logger.warning("Failed to send appointment confirmation for %s", appointment["id"], exc_info=True)
 
@@ -315,7 +317,7 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
     from backend.services.twilio_service import send_sms
 
     db = get_supabase()
-    tenant = db.table("tenants").select("business_name, business_phone").eq("id", tenant_id).limit(1).execute()
+    tenant = tenant_table(db, "tenants", tenant_id).select("business_name, business_phone").limit(1).execute()
     business_name = tenant.data[0]["business_name"] if tenant.data else "Our business"
     business_phone = (tenant.data[0].get("business_phone") or "") if tenant.data else ""
 
@@ -389,9 +391,8 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
 
     # Check for existing lead with same email
     existing = (
-        db.table("leads")
+        tenant_table(db, "leads", tenant_id)
         .select("id")
-        .eq("client_id", tenant_id)
         .eq("email", email)
         .limit(1)
         .execute()
@@ -401,7 +402,7 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
         return existing.data[0]["id"]
 
     # Create new lead from appointment booking
-    lead = db.table("leads").insert({
+    lead = tenant_table(db, "leads", tenant_id).insert({
         "client_id": tenant_id,
         "name": appointment.get("customer_name"),
         "email": email,
@@ -435,10 +436,9 @@ def create_recurring_series(
 
     # Fetch the parent appointment
     parent_result = (
-        db.table("appointments")
+        tenant_table(db, "appointments", tenant_id)
         .select("*")
         .eq("id", appointment_id)
-        .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()
     )
@@ -452,7 +452,7 @@ def create_recurring_series(
         return []
 
     # Mark the parent with recurrence info
-    db.table("appointments").update({
+    tenant_table(db, "appointments", tenant_id).update({
         "recurrence_rule": rule,
         "recurrence_end_date": end_date_str,
     }).eq("id", appointment_id).execute()
@@ -493,7 +493,7 @@ def create_recurring_series(
         }
 
         try:
-            result = db.table("appointments").insert(payload).execute()
+            result = tenant_table(db, "appointments", tenant_id).insert(payload).execute()
             if result.data:
                 created.append(result.data[0])
         except Exception:
@@ -521,9 +521,8 @@ def list_appointments(
     """List appointments with optional filters."""
     db = get_supabase()
     query = (
-        db.table("appointments")
+        tenant_table(db, "appointments", tenant_id)
         .select("*")
-        .eq("tenant_id", tenant_id)
         .order("start_time", desc=False)
     )
 
@@ -542,10 +541,9 @@ def update_appointment(tenant_id: str, appointment_id: str, data: dict) -> dict:
     """Update appointment fields (status, notes, reschedule)."""
     db = get_supabase()
     result = (
-        db.table("appointments")
+        tenant_table(db, "appointments", tenant_id)
         .update(data)
         .eq("id", appointment_id)
-        .eq("tenant_id", tenant_id)
         .execute()
     )
     if not result.data:
@@ -577,10 +575,9 @@ def cancel_appointment(tenant_id: str, appointment_id: str) -> dict:
     # Fetch appointment first to get google_event_id
     db = get_supabase()
     existing = (
-        db.table("appointments")
+        tenant_table(db, "appointments", tenant_id)
         .select("google_event_id")
         .eq("id", appointment_id)
-        .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()
     )

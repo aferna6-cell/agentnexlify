@@ -16,6 +16,7 @@ class TenantScopeError(ValueError):
 _TENANT_COLUMN_OVERRIDES = {
     "conversations": "client_id",
     "leads": "client_id",
+    "tenants": "id",
 }
 
 
@@ -64,6 +65,58 @@ def tenant_upsert(db: Any, table_name: str, tenant_id: str, rows: Any, **upsert_
         _scope_insert_rows(table_name, tenant_id, rows),
         **upsert_kwargs,
     )
+
+
+class TenantScopedTable:
+    """Small table facade that scopes every tenant-owned operation."""
+
+    def __init__(self, db: Any, table_name: str, tenant_id: str):
+        self.db = db
+        self.table_name = table_name
+        self.tenant_id = tenant_id
+
+    def select(self, columns: str = "*", **select_kwargs: Any) -> Any:
+        return tenant_select(self.db, self.table_name, self.tenant_id, columns, **select_kwargs)
+
+    def update(self, values: Mapping[str, Any]) -> Any:
+        return tenant_update(self.db, self.table_name, self.tenant_id, values)
+
+    def delete(self) -> Any:
+        return tenant_delete(self.db, self.table_name, self.tenant_id)
+
+    def insert(self, rows: Any) -> Any:
+        return tenant_insert(self.db, self.table_name, self.tenant_id, rows)
+
+    def upsert(self, rows: Any, **upsert_kwargs: Any) -> Any:
+        return tenant_upsert(self.db, self.table_name, self.tenant_id, rows, **upsert_kwargs)
+
+
+def tenant_table(db: Any, table_name: str, tenant_id: str) -> TenantScopedTable:
+    """Return a table facade that injects the tenant scope automatically."""
+    return TenantScopedTable(db, table_name, tenant_id)
+
+
+class TenantScopedClient:
+    """Tenant-scoped client facade for request-path database access."""
+
+    def __init__(self, db: Any, tenant_id: str):
+        self.db = db
+        self.tenant_id = tenant_id
+
+    def table(self, table_name: str) -> TenantScopedTable:
+        return tenant_table(self.db, table_name, self.tenant_id)
+
+    def rpc(self, *args: Any, **kwargs: Any) -> Any:
+        return self.db.rpc(*args, **kwargs)
+
+    @property
+    def storage(self) -> Any:
+        return self.db.storage
+
+
+def tenant_client(db: Any, tenant_id: str) -> TenantScopedClient:
+    """Return a client facade that scopes table operations to a tenant."""
+    return TenantScopedClient(db, tenant_id)
 
 
 def _scope_insert_rows(table_name: str, tenant_id: str, rows: Any) -> Any:

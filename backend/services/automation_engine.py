@@ -18,6 +18,7 @@ from backend.services.email_sender import (
     send_email,
 )
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
+from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -45,9 +46,8 @@ async def trigger_sequence(
 
     # Find active sequences for this trigger event
     result = (
-        db.table("automation_sequences")
+        tenant_table(db, "automation_sequences", tenant_id)
         .select("id, trigger_config")
-        .eq("tenant_id", tenant_id)
         .eq("trigger_event", trigger_event)
         .eq("is_active", True)
         .execute()
@@ -100,7 +100,7 @@ async def trigger_sequence(
         next_run = datetime.now(timezone.utc) + timedelta(minutes=delay)
 
         try:
-            db.table("automation_executions").insert(
+            tenant_table(db, "automation_executions", tenant_id).insert(
                 {
                     "sequence_id": seq["id"],
                     "lead_id": lead_id,
@@ -182,7 +182,7 @@ async def execute_step(execution_id: str) -> None:
     )
     if not steps_result.data:
         # No active step at this order — mark completed
-        db.table("automation_executions").update(
+        tenant_table(db, "automation_executions", execution["tenant_id"]).update(
             {
                 "status": "completed",
                 "completed_at": datetime.now(timezone.utc).isoformat(),
@@ -193,14 +193,14 @@ async def execute_step(execution_id: str) -> None:
 
     # Load lead
     lead_result = (
-        db.table("leads")
+        tenant_table(db, "leads", execution["tenant_id"])
         .select("id, name, email, phone, unsubscribed")
         .eq("id", execution["lead_id"])
         .limit(1)
         .execute()
     )
     if not lead_result.data:
-        db.table("automation_executions").update(
+        tenant_table(db, "automation_executions", execution["tenant_id"]).update(
             {
                 "status": "failed",
             }
@@ -218,7 +218,7 @@ async def execute_step(execution_id: str) -> None:
                 "details": {"reason": "unsubscribed"},
             }
         ).execute()
-        db.table("automation_executions").update(
+        tenant_table(db, "automation_executions", execution["tenant_id"]).update(
             {
                 "status": "completed",
                 "completed_at": datetime.now(timezone.utc).isoformat(),
@@ -228,9 +228,8 @@ async def execute_step(execution_id: str) -> None:
 
     # Load tenant for business_name, plan, and google_review_link
     tenant_result = (
-        db.table("tenants")
+        tenant_table(db, "tenants", execution["tenant_id"])
         .select("id, business_name, plan, google_review_link")
-        .eq("id", execution["tenant_id"])
         .limit(1)
         .execute()
     )
@@ -489,7 +488,7 @@ async def _generate_ai_email(
     conversation = []
     try:
         lead_row = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("conversation_id")
             .eq("id", lead_id)
             .limit(1)
@@ -499,7 +498,7 @@ async def _generate_ai_email(
         session_id = None
         if conv_id:
             conv_row = (
-                db.table("conversations")
+                tenant_table(db, "conversations", tenant_id)
                 .select("session_id")
                 .eq("id", conv_id)
                 .limit(1)
@@ -508,9 +507,8 @@ async def _generate_ai_email(
             session_id = conv_row.data[0].get("session_id") if conv_row.data else None
         if session_id:
             msg_result = (
-                db.table("chat_messages")
+                tenant_table(db, "chat_messages", tenant_id)
                 .select("role, content")
-                .eq("tenant_id", tenant_id)
                 .eq("session_id", session_id)
                 .order("created_at", desc=False)
                 .limit(20)
@@ -530,9 +528,8 @@ async def _generate_ai_email(
 
     # Load FAQ entries for context
     faq_result = (
-        db.table("faq_entries")
+        tenant_table(db, "faq_entries", tenant_id)
         .select("question, answer")
-        .eq("tenant_id", tenant_id)
         .limit(20)
         .execute()
     )
@@ -3445,7 +3442,7 @@ async def evaluate_trigger(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -3475,7 +3472,7 @@ async def evaluate_trigger(
             return False, None
         try:
             appt_result = (
-                db.table("appointments")
+                tenant_table(db, "appointments", tenant_id)
                 .select("id, status")
                 .eq("id", appt_id)
                 .limit(1)
@@ -3669,10 +3666,9 @@ async def execute_automation_rule(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads")
+                tenant_table(db, "leads", tenant_id)
                 .select("*")
                 .eq("id", lead_id)
-                .eq("client_id", tenant_id)
                 .limit(1)
                 .execute()
             )
@@ -3731,7 +3727,7 @@ async def execute_automation_rule(
     }
 
     try:
-        db.table("automation_rule_executions").insert(
+        tenant_table(db, "automation_rule_executions", tenant_id).insert(
             {
                 "automation_rule_id": rule_id,
                 "tenant_id": tenant_id,
@@ -3745,7 +3741,7 @@ async def execute_automation_rule(
         logger.exception("Failed to log automation rule execution for rule %s", rule_id)
 
     try:
-        db.table("automation_rules").update(
+        tenant_table(db, "automation_rules", tenant_id).update(
             {
                 "last_triggered_at": end_time.isoformat(),
                 "triggered_count": (rule.get("triggered_count") or 0) + 1,
@@ -3801,9 +3797,9 @@ async def _execute_action(
             return {"status": "failed", "reason": "no_tag"}
         current_tags = set(lead_data.get("tags") or [])
         current_tags.add(tag)
-        db.table("leads").update({"tags": list(current_tags)}).eq(
+        tenant_table(db, "leads", tenant_id).update({"tags": list(current_tags)}).eq(
             "id", lead_data["id"]
-        ).eq("client_id", tenant_id).execute()
+        ).execute()
         return {"status": "success", "tag": tag}
 
     elif action_type == "remove_tag":
@@ -3814,9 +3810,9 @@ async def _execute_action(
             return {"status": "failed", "reason": "no_tag"}
         current_tags = set(lead_data.get("tags") or [])
         current_tags.discard(tag)
-        db.table("leads").update({"tags": list(current_tags)}).eq(
+        tenant_table(db, "leads", tenant_id).update({"tags": list(current_tags)}).eq(
             "id", lead_data["id"]
-        ).eq("client_id", tenant_id).execute()
+        ).execute()
         return {"status": "success", "tag": tag}
 
     elif action_type == "update_lead_status":
@@ -3825,9 +3821,9 @@ async def _execute_action(
         new_status = action_config.get("status", "")
         if not new_status:
             return {"status": "failed", "reason": "no_status"}
-        db.table("leads").update({"status": new_status}).eq(
+        tenant_table(db, "leads", tenant_id).update({"status": new_status}).eq(
             "id", lead_data["id"]
-        ).eq("client_id", tenant_id).execute()
+        ).execute()
         return {"status": "success", "status": new_status}
 
     elif action_type == "enroll_in_sequence":
@@ -3836,10 +3832,9 @@ async def _execute_action(
             return {"status": "failed", "reason": "missing_sequence_id_or_lead"}
         try:
             sequence_result = (
-                db.table("automation_sequences")
+                tenant_table(db, "automation_sequences", tenant_id)
                 .select("id")
                 .eq("id", sequence_id)
-                .eq("tenant_id", tenant_id)
                 .eq("is_active", True)
                 .limit(1)
                 .execute()
@@ -3862,7 +3857,7 @@ async def _execute_action(
             first_step = first_step_result.data[0]
             delay = first_step.get("delay_minutes") or 0
             next_run = datetime.now(timezone.utc) + timedelta(minutes=delay)
-            db.table("automation_executions").insert(
+            tenant_table(db, "automation_executions", tenant_id).insert(
                 {
                     "sequence_id": sequence_id,
                     "lead_id": lead_data["id"],
@@ -3889,7 +3884,7 @@ async def _execute_action(
             task_payload["lead_id"] = lead_data["id"]
         if assigned_to:
             task_payload["assigned_to"] = assigned_to
-        db.table("action_items").insert(task_payload).execute()
+        tenant_table(db, "action_items", tenant_id).insert(task_payload).execute()
         return {"status": "success", "description": description}
 
     elif action_type == "notify_team":
@@ -3897,9 +3892,8 @@ async def _execute_action(
         channel = action_config.get("channel", "dashboard")
         if channel == "sms":
             tenant_result = (
-                db.table("tenants")
+                tenant_table(db, "tenants", tenant_id)
                 .select("notification_phone")
-                .eq("id", tenant_id)
                 .limit(1)
                 .execute()
             )
@@ -3926,9 +3920,9 @@ async def _execute_action(
         delta = action_config.get("delta", 0)
         current_score = float(lead_data.get("lead_score") or 0)
         new_score = current_score + delta
-        db.table("leads").update({"lead_score": new_score}).eq(
+        tenant_table(db, "leads", tenant_id).update({"lead_score": new_score}).eq(
             "id", lead_data["id"]
-        ).eq("client_id", tenant_id).execute()
+        ).execute()
         return {"status": "success", "new_score": new_score}
 
     else:
@@ -3949,10 +3943,9 @@ async def _send_campaign_for_rule(
 
         db = get_supabase()
         campaign_result = (
-            db.table("marketing_campaigns")
+            tenant_table(db, "marketing_campaigns", tenant_id)
             .select("*")
             .eq("id", campaign_id)
-            .eq("tenant_id", tenant_id)
             .limit(1)
             .execute()
         )
@@ -3986,9 +3979,8 @@ async def check_lead_captured_triggers(lead_id: str) -> int:
 
     try:
         rules_result = (
-            db.table("automation_rules")
+            tenant_table(db, "automation_rules", tenant_id)
             .select("*")
-            .eq("tenant_id", tenant_id)
             .eq("trigger_type", "lead_captured")
             .eq("is_active", True)
             .order("priority", desc=True)
@@ -4028,7 +4020,7 @@ async def check_tag_triggers(
     trigger_type = "tag_added" if added else "tag_removed"
 
     try:
-        lead_result = db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+        lead_result = tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
         lead_data = lead_result.data[0] if lead_result.data else None
     except Exception:
         logger.exception("check_tag_triggers: failed to load lead %s", lead_id)
@@ -4036,9 +4028,8 @@ async def check_tag_triggers(
 
     try:
         rules_result = (
-            db.table("automation_rules")
+            tenant_table(db, "automation_rules", tenant_id)
             .select("*")
-            .eq("tenant_id", tenant_id)
             .eq("trigger_type", trigger_type)
             .eq("is_active", True)
             .order("priority", desc=True)
@@ -4105,7 +4096,7 @@ async def check_form_submission_triggers(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -4113,9 +4104,8 @@ async def check_form_submission_triggers(
 
     try:
         rules_result = (
-            db.table("automation_rules")
+            tenant_table(db, "automation_rules", tenant_id)
             .select("*")
-            .eq("tenant_id", tenant_id)
             .eq("trigger_type", "form_submitted")
             .eq("is_active", True)
             .order("priority", desc=True)
@@ -4188,7 +4178,7 @@ async def check_appointment_triggers(
     if lead_id:
         try:
             lead_result = (
-                db.table("leads").select("*").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -4198,9 +4188,8 @@ async def check_appointment_triggers(
 
     try:
         rules_result = (
-            db.table("automation_rules")
+            tenant_table(db, "automation_rules", tenant_id)
             .select("*")
-            .eq("tenant_id", tenant_id)
             .eq("trigger_type", trigger_type)
             .eq("is_active", True)
             .order("priority", desc=True)

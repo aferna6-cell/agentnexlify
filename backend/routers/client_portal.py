@@ -14,6 +14,7 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
+from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ async def create_service_record(
     }
 
     try:
-        result = db.table("service_records").insert(row).execute()
+        result = tenant_table(db, "service_records", tenant_id).insert(row).execute()
     except Exception:
         logger.exception("Failed to create service record for tenant %s", tenant_id)
         raise HTTPException(status_code=500, detail="Failed to create service record")
@@ -115,7 +116,7 @@ async def list_service_records(
     db = get_supabase()
     try:
         query = (
-            db.table("service_records")
+            tenant_table(db, "service_records", tenant_id)
             .select("*")
             .eq("tenant_id", tenant_id)
             .order("service_date", desc=True)
@@ -147,7 +148,7 @@ async def update_service_record(
     db = get_supabase()
     try:
         result = (
-            db.table("service_records")
+            tenant_table(db, "service_records", tenant_id)
             .update(updates)
             .eq("id", record_id)
             .eq("tenant_id", tenant_id)
@@ -175,7 +176,7 @@ async def delete_service_record(
     db = get_supabase()
     try:
         result = (
-            db.table("service_records")
+            tenant_table(db, "service_records", tenant_id)
             .delete()
             .eq("id", record_id)
             .eq("tenant_id", tenant_id)
@@ -228,7 +229,7 @@ async def upload_service_photo(
     # Verify the service record exists and belongs to this tenant
     try:
         existing = (
-            db.table("service_records")
+            tenant_table(db, "service_records", tenant_id)
             .select("id, photos_json")
             .eq("id", record_id)
             .eq("tenant_id", tenant_id)
@@ -267,7 +268,7 @@ async def upload_service_photo(
     updated_photos = current_photos + [public_url]
     try:
         result = (
-            db.table("service_records")
+            tenant_table(db, "service_records", tenant_id)
             .update({"photos_json": updated_photos})
             .eq("id", record_id)
             .eq("tenant_id", tenant_id)
@@ -297,7 +298,7 @@ async def generate_portal_link(
     # Check if a token already exists for this tenant + lead
     try:
         existing = (
-            db.table("portal_tokens")
+            tenant_table(db, "portal_tokens", tenant_id)
             .select("token")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
@@ -315,7 +316,7 @@ async def generate_portal_link(
     # Generate a new token
     token = secrets.token_urlsafe(32)
     try:
-        db.table("portal_tokens").insert({
+        tenant_table(db, "portal_tokens", tenant_id).insert({
             "tenant_id": tenant_id,
             "lead_id": lead_id,
             "token": token,
@@ -362,7 +363,7 @@ async def get_portal_data(token: str, request: Request):
     # Fetch business info
     try:
         tenant_result = (
-            db.table("tenants")
+            tenant_table(db, "tenants", tenant_id)
             .select("id, business_name, owner_email, industry, city")
             .eq("id", tenant_id)
             .limit(1)
@@ -377,7 +378,7 @@ async def get_portal_data(token: str, request: Request):
     # Fetch customer (lead) info — leads table uses client_id
     try:
         lead_result = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("id, name, email, phone")
             .eq("id", lead_id)
             .eq("client_id", tenant_id)
@@ -393,7 +394,7 @@ async def get_portal_data(token: str, request: Request):
     # Fetch service records for this lead + tenant (only public-safe columns)
     try:
         records_result = (
-            db.table("service_records")
+            tenant_table(db, "service_records", tenant_id)
             .select("id, title, description, service_date, photos_json, documents_json, invoice_amount, created_at")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
@@ -411,7 +412,7 @@ async def get_portal_data(token: str, request: Request):
     widget_api_key = None
     try:
         wc_result = (
-            db.table("widget_configs")
+            tenant_table(db, "widget_configs", tenant_id)
             .select("booking_enabled, api_key")
             .eq("tenant_id", tenant_id)
             .limit(1)
@@ -427,7 +428,7 @@ async def get_portal_data(token: str, request: Request):
     client_login_enabled = False
     try:
         tenant_full = (
-            db.table("tenants")
+            tenant_table(db, "tenants", tenant_id)
             .select("client_login_enabled")
             .eq("id", tenant_id)
             .limit(1)
@@ -529,7 +530,7 @@ async def client_register(req: ClientRegisterRequest, request: Request):
     # Check if client login is enabled for this tenant
     try:
         tenant_result = (
-            db.table("tenants")
+            tenant_table(db, "tenants", tenant_id)
             .select("client_login_enabled")
             .eq("id", tenant_id)
             .limit(1)
@@ -546,7 +547,7 @@ async def client_register(req: ClientRegisterRequest, request: Request):
     # Check if account already exists
     try:
         existing = (
-            db.table("client_accounts")
+            tenant_table(db, "client_accounts", tenant_id)
             .select("id")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
@@ -564,7 +565,7 @@ async def client_register(req: ClientRegisterRequest, request: Request):
     # Create the account
     password_hash = _hash_client_password(req.password)
     try:
-        db.table("client_accounts").insert({
+        tenant_table(db, "client_accounts", tenant_id).insert({
             "tenant_id": tenant_id,
             "lead_id": lead_id,
             "email": req.email,
@@ -609,7 +610,7 @@ async def client_login(req: ClientLoginRequest, request: Request):
     # Find the client account
     try:
         account_result = (
-            db.table("client_accounts")
+            tenant_table(db, "client_accounts", tenant_id)
             .select("id, lead_id, email, password_hash")
             .eq("tenant_id", tenant_id)
             .eq("email", req.email)
@@ -643,7 +644,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     # Fetch business info
     try:
         tenant_result = (
-            db.table("tenants")
+            tenant_table(db, "tenants", tenant_id)
             .select("id, business_name, owner_email, industry, city, business_slug")
             .eq("id", tenant_id)
             .limit(1)
@@ -658,7 +659,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     # Fetch customer (lead) info — leads table uses client_id
     try:
         lead_result = (
-            db.table("leads")
+            tenant_table(db, "leads", tenant_id)
             .select("id, name, email, phone")
             .eq("id", lead_id)
             .eq("client_id", tenant_id)
@@ -674,7 +675,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     # Fetch service records (client-facing columns only)
     try:
         records_result = (
-            db.table("service_records")
+            tenant_table(db, "service_records", tenant_id)
             .select("id, title, description, service_date, photos_json, documents_json, invoice_amount, created_at")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
@@ -688,7 +689,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     # Fetch appointments
     try:
         appt_result = (
-            db.table("appointments")
+            tenant_table(db, "appointments", tenant_id)
             .select("id, customer_name, start_time, end_time, status, notes")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
@@ -703,7 +704,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     # Fetch invoices
     try:
         inv_result = (
-            db.table("invoices")
+            tenant_table(db, "invoices", tenant_id)
             .select("id, invoice_number, items_json, subtotal, tax, total, status, created_at, due_date")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
@@ -718,7 +719,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     # Fetch documents
     try:
         doc_result = (
-            db.table("documents")
+            tenant_table(db, "documents", tenant_id)
             .select("id, title, status, created_at, signed_at")
             .eq("tenant_id", tenant_id)
             .eq("lead_id", lead_id)
@@ -735,7 +736,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     widget_api_key = None
     try:
         wc_result = (
-            db.table("widget_configs")
+            tenant_table(db, "widget_configs", tenant_id)
             .select("booking_enabled, api_key")
             .eq("tenant_id", tenant_id)
             .limit(1)
@@ -772,7 +773,7 @@ async def toggle_client_login(
     try:
         # Get current state
         current = (
-            db.table("tenants")
+            tenant_table(db, "tenants", tenant_id)
             .select("client_login_enabled")
             .eq("id", tenant_id)
             .limit(1)
@@ -782,7 +783,7 @@ async def toggle_client_login(
             raise HTTPException(status_code=404, detail="Tenant not found")
 
         new_value = not bool(current.data[0].get("client_login_enabled"))
-        db.table("tenants").update({"client_login_enabled": new_value}).eq("id", tenant_id).execute()
+        tenant_table(db, "tenants", tenant_id).update({"client_login_enabled": new_value}).eq("id", tenant_id).execute()
         return {"client_login_enabled": new_value}
     except HTTPException:
         raise
