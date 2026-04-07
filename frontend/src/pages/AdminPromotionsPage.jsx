@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { BASE } from "../utils/api/_client";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const cardStyle = {
@@ -124,7 +125,7 @@ function clearAdminSecret() {
 async function apiFetch(path, opts = {}) {
   const secret = getAdminSecret();
   if (!secret) throw new Error("No admin secret provided");
-  const res = await fetch(`/api/v1/admin${path}`, {
+  const res = await fetch(`${BASE}/api/v1/admin${path}`, {
     headers: {
       "x-api-secret": secret,
       "Content-Type": "application/json",

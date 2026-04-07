@@ -661,7 +661,7 @@ async def get_campaign_analytics(
                     email_events_result = (
                         db.table("email_events")
                         .select("event_type, created_at")
-                        .eq("campaign_id", campaign_id)
+                        .eq("campaign_tag", campaign_id)
                         .eq("tenant_id", tenant_id)
                         .gte("created_at", trend_start)
                         .execute()
@@ -698,7 +698,7 @@ async def get_campaign_analytics(
             email_events_result = (
                 db.table("email_events")
                 .select("details")
-                .eq("campaign_id", campaign_id)
+                .eq("campaign_tag", campaign_id)
                 .eq("tenant_id", tenant_id)
                 .limit(500)
                 .execute()

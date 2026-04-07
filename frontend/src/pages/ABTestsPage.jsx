@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { BASE } from "../utils/api/_client";
 import SkeletonLoader from "../components/SkeletonLoader";
 import {
   BarChart,
@@ -124,7 +125,7 @@ const STATUS_STYLES = {
   },
 };
 
-const API_BASE = "/api/v1";
+const API_BASE = `${BASE}/api/v1`;
 
 async function apiFetch(path, token, opts = {}) {
   const res = await fetch(`${API_BASE}${path}`, {

@@ -260,7 +260,7 @@ async def unsubscribe_lead(
     db = get_supabase()
     result = (
         db.table("leads")
-        .select("id, tenant_id, unsubscribed")
+        .select("id, client_id, unsubscribed")
         .eq("id", lid)
         .limit(1)
         .execute()
@@ -272,7 +272,7 @@ async def unsubscribe_lead(
         )
 
     lead = result.data[0]
-    lead_tenant_id = str(lead.get("tenant_id") or "")
+    lead_tenant_id = str(lead.get("client_id") or "")
 
     expected_bound = _make_unsub_sig(lid, lead_tenant_id) if lead_tenant_id else ""
     tid_matches = (not tid) or (tid == lead_tenant_id)
