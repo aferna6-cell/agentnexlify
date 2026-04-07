@@ -1,0 +1,1041 @@
+<!doctype html>
+<!-- Claudeopedia — Interactive Knowledge Base Viewer
+  To use: cd knowledge-base && python3 -m http.server 8080
+  Then open: http://localhost:8080/viewer.html
+  Keyboard: / = search, Escape = close, G = toggle view, C = clear filters
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claudeopedia</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --s2: #283548;
+        --border: #334155;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #3b82f6;
+        --adim: rgba(59, 130, 246, 0.15);
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        grid-template-rows: 56px 1fr;
+        height: 100vh;
+      }
+      .top {
+        grid-column: 1/-1;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 20px;
+        z-index: 10;
+      }
+      .logo {
+        font-weight: 700;
+        font-size: 1rem;
+        white-space: nowrap;
+      }
+      .logo span {
+        color: var(--accent);
+      }
+      .sw {
+        flex: 1;
+        position: relative;
+        max-width: 440px;
+      }
+      .sw input {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 7px 12px 7px 32px;
+        color: var(--text);
+        font-size: 0.88rem;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .sw input:focus {
+        border-color: var(--accent);
+      }
+      .si {
+        position: absolute;
+        left: 9px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        pointer-events: none;
+      }
+      .stats {
+        margin-left: auto;
+        font-size: 0.75rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .vtg {
+        display: flex;
+        gap: 4px;
+      }
+      .vtg button {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 5px 9px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        transition: all 0.15s;
+      }
+      .vtg button.on,
+      .vtg button:hover {
+        background: var(--adim);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .side {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+        padding: 16px 12px;
+      }
+      .main {
+        overflow-y: auto;
+        padding: 20px;
+      }
+      .st {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        margin-bottom: 8px;
+        margin-top: 16px;
+      }
+      .st:first-child {
+        margin-top: 0;
+      }
+      .cf {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 7px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        transition: background 0.15s;
+        margin-bottom: 1px;
+        user-select: none;
+      }
+      .cf:hover {
+        background: var(--s2);
+      }
+      .cf.on {
+        background: var(--adim);
+      }
+      .cdot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .ccount {
+        margin-left: auto;
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+      .tc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .tp {
+        background: var(--s2);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.72rem;
+        padding: 2px 7px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .tp:hover,
+      .tp.on {
+        background: var(--adim);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .di {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 5px 9px;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        margin-bottom: 7px;
+      }
+      .bcl {
+        width: 100%;
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        margin-top: 4px;
+        transition: all 0.15s;
+      }
+      .bcl:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+      }
+      .card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+      .ctop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 10px 10px 0 0;
+      }
+      .ch {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .ct {
+        font-size: 0.9rem;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+      .badge {
+        font-size: 0.68rem;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 9px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .cs {
+        font-size: 0.8rem;
+        color: var(--muted);
+        line-height: 1.5;
+        margin-bottom: 10px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .cf2 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+      .ctags {
+        display: flex;
+        gap: 3px;
+        flex-wrap: wrap;
+      }
+      .ctag {
+        font-size: 0.68rem;
+        color: var(--muted);
+        background: var(--s2);
+        padding: 2px 5px;
+        border-radius: 7px;
+      }
+      .cmeta {
+        font-size: 0.7rem;
+        color: var(--muted);
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+      .tl {
+        padding: 8px 0;
+      }
+      .tly {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin: 18px 0 7px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .tli {
+        display: flex;
+        gap: 14px;
+        padding: 10px 0;
+        border-left: 2px solid var(--border);
+        margin-left: 55px;
+        padding-left: 18px;
+        position: relative;
+        cursor: pointer;
+      }
+      .tli::before {
+        content: "";
+        position: absolute;
+        left: -5px;
+        top: 16px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--border);
+        transition: background 0.15s;
+      }
+      .tli:hover::before {
+        background: var(--accent);
+      }
+      .tli:hover .tlt {
+        color: var(--accent);
+      }
+      .tld {
+        position: absolute;
+        left: -68px;
+        top: 13px;
+        font-size: 0.72rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .tlt {
+        font-size: 0.87rem;
+        font-weight: 600;
+      }
+      .tls {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-top: 3px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .empty {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--muted);
+      }
+      .empty-i {
+        font-size: 2.5rem;
+        margin-bottom: 12px;
+      }
+      .empty h3 {
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+      .ov {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 100;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 32px 16px;
+        backdrop-filter: blur(4px);
+      }
+      .mo {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        width: 100%;
+        max-width: 760px;
+        max-height: 87vh;
+        overflow-y: auto;
+        padding: 28px;
+        position: relative;
+      }
+      .mc {
+        position: sticky;
+        top: 0;
+        float: right;
+        background: var(--s2);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 5px 11px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        margin-bottom: 14px;
+      }
+      .mc:hover {
+        color: #ef4444;
+        border-color: #ef4444;
+      }
+      .mm {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      .ab {
+        font-size: 0.88rem;
+        line-height: 1.8;
+        color: var(--text);
+      }
+      .ab h1 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 18px;
+      }
+      .ab h2 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin: 22px 0 10px;
+      }
+      .ab h3 {
+        font-size: 0.92rem;
+        font-weight: 600;
+        margin: 14px 0 7px;
+      }
+      .ab p {
+        margin-bottom: 12px;
+      }
+      .ab strong {
+        font-weight: 600;
+      }
+      .ab em {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .ab ul,
+      .ab ol {
+        margin: 7px 0 12px 18px;
+      }
+      .ab li {
+        margin-bottom: 3px;
+      }
+      .ab code {
+        background: var(--s2);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-family: "SF Mono", Monaco, monospace;
+        font-size: 0.83em;
+        color: var(--accent);
+      }
+      .ab pre {
+        background: var(--s2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px;
+        overflow-x: auto;
+        margin: 10px 0;
+      }
+      .ab pre code {
+        background: none;
+        padding: 0;
+        color: var(--text);
+      }
+      .ab blockquote {
+        border-left: 3px solid var(--accent);
+        padding-left: 14px;
+        color: var(--muted);
+        margin: 10px 0;
+        font-style: italic;
+      }
+      .ab a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .wl {
+        color: #8b5cf6;
+        background: rgba(139, 92, 246, 0.1);
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 0.9em;
+      }
+      .sn {
+        background: var(--s2);
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 16px;
+        font-size: 0.82rem;
+        color: #f59e0b;
+      }
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="top">
+        <div class="logo">Claude<span>opedia</span></div>
+        <div class="sw">
+          <span class="si">⌕</span>
+          <input
+            id="q"
+            type="text"
+            placeholder="Search… ( / or Ctrl+K )"
+            autocomplete="off"
+          />
+        </div>
+        <div class="vtg">
+          <button id="bg" class="on" title="Grid (G)">⊞</button>
+          <button id="bt" title="Timeline (G)">☰</button>
+        </div>
+        <div class="stats" id="stats">—</div>
+      </div>
+      <div class="side">
+        <div class="st">Categories</div>
+        <div id="cats"></div>
+        <div class="st">Date Range</div>
+        <input type="date" id="df" class="di" />
+        <input type="date" id="dt" class="di" />
+        <div class="st">Tags</div>
+        <div class="tc" id="tags"></div>
+        <button class="bcl" id="bcl">✕ Clear filters</button>
+      </div>
+      <div class="main" id="main">
+        <div class="empty">
+          <div class="empty-i">📚</div>
+          <h3>Loading…</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="ov" id="ov" style="display: none">
+      <div class="mo">
+        <button class="mc" id="mc">✕ Close</button>
+        <div class="mm" id="mm"></div>
+        <div class="ab" id="ab"></div>
+      </div>
+    </div>
+
+    <script>
+      let all = [],
+        filt = [],
+        cc = {},
+        state = {
+          q: "",
+          cats: new Set(),
+          tags: new Set(),
+          df: "",
+          dt: "",
+          v: "grid",
+        };
+
+      const CAT_COLORS = {
+        competitors: "#ef4444",
+        "ai-llm": "#8b5cf6",
+        "small-biz-saas": "#f59e0b",
+        verticals: "#10b981",
+        technical: "#3b82f6",
+        regulations: "#f97316",
+        growth: "#06b6d4",
+        general: "#6b7280",
+      };
+      const CAT_LABELS = {
+        competitors: "Competitors",
+        "ai-llm": "AI / LLM",
+        "small-biz-saas": "Small Biz SaaS",
+        verticals: "Verticals",
+        technical: "Technical",
+        regulations: "Regulations",
+        growth: "Growth",
+        general: "General",
+      };
+
+      // Parse YAML frontmatter from markdown
+      function parseFM(txt) {
+        const fm = {},
+          m = txt.match(/^---\n([\s\S]*?)\n---/);
+        if (!m) return { fm, body: txt };
+        const body = txt.slice(m[0].length).trim();
+        m[1].split("\n").forEach((l) => {
+          const ci = l.indexOf(":");
+          if (ci < 0) return;
+          const k = l.slice(0, ci).trim(),
+            v = l.slice(ci + 1).trim();
+          if (v.startsWith("["))
+            fm[k] = v
+              .slice(1, -1)
+              .split(",")
+              .map((x) => x.trim().replace(/^["']|["']$/g, ""));
+          else fm[k] = v.replace(/^["']|["']$/g, "");
+        });
+        return { fm, body };
+      }
+
+      // Parse INDEX.md to extract article paths
+      function parseIndex(txt) {
+        const paths = [];
+        const re = /\(wiki\/([^)]+\.md)\)/g;
+        let m;
+        while ((m = re.exec(txt)) !== null) paths.push("wiki/" + m[1]);
+        return paths;
+      }
+
+      // Build article object from markdown content + path
+      function articleFromMd(path, content) {
+        const { fm, body } = parseFM(content);
+        const parts = path.replace("wiki/", "").replace(".md", "").split("/");
+        const category = parts[0] || "general";
+        const slug = parts.slice(1).join("/") || parts[0];
+        const tags = Array.isArray(fm.tags)
+          ? fm.tags
+          : fm.tags
+            ? [fm.tags]
+            : [];
+        const words = body.split(/\s+/).filter(Boolean).length;
+        const links = [...body.matchAll(/\[\[([^\]]+)\]\]/g)].map((m) => m[1]);
+        // Extract first real paragraph as summary fallback
+        const summaryFallback = body
+          .replace(/^#{1,6}.*$/gm, "")
+          .replace(/\n+/g, " ")
+          .trim()
+          .slice(0, 200);
+        return {
+          slug: `${category}/${slug}`,
+          title: fm.title || slug.replace(/-/g, " "),
+          category,
+          category_label: CAT_LABELS[category] || category,
+          category_color: CAT_COLORS[category] || "#6b7280",
+          summary: fm.summary || summaryFallback,
+          created: fm.created || fm.date || "2026-01-01",
+          updated: fm.updated || fm.created || "2026-01-01",
+          tags,
+          word_count: words,
+          read_time_minutes: Math.max(1, Math.round(words / 200)),
+          cross_links: [...new Set(links)],
+          content,
+          path,
+        };
+      }
+
+      async function loadDirect() {
+        // Fallback: parse INDEX.md to find paths, fetch each article individually
+        try {
+          const idxR = await fetch("INDEX.md");
+          if (!idxR.ok) throw new Error("no INDEX.md");
+          const idxTxt = await idxR.text();
+          const paths = parseIndex(idxTxt);
+          if (!paths.length) throw new Error("empty index");
+          const articles = await Promise.all(
+            paths.map(async (p) => {
+              try {
+                const r = await fetch(p);
+                if (!r.ok) return null;
+                return articleFromMd(p, await r.text());
+              } catch {
+                return null;
+              }
+            }),
+          );
+          return articles.filter(Boolean);
+        } catch {
+          return null;
+        }
+      }
+
+      async function load() {
+        document.getElementById("main").innerHTML =
+          '<div class="empty"><div class="empty-i">⏳</div><h3>Loading…</h3></div>';
+        // Try viewer-data.json first (pre-generated, fastest)
+        try {
+          const r = await fetch("viewer-data.json");
+          if (!r.ok) throw new Error(r.status);
+          const d = await r.json();
+          cc = d.category_colors || CAT_COLORS;
+          all = d.articles || [];
+          // Lazy-fetch full content for articles missing it (viewer-data might be stale)
+          all = await Promise.all(
+            all.map(async (a) => {
+              if (a.content) return a;
+              try {
+                const r = await fetch(a.path);
+                if (r.ok) a.content = await r.text();
+              } catch {}
+              return a;
+            }),
+          );
+          initSide(d);
+          apply();
+          return;
+        } catch {}
+        // Fallback: read INDEX.md + fetch articles directly (no pre-generation needed)
+        cc = CAT_COLORS;
+        const direct = await loadDirect();
+        if (direct && direct.length) {
+          all = direct;
+          const catCounts = {};
+          direct.forEach((a) => {
+            catCounts[a.category] = (catCounts[a.category] || 0) + 1;
+          });
+          const tagMap = {};
+          direct.forEach((a) =>
+            (a.tags || []).forEach((t) => {
+              tagMap[t] = (tagMap[t] || 0) + 1;
+            }),
+          );
+          const totalWords = direct.reduce(
+            (s, a) => s + (a.word_count || 0),
+            0,
+          );
+          const dates = direct
+            .map((a) => a.created)
+            .filter(Boolean)
+            .sort();
+          initSide({
+            stats: {
+              total_articles: direct.length,
+              total_words: totalWords,
+              categories: catCounts,
+              oldest_article: dates[0],
+              newest_article: dates[dates.length - 1],
+              generated_at: "live",
+            },
+            tags: Object.entries(tagMap)
+              .sort((a, b) => b[1] - a[1])
+              .map(([tag, count]) => ({ tag, count })),
+            category_colors: CAT_COLORS,
+          });
+          apply();
+          // Save fetched data to viewer-data.json in background (best-effort, only works in http mode)
+          return;
+        }
+        // Total failure
+        document.getElementById("main").innerHTML =
+          `<div class="sn">⚠️ Cannot load articles.<br>Serve with: <code>cd knowledge-base && python3 -m http.server 8080</code><br>Then open <a href="http://localhost:8080/viewer.html" style="color:var(--accent)">localhost:8080/viewer.html</a></div>`;
+      }
+
+      function initSide(d) {
+        const s = d.stats || {};
+        document.getElementById("stats").textContent =
+          `${s.total_articles || 0} articles · ${(s.total_words || 0).toLocaleString()}w`;
+        const cc2 = s.categories || {};
+        const cat = document.getElementById("cats");
+        Object.keys(cc2)
+          .sort()
+          .forEach((c) => {
+            const div = document.createElement("div");
+            div.className = "cf";
+            div.dataset.c = c;
+            const col = cc[c] || "#6b7280";
+            div.innerHTML = `<span class="cdot" style="background:${col}"></span><span>${c.replace(/-/g, " ")}</span><span class="ccount">${cc2[c]}</span>`;
+            div.onclick = () => togCat(c);
+            cat.appendChild(div);
+          });
+        const tc = document.getElementById("tags");
+        (d.tags || []).slice(0, 25).forEach(({ tag, count }) => {
+          const s = document.createElement("span");
+          s.className = "tp";
+          s.textContent = `${tag}${count > 1 ? " " + count : ""}`;
+          s.onclick = () => togTag(tag);
+          tc.appendChild(s);
+        });
+        if (s.oldest_article)
+          document.getElementById("df").value = s.oldest_article;
+        if (s.newest_article)
+          document.getElementById("dt").value = s.newest_article;
+      }
+
+      function apply() {
+        const q = state.q.toLowerCase().trim();
+        filt = all.filter((a) => {
+          if (
+            q &&
+            !a.title.toLowerCase().includes(q) &&
+            !(a.summary || "").toLowerCase().includes(q) &&
+            !(a.tags || []).some((t) => t.includes(q))
+          )
+            return false;
+          if (state.cats.size > 0 && !state.cats.has(a.category)) return false;
+          if (
+            state.tags.size > 0 &&
+            ![...state.tags].some((t) => (a.tags || []).includes(t))
+          )
+            return false;
+          if (state.df && a.created < state.df) return false;
+          if (state.dt && a.created > state.dt) return false;
+          return true;
+        });
+        render();
+      }
+
+      function render() {
+        const m = document.getElementById("main");
+        if (!filt.length) {
+          m.innerHTML = `<div class="empty"><div class="empty-i">🔍</div><h3>No articles found</h3><p>Try different search or clear filters</p></div>`;
+          return;
+        }
+        state.v === "timeline" ? renderTL(m) : renderGrid(m);
+      }
+
+      function renderGrid(m) {
+        m.innerHTML = `<div class="grid">${filt.map((a, i) => card(a, i)).join("")}</div>`;
+        m.querySelectorAll(".card").forEach(
+          (el, i) => (el.onclick = () => open(filt[i])),
+        );
+      }
+
+      function card(a, i) {
+        const col = cc[a.category] || "#6b7280";
+        const tags = (a.tags || [])
+          .slice(0, 3)
+          .map((t) => `<span class="ctag">${esc(t)}</span>`)
+          .join("");
+        return `<div class="card"><div class="ctop" style="background:${col}"></div>
+  <div class="ch"><div class="ct">${esc(a.title)}</div><span class="badge" style="background:${col}22;color:${col}">${esc(a.category_label || a.category)}</span></div>
+  <div class="cs">${esc(a.summary || "")}</div>
+  <div class="cf2"><span>${a.created}</span><div class="ctags">${tags}</div></div>
+  <div class="cmeta"><span>📖 ${a.read_time_minutes || 1}m</span><span>📝 ${(a.word_count || 0).toLocaleString()}w</span>${(a.cross_links || []).length ? `<span>🔗 ${a.cross_links.length}</span>` : ""}</div></div>`;
+      }
+
+      function renderTL(m) {
+        const by = {};
+        [...filt]
+          .sort((a, b) => b.created.localeCompare(a.created))
+          .forEach((a) => {
+            const y = a.created.slice(0, 4);
+            if (!by[y]) by[y] = [];
+            by[y].push(a);
+          });
+        let h = '<div class="tl">';
+        Object.keys(by)
+          .sort()
+          .reverse()
+          .forEach((y) => {
+            h += `<div class="tly">${y}</div>`;
+            by[y].forEach((a) => {
+              const col = cc[a.category] || "#6b7280";
+              const idx = filt.indexOf(a);
+              h += `<div class="tli" data-i="${idx}"><span class="tld">${a.created.slice(5)}</span><div><div class="tlt" style="color:${col}">${esc(a.title)}</div><div class="tls">${esc(a.summary || "")}</div></div></div>`;
+            });
+          });
+        h += "</div>";
+        m.innerHTML = h;
+        m.querySelectorAll(".tli").forEach(
+          (el) => (el.onclick = () => open(filt[+el.dataset.i])),
+        );
+      }
+
+      function open(a) {
+        const col = cc[a.category] || "#6b7280";
+        const tags = (a.tags || [])
+          .map(
+            (t) => `<span class="tp" style="font-size:.72rem">${esc(t)}</span>`,
+          )
+          .join(" ");
+        document.getElementById("mm").innerHTML =
+          `<span class="badge" style="background:${col}22;color:${col}">${esc(a.category_label || a.category)}</span>${tags}<span>${a.created}</span><span>📖 ${a.read_time_minutes || 1}m · ${(a.word_count || 0).toLocaleString()}w</span>`;
+        document.getElementById("ab").innerHTML = md(a.content || "");
+        document.getElementById("ov").style.display = "flex";
+        document.body.style.overflow = "hidden";
+      }
+
+      function close() {
+        document.getElementById("ov").style.display = "none";
+        document.body.style.overflow = "";
+      }
+
+      function md(s) {
+        s = s.replace(/^---[\s\S]*?---\n/, "");
+        const il = (t) =>
+          t
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/`([^`]+)`/g, "<code>$1</code>")
+            .replace(/\[\[([^\]]+)\]\]/g, '<span class="wl">[[$1]]</span>')
+            .replace(
+              /\[([^\]]+)\]\(([^)]+)\)/g,
+              '<a href="$2" target="_blank">$1</a>',
+            )
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+        let h = "",
+          code = false,
+          list = "",
+          inList = false;
+        const fl = () => {
+          if (inList) {
+            h += `<ul>${list}</ul>`;
+            inList = false;
+            list = "";
+          }
+        };
+        s.split("\n").forEach((l) => {
+          if (l.startsWith("```")) {
+            fl();
+            code = !code;
+            h += code ? "<pre><code>" : "</code></pre>";
+            return;
+          }
+          if (code) {
+            h += esc(l) + "\n";
+            return;
+          }
+          if (/^#{1,6}\s/.test(l)) {
+            fl();
+            const n = l.match(/^(#+)/)[1].length;
+            h += `<h${n}>${il(l.replace(/^#+\s/, ""))}</h${n}>`;
+            return;
+          }
+          if (/^[-*]\s/.test(l)) {
+            inList = true;
+            list += `<li>${il(l.replace(/^[-*]\s/, ""))}</li>`;
+            return;
+          }
+          if (/^>\s/.test(l)) {
+            fl();
+            h += `<blockquote>${il(l.replace(/^>\s/, ""))}</blockquote>`;
+            return;
+          }
+          if (!l.trim()) {
+            fl();
+            h += "<br>";
+            return;
+          }
+          fl();
+          h += `<p>${il(l)}</p>`;
+        });
+        fl();
+        return h;
+      }
+
+      function esc(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function togCat(c) {
+        const el = document.querySelector(`[data-c="${c}"]`);
+        state.cats.has(c)
+          ? (state.cats.delete(c), el.classList.remove("on"))
+          : (state.cats.add(c), el.classList.add("on"));
+        apply();
+      }
+      function togTag(t) {
+        document.querySelectorAll(".tp").forEach((p) => {
+          if (p.textContent.trim().startsWith(t))
+            state.tags.has(t)
+              ? p.classList.remove("on")
+              : p.classList.add("on");
+        });
+        state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t);
+        apply();
+      }
+
+      document.getElementById("q").addEventListener("input", (e) => {
+        state.q = e.target.value;
+        apply();
+      });
+      document.getElementById("df").addEventListener("change", (e) => {
+        state.df = e.target.value;
+        apply();
+      });
+      document.getElementById("dt").addEventListener("change", (e) => {
+        state.dt = e.target.value;
+        apply();
+      });
+      document.getElementById("bg").addEventListener("click", () => {
+        state.v = "grid";
+        document.getElementById("bg").classList.add("on");
+        document.getElementById("bt").classList.remove("on");
+        apply();
+      });
+      document.getElementById("bt").addEventListener("click", () => {
+        state.v = "timeline";
+        document.getElementById("bt").classList.add("on");
+        document.getElementById("bg").classList.remove("on");
+        apply();
+      });
+      document.getElementById("mc").addEventListener("click", close);
+      document.getElementById("ov").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("ov")) close();
+      });
+      document.getElementById("bcl").addEventListener("click", () => {
+        state.q = "";
+        state.cats.clear();
+        state.tags.clear();
+        state.df = "";
+        state.dt = "";
+        document.getElementById("q").value = "";
+        document
+          .querySelectorAll(".cf.on,.tp.on")
+          .forEach((el) => el.classList.remove("on"));
+        apply();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (!e.target.matches("input")) {
+          if (e.key === "/" || (e.ctrlKey && e.key === "k")) {
+            e.preventDefault();
+            document.getElementById("q").focus();
+          }
+          if (e.key === "g" || e.key === "G")
+            document.getElementById(state.v === "grid" ? "bt" : "bg").click();
+          if (e.key === "c" || e.key === "C")
+            document.getElementById("bcl").click();
+        }
+        if (e.key === "Escape") {
+          if (document.getElementById("ov").style.display !== "none") close();
+          else {
+            document.getElementById("q").value = "";
+            state.q = "";
+            apply();
+          }
+        }
+      });
+
+      load();
+    </script>
+  </body>
+</html>

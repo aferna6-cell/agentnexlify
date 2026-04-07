@@ -292,7 +292,7 @@ async def complete_onboarding(
         "onboarding_completed_at": datetime.now(timezone.utc).isoformat(),
     }
     if req.phone:
-        tenant_update["phone"] = req.phone
+        tenant_update["notification_phone"] = req.phone
     if req.website_url:
         tenant_update["website_url"] = req.website_url
     if req.services:

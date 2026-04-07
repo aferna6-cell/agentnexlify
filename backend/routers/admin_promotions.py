@@ -7,9 +7,11 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Header, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from starlette.requests import Request
 
 from backend.config import settings
+from backend.limiter import limiter
 from backend.models.database import get_supabase
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,16 @@ def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
         raise HTTPException(status_code=401, detail="Invalid admin secret")
 
 
+def _validate_iso_datetime(v: str | None) -> str | None:
+    if v is None:
+        return v
+    try:
+        datetime.fromisoformat(v)
+    except (ValueError, TypeError):
+        raise ValueError("expires_at must be a valid ISO 8601 datetime string")
+    return v
+
+
 class PromotionCreate(BaseModel):
     tenant_id: str
     promotion_type: str = Field(
@@ -53,6 +65,11 @@ class PromotionCreate(BaseModel):
     expires_at: str | None = None
     notes: str | None = Field(None, max_length=2000)
 
+    @field_validator("expires_at")
+    @classmethod
+    def check_expires_at(cls, v):
+        return _validate_iso_datetime(v)
+
 
 class PromotionUpdate(BaseModel):
     discount_pct: int | None = Field(None, ge=0, le=100)
@@ -61,9 +78,16 @@ class PromotionUpdate(BaseModel):
     expires_at: str | None = None
     notes: str | None = Field(None, max_length=2000)
 
+    @field_validator("expires_at")
+    @classmethod
+    def check_expires_at(cls, v):
+        return _validate_iso_datetime(v)
+
 
 @router.get("")
+@limiter.limit("10/minute")
 async def list_promotions(
+    request: Request,
     x_api_secret: str | None = Header(None),
     promotion_type: str | None = Query(None),
     tenant_id: str | None = Query(None),
@@ -111,7 +135,9 @@ async def list_promotions(
 
 
 @router.post("")
+@limiter.limit("10/minute")
 async def create_promotion(
+    request: Request,
     req: PromotionCreate,
     x_api_secret: str | None = Header(None),
 ):
@@ -194,7 +220,9 @@ async def create_promotion(
 
 
 @router.get("/{promotion_id}")
+@limiter.limit("10/minute")
 async def get_promotion(
+    request: Request,
     promotion_id: str,
     x_api_secret: str | None = Header(None),
 ):
@@ -224,7 +252,9 @@ async def get_promotion(
 
 
 @router.put("/{promotion_id}")
+@limiter.limit("10/minute")
 async def update_promotion(
+    request: Request,
     promotion_id: str,
     req: PromotionUpdate,
     x_api_secret: str | None = Header(None),
@@ -279,7 +309,9 @@ async def update_promotion(
 
 
 @router.delete("/{promotion_id}", status_code=204)
+@limiter.limit("10/minute")
 async def delete_promotion(
+    request: Request,
     promotion_id: str,
     x_api_secret: str | None = Header(None),
 ):
@@ -306,7 +338,9 @@ async def delete_promotion(
 
 
 @router.post("/{promotion_id}/expire")
+@limiter.limit("10/minute")
 async def expire_promotion(
+    request: Request,
     promotion_id: str,
     x_api_secret: str | None = Header(None),
 ):

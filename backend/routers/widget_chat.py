@@ -676,15 +676,16 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         try:
             owner_email = tenant.get("owner_email")
             if owner_email:
-                from backend.services.email_service import send_email
+                from backend.services.email_sender import send_email
                 biz = tenant.get("business_name") or "Your business"
                 await send_email(
                     to=owner_email,
                     subject=f"[{biz}] Customer requesting a human",
-                    html=(
+                    body_html=(
                         f"<p>A customer on your website chat is asking to speak with a team member.</p>"
                         f"<p>Open the <a href='https://app.agentnexlify.com/dashboard/conversations'>Conversations inbox</a> to reply.</p>"
                     ),
+                    tenant_id=tenant["id"],
                 )
         except Exception:
             logger.warning("Failed to send handoff email notification", exc_info=True)

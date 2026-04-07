@@ -155,6 +155,8 @@ async def delete_job(
         .eq("tenant_id", tenant_id)
         .execute()
     )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Job not found")
     return {"deleted": True}
 
 

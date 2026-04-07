@@ -481,7 +481,9 @@ async def _send_campaign_background(
 
 
 @router.post("/{tenant_id}/{campaign_id}/send")
+@limiter.limit("3/minute")
 async def send_campaign(
+    request: Request,
     tenant_id: str,
     campaign_id: str,
     claims: dict = Depends(_get_current_tenant),
@@ -494,6 +496,12 @@ async def send_campaign(
     so the HTTP handler is never blocked for more than a few milliseconds.
     """
     verify_tenant(claims, tenant_id)
+
+    # Plan gate: free plan cannot send campaigns
+    _PAID_PLANS = {"growth", "professional", "autopilot", "enterprise"}
+    tenant_plan = claims.get("plan", "free")
+    if tenant_plan not in _PAID_PLANS:
+        raise HTTPException(status_code=403, detail="Campaign sending requires a paid plan")
 
     try:
         db = get_supabase()
@@ -659,7 +667,7 @@ async def get_campaign_analytics(
                     email_events_result = (
                         db.table("email_events")
                         .select("event_type, created_at")
-                        .eq("campaign_id", campaign_id)
+                        .eq("campaign_tag", campaign_id)
                         .eq("tenant_id", tenant_id)
                         .gte("created_at", trend_start)
                         .execute()
@@ -689,14 +697,14 @@ async def get_campaign_analytics(
                         )
                     trend_data.reverse()
             except Exception:
-                pass
+                logger.warning("Failed to load trend data for campaign %s", campaign_id, exc_info=True)
 
         device_breakdown = {}
         try:
             email_events_result = (
                 db.table("email_events")
                 .select("details")
-                .eq("campaign_id", campaign_id)
+                .eq("campaign_tag", campaign_id)
                 .eq("tenant_id", tenant_id)
                 .limit(500)
                 .execute()
@@ -711,7 +719,7 @@ async def get_campaign_analytics(
                 else:
                     device_breakdown["other"] = device_breakdown.get("other", 0) + 1
         except Exception:
-            pass
+            logger.warning("Failed to load device breakdown for campaign %s", campaign_id, exc_info=True)
 
         return {
             "campaign": campaign,

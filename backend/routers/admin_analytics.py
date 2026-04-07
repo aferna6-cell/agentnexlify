@@ -497,14 +497,6 @@ async def _calculate_live_revenue(db, start_month, now, months):
     current = start_month
     while current <= now:
         month_key = current.strftime("%Y-%m")
-        month_end = current.replace(
-            day=28
-        ) + timedelta(days=4)  # Last day of month approximation
-        month_end = month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if month_end.month == 12:
-            month_end = month_end.replace(year=month_end.year + 1, month=1)
-        else:
-            month_end = month_end.replace(month=month_end.month + 1)
 
         # Count tenants who had active paid subscription during this month
         month_revenue_cents = 0

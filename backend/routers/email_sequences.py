@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.routers.auth import _get_current_tenant
-from backend.services.email_sender import build_unsubscribe_url, send_email
+from backend.services.email_sender import build_unsubscribe_url, render_template, send_email
 
 logger = logging.getLogger(__name__)
 
@@ -839,7 +839,7 @@ async def process_sequences(
         try:
             lead_result = (
                 db.table("leads")
-                .select("id, name, email")
+                .select("id, name, email, unsubscribed")
                 .eq("id", lead_id)
                 .limit(1)
                 .execute()
@@ -856,6 +856,13 @@ async def process_sequences(
             failed += 1
             continue
 
+        # CAN-SPAM: never send to unsubscribed leads
+        if lead.get("unsubscribed"):
+            logger.info("Lead %s is unsubscribed, skipping send %s", lead_id, send_id)
+            _update_send_status(db, send_id, "skipped", error="unsubscribed")
+            skipped += 1
+            continue
+
         lead_email = lead.get("email", "")
         if not lead_email:
             logger.info("Lead %s has no email, skipping send %s", lead_id, send_id)
@@ -863,13 +870,25 @@ async def process_sequences(
             skipped += 1
             continue
 
+        # Render template variables before sending
+        try:
+            biz_row = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+            business_name = (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
+        except Exception:
+            business_name = ""
+        ctx = {
+            "name": lead.get("name") or "there",
+            "email": lead_email,
+            "business_name": business_name,
+        }
+
         # Send the email
         try:
             unsub_url = build_unsubscribe_url(lead_id, tenant_id)
             result = await send_email(
                 to=lead_email,
-                subject=step["subject"],
-                body_html=step["body"],
+                subject=render_template(step["subject"], ctx),
+                body_html=render_template(step["body"], ctx),
                 tenant_id=tenant_id,
                 unsubscribe_url=unsub_url,
                 lead_id=lead_id,
@@ -968,7 +987,7 @@ async def run_sequence_processor() -> dict:
             failed += 1
             continue
         try:
-            lead_result = db.table("leads").select("id, name, email").eq("id", lead_id).limit(1).execute()
+            lead_result = db.table("leads").select("id, name, email, unsubscribed").eq("id", lead_id).limit(1).execute()
             if not lead_result.data:
                 _update_send_status(db, send_id, "skipped", error="lead not found")
                 skipped += 1
@@ -978,16 +997,27 @@ async def run_sequence_processor() -> dict:
             _update_send_status(db, send_id, "failed", error="lead load error")
             failed += 1
             continue
+        # CAN-SPAM: never send to unsubscribed leads
+        if lead.get("unsubscribed"):
+            _update_send_status(db, send_id, "skipped", error="unsubscribed")
+            skipped += 1
+            continue
         lead_email = lead.get("email", "")
         if not lead_email:
             _update_send_status(db, send_id, "skipped", error="no email address")
             skipped += 1
             continue
         try:
+            biz_row = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+            _biz = (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
+        except Exception:
+            _biz = ""
+        _ctx = {"name": lead.get("name") or "there", "email": lead_email, "business_name": _biz}
+        try:
             result = await send_email(
                 to=lead_email,
-                subject=step["subject"],
-                body_html=step["body"],
+                subject=render_template(step["subject"], _ctx),
+                body_html=render_template(step["body"], _ctx),
                 tenant_id=tenant_id,
                 unsubscribe_url=build_unsubscribe_url(lead_id, tenant_id),
                 lead_id=lead_id,

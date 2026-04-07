@@ -859,6 +859,7 @@ class AcceptInviteRequest(BaseModel):
     token: str
     name: str
     password: str
+    email: str
 
     @field_validator("password")
     @classmethod

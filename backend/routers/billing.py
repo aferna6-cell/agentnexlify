@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from backend.config import settings
 from backend.models.database import get_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
+from backend.routers.auth import _get_current_tenant
 from backend.services.stripe_service import (
     PLAN_PRICES,
     get_or_create_customer,
@@ -25,8 +26,9 @@ router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 # ---------------------------------------------------------------------------
 
 def _verify_secret(x_api_secret: str = Header(...)):
+    import hmac as _hmac
     secret = settings.billing_secret or settings.api_secret_key
-    if x_api_secret != secret:
+    if not secret or not _hmac.compare_digest(x_api_secret, secret):
         raise HTTPException(status_code=403, detail="Invalid API secret")
 
 
@@ -106,11 +108,11 @@ async def stripe_webhook(request: Request):
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except (stripe.SignatureVerificationError, Exception) as exc:
-        # stripe.error.SignatureVerificationError is deprecated in v11+
+    except Exception as exc:
+        # Handle both pre-v11 and v11+ stripe SDK exception names
         if "SignatureVerification" in type(exc).__name__:
             raise HTTPException(status_code=400, detail="Invalid signature")
-        raise
+        raise HTTPException(status_code=400, detail="Webhook verification failed") from exc
 
     event_type = event["type"]
     data = event["data"]["object"]
@@ -310,7 +312,9 @@ def _handle_subscription_updated(db, subscription: dict) -> None:
         logger.warning("subscription.updated: could not resolve tenant (customer=%s)", subscription.get("customer"))
         return
 
-    update_data: dict = {"plan_status": subscription.get("status", "active")}
+    _ALLOWED_STATUSES = {"active", "paused", "past_due", "unpaid", "incomplete", "canceled", "trialing", "incomplete_expired"}
+    raw_status = subscription.get("status", "active")
+    update_data: dict = {"plan_status": raw_status if raw_status in _ALLOWED_STATUSES else "paused"}
     if plan:
         update_data["plan"] = plan
 
@@ -381,8 +385,10 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
 # ---------------------------------------------------------------------------
 
 @router.get("/portal/{tenant_id}", response_model=PortalResponse)
-async def billing_portal(tenant_id: str, _=Depends(_verify_secret)):
+async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """Create a Stripe Customer Portal session for managing subscriptions."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     db = get_supabase()
     result = db.table("tenants").select("stripe_customer_id").eq("id", tenant_id).limit(1).execute()
     if not result.data:

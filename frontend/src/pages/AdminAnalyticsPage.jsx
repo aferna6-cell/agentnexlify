@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { BASE } from "../utils/api/_client";
 import {
   LineChart,
   Line,
@@ -66,7 +67,7 @@ function clearAdminSecret() {
 async function apiFetch(path) {
   const secret = getAdminSecret();
   if (!secret) throw new Error("No admin secret provided");
-  const res = await fetch(`/api/v1/admin${path}`, {
+  const res = await fetch(`${BASE}/api/v1/admin${path}`, {
     headers: {
       "x-api-secret": secret,
       "Content-Type": "application/json",
@@ -128,8 +129,8 @@ export default function AdminAnalyticsPage() {
       if (revenueRes?.revenue_trends)
         setRevenueTrends(revenueRes.revenue_trends);
       if (industryRes?.breakdown) setIndustryBreakdown(industryRes.breakdown);
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error("Admin analytics load failed:", err.message);
     } finally {
       setLoading(false);
     }
@@ -139,7 +140,7 @@ export default function AdminAnalyticsPage() {
     loadData();
   }, [loadData]);
 
-  if (!getAdminSecret()) {
+  if (!_adminSecret) {
     return (
       <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
         <div

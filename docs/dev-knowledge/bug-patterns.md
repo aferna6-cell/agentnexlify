@@ -967,3 +967,45 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `backend/requirements.txt`
 **Fix:** Added `tzdata>=2025.1` to backend requirements so Python can resolve IANA timezone names consistently across Windows and slim environments.
 **Prevention:** Any Python service using `zoneinfo` should explicitly depend on `tzdata` unless the deployment target guarantees a system timezone database.
+
+---
+
+## 2026-04-06
+
+### Audit findings — secret leak, broken inserts, filter sanitization, rate limits
+**Date:** 2026-04-06 (Commit 1ef217d)
+**Symptom:** Multiple security/reliability issues found during audit: potential secret exposure, broken database inserts, unsanitized filter inputs, missing rate limits.
+**Root Cause:** Auto-logged — needs human enrichment for root cause details.
+**Files Changed:** Multiple backend routers and config files
+**Fix:** Addressed all audit findings in a single commit — secret leak sealed, insert queries fixed, filter inputs sanitized, rate limits applied.
+**Prevention:** Run security audit skill periodically. Rate-limit all public-facing endpoints.
+
+---
+
+### Expired JWT tokens not handled — users stuck on dashboard after token expiry
+**Date:** 2026-04-06 (Commit 6d10cf5)
+**Symptom:** Users with expired JWT tokens remained on the dashboard with broken API calls instead of being redirected to login.
+**Root Cause:** No 401 response interceptor in the frontend API client. No proactive token expiry check before API calls.
+**Files Changed:** `frontend/src/utils/api/_client.js`, `frontend/src/context/AuthContext.jsx`
+**Fix:** Added 401 interceptor to API client that clears auth state and redirects to login. Added proactive expiry check before requests.
+**Prevention:** All authenticated SPAs need a 401 interceptor. Check token expiry client-side before making requests to avoid unnecessary failed calls.
+
+---
+
+### Stalled campaign detection used wrong timestamp column
+**Date:** 2026-04-06 (Commit 72ed91e)
+**Symptom:** Stalled campaign recovery logic was not correctly identifying campaigns that had been sending for too long.
+**Root Cause:** Detection query used the wrong timestamp field instead of `sending_started_at` (added in migration 055 specifically for stall detection).
+**Files Changed:** `backend/services/automation_engine.py`
+**Fix:** Changed stalled campaign detection to use `sending_started_at` column.
+**Prevention:** When a column is created for a specific purpose (like stall detection), grep for all related queries to ensure they actually use it.
+
+---
+
+### Autopilot plan missing from DB CHECK constraint — subscription creation fails
+**Date:** 2026-04-06 (Commit 31761c0)
+**Symptom:** Creating autopilot plan subscriptions fails with a CHECK constraint violation at database level.
+**Root Cause:** `tenants.plan` CHECK constraint only allowed `free, growth, professional, enterprise`. The `autopilot` plan existed in code (PLAN_PRICES) and Stripe but was never added to the DB constraint.
+**Files Changed:** `migrations/090_add_autopilot_plan.sql`
+**Fix:** Migration 090 drops and recreates the CHECK constraint to include `autopilot`.
+**Prevention:** When adding a new plan tier to code/Stripe, ALWAYS update the DB CHECK constraint in the same PR. Add to the pre-launch checklist.

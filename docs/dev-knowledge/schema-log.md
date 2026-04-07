@@ -512,3 +512,66 @@ Renumbered 3 duplicate migration files to resolve numbering conflicts:
 - `067_scoring_configs.sql` -> `084_scoring_configs.sql`
 - `068_password_reset_tokens.sql` -> `085_password_reset_tokens.sql`
 The "keep" files (`066_appointment_waitlist.sql`, `067_lead_scoring_config.sql`, `068_invoice_number_unique.sql`) retain their original numbers. Historical duplicates at 005 and 007 remain unchanged (documented separately).
+
+### 086 — A/B Testing Tables
+Creates three tables for multivariate marketing campaign testing:
+- `ab_tests`: tenant_id, name, description, test_type (subject_line/send_time/body_content/campaign_variant), status (draft/running/completed/paused), winner_variant_id, started_at, completed_at.
+- `ab_test_variants`: ab_test_id (FK→ab_tests), name, variant_config (JSONB), traffic_pct, sends/opens/clicks/conversions counters.
+- `ab_test_sends`: ab_test_id, variant_id, campaign_send_id, tenant_id. Links A/B test variants to individual campaign sends.
+
+**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+
+### 087 — Automation Rules
+Creates `automation_rules` table for event-driven automation. Columns: tenant_id, name, description, trigger_type (16 event types including lead_captured, tag_added, form_submitted, appointment_created, pipeline_stage_changed, email_opened, scheduled_daily/weekly, etc.), trigger_config (JSONB), conditions (JSONB), actions (JSONB), is_active (BOOLEAN), execution_count, last_triggered_at.
+
+Also creates `automation_rule_logs` for execution audit trail: rule_id, tenant_id, trigger_data (JSONB), actions_executed (JSONB), status (success/partial_failure/failed), error_message.
+
+**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+
+### 088 — Campaign Analytics Aggregates
+Creates `campaign_analytics_aggregates` for pre-computed daily/weekly campaign metrics. Columns: tenant_id, campaign_id (FK→marketing_campaigns), period_start (DATE), period_type (daily/weekly), total_sent/delivered/opened/clicked/bounced, unique_opens/clicks. UNIQUE on (campaign_id, period_start, period_type). Indexed on tenant_id.
+
+**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+
+### 089 — Platform Admin Tracking
+Adds admin management columns to `tenants`: admin_discount_pct (INTEGER), admin_notes (TEXT), acquired_at (TIMESTAMPTZ), first_paid_at (TIMESTAMPTZ). Adds indexes on created_at and (plan, plan_status) for growth queries.
+
+Creates `admin_promotions` table: tenant_id, promotion_type (free_tier/discount/extended_trial/partner_deal/case_study/referral), discount_pct (0-100), notes, starts_at, expires_at, is_active.
+
+**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+
+### 090 — Add Autopilot Plan to CHECK Constraint
+Drops and recreates `tenants_plan_check` to include `autopilot`: `CHECK (plan IN ('free', 'growth', 'professional', 'autopilot', 'enterprise'))`. Fixes constraint violations when creating autopilot subscriptions.
+
+**Applied:** Pending — created 2026-04-06. **Critical: autopilot subscriptions fail until this is applied.**
+
+### 091 — RLS and Guards for Migrations 086-089
+Enables RLS and creates tenant isolation policies on all tables from migrations 086-089: ab_tests, ab_test_variants, ab_test_sends, automation_rules, automation_rule_logs, campaign_analytics_aggregates, admin_promotions. Uses `IF NOT EXISTS` guards throughout.
+
+**Applied:** Pending — created 2026-04-06.
+
+### 092 — Appointment Reminder Tracking
+Adds `reminder_24h_sent_at` (TIMESTAMPTZ) and `reminder_1h_sent_at` (TIMESTAMPTZ) to `appointments`. Replaces fragile notes-field string matching for reminder deduplication. Partial indexes on tenant_id for unsent reminders.
+
+**Applied:** Pending — created 2026-04-06.
+
+---
+
+## Schema Guardian Audit — 2026-04-06 (Migrations 086-092)
+
+**Corrections to entries above (documented here to avoid rewriting history):**
+
+### 086 — ab_test_variants columns are WRONG in the entry above
+The entry says `variant_config (JSONB), traffic_pct, sends/opens/clicks/conversions counters`. The actual migration SQL has: `name TEXT, subject TEXT, body TEXT, send_time_override TIME, allocation_percent INTEGER DEFAULT 50 (CHECK 0-100), is_winner BOOLEAN DEFAULT FALSE`. The backend code (`backend/routers/ab_tests.py`) matches the SQL, not the log entry.
+
+### 087 — Table name is WRONG in the entry above
+The entry says `automation_rule_logs`. The actual table is `automation_rule_executions`. Column names also differ: `automation_rule_id` (not `rule_id`), `trigger_event` (not `trigger_data`), `actions_run` (not `actions_executed`), status values are `success/partial/failed` (not `success/partial_failure/failed`). Backend code matches the SQL.
+
+### 089 — admin_promotions does NOT have `is_active` column
+The entry above incorrectly lists `is_active` as a column. The actual migration has: `id, tenant_id, promotion_type, discount_pct, reason, approved_by, starts_at, expires_at, notes, created_at`. No `is_active`.
+
+### 091 — RLS policies use wrong pattern
+Policies use `auth.uid()` which is a Supabase Auth function. This codebase uses custom JWT auth and service_role key. Every other migration uses `current_setting('role', true) = 'service_role'`. The `auth.uid()` policies will never match for any caller. A corrective migration (093) is needed.
+
+### 091 — References `automation_rule_logs` in entry above
+Should be `automation_rule_executions`. The actual SQL file correctly uses `automation_rule_executions`.
