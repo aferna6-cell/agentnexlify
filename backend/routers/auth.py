@@ -60,9 +60,11 @@ def _jwt_secret() -> str:
 
 # ── Helpers ──────────────────────────────────────────────────
 
+_BCRYPT_ROUNDS = 14  # OWASP recommended minimum for 2024+
+
 
 def _hash_password(plain: str) -> str:
-    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode()
 
 
 def _verify_password(plain: str, hashed: str) -> bool:
@@ -487,6 +489,8 @@ async def login(request: Request, req: LoginRequest):
     if result.data:
         tenant = result.data[0]
         if not tenant.get("password_hash"):
+            # Use dummy hash to prevent timing attacks
+            _verify_password(req.password, bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode())
             raise HTTPException(status_code=401, detail="Invalid email or password")
         if not _verify_password(req.password, tenant["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -518,6 +522,8 @@ async def login(request: Request, req: LoginRequest):
     if tm_result.data:
         member = tm_result.data[0]
         if not member.get("password_hash"):
+            # Use dummy hash to prevent timing attacks
+            _verify_password(req.password, bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode())
             raise HTTPException(status_code=401, detail="Invalid email or password")
         if not _verify_password(req.password, member["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -556,6 +562,9 @@ async def login(request: Request, req: LoginRequest):
             plan=t.get("plan") or "free",
         )
 
+    # No user found — perform dummy hash to prevent timing attacks
+    # This ensures the response time is similar whether user exists or not
+    _verify_password(req.password, bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode())
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
 

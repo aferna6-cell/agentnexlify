@@ -9,7 +9,7 @@ from backend.services.task_utils import safe_create_task
 import logging
 from datetime import date as date_type
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 
 from backend.limiter import limiter
 from backend.models.database import get_supabase
@@ -126,6 +126,36 @@ async def get_slots(
     api_key: str = Query(..., description="Widget API key"),
 ):
     """Get available appointment slots for a date. Public endpoint (API key auth)."""
+    widget = _get_widget_config(api_key)
+    if widget["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="API key mismatch")
+
+    try:
+        parsed_date = date_type.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    config = get_business_hours(tenant_id)
+    tz = config["timezone"] if config else "America/New_York"
+
+    slots = generate_available_slots(tenant_id, parsed_date)
+
+    return AvailableSlotsResponse(
+        date=target_date,
+        timezone=tz,
+        slots=slots,
+    )
+
+
+@router.post("/slots/{tenant_id}", response_model=AvailableSlotsResponse)
+@limiter.limit("60/minute")
+async def get_slots_post(
+    request: Request,
+    tenant_id: str,
+    target_date: str = Query(..., alias="date", description="Date in YYYY-MM-DD format"),
+    api_key: str = Body(..., embed=True),
+):
+    """Get available appointment slots for a date. POST version to avoid API key in URL."""
     widget = _get_widget_config(api_key)
     if widget["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="API key mismatch")

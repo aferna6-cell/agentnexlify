@@ -51,6 +51,8 @@
     // Clear chat UI
     const container = document.getElementById("anx-messages");
     if (container) container.innerHTML = "";
+    // Reset message counter
+    msgCounter = 0;
     return sid;
   }
 
@@ -829,7 +831,7 @@
   // --- API calls ---
   async function fetchConfig() {
     try {
-      const resp = await fetch(
+      const resp = await fetchWithTimeout(
         `${API_BASE}/api/v1/widget/config/${encodeURIComponent(API_KEY)}`,
       );
       if (!resp.ok) return;
@@ -864,7 +866,7 @@
   async function sendFeedback(messageIndex, rating) {
     if (!API_KEY || !API_BASE) return;
     try {
-      await fetch(`${API_BASE}/api/v1/widget/feedback`, {
+      await fetchWithTimeout(`${API_BASE}/api/v1/widget/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -879,13 +881,25 @@
     }
   }
 
+  const FETCH_TIMEOUT_MS = 15000; // 15 seconds
+
+  async function fetchWithTimeout(url, options = {}, timeout = FETCH_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(id);
+    }
+  }
+
   async function sendMessage(text) {
     if (!API_KEY || !API_BASE) {
       throw new Error(
         "Widget not configured: missing data-api-key or data-api-base",
       );
     }
-    const resp = await fetch(`${API_BASE}/api/v1/widget/chat`, {
+    const resp = await fetchWithTimeout(`${API_BASE}/api/v1/widget/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -912,9 +926,10 @@
     }
     const formData = new FormData();
     formData.append("file", file);
-    const sid = getSessionId();
-    const resp = await fetch(
-      `${API_BASE}/api/v1/widget/upload?api_key=${encodeURIComponent(API_KEY)}&session_id=${encodeURIComponent(sid)}`,
+    formData.append("api_key", API_KEY);
+    formData.append("session_id", getSessionId());
+    const resp = await fetchWithTimeout(
+      `${API_BASE}/api/v1/widget/upload`,
       { method: "POST", body: formData },
     );
     if (!resp.ok) {
@@ -1189,8 +1204,10 @@
       win.classList.add("open");
       bubble.classList.add("hidden");
       unreadCount = 0;
-      document.getElementById("anx-badge").style.display = "none";
-      document.getElementById("anx-input").focus();
+      const badge = document.getElementById("anx-badge");
+      if (badge) badge.style.display = "none";
+      const input = document.getElementById("anx-input");
+      if (input) input.focus();
       localStorage.setItem(STATE_KEY, "open");
       const msgs = document.getElementById("anx-messages");
       if (msgs && msgs.children.length === 0) triggerGreeting();
@@ -1237,7 +1254,7 @@
 
   async function handleSend() {
     const input = document.getElementById("anx-input");
-    const text = input.value.trim();
+    const text = input?.value.trim();
     if (!text || isLoading) return;
 
     // Booking intent detection
@@ -1262,7 +1279,8 @@
     addMessage("user", text);
 
     isLoading = true;
-    document.getElementById("anx-send").disabled = true;
+    const sendBtn = document.getElementById("anx-send");
+    if (sendBtn) sendBtn.disabled = true;
     showTyping();
 
     try {
@@ -1272,8 +1290,8 @@
 
       // Handle handoff to team member
       if (data.handoff) {
-        const input = document.getElementById("anx-input");
-        if (input) input.placeholder = "A team member will respond...";
+        const inputEl = document.getElementById("anx-input");
+        if (inputEl) inputEl.placeholder = "A team member will respond...";
       }
 
       // Handle trial expiry
@@ -1289,7 +1307,7 @@
       console.error("AgentNexLiFy: Send failed", e);
     } finally {
       isLoading = false;
-      document.getElementById("anx-send").disabled = false;
+      if (sendBtn) sendBtn.disabled = false;
     }
   }
 
@@ -1472,8 +1490,13 @@
     };
 
     try {
-      const resp = await fetch(
-        `${API_BASE}/api/v1/appointments/slots/${tenantId}?date=${selectedDate}&api_key=${encodeURIComponent(API_KEY)}`,
+      const resp = await fetchWithTimeout(
+        `${API_BASE}/api/v1/appointments/slots/${tenantId}?date=${selectedDate}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: API_KEY }),
+        }
       );
       if (!resp.ok) throw new Error("Failed to fetch slots");
       const data = await resp.json();
@@ -1568,7 +1591,7 @@
     errEl.style.display = "none";
 
     try {
-      const resp = await fetch(`${API_BASE}/api/v1/appointments/${tenantId}`, {
+      const resp = await fetchWithTimeout(`${API_BASE}/api/v1/appointments/${tenantId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1696,7 +1719,7 @@
     errEl.style.display = "none";
 
     try {
-      const resp = await fetch(`${API_BASE}/api/v1/widget/offline-contact`, {
+      const resp = await fetchWithTimeout(`${API_BASE}/api/v1/widget/offline-contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
