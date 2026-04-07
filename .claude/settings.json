@@ -41,10 +41,27 @@
         ]
       }
     ],
+    "FileChanged": [
+      {
+        "matcher": "knowledge-base/wiki",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/kb-viewer-sync.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/kb-viewer-sync.sh",
+            "timeout": 15
+          },
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/post-edit-check.sh"
