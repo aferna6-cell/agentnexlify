@@ -290,6 +290,58 @@ async def create_automation_rule(
         raise HTTPException(status_code=500, detail="Failed to create automation rule")
 
 
+@router.get("/{tenant_id}/logs")
+async def get_tenant_automation_logs(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    rule_id: str | None = Query(None),
+    status: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    """Get execution history logs across all automation rules for a tenant."""
+    verify_tenant(claims, tenant_id)
+
+    try:
+        db = get_supabase()
+
+        query = (
+            db.table("automation_rule_executions")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
+        )
+
+        if rule_id:
+            query = query.eq("automation_rule_id", rule_id)
+        if status:
+            query = query.eq("status", status)
+
+        result = query.execute()
+
+        count_query = (
+            db.table("automation_rule_executions")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+        )
+        if rule_id:
+            count_query = count_query.eq("automation_rule_id", rule_id)
+        if status:
+            count_query = count_query.eq("status", status)
+        count_result = count_query.execute()
+        total = (
+            count_result.count
+            if count_result.count is not None
+            else len(result.data or [])
+        )
+
+        return {"logs": result.data or [], "total": total}
+    except Exception:
+        logger.exception("Failed to get automation logs for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to load automation logs")
+
+
 @router.get("/{tenant_id}/{rule_id}")
 async def get_automation_rule(
     tenant_id: str,
@@ -446,58 +498,6 @@ async def toggle_automation_rule(
     except Exception:
         logger.exception("Failed to toggle automation rule %s", rule_id)
         raise HTTPException(status_code=500, detail="Failed to toggle automation rule")
-
-
-@router.get("/{tenant_id}/logs")
-async def get_tenant_automation_logs(
-    tenant_id: str,
-    claims: dict = Depends(_get_current_tenant),
-    rule_id: str | None = Query(None),
-    status: str | None = Query(None),
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
-):
-    """Get execution history logs across all automation rules for a tenant."""
-    verify_tenant(claims, tenant_id)
-
-    try:
-        db = get_supabase()
-
-        query = (
-            db.table("automation_rule_executions")
-            .select("*")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .range(offset, offset + limit - 1)
-        )
-
-        if rule_id:
-            query = query.eq("automation_rule_id", rule_id)
-        if status:
-            query = query.eq("status", status)
-
-        result = query.execute()
-
-        count_query = (
-            db.table("automation_rule_executions")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-        )
-        if rule_id:
-            count_query = count_query.eq("automation_rule_id", rule_id)
-        if status:
-            count_query = count_query.eq("status", status)
-        count_result = count_query.execute()
-        total = (
-            count_result.count
-            if count_result.count is not None
-            else len(result.data or [])
-        )
-
-        return {"logs": result.data or [], "total": total}
-    except Exception:
-        logger.exception("Failed to get automation logs for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to load automation logs")
 
 
 @router.get("/{tenant_id}/{rule_id}/logs")

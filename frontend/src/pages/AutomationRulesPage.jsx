@@ -668,7 +668,7 @@ export default function AutomationRulesPage() {
     setLoading(true);
     try {
       const res = await apiFetch(`/automation-rules/${user.tenantId}`, token);
-      setRules(Array.isArray(res) ? res : res.rules || []);
+      setRules(Array.isArray(res) ? res : (res.automation_rules || res.rules || []));
     } catch {
       setRules([]);
     } finally {

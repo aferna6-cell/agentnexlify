@@ -526,13 +526,12 @@ function ResultsPanel({ test, onClose }) {
       .finally(() => setLoading(false));
   }, [user?.tenantId, token, test?.id]);
 
-  const chartData =
-    results?.variants?.map((v) => ({
-      name: v.variant?.name || v.name || "Unknown",
-      open_rate: v.metrics?.open_rate ?? v.open_rate ?? 0,
-      click_rate: v.metrics?.click_rate ?? v.click_rate ?? 0,
-      sent: v.metrics?.sent ?? v.sent ?? 0,
-    })) || [];
+  const chartData = results?.variants?.map((v) => ({
+    name: v.variant?.name || v.name || "Unknown",
+    open_rate: v.metrics?.open_rate ?? v.open_rate ?? 0,
+    click_rate: v.metrics?.click_rate ?? v.click_rate ?? 0,
+    sent: v.metrics?.sent ?? v.sent ?? 0,
+  })) || [];
 
   return (
     <div style={{ ...cardStyle, marginTop: 24 }}>
@@ -785,7 +784,7 @@ export default function ABTestsPage() {
     setLoading(true);
     try {
       const res = await apiFetch(`/ab-tests/${user.tenantId}`, token);
-      setTests(Array.isArray(res) ? res : res.tests || []);
+      setTests(Array.isArray(res) ? res : (res.ab_tests || res.tests || []));
     } catch {
       setTests([]);
     } finally {

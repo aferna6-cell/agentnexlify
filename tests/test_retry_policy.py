@@ -33,10 +33,12 @@ async def test_generate_ai_email_uses_single_retry(mock_call):
 
 
 @pytest.mark.asyncio
+@patch("backend.routers.local_seo.settings")
 @patch("backend.routers.local_seo.call_claude_messages", new_callable=AsyncMock)
-async def test_run_geo_score_ai_uses_single_retry(mock_call):
+async def test_run_geo_score_ai_uses_single_retry(mock_call, mock_settings):
     from backend.routers.local_seo import _run_geo_score_ai
 
+    mock_settings.anthropic_api_key = "test-key"
     mock_call.return_value = MagicMock(text='{"overall_score": 42, "platform_scores": {}, "visibility_factors": [], "recommendations": []}')
     result = await _run_geo_score_ai("Test Biz", "plumbing", "Miami", "https://example.com")
 

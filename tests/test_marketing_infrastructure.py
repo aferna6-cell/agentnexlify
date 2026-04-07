@@ -304,6 +304,15 @@ class TestAutomationRules:
         data = res.json()
         assert "automation_rules" in data
 
+    def test_tenant_logs_route_not_shadowed_by_rule_detail(self, mock_supabase, tenant_override, auth_headers):
+        mock_supabase.set_table_data("automation_rule_executions", [], count=0)
+        client = TestClient(app)
+        res = client.get(f"/api/v1/automation-rules/{TEST_TENANT_ID}/logs", headers=auth_headers)
+        assert res.status_code == 200
+        data = res.json()
+        assert "logs" in data
+        assert data["total"] == 0
+
     def test_list_trigger_types(self, mock_supabase, tenant_override, auth_headers):
         client = TestClient(app)
         res = client.get(f"/api/v1/automation-rules/{TEST_TENANT_ID}/triggers", headers=auth_headers)

@@ -548,7 +548,7 @@ Nodes (6): check_sms_rate_limit(), get_sms_usage(), increment_sms_count(), _mayb
 
 ### Community 119 - "Community 119"
 Cohesion: 0.29
-Nodes (0): 
+Nodes (0):
 
 ### Community 120 - "Community 120"
 Cohesion: 0.29
@@ -620,7 +620,7 @@ Nodes (1): Seed the MTOptions Welcome Sequence in email_sequences.  Looks up the
 
 ### Community 137 - "Community 137"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (0):
 
 ### Community 138 - "Community 138"
 Cohesion: 0.67
@@ -636,7 +636,7 @@ Nodes (2): getPresetWidgetDefaults(), resolvePresetKey()
 
 ### Community 141 - "Community 141"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 142 - "Community 142"
 Cohesion: 1.0
@@ -656,11 +656,11 @@ Nodes (2): Test Matrix, Test Results
 
 ### Community 146 - "Community 146"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 147 - "Community 147"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 148 - "Community 148"
 Cohesion: 1.0
@@ -828,11 +828,11 @@ Nodes (1): Twilio webhooks require valid signature — unsigned requests fail.
 
 ### Community 189 - "Community 189"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 190 - "Community 190"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 191 - "Community 191"
 Cohesion: 1.0
