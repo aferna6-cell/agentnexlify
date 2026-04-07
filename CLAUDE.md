@@ -3,6 +3,7 @@
 AI-powered business automation platform. Chat widget captures leads, books appointments, and automates follow-ups for small businesses.
 
 ## Critical Rules
+- Research the codebase before editing. Never change code you haven't read.
 - NEVER use `from __future__ import annotations` in any Python file — it breaks FastAPI
 - NEVER use localStorage in React artifacts
 - Always use `client_id` (not `tenant_id`) when querying the `leads` table
