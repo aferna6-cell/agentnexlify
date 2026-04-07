@@ -156,9 +156,31 @@
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/auto-commit.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/notify-stop.sh",
+            "timeout": 5
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(git log*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git stash list*)",
+      "Bash(ls *)",
+      "Bash(which *)",
+      "Bash(echo *)",
+      "Bash(cat /dev/stdin*)"
     ]
   },
   "enabledPlugins": {

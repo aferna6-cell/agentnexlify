@@ -1,6 +1,9 @@
 ---
 name: agentnexlify-surface-selector
-description: Choose the correct AgentNexLiFy surface before editing. Use when a task touches this repository and you need to decide whether the work belongs in backend/, frontend/, widget/, demo-platform/, landing-page-v2/, public/, migrations/, prospects/, or _archive/. Also use when a request spans multiple surfaces and you need to map the dependency boundaries first.
+description: "Choose the correct AgentNexLiFy surface before editing. Use when a task touches this repository and you need to decide which directory to work in."
+version: 1.0.0
+origin: codex
+triggers: ["where should I put this", "which directory", "surface selector", "where does this belong"]
 ---
 
 # AgentNexLiFy Surface Selector
@@ -17,6 +20,10 @@ Read [`CLAUDE.md`](/home/aidan/agentnexlify/CLAUDE.md) first, then classify the 
 - `_archive/`: retired code and scripts for reference only.
 - `migrations/`: schema history and the best clue for column names.
 - `prospects/`: outbound prospecting/import tooling, not customer-facing product logic.
+
+## When NOT to Use
+- Do not use for tasks that are clearly within a single already-known surface.
+- Do not use for reading files or understanding code — only for deciding WHERE the work belongs.
 
 ## Decision rules
 - If the user is changing production API behavior, start in `backend/`.

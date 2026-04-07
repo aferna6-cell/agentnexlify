@@ -1,12 +1,27 @@
 ---
 name: kairos
-description: "Persistent background agent. Start/stop the KAIROS daemon for memory consolidation, project monitoring, and dream reports. Use when user says 'kairos start', 'kairos stop', 'kairos status', or 'what did kairos find'."
-allowed-tools: Read, Bash, Glob, Grep
+description: "Persistent background agent for memory consolidation, project monitoring, and dream reports."
+version: 1.0.0
+origin: claude
+allowed_tools: ["Read", "Bash", "Glob", "Grep"]
+triggers: ["kairos start", "kairos stop", "kairos status", "what did kairos find", "memory consolidation", "project monitoring"]
 ---
 
 # KAIROS -- Persistent Background Agent
 
 A daemon that runs between Claude Code sessions to consolidate memory, monitor project health, and surface insights. It does NOT modify any source or memory files -- it only generates reports.
+
+## When to Use
+- User says "kairos start" to begin background monitoring
+- User says "kairos status" to check daemon state
+- User says "kairos stop" to halt the daemon
+- User asks "what did kairos find" to read latest reports
+- Need to review memory contradictions or project health
+
+## When NOT to Use
+- One-off code reviews (use review skill instead)
+- Immediate debugging needs (debug directly, don't wait for daemon)
+- Schema validation (use schema-guard skill)
 
 ## Quick Commands
 

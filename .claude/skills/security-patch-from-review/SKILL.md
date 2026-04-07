@@ -1,7 +1,10 @@
 ---
 name: security-patch-from-review
-description: "Systematically close every finding from a code review or audit report. Parses the finding list, fixes in severity order, tracks status, commits with matching classification codes."
+description: "Systematically close every finding from a code review or audit report by parsing findings, fixing in severity order, tracking status, and committing with matching classification codes."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["security-patch-from-review", "patch findings", "fix review findings", "close security findings", "patch audit results"]
 ---
 
 # Security Patch from Review
@@ -12,6 +15,15 @@ Consume a structured review/audit findings list and systematically close every i
 
 - `/security-patch-from-review` — reads the most recent review from agent-comms or asks for input
 - `/security-patch-from-review <path-to-review.md>` — reads a specific review file
+
+## When to Use
+- Systematically fixing all findings from a completed security audit or code review
+- Creating an auditable chain of security fixes with consistent commit messages
+
+## When NOT to Use
+- Running a new security scan (use security-audit instead)
+- Fixing a single non-security bug (just fix it directly)
+- Reviewing code for correctness (use review skill instead)
 
 ## Workflow
 

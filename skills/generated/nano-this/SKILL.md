@@ -1,7 +1,9 @@
 ---
 name: nano-this
-description: Turn a document or pasted content into a polished Swiss Pulse-style infographic with a fallback prompt when image generation is unavailable.
-created_by: codex
+description: "Turn a document or pasted content into a polished Swiss Pulse-style infographic with a fallback prompt when image generation is unavailable."
+version: 1.0.0
+origin: generated
+triggers: ["nano this", "infographic", "one-pager", "Swiss Pulse", "PNG from this"]
 ---
 
 # nano-this

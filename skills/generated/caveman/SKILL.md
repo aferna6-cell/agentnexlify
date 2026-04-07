@@ -1,7 +1,9 @@
 ---
 name: caveman
-description: Force an ultra-brief action-first response style with no preamble, no filler, and a two-sentence default cap.
-created_by: codex
+description: "Force an ultra-brief action-first response style with no preamble, no filler, and a two-sentence default cap."
+version: 1.0.0
+origin: generated
+triggers: ["caveman", "no preamble", "no filler", "two sentences max", "caveman mode"]
 ---
 
 # caveman

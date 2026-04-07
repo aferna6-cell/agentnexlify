@@ -1,7 +1,9 @@
 ---
 name: ver-it
-description: Build a Swiss Pulse-style interactive HTML summary with a hero metric, stats, chart, and dark-mode presentation.
-created_by: codex
+description: "Build a Swiss Pulse-style interactive HTML summary with a hero metric, stats, chart, and dark-mode presentation."
+version: 1.0.0
+origin: generated
+triggers: ["ver this", "HTML summary", "dark-mode page", "shareable page"]
 ---
 
 # ver-it

@@ -1,12 +1,25 @@
 ---
 name: security-audit
-description: "Scan the codebase for security vulnerabilities — missing tenant verification, unverified webhooks, unsigned OAuth state, XSS, dangerous imports. Classify by severity and fix in order."
+description: "Scan the codebase for security vulnerabilities including missing tenant verification, unverified webhooks, unsigned OAuth state, XSS, and dangerous imports."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["security-audit", "security scan", "vulnerability scan", "audit security", "check for XSS", "check RLS", "check CORS"]
 ---
 
 # Security Audit
 
 Full-codebase security scan with severity classification and structured fixes.
+
+## When to Use
+- Periodic security review of the codebase
+- Before major releases or deployments
+- After a security incident or vulnerability disclosure
+
+## When NOT to Use
+- Fixing findings from a review (use security-patch-from-review instead)
+- Code review for correctness (use review skill instead)
+- Verifying a single security fix (check the specific change directly)
 
 ## Usage
 

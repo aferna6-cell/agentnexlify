@@ -1,7 +1,10 @@
 ---
 name: last30days
-description: "Synthesize recent knowledge accumulation into a 'State of Your Mind' report. Groups by theme, identifies patterns, surfaces blind spots."
+description: "Synthesize recent knowledge accumulation into a 'State of Your Mind' report by grouping by theme, identifying patterns, and surfacing blind spots."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["last30days", "state of your mind", "knowledge synthesis", "30 day report", "weekly review", "bi-weekly review"]
 ---
 
 # `/last30days` Skill — Claudeopedia Knowledge Synthesis
@@ -21,7 +24,15 @@ user_invocable: true
 /last30days --days 7                 # weekly review mode
 ```
 
----
+## When to Use
+- Synthesizing recent knowledge base activity into a structured report
+- Identifying emerging patterns across wiki articles
+- Comparing knowledge accumulation between two time windows
+
+## When NOT to Use
+- Checking knowledge base health (use kb-health instead)
+- Adding or compiling articles (use wiki, kb-ingest, or kb-compile instead)
+- Querying specific facts from the knowledge base (use kb-query instead)
 
 ## Full Workflow (6 Steps)
 

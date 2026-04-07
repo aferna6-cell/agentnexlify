@@ -1,7 +1,10 @@
 ---
 name: tenant-chatbot-audit
-description: "Audit a specific tenant's chatbot for data gaps, RLS failures, FAQ quality, orphaned sessions, and knowledge base issues. Use when a client reports chatbot problems or lead capture isn't working."
+description: "Audit a specific tenant chatbot for data gaps, RLS failures, FAQ quality, orphaned sessions, and knowledge base issues."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["tenant chatbot audit", "chatbot audit", "bot audit", "tenant bot not working", "leads not capturing", "chatbot diagnosis"]
 ---
 
 # Tenant Chatbot Audit
@@ -12,6 +15,16 @@ Deep diagnostic for a specific tenant's chatbot. Use when: bot isn't working, le
 
 - `/tenant-chatbot-audit <tenant_id>` — full audit
 - `/tenant-chatbot-audit <business_name>` — lookup by name first
+
+## When to Use
+- A specific tenant's chatbot is malfunctioning or not capturing leads
+- A client reports problems with their chatbot's response quality
+- Diagnosing RLS failures, orphaned sessions, or FAQ quality issues for a tenant
+
+## When NOT to Use
+- System-wide chatbot issues (debug directly without tenant focus)
+- General codebase security review (use security-audit instead)
+- Schema validation across all tables (use schema-guard instead)
 
 ## Audit Steps
 

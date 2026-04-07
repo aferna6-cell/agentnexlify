@@ -1,7 +1,9 @@
 ---
 name: verification-loop
-description: "A comprehensive verification system for Claude Code sessions."
-origin: ECC
+description: "Run a comprehensive verification system for Claude Code sessions covering build, types, lint, tests, security, and diff review."
+version: 1.0.0
+origin: claude
+triggers: ["verification loop", "verify changes", "quality gate", "pre-PR check", "verify build", "run verification"]
 ---
 
 # Verification Loop Skill
@@ -9,12 +11,15 @@ origin: ECC
 A comprehensive verification system for Claude Code sessions.
 
 ## When to Use
-
-Invoke this skill:
 - After completing a feature or significant code change
 - Before creating a PR
 - When you want to ensure quality gates pass
 - After refactoring
+
+## When NOT to Use
+- During active development mid-task (wait until a milestone)
+- For trivial one-line changes (overkill for tiny fixes)
+- When the project has no build/test infrastructure (adapt the checks instead)
 
 ## Verification Phases
 

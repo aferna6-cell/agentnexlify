@@ -1,7 +1,10 @@
 ---
 name: kb-query
-description: "Ask questions against the knowledge base using semantic search. Embeds your question, finds relevant articles via pgvector cosine similarity, and synthesizes an answer."
+description: "Ask natural language questions against the knowledge base using semantic search with pgvector cosine similarity."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["kb-query", "search knowledge base", "ask the wiki", "semantic search wiki", "query kb"]
 ---
 
 # KB Query — Semantic Q&A
@@ -13,6 +16,16 @@ Ask natural language questions against the compiled knowledge base.
 - `/kb-query How does GoHighLevel's AI Employee compare to our chat widget?`
 - `/kb-query What are the latest LLM context window improvements?`
 - `/kb-query What compliance risks do we face with SMS automation?`
+
+## When to Use
+- Asking questions that can be answered from existing wiki articles
+- Finding connections between concepts in the knowledge base
+- Synthesizing information across multiple wiki articles
+
+## When NOT to Use
+- Adding new sources (use kb-ingest or wiki instead)
+- Discovering new articles (use kb-discover instead)
+- Checking knowledge base health (use kb-health instead)
 
 ## Workflow
 

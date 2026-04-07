@@ -1,7 +1,9 @@
 ---
 name: diagram-it
-description: Turn source material into the clearest diagram format and render it quickly without inventing structure.
-created_by: codex
+description: "Turn source material into the clearest diagram format and render it quickly without inventing structure."
+version: 1.0.0
+origin: generated
+triggers: ["diagram", "flowchart", "map this", "visualize", "draw this"]
 ---
 
 # diagram-it

@@ -1,7 +1,10 @@
 ---
 name: kb-health
-description: "Audit the knowledge base for staleness, gaps, contradictions, and missing cross-links. Reports health score and suggests improvements."
+description: "Audit the knowledge base for staleness, gaps, contradictions, and missing cross-links, reporting a health score and suggesting improvements."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["kb-health", "knowledge base health", "audit wiki", "kb audit", "check knowledge base quality"]
 ---
 
 # KB Health — Wiki Audit
@@ -12,6 +15,16 @@ Run quality checks across the knowledge base and suggest improvements.
 
 - `/kb-health` — full audit
 - `/kb-health --category competitors` — audit one category
+
+## When to Use
+- Periodic quality check of the knowledge base
+- Before compiling new sources to assess current state
+- When noticing contradictions or stale information in wiki articles
+
+## When NOT to Use
+- Adding new sources (use kb-ingest or kb-discover instead)
+- Compiling pending sources (use kb-compile instead)
+- Querying the knowledge base for answers (use kb-query instead)
 
 ## Checks
 

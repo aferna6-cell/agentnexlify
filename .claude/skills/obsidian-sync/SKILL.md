@@ -1,7 +1,10 @@
 ---
 name: obsidian-sync
-description: "Sync wiki articles to an Obsidian vault with wikilinks and frontmatter. One-way: wiki → Obsidian. Never modifies source wiki files."
+description: "Sync wiki articles to an Obsidian vault with wikilinks and frontmatter in a one-way sync that never modifies source wiki files."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["obsidian-sync", "sync to obsidian", "sync wiki to vault", "obsidian vault sync"]
 ---
 
 # obsidian-sync
@@ -22,6 +25,16 @@ Also callable as a flag when ingesting:
 ```
 /wiki https://example.com --obsidian /path/to/vault
 ```
+
+## When to Use
+- Creating a read-friendly copy of the wiki for use in Obsidian
+- Setting up the Obsidian vault with the latest wiki articles
+- Incremental sync after new articles have been added to the wiki
+
+## When NOT to Use
+- Editing wiki content (edit the wiki directly, then sync)
+- Two-way sync (this is one-way only, wiki is canonical)
+- Querying the knowledge base (use kb-query instead)
 
 ---
 

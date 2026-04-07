@@ -1,11 +1,19 @@
 ---
 name: agentnexlify-schema-guard
-description: Protect live schema and API conventions in AgentNexLiFy. Use when editing backend routes, services, migrations, Supabase queries, auth, analytics, leads, appointments, widget chat, or any code that reads or writes tenant, lead, conversation, billing, or automation data.
+description: "Protect live schema and API conventions in AgentNexLiFy. Use when editing backend routes, services, migrations, Supabase queries, or any code that reads/writes tenant, lead, conversation, billing, or automation data."
+version: 1.0.0
+origin: codex
+triggers: ["schema guard", "check the schema", "verify columns", "before writing a query"]
+depends_on: []
 ---
 
 # AgentNexLiFy Schema Guard
 
 This repo has active schema drift. Verify the live pattern before changing queries.
+
+## When NOT to Use
+- Do not use for purely algorithmic changes that don't touch database reads/writes.
+- Do not use for frontend-only CSS/style changes with no data layer impact.
 
 ## Mandatory invariants
 - Auth and JWT claims use `tenant_id`.

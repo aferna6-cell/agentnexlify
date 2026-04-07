@@ -1,6 +1,9 @@
 ---
 name: industry-content
-description: "Use this skill when adding support for a new business type/industry. Ensures all industry-specific content is created consistently: FAQs, pipeline presets, form presets, reminder extras, aftercare templates, and rebook intervals."
+description: "Use when adding support for a new business type or industry to ensure all industry-specific content is created consistently."
+version: 1.0.0
+origin: claude
+triggers: ["new business type", "new industry", "industry FAQs", "pipeline preset", "form preset", "reminder extras", "aftercare template", "rebook interval"]
 ---
 
 # Industry Content — Adding a New Business Type
@@ -9,6 +12,11 @@ description: "Use this skill when adding support for a new business type/industr
 - Adding support for a new industry/business type
 - Expanding content for an existing business type
 - Running a customer simulation that reveals content gaps
+
+## When NOT to Use
+- Modifying existing industry content (just edit the files directly)
+- Debugging industry-specific bugs (use debugging skills instead)
+- Making schema changes (use migration-workflow skill)
 
 ## Checklist
 

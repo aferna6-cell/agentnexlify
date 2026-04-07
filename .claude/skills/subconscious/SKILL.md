@@ -1,7 +1,10 @@
 ---
 name: subconscious
-description: "Self-improvement loop. Gathers evidence, generates improvement ideas, debates them, synthesizes one recommendation, writes artifacts. Each run starts smarter than the last."
+description: "Self-improvement loop that gathers evidence, generates improvement ideas, debates them, synthesizes one recommendation, and writes artifacts."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["subconscious", "self-improvement", "improvement loop", "generate improvement ideas", "debate ideas"]
 ---
 
 # Subconscious Agent — Self-Improvement Loop
@@ -12,6 +15,15 @@ A continuous improvement system that compounds. Each run gathers evidence, gener
 
 - `/subconscious` — run the full loop
 - `/subconscious --dry-run` — ideate and debate only, don't write artifacts
+
+## When to Use
+- Running periodic self-improvement cycles to identify workflow or code quality improvements
+- Generating and debating improvement ideas with evidence-based reasoning
+
+## When NOT to Use
+- Implementing a specific known fix (just do it directly)
+- Emergency bug fixes (fix first, improve process later)
+- When governance.json has auto_approve set to true and you want human oversight
 
 ## The Loop
 

@@ -1,6 +1,9 @@
 ---
 name: team-orchestration
-description: "Use this skill when a task is complex enough to benefit from delegating to multiple agents. Provides the delegation patterns and coordination workflow for the agent team."
+description: "Use this skill when a task is complex enough to benefit from delegating to multiple agents with specific roles and coordination patterns."
+version: 1.0.0
+origin: claude
+triggers: ["team orchestration", "delegate to agents", "multi-agent task", "orchestrate agents", "full stack feature", "database change workflow"]
 ---
 
 # Team Orchestration
@@ -11,6 +14,13 @@ description: "Use this skill when a task is complex enough to benefit from deleg
 - Task involves database changes (always route through schema-guardian first)
 - Task is complex enough that breaking it into specialist subtasks would produce better results
 - You want to validate changes (always involve qa-tester after implementation)
+
+## When NOT to Use
+
+- Simple questions about the codebase (just read the file yourself)
+- Single-file changes with no cross-cutting concerns
+- Tasks that are clearly within one domain with no validation needed
+- When the developer explicitly says to do something directly
 
 ## Agent Team
 

@@ -1,20 +1,26 @@
 ---
 name: strategic-compact
-description: Suggests manual context compaction at logical intervals to preserve context through task phases rather than arbitrary auto-compaction.
-origin: ECC
+description: "Suggest manual context compaction at logical task boundaries to preserve context through task phases rather than arbitrary auto-compaction."
+version: 1.0.0
+origin: claude
+triggers: ["strategic compact", "manual compact", "compact context", "context compaction", "suggest compact"]
 ---
 
 # Strategic Compact Skill
 
 Suggests manual `/compact` at strategic points in your workflow rather than relying on arbitrary auto-compaction.
 
-## When to Activate
-
+## When to Use
 - Running long sessions that approach context limits (200K+ tokens)
-- Working on multi-phase tasks (research → plan → implement → test)
+- Working on multi-phase tasks (research then plan then implement then test)
 - Switching between unrelated tasks within the same session
 - After completing a major milestone and starting new work
 - When responses slow down or become less coherent (context pressure)
+
+## When NOT to Use
+- Short sessions well within context limits
+- Mid-implementation where losing variable names and file paths is costly
+- When the session is near its end anyway
 
 ## Why Strategic Compaction?
 

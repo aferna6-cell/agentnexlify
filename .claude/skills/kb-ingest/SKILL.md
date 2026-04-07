@@ -1,7 +1,10 @@
 ---
 name: kb-ingest
-description: "Manually add a source to the knowledge base. Takes a URL or local file path. Fetches, converts to markdown, categorizes, and registers in kb_sources."
+description: "Manually add a source to the knowledge base by fetching a URL or reading a local file, converting to markdown, categorizing, and registering in kb_sources."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["kb-ingest", "ingest url", "ingest article", "add source", "save article to kb"]
 ---
 
 # KB Ingest — Manual Source Addition
@@ -12,6 +15,16 @@ Add a single source to the knowledge base for later compilation.
 
 - `/kb-ingest https://some-article.com` — fetch URL, convert to .md, categorize
 - `/kb-ingest ./path/to/file.md` — copy local file, categorize
+
+## When to Use
+- Adding a single known URL or local file to the knowledge base
+- Saving an article you found manually for later compilation
+
+## When NOT to Use
+- Automated web discovery (use kb-discover instead)
+- Compiling raw sources into wiki articles (use kb-compile instead)
+- Querying the knowledge base (use kb-query instead)
+- Fast-path directly to wiki (use wiki skill instead)
 
 ## Workflow
 

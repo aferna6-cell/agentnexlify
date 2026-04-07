@@ -1,11 +1,18 @@
 ---
 name: agentnexlify-runtime-constraints
-description: Account for AgentNexLiFy runtime and deployment constraints. Use when editing background jobs, automation execution, rate limiting, caches, webhook delivery, SMS or email quotas, Docker/runtime config, or any logic that assumes a single process or durable in-memory state.
+description: "Account for AgentNexLiFy runtime and deployment constraints. Use when editing background jobs, automation execution, rate limiting, caches, webhook delivery, SMS/email quotas, or any logic that assumes a single process or durable in-memory state."
+version: 1.0.0
+origin: codex
+triggers: ["runtime constraints", "multi-worker", "automation loop", "rate limit", "quota"]
 ---
 
 # AgentNexLiFy Runtime Constraints
 
 The production backend is not a single-process toy app.
+
+## When NOT to Use
+- Do not use for frontend-only changes.
+- Do not use for one-off scripts that don't run in the FastAPI lifespan.
 
 ## Core runtime facts
 - `backend/main.py` starts the automation loop inside FastAPI lifespan.

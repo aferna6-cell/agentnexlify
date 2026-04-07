@@ -1,6 +1,9 @@
 ---
 name: schema-guard
-description: "Use this skill BEFORE writing any database query, migration, or Pydantic model that touches the database. Prevents schema mismatch bugs — the most common bug class in this repo."
+description: "Use this skill BEFORE writing any database query, migration, or Pydantic model that touches the database to prevent schema mismatch bugs."
+version: 1.0.0
+origin: claude
+triggers: ["schema guard", "check schema", "database query", "pydantic model", "schema mismatch", "RLS policy", "leads table"]
 ---
 
 # Schema Guard
@@ -12,6 +15,11 @@ description: "Use this skill BEFORE writing any database query, migration, or Py
 - Before adding a foreign key reference
 - When you see a 422 error on an API endpoint
 - When lead capture, appointments, or any data write silently fails
+
+## When NOT to Use
+- Frontend-only changes with no database interaction
+- Reading data from non-database sources (files, APIs, environment variables)
+- When the schema is already verified and you're only doing read-only queries on well-known tables
 
 ## Workflow
 

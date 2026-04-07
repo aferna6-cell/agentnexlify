@@ -1,6 +1,9 @@
 ---
 name: widget-test
-description: "Use this skill when testing, debugging, or modifying the chat widget."
+description: "Test, debug, or verify the chat widget covering load, conversation, data capture, cross-origin behavior, and file sync."
+version: 1.0.0
+origin: claude
+triggers: ["widget test", "test widget", "widget debugging", "widget checklist", "chat widget test"]
 ---
 
 # Widget Test
@@ -9,6 +12,11 @@ description: "Use this skill when testing, debugging, or modifying the chat widg
 - After any change to the widget or chat API
 - After any change to lead capture or conversation storage
 - When a customer reports the widget isn't working
+
+## When NOT to Use
+- Backend-only changes with no widget interaction
+- Dashboard frontend changes unrelated to the widget
+- Non-widget-related bug fixes
 
 ## Test Checklist
 

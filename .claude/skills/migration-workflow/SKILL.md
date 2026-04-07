@@ -1,6 +1,9 @@
 ---
 name: migration-workflow
-description: "Use this skill when creating, applying, or verifying database migrations. Prevents the #1 operational failure mode: migrations that exist as files but are never applied to live Supabase."
+description: "Use this skill when creating, applying, or verifying database migrations to prevent migrations that exist as files but are never applied to live Supabase."
+version: 1.0.0
+origin: claude
+triggers: ["database migration", "create migration", "apply migration", "migration checklist", "verify migration", "schema change"]
 ---
 
 # Migration Workflow
@@ -10,6 +13,11 @@ description: "Use this skill when creating, applying, or verifying database migr
 - Modifying existing schema
 - Before deploying features that depend on schema changes
 - During morning/evening reviews when checking migration status
+
+## When NOT to Use
+- Writing queries against existing schema without changes (no migration needed)
+- Frontend-only changes (no database involvement)
+- Non-schema configuration changes (use appropriate config tools)
 
 ## Creating a Migration
 

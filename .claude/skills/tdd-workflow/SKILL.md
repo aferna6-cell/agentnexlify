@@ -1,20 +1,27 @@
 ---
 name: tdd-workflow
-description: Use this skill when writing new features, fixing bugs, or refactoring code. Enforces test-driven development with 80%+ coverage including unit, integration, and E2E tests.
-origin: ECC
+description: "Enforce test-driven development with 80 percent plus coverage including unit, integration, and E2E tests for new features, bug fixes, and refactoring."
+version: 1.0.0
+origin: claude
+triggers: ["tdd", "test-driven", "test driven development", "write tests first", "test coverage", "unit test", "integration test", "e2e test", "playwright test"]
 ---
 
 # Test-Driven Development Workflow
 
 This skill ensures all code development follows TDD principles with comprehensive test coverage.
 
-## When to Activate
-
+## When to Use
 - Writing new features or functionality
 - Fixing bugs or issues
 - Refactoring existing code
 - Adding API endpoints
 - Creating new components
+
+## When NOT to Use
+- Quick scripts or one-off utilities where tests add no value
+- Prototyping or exploratory code that will be thrown away
+- Documentation-only changes
+- Configuration or data-only changes with no logic
 
 ## Core Principles
 

@@ -1,7 +1,10 @@
 ---
 name: kb-discover
-description: "Automated article discovery for the knowledge base. Searches the web using sources.yaml queries, scores relevance, and ingests high-quality results. Run to find new articles."
+description: "Automated article discovery for the knowledge base that searches the web, scores relevance, and ingests high-quality results."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["kb-discover", "discover articles", "find new articles", "automated discovery", "search for articles"]
 ---
 
 # KB Discover — Automated Article Discovery
@@ -13,6 +16,16 @@ Search the web for articles relevant to AgentNexLiFy and AI, score them for rele
 - `/kb-discover` — run all categories
 - `/kb-discover competitors` — run only the competitors category
 - `/kb-discover ai_llm technical` — run multiple categories
+
+## When to Use
+- Finding new articles to add to the knowledge base automatically
+- Refreshing stale categories with fresh web content
+- Running targeted discovery for specific topic areas
+
+## When NOT to Use
+- Adding a single known URL (use kb-ingest instead)
+- Compiling existing raw sources (use kb-compile instead)
+- Querying the knowledge base (use kb-query instead)
 
 ## Workflow
 

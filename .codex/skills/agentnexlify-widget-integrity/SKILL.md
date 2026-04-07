@@ -1,11 +1,18 @@
 ---
 name: agentnexlify-widget-integrity
-description: Preserve the current production widget contract in AgentNexLiFy. Use when editing widget JavaScript, widget embed snippets, widget API endpoints, business-page widget loading, widget config fields, or any code/docs that could drift between the live widget and older widget generations in this repository.
+description: "Preserve the current production widget contract in AgentNexLiFy. Use when editing widget JavaScript, embed snippets, widget API endpoints, business-page widget loading, or widget config fields."
+version: 1.0.0
+origin: codex
+triggers: ["widget", "embed", "chat widget", "widget config", "data-api-key"]
 ---
 
 # AgentNexLiFy Widget Integrity
 
 This repo contains multiple widget generations. Do not patch the wrong one.
+
+## When NOT to Use
+- Do not use for dashboard UI changes unrelated to widget embedding.
+- Do not use for backend API routes that have nothing to do with the widget.
 
 ## Current production path
 - Primary source: `widget/agentnexlify-widget.js`

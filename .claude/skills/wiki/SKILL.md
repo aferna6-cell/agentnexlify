@@ -1,7 +1,10 @@
 ---
 name: wiki
-description: "Capture any input (screenshot, URL, text, file, YouTube) into a Karpathy-style wiki article. One-step raw-to-wiki."
+description: "Capture any input (screenshot, URL, text, file, YouTube) into a Karpathy-style wiki article in one step from raw to wiki."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["wiki", "capture knowledge", "ingest screenshot", "ingest url", "ingest text", "create wiki article", "karpathy article"]
 ---
 
 # `/wiki` Skill — Claudeopedia Fast Ingest

@@ -1,7 +1,10 @@
 ---
 name: kb-compile
-description: "Compile raw sources into the wiki. Reads pending sources, creates or updates wiki articles, generates embeddings, stores in Supabase pgvector, and rebuilds INDEX.md."
+description: "Compile raw sources into the wiki by reading pending sources, creating or updating wiki articles, generating embeddings, storing in Supabase pgvector, and rebuilding INDEX.md."
+version: 1.0.0
+origin: claude
 user_invocable: true
+triggers: ["kb-compile", "compile sources", "compile wiki", "compile pending", "recompile wiki", "compile embeddings"]
 ---
 
 # KB Compile — Wiki Compilation
@@ -12,6 +15,16 @@ Transform raw sources into interlinked wiki articles with vector embeddings.
 
 - `/kb-compile` — compile all pending sources
 - `/kb-compile --full` — recompile entire wiki (regenerate all embeddings)
+
+## When to Use
+- Pending raw sources need to be compiled into wiki articles
+- New embeddings need to be generated for existing articles
+- INDEX.md needs to be rebuilt from wiki articles
+
+## When NOT to Use
+- Adding a single new source (use kb-ingest instead)
+- Searching the knowledge base (use kb-query instead)
+- Checking knowledge base health (use kb-health instead)
 
 ## Workflow
 

@@ -1,7 +1,9 @@
 ---
 name: vis-it
-description: Turn content into the best-fit visual explainer or interactive widget, using HTML when true interactivity is needed.
-created_by: codex
+description: "Turn content into the best-fit visual explainer or interactive widget, using HTML when true interactivity is needed."
+version: 1.0.0
+origin: generated
+triggers: ["vis this", "interactive explainer", "chart", "timeline", "pipeline widget"]
 ---
 
 # vis-it

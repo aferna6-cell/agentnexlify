@@ -1,3 +1,12 @@
+---
+name: llm-council
+description: "Run any question, idea, or decision through a council of 5 AI advisors who independently analyze it, peer-review each other, and synthesize a final verdict."
+version: 1.0.0
+origin: repo
+user_invocable: true
+triggers: ["council this", "run the council", "war room this", "pressure-test this", "stress-test this", "debate this"]
+---
+
 # LLM Council
 
 Run any question, idea, or decision through a council of 5 AI advisors who independently analyze it, peer-review each other anonymously, and synthesize a final verdict. Based on Karpathy's LLM Council methodology.
