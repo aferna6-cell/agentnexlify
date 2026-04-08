@@ -592,3 +592,64 @@ CREATE POLICY table_policy ON table_name
 All tenant isolation is enforced at application layer in FastAPI, not at RLS layer.
 
 **Applied:** Pending — created 2026-04-07. Apply via Supabase MCP. Must apply before 091 creates a false sense of security.
+
+---
+
+### 094 — Reconcile Leads Schema with Production Reality
+**Date:** 2026-04-07
+Adds 8 columns to `leads` that existed in production but had no migration files — they were added ad-hoc to Supabase and are required by active backend code. Without this migration, any new environment (test/staging/demo) fails at runtime.
+
+Columns added (all `IF NOT EXISTS`):
+- `lead_temperature` TEXT with CHECK constraint (`hot`, `warm`, `cold`) — used by lead scoring and pipeline views
+- `lead_type` TEXT — CRM categorization (buyer, seller, service_inquiry, etc.)
+- `must_haves` TEXT — property preferences or service requirements
+- `pre_approved` BOOLEAN DEFAULT false — mortgage pre-approval flag
+- `conversation_summary` TEXT — AI-generated chat session summary
+- `next_steps` TEXT — AI-recommended follow-up actions
+- `appointment_date` TIMESTAMPTZ — scheduled or suggested appointment
+- `updated_at` TIMESTAMPTZ DEFAULT NOW() — last modification timestamp
+
+Indexes: `idx_leads_temperature`, `idx_leads_type`, `idx_leads_appointment_date` (partial, non-null only).
+
+**Applied:** Pending — created 2026-04-07.
+
+### 095 — Conversation Memory Column
+**Date:** 2026-04-07
+Adds `memory` JSONB column to `conversations` table for structured conversation memory. Enables context continuity across AI interactions without full message history in prompt.
+
+GIN index `idx_conversations_has_memory` on `memory` column (partial, non-null only).
+
+**Applied:** Pending — created 2026-04-07.
+
+### 096 — Production Hardening
+**Date:** 2026-04-07
+Large multi-purpose migration with 4 sections:
+
+**1. Client ID canonicalization (leads + conversations):**
+- Adds `client_id` UUID to both `leads` and `conversations` (IF NOT EXISTS)
+- Backfills from `tenant_id` where `client_id` is NULL
+- Adds FK to `tenants(id)` as NOT VALID first, validates only if no orphans exist
+- Sets NOT NULL only if all rows have valid client_id
+- Indexes on `client_id` for both tables
+
+**2. Automation locks:**
+- Creates `automation_locks` table (name TEXT PK, owner TEXT, locked_until TIMESTAMPTZ)
+- `try_acquire_automation_lock(name, owner, ttl_seconds)` — atomic lock acquisition via UPSERT
+- `release_automation_lock(name, owner)` — deletes lock row
+- Replaces per-process in-memory coordination for multi-worker safety
+
+**3. Durable email quotas:**
+- Creates `tenant_email_daily_sends` (tenant_id + send_date PK, send_count INTEGER)
+- `reserve_email_send_quota(tenant_id, daily_limit)` — atomic increment with cap
+- Replaces process-local counters that reset on restart
+
+**4. OAuth state nonces:**
+- Creates `oauth_states` table (provider + nonce PK, tenant_id, expires_at, consumed_at)
+- Prevents replay/cross-session OAuth linking attacks
+- Indexes on (tenant_id, provider) and expiry for cleanup
+
+All new tables have RLS enabled with `auth.role() = 'service_role'` policy. Functions use SECURITY DEFINER with `SET search_path = public`.
+
+**Note:** Migration tolerates orphaned `client_id` values — FK is left NOT VALID with a NOTICE if orphans exist (commit 738ba0b).
+
+**Applied:** Pending — created 2026-04-07. Critical for multi-worker safety.
