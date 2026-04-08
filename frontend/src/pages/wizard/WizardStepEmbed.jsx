@@ -19,7 +19,7 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
           setApiKey(data.widget_api_key);
         }
       })
-      .catch(() => {});
+      .catch((e) => { console.warn('Widget key fetch failed:', e?.message); });
   }, [token, tenantId]);
 
   const snippet = apiKey

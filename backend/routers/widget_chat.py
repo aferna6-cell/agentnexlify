@@ -111,12 +111,35 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     db = get_supabase()
 
     # Increment usage counter only for new conversations
+    # Uses compare-and-swap to avoid lost increments under concurrent requests.
     if is_new:
         try:
-            current_used = tenant.get("conversations_used_this_month", 0) or 0
-            db.table("tenants").update(
-                {"conversations_used_this_month": current_used + 1}
-            ).eq("id", tenant["id"]).execute()
+            for _attempt in range(3):
+                row = (
+                    db.table("tenants")
+                    .select("conversations_used_this_month")
+                    .eq("id", tenant["id"])
+                    .limit(1)
+                    .execute()
+                    .data
+                )
+                old_val = (row[0].get("conversations_used_this_month") or 0) if row else 0
+                # Conditional update: only succeeds if the value hasn't changed
+                query = (
+                    db.table("tenants")
+                    .update({"conversations_used_this_month": old_val + 1})
+                    .eq("id", tenant["id"])
+                )
+                if old_val == 0:
+                    # NULL and 0 both need to match — use is_ for NULL
+                    query = query.is_("conversations_used_this_month", "null")
+                else:
+                    query = query.eq("conversations_used_this_month", old_val)
+                result = query.execute()
+                if result.data:
+                    break  # update succeeded
+            else:
+                logger.warning("Usage counter CAS failed for tenant %s after 3 attempts", tenant["id"])
         except Exception:
             logger.warning("Failed to increment usage counter for tenant %s", tenant["id"], exc_info=True)
 

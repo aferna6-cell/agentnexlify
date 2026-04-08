@@ -6,6 +6,7 @@ DELETE /api/v1/phone/{tenant_id}/release — Release a provisioned number
 """
 
 import logging
+import os
 from typing import Any
 
 import httpx
@@ -24,8 +25,8 @@ router = APIRouter(prefix="/api/v1/phone", tags=["phone"])
 # Twilio API base
 _TWILIO_BASE = "https://api.twilio.com/2010-04-01/Accounts"
 
-# Backend base URL for webhook configuration
-_BACKEND_BASE = "https://agentnexlify-production.up.railway.app"
+# Backend base URL for webhook configuration — use env var or fall back to settings
+_BACKEND_BASE = os.environ.get("BACKEND_URL", settings.api_url)
 
 
 # ---------------------------------------------------------------------------

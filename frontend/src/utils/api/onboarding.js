@@ -50,7 +50,7 @@ export function trackWizardEvent(tenantId, token, step, action) {
   apiFetch(`/api/v1/wizard/${tenantId}/event`, {
     token,
     body: { step, action },
-  }).catch(() => {});
+  }).catch((e) => { console.warn('Wizard event tracking failed:', e?.message); });
 }
 
 /**

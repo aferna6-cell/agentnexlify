@@ -162,7 +162,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
     if (user?.tenantId) {
       fetchDashboard(user.tenantId, token)
         .then((res) => { if (res?.plan) setLivePlan(res.plan); })
-        .catch(() => {}); // non-critical — JWT plan is the fallback
+        .catch((e) => { console.warn('Dashboard fetch failed, using JWT plan fallback:', e?.message); }); // non-critical — JWT plan is the fallback
     }
   }, [loadCampaigns, user?.tenantId, token]);
 

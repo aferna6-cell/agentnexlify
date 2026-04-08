@@ -64,7 +64,6 @@ class Settings(BaseSettings):
     # Keep disabled in production; old tokens are bearer credentials with no expiry.
     allow_legacy_reschedule_tokens: bool = False
     billing_secret: str = ""
-    sentry_dsn: str = ""
 
     google_client_id: str = ""
     google_client_secret: str = ""

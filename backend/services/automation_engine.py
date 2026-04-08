@@ -3828,7 +3828,7 @@ async def _execute_action(
         tenant_table(db, "leads", tenant_id).update({"status": new_status}).eq(
             "id", lead_data["id"]
         ).execute()
-        return {"status": "success", "status": new_status}
+        return {"status": "success", "new_status": new_status}
 
     elif action_type == "enroll_in_sequence":
         sequence_id = action_config.get("sequence_id")
@@ -3940,10 +3940,7 @@ async def _send_campaign_for_rule(
     if not lead_data:
         return
     try:
-        from backend.routers.marketing_campaigns import (
-            _query_target_leads,
-            _send_campaign_background,
-        )
+        from backend.routers.marketing_campaigns import _send_campaign_background
 
         db = get_supabase()
         campaign_result = (

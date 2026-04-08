@@ -773,9 +773,9 @@ app.mount("/widget", StaticFiles(directory="widget"), name="widget")
 
 
 # --- Health check ---
-@app.get("/healthz")
-@app.get("/api/healthz")
-@app.get("/api/v1/healthz")
+@app.api_route("/healthz", methods=["GET", "HEAD"])
+@app.api_route("/api/healthz", methods=["GET", "HEAD"])
+@app.api_route("/api/v1/healthz", methods=["GET", "HEAD"])
 async def healthz():
     return {
         "status": "ok",
@@ -784,9 +784,9 @@ async def healthz():
     }
 
 
-@app.get("/readyz")
-@app.get("/api/readyz")
-@app.get("/api/v1/readyz")
+@app.api_route("/readyz", methods=["GET", "HEAD"])
+@app.api_route("/api/readyz", methods=["GET", "HEAD"])
+@app.api_route("/api/v1/readyz", methods=["GET", "HEAD"])
 async def readyz():
     snapshot = _readiness_snapshot()
     return JSONResponse(

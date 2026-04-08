@@ -91,7 +91,7 @@ async def get_leads(
         }
     except Exception:
         logger.warning("Leads query failed for tenant %s", tenant_id, exc_info=True)
-        return {"leads": [], "total": 0, "page": 1, "per_page": per_page, "total_pages": 1}
+        raise HTTPException(status_code=503, detail="Leads query failed — please retry")
 
 
 @router.get("/{tenant_id}/summary")
@@ -114,7 +114,7 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
         }
     except Exception:
         logger.warning("Lead summary query failed for tenant %s", tenant_id, exc_info=True)
-        return {"total": 0, "new": 0, "contacted": 0, "appointment_booked": 0, "closed": 0, "lost": 0}
+        raise HTTPException(status_code=503, detail="Lead summary query failed — please retry")
 
 
 @router.post("/{tenant_id}/score-all", response_model=ScoreAllResponse)
@@ -519,7 +519,7 @@ _CSV_FIELD_MAP = {
     "stage": "status",
     "status": "status",
     "score": "lead_score",
-    "source": "lead_temperature",
+    "source": "source",
     "temperature": "lead_temperature",
     "service interest": "areas_of_interest",
     "service_interest": "areas_of_interest",

@@ -22,7 +22,7 @@ export default function ClientLoginPage() {
       .then((data) => {
         if (data?.business_name) setBusinessName(data.business_name);
       })
-      .catch(() => {});
+      .catch((e) => { console.warn('Business name fetch failed:', e?.message); });
   }, [slug]);
 
   // Check if already logged in

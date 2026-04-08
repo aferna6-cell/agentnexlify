@@ -1,13 +1,9 @@
 """Appointment booking endpoints — availability config, slot queries, booking."""
 
-
-import asyncio
-
-from backend.services.task_utils import safe_create_task
-
-from backend.services.task_utils import safe_create_task
 import logging
 from datetime import date as date_type
+
+from backend.services.task_utils import safe_create_task
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 
