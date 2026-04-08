@@ -550,6 +550,14 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     if widget.get("bot_name"):
         system_prompt = system_prompt.replace("AI Assistant", widget["bot_name"], 1)
 
+    # Booking nudge — if online booking is enabled, tell the AI to suggest it
+    if widget.get("booking_enabled") and bh_data:
+        system_prompt += (
+            "\n\nBOOKING: This business has online booking enabled. "
+            "When the visitor shows interest in scheduling, mention they can book an appointment "
+            "directly through the booking link. Don't push it — only suggest when relevant."
+        )
+
     # 7. Append user message to the compact LLM history
     llm_messages = history_for_model + [{"role": "user", "content": req.message}]
 
