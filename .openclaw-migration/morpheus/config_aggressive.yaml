@@ -1,0 +1,149 @@
+# Morpheus AGGRESSIVE Config — Maximum Returns
+# Target: 100-150% weekly on $50-100 capital
+# Risk: Higher but still managed
+
+strategy:
+  enabled_strategies: ["kalshi_bracket_arb", "kalshi_bonding", "kalshi_mm", "kalshi_llm"]
+  min_edge: 0.03
+  kelly_fraction: 0.60              # 60% Kelly (aggressive)
+  max_position_pct: 0.20            # 20% per trade
+  max_position_size: 20.0           # $20 max per position
+  max_total_exposure: 45.0          # 90% of $50
+  min_confidence: 0.25
+  min_conviction: "low"
+  high_conviction_multiplier: 1.5
+  min_payout_ratio: 0.08
+  fee_pct: 0.00
+  slippage_pct: 0.003
+
+market_filters:
+  min_volume_24h: 300               # lowered for more opportunities
+  min_price: 0.03
+  max_price: 0.97
+  min_liquidity: 100
+  max_spread_pct: 0.20
+  max_markets_per_scan: 500
+  max_resolution_days: 7
+
+sports_filters:
+  enabled: true
+  blocked_categories: ["Sports", "Soccer", "Football", "Basketball", "Baseball", "Hockey", "Tennis", "Golf", "MMA", "Boxing", "Racing"]
+
+# LLM — minimal (only for weather verification fallback)
+llm:
+  ensemble_mode: "none"
+  screening_enabled: false
+  monthly_budget_usd: 2.0
+  daily_budget_usd: 0.25
+
+risk:
+  max_loss_per_trade: 12.0
+  max_daily_loss: 15.0              # 30% daily stop
+  stop_loss_pct: 0.45
+  take_profit_pct: 0.80
+  max_position_hold_hours: 72
+  max_bankroll_pct: 0.30
+
+timing:
+  loop_interval_seconds: 45
+  market_scan_interval_minutes: 3   # faster scanning
+  rate_limit_per_minute: 50
+
+orchestrator:
+  enabled: true
+  signal_ttl_seconds: 120
+  max_signals_per_cycle: 30         # more signals per cycle
+  cycle_interval_seconds: 30        # faster cycles
+
+kalshi:
+  enabled: true
+  scan_interval_seconds: 180
+  min_volume: 300
+  max_resolution_days: 7
+
+# ============================================
+# BRACKET ARBITRAGE — MAXIMIZED
+# ============================================
+bracket_arb:
+  enabled: true
+  scan_interval_seconds: 30         # every 30 seconds
+  min_margin_pct: 0.5               # capture 0.5%+ margins
+  max_active_sets: 15               # 15 concurrent arb sets
+  max_contracts_per_leg: 5          # 5 contracts per bracket
+  max_total_arb_usd: 35.0           # $35 total arb deployment
+  max_days_to_close: 7
+  min_brackets: 3
+
+# ============================================
+# BONDING ENGINE — ACTIVATED
+# ============================================
+bonding:
+  enabled: true
+  scan_interval_seconds: 300
+  min_price_cents: 82               # was 90 — capture more
+  max_price_cents: 98
+  max_hours_to_settle: 168          # 7 days (was 72h)
+  min_volume: 300                   # was 2000
+  max_position_usd: 12.0
+  max_total_bonds: 12
+  min_profit_pct: 0.012             # 1.2% minimum
+  verify_with_data: true
+
+# ============================================
+# MARKET MAKING — EXPANDED
+# ============================================
+market_making:
+  enabled: true
+  max_markets: 8                    # was 3
+  min_volume: 500
+  min_spread_cents: 2
+  max_spread_cents: 25
+  quote_size: 5                     # 5 contracts per side
+  max_inventory: 25
+  max_inventory_usd: 15.0
+  quote_refresh_seconds: 15         # faster refresh
+  scan_interval_seconds: 120
+  min_price_cents: 8
+  max_price_cents: 92
+  avellaneda_stoikov:
+    gamma: 0.20                     # more aggressive
+    default_sigma: 0.10
+    min_spread_cents: 2
+    max_spread_cents: 20
+
+# ============================================
+# ECONOMIC SNIPING — ENABLED
+# ============================================
+econ_sniping:
+  enabled: true
+  min_edge: 0.04
+  min_z_score: 0.8
+  release_window_hours: 3
+
+# Theta — disabled (not producing)
+theta_engine:
+  enabled: false
+
+# Contrarian — disabled (no signals)
+contrarian:
+  enabled: false
+
+# Longshot — disabled
+longshot_seller:
+  enabled: false
+
+# Crypto — disabled (blocked)
+crypto_engine:
+  enabled: false
+
+alerts:
+  telegram_enabled: true
+  alert_on_trade: true
+  alert_on_profit: true
+
+survival:
+  enabled: true
+  vps_cost_daily: 0.33
+
+dev:
+  dry_run: false
