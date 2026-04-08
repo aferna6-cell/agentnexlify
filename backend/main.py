@@ -11,7 +11,6 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -20,16 +19,6 @@ from pythonjsonlogger.jsonlogger import JsonFormatter
 from slowapi.errors import RateLimitExceeded
 
 from backend.config import is_production, settings
-
-# --- Sentry Error Monitoring ---
-if settings.sentry_dsn:
-    sentry_sdk.init(
-        dsn=settings.sentry_dsn,
-        traces_sample_rate=0.1,
-        environment="production" if is_production() else "development",
-        send_default_pii=False,
-    )
-    logging.getLogger(__name__).info("Sentry initialized")
 from backend.limiter import limiter
 from backend.routers import (
     action_items,
