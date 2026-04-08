@@ -6,6 +6,7 @@ origin: claude
 user_invocable: true
 allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "TaskCreate", "TaskUpdate", "TaskList"]
 triggers: ["/compound", "compound this", "full pipeline", "5-agent", "compound pipeline", "compound engineering"]
+effort: high
 ---
 
 # Compound Engineering Pipeline

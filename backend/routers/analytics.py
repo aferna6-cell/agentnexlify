@@ -1874,7 +1874,7 @@ async def get_tester_snapshot(
         t = tenant_table(db, "tenants", tenant_id).select("business_name").eq("id", tenant_id).single().execute()
         biz_name = (t.data or {}).get("business_name", "Unknown")
     except Exception:
-        pass
+        logger.warning("snapshot: tenant name query failed for %s", tenant_id, exc_info=True)
 
     # Chat messages
     msgs = []

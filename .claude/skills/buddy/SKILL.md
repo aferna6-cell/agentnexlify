@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: ["Read", "Write", "Bash", "Glob"]
 triggers: ["buddy", "companion", "pet", "buddy status", "buddy stats", "buddy feed", "buddy name"]
+effort: low
 ---
 
 # Buddy — Your Coding Companion

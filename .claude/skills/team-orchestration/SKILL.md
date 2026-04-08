@@ -4,6 +4,7 @@ description: "Use this skill when a task is complex enough to benefit from deleg
 version: 1.0.0
 origin: claude
 triggers: ["team orchestration", "delegate to agents", "multi-agent task", "orchestrate agents", "full stack feature", "database change workflow"]
+effort: high
 ---
 
 # Team Orchestration

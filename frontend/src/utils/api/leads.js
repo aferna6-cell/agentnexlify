@@ -67,10 +67,6 @@ export function assignLead(tenantId, token, leadId, assignedTo) {
   return request(`/api/v1/leads/${tenantId}/${leadId}/assign`, { method: "PUT", token, body: { assigned_to: assignedTo } });
 }
 
-export function generateLeadSummary(tenantId, token, leadId) {
-  return request(`/api/v1/leads/${tenantId}/${leadId}/generate-summary`, { method: "POST", token });
-}
-
 export function findDuplicateLeads(tenantId, token) {
   return request(`/api/v1/leads/${tenantId}/duplicates`, { token });
 }

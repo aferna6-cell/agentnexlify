@@ -1,0 +1,17 @@
+{
+  "name": "agentnexlify-standards",
+  "version": "1.0.0",
+  "description": "AgentNexLiFy development standards plugin — bundles code review, security, schema validation, and tenant isolation enforcement for consistent multi-tenant SaaS development.",
+  "owner": {
+    "name": "AgentNexLiFy",
+    "url": "https://github.com/aferna6-cell/agentnexlify"
+  },
+  "plugins": [
+    {
+      "name": "agentnexlify-standards",
+      "source": "./",
+      "description": "Multi-tenant SaaS development standards: code review, security audit, schema guard, tenant isolation, widget sync verification",
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: []
 triggers: ["422 error", "500 error", "API error", "CORS error", "webhook issue", "silent data loss", "debug API", "API not working"]
+effort: high
 ---
 
 # Debug API

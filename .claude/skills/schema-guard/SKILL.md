@@ -4,6 +4,7 @@ description: "Use this skill BEFORE writing any database query, migration, or Py
 version: 1.0.0
 origin: claude
 triggers: ["schema guard", "check schema", "database query", "pydantic model", "schema mismatch", "RLS policy", "leads table"]
+effort: high
 ---
 
 # Schema Guard

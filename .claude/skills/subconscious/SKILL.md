@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["subconscious", "self-improvement", "improvement loop", "generate improvement ideas", "debate ideas"]
+effort: medium
 ---
 
 # Subconscious Agent — Self-Improvement Loop

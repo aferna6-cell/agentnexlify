@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "TaskCreate", "TaskUpdate", "TaskList"]
 triggers: ["coordinate this", "orchestrate", "/new-feature", "/refactor", "multi-part task", "complex task"]
+effort: medium
 ---
 
 # Coordinator Mode

@@ -6,6 +6,7 @@ origin: claude
 user_invocable: true
 allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "WebSearch", "WebFetch"]
 triggers: ["kevin mode", "normal mode", "ultra compressed", "minimum words"]
+effort: low
 ---
 
 # Kevin Mode

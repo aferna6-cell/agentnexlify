@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["kb-discover", "discover articles", "find new articles", "automated discovery", "search for articles"]
+effort: medium
 ---
 
 # KB Discover — Automated Article Discovery

@@ -19,10 +19,6 @@ export function deleteWebhook(tenantId, token, webhookId) {
   return request(`/api/v1/webhooks/${tenantId}/${webhookId}`, { method: "DELETE", token });
 }
 
-export function fetchWebhookDeliveries(tenantId, token, webhookId, limit = 20) {
-  return request(`/api/v1/webhooks/${tenantId}/${webhookId}/deliveries?limit=${limit}`, { token });
-}
-
 export function fetchWebhookLogs(tenantId, token, limit = 20) {
   return request(`/api/v1/webhooks/${tenantId}/logs/recent?limit=${limit}`, { token });
 }

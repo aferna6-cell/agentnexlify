@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["obsidian-sync", "sync to obsidian", "sync wiki to vault", "obsidian vault sync"]
+effort: low
 ---
 
 # obsidian-sync

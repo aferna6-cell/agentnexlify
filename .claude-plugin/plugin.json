@@ -1,0 +1,26 @@
+{
+  "name": "agentnexlify-standards",
+  "version": "1.0.0",
+  "description": "AgentNexLiFy multi-tenant SaaS development standards. Bundles code review, security, schema validation, and tenant isolation enforcement.",
+  "skills": [
+    "skills/plugin-code-review",
+    "skills/plugin-tenant-check",
+    "skills/plugin-widget-sync"
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/plugin-schema-warn.sh",
+            "timeout": 5,
+            "statusMessage": "Checking schema rules..."
+          }
+        ]
+      }
+    ]
+  },
+  "agents": ["agents/plugin-security-reviewer"]
+}

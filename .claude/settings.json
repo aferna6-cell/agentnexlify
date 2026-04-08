@@ -19,6 +19,14 @@
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/pre-commit-review.sh"
+          },
+          {
+            "type": "agent",
+            "if": "Bash(git push*)",
+            "prompt": "Review all unpushed commits for this branch. Run: git log --oneline origin/main..HEAD and git diff origin/main..HEAD. Check for: (1) missing tenant isolation in DB queries (leads/conversations use client_id not tenant_id), (2) route shadowing (static routes must register before param routes), (3) unawaited async calls, (4) bare except:pass without logging, (5) security issues (secret leakage, XSS, missing auth). Output BLOCK with reason if critical issues found. Output PASS if clean.",
+            "model": "claude-haiku-4-5-20251001",
+            "timeout": 120,
+            "statusMessage": "Reviewing unpushed commits..."
           }
         ]
       },
@@ -107,6 +115,14 @@
             "type": "command",
             "command": "bash scripts/claude-hooks/reference-design.sh",
             "timeout": 5
+          },
+          {
+            "type": "agent",
+            "if": "Edit(backend/routers/auth.py)|Edit(backend/routers/stripe_webhooks.py)|Edit(backend/routers/billing.py)|Edit(backend/routers/client_portal.py)|Edit(backend/dependencies.py)|Write(backend/routers/auth.py)|Write(backend/routers/stripe_webhooks.py)|Write(backend/routers/billing.py)|Write(backend/routers/client_portal.py)|Write(backend/dependencies.py)",
+            "prompt": "A security-critical file was just modified. Read the changed file and scan for: (1) auth bypass — missing verify_tenant or JWT validation, (2) tenant data leakage — queries without tenant_id/client_id filter, (3) secret leakage in logs or responses, (4) Stripe webhook missing signature verification, (5) missing input validation on request bodies. Report findings with line numbers. Exit code 2 if critical vulnerability found.",
+            "model": "claude-haiku-4-5-20251001",
+            "timeout": 90,
+            "statusMessage": "Security scanning modified auth/payment file..."
           }
         ]
       },
@@ -202,6 +218,30 @@
         ]
       }
     ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/log-compaction.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/cleanup-worktree.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
@@ -244,6 +284,9 @@
       "mcp__deepwiki__*",
       "mcp__supabase__*"
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "enableAllProjectMcpServers": true,
   "enabledPlugins": {

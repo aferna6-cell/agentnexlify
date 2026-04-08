@@ -1131,3 +1131,68 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `migrations/093_fix_rls_policies.sql`
 **Fix:** Migration 093 replaces all `auth.uid()` policies with `auth.role() = 'service_role'` — deny all non-service-role access, let FastAPI handle tenant isolation in application code.
 **Prevention:** This codebase's RLS pattern: `FOR ALL USING (auth.role() = 'service_role')`. NEVER use `auth.uid()` — there are no Supabase Auth users. Document this in every migration template.
+
+---
+
+### 58. Automation rules — missing tenant_id scoping and retry safety
+**Date:** 2026-04-07 (Commit 265bd07 — PR #9)
+**Symptom:** Automation rules and engine had insufficient tenant isolation and unsafe retry behavior.
+**Root Cause:** automation_rules.py queries and automation_engine.py actions lacked consistent tenant_id filtering. Retry logic could amplify failures.
+**Files Changed:** `backend/routers/automation_rules.py`, `backend/services/automation_engine.py`, `tests/test_automation_engine.py`, `tests/test_retry_policy.py`
+**Fix:** Added tenant_id filtering to all automation rule queries. Added retry safety and test coverage.
+**Prevention:** All automation queries must filter by tenant_id. Test retry behavior explicitly.
+*Auto-logged 2026-04-07 evening — needs human enrichment for root cause details*
+
+---
+
+### 59. Appointments schema validation and widget XSS
+**Date:** 2026-04-07 (Commit e2dbf36)
+**Symptom:** Comprehensive security hardening batch — appointment schema validation gaps and widget XSS vectors.
+**Root Cause:** Multiple issues: appointment Pydantic models missing validation, auth router gaps, widget JS had unescaped content injection points.
+**Files Changed:** `backend/models/schemas.py`, `backend/routers/appointments.py`, `backend/routers/auth.py`, `widget/agentnexlify-widget.js`
+**Fix:** Added schema validation to appointment models, hardened auth router, sanitized widget output.
+**Prevention:** All user-facing content rendering must escape HTML. Pydantic models must validate all input fields.
+*Auto-logged 2026-04-07 evening — needs human enrichment for root cause details*
+
+---
+
+### 60. Production security — email sender, booking, Facebook channels, config hardening
+**Date:** 2026-04-07 (Commit 29aca88)
+**Symptom:** Multiple production security gaps across 22 files — email sender without validation, booking page unprotected, Facebook channel webhooks unverified, missing config guards.
+**Root Cause:** Rapid feature development left security gaps in email_sender, booking_page, channels_facebook, widget_config, widget_helpers, team router, and main.py startup.
+**Files Changed:** `backend/config.py`, `backend/main.py`, `backend/routers/auth.py`, `backend/routers/booking_page.py`, `backend/routers/channels_facebook.py`, `backend/routers/team.py`, `backend/routers/widget_chat.py`, `backend/routers/widget_config.py`, `backend/routers/widget_helpers.py`, `backend/services/email_sender.py`, `migrations/096_production_hardening.sql`
+**Fix:** Added input validation, tenant scoping, webhook verification, config guards, and created migration 096 for DB-level hardening.
+**Prevention:** Every new router must have tenant scoping from creation. Email sends must validate recipient. Webhook endpoints must verify signatures.
+*Auto-logged 2026-04-07 evening — needs human enrichment for root cause details*
+
+---
+
+### 61. Tenant-scoped data access — guardrails via tenant_scope.py service
+**Date:** 2026-04-07 (Commit 156f5e7)
+**Symptom:** Multiple routers (conversation_inbox, leads, onboarding, widget_helpers) had inconsistent tenant_id filtering, risking cross-tenant data leaks.
+**Root Cause:** Each router implemented its own tenant filtering logic, leading to inconsistency and gaps. No centralized tenant scoping utility.
+**Files Changed:** `backend/routers/conversation_inbox.py`, `backend/routers/leads.py`, `backend/routers/onboarding.py`, `backend/routers/widget_helpers.py`, `backend/services/tenant_scope.py`, `tests/test_tenant_scope.py`
+**Fix:** Created centralized `tenant_scope.py` service. Refactored routers to use shared scoping functions. Added 150-line test suite.
+**Prevention:** Always use `tenant_scope.py` helpers for tenant-filtered queries. Never write raw `.eq("tenant_id", ...)` in routers — use the service.
+*Auto-logged 2026-04-07 evening — needs human enrichment for root cause details*
+
+---
+
+### 62. Broadened tenant hardening — analytics, booking, invoices, automation engine
+**Date:** 2026-04-07 (Commit 68a77df)
+**Symptom:** Second wave of tenant scoping gaps found in analytics, booking service, client portal, invoices, and automation engine.
+**Root Cause:** Initial tenant_scope.py rollout (commit 156f5e7) covered 4 routers but missed analytics, booking, client_portal, invoices, and automation_engine.
+**Files Changed:** `backend/routers/analytics.py`, `backend/routers/booking_page.py`, `backend/routers/client_portal.py`, `backend/routers/invoices.py`, `backend/services/automation_engine.py`, `backend/services/booking.py`, `backend/services/tenant_scope.py`, `backend/models/database.py`
+**Fix:** Extended tenant_scope.py coverage to all remaining data-access routers. Added staging migration verification script.
+**Prevention:** When adding tenant scoping, audit ALL routers — not just the obvious ones. Use `grep -rn 'supabase.*table\|\.from_(' backend/` to find unscoped queries.
+*Auto-logged 2026-04-07 evening — needs human enrichment for root cause details*
+
+---
+
+### 63. Migration 096 FK validation fails on orphaned client_id values
+**Date:** 2026-04-07 (Commit 738ba0b)
+**Symptom:** Migration 096's FK constraint `leads_client_id_fkey` would fail on production data that contains `client_id` values not present in `tenants.id` (orphaned rows from deleted tenants).
+**Root Cause:** Original migration used `ADD CONSTRAINT ... FOREIGN KEY` without NOT VALID, which tries to validate all existing rows immediately. Historical leads from deleted tenants have client_id values with no matching tenant.
+**Files Changed:** `migrations/096_production_hardening.sql`, `tests/test_migration_096.py`
+**Fix:** Changed to `NOT VALID` FK + conditional validation: check for orphan count first, only `VALIDATE CONSTRAINT` if zero orphans, otherwise log a NOTICE. Same pattern applied to conversations table.
+**Prevention:** Any FK constraint on tables with historical data must use `NOT VALID` + conditional validation. Never assume referential integrity exists in production for columns added ad-hoc.

@@ -531,7 +531,7 @@ async def get_team_activity(
         for m in (members.data or []):
             team_map[m["id"]] = m.get("name") or m.get("email") or "Unknown"
     except Exception:
-        pass
+        logger.warning("Failed to fetch team member names for tenant %s", tenant_id, exc_info=True)
 
     # Enrich entries with member names
     for entry in team_entries:

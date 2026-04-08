@@ -164,7 +164,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                         handoff=True,
                     )
         except Exception:
-            pass
+            logger.warning("Failed to fetch latest team reply for session %s", req.session_id, exc_info=True)
 
         waiting_msg = "A team member is reviewing your conversation and will respond shortly. Thank you for your patience."
         _save_chat_messages(tenant["id"], req.session_id, None, waiting_msg)
@@ -549,6 +549,14 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
         system_prompt = system_prompt.replace("AI Assistant", widget["bot_name"], 1)
+
+    # Booking nudge — if online booking is enabled, tell the AI to suggest it
+    if widget.get("booking_enabled") and bh_data:
+        system_prompt += (
+            "\n\nBOOKING: This business has online booking enabled. "
+            "When the visitor shows interest in scheduling, mention they can book an appointment "
+            "directly through the booking link. Don't push it — only suggest when relevant."
+        )
 
     # 7. Append user message to the compact LLM history
     llm_messages = history_for_model + [{"role": "user", "content": req.message}]

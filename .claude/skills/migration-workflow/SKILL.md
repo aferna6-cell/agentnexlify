@@ -4,6 +4,7 @@ description: "Use this skill when creating, applying, or verifying database migr
 version: 1.0.0
 origin: claude
 triggers: ["database migration", "create migration", "apply migration", "migration checklist", "verify migration", "schema change"]
+effort: high
 ---
 
 # Migration Workflow

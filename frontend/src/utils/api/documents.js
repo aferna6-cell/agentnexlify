@@ -10,9 +10,6 @@ export function fetchDocuments(tenantId, token, params = {}) {
 export function createDocument(tenantId, token, data) {
   return request(`/api/v1/documents/${tenantId}`, { method: "POST", token, body: data });
 }
-export function createDocumentFromTemplate(tenantId, token, data) {
-  return request(`/api/v1/documents/${tenantId}/from-template`, { method: "POST", token, body: data });
-}
 export function sendDocument(tenantId, token, docId, data) {
   return request(`/api/v1/documents/${tenantId}/${docId}/send`, { method: "POST", token, body: data });
 }
@@ -24,7 +21,4 @@ export function fetchDocTemplates(tenantId, token) {
 }
 export function createDocTemplate(tenantId, token, data) {
   return request(`/api/v1/documents/${tenantId}/templates`, { method: "POST", token, body: data });
-}
-export function deleteDocTemplate(tenantId, token, templateId) {
-  return request(`/api/v1/documents/${tenantId}/templates/${templateId}`, { method: "DELETE", token });
 }

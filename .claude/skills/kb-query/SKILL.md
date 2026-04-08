@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["kb-query", "search knowledge base", "ask the wiki", "semantic search wiki", "query kb"]
+effort: low
 ---
 
 # KB Query — Semantic Q&A

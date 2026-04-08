@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["security-audit", "security scan", "vulnerability scan", "audit security", "check for XSS", "check RLS", "check CORS"]
+effort: high
 ---
 
 # Security Audit

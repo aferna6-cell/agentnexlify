@@ -4,6 +4,7 @@ description: "Use when adding support for a new business type or industry to ens
 version: 1.0.0
 origin: claude
 triggers: ["new business type", "new industry", "industry FAQs", "pipeline preset", "form preset", "reminder extras", "aftercare template", "rebook interval"]
+effort: medium
 ---
 
 # Industry Content — Adding a New Business Type

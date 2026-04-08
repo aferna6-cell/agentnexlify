@@ -4,6 +4,7 @@ description: "Test, debug, or verify the chat widget covering load, conversation
 version: 1.0.0
 origin: claude
 triggers: ["widget test", "test widget", "widget debugging", "widget checklist", "chat widget test"]
+effort: low
 ---
 
 # Widget Test

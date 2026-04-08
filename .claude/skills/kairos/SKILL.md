@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: ["Read", "Bash", "Glob", "Grep"]
 triggers: ["kairos start", "kairos stop", "kairos status", "what did kairos find", "memory consolidation", "project monitoring"]
+effort: low
 ---
 
 # KAIROS -- Persistent Background Agent

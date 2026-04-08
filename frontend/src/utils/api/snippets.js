@@ -11,10 +11,6 @@ export function fetchSnippets(tenantId, token, params = {}) {
   return request(`/api/v1/snippets/${tenantId}${q ? `?${q}` : ""}`, { token });
 }
 
-export function getSnippet(tenantId, token, snippetId) {
-  return request(`/api/v1/snippets/${tenantId}/${snippetId}`, { token });
-}
-
 export function createSnippet(tenantId, token, data) {
   return request(`/api/v1/snippets/${tenantId}`, { method: "POST", token, body: data });
 }
@@ -27,8 +23,3 @@ export function deleteSnippet(tenantId, token, snippetId) {
   return request(`/api/v1/snippets/${tenantId}/${snippetId}`, { method: "DELETE", token });
 }
 
-export function suggestSnippet(tenantId, token, conversationContext) {
-  return request(`/api/v1/snippets/${tenantId}/suggest`, {
-    method: "POST", token, body: { conversation_context: conversationContext },
-  });
-}

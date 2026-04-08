@@ -29,12 +29,3 @@ export function replyToConversation(tenantId, token, conversationId, content) {
   });
 }
 
-export function updatePresence(tenantId, token, conversationId) {
-  return request(`/api/v1/inbox/${tenantId}/presence${conversationId ? `?conversation_id=${conversationId}` : ""}`, {
-    method: "PUT", token,
-  });
-}
-
-export function getPresence(tenantId, token) {
-  return request(`/api/v1/inbox/${tenantId}/presence`, { token });
-}

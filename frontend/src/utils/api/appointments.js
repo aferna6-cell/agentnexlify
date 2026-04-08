@@ -11,18 +11,6 @@ export function updateAvailability(tenantId, token, data) {
   return request(`/api/v1/appointments/availability/${tenantId}`, { method: "PUT", token, body: data });
 }
 
-export function fetchServiceTypes(tenantId, token) {
-  return request(`/api/v1/appointments/${tenantId}/service-types`, { token });
-}
-
-export function createServiceType(tenantId, token, data) {
-  return request(`/api/v1/appointments/${tenantId}/service-types`, { method: "POST", token, body: data });
-}
-
-export function deleteServiceType(tenantId, token, serviceId) {
-  return request(`/api/v1/appointments/${tenantId}/service-types/${serviceId}`, { method: "DELETE", token });
-}
-
 export function createAppointment(tenantId, token, data) {
   return request(`/api/v1/appointments/${tenantId}/dashboard-book`, { method: "POST", token, body: data });
 }
@@ -48,6 +36,3 @@ export function setAppointmentRecurrence(tenantId, token, appointmentId, rule, e
   return request(`/api/v1/appointments/${tenantId}/${appointmentId}/recur`, { method: "POST", token, body: { rule, end_date: endDate } });
 }
 
-export function fetchNoShowStats(tenantId, token) {
-  return request(`/api/v1/appointments/no-show-stats/${tenantId}`, { token });
-}
