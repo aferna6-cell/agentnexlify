@@ -1123,7 +1123,7 @@ async def send_rebook_suggestions() -> int:
             if existing.data:
                 continue
         except Exception:
-            pass
+            logger.warning("Dedup check failed in automation trigger", exc_info=True)
 
         business_name = html.escape(tenant.get("business_name") or "Us")
         customer_name = html.escape(appt.get("customer_name") or "there")
@@ -1247,7 +1247,7 @@ async def send_aftercare_instructions() -> int:
             if existing.data:
                 continue
         except Exception:
-            pass
+            logger.warning("Dedup check failed in automation trigger", exc_info=True)
 
         if tenant_id not in tenant_cache:
             try:
@@ -1407,6 +1407,7 @@ async def send_pending_review_requests() -> int:
                 appt["updated_at"].replace("Z", "+00:00")
             )
         except Exception:
+            logger.warning("Failed to parse appointment timestamp", exc_info=True)
             continue
 
         if (now - completed_at).total_seconds() < delay_hours * 3600:
@@ -2051,6 +2052,7 @@ async def send_portal_links() -> int:
             if existing.count and existing.count > 0:
                 continue
         except Exception:
+            logger.warning("Dedup check failed in review request trigger", exc_info=True)
             continue
 
         # Check if portal token exists
@@ -2064,6 +2066,7 @@ async def send_portal_links() -> int:
                 .execute()
             )
         except Exception:
+            logger.warning("Failed to insert review request record", exc_info=True)
             continue
 
         if not tok_result.data:
@@ -2176,6 +2179,7 @@ async def send_csat_surveys() -> int:
             if existing.count and existing.count > 0:
                 continue
         except Exception:
+            logger.warning("Dedup check failed in follow-up review trigger", exc_info=True)
             continue
 
         # Get business name
@@ -3196,7 +3200,7 @@ async def send_birthday_greetings() -> int:
             if existing.data:
                 continue
         except Exception:
-            pass
+            logger.warning("Dedup check failed in sequence enrollment", exc_info=True)
 
         if tenant_id not in tenant_cache:
             try:
@@ -4100,7 +4104,7 @@ async def check_form_submission_triggers(
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
-            pass
+            logger.warning("Failed to fetch lead data for automation", exc_info=True)
 
     try:
         rules_result = (
@@ -4182,7 +4186,7 @@ async def check_appointment_triggers(
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
-            pass
+            logger.warning("Failed to fetch lead data for automation", exc_info=True)
 
     trigger_type = "appointment_completed" if completed else "appointment_created"
 

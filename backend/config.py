@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     api_url: str = "https://agentnexlify-production.up.railway.app"
 
     resend_api_key: str = ""
+    sentry_dsn: str = ""
 
     widget_allowed_origins: str = "*"
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
