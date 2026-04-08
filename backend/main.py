@@ -267,6 +267,8 @@ async def _automation_loop():
     import random
 
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
+    from backend.services.daily_briefing import send_daily_briefings
+    from backend.services.noshow_recovery import process_noshow_recovery
     from backend.services.automation_engine import (
         check_new_reviews,
         check_no_response_leads,
@@ -330,6 +332,7 @@ async def _automation_loop():
                             "run_sequence_processor", email_sequences.run_sequence_processor
                         ),
                         _safe_run("schedule_automation_check", schedule_automation_check),
+                        _safe_run("process_noshow_recovery", process_noshow_recovery),
                     ]
                 )
 
@@ -345,6 +348,7 @@ async def _automation_loop():
                         ),
                         _safe_run("send_weekly_digest", send_weekly_digest),
                         _safe_run("send_birthday_greetings", send_birthday_greetings),
+                        _safe_run("send_daily_briefings", send_daily_briefings),
                     ]
                 )
 
