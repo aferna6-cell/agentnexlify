@@ -1,0 +1,84 @@
+name: Claude Security Scan
+
+on:
+  schedule:
+    - cron: "0 10 * * 1" # Weekly Monday 10am UTC
+  pull_request:
+    paths:
+      - "backend/routers/auth.py"
+      - "backend/routers/stripe_webhooks.py"
+      - "backend/routers/billing.py"
+      - "backend/routers/client_portal.py"
+      - "backend/dependencies.py"
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Security scan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p "Perform a security audit of the AgentNexLiFy codebase focusing on:
+
+          1. Authentication bypass opportunities
+          2. Missing tenant isolation in database queries
+          3. Stripe webhook signature verification
+          4. XSS via dangerouslySetInnerHTML or unsanitized user input
+          5. SQL injection (even via Supabase client)
+          6. Secret leakage in logs, responses, or error messages
+          7. CORS misconfiguration
+          8. Rate limiting gaps on sensitive endpoints
+          9. Insecure direct object references
+
+          Scan these critical files:
+          - backend/routers/auth.py
+          - backend/routers/stripe_webhooks.py
+          - backend/routers/billing.py
+          - backend/routers/client_portal.py
+          - backend/dependencies.py
+          - backend/services/tenant_scope.py
+
+          Output as JSON: {vulnerabilities: [{severity: 'critical'|'high'|'medium'|'low', category: string, file: string, description: string, recommendation: string}]}
+          False positive rate target: <5%." \
+          --output-format json \
+          --model claude-sonnet-4-6 > /tmp/security-scan.json 2>/dev/null || true
+
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-results
+          path: /tmp/security-scan.json
+          retention-days: 30
+
+      - name: Check for critical findings
+        if: always()
+        run: |
+          if [ -f /tmp/security-scan.json ]; then
+            CRITICAL=$(python3 -c "
+          import json, sys
+          try:
+              data = json.load(open('/tmp/security-scan.json'))
+              vulns = data.get('vulnerabilities', [])
+              critical = [v for v in vulns if v.get('severity') in ('critical', 'high')]
+              print(len(critical))
+          except:
+              print(0)
+          ")
+            echo "Critical/High findings: $CRITICAL"
+            if [ "$CRITICAL" -gt 0 ]; then
+              echo "::warning::Found $CRITICAL critical/high security findings"
+            fi
+          fi

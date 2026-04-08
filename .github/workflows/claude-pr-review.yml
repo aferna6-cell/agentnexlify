@@ -1,0 +1,92 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Get PR diff
+        run: git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr-diff.txt
+
+      - name: Review PR with Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p "You are reviewing a pull request for AgentNexLiFy, a multi-tenant SaaS platform.
+
+          Review this diff for:
+          1. Bugs and logic errors
+          2. Missing tenant isolation (every query on tenant-scoped tables MUST filter by tenant_id or client_id)
+          3. Security vulnerabilities (XSS, injection, auth bypass, secret leakage)
+          4. Missing error handling (bare except blocks, unguarded .data[0] access)
+          5. Route shadowing (static routes must be registered before param routes)
+          6. Missing tests for new endpoints
+
+          Be specific and actionable. Flag CRITICAL issues that must be fixed before merge.
+          Output as JSON with structure: {findings: [{severity: 'critical'|'warning'|'info', file: string, line: number|null, message: string}]}
+
+          $(cat /tmp/pr-diff.txt)" \
+          --output-format json \
+          --model claude-haiku-4-5-20251001 > /tmp/review.json 2>/dev/null || true
+
+      - name: Post review summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const raw = fs.readFileSync('/tmp/review.json', 'utf8');
+              const review = JSON.parse(raw);
+              const findings = review.findings || [];
+              if (findings.length === 0) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: '**Claude Review:** No issues found.'
+                });
+                return;
+              }
+              const critical = findings.filter(f => f.severity === 'critical');
+              const warnings = findings.filter(f => f.severity === 'warning');
+              const info = findings.filter(f => f.severity === 'info');
+              let body = '## Claude Code Review\n\n';
+              if (critical.length) {
+                body += `### Critical (${critical.length})\n`;
+                critical.forEach(f => { body += `- **${f.file}${f.line ? ':' + f.line : ''}**: ${f.message}\n`; });
+              }
+              if (warnings.length) {
+                body += `\n### Warnings (${warnings.length})\n`;
+                warnings.forEach(f => { body += `- **${f.file}${f.line ? ':' + f.line : ''}**: ${f.message}\n`; });
+              }
+              if (info.length) {
+                body += `\n### Info (${info.length})\n`;
+                info.forEach(f => { body += `- ${f.message}\n`; });
+              }
+              body += '\n---\n*Automated review by Claude Code (Haiku)*';
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            } catch (e) {
+              console.log('Review parsing failed:', e.message);
+            }
