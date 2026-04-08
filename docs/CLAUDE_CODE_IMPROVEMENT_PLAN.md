@@ -435,11 +435,24 @@ New feature: skills support `effort` frontmatter to override model thinking effo
 
 ## Quick Wins (Do This Week)
 
-1. ☐ Enable Agent Teams in settings.json (1 minute)
-2. ☐ Create `CLAUDE.local.md` template (5 minutes)
-3. ☐ Move schema discipline section from CLAUDE.md to `.claude/rules/schema-discipline.md` with path scoping (30 minutes)
-4. ☐ Add MCP token audit command (15 minutes)
-5. ☐ Try `/voice` for next code review session (1 minute)
+1. ✅ Enable Agent Teams in settings.json
+2. ✅ Create `CLAUDE.local.md` template
+3. ✅ Move schema discipline section from CLAUDE.md to `.claude/rules/schema-discipline.md` with path scoping
+4. ✅ Add MCP token audit command (`/mcp-audit`)
+5. ☐ Try `/voice` for next code review session (manual)
+
+## Implementation Status (Updated 2026-04-08)
+
+| Phase | Status | What Shipped |
+|-------|--------|-------------|
+| 1. CLAUDE.md Diet | ✅ Done | 539→99 lines. 9 rules files with path scoping. |
+| 2. Headless CI | ✅ Done | PR review (Haiku) + security scan (Sonnet) workflows. Needs ANTHROPIC_API_KEY secret. |
+| 3. Rules Buildout | ✅ Done | 10 rules files total (9 new + 1 existing). All path-scoped. |
+| 4. Agent Teams | ✅ Done | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` enabled. |
+| 5. Channels | ⏭️ Skipped | Needs Telegram bot token. |
+| 6. Plugins | ⏭️ Deferred | High effort, week 4. |
+| 7. Hook Improvements | ✅ Done | PostCompact + WorktreeRemove hooks added. |
+| 8. Misc | ✅ Partial | MCP audit command, CLAUDE.local.md. Voice/effort frontmatter pending. |
 
 ---
 
