@@ -1,0 +1,23 @@
+name: Public Smoke Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 6 * * *"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run public smoke checks
+        env:
+          PUBLIC_BASE_URL: ${{ secrets.PRODUCTION_PUBLIC_URL }}
+          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL }}
+          PUBLIC_WIDGET_API_KEY: ${{ secrets.PRODUCTION_WIDGET_API_KEY }}
+        run: python scripts/public_smoke.py

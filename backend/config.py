@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     stripe_price_enterprise_monthly: str = ""
     frontend_url: str = "http://localhost:5173"
     api_url: str = "https://agentnexlify-production.up.railway.app"
+    cors_allowed_origins: str = ""
 
     resend_api_key: str = ""
 
@@ -105,17 +106,31 @@ def _is_weak_secret(value: str | None) -> bool:
     return not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
 
 
+def _production_secret_failures(
+    api_secret_key: str,
+    jwt_secret_key: str,
+    admin_api_secret_key: str,
+) -> list[str]:
+    """Return the production secret env vars that are missing or weak."""
+    failures: list[str] = []
+    if _is_weak_secret(api_secret_key):
+        failures.append("API_SECRET_KEY")
+    if jwt_secret_key and _is_weak_secret(jwt_secret_key):
+        failures.append("JWT_SECRET_KEY")
+    if admin_api_secret_key and _is_weak_secret(admin_api_secret_key):
+        failures.append("ADMIN_API_SECRET_KEY")
+    return failures
+
+
 def _enforce_production_secrets() -> None:
     if not is_production():
         return
 
-    failures: list[str] = []
-    if _is_weak_secret(settings.api_secret_key):
-        failures.append("API_SECRET_KEY")
-    if _is_weak_secret(settings.jwt_secret_key):
-        failures.append("JWT_SECRET_KEY")
-    if _is_weak_secret(settings.admin_api_secret_key):
-        failures.append("ADMIN_API_SECRET_KEY")
+    failures = _production_secret_failures(
+        settings.api_secret_key,
+        settings.jwt_secret_key,
+        settings.admin_api_secret_key,
+    )
 
     if failures:
         raise RuntimeError(

@@ -17,5 +17,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8000/api/health').raise_for_status()"
 
-# Run with uvicorn
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Run Uvicorn on Railway's injected port and keep a compatibility listener on 8000.
+CMD ["python", "-m", "backend.railway_entrypoint"]

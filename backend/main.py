@@ -9,6 +9,7 @@ import socket
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -112,6 +113,81 @@ if settings.sentry_dsn:
 
 _startup_time: float = 0.0
 _LOCK_OWNER = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex}"
+_VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
+_cors_warning_logged = False
+
+
+def _app_uptime_seconds() -> float:
+    return round(time.time() - _startup_time, 1) if _startup_time else 0.0
+
+
+def _app_version() -> str:
+    try:
+        return _VERSION_FILE.read_text(encoding="utf-8").strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _build_sha() -> str:
+    for env_name in (
+        "RAILWAY_GIT_COMMIT_SHA",
+        "VERCEL_GIT_COMMIT_SHA",
+        "GITHUB_SHA",
+        "COMMIT_SHA",
+        "SOURCE_VERSION",
+    ):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return value[:40]
+    return "unknown"
+
+
+def _split_origins(raw_value: str) -> list[str]:
+    origins = [origin.strip() for origin in (raw_value or "").split(",") if origin.strip()]
+    return origins or ["*"]
+
+
+def _cors_origins() -> list[str]:
+    global _cors_warning_logged
+    raw_value = settings.cors_allowed_origins or settings.widget_allowed_origins or "*"
+    origins = _split_origins(raw_value)
+    if is_production() and origins == ["*"] and not _cors_warning_logged:
+        logger.warning(
+            "CORS allow_origins is '*'. Set CORS_ALLOWED_ORIGINS or "
+            "WIDGET_ALLOWED_ORIGINS to make production origins explicit."
+        )
+        _cors_warning_logged = True
+    return origins
+
+
+def _readiness_snapshot() -> dict:
+    effective_jwt_secret = settings.jwt_secret_key or settings.api_secret_key
+    effective_admin_secret = settings.admin_api_secret_key or settings.api_secret_key
+    required_checks = {
+        "api_secret_configured": bool(settings.api_secret_key),
+        "jwt_secret_configured": bool(effective_jwt_secret),
+        "admin_api_secret_configured": bool(effective_admin_secret),
+    }
+    if is_production():
+        required_checks.update(
+            {
+                "supabase_url_configured": bool(settings.supabase_url),
+                "supabase_key_configured": bool(settings.supabase_key),
+                "supabase_service_key_configured": bool(settings.supabase_service_key),
+            }
+        )
+
+    optional_checks = {
+        "anthropic_configured": bool(settings.anthropic_api_key),
+        "resend_configured": bool(settings.resend_api_key),
+        "sentry_configured": bool(settings.sentry_dsn),
+        "widget_allowed_origins_explicit": _cors_origins() != ["*"],
+    }
+    return {
+        "required": required_checks,
+        "optional": optional_checks,
+        "ready": all(required_checks.values()),
+    }
 
 
 def _coerce_rpc_bool(data) -> bool:
@@ -487,7 +563,7 @@ _CORS_HEADERS = {
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -695,10 +771,48 @@ app.mount("/widget", StaticFiles(directory="widget"), name="widget")
 
 
 # --- Health check ---
+@app.get("/healthz")
+@app.get("/api/healthz")
+@app.get("/api/v1/healthz")
+async def healthz():
+    return {
+        "status": "ok",
+        "service": "agentnexlify",
+        "uptime_seconds": _app_uptime_seconds(),
+    }
+
+
+@app.get("/readyz")
+@app.get("/api/readyz")
+@app.get("/api/v1/readyz")
+async def readyz():
+    snapshot = _readiness_snapshot()
+    return JSONResponse(
+        status_code=200 if snapshot["ready"] else 503,
+        content={
+            "status": "ready" if snapshot["ready"] else "not_ready",
+            "service": "agentnexlify",
+            "uptime_seconds": _app_uptime_seconds(),
+            "checks": snapshot,
+        },
+    )
+
+
+@app.get("/version")
+@app.get("/api/version")
+@app.get("/api/v1/version")
+async def version():
+    return {
+        "service": "agentnexlify",
+        "version": _app_version(),
+        "commit": _build_sha(),
+    }
+
+
 @app.get("/health")
 @app.get("/api/health")
 async def health():
-    uptime = round(time.time() - _startup_time, 1) if _startup_time else 0.0
+    uptime = _app_uptime_seconds()
 
     # Supabase connectivity check
     supabase_status = "disconnected"

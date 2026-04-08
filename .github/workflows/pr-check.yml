@@ -18,6 +18,10 @@ jobs:
         run: |
           git fetch --no-tags --prune --depth=1 origin main || true
 
+      - name: Check diff hygiene
+        run: |
+          git diff --check origin/main...HEAD
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -79,11 +83,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r backend/requirements.txt
-          python -m pip install pytest pytest-cov diff-cover
+          python -m pip install pytest pytest-cov diff-cover pip-audit
 
       - name: Run backend tests with coverage
         run: |
           python -m pytest tests -q --cov=backend --cov-report=xml:coverage-python.xml
+
+      - name: Audit backend Python dependencies
+        continue-on-error: true
+        run: pip-audit -r backend/requirements.txt --progress-spinner off
 
       - name: Run JS coverage tests when configured
         run: |
@@ -112,10 +120,21 @@ jobs:
             --js-report coverage/lcov.info \
             --js-fail-under 80
 
+      - name: Frontend tests
+        run: |
+          cd frontend
+          npm ci
+          npm run test -- --run
+
+      - name: Audit frontend production dependencies
+        run: |
+          cd frontend
+          npm audit --omit=dev --audit-level=high
+
       - name: Frontend build check
         run: |
           cd frontend
-          npm install --silent
+          npm ci
           npm run build
 
       - name: Check migration numbering

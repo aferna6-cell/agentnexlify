@@ -3,15 +3,18 @@
  * DO NOT import this directly in components. Import from ../api.js instead.
  */
 
+import { apiErrorMessage, reportError } from "../errorReporting";
+
 export const BASE =
   import.meta.env.VITE_API_BASE_URL ||
   "https://agentnexlify-production.up.railway.app";
 
 export class ApiError extends Error {
-  constructor(status, body) {
-    super(body?.detail || `API error ${status}`);
+  constructor(status, body = {}) {
+    super(apiErrorMessage(status, body));
     this.status = status;
     this.body = body;
+    this.requestId = body?.request_id || body?.requestId || null;
   }
 }
 
@@ -33,21 +36,62 @@ function handleUnauthorized() {
   }
 }
 
+async function parseErrorBody(res) {
+  if (typeof res.text === "function") {
+    const text = await res.text().catch(() => "");
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { detail: text };
+    }
+  }
+  if (typeof res.json === "function") {
+    return res.json().catch(() => ({}));
+  }
+  return {};
+}
+
+function responseHeader(res, name) {
+  if (res.headers && typeof res.headers.get === "function") {
+    return res.headers.get(name);
+  }
+  return null;
+}
+
 export async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (error) {
+    reportError(error, { source: "api-client", path, method, phase: "network" });
+    throw new ApiError(0, {
+      detail: "Network error. Check your connection and try again.",
+    });
+  }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+    const err = await parseErrorBody(res);
+    const requestId = responseHeader(res, "x-request-id");
+    if (requestId) err.request_id = requestId;
     if (res.status === 401) {
       handleUnauthorized();
       throw new ApiError(res.status, err);
+    }
+    if (res.status >= 500) {
+      reportError(new ApiError(res.status, err), {
+        source: "api-client",
+        path,
+        method,
+        requestId,
+      });
     }
     throw new ApiError(res.status, err);
   }

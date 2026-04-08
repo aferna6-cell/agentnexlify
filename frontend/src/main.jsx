@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import App from "./components/App";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Home from "./pages/Home";
 import SignupPage from "./pages/SignupPage";
 import "./index.css";
@@ -104,9 +105,10 @@ function OnboardingRedirect() {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <HelmetProvider>
-      <BrowserRouter>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/free-widget" element={<FreeWidget />} />
             <Route path="/signup" element={<SignupPage />} />
@@ -148,9 +150,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/onboarding" element={<AuthProvider><OnboardingRedirect /></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}
             <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </ErrorBoundary>
     </HelmetProvider>
   </React.StrictMode>
 );

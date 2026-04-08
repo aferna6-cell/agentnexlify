@@ -9,6 +9,7 @@ os.environ["TESTING"] = "1"
 from fastapi.testclient import TestClient
 import pytest
 
+import backend.config as backend_config
 from backend.main import app
 from backend.routers.auth import _get_current_tenant
 from backend.routers.analytics import _period_to_days
@@ -26,6 +27,45 @@ def test_resend_webhook_route_is_registered():
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid webhook signature"}
+
+
+def test_healthz_readyz_and_version_are_registered():
+    """Process health endpoints should work without touching tenant data."""
+    client = TestClient(app)
+
+    health_response = client.get("/api/v1/healthz")
+    ready_response = client.get("/api/v1/readyz")
+    version_response = client.get("/api/v1/version")
+
+    assert health_response.status_code == 200
+    assert health_response.json()["status"] == "ok"
+    assert ready_response.status_code == 200
+    assert ready_response.json()["status"] == "ready"
+    assert version_response.status_code == 200
+    assert version_response.json()["service"] == "agentnexlify"
+    assert version_response.json()["version"]
+
+
+def test_production_secret_check_allows_api_secret_fallbacks():
+    """Missing dedicated secrets should still boot when API_SECRET_KEY is strong."""
+    strong_secret = "x" * 32
+
+    failures = backend_config._production_secret_failures(strong_secret, "", "")
+
+    assert failures == []
+
+
+def test_production_secret_check_rejects_explicit_weak_dedicated_secrets():
+    """Explicit weak dedicated secrets should fail even if API fallback is strong."""
+    strong_secret = "x" * 32
+
+    failures = backend_config._production_secret_failures(
+        strong_secret,
+        "too-short",
+        "still-too-short",
+    )
+
+    assert failures == ["JWT_SECRET_KEY", "ADMIN_API_SECRET_KEY"]
 
 
 def test_webhook_delivery_route_is_registered_and_returns_summary(mock_supabase, monkeypatch):
@@ -234,6 +274,8 @@ async def test_automation_loop_schedules_recurring_invoices(monkeypatch):
         return None
 
     monkeypatch.setattr(main, "_safe_run", fake_safe_run)
+    monkeypatch.setattr(main, "_try_acquire_automation_lock", lambda lock_name: True)
+    monkeypatch.setattr(main, "_release_automation_lock", lambda lock_name: None)
     monkeypatch.setattr(main.asyncio, "gather", fake_gather)
     monkeypatch.setattr(main.asyncio, "sleep", fake_sleep)
 
@@ -241,3 +283,33 @@ async def test_automation_loop_schedules_recurring_invoices(monkeypatch):
         await main._automation_loop()
 
     assert "process_recurring_invoices" in scheduled_names
+
+
+@pytest.mark.asyncio
+async def test_automation_loop_skips_work_when_lock_is_not_acquired(monkeypatch):
+    """A worker that misses the DB lease must not execute scheduler work."""
+    import backend.main as main
+
+    scheduled_names = []
+    sleep_calls = 0
+
+    async def fake_safe_run(name, fn, timeout=30.0):
+        scheduled_names.append(name)
+        return 0
+
+    async def fake_sleep(seconds):
+        nonlocal sleep_calls
+        sleep_calls += 1
+        if sleep_calls >= 2:
+            raise _StopAutomationLoop()
+        return None
+
+    monkeypatch.setattr(main, "_safe_run", fake_safe_run)
+    monkeypatch.setattr(main, "_try_acquire_automation_lock", lambda lock_name: False)
+    monkeypatch.setattr(main, "_release_automation_lock", lambda lock_name: None)
+    monkeypatch.setattr(main.asyncio, "sleep", fake_sleep)
+
+    with pytest.raises(_StopAutomationLoop):
+        await main._automation_loop()
+
+    assert scheduled_names == []
