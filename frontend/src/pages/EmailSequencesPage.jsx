@@ -6,9 +6,6 @@ import {
   getEmailSequence,
   updateEmailSequence,
   deleteEmailSequence,
-  addEmailSequenceStep,
-  updateEmailSequenceStep,
-  deleteEmailSequenceStep,
   fetchEmailSequenceEnrollments,
 } from "../utils/api/email-sequences";
 
@@ -27,16 +24,40 @@ const EMAIL_TYPES = [
 
 const STATUS_STYLES = {
   active: { label: "Active", color: "var(--green)", bg: "var(--green-dim)" },
-  paused: { label: "Paused", color: "var(--yellow, #f59e0b)", bg: "rgba(245, 158, 11, 0.15)" },
-  completed: { label: "Completed", color: "var(--text-secondary)", bg: "var(--hover-overlay)" },
-  unsubscribed: { label: "Unsubscribed", color: "#f87171", bg: "rgba(248, 113, 113, 0.15)" },
+  paused: {
+    label: "Paused",
+    color: "var(--yellow, #f59e0b)",
+    bg: "rgba(245, 158, 11, 0.15)",
+  },
+  completed: {
+    label: "Completed",
+    color: "var(--text-secondary)",
+    bg: "var(--hover-overlay)",
+  },
+  unsubscribed: {
+    label: "Unsubscribed",
+    color: "#f87171",
+    bg: "rgba(248, 113, 113, 0.15)",
+  },
 };
 
 const ENROLLMENT_STATUS_STYLES = {
   active: { label: "Active", color: "var(--green)", bg: "var(--green-dim)" },
-  paused: { label: "Paused", color: "var(--yellow, #f59e0b)", bg: "rgba(245, 158, 11, 0.15)" },
-  completed: { label: "Completed", color: "var(--accent)", bg: "var(--accent-dim)" },
-  unsubscribed: { label: "Unsubscribed", color: "#f87171", bg: "rgba(248, 113, 113, 0.15)" },
+  paused: {
+    label: "Paused",
+    color: "var(--yellow, #f59e0b)",
+    bg: "rgba(245, 158, 11, 0.15)",
+  },
+  completed: {
+    label: "Completed",
+    color: "var(--accent)",
+    bg: "var(--accent-dim)",
+  },
+  unsubscribed: {
+    label: "Unsubscribed",
+    color: "#f87171",
+    bg: "rgba(248, 113, 113, 0.15)",
+  },
 };
 
 /* ---- Shared styles ---- */
@@ -144,10 +165,16 @@ function TriggerBadge({ type }) {
   };
   const colors = colorMap[type] || colorMap.manual;
   return (
-    <span style={{
-      padding: "2px 10px", borderRadius: 12, fontSize: "0.75rem", fontWeight: 600,
-      color: colors.color, background: colors.bg,
-    }}>
+    <span
+      style={{
+        padding: "2px 10px",
+        borderRadius: 12,
+        fontSize: "0.75rem",
+        fontWeight: 600,
+        color: colors.color,
+        background: colors.bg,
+      }}
+    >
       {label}
     </span>
   );
@@ -156,10 +183,16 @@ function TriggerBadge({ type }) {
 function StatusBadge({ status, map = ENROLLMENT_STATUS_STYLES }) {
   const s = map[status] || map.active;
   return (
-    <span style={{
-      padding: "2px 10px", borderRadius: 12, fontSize: "0.75rem", fontWeight: 600,
-      color: s.color, background: s.bg,
-    }}>
+    <span
+      style={{
+        padding: "2px 10px",
+        borderRadius: 12,
+        fontSize: "0.75rem",
+        fontWeight: 600,
+        color: s.color,
+        background: s.bg,
+      }}
+    >
       {s.label}
     </span>
   );
@@ -167,23 +200,45 @@ function StatusBadge({ status, map = ENROLLMENT_STATUS_STYLES }) {
 
 function Toggle({ checked, onChange, label }) {
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        cursor: "pointer",
+      }}
+    >
       <div
         onClick={() => onChange(!checked)}
         style={{
-          width: 38, height: 20, borderRadius: 10, position: "relative", cursor: "pointer",
+          width: 38,
+          height: 20,
+          borderRadius: 10,
+          position: "relative",
+          cursor: "pointer",
           background: checked ? "var(--accent)" : "var(--border)",
           transition: "background 0.2s",
           flexShrink: 0,
         }}
       >
-        <div style={{
-          position: "absolute", top: 3, left: checked ? 19 : 3,
-          width: 14, height: 14, borderRadius: "50%", background: "#fff",
-          transition: "left 0.2s",
-        }} />
+        <div
+          style={{
+            position: "absolute",
+            top: 3,
+            left: checked ? 19 : 3,
+            width: 14,
+            height: 14,
+            borderRadius: "50%",
+            background: "#fff",
+            transition: "left 0.2s",
+          }}
+        />
       </div>
-      {label && <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{label}</span>}
+      {label && (
+        <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+          {label}
+        </span>
+      )}
     </label>
   );
 }
@@ -191,8 +246,22 @@ function Toggle({ checked, onChange, label }) {
 function StatCard({ label, value, color }) {
   return (
     <div style={{ ...cardStyle, flex: 1, minWidth: 140 }}>
-      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: "1.8rem", fontWeight: 700, color: color || "var(--text-primary)" }}>
+      <div
+        style={{
+          fontSize: "0.8rem",
+          color: "var(--text-secondary)",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "1.8rem",
+          fontWeight: 700,
+          color: color || "var(--text-primary)",
+        }}
+      >
         {value ?? "\u2014"}
       </div>
     </div>
@@ -201,24 +270,52 @@ function StatCard({ label, value, color }) {
 
 function EmptyState({ onCreateFirst }) {
   return (
-    <div style={{
-      ...cardStyle, textAlign: "center", padding: "56px 32px",
-      color: "var(--text-secondary)",
-    }}>
+    <div
+      style={{
+        ...cardStyle,
+        textAlign: "center",
+        padding: "56px 32px",
+        color: "var(--text-secondary)",
+      }}
+    >
       <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"
-          strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4, margin: "0 auto" }}>
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ opacity: 0.4, margin: "0 auto" }}
+        >
           <rect x="2" y="4" width="20" height="16" rx="2" />
           <path d="M22 6l-10 7L2 6" />
           <path d="M8 14h3M8 18h8" />
         </svg>
       </div>
-      <div style={{ fontSize: "1.15rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>
+      <div
+        style={{
+          fontSize: "1.15rem",
+          fontWeight: 600,
+          color: "var(--text-primary)",
+          marginBottom: 8,
+        }}
+      >
         No email sequences yet
       </div>
-      <p style={{ maxWidth: 380, margin: "0 auto 24px", lineHeight: 1.6, fontSize: "0.9rem" }}>
-        Email sequences automatically send a series of emails when a trigger event fires (e.g., a new
-        lead is captured). Create your first sequence to start nurturing leads on autopilot.
+      <p
+        style={{
+          maxWidth: 380,
+          margin: "0 auto 24px",
+          lineHeight: 1.6,
+          fontSize: "0.9rem",
+        }}
+      >
+        Email sequences automatically send a series of emails when a trigger
+        event fires (e.g., a new lead is captured). Create your first sequence
+        to start nurturing leads on autopilot.
       </p>
       <button style={btnPrimary} onClick={onCreateFirst}>
         Create First Sequence
@@ -232,12 +329,15 @@ function LoadingRows({ count = 4 }) {
     <tr key={i}>
       {Array.from({ length: 6 }).map((__, j) => (
         <td key={j} style={{ padding: "14px 16px" }}>
-          <div style={{
-            height: 14, borderRadius: 6,
-            background: "var(--hover-overlay)",
-            width: j === 0 ? "60%" : j === 5 ? "70%" : "40%",
-            animation: "pulse 1.5s ease-in-out infinite",
-          }} />
+          <div
+            style={{
+              height: 14,
+              borderRadius: 6,
+              background: "var(--hover-overlay)",
+              width: j === 0 ? "60%" : j === 5 ? "70%" : "40%",
+              animation: "pulse 1.5s ease-in-out infinite",
+            }}
+          />
         </td>
       ))}
     </tr>
@@ -263,23 +363,48 @@ function blankStep(order) {
 
 function StepRow({ step, index, onChange, onDelete }) {
   return (
-    <div style={{
-      background: "var(--bg-primary)",
-      border: "1px solid var(--border)",
-      borderRadius: 10,
-      padding: "16px 18px",
-      marginBottom: 12,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: "50%",
-          background: "var(--accent-dim)", color: "var(--accent)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontWeight: 700, fontSize: "0.85rem", flexShrink: 0,
-        }}>
+    <div
+      style={{
+        background: "var(--bg-primary)",
+        border: "1px solid var(--border)",
+        borderRadius: 10,
+        padding: "16px 18px",
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            background: "var(--accent-dim)",
+            color: "var(--accent)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "0.85rem",
+            flexShrink: 0,
+          }}
+        >
           {index + 1}
         </div>
-        <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)", flex: 1 }}>
+        <span
+          style={{
+            fontWeight: 600,
+            fontSize: "0.9rem",
+            color: "var(--text-primary)",
+            flex: 1,
+          }}
+        >
           Step {index + 1}
         </span>
         <Toggle
@@ -287,10 +412,19 @@ function StepRow({ step, index, onChange, onDelete }) {
           onChange={(v) => onChange({ ...step, is_active: v })}
           label="Active"
         />
-        <button style={btnDanger} onClick={() => onDelete(step)}>Remove</button>
+        <button style={btnDanger} onClick={() => onDelete(step)}>
+          Remove
+        </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
         <div>
           <label style={labelStyle}>Delay Days</label>
           <input
@@ -298,7 +432,12 @@ function StepRow({ step, index, onChange, onDelete }) {
             min={0}
             style={inputStyle}
             value={step.delay_days}
-            onChange={(e) => onChange({ ...step, delay_days: parseInt(e.target.value, 10) || 0 })}
+            onChange={(e) =>
+              onChange({
+                ...step,
+                delay_days: parseInt(e.target.value, 10) || 0,
+              })
+            }
           />
         </div>
         <div>
@@ -309,7 +448,12 @@ function StepRow({ step, index, onChange, onDelete }) {
             max={23}
             style={inputStyle}
             value={step.delay_hours}
-            onChange={(e) => onChange({ ...step, delay_hours: parseInt(e.target.value, 10) || 0 })}
+            onChange={(e) =>
+              onChange({
+                ...step,
+                delay_hours: parseInt(e.target.value, 10) || 0,
+              })
+            }
           />
         </div>
         <div>
@@ -320,7 +464,9 @@ function StepRow({ step, index, onChange, onDelete }) {
             onChange={(e) => onChange({ ...step, email_type: e.target.value })}
           >
             {EMAIL_TYPES.map((t) => (
-              <option key={t.key} value={t.key}>{t.label}</option>
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
             ))}
           </select>
         </div>
@@ -345,7 +491,11 @@ function StepRow({ step, index, onChange, onDelete }) {
         </label>
         <textarea
           style={textareaStyle}
-          placeholder={step.email_type === "sms" ? "SMS message text..." : "Email body content..."}
+          placeholder={
+            step.email_type === "sms"
+              ? "SMS message text..."
+              : "Email body content..."
+          }
           value={step.body}
           onChange={(e) => onChange({ ...step, body: e.target.value })}
         />
@@ -360,17 +510,25 @@ function SequenceModal({ sequence, tenantId, token, onClose, onSaved }) {
   const isEdit = !!sequence?.id;
 
   const [name, setName] = useState(sequence?.name || "");
-  const [triggerType, setTriggerType] = useState(sequence?.trigger_type || "lead_captured");
+  const [triggerType, setTriggerType] = useState(
+    sequence?.trigger_type || "lead_captured",
+  );
   const [isActive, setIsActive] = useState(sequence?.is_active !== false);
   const [steps, setSteps] = useState(() => {
-    if (sequence?.steps?.length) return sequence.steps.map((s) => ({ ...s, _localId: s.id || Math.random().toString(36).slice(2) }));
+    if (sequence?.steps?.length)
+      return sequence.steps.map((s) => ({
+        ...s,
+        _localId: s.id || Math.random().toString(36).slice(2),
+      }));
     return [blankStep(1)];
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   const handleStepChange = (updated) => {
-    setSteps((prev) => prev.map((s) => (s._localId === updated._localId ? updated : s)));
+    setSteps((prev) =>
+      prev.map((s) => (s._localId === updated._localId ? updated : s)),
+    );
   };
 
   const handleStepDelete = (target) => {
@@ -385,8 +543,14 @@ function SequenceModal({ sequence, tenantId, token, onClose, onSaved }) {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { setError("Sequence name is required."); return; }
-    if (!steps.length) { setError("Add at least one step."); return; }
+    if (!name.trim()) {
+      setError("Sequence name is required.");
+      return;
+    }
+    if (!steps.length) {
+      setError("Add at least one step.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -420,27 +584,69 @@ function SequenceModal({ sequence, tenantId, token, onClose, onSaved }) {
   };
 
   return (
-    <div style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      style={overlayStyle}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div style={modalStyle}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-          <h2 style={{ margin: 0, fontSize: "1.2rem", color: "var(--text-primary)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "1.2rem",
+              color: "var(--text-primary)",
+            }}
+          >
             {isEdit ? "Edit Sequence" : "New Email Sequence"}
           </h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1.4rem", lineHeight: 1 }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--text-secondary)",
+              fontSize: "1.4rem",
+              lineHeight: 1,
+            }}
+          >
             &times;
           </button>
         </div>
 
         {error && (
-          <div style={{
-            background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.25)",
-            borderRadius: 8, padding: "10px 14px", marginBottom: 20, color: "#f87171", fontSize: "0.875rem",
-          }}>
+          <div
+            style={{
+              background: "rgba(248,113,113,0.12)",
+              border: "1px solid rgba(248,113,113,0.25)",
+              borderRadius: 8,
+              padding: "10px 14px",
+              marginBottom: 20,
+              color: "#f87171",
+              fontSize: "0.875rem",
+            }}
+          >
             {error}
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
           <div style={{ gridColumn: "1 / -1" }}>
             <label style={labelStyle}>Sequence Name</label>
             <input
@@ -453,20 +659,55 @@ function SequenceModal({ sequence, tenantId, token, onClose, onSaved }) {
           </div>
           <div>
             <label style={labelStyle}>Trigger Type</label>
-            <select style={selectStyle} value={triggerType} onChange={(e) => setTriggerType(e.target.value)}>
+            <select
+              style={selectStyle}
+              value={triggerType}
+              onChange={(e) => setTriggerType(e.target.value)}
+            >
               {TRIGGER_TYPES.map((t) => (
-                <option key={t.key} value={t.key}>{t.label}</option>
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
               ))}
             </select>
           </div>
-          <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-            <Toggle checked={isActive} onChange={setIsActive} label="Active (start enrolling immediately)" />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              paddingBottom: 2,
+            }}
+          >
+            <Toggle
+              checked={isActive}
+              onChange={setIsActive}
+              label="Active (start enrolling immediately)"
+            />
           </div>
         </div>
 
-        <div style={{ borderTop: "1px solid var(--border)", paddingTop: 20, marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: "1rem", color: "var(--text-primary)" }}>
+        <div
+          style={{
+            borderTop: "1px solid var(--border)",
+            paddingTop: 20,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "1rem",
+                color: "var(--text-primary)",
+              }}
+            >
               Steps ({steps.length})
             </h3>
             <button style={btnSecondary} onClick={handleAddStep}>
@@ -475,7 +716,14 @@ function SequenceModal({ sequence, tenantId, token, onClose, onSaved }) {
           </div>
 
           {steps.length === 0 && (
-            <div style={{ textAlign: "center", padding: "24px", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "24px",
+                color: "var(--text-secondary)",
+                fontSize: "0.875rem",
+              }}
+            >
               No steps yet. Click "Add Step" to build your sequence.
             </div>
           )}
@@ -500,8 +748,18 @@ function SequenceModal({ sequence, tenantId, token, onClose, onSaved }) {
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-          <button style={btnSecondary} onClick={onClose} disabled={saving}>Cancel</button>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            justifyContent: "flex-end",
+            paddingTop: 8,
+            borderTop: "1px solid var(--border)",
+          }}
+        >
+          <button style={btnSecondary} onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
           <button style={btnPrimary} onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Sequence"}
           </button>
@@ -550,100 +808,282 @@ function SequenceDetail({ sequenceId, token, onClose, onEdit }) {
   });
 
   return (
-    <div style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      style={overlayStyle}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div style={{ ...modalStyle, maxWidth: 760 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: "1.15rem", color: "var(--text-primary)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 20,
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "1.15rem",
+              color: "var(--text-primary)",
+            }}
+          >
             {loading ? "Loading..." : detail?.name || "Sequence Detail"}
           </h2>
           <div style={{ display: "flex", gap: 8 }}>
-            <button style={btnSecondary} onClick={onEdit}>Edit</button>
-            <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1.4rem", lineHeight: 1 }}>
+            <button style={btnSecondary} onClick={onEdit}>
+              Edit
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                fontSize: "1.4rem",
+                lineHeight: 1,
+              }}
+            >
               &times;
             </button>
           </div>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--text-secondary)" }}>Loading sequence details...</div>
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              color: "var(--text-secondary)",
+            }}
+          >
+            Loading sequence details...
+          </div>
         ) : !detail ? (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--text-secondary)" }}>Could not load sequence details.</div>
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              color: "var(--text-secondary)",
+            }}
+          >
+            Could not load sequence details.
+          </div>
         ) : (
           <>
-            <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                marginBottom: 20,
+                flexWrap: "wrap",
+              }}
+            >
               <div style={{ ...cardStyle, padding: "12px 18px", flex: "none" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 4 }}>Trigger</div>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-secondary)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Trigger
+                </div>
                 <TriggerBadge type={detail.trigger_type} />
               </div>
               <div style={{ ...cardStyle, padding: "12px 18px", flex: "none" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 4 }}>Steps</div>
-                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{detail.step_count ?? (detail.steps?.length ?? 0)}</span>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-secondary)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Steps
+                </div>
+                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                  {detail.step_count ?? detail.steps?.length ?? 0}
+                </span>
               </div>
               <div style={{ ...cardStyle, padding: "12px 18px", flex: "none" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 4 }}>Enrollments</div>
-                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{detail.enrollment_count ?? enrollments.length}</span>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-secondary)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Enrollments
+                </div>
+                <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                  {detail.enrollment_count ?? enrollments.length}
+                </span>
               </div>
               <div style={{ ...cardStyle, padding: "12px 18px", flex: "none" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 4 }}>Status</div>
-                <span style={{ fontWeight: 700, color: detail.is_active ? "var(--green)" : "var(--text-secondary)" }}>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-secondary)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Status
+                </div>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: detail.is_active
+                      ? "var(--green)"
+                      : "var(--text-secondary)",
+                  }}
+                >
                   {detail.is_active ? "Active" : "Paused"}
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
-              <button style={tabStyle(activeTab === "steps")} onClick={() => setActiveTab("steps")}>Steps</button>
-              <button style={tabStyle(activeTab === "enrollments")} onClick={() => setActiveTab("enrollments")}>
+            <div
+              style={{
+                display: "flex",
+                gap: 4,
+                marginBottom: 20,
+                borderBottom: "1px solid var(--border)",
+                paddingBottom: 12,
+              }}
+            >
+              <button
+                style={tabStyle(activeTab === "steps")}
+                onClick={() => setActiveTab("steps")}
+              >
+                Steps
+              </button>
+              <button
+                style={tabStyle(activeTab === "enrollments")}
+                onClick={() => setActiveTab("enrollments")}
+              >
                 Enrollments ({enrollments.length})
               </button>
             </div>
 
             {activeTab === "steps" && (
               <div>
-                {(!detail.steps || detail.steps.length === 0) ? (
-                  <div style={{ textAlign: "center", padding: "32px", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                {!detail.steps || detail.steps.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "32px",
+                      color: "var(--text-secondary)",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     No steps configured. Click Edit to add steps.
                   </div>
                 ) : (
                   detail.steps.map((step, i) => (
-                    <div key={step.id || i} style={{
-                      background: "var(--bg-primary)", border: "1px solid var(--border)",
-                      borderRadius: 10, padding: "14px 18px", marginBottom: 10,
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                        <div style={{
-                          width: 26, height: 26, borderRadius: "50%",
-                          background: "var(--accent-dim)", color: "var(--accent)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontWeight: 700, fontSize: "0.8rem", flexShrink: 0,
-                        }}>
+                    <div
+                      key={step.id || i}
+                      style={{
+                        background: "var(--bg-primary)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 10,
+                        padding: "14px 18px",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          marginBottom: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: "50%",
+                            background: "var(--accent-dim)",
+                            color: "var(--accent)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 700,
+                            fontSize: "0.8rem",
+                            flexShrink: 0,
+                          }}
+                        >
                           {i + 1}
                         </div>
-                        <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)", flex: 1 }}>
-                          {step.email_type === "sms" ? "SMS" : "Email"} — Step {i + 1}
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            color: "var(--text-primary)",
+                            flex: 1,
+                          }}
+                        >
+                          {step.email_type === "sms" ? "SMS" : "Email"} — Step{" "}
+                          {i + 1}
                         </span>
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                          Delay: {step.delay_days || 0}d {step.delay_hours || 0}h
+                        <span
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          Delay: {step.delay_days || 0}d {step.delay_hours || 0}
+                          h
                         </span>
-                        <span style={{
-                          padding: "2px 8px", borderRadius: 10, fontSize: "0.72rem", fontWeight: 600,
-                          background: step.is_active !== false ? "var(--green-dim)" : "var(--hover-overlay)",
-                          color: step.is_active !== false ? "var(--green)" : "var(--text-secondary)",
-                        }}>
+                        <span
+                          style={{
+                            padding: "2px 8px",
+                            borderRadius: 10,
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            background:
+                              step.is_active !== false
+                                ? "var(--green-dim)"
+                                : "var(--hover-overlay)",
+                            color:
+                              step.is_active !== false
+                                ? "var(--green)"
+                                : "var(--text-secondary)",
+                          }}
+                        >
                           {step.is_active !== false ? "Active" : "Inactive"}
                         </span>
                       </div>
                       {step.subject && (
-                        <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 6 }}>
-                          <strong style={{ color: "var(--text-primary)" }}>Subject:</strong> {step.subject}
+                        <div
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "var(--text-secondary)",
+                            marginBottom: 6,
+                          }}
+                        >
+                          <strong style={{ color: "var(--text-primary)" }}>
+                            Subject:
+                          </strong>{" "}
+                          {step.subject}
                         </div>
                       )}
                       {step.body && (
-                        <div style={{
-                          fontSize: "0.82rem", color: "var(--text-secondary)",
-                          background: "var(--bg-secondary)", borderRadius: 6,
-                          padding: "8px 12px", whiteSpace: "pre-wrap", maxHeight: 100, overflowY: "auto",
-                        }}>
+                        <div
+                          style={{
+                            fontSize: "0.82rem",
+                            color: "var(--text-secondary)",
+                            background: "var(--bg-secondary)",
+                            borderRadius: 6,
+                            padding: "8px 12px",
+                            whiteSpace: "pre-wrap",
+                            maxHeight: 100,
+                            overflowY: "auto",
+                          }}
+                        >
                           {step.body}
                         </div>
                       )}
@@ -656,38 +1096,98 @@ function SequenceDetail({ sequenceId, token, onClose, onEdit }) {
             {activeTab === "enrollments" && (
               <div>
                 {enrollments.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "32px", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                    No leads enrolled yet. Leads are enrolled automatically when the trigger fires, or manually from the Clients page.
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "32px",
+                      color: "var(--text-secondary)",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    No leads enrolled yet. Leads are enrolled automatically when
+                    the trigger fires, or manually from the Clients page.
                   </div>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <table
+                      style={{ width: "100%", borderCollapse: "collapse" }}
+                    >
                       <thead>
                         <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                          {["Lead", "Email", "Status", "Step", "Enrolled"].map((h) => (
-                            <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                              {h}
-                            </th>
-                          ))}
+                          {["Lead", "Email", "Status", "Step", "Enrolled"].map(
+                            (h) => (
+                              <th
+                                key={h}
+                                style={{
+                                  padding: "10px 12px",
+                                  textAlign: "left",
+                                  fontSize: "0.78rem",
+                                  color: "var(--text-secondary)",
+                                  fontWeight: 600,
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.05em",
+                                }}
+                              >
+                                {h}
+                              </th>
+                            ),
+                          )}
                         </tr>
                       </thead>
                       <tbody>
                         {enrollments.map((e) => (
-                          <tr key={e.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                            <td style={{ padding: "12px", fontSize: "0.875rem", color: "var(--text-primary)", fontWeight: 500 }}>
+                          <tr
+                            key={e.id}
+                            style={{ borderBottom: "1px solid var(--border)" }}
+                          >
+                            <td
+                              style={{
+                                padding: "12px",
+                                fontSize: "0.875rem",
+                                color: "var(--text-primary)",
+                                fontWeight: 500,
+                              }}
+                            >
                               {e.lead_name || "\u2014"}
                             </td>
-                            <td style={{ padding: "12px", fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+                            <td
+                              style={{
+                                padding: "12px",
+                                fontSize: "0.875rem",
+                                color: "var(--text-secondary)",
+                              }}
+                            >
                               {e.lead_email || "\u2014"}
                             </td>
                             <td style={{ padding: "12px" }}>
                               <StatusBadge status={e.status} />
                             </td>
-                            <td style={{ padding: "12px", fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+                            <td
+                              style={{
+                                padding: "12px",
+                                fontSize: "0.875rem",
+                                color: "var(--text-secondary)",
+                              }}
+                            >
                               Step {e.current_step ?? "\u2014"}
                             </td>
-                            <td style={{ padding: "12px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                              {e.enrolled_at ? new Date(e.enrolled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "\u2014"}
+                            <td
+                              style={{
+                                padding: "12px",
+                                fontSize: "0.8rem",
+                                color: "var(--text-secondary)",
+                              }}
+                            >
+                              {e.enrolled_at
+                                ? new Date(e.enrolled_at).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )
+                                : "\u2014"}
                             </td>
                           </tr>
                         ))}
@@ -735,14 +1235,20 @@ export default function EmailSequencesPage() {
     }
   }, [user?.tenantId, token]);
 
-  useEffect(() => { loadSequences(); }, [loadSequences]);
+  useEffect(() => {
+    loadSequences();
+  }, [loadSequences]);
 
   /* ---- Toggle active ---- */
 
   const handleToggleActive = async (seq) => {
     try {
       await updateEmailSequence(seq.id, token, { is_active: !seq.is_active });
-      setSequences((prev) => prev.map((s) => s.id === seq.id ? { ...s, is_active: !s.is_active } : s));
+      setSequences((prev) =>
+        prev.map((s) =>
+          s.id === seq.id ? { ...s, is_active: !s.is_active } : s,
+        ),
+      );
     } catch (e) {
       alert("Failed to update: " + (e.message || "Unknown error"));
     }
@@ -751,7 +1257,10 @@ export default function EmailSequencesPage() {
   /* ---- Delete ---- */
 
   const handleDelete = async (seq) => {
-    if (!confirm(`Delete "${seq.name}"? This will stop all active enrollments.`)) return;
+    if (
+      !confirm(`Delete "${seq.name}"? This will stop all active enrollments.`)
+    )
+      return;
     try {
       await deleteEmailSequence(seq.id, token);
       setSequences((prev) => prev.filter((s) => s.id !== seq.id));
@@ -763,19 +1272,42 @@ export default function EmailSequencesPage() {
   /* ---- Stat calculations ---- */
 
   const totalActive = sequences.filter((s) => s.is_active).length;
-  const totalEnrollments = sequences.reduce((acc, s) => acc + (s.enrollment_count || 0), 0);
+  const totalEnrollments = sequences.reduce(
+    (acc, s) => acc + (s.enrollment_count || 0),
+    0,
+  );
 
   /* ---- Render ---- */
 
   return (
     <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 28,
+        }}
+      >
         <div>
-          <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)" }}>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "1.5rem",
+              fontWeight: 700,
+              color: "var(--text-primary)",
+            }}
+          >
             Email Sequences
           </h1>
-          <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+          <p
+            style={{
+              margin: "4px 0 0",
+              color: "var(--text-secondary)",
+              fontSize: "0.875rem",
+            }}
+          >
             Automated drip email series triggered by lead events
           </p>
         </div>
@@ -785,21 +1317,48 @@ export default function EmailSequencesPage() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
-        <StatCard label="Total Sequences" value={loading ? "..." : sequences.length} />
-        <StatCard label="Active Sequences" value={loading ? "..." : totalActive} color="var(--green)" />
-        <StatCard label="Total Enrollments" value={loading ? "..." : totalEnrollments} color="var(--accent)" />
+      <div
+        style={{ display: "flex", gap: 16, marginBottom: 28, flexWrap: "wrap" }}
+      >
+        <StatCard
+          label="Total Sequences"
+          value={loading ? "..." : sequences.length}
+        />
+        <StatCard
+          label="Active Sequences"
+          value={loading ? "..." : totalActive}
+          color="var(--green)"
+        />
+        <StatCard
+          label="Total Enrollments"
+          value={loading ? "..." : totalEnrollments}
+          color="var(--accent)"
+        />
       </div>
 
       {/* Error state */}
       {error && (
-        <div style={{
-          background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)",
-          borderRadius: 10, padding: "14px 18px", marginBottom: 20, color: "#f87171", fontSize: "0.875rem",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
+        <div
+          style={{
+            background: "rgba(248,113,113,0.1)",
+            border: "1px solid rgba(248,113,113,0.2)",
+            borderRadius: 10,
+            padding: "14px 18px",
+            marginBottom: 20,
+            color: "#f87171",
+            fontSize: "0.875rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <span>{error}</span>
-          <button style={{ ...btnSecondary, fontSize: "0.8rem" }} onClick={loadSequences}>Retry</button>
+          <button
+            style={{ ...btnSecondary, fontSize: "0.8rem" }}
+            onClick={loadSequences}
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -812,13 +1371,28 @@ export default function EmailSequencesPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  {["Name", "Trigger", "Active", "Steps", "Enrollments", "Created", "Actions"].map((h) => (
-                    <th key={h} style={{
-                      padding: "10px 16px", textAlign: "left",
-                      fontSize: "0.78rem", color: "var(--text-secondary)",
-                      fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em",
-                      whiteSpace: "nowrap",
-                    }}>
+                  {[
+                    "Name",
+                    "Trigger",
+                    "Active",
+                    "Steps",
+                    "Enrollments",
+                    "Created",
+                    "Actions",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "10px 16px",
+                        textAlign: "left",
+                        fontSize: "0.78rem",
+                        color: "var(--text-secondary)",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {h}
                     </th>
                   ))}
@@ -831,17 +1405,30 @@ export default function EmailSequencesPage() {
                   sequences.map((seq) => (
                     <tr
                       key={seq.id}
-                      style={{ borderBottom: "1px solid var(--border)", transition: "background 0.15s" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--hover-overlay)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      style={{
+                        borderBottom: "1px solid var(--border)",
+                        transition: "background 0.15s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--hover-overlay)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
                     >
                       <td style={{ padding: "14px 16px" }}>
                         <button
                           onClick={() => setDetailSequenceId(seq.id)}
                           style={{
-                            background: "none", border: "none", cursor: "pointer",
-                            color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem",
-                            textAlign: "left", padding: 0,
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--text-primary)",
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            textAlign: "left",
+                            padding: 0,
                           }}
                         >
                           {seq.name}
@@ -856,15 +1443,41 @@ export default function EmailSequencesPage() {
                           onChange={() => handleToggleActive(seq)}
                         />
                       </td>
-                      <td style={{ padding: "14px 16px", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                      <td
+                        style={{
+                          padding: "14px 16px",
+                          color: "var(--text-secondary)",
+                          fontSize: "0.875rem",
+                        }}
+                      >
                         {seq.step_count ?? "\u2014"}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                      <td
+                        style={{
+                          padding: "14px 16px",
+                          color: "var(--text-secondary)",
+                          fontSize: "0.875rem",
+                        }}
+                      >
                         {seq.enrollment_count ?? 0}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "var(--text-secondary)", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                      <td
+                        style={{
+                          padding: "14px 16px",
+                          color: "var(--text-secondary)",
+                          fontSize: "0.8rem",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {seq.created_at
-                          ? new Date(seq.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                          ? new Date(seq.created_at).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )
                           : "\u2014"}
                       </td>
                       <td style={{ padding: "14px 16px" }}>

@@ -49,7 +49,7 @@ def _ensure_system_tags(db, tenant_id: str) -> None:
                 "is_system": True,
             }).execute()
         except Exception:
-            pass  # Unique constraint — tag already exists
+            logger.debug("Tag '%s' already exists for tenant %s (unique constraint)", tag["tag_name"], tenant_id)
 
 
 @router.get("/{tenant_id}")

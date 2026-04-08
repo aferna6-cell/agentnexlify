@@ -377,7 +377,7 @@ async def track_email_open(
             "execution_id": eid or None,
         }).execute()
     except Exception:
-        pass  # Tracking failures should never affect the user
+        logger.debug("Email open tracking insert failed", exc_info=True)
     from starlette.responses import Response
     return Response(content=_TRACKING_PIXEL, media_type="image/gif")
 

@@ -1431,7 +1431,7 @@ async def send_pending_review_requests() -> int:
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                pass  # If we can't check, proceed (fail-open for review requests)
+                logger.debug("Failed to check unsubscribe status for lead %s, proceeding (fail-open)", lead_id, exc_info=True)
 
         # Send email review request
         if method in ("email", "both") and appt.get("customer_email"):
@@ -1619,7 +1619,7 @@ async def _send_review_followups(
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                pass  # Fail-open for follow-up review requests
+                logger.debug("Failed to check unsubscribe status for lead %s, proceeding (fail-open)", lead_id, exc_info=True)
 
         followup_sent = False
 

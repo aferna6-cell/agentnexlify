@@ -4,7 +4,6 @@ import SkeletonLoader from "../components/SkeletonLoader";
 import {
   fetchInvoices,
   createInvoice,
-  updateInvoice,
   deleteInvoice,
   sendInvoice,
   markInvoicePaid,
@@ -18,7 +17,15 @@ import {
 import { fetchLeads } from "../utils/api/leads";
 import { fetchBids } from "../utils/api/bids";
 
-const STATUS_FILTERS = ["all", "draft", "sent", "viewed", "paid", "overdue", "cancelled"];
+const STATUS_FILTERS = [
+  "all",
+  "draft",
+  "sent",
+  "viewed",
+  "paid",
+  "overdue",
+  "cancelled",
+];
 
 const STATUS_COLORS = {
   draft: { color: "var(--text-muted)", bg: "var(--hover-overlay)" },
@@ -45,17 +52,31 @@ const emptyForm = {
 function formatCurrency(val) {
   const num = Number(val);
   if (isNaN(num)) return "$0.00";
-  return "$" + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    "$" +
+    num.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function calcSubtotal(items) {
-  return (items || []).reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
+  return (items || []).reduce(
+    (sum, it) =>
+      sum + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
+    0,
+  );
 }
 
 function calcTotal(items, taxRate) {
@@ -207,7 +228,9 @@ export default function InvoicesPage() {
       notes: form.notes.trim() || null,
       deposit_amount: Number(form.deposit_amount) || 0,
       is_recurring: form.is_recurring,
-      recurrence_interval: form.is_recurring ? (form.recurrence_interval || null) : null,
+      recurrence_interval: form.is_recurring
+        ? form.recurrence_interval || null
+        : null,
     };
     try {
       await createInvoice(user.tenantId, token, body);
@@ -253,12 +276,16 @@ export default function InvoicesPage() {
     if (!sendTarget) return;
     setSending(true);
     try {
-      await sendInvoice(user.tenantId, token, sendTarget.id, { method: sendMethod });
+      await sendInvoice(user.tenantId, token, sendTarget.id, {
+        method: sendMethod,
+      });
       setShowSendModal(false);
       setSendTarget(null);
       // Update local status to sent
       setInvoices((prev) =>
-        prev.map((inv) => (inv.id === sendTarget.id ? { ...inv, status: "sent" } : inv))
+        prev.map((inv) =>
+          inv.id === sendTarget.id ? { ...inv, status: "sent" } : inv,
+        ),
       );
       if (detailInvoice?.id === sendTarget.id) {
         setDetailInvoice((prev) => ({ ...prev, status: "sent" }));
@@ -276,7 +303,9 @@ export default function InvoicesPage() {
     try {
       await markInvoicePaid(user.tenantId, token, invoiceId);
       setInvoices((prev) =>
-        prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: "paid" } : inv))
+        prev.map((inv) =>
+          inv.id === invoiceId ? { ...inv, status: "paid" } : inv,
+        ),
       );
       if (detailInvoice?.id === invoiceId) {
         setDetailInvoice((prev) => ({ ...prev, status: "paid" }));
@@ -291,13 +320,18 @@ export default function InvoicesPage() {
 
   const handleCopyPaymentLink = (invoice, e) => {
     if (e) e.stopPropagation();
-    const link = invoice.stripe_payment_link || `${window.location.origin}/pay/${invoice.id}`;
-    navigator.clipboard.writeText(link).then(() => {
-      setCopiedId(invoice.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    }).catch(() => {
-      setError("Failed to copy link to clipboard");
-    });
+    const link =
+      invoice.stripe_payment_link ||
+      `${window.location.origin}/pay/${invoice.id}`;
+    navigator.clipboard
+      .writeText(link)
+      .then(() => {
+        setCopiedId(invoice.id);
+        setTimeout(() => setCopiedId(null), 2000);
+      })
+      .catch(() => {
+        setError("Failed to copy link to clipboard");
+      });
   };
 
   // Line item helpers
@@ -308,7 +342,14 @@ export default function InvoicesPage() {
   const addFromTemplate = (tmpl) => {
     setForm((f) => ({
       ...f,
-      items: [...f.items, { description: tmpl.description, quantity: 1, unit_price: Number(tmpl.unit_price) }],
+      items: [
+        ...f.items,
+        {
+          description: tmpl.description,
+          quantity: 1,
+          unit_price: Number(tmpl.unit_price),
+        },
+      ],
     }));
     setShowTemplates(false);
   };
@@ -353,7 +394,9 @@ export default function InvoicesPage() {
   const updateItem = (idx, field, value) => {
     setForm((f) => ({
       ...f,
-      items: f.items.map((it, i) => (i === idx ? { ...it, [field]: value } : it)),
+      items: f.items.map((it, i) =>
+        i === idx ? { ...it, [field]: value } : it,
+      ),
     }));
   };
 
@@ -361,12 +404,15 @@ export default function InvoicesPage() {
 
   const subtotal = stats?.total_outstanding ?? 0;
   const totalPaid = stats?.total_paid ?? 0;
-  const overdueCount = stats?.overdue_count ?? invoices.filter((inv) => inv.status === "overdue").length;
+  const overdueCount =
+    stats?.overdue_count ??
+    invoices.filter((inv) => inv.status === "overdue").length;
   const avgDays = stats?.avg_days_to_payment ?? 0;
 
-  const filteredInvoices = activeFilter === "all"
-    ? invoices
-    : invoices.filter((inv) => inv.status === activeFilter);
+  const filteredInvoices =
+    activeFilter === "all"
+      ? invoices
+      : invoices.filter((inv) => inv.status === activeFilter);
 
   return (
     <div className="fade-in">
@@ -378,7 +424,10 @@ export default function InvoicesPage() {
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <button
             className="btn-primary"
-            onClick={() => { setLoading(true); loadData(); }}
+            onClick={() => {
+              setLoading(true);
+              loadData();
+            }}
             style={{
               background: "transparent",
               border: "1px solid var(--border)",
@@ -403,10 +452,22 @@ export default function InvoicesPage() {
         }}
       >
         {[
-          { label: "Total Outstanding", value: formatCurrency(subtotal), color: "#f59e0b" },
-          { label: "Total Paid", value: formatCurrency(totalPaid), color: "#22c55e" },
+          {
+            label: "Total Outstanding",
+            value: formatCurrency(subtotal),
+            color: "#f59e0b",
+          },
+          {
+            label: "Total Paid",
+            value: formatCurrency(totalPaid),
+            color: "#22c55e",
+          },
           { label: "Overdue", value: overdueCount, color: "#ef4444" },
-          { label: "Avg Days to Payment", value: avgDays ? `${Math.round(avgDays)}d` : "-", color: "#3b82f6" },
+          {
+            label: "Avg Days to Payment",
+            value: avgDays ? `${Math.round(avgDays)}d` : "-",
+            color: "#3b82f6",
+          },
         ].map((card) => (
           <div
             key={card.label}
@@ -417,10 +478,18 @@ export default function InvoicesPage() {
               padding: "16px 20px",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                marginBottom: 4,
+              }}
+            >
               {card.label}
             </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: card.color }}>
+            <div
+              style={{ fontSize: "1.5rem", fontWeight: 700, color: card.color }}
+            >
               {card.value}
             </div>
           </div>
@@ -428,10 +497,15 @@ export default function InvoicesPage() {
       </div>
 
       {/* Status Filter Tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+      <div
+        style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}
+      >
         {STATUS_FILTERS.map((s) => {
           const isActive = activeFilter === s;
-          const count = s === "all" ? invoices.length : invoices.filter((inv) => inv.status === s).length;
+          const count =
+            s === "all"
+              ? invoices.length
+              : invoices.filter((inv) => inv.status === s).length;
           return (
             <button
               key={s}
@@ -439,8 +513,12 @@ export default function InvoicesPage() {
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
-                border: isActive ? "1px solid var(--accent)" : "1px solid var(--border)",
-                background: isActive ? "var(--accent-dim)" : "var(--bg-secondary)",
+                border: isActive
+                  ? "1px solid var(--accent)"
+                  : "1px solid var(--border)",
+                background: isActive
+                  ? "var(--accent-dim)"
+                  : "var(--bg-secondary)",
                 color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 cursor: "pointer",
                 fontSize: "0.85rem",
@@ -450,7 +528,11 @@ export default function InvoicesPage() {
               }}
             >
               {s}
-              <span style={{ marginLeft: 6, fontSize: "0.75rem", opacity: 0.7 }}>{count}</span>
+              <span
+                style={{ marginLeft: 6, fontSize: "0.75rem", opacity: 0.7 }}
+              >
+                {count}
+              </span>
             </button>
           );
         })}
@@ -471,7 +553,15 @@ export default function InvoicesPage() {
           {error}
           <button
             onClick={() => setError(null)}
-            style={{ marginLeft: 12, background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.8rem", textDecoration: "underline" }}
+            style={{
+              marginLeft: 12,
+              background: "none",
+              border: "none",
+              color: "#ef4444",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              textDecoration: "underline",
+            }}
           >
             dismiss
           </button>
@@ -480,9 +570,17 @@ export default function InvoicesPage() {
 
       {/* Invoice Table */}
       {filteredInvoices.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            color: "var(--text-muted)",
+          }}
+        >
           <div style={{ fontSize: "2rem", marginBottom: 12 }}>
-            {activeFilter !== "all" ? "No invoices match this filter" : "No invoices yet"}
+            {activeFilter !== "all"
+              ? "No invoices match this filter"
+              : "No invoices yet"}
           </div>
           <p style={{ maxWidth: 480, margin: "0 auto 20px", lineHeight: 1.6 }}>
             {activeFilter !== "all"
@@ -493,7 +591,11 @@ export default function InvoicesPage() {
             <button
               className="btn-primary"
               onClick={() => setActiveFilter("all")}
-              style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border)",
+                color: "var(--text-primary)",
+              }}
             >
               Clear Filter
             </button>
@@ -516,7 +618,8 @@ export default function InvoicesPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "28px 100px 1fr 120px 100px 110px 110px 160px",
+              gridTemplateColumns:
+                "28px 100px 1fr 120px 100px 110px 110px 160px",
               padding: "10px 16px",
               borderBottom: "1px solid var(--border)",
               fontSize: "0.75rem",
@@ -527,10 +630,15 @@ export default function InvoicesPage() {
             }}
           >
             <span style={{ width: 28 }}>
-              <input type="checkbox"
-                checked={selectedIds.size > 0 && filteredInvoices.every(i => selectedIds.has(i.id))}
+              <input
+                type="checkbox"
+                checked={
+                  selectedIds.size > 0 &&
+                  filteredInvoices.every((i) => selectedIds.has(i.id))
+                }
                 onChange={(e) => {
-                  if (e.target.checked) setSelectedIds(new Set(filteredInvoices.map(i => i.id)));
+                  if (e.target.checked)
+                    setSelectedIds(new Set(filteredInvoices.map((i) => i.id)));
                   else setSelectedIds(new Set());
                 }}
               />
@@ -546,11 +654,23 @@ export default function InvoicesPage() {
 
           {/* Bulk Action Bar */}
           {selectedIds.size > 0 && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "10px 16px",
-              background: "rgba(0,191,255,0.08)", borderBottom: "1px solid rgba(0,191,255,0.25)",
-            }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: "var(--accent, #00BFFF)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "10px 16px",
+                background: "rgba(0,191,255,0.08)",
+                borderBottom: "1px solid rgba(0,191,255,0.25)",
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: 600,
+                  fontSize: 13,
+                  color: "var(--accent, #00BFFF)",
+                }}
+              >
                 {selectedIds.size} selected
               </span>
               <button
@@ -558,21 +678,35 @@ export default function InvoicesPage() {
                 onClick={async () => {
                   setBulkSending(true);
                   try {
-                    const result = await bulkSendInvoices(user.tenantId, token, [...selectedIds], "email");
+                    const result = await bulkSendInvoices(
+                      user.tenantId,
+                      token,
+                      [...selectedIds],
+                      "email",
+                    );
                     setError(null);
                     setSelectedIds(new Set());
                     loadData();
-                    alert(`Sent: ${result.sent}, Failed: ${result.failed}${result.errors?.length ? '\n' + result.errors.join('\n') : ''}`);
+                    alert(
+                      `Sent: ${result.sent}, Failed: ${result.failed}${result.errors?.length ? "\n" + result.errors.join("\n") : ""}`,
+                    );
                   } catch (err) {
-                    setError(err.body?.detail || err.message || "Bulk send failed");
+                    setError(
+                      err.body?.detail || err.message || "Bulk send failed",
+                    );
                   } finally {
                     setBulkSending(false);
                   }
                 }}
                 style={{
-                  padding: "4px 12px", fontSize: 12, fontWeight: 600,
-                  background: "var(--accent, #00BFFF)", color: "#fff",
-                  border: "none", borderRadius: 6, cursor: "pointer",
+                  padding: "4px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: "var(--accent, #00BFFF)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
                 }}
               >
                 {bulkSending ? "Sending..." : "Send All via Email"}
@@ -580,9 +714,13 @@ export default function InvoicesPage() {
               <button
                 onClick={() => setSelectedIds(new Set())}
                 style={{
-                  padding: "4px 10px", fontSize: 12,
-                  background: "none", color: "var(--text-muted)",
-                  border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer",
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  background: "none",
+                  color: "var(--text-muted)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 6,
+                  cursor: "pointer",
                 }}
               >
                 Clear
@@ -594,7 +732,10 @@ export default function InvoicesPage() {
             const isDeleting = deletingIds.has(inv.id);
             const total = calcTotal(inv.items_json || [], inv.tax_rate || 0);
             const canSend = inv.status === "draft" || inv.status === "sent";
-            const canPay = inv.status === "sent" || inv.status === "viewed" || inv.status === "overdue";
+            const canPay =
+              inv.status === "sent" ||
+              inv.status === "viewed" ||
+              inv.status === "overdue";
 
             return (
               <div
@@ -602,7 +743,8 @@ export default function InvoicesPage() {
                 onClick={() => setDetailInvoice(inv)}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "28px 100px 1fr 120px 100px 110px 110px 160px",
+                  gridTemplateColumns:
+                    "28px 100px 1fr 120px 100px 110px 110px 160px",
                   padding: "12px 16px",
                   borderBottom: "1px solid var(--border)",
                   alignItems: "center",
@@ -610,39 +752,77 @@ export default function InvoicesPage() {
                   opacity: isDeleting ? 0.5 : 1,
                   transition: "background 0.1s ease",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--hover-overlay)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--hover-overlay)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                }}
               >
                 <span onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox"
+                  <input
+                    type="checkbox"
                     checked={selectedIds.has(inv.id)}
                     onChange={(e) => {
                       const next = new Set(selectedIds);
-                      if (e.target.checked) next.add(inv.id); else next.delete(inv.id);
+                      if (e.target.checked) next.add(inv.id);
+                      else next.delete(inv.id);
                       setSelectedIds(next);
                     }}
                   />
                 </span>
-                <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--accent)" }}>
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    color: "var(--accent)",
+                  }}
+                >
                   #{inv.invoice_number || inv.id?.slice(0, 8)}
                 </span>
                 <span style={{ fontSize: "0.85rem" }}>
                   {inv.customer_name || inv.lead_name || "-"}
                 </span>
-                <span style={{ textAlign: "right", fontSize: "0.9rem", fontWeight: 700, color: "#3b82f6" }}>
+                <span
+                  style={{
+                    textAlign: "right",
+                    fontSize: "0.9rem",
+                    fontWeight: 700,
+                    color: "#3b82f6",
+                  }}
+                >
                   {formatCurrency(inv.total ?? total)}
                 </span>
                 <span style={{ textAlign: "center" }}>
                   <StatusBadge status={inv.status} />
                 </span>
-                <span style={{ textAlign: "center", fontSize: "0.8rem", color: inv.status === "overdue" ? "#ef4444" : "var(--text-secondary)" }}>
+                <span
+                  style={{
+                    textAlign: "center",
+                    fontSize: "0.8rem",
+                    color:
+                      inv.status === "overdue"
+                        ? "#ef4444"
+                        : "var(--text-secondary)",
+                  }}
+                >
                   {formatDate(inv.due_date) || "-"}
                 </span>
-                <span style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                <span
+                  style={{
+                    textAlign: "center",
+                    fontSize: "0.8rem",
+                    color: "var(--text-muted)",
+                  }}
+                >
                   {formatDate(inv.sent_at) || "-"}
                 </span>
                 <div
-                  style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}
+                  style={{
+                    display: "flex",
+                    gap: 4,
+                    justifyContent: "flex-end",
+                  }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {canSend && (
@@ -664,7 +844,10 @@ export default function InvoicesPage() {
                   )}
                   {canPay && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleMarkPaid(inv.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkPaid(inv.id);
+                      }}
                       disabled={markingPaid}
                       style={{
                         background: "rgba(34,197,94,0.1)",
@@ -687,7 +870,10 @@ export default function InvoicesPage() {
                       border: "1px solid var(--border)",
                       borderRadius: 6,
                       padding: "4px 8px",
-                      color: copiedId === inv.id ? "#22c55e" : "var(--text-secondary)",
+                      color:
+                        copiedId === inv.id
+                          ? "#22c55e"
+                          : "var(--text-secondary)",
                       cursor: "pointer",
                       fontSize: "0.75rem",
                     }}
@@ -696,7 +882,10 @@ export default function InvoicesPage() {
                     {copiedId === inv.id ? "Copied!" : "Link"}
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(inv.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(inv.id);
+                    }}
                     disabled={isDeleting}
                     style={{
                       background: "none",
@@ -720,65 +909,160 @@ export default function InvoicesPage() {
       {/* Invoice Detail Modal */}
       {detailInvoice && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
           onClick={() => setDetailInvoice(null)}
         >
           <div
-            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 620, maxHeight: "85vh", overflowY: "auto", border: "1px solid var(--border)" }}
+            style={{
+              background: "var(--bg-primary)",
+              borderRadius: 12,
+              padding: 24,
+              width: "90%",
+              maxWidth: 620,
+              maxHeight: "85vh",
+              overflowY: "auto",
+              border: "1px solid var(--border)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 16,
+              }}
+            >
               <div>
                 <h3 style={{ marginBottom: 6 }}>
-                  Invoice #{detailInvoice.invoice_number || detailInvoice.id?.slice(0, 8)}
+                  Invoice #
+                  {detailInvoice.invoice_number ||
+                    detailInvoice.id?.slice(0, 8)}
                 </h3>
                 <StatusBadge status={detailInvoice.status} />
               </div>
               <button
                 onClick={() => setDetailInvoice(null)}
-                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "1.2rem" }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                }}
               >
                 x
               </button>
             </div>
 
             {(detailInvoice.customer_name || detailInvoice.lead_name) && (
-              <div style={{ marginBottom: 12, fontSize: "0.9rem", color: "var(--text-secondary)" }}>
-                <strong>Customer:</strong> {detailInvoice.customer_name || detailInvoice.lead_name}
+              <div
+                style={{
+                  marginBottom: 12,
+                  fontSize: "0.9rem",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <strong>Customer:</strong>{" "}
+                {detailInvoice.customer_name || detailInvoice.lead_name}
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 20, marginBottom: 16, fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 20,
+                marginBottom: 16,
+                fontSize: "0.85rem",
+                color: "var(--text-secondary)",
+              }}
+            >
               {detailInvoice.due_date && (
-                <div><strong>Due:</strong> {formatDate(detailInvoice.due_date)}</div>
+                <div>
+                  <strong>Due:</strong> {formatDate(detailInvoice.due_date)}
+                </div>
               )}
               {detailInvoice.sent_at && (
-                <div><strong>Sent:</strong> {formatDate(detailInvoice.sent_at)}</div>
+                <div>
+                  <strong>Sent:</strong> {formatDate(detailInvoice.sent_at)}
+                </div>
               )}
               {detailInvoice.paid_at && (
-                <div><strong>Paid:</strong> {formatDate(detailInvoice.paid_at)}</div>
+                <div>
+                  <strong>Paid:</strong> {formatDate(detailInvoice.paid_at)}
+                </div>
               )}
             </div>
 
             {/* Line Items */}
             {(detailInvoice.items_json || []).length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: 8,
+                  }}
+                >
                   Items
                 </div>
-                <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", background: "var(--bg-secondary)", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                <div
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "2fr 1fr 1fr 1fr",
+                      padding: "8px 12px",
+                      background: "var(--bg-secondary)",
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                    }}
+                  >
                     <span>Description</span>
                     <span style={{ textAlign: "right" }}>Qty</span>
                     <span style={{ textAlign: "right" }}>Unit Price</span>
                     <span style={{ textAlign: "right" }}>Total</span>
                   </div>
                   {detailInvoice.items_json.map((item, idx) => (
-                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                    <div
+                      key={idx}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "2fr 1fr 1fr 1fr",
+                        padding: "8px 12px",
+                        borderTop: "1px solid var(--border)",
+                        fontSize: "0.85rem",
+                      }}
+                    >
                       <span>{item.description}</span>
-                      <span style={{ textAlign: "right" }}>{item.quantity}</span>
-                      <span style={{ textAlign: "right" }}>{formatCurrency(item.unit_price)}</span>
-                      <span style={{ textAlign: "right", fontWeight: 600 }}>{formatCurrency((item.quantity || 0) * (item.unit_price || 0))}</span>
+                      <span style={{ textAlign: "right" }}>
+                        {item.quantity}
+                      </span>
+                      <span style={{ textAlign: "right" }}>
+                        {formatCurrency(item.unit_price)}
+                      </span>
+                      <span style={{ textAlign: "right", fontWeight: 600 }}>
+                        {formatCurrency(
+                          (item.quantity || 0) * (item.unit_price || 0),
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -791,12 +1075,31 @@ export default function InvoicesPage() {
                     const taxAmt = sub * (taxRate / 100);
                     const total = sub + taxAmt;
                     return (
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                        <div style={{ color: "var(--text-secondary)" }}>Subtotal: {formatCurrency(sub)}</div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-end",
+                          gap: 4,
+                        }}
+                      >
+                        <div style={{ color: "var(--text-secondary)" }}>
+                          Subtotal: {formatCurrency(sub)}
+                        </div>
                         {taxRate > 0 && (
-                          <div style={{ color: "var(--text-secondary)" }}>Tax ({taxRate}%): {formatCurrency(taxAmt)}</div>
+                          <div style={{ color: "var(--text-secondary)" }}>
+                            Tax ({taxRate}%): {formatCurrency(taxAmt)}
+                          </div>
                         )}
-                        <div style={{ fontWeight: 700, fontSize: "1rem", color: "#3b82f6" }}>Total: {formatCurrency(total)}</div>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            fontSize: "1rem",
+                            color: "#3b82f6",
+                          }}
+                        >
+                          Total: {formatCurrency(total)}
+                        </div>
                       </div>
                     );
                   })()}
@@ -806,28 +1109,70 @@ export default function InvoicesPage() {
 
             {detailInvoice.notes && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Notes</div>
-                <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>{detailInvoice.notes}</div>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    marginBottom: 4,
+                  }}
+                >
+                  Notes
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "var(--text-secondary)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {detailInvoice.notes}
+                </div>
               </div>
             )}
 
             {/* Payment Link */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Payment Link</div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  marginBottom: 4,
+                }}
+              >
+                Payment Link
+              </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input
                   readOnly
-                  value={detailInvoice.stripe_payment_link || `${window.location.origin}/pay/${detailInvoice.id}`}
-                  style={{ flex: 1, fontSize: "0.8rem", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
+                  value={
+                    detailInvoice.stripe_payment_link ||
+                    `${window.location.origin}/pay/${detailInvoice.id}`
+                  }
+                  style={{
+                    flex: 1,
+                    fontSize: "0.8rem",
+                    background: "var(--bg-secondary)",
+                    color: "var(--text-secondary)",
+                  }}
                 />
                 <button
                   onClick={() => handleCopyPaymentLink(detailInvoice)}
                   style={{
-                    background: copiedId === detailInvoice.id ? "rgba(34,197,94,0.1)" : "var(--bg-secondary)",
+                    background:
+                      copiedId === detailInvoice.id
+                        ? "rgba(34,197,94,0.1)"
+                        : "var(--bg-secondary)",
                     border: "1px solid var(--border)",
                     borderRadius: 6,
                     padding: "6px 12px",
-                    color: copiedId === detailInvoice.id ? "#22c55e" : "var(--text-secondary)",
+                    color:
+                      copiedId === detailInvoice.id
+                        ? "#22c55e"
+                        : "var(--text-secondary)",
                     cursor: "pointer",
                     fontSize: "0.8rem",
                     whiteSpace: "nowrap",
@@ -839,63 +1184,169 @@ export default function InvoicesPage() {
             </div>
 
             {/* Deposit & Payment Progress */}
-            {(Number(detailInvoice.deposit_amount) > 0 || Number(detailInvoice.amount_paid) > 0) && (
+            {(Number(detailInvoice.deposit_amount) > 0 ||
+              Number(detailInvoice.amount_paid) > 0) && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>Payment Progress</div>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    marginBottom: 6,
+                  }}
+                >
+                  Payment Progress
+                </div>
                 {Number(detailInvoice.deposit_amount) > 0 && (
-                  <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: 4 }}>
-                    Deposit required: {formatCurrency(detailInvoice.deposit_amount)}
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      color: "var(--text-secondary)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Deposit required:{" "}
+                    {formatCurrency(detailInvoice.deposit_amount)}
                   </div>
                 )}
-                <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: 6 }}>
-                  Paid: {formatCurrency(detailInvoice.amount_paid || 0)} / {formatCurrency(detailInvoice.total)}
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--text-secondary)",
+                    marginBottom: 6,
+                  }}
+                >
+                  Paid: {formatCurrency(detailInvoice.amount_paid || 0)} /{" "}
+                  {formatCurrency(detailInvoice.total)}
                 </div>
-                <div style={{ height: 6, background: "var(--bg-secondary)", borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.min(100, ((Number(detailInvoice.amount_paid) || 0) / (Number(detailInvoice.total) || 1)) * 100)}%`, background: "var(--green, #22c55e)", borderRadius: 3, transition: "width 0.3s" }} />
+                <div
+                  style={{
+                    height: 6,
+                    background: "var(--bg-secondary)",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${Math.min(100, ((Number(detailInvoice.amount_paid) || 0) / (Number(detailInvoice.total) || 1)) * 100)}%`,
+                      background: "var(--green, #22c55e)",
+                      borderRadius: 3,
+                      transition: "width 0.3s",
+                    }}
+                  />
                 </div>
               </div>
             )}
 
             {/* Record Partial Payment */}
-            {detailInvoice.status !== "paid" && detailInvoice.status !== "cancelled" && detailInvoice.status !== "draft" && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Record Payment</div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>$</span>
-                  <input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    min={0}
-                    step="0.01"
-                    placeholder="Amount"
-                    style={{ width: 120 }}
-                  />
-                  <button
-                    onClick={() => handleRecordPayment(detailInvoice.id)}
-                    disabled={recordingPayment || !paymentAmount || Number(paymentAmount) <= 0}
-                    style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 6, padding: "6px 12px", color: "#22c55e", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }}
+            {detailInvoice.status !== "paid" &&
+              detailInvoice.status !== "cancelled" &&
+              detailInvoice.status !== "draft" && (
+                <div style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      marginBottom: 4,
+                    }}
                   >
-                    {recordingPayment ? "Recording..." : "Record"}
-                  </button>
+                    Record Payment
+                  </div>
+                  <div
+                    style={{ display: "flex", gap: 6, alignItems: "center" }}
+                  >
+                    <span
+                      style={{
+                        color: "var(--text-muted)",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      min={0}
+                      step="0.01"
+                      placeholder="Amount"
+                      style={{ width: 120 }}
+                    />
+                    <button
+                      onClick={() => handleRecordPayment(detailInvoice.id)}
+                      disabled={
+                        recordingPayment ||
+                        !paymentAmount ||
+                        Number(paymentAmount) <= 0
+                      }
+                      style={{
+                        background: "rgba(34,197,94,0.1)",
+                        border: "1px solid rgba(34,197,94,0.3)",
+                        borderRadius: 6,
+                        padding: "6px 12px",
+                        color: "#22c55e",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {recordingPayment ? "Recording..." : "Record"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: 16 }}>
-              {(detailInvoice.status === "draft" || detailInvoice.status === "sent") && (
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                justifyContent: "flex-end",
+                borderTop: "1px solid var(--border)",
+                paddingTop: 16,
+              }}
+            >
+              {(detailInvoice.status === "draft" ||
+                detailInvoice.status === "sent") && (
                 <button
-                  onClick={() => { setDetailInvoice(null); openSend(detailInvoice); }}
-                  style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: 8, padding: "8px 16px", color: "#3b82f6", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}
+                  onClick={() => {
+                    setDetailInvoice(null);
+                    openSend(detailInvoice);
+                  }}
+                  style={{
+                    background: "rgba(59,130,246,0.1)",
+                    border: "1px solid rgba(59,130,246,0.3)",
+                    borderRadius: 8,
+                    padding: "8px 16px",
+                    color: "#3b82f6",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                  }}
                 >
                   Send Invoice
                 </button>
               )}
-              {(detailInvoice.status === "sent" || detailInvoice.status === "viewed" || detailInvoice.status === "overdue") && (
+              {(detailInvoice.status === "sent" ||
+                detailInvoice.status === "viewed" ||
+                detailInvoice.status === "overdue") && (
                 <button
                   onClick={() => handleMarkPaid(detailInvoice.id)}
                   disabled={markingPaid}
-                  style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 8, padding: "8px 16px", color: "#22c55e", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}
+                  style={{
+                    background: "rgba(34,197,94,0.1)",
+                    border: "1px solid rgba(34,197,94,0.3)",
+                    borderRadius: 8,
+                    padding: "8px 16px",
+                    color: "#22c55e",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                  }}
                 >
                   {markingPaid ? "Marking..." : "Mark as Paid"}
                 </button>
@@ -914,19 +1365,51 @@ export default function InvoicesPage() {
       {/* Create Invoice Modal */}
       {showModal && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
           onClick={() => setShowModal(false)}
         >
           <div
-            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 640, maxHeight: "88vh", overflowY: "auto", border: "1px solid var(--border)" }}
+            style={{
+              background: "var(--bg-primary)",
+              borderRadius: 12,
+              padding: 24,
+              width: "90%",
+              maxWidth: 640,
+              maxHeight: "88vh",
+              overflowY: "auto",
+              border: "1px solid var(--border)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ marginBottom: 16 }}>Create Invoice</h3>
 
             {/* Create from Bid shortcut */}
             {bids.length > 0 && (
-              <div style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#3b82f6", marginBottom: 8 }}>
+              <div
+                style={{
+                  background: "rgba(59,130,246,0.08)",
+                  border: "1px solid rgba(59,130,246,0.2)",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "#3b82f6",
+                    marginBottom: 8,
+                  }}
+                >
                   Create from Bid
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -935,10 +1418,13 @@ export default function InvoicesPage() {
                     defaultValue=""
                     style={{ flex: 1, fontSize: "0.85rem" }}
                   >
-                    <option value="" disabled>Select a bid...</option>
+                    <option value="" disabled>
+                      Select a bid...
+                    </option>
                     {bids.map((bid) => (
                       <option key={bid.id} value={bid.id}>
-                        {bid.title} - {formatCurrency(calcTotal(bid.line_items || [], 0))}
+                        {bid.title} -{" "}
+                        {formatCurrency(calcTotal(bid.line_items || [], 0))}
                       </option>
                     ))}
                   </select>
@@ -948,13 +1434,30 @@ export default function InvoicesPage() {
                       if (sel.value) handleCreateFromBid(sel.value);
                     }}
                     disabled={saving}
-                    style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}
+                    style={{
+                      background: "#3b82f6",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "6px 14px",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     {saving ? "Creating..." : "Convert"}
                   </button>
                 </div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4 }}>
-                  Instantly converts a bid into an invoice with all line items copied over
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--text-muted)",
+                    marginTop: 4,
+                  }}
+                >
+                  Instantly converts a bid into an invoice with all line items
+                  copied over
                 </div>
               </div>
             )}
@@ -962,15 +1465,28 @@ export default function InvoicesPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {/* Customer */}
               <div>
-                <label style={{ display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.8rem",
+                    marginBottom: 4,
+                    color: "var(--text-secondary)",
+                  }}
+                >
                   Customer (optional)
                 </label>
                 {loadingDropdowns ? (
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Loading customers...</div>
+                  <div
+                    style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}
+                  >
+                    Loading customers...
+                  </div>
                 ) : (
                   <select
                     value={form.lead_id}
-                    onChange={(e) => setForm((f) => ({ ...f, lead_id: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, lead_id: e.target.value }))
+                    }
                     style={{ width: "100%" }}
                   >
                     <option value="">No customer linked</option>
@@ -985,29 +1501,91 @@ export default function InvoicesPage() {
 
               {/* Line Items */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Items *</label>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    Items *
+                  </label>
                   <div style={{ display: "flex", gap: 6 }}>
                     {itemTemplates.length > 0 && (
                       <div style={{ position: "relative" }}>
                         <button
                           onClick={() => setShowTemplates((v) => !v)}
-                          style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 10px", color: "var(--purple, #8b5cf6)", cursor: "pointer", fontSize: "0.75rem" }}
+                          style={{
+                            background: "none",
+                            border: "1px solid var(--border)",
+                            borderRadius: 6,
+                            padding: "4px 10px",
+                            color: "var(--purple, #8b5cf6)",
+                            cursor: "pointer",
+                            fontSize: "0.75rem",
+                          }}
                         >
                           Saved Items
                         </button>
                         {showTemplates && (
-                          <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, background: "var(--bg-card, #1e1e2e)", border: "1px solid var(--border)", borderRadius: 8, padding: 4, zIndex: 50, minWidth: 220, maxHeight: 200, overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                          <div
+                            style={{
+                              position: "absolute",
+                              right: 0,
+                              top: "100%",
+                              marginTop: 4,
+                              background: "var(--bg-card, #1e1e2e)",
+                              border: "1px solid var(--border)",
+                              borderRadius: 8,
+                              padding: 4,
+                              zIndex: 50,
+                              minWidth: 220,
+                              maxHeight: 200,
+                              overflowY: "auto",
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                            }}
+                          >
                             {itemTemplates.map((t) => (
                               <button
                                 key={t.id}
                                 onClick={() => addFromTemplate(t)}
-                                style={{ display: "flex", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "6px 8px", color: "var(--text-primary)", cursor: "pointer", fontSize: "0.8rem", borderRadius: 4, textAlign: "left" }}
-                                onMouseEnter={(e) => { e.target.style.background = "var(--hover-overlay)"; }}
-                                onMouseLeave={(e) => { e.target.style.background = "none"; }}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  width: "100%",
+                                  background: "none",
+                                  border: "none",
+                                  padding: "6px 8px",
+                                  color: "var(--text-primary)",
+                                  cursor: "pointer",
+                                  fontSize: "0.8rem",
+                                  borderRadius: 4,
+                                  textAlign: "left",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.background =
+                                    "var(--hover-overlay)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.background = "none";
+                                }}
                               >
                                 <span>{t.description}</span>
-                                <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>{formatCurrency(t.unit_price)}</span>
+                                <span
+                                  style={{
+                                    color: "var(--text-muted)",
+                                    marginLeft: 8,
+                                  }}
+                                >
+                                  {formatCurrency(t.unit_price)}
+                                </span>
                               </button>
                             ))}
                           </div>
@@ -1016,7 +1594,15 @@ export default function InvoicesPage() {
                     )}
                     <button
                       onClick={addItem}
-                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 10px", color: "var(--accent)", cursor: "pointer", fontSize: "0.75rem" }}
+                      style={{
+                        background: "none",
+                        border: "1px solid var(--border)",
+                        borderRadius: 6,
+                        padding: "4px 10px",
+                        color: "var(--accent)",
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                      }}
                     >
                       + Add Item
                     </button>
@@ -1024,7 +1610,18 @@ export default function InvoicesPage() {
                 </div>
 
                 {/* Items header */}
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 40px", gap: 6, marginBottom: 4, fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "2fr 1fr 1fr 80px 40px",
+                    gap: 6,
+                    marginBottom: 4,
+                    fontSize: "0.7rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
                   <span>Description</span>
                   <span style={{ textAlign: "right" }}>Qty</span>
                   <span style={{ textAlign: "right" }}>Unit Price</span>
@@ -1033,16 +1630,29 @@ export default function InvoicesPage() {
                 </div>
 
                 {form.items.map((item, idx) => (
-                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 40px", gap: 6, marginBottom: 6, alignItems: "center" }}>
+                  <div
+                    key={idx}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "2fr 1fr 1fr 80px 40px",
+                      gap: 6,
+                      marginBottom: 6,
+                      alignItems: "center",
+                    }}
+                  >
                     <input
                       value={item.description}
-                      onChange={(e) => updateItem(idx, "description", e.target.value)}
+                      onChange={(e) =>
+                        updateItem(idx, "description", e.target.value)
+                      }
                       placeholder="Item description"
                     />
                     <input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                      onChange={(e) =>
+                        updateItem(idx, "quantity", e.target.value)
+                      }
                       min={0}
                       step="1"
                       style={{ textAlign: "right" }}
@@ -1050,21 +1660,39 @@ export default function InvoicesPage() {
                     <input
                       type="number"
                       value={item.unit_price}
-                      onChange={(e) => updateItem(idx, "unit_price", e.target.value)}
+                      onChange={(e) =>
+                        updateItem(idx, "unit_price", e.target.value)
+                      }
                       min={0}
                       step="0.01"
                       placeholder="0.00"
                       style={{ textAlign: "right" }}
                     />
-                    <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", textAlign: "right" }}>
-                      {formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-muted)",
+                        textAlign: "right",
+                      }}
+                    >
+                      {formatCurrency(
+                        (Number(item.quantity) || 0) *
+                          (Number(item.unit_price) || 0),
+                      )}
                     </span>
                     <div style={{ display: "flex", gap: 4 }}>
                       {item.description.trim() && (
                         <button
                           onClick={() => saveAsTemplate(item)}
                           title="Save as template"
-                          style={{ background: "none", border: "none", color: "var(--purple, #8b5cf6)", cursor: "pointer", fontSize: "0.7rem", padding: 0 }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--purple, #8b5cf6)",
+                            cursor: "pointer",
+                            fontSize: "0.7rem",
+                            padding: 0,
+                          }}
                         >
                           Save
                         </button>
@@ -1072,7 +1700,14 @@ export default function InvoicesPage() {
                       {form.items.length > 1 && (
                         <button
                           onClick={() => removeItem(idx)}
-                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.9rem", padding: 0 }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            fontSize: "0.9rem",
+                            padding: 0,
+                          }}
                         >
                           x
                         </button>
@@ -1082,31 +1717,67 @@ export default function InvoicesPage() {
                 ))}
 
                 {/* Totals summary */}
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, fontSize: "0.85rem" }}>
+                <div
+                  style={{
+                    borderTop: "1px solid var(--border)",
+                    paddingTop: 8,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    gap: 4,
+                    fontSize: "0.85rem",
+                  }}
+                >
                   <div style={{ color: "var(--text-secondary)" }}>
                     Subtotal: {formatCurrency(calcSubtotal(form.items))}
                   </div>
                   {Number(form.tax_rate) > 0 && (
                     <div style={{ color: "var(--text-secondary)" }}>
-                      Tax ({form.tax_rate}%): {formatCurrency(calcSubtotal(form.items) * (Number(form.tax_rate) / 100))}
+                      Tax ({form.tax_rate}%):{" "}
+                      {formatCurrency(
+                        calcSubtotal(form.items) *
+                          (Number(form.tax_rate) / 100),
+                      )}
                     </div>
                   )}
-                  <div style={{ fontWeight: 700, color: "#3b82f6", fontSize: "0.95rem" }}>
-                    Total: {formatCurrency(calcTotal(form.items, form.tax_rate))}
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color: "#3b82f6",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    Total:{" "}
+                    {formatCurrency(calcTotal(form.items, form.tax_rate))}
                   </div>
                 </div>
               </div>
 
               {/* Tax Rate + Due Date */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      marginBottom: 4,
+                      color: "var(--text-secondary)",
+                    }}
+                  >
                     Tax Rate (%)
                   </label>
                   <input
                     type="number"
                     value={form.tax_rate}
-                    onChange={(e) => setForm((f) => ({ ...f, tax_rate: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, tax_rate: e.target.value }))
+                    }
                     min={0}
                     max={100}
                     step="0.1"
@@ -1115,13 +1786,22 @@ export default function InvoicesPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      marginBottom: 4,
+                      color: "var(--text-secondary)",
+                    }}
+                  >
                     Due Date
                   </label>
                   <input
                     type="date"
                     value={form.due_date}
-                    onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, due_date: e.target.value }))
+                    }
                     style={{ width: "100%" }}
                   />
                 </div>
@@ -1129,30 +1809,56 @@ export default function InvoicesPage() {
 
               {/* Deposit */}
               <div>
-                <label style={{ display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.8rem",
+                    marginBottom: 4,
+                    color: "var(--text-secondary)",
+                  }}
+                >
                   Deposit Required
                 </label>
                 <input
                   type="number"
                   value={form.deposit_amount}
-                  onChange={(e) => setForm((f) => ({ ...f, deposit_amount: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, deposit_amount: e.target.value }))
+                  }
                   min={0}
                   step="0.01"
                   placeholder="0.00"
                   style={{ width: 150 }}
                 />
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: 8 }}>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    marginLeft: 8,
+                  }}
+                >
                   Leave 0 for no deposit
                 </span>
               </div>
 
               {/* Recurring */}
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text-secondary)", cursor: "pointer" }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: "0.8rem",
+                    color: "var(--text-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={form.is_recurring}
-                    onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.checked }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, is_recurring: e.target.checked }))
+                    }
                     style={{ width: "auto" }}
                   />
                   Recurring Invoice
@@ -1160,7 +1866,12 @@ export default function InvoicesPage() {
                 {form.is_recurring && (
                   <select
                     value={form.recurrence_interval}
-                    onChange={(e) => setForm((f) => ({ ...f, recurrence_interval: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        recurrence_interval: e.target.value,
+                      }))
+                    }
                     style={{ fontSize: "0.85rem" }}
                   >
                     <option value="">Select interval</option>
@@ -1174,12 +1885,21 @@ export default function InvoicesPage() {
 
               {/* Notes */}
               <div>
-                <label style={{ display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.8rem",
+                    marginBottom: 4,
+                    color: "var(--text-secondary)",
+                  }}
+                >
                   Notes
                 </label>
                 <textarea
                   value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, notes: e.target.value }))
+                  }
                   placeholder="Payment terms, special instructions..."
                   rows={3}
                   style={{ width: "100%", resize: "vertical" }}
@@ -1187,17 +1907,33 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginTop: 20,
+                justifyContent: "flex-end",
+              }}
+            >
               <button
                 onClick={() => setShowModal(false)}
-                style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                }}
               >
                 Cancel
               </button>
               <button
                 className="btn-primary"
                 onClick={handleSave}
-                disabled={!form.items.some((it) => it.description.trim()) || saving}
+                disabled={
+                  !form.items.some((it) => it.description.trim()) || saving
+                }
               >
                 {saving ? "Creating..." : "Create Invoice"}
               </button>
@@ -1209,27 +1945,65 @@ export default function InvoicesPage() {
       {/* Send Invoice Modal */}
       {showSendModal && sendTarget && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1100,
+          }}
           onClick={() => setShowSendModal(false)}
         >
           <div
-            style={{ background: "var(--bg-primary)", borderRadius: 12, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border)" }}
+            style={{
+              background: "var(--bg-primary)",
+              borderRadius: 12,
+              padding: 24,
+              width: "90%",
+              maxWidth: 480,
+              border: "1px solid var(--border)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ marginBottom: 4 }}>Send Invoice</h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 20 }}>
-              Invoice #{sendTarget.invoice_number || sendTarget.id?.slice(0, 8)} -{" "}
-              {formatCurrency(sendTarget.total ?? calcTotal(sendTarget.items || [], sendTarget.tax_rate || 0))}
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--text-muted)",
+                marginBottom: 20,
+              }}
+            >
+              Invoice #{sendTarget.invoice_number || sendTarget.id?.slice(0, 8)}{" "}
+              -{" "}
+              {formatCurrency(
+                sendTarget.total ??
+                  calcTotal(sendTarget.items || [], sendTarget.tax_rate || 0),
+              )}
             </p>
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 10, fontWeight: 600 }}>
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  color: "var(--text-secondary)",
+                  marginBottom: 10,
+                  fontWeight: 600,
+                }}
+              >
                 Send Method
               </div>
               {["email", "sms", "both"].map((method) => (
                 <label
                   key={method}
-                  style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 10,
+                    cursor: "pointer",
+                  }}
                 >
                   <input
                     type="radio"
@@ -1239,7 +2013,9 @@ export default function InvoicesPage() {
                     onChange={() => setSendMethod(method)}
                     style={{ width: "auto" }}
                   />
-                  <span style={{ fontSize: "0.9rem", textTransform: "capitalize" }}>
+                  <span
+                    style={{ fontSize: "0.9rem", textTransform: "capitalize" }}
+                  >
                     {method === "both" ? "Email + SMS" : method.toUpperCase()}
                   </span>
                 </label>
@@ -1247,7 +2023,16 @@ export default function InvoicesPage() {
             </div>
 
             <div
-              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 8, padding: 12, marginBottom: 20, fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.6 }}
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 20,
+                fontSize: "0.8rem",
+                color: "var(--text-secondary)",
+                lineHeight: 1.6,
+              }}
             >
               <strong>Preview:</strong>
               <br />
@@ -1257,15 +2042,25 @@ export default function InvoicesPage() {
               {(sendMethod === "email" || sendMethod === "both") && (
                 <span>
                   {sendMethod === "both" && <br />}
-                  Email: Professional invoice with itemized breakdown, payment link, and your business details.
+                  Email: Professional invoice with itemized breakdown, payment
+                  link, and your business details.
                 </span>
               )}
             </div>
 
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <div
+              style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+            >
               <button
                 onClick={() => setShowSendModal(false)}
-                style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 16px", color: "var(--text-primary)", cursor: "pointer" }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                }}
               >
                 Cancel
               </button>

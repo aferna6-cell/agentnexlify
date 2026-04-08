@@ -4,7 +4,6 @@ import {
   createRepurposeJob,
   listRepurposeJobs,
   getRepurposeJob,
-  updateRepurposeJob,
   connectRepurposeOutputs,
   deleteRepurposeJob,
 } from "../utils/api/repurpose";
