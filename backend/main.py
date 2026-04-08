@@ -468,10 +468,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="AgentNexLiFy",
-    description="AI-powered lead capture and qualification chatbot for real estate agents",
-    version="1.0.0",
+    title="AgentNexLiFy API",
+    description="AI-powered business automation platform. Chat widget captures leads, books appointments, and automates follow-ups for small businesses. Multi-tenant SaaS with 438+ endpoints.",
+    version="2.0.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # --- CORS ---
