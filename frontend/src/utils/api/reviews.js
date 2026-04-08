@@ -28,10 +28,6 @@ export function generateAIDraft(tenantId, token, reviewId, tone = "professional"
   return request(`/api/v1/reviews/${tenantId}/${reviewId}/ai-draft`, { method: "POST", token, body: { tone } });
 }
 
-export function fetchReviewResponseStats(tenantId, token) {
-  return request(`/api/v1/reviews/${tenantId}/response-stats`, { token });
-}
-
 export function requestReview(tenantId, token, leadId, channel) {
   return request(`/api/v1/reviews/${tenantId}/request-review/${leadId}`, {
     method: "POST",

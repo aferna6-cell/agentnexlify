@@ -23,29 +23,12 @@ export function generatePortalLink(tenantId, token, leadId) {
   return request(`/api/v1/portal/${tenantId}/portal-link/${leadId}`, { method: "POST", token });
 }
 
-export function fetchClientPortalPublic(portalToken) {
-  return request(`/api/v1/portal/portal/${portalToken}`);
-}
-
 // --- Client Login ---
-
-export function clientRegister(portalToken, email, password) {
-  return request("/api/v1/portal/client/register", {
-    method: "POST",
-    body: { portal_token: portalToken, email, password },
-  });
-}
 
 export function clientLogin(email, password, businessSlug) {
   return request("/api/v1/portal/client/login", {
     method: "POST",
     body: { email, password, business_slug: businessSlug },
-  });
-}
-
-export function fetchClientPortalAuth(clientToken) {
-  return request("/api/v1/portal/client/me", {
-    headers: { Authorization: `Bearer ${clientToken}` },
   });
 }
 

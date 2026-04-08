@@ -9,14 +9,6 @@ export function fetchDashboard(tenantId, token) {
   return request(`/api/v1/auth/dashboard/${tenantId}`, { token });
 }
 
-export function getMe(token) {
-  return request("/api/v1/auth/me", { token });
-}
-
-export function fetchUsage(tenantId, token) {
-  return request(`/api/v1/usage/${tenantId}`, { token });
-}
-
 export function fetchActivity(tenantId, token) {
   return request(`/api/v1/auth/activity/${tenantId}`, { token });
 }
@@ -78,14 +70,6 @@ export function fetchNotifications(tenantId, token) {
 }
 
 // --- MCP API Keys ---
-
-export function generateMcpKey(tenantId, token) {
-  return request(`/api/v1/auth/mcp-key/${tenantId}`, { method: "POST", token });
-}
-
-export function revokeMcpKey(tenantId, token) {
-  return request(`/api/v1/auth/mcp-key/${tenantId}`, { method: "DELETE", token });
-}
 
 export function fetchKnowledgeStats(tenantId, token) {
   return request(`/api/v1/auth/knowledge-stats/${tenantId}`, { token });

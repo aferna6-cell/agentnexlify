@@ -40,6 +40,3 @@ export function fetchEmailSequenceEnrollments(sequenceId, token) {
   return request(`/api/v1/email-sequences/${sequenceId}/enrollments`, { token });
 }
 
-export function enrollLeadInEmailSequence(sequenceId, token, leadId) {
-  return request(`/api/v1/email-sequences/${sequenceId}/enroll`, { method: "POST", token, body: { lead_id: leadId } });
-}

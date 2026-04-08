@@ -31,10 +31,6 @@ export function generateSocialCampaign(tenantId, token, data) {
   return request(`/api/v1/social/${tenantId}/generate-campaign`, { method: "POST", token, body: data });
 }
 
-export function fetchSocialCalendar(tenantId, token, month, year) {
-  return request(`/api/v1/social/${tenantId}/calendar?month=${month}&year=${year}`, { token });
-}
-
 export function fetchSocialAnalytics(tenantId, token) {
   return request(`/api/v1/social/${tenantId}/analytics`, { token });
 }

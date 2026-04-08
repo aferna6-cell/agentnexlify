@@ -55,10 +55,3 @@ export function createEmailTemplate(tenantId, token, data) {
   return request(`/api/v1/email-templates/${tenantId}`, { method: "POST", token, body: data });
 }
 
-export function updateEmailTemplate(tenantId, token, templateId, data) {
-  return request(`/api/v1/email-templates/${tenantId}/${templateId}`, { method: "PUT", token, body: data });
-}
-
-export function deleteEmailTemplate(tenantId, token, templateId) {
-  return request(`/api/v1/email-templates/${tenantId}/${templateId}`, { method: "DELETE", token });
-}

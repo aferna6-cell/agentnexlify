@@ -42,9 +42,6 @@ export function fetchItemTemplates(tenantId, token) {
 export function createItemTemplate(tenantId, token, data) {
   return request(`/api/v1/invoices/${tenantId}/item-templates`, { method: "POST", token, body: data });
 }
-export function deleteItemTemplate(tenantId, token, templateId) {
-  return request(`/api/v1/invoices/${tenantId}/item-templates/${templateId}`, { method: "DELETE", token });
-}
 
 export function bulkSendInvoices(tenantId, token, invoiceIds, channel = "email") {
   return request(`/api/v1/invoices/${tenantId}/bulk-send`, {

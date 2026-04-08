@@ -5,10 +5,6 @@ import { request } from "./_client";
 
 // --- Widget Config ---
 
-export function fetchWidgetConfig(tenantId, token) {
-  return request(`/api/v1/widget-config/${tenantId}`, { token });
-}
-
 export function updateWidgetConfig(tenantId, token, data) {
   return request(`/api/v1/auth/widget-config/${tenantId}`, {
     method: "PUT",
