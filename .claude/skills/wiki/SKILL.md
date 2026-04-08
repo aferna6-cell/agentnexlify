@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["wiki", "capture knowledge", "ingest screenshot", "ingest url", "ingest text", "create wiki article", "karpathy article"]
+effort: medium
 ---
 
 # `/wiki` Skill — Claudeopedia Fast Ingest

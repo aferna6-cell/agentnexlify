@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: []
 triggers: ["research", "deep dive", "investigate", "what's the current state", "competitive analysis", "market sizing", "due diligence"]
+effort: high
 ---
 
 # Deep Research

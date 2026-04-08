@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["tenant chatbot audit", "chatbot audit", "bot audit", "tenant bot not working", "leads not capturing", "chatbot diagnosis"]
+effort: high
 ---
 
 # Tenant Chatbot Audit

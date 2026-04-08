@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 triggers: ["/eval define", "/eval check", "/eval report", "eval-driven", "pass@k", "eval framework", "regression eval"]
+effort: high
 ---
 
 # Eval Harness Skill

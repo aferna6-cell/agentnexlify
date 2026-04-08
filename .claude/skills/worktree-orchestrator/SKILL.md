@@ -6,6 +6,7 @@ origin: claude
 user_invocable: true
 allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "TaskCreate", "TaskUpdate", "TaskList"]
 triggers: ["worktree", "parallel worktrees", "orchestrate worktrees", "run in parallel", "compound engineering", "worktree setup"]
+effort: high
 ---
 
 # Worktree Orchestrator

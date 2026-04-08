@@ -6,6 +6,7 @@ origin: claude
 user_invocable: true
 allowed_tools: []
 triggers: ["/build-loop", "build loop", "autonomous loop", "continuous build"]
+effort: medium
 ---
 
 # Autonomous Build Loop

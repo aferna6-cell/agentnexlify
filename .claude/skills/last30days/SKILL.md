@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["last30days", "state of your mind", "knowledge synthesis", "30 day report", "weekly review", "bi-weekly review"]
+effort: medium
 ---
 
 # `/last30days` Skill — Claudeopedia Knowledge Synthesis

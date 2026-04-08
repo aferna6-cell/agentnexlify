@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["kb-compile", "compile sources", "compile wiki", "compile pending", "recompile wiki", "compile embeddings"]
+effort: medium
 ---
 
 # KB Compile — Wiki Compilation

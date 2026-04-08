@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["kb-ingest", "ingest url", "ingest article", "add source", "save article to kb"]
+effort: medium
 ---
 
 # KB Ingest — Manual Source Addition

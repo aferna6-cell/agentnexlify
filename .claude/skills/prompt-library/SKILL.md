@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 triggers: ["any task", "before starting work", "research", "debug", "write", "review", "build", "test", "summarize", "reason"]
 user_invocable: false
+effort: medium
 ---
 
 # Prompt Library Workflow

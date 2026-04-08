@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: []
 triggers: ["e2e test", "end-to-end test", "playwright test", "page object model", "flaky test", "E2E configuration"]
+effort: medium
 ---
 
 # E2E Testing Patterns

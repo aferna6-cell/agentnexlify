@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: []
 triggers: ["AI-powered feature", "Claude API", "text generation", "categorization", "extraction", "AI job writer", "content repurposer", "review response"]
+effort: medium
 ---
 
 # AI Feature Pattern

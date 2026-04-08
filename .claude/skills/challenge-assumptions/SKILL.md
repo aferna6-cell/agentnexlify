@@ -6,6 +6,7 @@ origin: claude
 user_invocable: true
 allowed_tools: []
 triggers: ["/challenge-assumptions", "challenge assumptions", "assumption review", "challenge wiki"]
+effort: medium
 ---
 
 # challenge-assumptions

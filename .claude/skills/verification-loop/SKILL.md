@@ -4,6 +4,7 @@ description: "Run a comprehensive verification system for Claude Code sessions c
 version: 1.0.0
 origin: claude
 triggers: ["verification loop", "verify changes", "quality gate", "pre-PR check", "verify build", "run verification"]
+effort: high
 ---
 
 # Verification Loop Skill

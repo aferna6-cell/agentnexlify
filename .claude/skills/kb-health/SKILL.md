@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["kb-health", "knowledge base health", "audit wiki", "kb audit", "check knowledge base quality"]
+effort: medium
 ---
 
 # KB Health — Wiki Audit

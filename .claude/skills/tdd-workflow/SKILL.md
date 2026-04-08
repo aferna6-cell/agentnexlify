@@ -4,6 +4,7 @@ description: "Enforce test-driven development with 80 percent plus coverage incl
 version: 1.0.0
 origin: claude
 triggers: ["tdd", "test-driven", "test driven development", "write tests first", "test coverage", "unit test", "integration test", "e2e test", "playwright test"]
+effort: high
 ---
 
 # Test-Driven Development Workflow

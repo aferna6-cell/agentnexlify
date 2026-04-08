@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 user_invocable: true
 triggers: ["security-patch-from-review", "patch findings", "fix review findings", "close security findings", "patch audit results"]
+effort: high
 ---
 
 # Security Patch from Review

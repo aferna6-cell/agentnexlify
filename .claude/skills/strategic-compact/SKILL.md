@@ -4,6 +4,7 @@ description: "Suggest manual context compaction at logical task boundaries to pr
 version: 1.0.0
 origin: claude
 triggers: ["strategic compact", "manual compact", "compact context", "context compaction", "suggest compact"]
+effort: medium
 ---
 
 # Strategic Compact Skill
