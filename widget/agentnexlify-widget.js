@@ -818,6 +818,10 @@
   let menuItems = null; // Array of {name, description, price, category} or null
   let businessType = ""; // e.g. "legal", "restaurant", "dental"
 
+  // Pre-chat form state
+  let preChatForm = null; // array of {name, label, type, required} or null
+  let preChatCompleted = false;
+
   // Booking state
   let tenantId = "";
   let bookingEnabled = false;
@@ -853,6 +857,9 @@
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
       }
+      if (Array.isArray(data.pre_chat_form) && data.pre_chat_form.length > 0) {
+        preChatForm = data.pre_chat_form;
+      }
     } catch (e) {
       console.warn("AgentNexLiFy: Failed to fetch config", e);
     }
@@ -883,7 +890,11 @@
 
   const FETCH_TIMEOUT_MS = 15000; // 15 seconds
 
-  async function fetchWithTimeout(url, options = {}, timeout = FETCH_TIMEOUT_MS) {
+  async function fetchWithTimeout(
+    url,
+    options = {},
+    timeout = FETCH_TIMEOUT_MS,
+  ) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     try {
@@ -928,10 +939,10 @@
     formData.append("file", file);
     formData.append("api_key", API_KEY);
     formData.append("session_id", getSessionId());
-    const resp = await fetchWithTimeout(
-      `${API_BASE}/api/v1/widget/upload`,
-      { method: "POST", body: formData },
-    );
+    const resp = await fetchWithTimeout(`${API_BASE}/api/v1/widget/upload`, {
+      method: "POST",
+      body: formData,
+    });
     if (!resp.ok) {
       const err = await resp.text().catch(() => "");
       throw new Error(`Upload failed: ${err}`);
@@ -1496,7 +1507,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ api_key: API_KEY }),
-        }
+        },
       );
       if (!resp.ok) throw new Error("Failed to fetch slots");
       const data = await resp.json();
@@ -1591,19 +1602,22 @@
     errEl.style.display = "none";
 
     try {
-      const resp = await fetchWithTimeout(`${API_BASE}/api/v1/appointments/${tenantId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          api_key: API_KEY,
-          customer_name: name,
-          customer_email: email,
-          customer_phone: phone || null,
-          start_utc: selectedSlot.start_utc,
-          end_utc: selectedSlot.end_utc,
-          notes: notes || null,
-        }),
-      });
+      const resp = await fetchWithTimeout(
+        `${API_BASE}/api/v1/appointments/${tenantId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            api_key: API_KEY,
+            customer_name: name,
+            customer_email: email,
+            customer_phone: phone || null,
+            start_utc: selectedSlot.start_utc,
+            end_utc: selectedSlot.end_utc,
+            notes: notes || null,
+          }),
+        },
+      );
 
       if (resp.status === 409) {
         errEl.textContent =
@@ -1719,17 +1733,20 @@
     errEl.style.display = "none";
 
     try {
-      const resp = await fetchWithTimeout(`${API_BASE}/api/v1/widget/offline-contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          api_key: API_KEY,
-          name,
-          email,
-          phone: phone || null,
-          message,
-        }),
-      });
+      const resp = await fetchWithTimeout(
+        `${API_BASE}/api/v1/widget/offline-contact`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            api_key: API_KEY,
+            name,
+            email,
+            phone: phone || null,
+            message,
+          }),
+        },
+      );
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
       // Show success
@@ -1844,6 +1861,14 @@
       }
     }
 
+    // Show pre-chat form if configured and no history
+    if (history.length === 0 && !showPreChatForm()) {
+      triggerGreeting();
+    } else if (history.length > 0) {
+      // History exists, mark pre-chat as done
+      preChatCompleted = true;
+    }
+
     // Event listeners
     document
       .getElementById("anx-bubble")
@@ -1897,6 +1922,107 @@
     ) {
       teaserTimer = setTimeout(showTeaser, teaserDelaySeconds * 1000);
     }
+  }
+
+  function showPreChatForm() {
+    if (!preChatForm || preChatForm.length === 0 || preChatCompleted)
+      return false;
+    // Skip if already filled this session
+    if (sessionStorage.getItem("anx_prechat_done")) {
+      preChatCompleted = true;
+      return false;
+    }
+    const msgs = document.getElementById("anx-messages");
+    if (!msgs) return false;
+
+    const formDiv = document.createElement("div");
+    formDiv.id = "anx-prechat-form";
+    formDiv.style.cssText = "padding:16px;";
+
+    const title = document.createElement("div");
+    title.style.cssText =
+      "font-weight:600;font-size:0.95rem;margin-bottom:12px;color:#e2e8f0;";
+    title.textContent = "Before we start, tell us a bit about yourself:";
+    formDiv.appendChild(title);
+
+    preChatForm.forEach(function (field) {
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "margin-bottom:10px;";
+      const label = document.createElement("label");
+      label.style.cssText =
+        "display:block;font-size:0.8rem;color:#94a3b8;margin-bottom:4px;";
+      label.textContent = field.label + (field.required ? " *" : "");
+      wrapper.appendChild(label);
+      const input = document.createElement("input");
+      input.type = field.type === "phone" ? "tel" : field.type || "text";
+      input.name = field.name || field.label.toLowerCase().replace(/\s+/g, "_");
+      input.required = field.required || false;
+      input.placeholder = field.label;
+      input.style.cssText =
+        "width:100%;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#e2e8f0;font-size:0.85rem;box-sizing:border-box;outline:none;";
+      wrapper.appendChild(input);
+      formDiv.appendChild(wrapper);
+    });
+
+    const btn = document.createElement("button");
+    btn.textContent = "Start Chat";
+    btn.style.cssText =
+      "width:100%;padding:10px;border:none;border-radius:8px;background:" +
+      (document.getElementById("anx-header")?.style.background || "#6366f1") +
+      ";color:#fff;font-weight:600;cursor:pointer;font-size:0.9rem;margin-top:4px;";
+    btn.addEventListener("click", function () {
+      // Validate required fields
+      var inputs = formDiv.querySelectorAll("input");
+      var data = {};
+      var valid = true;
+      inputs.forEach(function (inp) {
+        if (inp.required && !inp.value.trim()) {
+          inp.style.borderColor = "#f87171";
+          valid = false;
+        } else {
+          inp.style.borderColor = "rgba(255,255,255,0.15)";
+        }
+        data[inp.name] = inp.value.trim();
+      });
+      if (!valid) return;
+
+      // Store in session and visitor_info
+      sessionStorage.setItem("anx_prechat_done", "1");
+      sessionStorage.setItem("anx_prechat_data", JSON.stringify(data));
+      preChatCompleted = true;
+
+      // If name/email captured, pre-populate for lead capture
+      if (data.name) sessionStorage.setItem("anx_visitor_name", data.name);
+      if (data.email) sessionStorage.setItem("anx_visitor_email", data.email);
+      if (data.phone) sessionStorage.setItem("anx_visitor_phone", data.phone);
+
+      // Remove form and show greeting
+      formDiv.remove();
+      triggerGreeting();
+
+      // Enable input
+      var inputEl = document.getElementById("anx-input");
+      if (inputEl) {
+        inputEl.disabled = false;
+        inputEl.focus();
+      }
+      var sendEl = document.getElementById("anx-send");
+      if (sendEl) sendEl.disabled = false;
+    });
+    formDiv.appendChild(btn);
+
+    msgs.appendChild(formDiv);
+
+    // Disable chat input while form is shown
+    var inputEl = document.getElementById("anx-input");
+    if (inputEl) {
+      inputEl.disabled = true;
+      inputEl.placeholder = "Fill out the form above to start chatting...";
+    }
+    var sendEl = document.getElementById("anx-send");
+    if (sendEl) sendEl.disabled = true;
+
+    return true;
   }
 
   function triggerGreeting() {

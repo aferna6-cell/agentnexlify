@@ -80,7 +80,7 @@ async def process_noshow_recovery() -> int:
             try:
                 t = (
                     db.table("tenants")
-                    .select("business_name, plan, google_review_link, owner_email")
+                    .select("business_name, plan, google_review_link, owner_email, noshow_recovery_enabled")
                     .eq("id", tenant_id)
                     .limit(1)
                     .execute()
@@ -95,8 +95,10 @@ async def process_noshow_recovery() -> int:
             continue
 
         plan = tenant.get("plan") or "free"
-        # Only available on paid plans
+        # Only available on paid plans with feature enabled
         if plan == "free":
+            continue
+        if not tenant.get("noshow_recovery_enabled", True):
             continue
 
         business_name = tenant.get("business_name") or "Our Team"

@@ -267,6 +267,7 @@ class WidgetConfigUpdateRequest(BaseModel):
     teaser_message: str | None = Field(None, max_length=150)
     teaser_delay_seconds: int | None = Field(None, ge=0, le=60)
     teaser_enabled: bool | None = None
+    pre_chat_form: list[dict] | None = None
 
 
 class FaqEntryResponse(BaseModel):
@@ -373,6 +374,7 @@ class WidgetConfigResponse(BaseModel):
     teaser_delay_seconds: int = 3
     teaser_enabled: bool = True
     plan: str = "free"
+    pre_chat_form: list[dict] | None = None
 
 
 class WidgetLeadRequest(BaseModel):

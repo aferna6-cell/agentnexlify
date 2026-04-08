@@ -45,6 +45,8 @@ export default function SettingsPage({ onNavigate }) {
     sms_notifications_enabled: false,
     google_review_link: "",
     review_request_config: { enabled: false, delay_hours: 24, method: "email" },
+    daily_briefing_enabled: false,
+    noshow_recovery_enabled: true,
     website_url: "",
     textback_enabled: false,
     textback_message:
@@ -105,6 +107,8 @@ export default function SettingsPage({ onNavigate }) {
           delay_hours: 24,
           method: "email",
         },
+        daily_briefing_enabled: tenant.daily_briefing_enabled || false,
+        noshow_recovery_enabled: tenant.noshow_recovery_enabled !== false,
         website_url: tenant.website_url || "",
         textback_enabled: tenant.textback_enabled || false,
         textback_message:
@@ -871,6 +875,102 @@ export default function SettingsPage({ onNavigate }) {
               </div>
             </>
           )}
+          <button
+            className="btn-primary"
+            onClick={handleSave}
+            disabled={saving}
+            style={{ marginTop: "0.75rem" }}
+          >
+            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+          </button>
+        </div>
+
+        {/* Daily Briefing SMS */}
+        <div className="settings-card">
+          <h3>Daily Briefing SMS</h3>
+          <p className="settings-card-desc">
+            Get a morning text message with your new leads, today&apos;s
+            appointments, pending tasks, and unread conversations.
+            {!form.notification_phone && (
+              <span
+                style={{
+                  color: "var(--yellow, #facc15)",
+                  display: "block",
+                  marginTop: 4,
+                }}
+              >
+                Set a phone number above first.
+              </span>
+            )}
+          </p>
+          <div
+            className="settings-field"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <input
+              type="checkbox"
+              checked={form.daily_briefing_enabled}
+              onChange={(e) => {
+                setForm((f) => ({
+                  ...f,
+                  daily_briefing_enabled: e.target.checked,
+                }));
+                setSaved(false);
+              }}
+              id="briefing-toggle"
+              style={{ width: "auto" }}
+              disabled={
+                !form.notification_phone || !form.sms_notifications_enabled
+              }
+            />
+            <label
+              htmlFor="briefing-toggle"
+              style={{ margin: 0, cursor: "pointer" }}
+            >
+              Enable daily morning briefing
+            </label>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={handleSave}
+            disabled={saving}
+            style={{ marginTop: "0.75rem" }}
+          >
+            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+          </button>
+        </div>
+
+        {/* No-Show Recovery */}
+        <div className="settings-card">
+          <h3>No-Show Recovery</h3>
+          <p className="settings-card-desc">
+            Automatically send a friendly SMS and email to customers who miss
+            their appointment, with an easy link to reschedule.
+          </p>
+          <div
+            className="settings-field"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <input
+              type="checkbox"
+              checked={form.noshow_recovery_enabled}
+              onChange={(e) => {
+                setForm((f) => ({
+                  ...f,
+                  noshow_recovery_enabled: e.target.checked,
+                }));
+                setSaved(false);
+              }}
+              id="noshow-toggle"
+              style={{ width: "auto" }}
+            />
+            <label
+              htmlFor="noshow-toggle"
+              style={{ margin: 0, cursor: "pointer" }}
+            >
+              Enable no-show recovery outreach
+            </label>
+          </div>
           <button
             className="btn-primary"
             onClick={handleSave}

@@ -53,14 +53,15 @@ async def send_daily_briefings() -> int:
     today_iso = now.date().isoformat()
     sent = 0
 
-    # Get tenants with notification_phone and SMS enabled
+    # Get tenants with daily briefing enabled and a phone number
     try:
         tenants = (
             db.table("tenants")
             .select(
                 "id, business_name, notification_phone, sms_notifications_enabled, "
-                "plan, owner_email"
+                "plan, owner_email, daily_briefing_enabled"
             )
+            .eq("daily_briefing_enabled", True)
             .eq("sms_notifications_enabled", True)
             .not_.is_("notification_phone", "null")
             .limit(BATCH_LIMIT)
