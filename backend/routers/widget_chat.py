@@ -164,7 +164,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                         handoff=True,
                     )
         except Exception:
-            pass
+            logger.warning("Failed to fetch latest team reply for session %s", req.session_id, exc_info=True)
 
         waiting_msg = "A team member is reviewing your conversation and will respond shortly. Thank you for your patience."
         _save_chat_messages(tenant["id"], req.session_id, None, waiting_msg)

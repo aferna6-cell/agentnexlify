@@ -1132,7 +1132,7 @@ async def bulk_send_invoices(
         t = tenant_table(db, "tenants", tenant_id).select("business_name").eq("id", tenant_id).limit(1).execute()
         business = t.data[0] if t.data else {}
     except Exception:
-        pass
+        logger.warning("Failed to fetch tenant business name for invoice send (tenant %s)", tenant_id, exc_info=True)
     biz_name = business.get("business_name") or "Your Service Provider"
 
     for invoice_id in req.invoice_ids:

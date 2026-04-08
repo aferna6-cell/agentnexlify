@@ -1018,11 +1018,15 @@ async def reschedule_submit(request: Request, appointment_id: str, body: _Resche
         logger.exception("Failed to reschedule appointment %s", appointment_id)
         raise HTTPException(status_code=500, detail="Failed to reschedule")
 
-    # Send new confirmation email (best-effort)
+    # Send new confirmation email (best-effort, fire-and-forget)
     try:
         from backend.services.booking import _send_appointment_confirmation
+        from backend.services.task_utils import safe_create_task
         if result.data:
-            _send_appointment_confirmation(tenant_id, result.data[0])
+            safe_create_task(
+                _send_appointment_confirmation(tenant_id, result.data[0]),
+                name=f"reschedule_confirmation_{appointment_id}",
+            )
     except Exception:
         logger.warning("Failed to send reschedule confirmation for %s", appointment_id, exc_info=True)
 

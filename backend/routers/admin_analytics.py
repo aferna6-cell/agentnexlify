@@ -124,7 +124,7 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
                 if row.get("tenant_id")
             })
         except Exception:
-            pass
+            logger.warning("Failed to fetch promoted tenants count", exc_info=True)
 
         # MRR calculation (rough estimate from active plans)
         PLAN_PRICES = {
