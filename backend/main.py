@@ -811,8 +811,8 @@ async def version():
     }
 
 
-@app.get("/health")
-@app.get("/api/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     uptime = _app_uptime_seconds()
 
