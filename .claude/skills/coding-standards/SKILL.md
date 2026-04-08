@@ -5,6 +5,7 @@ version: 1.0.0
 origin: claude
 allowed_tools: []
 triggers: ["coding standards", "code style", "best practices", "linting rules", "naming conventions", "new project standards", "onboarding conventions"]
+effort: low
 ---
 
 # Coding Standards & Best Practices

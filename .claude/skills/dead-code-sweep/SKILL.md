@@ -6,6 +6,7 @@ origin: claude
 user_invocable: true
 allowed_tools: []
 triggers: ["/dead-code-sweep", "dead code", "unused code", "remove dead", "orphan imports", "cleanup unused"]
+effort: medium
 ---
 
 # Dead Code Sweep
