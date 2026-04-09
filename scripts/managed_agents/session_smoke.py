@@ -73,7 +73,12 @@ def _run_session(client: ManagedAgentsClient, *, agent_id: str, environment_id: 
     logger.info("kickoff message sent; streaming events...")
 
     transcript: list[dict] = []
-    terminal = SessionTerminalState(terminated=False, stop_reason_type=None, last_event_id=None)
+    terminal = SessionTerminalState(
+        terminated=False,
+        stop_reason_type=None,
+        last_event_id=None,
+        session_id=session_id,
+    )
     event_count = 0
 
     for event in stream:
@@ -94,6 +99,7 @@ def _run_session(client: ManagedAgentsClient, *, agent_id: str, environment_id: 
                 terminated=True,
                 stop_reason_type=None,
                 last_event_id=event.get("id"),
+                session_id=session_id,
             )
             break
         elif event_type == "session.status_idle":
@@ -104,6 +110,7 @@ def _run_session(client: ManagedAgentsClient, *, agent_id: str, environment_id: 
                     terminated=False,
                     stop_reason_type=stop_type,
                     last_event_id=event.get("id"),
+                    session_id=session_id,
                 )
                 break
 
@@ -124,6 +131,19 @@ def _run_session(client: ManagedAgentsClient, *, agent_id: str, environment_id: 
 
     if not transcript:
         logger.error("session completed but produced no assistant messages")
+        return 2
+
+    # Contract: terminal.session_id must carry the real session id the
+    # API returned, not the last stream event id. Regression of 91651b0.
+    if terminal.session_id != session_id:
+        logger.error(
+            "SessionTerminalState.session_id drift: terminal=%r, created=%r",
+            terminal.session_id,
+            session_id,
+        )
+        return 2
+    if terminal.last_event_id and terminal.last_event_id == terminal.session_id:
+        logger.error("session_id equals last_event_id — contract broken")
         return 2
 
     print()

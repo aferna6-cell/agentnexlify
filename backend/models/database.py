@@ -1,11 +1,17 @@
 
+import logging
+import warnings
+
 from supabase import create_client, Client
 
 from backend.config import is_production, settings
 from backend.services.tenant_scope import TenantScopedClient, tenant_client
 
+logger = logging.getLogger(__name__)
+
 _service_client: Client | None = None
 _public_client: Client | None = None
+_get_supabase_warned: bool = False
 
 
 def get_service_supabase() -> Client:
@@ -38,8 +44,28 @@ def get_tenant_supabase(tenant_id: str) -> TenantScopedClient:
 
 
 def get_supabase() -> Client:
-    """Backward-compatible service-role client.
+    """Backward-compatible service-role client. **Deprecated.**
 
-    New tenant request-path code should prefer ``get_tenant_supabase``.
+    New code should call one of the explicit alternatives directly:
+
+    - ``get_service_supabase()`` for internal admin / background jobs
+    - ``get_tenant_supabase(tenant_id)`` for tenant-scoped request paths
+
+    This wrapper is kept only so the 200+ legacy call sites keep working
+    during the incremental rename. It emits a one-shot DeprecationWarning
+    the first time it is invoked per worker process so drift is visible
+    in CI and local dev without flooding production logs.
     """
+    global _get_supabase_warned
+    if not _get_supabase_warned:
+        _get_supabase_warned = True
+        warnings.warn(
+            "backend.models.database.get_supabase() is deprecated; "
+            "prefer get_service_supabase() or get_tenant_supabase(tenant_id)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        logger.debug(
+            "get_supabase() called — this alias is deprecated, see database.py"
+        )
     return get_service_supabase()
