@@ -296,6 +296,179 @@ class TestStreamEvents:
         assert exc_info.value.status == 401
 
 
+class TestQualifyLeadBlocking:
+    """Unit tests for the router's `_qualify_lead_blocking` event loop.
+
+    The real loop wires `ManagedAgentsClient` to the Managed Agents API, but
+    the interesting logic is the break-gate state machine: we must break on
+    `status_terminated`, break on `status_idle` with a non-`requires_action`
+    stop, keep looping on `status_idle` with `requires_action`, and fail loudly
+    on an unexpected `agent.custom_tool_use` (lead_qualifier has no custom
+    tools — any sighting is a config drift).
+    """
+
+    def _make_mock_client(self, events: list[dict[str, Any]]) -> MagicMock:
+        mock_client = MagicMock()
+        mock_client.create_session.return_value = {"id": "sess_1"}
+        mock_client.stream_events.return_value = iter(events)
+        mock_client.send_user_message.return_value = None
+        return mock_client
+
+    def test_happy_path_captures_transcript_and_breaks_on_end_turn(self):
+        from backend.routers.managed_agent_runs import _qualify_lead_blocking
+
+        events = [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [{"type": "text", "text": "ok"}],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_2",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_client = self._make_mock_client(events)
+
+        terminal, transcript = _qualify_lead_blocking(
+            mock_client,
+            agent_id="agent_abc",
+            environment_id="env_abc",
+            prompt="qualify",
+            tenant_id="tenant_xyz",
+        )
+
+        # Session was created with the right metadata.
+        mock_client.create_session.assert_called_once()
+        kwargs = mock_client.create_session.call_args.kwargs
+        assert kwargs["agent_id"] == "agent_abc"
+        assert kwargs["environment_id"] == "env_abc"
+        assert kwargs["metadata"]["tenant_id"] == "tenant_xyz"
+        assert kwargs["metadata"]["flow"] == "lead_qualify"
+
+        # Stream was opened BEFORE the first user message was sent.
+        call_order = [c[0] for c in mock_client.method_calls]
+        stream_idx = call_order.index("stream_events")
+        send_idx = call_order.index("send_user_message")
+        assert stream_idx < send_idx, (
+            "stream_events must be opened before send_user_message — "
+            "the SSE API drops events published before a subscriber attaches"
+        )
+
+        # Assistant message captured, terminal state reflects end_turn.
+        assert len(transcript) == 1
+        assert transcript[0]["role"] == "assistant"
+        assert transcript[0]["content"] == [{"type": "text", "text": "ok"}]
+        assert terminal.terminated is False
+        assert terminal.stop_reason_type == "end_turn"
+        assert terminal.last_event_id == "sevt_2"
+
+    def test_break_on_session_terminated(self):
+        from backend.routers.managed_agent_runs import _qualify_lead_blocking
+
+        events = [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [{"type": "text", "text": "partial"}],
+            },
+            {"type": "session.status_terminated", "id": "sevt_2"},
+            # Sentinel event — loop must have broken before reaching this.
+            {
+                "type": "agent.message",
+                "id": "sevt_3",
+                "content": [{"type": "text", "text": "should-not-capture"}],
+            },
+        ]
+        mock_client = self._make_mock_client(events)
+
+        terminal, transcript = _qualify_lead_blocking(
+            mock_client,
+            agent_id="agent_abc",
+            environment_id="env_abc",
+            prompt="qualify",
+            tenant_id="tenant_xyz",
+        )
+
+        assert terminal.terminated is True
+        assert terminal.last_event_id == "sevt_2"
+        # Only the first message — the sentinel after the break should NOT be
+        # appended.
+        assert len(transcript) == 1
+        assert transcript[0]["content"][0]["text"] == "partial"
+
+    def test_idle_requires_action_does_not_break(self):
+        from backend.routers.managed_agent_runs import _qualify_lead_blocking
+
+        # requires_action idle is transient — the loop MUST keep going.
+        # This test would hang forever if the loop broke incorrectly on the
+        # first idle, because the next event is a real end_turn.
+        events = [
+            {
+                "type": "session.status_idle",
+                "id": "sevt_1",
+                "stop_reason": {"type": "requires_action"},
+            },
+            {
+                "type": "agent.message",
+                "id": "sevt_2",
+                "content": [{"type": "text", "text": "after tool"}],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_3",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_client = self._make_mock_client(events)
+
+        terminal, transcript = _qualify_lead_blocking(
+            mock_client,
+            agent_id="agent_abc",
+            environment_id="env_abc",
+            prompt="qualify",
+            tenant_id="tenant_xyz",
+        )
+
+        assert terminal.stop_reason_type == "end_turn"
+        assert terminal.last_event_id == "sevt_3"
+        assert len(transcript) == 1
+        assert transcript[0]["content"][0]["text"] == "after tool"
+
+    def test_custom_tool_use_breaks_early_as_config_drift_signal(self):
+        from backend.routers.managed_agent_runs import _qualify_lead_blocking
+
+        events = [
+            {
+                "type": "agent.custom_tool_use",
+                "id": "sevt_1",
+                "tool_name": "unexpected_tool",
+            },
+            # Sentinel — should NOT be reached.
+            {
+                "type": "agent.message",
+                "id": "sevt_2",
+                "content": [{"type": "text", "text": "unreachable"}],
+            },
+        ]
+        mock_client = self._make_mock_client(events)
+
+        terminal, transcript = _qualify_lead_blocking(
+            mock_client,
+            agent_id="agent_abc",
+            environment_id="env_abc",
+            prompt="qualify",
+            tenant_id="tenant_xyz",
+        )
+
+        # The loop broke on the custom tool request — no transcript,
+        # terminal state still at its initial non-terminated value.
+        assert transcript == []
+        assert terminal.terminated is False
+        assert terminal.last_event_id is None
+
+
 class TestRegistry:
     def test_missing_env_vars_raises_actionable_error(self):
         from backend.services.managed_agents_registry import (

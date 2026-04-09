@@ -285,6 +285,55 @@ the right tool when you genuinely need the container + tool loop.
 
 ---
 
+## Known limitations
+
+This integration is intentionally minimal. The pieces below are **not
+implemented** — read this list before putting a new flow into the request
+path.
+
+- **No SSE reconnect / replay.** `ManagedAgentsClient.stream_events` opens a
+  single SSE connection and does not retry or de-dupe events after a TCP
+  drop. If the connection dies mid-session the client hangs waiting for
+  events that will never arrive. Anthropic's `shared/managed-agents-client-patterns.md`
+  pattern 1 ("SSE reconnect with replay") describes the fix: call
+  `list_events(session_id)` on reconnect, dedupe by event ID, then resume
+  `stream_events`. We will add this when we have a flow that runs long
+  enough to care. Until then, treat any flow > ~60s as best-effort.
+- **No live end-to-end validation against our YAML config.** The
+  provisioner's `--dry-run` path has been run against the live API
+  (`list_environments` + `list_agents` both returned 200 OK), and the
+  read-only smoke test in `scripts/managed_agents/smoke.py` exercises the
+  same two endpoints. `create_environment`, `create_agent`, `create_session`,
+  `send_user_message`, and the SSE stream have **never** been run against
+  the live API with our specific `config/managed_agents.yaml`. The first
+  real provisioning run should be treated as a deployment, not a
+  development iteration — watch the output closely and keep a human in
+  the loop.
+- **No correlation IDs in router logs.** `backend/routers/managed_agent_runs.py`
+  logs at session create time but does not attach a `trace_id` or propagate
+  one through the event loop. Debugging a failed session against Railway
+  logs means grepping by `session_id`, which is fine for one-off postmortems
+  but not good enough for a production flow.
+- **No Managed Agents rate-limit tracking.** Managed Agents has its own
+  RPM limits (~60 RPM on creates, ~600 RPM on other endpoints) separate
+  from the `/v1/messages` quota. Our client does not read or expose
+  `anthropic-ratelimit-*` headers, and the only backpressure is
+  `limiter.limit("10/minute")` on the FastAPI route. If we drive more than
+  one flow from managed agents in parallel we need to wire the headers
+  into a shared budget.
+- **No vault / MCP credential helper.** `ManagedAgentsClient` does not
+  expose `create_vault` / `attach_vault` wrappers. If we add an MCP server
+  that needs an OAuth token (GitHub, Linear, Notion) we have to call the
+  vault endpoints via raw HTTP or add SDK coverage. For the three
+  template agents in `config/managed_agents.yaml` this is fine — none
+  need credentials.
+- **No SDK swap-in.** `backend/services/managed_agents.py` is a raw-HTTP
+  wrapper intentionally kept independent of `anthropic==0.42.0`, which is
+  pinned by `llm_runtime.py`. When we eventually upgrade the SDK and get
+  `client.beta.agents.*`, the wrapper interface is designed to swap 1:1 —
+  but the swap hasn't happened and the risks of upgrading the pinned SDK
+  are owned by `llm_runtime.py`, not this module.
+
 ## Troubleshooting
 
 **`Managed Agent not configured: set LEAD_QUALIFIER_AGENT_ID …`**
