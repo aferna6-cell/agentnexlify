@@ -14,6 +14,7 @@ from backend.limiter import limiter
 from backend.models.database import get_supabase
 from backend.models.schemas import WidgetLeadRequest, WidgetLeadResponse, WidgetOfflineContactRequest
 from backend.services.activity import log_activity
+from backend.services.lead_qualification import qualify_lead_background
 from backend.services.lead_scoring import score_lead_background
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.widget_helpers import (
@@ -93,6 +94,12 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     if lead_id:
         background_tasks.add_task(score_lead_background, lead_id)
 
+    # AI qualification only fires for NEW leads on eligible plans — the
+    # service itself gates on plan, so we unconditionally enqueue here
+    # and let the service decide whether to spend the API call.
+    if lead_id and is_new:
+        background_tasks.add_task(qualify_lead_background, lead_id)
+
     if lead_id and is_new:
         logger.info("SMS_TRIGGER[/lead]: new lead created lead_id=%s, about to trigger automation", lead_id)
         try:
@@ -130,7 +137,11 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
 
 @router.post("/offline-contact")
 @limiter.limit("30/minute")
-async def submit_offline_contact(request: Request, body: WidgetOfflineContactRequest):
+async def submit_offline_contact(
+    request: Request,
+    body: WidgetOfflineContactRequest,
+    background_tasks: BackgroundTasks,
+):
     """Submit contact form when widget is in offline mode. Creates a lead."""
     try:
         # 1. Validate api_key and get widget config / tenant
@@ -171,6 +182,7 @@ async def submit_offline_contact(request: Request, body: WidgetOfflineContactReq
             )
 
         # 3. Create new lead if no existing one found
+        offline_is_new = False
         if not lead_id:
             lead_fields: dict[str, Any] = {
                 "client_id": tenant_id,
@@ -185,6 +197,7 @@ async def submit_offline_contact(request: Request, body: WidgetOfflineContactReq
                 result = db.table("leads").insert(lead_fields).execute()
                 if result.data:
                     lead_id = result.data[0]["id"]
+                    offline_is_new = True
                     logger.info("offline_contact: created new lead %s", lead_id)
                 else:
                     logger.warning("offline_contact: INSERT returned no data")
@@ -231,6 +244,10 @@ async def submit_offline_contact(request: Request, body: WidgetOfflineContactReq
                     "offline_contact: score_lead_background failed for lead %s",
                     lead_id, exc_info=True,
                 )
+
+            # AI qualification for new leads on eligible plans.
+            if offline_is_new:
+                background_tasks.add_task(qualify_lead_background, lead_id)
 
         return {"success": True, "message": "Thank you! We'll get back to you soon."}
 

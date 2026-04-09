@@ -674,3 +674,15 @@ Adds tenant feature toggles and widget pre-chat form:
 Column comments added for documentation.
 
 **Applied:** Pending — created 2026-04-08. Required for daily briefing and pre-chat form features.
+
+### 099 — AI Lead Qualification Fields
+**Date:** 2026-04-09
+Adds structured output from the Claude Managed Agents `lead_qualifier` agent to the `leads` table. Runs asynchronously on paid plans after a new lead is captured. Complements (does not replace) the rule-based `lead_scoring` service — the inline scorer runs on every lead, the AI qualifier only on plans >= growth.
+
+- `leads.qualification_json` JSONB — full structured response (intent_score, fit_score, recommendation, reasoning, suggested_first_reply)
+- `leads.qualification_recommendation` TEXT — extracted recommendation with CHECK constraint (`hot_call_now`, `warm_nurture_sequence`, `cold_drop`, `disqualify_spam`)
+- `leads.qualified_at` TIMESTAMPTZ — when the last successful qualification run completed
+
+Partial indexes `idx_leads_qualification_recommendation` and `idx_leads_qualified_at` — optimize dashboard filters for hot-lead views.
+
+**Applied:** 2026-04-09 via Supabase Management API (MCP auth was unavailable). Required for AI lead qualification feature (backend/services/lead_qualification.py).

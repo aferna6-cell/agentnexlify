@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchLeads, updateLead, deleteLead, importLeadsCSV, findDuplicateLeads, mergeLeads, bulkUpdateLeads, exportLeadsCSV } from "../utils/api/leads";
+import {
+  fetchLeads,
+  updateLead,
+  deleteLead,
+  importLeadsCSV,
+  findDuplicateLeads,
+  mergeLeads,
+  bulkUpdateLeads,
+  exportLeadsCSV,
+} from "../utils/api/leads";
 import { fetchLeadSuggestions, handleLeadSuggestion } from "../utils/api/leads";
 import { fetchTeamMembers } from "../utils/api/team";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
@@ -9,7 +18,9 @@ import LeadDetailDrawer from "./Dashboard/LeadDetailDrawer";
 function formatDate(dateStr) {
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -25,7 +36,16 @@ function scoreLabel(score) {
   return "Cold";
 }
 
-function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead, selectedIds, onToggleSelect, onToggleSelectAll }) {
+function LeadTable({
+  leads,
+  sortField,
+  sortOrder,
+  onSort,
+  onSelectLead,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
+}) {
   const columns = [
     { key: "name", label: "Name" },
     { key: "email", label: "Email" },
@@ -36,7 +56,8 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead, selected
     { key: "created_at", label: "Created" },
   ];
 
-  const allSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l.id));
+  const allSelected =
+    leads.length > 0 && leads.every((l) => selectedIds.has(l.id));
   const someSelected = leads.some((l) => selectedIds.has(l.id));
 
   return (
@@ -48,21 +69,32 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead, selected
               <input
                 type="checkbox"
                 checked={allSelected}
-                ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected && !allSelected;
+                }}
                 onChange={() => onToggleSelectAll(leads)}
-                style={{ cursor: "pointer", accentColor: "var(--accent, #00BFFF)" }}
+                style={{
+                  cursor: "pointer",
+                  accentColor: "var(--accent, #00BFFF)",
+                }}
               />
             </th>
             {columns.map((col) => (
               <th
                 key={col.key}
-                onClick={col.sortable !== false ? () => onSort(col.key) : undefined}
+                onClick={
+                  col.sortable !== false ? () => onSort(col.key) : undefined
+                }
                 className={sortField === col.key ? "sorted" : ""}
-                style={col.sortable === false ? { cursor: "default" } : undefined}
+                style={
+                  col.sortable === false ? { cursor: "default" } : undefined
+                }
               >
                 {col.label}
                 {sortField === col.key && (
-                  <span className="sort-arrow">{sortOrder === "asc" ? " \u2191" : " \u2193"}</span>
+                  <span className="sort-arrow">
+                    {sortOrder === "asc" ? " \u2191" : " \u2193"}
+                  </span>
                 )}
               </th>
             ))}
@@ -70,51 +102,111 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead, selected
         </thead>
         <tbody>
           {leads.map((lead) => (
-            <tr key={lead.id} onClick={() => onSelectLead(lead)} className={selectedIds.has(lead.id) ? "selected-row" : ""}>
-              <td style={{ padding: "8px 4px" }} onClick={(e) => e.stopPropagation()}>
+            <tr
+              key={lead.id}
+              onClick={() => onSelectLead(lead)}
+              className={selectedIds.has(lead.id) ? "selected-row" : ""}
+            >
+              <td
+                style={{ padding: "8px 4px" }}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <input
                   type="checkbox"
                   checked={selectedIds.has(lead.id)}
                   onChange={() => onToggleSelect(lead.id)}
-                  style={{ cursor: "pointer", accentColor: "var(--accent, #00BFFF)" }}
+                  style={{
+                    cursor: "pointer",
+                    accentColor: "var(--accent, #00BFFF)",
+                  }}
                 />
               </td>
               <td>
                 <div>{lead.name || "Unknown"}</div>
                 {lead.conversation_summary && (
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      color: "var(--text-muted)",
+                      maxWidth: 220,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      marginTop: 2,
+                    }}
+                  >
                     {lead.conversation_summary}
                   </div>
                 )}
               </td>
               <td>{lead.email || "\u2014"}</td>
               <td>{lead.phone || "\u2014"}</td>
-              <td><span className={`stage-badge stage-${lead.status || "new"}`}>{lead.status || "new"}</span></td>
               <td>
-                <span className={`lead-tag ${scoreClass(lead.lead_score)}`}>
-                  {lead.lead_score ?? "N/A"} &middot; {scoreLabel(lead.lead_score)}
+                <span className={`stage-badge stage-${lead.status || "new"}`}>
+                  {lead.status || "new"}
                 </span>
+              </td>
+              <td>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span className={`lead-tag ${scoreClass(lead.lead_score)}`}>
+                    {lead.lead_score ?? "N/A"} &middot;{" "}
+                    {scoreLabel(lead.lead_score)}
+                  </span>
+                  {lead.qualification_recommendation && (
+                    <span
+                      title={`AI: ${lead.qualification_recommendation.replace(/_/g, " ")}`}
+                      style={{
+                        fontSize: "0.7rem",
+                        lineHeight: 1,
+                        padding: "3px 6px",
+                        borderRadius: 10,
+                        background:
+                          lead.qualification_recommendation === "hot_call_now"
+                            ? "rgba(255,68,68,0.2)"
+                            : lead.qualification_recommendation ===
+                                "warm_nurture_sequence"
+                              ? "rgba(245,166,35,0.2)"
+                              : "rgba(136,136,136,0.2)",
+                        color:
+                          lead.qualification_recommendation === "hot_call_now"
+                            ? "#ff4444"
+                            : lead.qualification_recommendation ===
+                                "warm_nurture_sequence"
+                              ? "#f5a623"
+                              : "#888",
+                        fontWeight: 700,
+                      }}
+                    >
+                      AI
+                    </span>
+                  )}
+                </div>
               </td>
               <td>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {(lead.tags || []).slice(0, 3).map((tag, ti) => (
-                    <span key={ti} style={{
-                      display: "inline-block",
-                      padding: "2px 8px",
-                      borderRadius: 12,
-                      fontSize: "0.7rem",
-                      background: "var(--accent-dim, rgba(0,191,255,0.15))",
-                      color: "var(--accent, #00BFFF)",
-                      whiteSpace: "nowrap",
-                      maxWidth: 140,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
+                    <span
+                      key={ti}
+                      style={{
+                        display: "inline-block",
+                        padding: "2px 8px",
+                        borderRadius: 12,
+                        fontSize: "0.7rem",
+                        background: "var(--accent-dim, rgba(0,191,255,0.15))",
+                        color: "var(--accent, #00BFFF)",
+                        whiteSpace: "nowrap",
+                        maxWidth: 140,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
                       {tag}
                     </span>
                   ))}
                   {(lead.tags || []).length > 3 && (
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                    <span
+                      style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                    >
                       +{lead.tags.length - 3}
                     </span>
                   )}
@@ -126,13 +218,15 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead, selected
           {leads.length === 0 && (
             <tr>
               <td colSpan={8}>
-                <div style={{
-                  background: "var(--bg-secondary)",
-                  borderRadius: 12,
-                  padding: 48,
-                  textAlign: "center",
-                  margin: "8px 0",
-                }}>
+                <div
+                  style={{
+                    background: "var(--bg-secondary)",
+                    borderRadius: 12,
+                    padding: 48,
+                    textAlign: "center",
+                    margin: "8px 0",
+                  }}
+                >
                   <svg
                     width="24"
                     height="24"
@@ -147,11 +241,26 @@ function LeadTable({ leads, sortField, sortOrder, onSort, onSelectLead, selected
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--text-primary)", marginBottom: 8 }}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "1rem",
+                      color: "var(--text-primary)",
+                      marginBottom: 8,
+                    }}
+                  >
                     No leads yet
                   </div>
-                  <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", maxWidth: 360, margin: "0 auto" }}>
-                    Leads captured from your chat widget will appear here. Set up your widget to start capturing visitors.
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "var(--text-muted)",
+                      maxWidth: 360,
+                      margin: "0 auto",
+                    }}
+                  >
+                    Leads captured from your chat widget will appear here. Set
+                    up your widget to start capturing visitors.
                   </div>
                 </div>
               </td>
@@ -191,21 +300,28 @@ export default function LeadsPage() {
   const fileInputRef = useRef(null);
   const debounceRef = useRef(null);
 
-  const loadLeads = useCallback(async (params = {}) => {
-    if (!user?.tenantId) return;
-    setLoading(true);
-    try {
-      const res = await fetchLeads(user.tenantId, token, { ...params, page: params.page || 1, per_page: 100 });
-      setLeads(res.leads || []);
-      setTotalPages(res.total_pages || 1);
-      setTotalLeads(res.total || 0);
-    } catch (err) {
-      setLeads([]);
-      setError(err.body?.detail || err.message || "Failed to load leads.");
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.tenantId, token]);
+  const loadLeads = useCallback(
+    async (params = {}) => {
+      if (!user?.tenantId) return;
+      setLoading(true);
+      try {
+        const res = await fetchLeads(user.tenantId, token, {
+          ...params,
+          page: params.page || 1,
+          per_page: 100,
+        });
+        setLeads(res.leads || []);
+        setTotalPages(res.total_pages || 1);
+        setTotalLeads(res.total || 0);
+      } catch (err) {
+        setLeads([]);
+        setError(err.body?.detail || err.message || "Failed to load leads.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.tenantId, token],
+  );
 
   useEffect(() => {
     if (user?.tenantId && token) {
@@ -219,7 +335,13 @@ export default function LeadsPage() {
   }, [user?.tenantId, token]);
 
   useEffect(() => {
-    loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined, page });
+    loadLeads({
+      stage: stageFilter || undefined,
+      sort: sortField,
+      order: sortOrder,
+      assigned_to: assignedFilter || undefined,
+      page,
+    });
   }, [loadLeads, stageFilter, sortField, sortOrder, assignedFilter, page]);
 
   // Debounced search
@@ -246,51 +368,88 @@ export default function LeadsPage() {
     }
   };
 
-  const handleStageDrop = useCallback(async (leadId, newStage) => {
-    const prev = leads.slice();
-    setLeads((cur) =>
-      cur.map((l) => (l.id === leadId ? { ...l, status: newStage } : l))
-    );
-    try {
-      await updateLead(user.tenantId, token, leadId, { status: newStage });
-      setError(null);
-    } catch (err) {
-      setLeads(prev);
-      setError(err.body?.detail || err.message || "Failed to update lead stage.");
-    }
-  }, [leads, user?.tenantId, token]);
+  const handleStageDrop = useCallback(
+    async (leadId, newStage) => {
+      const prev = leads.slice();
+      setLeads((cur) =>
+        cur.map((l) => (l.id === leadId ? { ...l, status: newStage } : l)),
+      );
+      try {
+        await updateLead(user.tenantId, token, leadId, { status: newStage });
+        setError(null);
+      } catch (err) {
+        setLeads(prev);
+        setError(
+          err.body?.detail || err.message || "Failed to update lead stage.",
+        );
+      }
+    },
+    [leads, user?.tenantId, token],
+  );
 
-  const handleLeadSave = useCallback(async (leadId, updates) => {
-    try {
-      const updated = await updateLead(user.tenantId, token, leadId, updates);
-      setLeads((cur) => cur.map((l) => (l.id === leadId ? { ...l, ...updated } : l)));
-      setSelectedLead((cur) => (cur?.id === leadId ? { ...cur, ...updated } : cur));
-      setError(null);
-    } catch (err) {
-      setError(err.body?.detail || err.message || "Failed to save lead.");
-    }
-  }, [user?.tenantId, token]);
+  const handleLeadSave = useCallback(
+    async (leadId, updates) => {
+      try {
+        const updated = await updateLead(user.tenantId, token, leadId, updates);
+        setLeads((cur) =>
+          cur.map((l) => (l.id === leadId ? { ...l, ...updated } : l)),
+        );
+        setSelectedLead((cur) =>
+          cur?.id === leadId ? { ...cur, ...updated } : cur,
+        );
+        setError(null);
+      } catch (err) {
+        setError(err.body?.detail || err.message || "Failed to save lead.");
+      }
+    },
+    [user?.tenantId, token],
+  );
 
-  const handleLeadDelete = useCallback(async (leadId) => {
-    try {
-      await deleteLead(user.tenantId, token, leadId);
-      setLeads((cur) => cur.filter((l) => l.id !== leadId));
-      setSelectedLead(null);
-      setError(null);
-    } catch (err) {
-      setError(err.body?.detail || err.message || "Failed to delete lead.");
-    }
-  }, [user?.tenantId, token]);
+  const handleLeadDelete = useCallback(
+    async (leadId) => {
+      try {
+        await deleteLead(user.tenantId, token, leadId);
+        setLeads((cur) => cur.filter((l) => l.id !== leadId));
+        setSelectedLead(null);
+        setError(null);
+      } catch (err) {
+        setError(err.body?.detail || err.message || "Failed to delete lead.");
+      }
+    },
+    [user?.tenantId, token],
+  );
 
   const handleExportCSV = () => {
     if (!leads.length) return;
-    const headers = ["Name", "Email", "Phone", "Stage", "Score", "Source", "Service Interest", "Timeline", "Budget", "Notes", "Created"];
+    const headers = [
+      "Name",
+      "Email",
+      "Phone",
+      "Stage",
+      "Score",
+      "Source",
+      "Service Interest",
+      "Timeline",
+      "Budget",
+      "Notes",
+      "Created",
+    ];
     const rows = leads.map((l) => [
-      l.name || "", l.email || "", l.phone || "", l.status || "", l.lead_score ?? "",
-      l.lead_temperature || "", l.areas_of_interest || "", l.timeline || "", l.budget || "",
-      (l.conversation_summary || "").replace(/"/g, '""'), l.created_at || "",
+      l.name || "",
+      l.email || "",
+      l.phone || "",
+      l.status || "",
+      l.lead_score ?? "",
+      l.lead_temperature || "",
+      l.areas_of_interest || "",
+      l.timeline || "",
+      l.budget || "",
+      (l.conversation_summary || "").replace(/"/g, '""'),
+      l.created_at || "",
     ]);
-    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${v}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -310,7 +469,12 @@ export default function LeadsPage() {
     try {
       const result = await importLeadsCSV(user.tenantId, token, file);
       setImportResult(result);
-      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined });
+      loadLeads({
+        stage: stageFilter || undefined,
+        sort: sortField,
+        order: sortOrder,
+        assigned_to: assignedFilter || undefined,
+      });
     } catch (err) {
       setError(err.body?.detail || err.message || "Import failed");
     } finally {
@@ -331,8 +495,15 @@ export default function LeadsPage() {
     setMerging(true);
     try {
       await mergeLeads(user.tenantId, token, keepId, mergeId);
-      setDuplicates((prev) => prev.filter((d) => !d.leads.some((l) => l.id === mergeId)));
-      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined });
+      setDuplicates((prev) =>
+        prev.filter((d) => !d.leads.some((l) => l.id === mergeId)),
+      );
+      loadLeads({
+        stage: stageFilter || undefined,
+        sort: sortField,
+        order: sortOrder,
+        assigned_to: assignedFilter || undefined,
+      });
       setError(null);
     } catch (err) {
       setError(err.body?.detail || err.message || "Merge failed");
@@ -387,12 +558,20 @@ export default function LeadsPage() {
           try {
             await deleteLead(user.tenantId, token, id);
             deleted++;
-          } catch { /* skip */ }
+          } catch {
+            /* skip */
+          }
         }
         setBulkResult({ updated: deleted, failed: lead_ids.length - deleted });
         setSelectedIds(new Set());
         setBulkAction("");
-        loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined, page });
+        loadLeads({
+          stage: stageFilter || undefined,
+          sort: sortField,
+          order: sortOrder,
+          assigned_to: assignedFilter || undefined,
+          page,
+        });
         return;
       }
 
@@ -400,62 +579,142 @@ export default function LeadsPage() {
       setBulkResult(result);
       setSelectedIds(new Set());
       setBulkAction("");
-      loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder, assigned_to: assignedFilter || undefined, page });
+      loadLeads({
+        stage: stageFilter || undefined,
+        sort: sortField,
+        order: sortOrder,
+        assigned_to: assignedFilter || undefined,
+        page,
+      });
     } catch (err) {
       setError(err.body?.detail || err.message || "Bulk update failed");
     } finally {
       setBulkRunning(false);
     }
-  }, [bulkAction, selectedIds, user?.tenantId, token, loadLeads, stageFilter, sortField, sortOrder, assignedFilter, page]);
+  }, [
+    bulkAction,
+    selectedIds,
+    user?.tenantId,
+    token,
+    loadLeads,
+    stageFilter,
+    sortField,
+    sortOrder,
+    assignedFilter,
+    page,
+  ]);
 
   return (
     <div className="fade-in">
       <div className="page-header">
         <h1>Leads</h1>
-        <p>{totalLeads} total lead{totalLeads !== 1 ? "s" : ""}</p>
+        <p>
+          {totalLeads} total lead{totalLeads !== 1 ? "s" : ""}
+        </p>
       </div>
 
       {/* AI Lead Update Suggestions */}
       {suggestions.length > 0 && (
-        <div style={{
-          marginBottom: 16, padding: "12px 16px", borderRadius: 10,
-          background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.3)",
-        }}>
-          <div style={{ fontWeight: 600, fontSize: 13, color: "#8b5cf6", marginBottom: 8 }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "12px 16px",
+            borderRadius: 10,
+            background: "rgba(139,92,246,0.1)",
+            border: "1px solid rgba(139,92,246,0.3)",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: 13,
+              color: "#8b5cf6",
+              marginBottom: 8,
+            }}
+          >
             AI Suggestions ({suggestions.length})
           </div>
           {suggestions.slice(0, 5).map((s) => {
             const sData = s.metadata?.suggestions || {};
             return (
-              <div key={s.id} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "6px 0", borderTop: "1px solid rgba(139,92,246,0.15)",
-                fontSize: 12, gap: 8,
-              }}>
+              <div
+                key={s.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "6px 0",
+                  borderTop: "1px solid rgba(139,92,246,0.15)",
+                  fontSize: 12,
+                  gap: 8,
+                }}
+              >
                 <div style={{ flex: 1, color: "var(--text-primary)" }}>
                   {s.description}
                   {Object.entries(sData).map(([field, vals]) => (
-                    <span key={field} style={{ marginLeft: 8, color: "var(--text-secondary)" }}>
-                      {field}: <s style={{ opacity: 0.5 }}>{vals.old}</s> → <strong>{vals.new}</strong>
+                    <span
+                      key={field}
+                      style={{ marginLeft: 8, color: "var(--text-secondary)" }}
+                    >
+                      {field}: <s style={{ opacity: 0.5 }}>{vals.old}</s> →{" "}
+                      <strong>{vals.new}</strong>
                     </span>
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                  <button onClick={async () => {
-                    await handleLeadSuggestion(user.tenantId, token, s.id, "approve");
-                    setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
-                    loadLeads({ stage: stageFilter || undefined, sort: sortField, order: sortOrder });
-                  }} style={{
-                    background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "none",
-                    borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11,
-                  }}>Approve</button>
-                  <button onClick={async () => {
-                    await handleLeadSuggestion(user.tenantId, token, s.id, "dismiss");
-                    setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
-                  }} style={{
-                    background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "none",
-                    borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11,
-                  }}>Dismiss</button>
+                  <button
+                    onClick={async () => {
+                      await handleLeadSuggestion(
+                        user.tenantId,
+                        token,
+                        s.id,
+                        "approve",
+                      );
+                      setSuggestions((prev) =>
+                        prev.filter((x) => x.id !== s.id),
+                      );
+                      loadLeads({
+                        stage: stageFilter || undefined,
+                        sort: sortField,
+                        order: sortOrder,
+                      });
+                    }}
+                    style={{
+                      background: "rgba(34,197,94,0.15)",
+                      color: "#22c55e",
+                      border: "none",
+                      borderRadius: 4,
+                      padding: "3px 8px",
+                      cursor: "pointer",
+                      fontSize: 11,
+                    }}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await handleLeadSuggestion(
+                        user.tenantId,
+                        token,
+                        s.id,
+                        "dismiss",
+                      );
+                      setSuggestions((prev) =>
+                        prev.filter((x) => x.id !== s.id),
+                      );
+                    }}
+                    style={{
+                      background: "rgba(239,68,68,0.1)",
+                      color: "#ef4444",
+                      border: "none",
+                      borderRadius: 4,
+                      padding: "3px 8px",
+                      cursor: "pointer",
+                      fontSize: 11,
+                    }}
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
             );
@@ -474,21 +733,31 @@ export default function LeadsPage() {
         <select
           className="leads-filter"
           value={stageFilter}
-          onChange={(e) => { setStageFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setStageFilter(e.target.value);
+            setPage(1);
+          }}
         >
           <option value="">All Stages</option>
           {STAGES.map((s) => (
-            <option key={s.key} value={s.key}>{s.label}</option>
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
           ))}
         </select>
         <select
           className="leads-filter"
           value={assignedFilter}
-          onChange={(e) => { setAssignedFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setAssignedFilter(e.target.value);
+            setPage(1);
+          }}
         >
           <option value="">All Assignees</option>
           {teamMembers.map((m) => (
-            <option key={m.id} value={m.id}>{m.name || m.email}</option>
+            <option key={m.id} value={m.id}>
+              {m.name || m.email}
+            </option>
           ))}
         </select>
         <div className="leads-view-toggle">
@@ -526,7 +795,11 @@ export default function LeadsPage() {
           className="leads-export-btn"
           onClick={async () => {
             try {
-              await exportLeadsCSV(user.tenantId, token, { stage: stageFilter || undefined, search: search || undefined, assigned_to: assignedFilter || undefined });
+              await exportLeadsCSV(user.tenantId, token, {
+                stage: stageFilter || undefined,
+                search: search || undefined,
+                assigned_to: assignedFilter || undefined,
+              });
             } catch (err) {
               setError(err.body?.detail || err.message || "Export failed");
               setTimeout(() => setError(null), 5000);
@@ -539,54 +812,94 @@ export default function LeadsPage() {
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && view === "table" && (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12, padding: "10px 16px",
-          marginBottom: 12, borderRadius: 10,
-          background: "rgba(0,191,255,0.08)", border: "1px solid rgba(0,191,255,0.25)",
-        }}>
-          <span style={{ fontWeight: 600, fontSize: 13, color: "var(--accent, #00BFFF)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "10px 16px",
+            marginBottom: 12,
+            borderRadius: 10,
+            background: "rgba(0,191,255,0.08)",
+            border: "1px solid rgba(0,191,255,0.25)",
+          }}
+        >
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 13,
+              color: "var(--accent, #00BFFF)",
+            }}
+          >
             {selectedIds.size} selected
           </span>
           <select
             value={bulkAction}
             onChange={(e) => setBulkAction(e.target.value)}
             style={{
-              background: "var(--bg-secondary)", color: "var(--text-primary)",
-              border: "1px solid var(--border)", borderRadius: 6,
-              padding: "5px 10px", fontSize: 13, cursor: "pointer",
+              background: "var(--bg-secondary)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "5px 10px",
+              fontSize: 13,
+              cursor: "pointer",
             }}
           >
             <option value="">Choose action...</option>
             <optgroup label="Change Stage">
               {STAGES.map((s) => (
-                <option key={s.key} value={`status:${s.key}`}>{s.label}</option>
+                <option key={s.key} value={`status:${s.key}`}>
+                  {s.label}
+                </option>
               ))}
             </optgroup>
             <optgroup label="Assign To">
               <option value="assign:">Unassign</option>
               {teamMembers.map((m) => (
-                <option key={m.id} value={`assign:${m.id}`}>{m.name || m.email}</option>
+                <option key={m.id} value={`assign:${m.id}`}>
+                  {m.name || m.email}
+                </option>
               ))}
             </optgroup>
-            <option value="delete" style={{ color: "#ef4444" }}>Delete selected</option>
+            <option value="delete" style={{ color: "#ef4444" }}>
+              Delete selected
+            </option>
           </select>
           <button
             onClick={handleBulkAction}
             disabled={!bulkAction || bulkRunning}
             style={{
-              background: bulkAction === "delete" ? "#ef4444" : "var(--accent, #00BFFF)",
-              color: "#fff", border: "none", borderRadius: 6,
-              padding: "6px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              background:
+                bulkAction === "delete" ? "#ef4444" : "var(--accent, #00BFFF)",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 16px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
               opacity: !bulkAction || bulkRunning ? 0.5 : 1,
             }}
           >
-            {bulkRunning ? "Updating..." : bulkAction === "delete" ? "Delete" : "Apply"}
+            {bulkRunning
+              ? "Updating..."
+              : bulkAction === "delete"
+                ? "Delete"
+                : "Apply"}
           </button>
           <button
-            onClick={() => { setSelectedIds(new Set()); setBulkAction(""); }}
+            onClick={() => {
+              setSelectedIds(new Set());
+              setBulkAction("");
+            }}
             style={{
-              background: "none", border: "none", color: "var(--text-muted)",
-              cursor: "pointer", fontSize: 12, textDecoration: "underline",
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontSize: 12,
+              textDecoration: "underline",
             }}
           >
             Clear selection
@@ -595,26 +908,79 @@ export default function LeadsPage() {
       )}
 
       {bulkResult && (
-        <div style={{
-          marginBottom: 12, padding: "8px 14px", borderRadius: 8,
-          background: "var(--bg-card)", border: "1px solid var(--border)", fontSize: 13,
-        }}>
-          Bulk update: {bulkResult.updated} updated{bulkResult.failed > 0 && `, ${bulkResult.failed} failed`}
-          <button onClick={() => setBulkResult(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 12 }}>dismiss</button>
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "8px 14px",
+            borderRadius: 8,
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            fontSize: 13,
+          }}
+        >
+          Bulk update: {bulkResult.updated} updated
+          {bulkResult.failed > 0 && `, ${bulkResult.failed} failed`}
+          <button
+            onClick={() => setBulkResult(null)}
+            style={{
+              marginLeft: 12,
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            dismiss
+          </button>
         </div>
       )}
 
-      {error && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
+      {error && (
+        <div className="error-banner" style={{ marginBottom: "1rem" }}>
+          {error}
+        </div>
+      )}
       {importResult && (
-        <div style={{ marginBottom: "1rem", padding: "0.75rem 1rem", background: "var(--bg-card)", borderRadius: 8, border: "1px solid var(--border)", fontSize: "0.9rem" }}>
-          Imported: {importResult.created} created, {importResult.updated} updated
-          {importResult.total_errors > 0 && `, ${importResult.total_errors} error${importResult.total_errors !== 1 ? "s" : ""}`}
-          <button onClick={() => setImportResult(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>dismiss</button>
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            background: "var(--bg-card)",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            fontSize: "0.9rem",
+          }}
+        >
+          Imported: {importResult.created} created, {importResult.updated}{" "}
+          updated
+          {importResult.total_errors > 0 &&
+            `, ${importResult.total_errors} error${importResult.total_errors !== 1 ? "s" : ""}`}
+          <button
+            onClick={() => setImportResult(null)}
+            style={{
+              marginLeft: 12,
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+            }}
+          >
+            dismiss
+          </button>
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>Loading...</div>
+        <div
+          style={{
+            textAlign: "center",
+            padding: 40,
+            color: "var(--text-muted)",
+          }}
+        >
+          Loading...
+        </div>
       ) : view === "board" ? (
         <LeadPipeline
           leads={leads}
@@ -636,16 +1002,24 @@ export default function LeadsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{
-          display: "flex", justifyContent: "center", alignItems: "center", gap: 12,
-          padding: "16px 0", marginTop: 8,
-        }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 12,
+            padding: "16px 0",
+            marginTop: 8,
+          }}
+        >
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             className="btn btn-secondary"
             style={{ padding: "6px 14px", fontSize: 13 }}
-          >Previous</button>
+          >
+            Previous
+          </button>
           <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
             Page {page} of {totalPages} ({totalLeads} leads)
           </span>
@@ -654,7 +1028,9 @@ export default function LeadsPage() {
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             className="btn btn-secondary"
             style={{ padding: "6px 14px", fontSize: 13 }}
-          >Next</button>
+          >
+            Next
+          </button>
         </div>
       )}
 
@@ -669,35 +1045,81 @@ export default function LeadsPage() {
 
       {duplicates !== null && (
         <div className="modal-overlay" onClick={() => setDuplicates(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600, maxHeight: "80vh", overflow: "auto" }}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 600, maxHeight: "80vh", overflow: "auto" }}
+          >
             <h3>Duplicate Leads</h3>
             {duplicates.length === 0 ? (
               <p style={{ color: "var(--text-muted)" }}>No duplicates found.</p>
             ) : (
               duplicates.map((dup, i) => (
-                <div key={i} style={{ marginBottom: 16, padding: 12, background: "var(--bg-secondary)", borderRadius: 8, border: "1px solid var(--border)" }}>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 8 }}>
+                <div
+                  key={i}
+                  style={{
+                    marginBottom: 16,
+                    padding: 12,
+                    background: "var(--bg-secondary)",
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "var(--text-muted)",
+                      marginBottom: 8,
+                    }}
+                  >
                     Match: {dup.match_field} = {dup.match_value}
                   </div>
                   {dup.leads.map((lead) => (
-                    <div key={lead.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                    <div
+                      key={lead.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "6px 0",
+                        borderBottom: "1px solid var(--border)",
+                      }}
+                    >
                       <div>
-                        <div style={{ fontWeight: 600 }}>{lead.name || "No name"}</div>
-                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{lead.email || ""} {lead.phone || ""}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Score: {lead.lead_score ?? "N/A"} | {lead.status}</div>
+                        <div style={{ fontWeight: 600 }}>
+                          {lead.name || "No name"}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          {lead.email || ""} {lead.phone || ""}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          Score: {lead.lead_score ?? "N/A"} | {lead.status}
+                        </div>
                       </div>
                       <div style={{ display: "flex", gap: 4 }}>
-                        {dup.leads.filter((l) => l.id !== lead.id).map((other) => (
-                          <button
-                            key={other.id}
-                            className="btn-sm"
-                            disabled={merging}
-                            onClick={() => handleMerge(lead.id, other.id)}
-                            title={`Keep this, merge ${other.name || other.email || "other"} into it`}
-                          >
-                            Keep this
-                          </button>
-                        ))}
+                        {dup.leads
+                          .filter((l) => l.id !== lead.id)
+                          .map((other) => (
+                            <button
+                              key={other.id}
+                              className="btn-sm"
+                              disabled={merging}
+                              onClick={() => handleMerge(lead.id, other.id)}
+                              title={`Keep this, merge ${other.name || other.email || "other"} into it`}
+                            >
+                              Keep this
+                            </button>
+                          ))}
                       </div>
                     </div>
                   ))}
@@ -705,7 +1127,12 @@ export default function LeadsPage() {
               ))
             )}
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDuplicates(null)}>Close</button>
+              <button
+                className="btn-secondary"
+                onClick={() => setDuplicates(null)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

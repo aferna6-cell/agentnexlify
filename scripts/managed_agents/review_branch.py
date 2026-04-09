@@ -134,50 +134,55 @@ def main() -> int:
 
     client.send_user_message(session_id, args.prompt or DEFAULT_PROMPT)
 
-    events_log = (
-        open(args.save_events, "w", encoding="utf-8") if args.save_events else None
-    )
+    # Use a context manager to guarantee the file handle is closed even if
+    # something goes wrong between open() and the stream loop. `ExitStack`
+    # lets us keep `events_log = None` for the no-save case without having
+    # to duplicate the loop body.
+    from contextlib import ExitStack
+    with ExitStack() as stack:
+        events_log = (
+            stack.enter_context(open(args.save_events, "w", encoding="utf-8"))
+            if args.save_events
+            else None
+        )
 
-    print()
-    print(f"=== Codebase Reviewer session {session_id} ===")
-    print()
+        print()
+        print(f"=== Codebase Reviewer session {session_id} ===")
+        print()
 
-    try:
-        for event in stream:
-            if events_log:
-                events_log.write(json.dumps(event) + "\n")
-                events_log.flush()
+        try:
+            for event in stream:
+                if events_log:
+                    events_log.write(json.dumps(event) + "\n")
+                    events_log.flush()
 
-            event_type = event.get("type", "")
-            if event_type == "agent.message":
-                text = _render_content(event.get("content") or [])
-                if text:
-                    print(text, end="", flush=True)
-            elif event_type == "span.model_request_end":
-                usage = event.get("model_usage") or {}
-                if usage:
-                    logger.debug("model usage: %s", usage)
-            elif event_type == "agent.tool_use":
-                tool = event.get("tool_name") or event.get("name") or "?"
-                logger.info("tool_use: %s", tool)
-            elif event_type == "session.status_terminated":
-                print()
-                logger.info("session terminated")
-                break
-            elif event_type == "session.status_idle":
-                stop = event.get("stop_reason") or {}
-                stop_type = (
-                    stop.get("type") if isinstance(stop, dict) else None
-                )
-                if stop_type != "requires_action":
+                event_type = event.get("type", "")
+                if event_type == "agent.message":
+                    text = _render_content(event.get("content") or [])
+                    if text:
+                        print(text, end="", flush=True)
+                elif event_type == "span.model_request_end":
+                    usage = event.get("model_usage") or {}
+                    if usage:
+                        logger.debug("model usage: %s", usage)
+                elif event_type == "agent.tool_use":
+                    tool = event.get("tool_name") or event.get("name") or "?"
+                    logger.info("tool_use: %s", tool)
+                elif event_type == "session.status_terminated":
                     print()
-                    logger.info("session idle (stop_reason=%s)", stop_type)
+                    logger.info("session terminated")
                     break
-    except ManagedAgentsError as exc:
-        raise SystemExit(f"stream error: {exc}")
-    finally:
-        if events_log:
-            events_log.close()
+                elif event_type == "session.status_idle":
+                    stop = event.get("stop_reason") or {}
+                    stop_type = (
+                        stop.get("type") if isinstance(stop, dict) else None
+                    )
+                    if stop_type != "requires_action":
+                        print()
+                        logger.info("session idle (stop_reason=%s)", stop_type)
+                        break
+        except ManagedAgentsError as exc:
+            raise SystemExit(f"stream error: {exc}")
 
     print()
     print(f"=== Session {session_id} complete ===")
