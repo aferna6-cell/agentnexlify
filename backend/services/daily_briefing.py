@@ -109,7 +109,12 @@ async def send_daily_briefings() -> int:
             if bh.data:
                 tz_name = bh.data[0].get("timezone") or tz_name
         except Exception:
-            pass
+            logger.debug(
+                "Failed to load business_hours timezone for tenant %s, defaulting to %s",
+                tenant_id,
+                tz_name,
+                exc_info=True,
+            )
 
         # Only send during morning window in tenant's timezone
         if not _is_briefing_window(tz_name, now):
@@ -243,8 +248,10 @@ def _format_briefing_sms(business_name: str, b: dict) -> str:
                 t = datetime.fromisoformat(appt["start_time"].replace("Z", "+00:00"))
                 time_str = t.strftime("%-I:%M %p")
             except Exception:
-                pass
-            lines.append(f"  • {time_str} — {name}")
+                logger.debug(
+                    "Failed to parse appointment start_time %r", appt.get("start_time"), exc_info=True
+                )
+            lines.append(f"  • {time_str} — {name}" if time_str else f"  • {name}")
         if ac > 3:
             lines.append(f"  + {ac - 3} more")
     else:

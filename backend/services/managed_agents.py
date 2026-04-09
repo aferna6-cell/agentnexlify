@@ -77,6 +77,7 @@ class SessionTerminalState:
     terminated: bool
     stop_reason_type: str | None
     last_event_id: str | None
+    session_id: str | None = None
 
 
 class ManagedAgentsClient:

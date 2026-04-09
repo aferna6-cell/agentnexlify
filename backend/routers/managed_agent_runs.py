@@ -105,7 +105,10 @@ def _qualify_lead_blocking(
     client.send_user_message(session_id, prompt)
 
     terminal = SessionTerminalState(
-        terminated=False, stop_reason_type=None, last_event_id=None,
+        terminated=False,
+        stop_reason_type=None,
+        last_event_id=None,
+        session_id=session_id,
     )
 
     for event in stream:
@@ -131,6 +134,7 @@ def _qualify_lead_blocking(
                 terminated=True,
                 stop_reason_type=None,
                 last_event_id=event.get("id"),
+                session_id=session_id,
             )
             break
         elif event_type == "session.status_idle":
@@ -143,6 +147,7 @@ def _qualify_lead_blocking(
                     terminated=False,
                     stop_reason_type=stop_type,
                     last_event_id=event.get("id"),
+                    session_id=session_id,
                 )
                 break
 
@@ -208,7 +213,7 @@ async def qualify_lead(
         raise HTTPException(status_code=status, detail=str(exc))
 
     return LeadQualifyResponse(
-        session_id=terminal.last_event_id or "",
+        session_id=terminal.session_id or "",
         terminated=terminal.terminated,
         stop_reason=terminal.stop_reason_type,
         transcript=transcript,
@@ -328,6 +333,34 @@ _CONTENT_TYPES = {
 }
 
 
+def _safe_content_disposition(file_name: str) -> str:
+    """Build a safe Content-Disposition header value for ``file_name``.
+
+    Prevents HTTP response-splitting via CR/LF in filenames and neutralises
+    the double-quote used for the RFC 6266 ``filename=""`` parameter. For
+    non-ASCII filenames we emit a UTF-8 ``filename*=`` value alongside an
+    ASCII fallback.
+    """
+    from urllib.parse import quote
+
+    # Strip CR/LF + null + control chars — these are the header-injection
+    # vectors. Also replace path separators and quotes which would break
+    # the ``filename=""`` parameter.
+    cleaned = "".join(
+        ch for ch in (file_name or "") if ch >= " " and ch not in ("\x7f",)
+    )
+    cleaned = cleaned.replace("\\", "_").replace("/", "_").replace('"', "_")
+    if not cleaned:
+        cleaned = "download"
+
+    ascii_fallback = cleaned.encode("ascii", "replace").decode("ascii").replace("?", "_")
+    quoted = quote(cleaned, safe="")
+    return (
+        f'attachment; filename="{ascii_fallback}"; '
+        f"filename*=UTF-8''{quoted}"
+    )
+
+
 def _decode_bytea(raw: Any) -> bytes | None:
     """Decode a PostgREST-returned bytea value to raw bytes.
 
@@ -411,6 +444,6 @@ async def download_drafted_document(
         content=file_bytes,
         media_type=content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{file_name}"',
+            "Content-Disposition": _safe_content_disposition(file_name),
         },
     )

@@ -338,6 +338,11 @@ class TestQualifyLeadBlocking:
             prompt="qualify",
             tenant_id="tenant_xyz",
         )
+        # Regression: terminal state must carry the real session_id, not the
+        # last event id. Previously the router returned last_event_id as the
+        # API response's `session_id`, which confused downstream consumers.
+        assert terminal.session_id == "sess_1"
+        assert terminal.session_id != terminal.last_event_id
 
         # Session was created with the right metadata.
         mock_client.create_session.assert_called_once()
@@ -467,6 +472,43 @@ class TestQualifyLeadBlocking:
         assert transcript == []
         assert terminal.terminated is False
         assert terminal.last_event_id is None
+
+
+class TestSafeContentDisposition:
+    """Regression tests for Content-Disposition header injection via filenames."""
+
+    def test_crlf_stripped(self):
+        from backend.routers.managed_agent_runs import _safe_content_disposition
+
+        header = _safe_content_disposition("evil\r\nX-Injected: yes.docx")
+        # CR/LF must not survive — otherwise an attacker could inject a new
+        # response header and split the response.
+        assert "\r" not in header
+        assert "\n" not in header
+        assert "X-Injected" in header  # the literal chars are fine, just not as a new header line
+
+    def test_embedded_quote_escaped(self):
+        from backend.routers.managed_agent_runs import _safe_content_disposition
+
+        header = _safe_content_disposition('hack".docx')
+        # Raw double-quote would close the filename parameter early.
+        assert 'filename="hack_.docx"' in header
+
+    def test_unicode_filename_uses_rfc6266_star(self):
+        from backend.routers.managed_agent_runs import _safe_content_disposition
+
+        header = _safe_content_disposition("résumé.pdf")
+        # ASCII fallback must be present, and RFC 6266 filename* must encode
+        # the UTF-8 bytes.
+        assert "filename=" in header
+        assert "filename*=UTF-8''" in header
+        assert "r%C3%A9sum%C3%A9.pdf" in header
+
+    def test_empty_filename_defaults_to_download(self):
+        from backend.routers.managed_agent_runs import _safe_content_disposition
+
+        header = _safe_content_disposition("")
+        assert 'filename="download"' in header
 
 
 class TestRegistry:

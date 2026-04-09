@@ -4,7 +4,31 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 
+import backend.models.database as _db_module
 from backend.main import app
+
+
+@pytest.fixture(autouse=True)
+def _stub_supabase_singletons():
+    """Install a MagicMock as the module-level Supabase singleton.
+
+    Routers do ``from backend.models.database import get_supabase`` at import
+    time, so patching ``backend.models.database.get_supabase`` in a single
+    fixture is ineffective — the router already holds its own reference.
+    Instead, seed the module-level cache directly so any caller of
+    ``get_service_supabase()`` (and therefore ``get_supabase()``) returns the
+    mock without ever touching ``supabase.create_client``.
+    """
+    mock = MagicMock()
+    prev_service = _db_module._service_client
+    prev_public = _db_module._public_client
+    _db_module._service_client = mock
+    _db_module._public_client = mock
+    try:
+        yield mock
+    finally:
+        _db_module._service_client = prev_service
+        _db_module._public_client = prev_public
 
 
 @pytest.fixture()
@@ -14,11 +38,9 @@ def client():
 
 
 @pytest.fixture()
-def mock_supabase():
-    """Mock Supabase client to avoid hitting real DB in unit tests."""
-    mock = MagicMock()
-    with patch("backend.models.database.get_supabase", return_value=mock):
-        yield mock
+def mock_supabase(_stub_supabase_singletons):
+    """Return the shared MagicMock seeded into the Supabase singletons."""
+    return _stub_supabase_singletons
 
 
 def _make_tenant_row(tenant_id="00000000-0000-0000-0000-000000000001", **overrides):
