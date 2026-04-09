@@ -106,14 +106,18 @@ class TestNoshowFollowupTenantCache:
             assert sent >= 0  # sanity — function returned without error
 
     def test_followup_skips_when_feature_toggle_off(self):
-        """Even with lazy loading, a tenant with noshow_recovery_enabled=False
-        must be skipped (defense in depth vs. a tenant toggling the feature
-        off between the initial send and the follow-up).
+        """Tenant with noshow_recovery_enabled=False must be skipped in the
+        follow-up path. Pre-populates the cache so the assertion isolates
+        the toggle check from the separate lazy-load fix (bug-patterns #70).
+        Clears customer_email so the rebook check is bypassed — otherwise
+        MagicMock's truthy auto-attributes make the old code short-circuit
+        via `if rebooked.data:` before ever reaching the send path.
         """
         from backend.services import noshow_recovery
 
         tenant_id = "tenant-xyz"
         appt = self._make_followup_appt(tenant_id)
+        appt["customer_email"] = None  # bypass rebook check
         tenant_row = self._make_tenant_row()
         tenant_row["noshow_recovery_enabled"] = False
 
@@ -125,8 +129,6 @@ class TestNoshowFollowupTenantCache:
             if table_name == "appointments":
                 chain.select.return_value.eq.return_value.not_.is_.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = followup_query
                 chain.update.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
-            elif table_name == "tenants":
-                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[tenant_row])
             else:
                 chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
             return chain
@@ -144,7 +146,9 @@ class TestNoshowFollowupTenantCache:
             patch.object(noshow_recovery, "increment_sms_count"),
             patch.object(noshow_recovery, "build_unsubscribe_url", return_value="https://unsub.test"),
         ):
-            cache: dict[str, dict | None] = {}
+            # IMPORTANT: pre-populate cache so we're NOT testing the lazy-load
+            # path. This isolates the toggle-off defense-in-depth check.
+            cache: dict[str, dict | None] = {tenant_id: tenant_row}
             sent = asyncio.run(
                 noshow_recovery._send_noshow_followups(
                     db, datetime.now(timezone.utc), cache,
