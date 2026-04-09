@@ -299,16 +299,19 @@ path.
   `list_events(session_id)` on reconnect, dedupe by event ID, then resume
   `stream_events`. We will add this when we have a flow that runs long
   enough to care. Until then, treat any flow > ~60s as best-effort.
-- **No live end-to-end validation against our YAML config.** The
-  provisioner's `--dry-run` path has been run against the live API
-  (`list_environments` + `list_agents` both returned 200 OK), and the
-  read-only smoke test in `scripts/managed_agents/smoke.py` exercises the
-  same two endpoints. `create_environment`, `create_agent`, `create_session`,
-  `send_user_message`, and the SSE stream have **never** been run against
-  the live API with our specific `config/managed_agents.yaml`. The first
-  real provisioning run should be treated as a deployment, not a
-  development iteration — watch the output closely and keep a human in
-  the loop.
+- **Live end-to-end validated on 2026-04-09.** The provisioner has been
+  run against the live API with our specific `config/managed_agents.yaml`
+  — environment `agentnexlify-shared` and all three agents
+  (`lead_qualifier`, `document_drafter`, `codebase_reviewer`) were created
+  and their IDs written to `.env.managed_agents`. The session-level smoke
+  test in `scripts/managed_agents/session_smoke.py` ran successfully
+  against `lead_qualifier`: `POST /v1/sessions` → 200 OK,
+  `POST /v1/sessions/{id}/events` → 200 OK, SSE stream returned 7 events
+  (status_running → user.message → model_request_start → agent.thinking →
+  agent.message → model_request_end → session.status_idle with
+  `stop_reason.type == "end_turn"`), and the break-gate correctly
+  terminated the loop. Re-run `session_smoke.py` any time you touch the
+  client, the registry, or the YAML.
 - **No correlation IDs in router logs.** `backend/routers/managed_agent_runs.py`
   logs at session create time but does not attach a `trace_id` or propagate
   one through the event loop. Debugging a failed session against Railway
