@@ -27,6 +27,8 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 > Domain-specific rules in `.claude/rules/`: schema-discipline, python-fastapi, frontend-patterns, security-rules, widget-rules, api-conventions, testing-standards, gitnexus, workflow-orchestration, codex-subagents
 >
 > Behavioral rules in `.claude/rules/`: caveman-mode, model-routing, no-assumptions, parallel-approaches, ultrathink, prompt-library, kb-first, claude-usage-patterns, personality
+>
+> Security hardening in `.claude/rules/`: claude-code-security (permissions.deny + ask + sandbox config per Trail of Bits-style guide)
 
 ## Tech Stack
 - Backend: FastAPI, Python 3.11, Pydantic, Supabase Python client
