@@ -229,11 +229,36 @@ GET  /api/v1/managed-agents/{tenant_id}/documents/{document_id}/download
 ```
 
 The POST endpoint runs the agent, the GET endpoint streams the file.
-**V1 does not cache bytes inline** — the download endpoint calls the
-Anthropic Files API fresh each time. If Anthropic's session-file
-retention proves too short for your use case, switch `document_drafting.py`
-to store `file_bytes` on the row at drafting time (migration 100 has
-the column reserved).
+**V1 stores bytes inline** — `document_drafting.py` decodes the agent's
+`content_base64` reply, persists it in `documents.file_bytes`, and the
+download endpoint streams those stored bytes directly. `anthropic_file_id`
+is retained as optional debugging metadata rather than the source of truth.
+
+### Preflight + smoke workflow
+
+For a safe, no-cost local verification pass:
+
+```bash
+python -m scripts.managed_agents.preflight
+```
+
+That checks backend importability, managed-agent route registration, and
+the migration/schema-log contract for the managed-agents features.
+
+If you have real Anthropic credentials configured and want a read-only
+API verification on top:
+
+```bash
+python -m scripts.managed_agents.preflight --live-readonly
+```
+
+For the cost-incurring end-to-end session checks, run the specialized
+scripts directly:
+
+```bash
+python -m scripts.managed_agents.session_smoke
+python -m scripts.managed_agents.drafter_smoke --save-events out.jsonl
+```
 
 Plan gating is the same as lead qualification: free tier is blocked
 server-side before the agent is invoked.

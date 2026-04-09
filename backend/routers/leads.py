@@ -10,7 +10,7 @@ from fastapi.responses import Response
 
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_service_supabase
+from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
@@ -24,6 +24,16 @@ from backend.services.webhook_dispatcher import fire_event_background
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/leads", tags=["leads"])
+
+
+def get_supabase():
+    """Backward-compatible test seam for modules that still patch leads.get_supabase."""
+    return _get_service_supabase()
+
+
+def get_service_supabase():
+    """Preserve existing call sites while allowing get_supabase() patches to intercept."""
+    return get_supabase()
 
 
 @router.get("/{tenant_id}")

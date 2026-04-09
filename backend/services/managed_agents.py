@@ -562,7 +562,10 @@ class ManagedAgentsClient:
                 last_event_id = event["id"]
             if event_type == "session.status_terminated":
                 return SessionTerminalState(
-                    terminated=True, stop_reason_type=None, last_event_id=last_event_id,
+                    terminated=True,
+                    stop_reason_type=None,
+                    last_event_id=last_event_id,
+                    session_id=session_id,
                 )
             if event_type == "session.status_idle":
                 stop_reason = event.get("stop_reason") or {}
@@ -572,10 +575,14 @@ class ManagedAgentsClient:
                         terminated=False,
                         stop_reason_type=stop_type,
                         last_event_id=last_event_id,
+                        session_id=session_id,
                     )
         # Stream ended without a terminal event — treat as unterminated.
         return SessionTerminalState(
-            terminated=False, stop_reason_type=None, last_event_id=last_event_id,
+            terminated=False,
+            stop_reason_type=None,
+            last_event_id=last_event_id,
+            session_id=session_id,
         )
 
 

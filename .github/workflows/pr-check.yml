@@ -39,6 +39,12 @@ jobs:
       - name: Lint Python test quality
         run: python scripts/lint_python_test_quality.py
 
+      - name: Check local Python test references
+        run: python scripts/check_test_local_refs.py
+
+      - name: Managed Agents preflight
+        run: python scripts/managed_agents/preflight.py
+
       - name: Check for dangerous patterns
         run: |
           ERRORS=0

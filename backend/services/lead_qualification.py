@@ -202,7 +202,10 @@ def _run_qualifier_session(
 
     assistant_chunks: list[str] = []
     terminal = SessionTerminalState(
-        terminated=False, stop_reason_type=None, last_event_id=None,
+        terminated=False,
+        stop_reason_type=None,
+        last_event_id=None,
+        session_id=session_id,
     )
 
     for event in stream:
@@ -220,6 +223,7 @@ def _run_qualifier_session(
                 terminated=True,
                 stop_reason_type=None,
                 last_event_id=event.get("id"),
+                session_id=session_id,
             )
             break
         elif event_type == "session.status_idle":
@@ -232,6 +236,7 @@ def _run_qualifier_session(
                     terminated=False,
                     stop_reason_type=stop_type,
                     last_event_id=event.get("id"),
+                    session_id=session_id,
                 )
                 break
 

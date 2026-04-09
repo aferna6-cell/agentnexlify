@@ -258,6 +258,39 @@ class TestStreamEvents:
         assert events[0]["content"][0]["text"] == "hello"
         assert events[1]["type"] == "session.status_idle"
 
+
+class TestRunUntilIdle:
+    def _make_sse_client(self, body: bytes) -> MagicMock:
+        stream_ctx = MagicMock()
+        stream_resp = MagicMock()
+        stream_resp.status_code = 200
+        stream_resp.iter_lines.return_value = iter(body.decode("utf-8").splitlines())
+        stream_ctx.__enter__.return_value = stream_resp
+        stream_ctx.__exit__.return_value = False
+
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value = mock_client
+        mock_client.__exit__.return_value = False
+        mock_client.stream.return_value = stream_ctx
+        mock_client.request.return_value = _ok_response({"ok": True})
+        return mock_client
+
+    def test_terminal_state_preserves_session_id(self):
+        client = _make_client()
+        body = (
+            b'event: session.status_idle\n'
+            b'data: {"type":"session.status_idle","id":"sevt_2","stop_reason":{"type":"end_turn"}}\n'
+            b"\n"
+        )
+        mock_http = self._make_sse_client(body)
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            terminal = client.run_until_idle("sess_123")
+
+        assert terminal.session_id == "sess_123"
+        assert terminal.last_event_id == "sevt_2"
+        assert terminal.stop_reason_type == "end_turn"
+
     def test_skips_malformed_json(self):
         client = _make_client()
         body = (

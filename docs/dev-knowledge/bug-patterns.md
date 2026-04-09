@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Removing module-local `get_supabase` seams breaks shared test fixtures
+**Date:** 2026-04-09
+**Symptom:** Large backend test groups fail during fixture setup with `AttributeError: <module ...> does not have the attribute 'get_supabase'` before any endpoint assertions run.
+**Root Cause:** Several routers were migrated to `get_service_supabase()` and stopped exporting a module-local `get_supabase` symbol, but shared pytest fixtures still patched `backend.routers.*.get_supabase` across many modules.
+**Files Changed:** `backend/routers/auth.py`, `backend/routers/leads.py`, `backend/routers/widget_lead.py`, `backend/routers/team.py`, `backend/routers/client_portal.py`
+**Fix:** Added backward-compatible `get_supabase()` shims and routed local `get_service_supabase()` calls through them so existing patch-based tests still intercept DB access.
+**Prevention:** When replacing `get_supabase()` with `get_service_supabase()` in a router/service, update the shared test fixtures in the same change or leave a module-local compatibility shim until all patches are migrated.
+
+---
+
 ### Stale tests left behind after dead code sweeps
 **Date:** 2026-04-09
 **Symptom:** `pytest` fails during collection or test execution with `ModuleNotFoundError` / `AttributeError` because a test imports or patches a service module that no longer exists.

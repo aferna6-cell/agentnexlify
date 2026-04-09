@@ -18,8 +18,8 @@ Routes:
         quote, invoice, or proposal.
 
     GET  /api/v1/managed-agents/{tenant_id}/documents/{document_id}/download
-        Stream the bytes of a drafted document via the Anthropic
-        Files API (lazy fetch — bytes are not stored inline in V1).
+        Stream the persisted inline bytes of a drafted document from
+        documents.file_bytes (no Files API round-trip in the live path).
 
     GET  /api/v1/managed-agents/{tenant_id}/health
         Report which agents are provisioned and reachable from this worker.

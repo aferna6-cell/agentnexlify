@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from backend.limiter import limiter
-from backend.models.database import get_service_supabase
+from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import WidgetLeadRequest, WidgetLeadResponse, WidgetOfflineContactRequest
 from backend.services.activity import log_activity
 from backend.services.lead_qualification import qualify_lead_background
@@ -27,6 +27,16 @@ from backend.routers.widget_helpers import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
+
+
+def get_supabase():
+    """Backward-compatible test seam for modules that still patch widget_lead.get_supabase."""
+    return _get_service_supabase()
+
+
+def get_service_supabase():
+    """Preserve existing call sites while allowing get_supabase() patches to intercept."""
+    return get_supabase()
 
 
 @router.post("/lead", response_model=WidgetLeadResponse)

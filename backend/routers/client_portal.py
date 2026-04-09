@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_service_supabase
+from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.tenant_scope import tenant_table
 
@@ -20,9 +20,37 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/portal", tags=["client-portal"])
 
-_PORTAL_BASE_URL = f"{settings.frontend_url}/client"
+_PUBLIC_PORTAL_FRONTEND_URL = "https://agentnexlify.vercel.app"
+_PUBLIC_API_BASE_URL = "https://agentnexlify-production.up.railway.app"
 _JWT_ALGORITHM = "HS256"
 _CLIENT_JWT_EXPIRE_DAYS = 30
+
+
+def get_supabase():
+    """Backward-compatible test seam for modules that still patch client_portal.get_supabase."""
+    return _get_service_supabase()
+
+
+def get_service_supabase():
+    """Preserve existing call sites while allowing get_supabase() patches to intercept."""
+    return get_supabase()
+
+
+def _portal_base_url() -> str:
+    frontend_url = getattr(settings, "frontend_url", "")
+    if not isinstance(frontend_url, str):
+        frontend_url = ""
+    frontend_url = frontend_url.rstrip("/")
+    if frontend_url and "localhost" not in frontend_url and "127.0.0.1" not in frontend_url:
+        return f"{frontend_url}/client"
+    return f"{_PUBLIC_PORTAL_FRONTEND_URL}/client"
+
+
+def _api_base_url() -> str:
+    api_url = getattr(settings, "api_url", "")
+    if isinstance(api_url, str) and api_url.strip():
+        return api_url
+    return _PUBLIC_API_BASE_URL
 
 
 def _jwt_secret() -> str:
@@ -311,7 +339,7 @@ async def generate_portal_link(
 
     if existing.data:
         token = existing.data[0]["token"]
-        return {"token": token, "url": f"{_PORTAL_BASE_URL}/{token}"}
+        return {"token": token, "url": f"{_portal_base_url()}/{token}"}
 
     # Generate a new token
     token = secrets.token_urlsafe(32)
@@ -325,7 +353,7 @@ async def generate_portal_link(
         logger.exception("Failed to insert portal token for lead %s", lead_id)
         raise HTTPException(status_code=500, detail="Failed to generate portal link")
 
-    return {"token": token, "url": f"{_PORTAL_BASE_URL}/{token}"}
+    return {"token": token, "url": f"{_portal_base_url()}/{token}"}
 
 
 # ── Public (no auth) endpoints ────────────────────────────────
@@ -445,7 +473,7 @@ async def get_portal_data(token: str, request: Request):
         "service_records": service_records,
         "rebook_enabled": rebook_enabled,
         "widget_api_key": widget_api_key,
-        "api_base": settings.api_url,
+        "api_base": _api_base_url(),
         "client_login_enabled": client_login_enabled,
     }
 
@@ -757,7 +785,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
         "documents": doc_result.data or [],
         "rebook_enabled": rebook_enabled,
         "widget_api_key": widget_api_key,
-        "api_base": settings.api_url,
+        "api_base": _api_base_url(),
     }
 
 

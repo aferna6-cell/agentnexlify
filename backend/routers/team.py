@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
 
-from backend.models.database import get_service_supabase
+from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import (
     AcceptInviteRequest,
     InviteValidationResponse,
@@ -26,6 +26,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/team", tags=["team"])
 
 INVITE_BASE_URL = f"{settings.frontend_url}/invite"
+
+
+def get_supabase():
+    """Backward-compatible test seam for modules that still patch team.get_supabase."""
+    return _get_service_supabase()
+
+
+def get_service_supabase():
+    """Preserve existing call sites while allowing get_supabase() patches to intercept."""
+    return get_supabase()
 
 
 def _build_invite_email_html(business_name: str, role: str, invite_url: str) -> str:

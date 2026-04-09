@@ -14,7 +14,7 @@ from jose import JWTError, jwt
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_service_supabase
+from backend.models.database import get_service_supabase as _get_service_supabase
 import stripe
 
 from backend.models.schemas import (
@@ -48,6 +48,16 @@ _JWT_EXPIRE_HOURS = 24  # Short-lived to prevent stale plan claims after downgra
 _GOOGLE_STATE_EXPIRY_MINUTES = 10
 _GOOGLE_SETUP_EXPIRY_HOURS = 1
 _GOOGLE_OAUTH_SCOPE = "openid email profile"
+
+
+def get_supabase():
+    """Backward-compatible test seam for modules that still patch auth.get_supabase."""
+    return _get_service_supabase()
+
+
+def get_service_supabase():
+    """Preserve existing call sites while allowing get_supabase() patches to intercept."""
+    return get_supabase()
 
 
 def _jwt_secret() -> str:

@@ -2003,7 +2003,7 @@ async def get_recovery_stats(
     briefings_sent = 0
     try:
         br = (
-            db.table("activity_log")
+            tenant_table(db, "activity_log", tenant_id)
             .select("id", count="exact")
             .eq("tenant_id", tenant_id)
             .eq("action", "daily_briefing_sent")

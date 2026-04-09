@@ -24,6 +24,22 @@ jobs:
           echo "# Health Check — $(date -u '+%Y-%m-%d %H:%M UTC')" > health-report.md
           echo "" >> health-report.md
 
+          echo "## Managed Agents Preflight" >> health-report.md
+          if python scripts/managed_agents/preflight.py >> health-report.md 2>&1; then
+            echo "" >> health-report.md
+          else
+            echo "CRITICAL: managed-agents preflight failed" >> health-report.md
+            echo "" >> health-report.md
+          fi
+
+          echo "## Local Python Test References" >> health-report.md
+          if python scripts/check_test_local_refs.py >> health-report.md 2>&1; then
+            echo "" >> health-report.md
+          else
+            echo "CRITICAL: stale local Python test references detected" >> health-report.md
+            echo "" >> health-report.md
+          fi
+
           echo "## Dangerous Imports" >> health-report.md
           if grep -r "from __future__ import annotations" backend/routers/ 2>/dev/null; then
             echo "CRITICAL: from __future__ import annotations in router files!" >> health-report.md
