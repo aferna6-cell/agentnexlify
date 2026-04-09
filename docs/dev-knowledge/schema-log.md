@@ -653,3 +653,24 @@ All new tables have RLS enabled with `auth.role() = 'service_role'` policy. Func
 **Note:** Migration tolerates orphaned `client_id` values — FK is left NOT VALID with a NOTICE if orphans exist (commit 738ba0b).
 
 **Applied:** Pending — created 2026-04-07. Critical for multi-worker safety.
+
+### 097 — No-Show Recovery Tracking Columns
+**Date:** 2026-04-08
+Adds two columns to `appointments` for no-show recovery outreach tracking:
+- `noshow_recovery_sent_at` TIMESTAMPTZ — when initial recovery message was sent
+- `noshow_followup_sent_at` TIMESTAMPTZ — when follow-up was sent
+
+Partial index `idx_appointments_noshow_recovery` on `(status, noshow_recovery_sent_at)` WHERE `status = 'no_show'` — optimizes the recovery query that finds no-show appointments needing outreach.
+
+**Applied:** Pending — created 2026-04-08. Required for no-show recovery automation.
+
+### 098 — Daily Briefing, No-Show Recovery Toggles, Pre-Chat Form Config
+**Date:** 2026-04-08
+Adds tenant feature toggles and widget pre-chat form:
+- `tenants.daily_briefing_enabled` BOOLEAN DEFAULT false — morning SMS briefing with leads, appointments, tasks
+- `tenants.noshow_recovery_enabled` BOOLEAN DEFAULT true — auto SMS+email to no-show appointments
+- `widget_configs.pre_chat_form` JSONB DEFAULT null — JSON config for pre-chat form fields `[{name, label, type, required}]`
+
+Column comments added for documentation.
+
+**Applied:** Pending — created 2026-04-08. Required for daily briefing and pre-chat form features.

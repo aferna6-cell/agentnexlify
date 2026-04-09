@@ -1196,3 +1196,71 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `migrations/096_production_hardening.sql`, `tests/test_migration_096.py`
 **Fix:** Changed to `NOT VALID` FK + conditional validation: check for orphan count first, only `VALIDATE CONSTRAINT` if zero orphans, otherwise log a NOTICE. Same pattern applied to conversations table.
 **Prevention:** Any FK constraint on tables with historical data must use `NOT VALID` + conditional validation. Never assume referential integrity exists in production for columns added ad-hoc.
+
+---
+
+## 2026-04-08
+
+### 64. Route shadowing — parameterized route hides fixed-path route
+**Date:** 2026-04-08 (Commit cd1c6fc)
+**Symptom:** `GET /documents/templates` returned 404 or matched the wrong handler, making document templates unreachable.
+**Root Cause:** `documents.py` had `/{document_id}` routes registered before `/templates`. FastAPI matches routes in order — the parameterized route captured "templates" as a document_id.
+**Files Changed:** `backend/routers/documents.py`
+**Fix:** Moved `/templates` routes before `/{document_id}` routes.
+**Prevention:** In any router with both fixed-path and parameterized routes, fixed paths MUST come first. Pattern: `/templates`, `/search`, `/export` before `/{id}`.
+*Auto-logged 2026-04-08 evening — needs human enrichment for root cause details*
+
+---
+
+### 65. Unawaited async coroutine — booking confirmation never sent on reschedule
+**Date:** 2026-04-08 (Commit cd1c6fc)
+**Symptom:** Customers who rescheduled appointments never received confirmation emails/SMS. New bookings worked fine.
+**Root Cause:** `booking_page.py` called `_send_appointment_confirmation(...)` without `await` or `safe_create_task()`. The coroutine was created but never executed — Python silently discards unawaited coroutines with only a RuntimeWarning.
+**Files Changed:** `backend/routers/booking_page.py`
+**Fix:** Wrapped in `safe_create_task()` to execute as background task.
+**Prevention:** Every async function call in a non-async context must use `safe_create_task()`. Python's RuntimeWarning for unawaited coroutines is easy to miss in logs. Consider a linter rule.
+*Auto-logged 2026-04-08 evening — needs human enrichment for root cause details*
+
+---
+
+### 66. Railway build failure — railway.toml overriding railway.json
+**Date:** 2026-04-08 (Commit 849943f)
+**Symptom:** Railway deployment failed to build. NIXPACKS builder was selected instead of Docker, and raw `$PORT` was passed to uvicorn command.
+**Root Cause:** `railway.toml` was committed alongside `railway.json`. Railway prioritizes .toml over .json. The .toml specified NIXPACKS builder and a start command with unresolved `$PORT`, overriding the correct Docker config in railway.json.
+**Files Changed:** `railway.toml` (deleted), `backend/main.py`
+**Fix:** Deleted railway.toml. Added HEAD method support to health endpoints (Railway health checks use HEAD).
+**Prevention:** Only one Railway config file should exist. If railway.json is canonical, never commit railway.toml. Railway's config precedence: .toml > .json.
+*Auto-logged 2026-04-08 evening — needs human enrichment for root cause details*
+
+---
+
+### 67. Widget chat usage counter race condition
+**Date:** 2026-04-08 (Commit 91b98d3)
+**Symptom:** Under concurrent requests, the widget chat usage counter could allow more messages than the plan limit due to TOCTOU (time-of-check-to-time-of-use) race between reading and incrementing the counter.
+**Root Cause:** Usage check and increment were separate operations — two concurrent requests could both read the same count, both pass the limit check, then both increment.
+**Files Changed:** `backend/routers/widget_chat.py`
+**Fix:** Replaced with compare-and-swap pattern — atomic check-and-increment in a single DB operation.
+**Prevention:** Any counter used for rate limiting or quota enforcement must use atomic increment (compare-and-swap or DB-level INCREMENT with RETURNING). Never separate the read and write.
+*Auto-logged 2026-04-08 evening — needs human enrichment for root cause details*
+
+---
+
+### 68. CSV lead import wrong column mapping — source mapped to lead_temperature
+**Date:** 2026-04-08 (Commit 91b98d3)
+**Symptom:** CSV-imported leads had their source value written to `lead_temperature` instead of `source`, corrupting both fields.
+**Root Cause:** Column mapping dict in `leads.py` CSV import handler had `'source'` mapped to the wrong field name.
+**Files Changed:** `backend/routers/leads.py`
+**Fix:** Corrected mapping: `'source'` column now maps to `'source'` field.
+**Prevention:** After modifying CSV import mappings, test with a sample CSV and verify all fields land in the correct DB columns.
+*Auto-logged 2026-04-08 evening — needs human enrichment for root cause details*
+
+---
+
+### 69. Swallowed exceptions — 22+ except-pass blocks replaced with logging
+**Date:** 2026-04-08 (Commits b65bf92, 3adee73, cd1c6fc, 91b98d3)
+**Symptom:** Multiple backend operations (email sends, dedup checks, lead lookups, tag definitions, widget config) failed silently. Errors were invisible in logs, making debugging impossible.
+**Root Cause:** `except Exception: pass` or `except Exception: continue` blocks in automation_engine.py (9 blocks), tag_definitions.py, widget_config.py, admin_analytics.py, team.py, invoices.py, widget_chat.py, analytics.py, and leads.py.
+**Files Changed:** `backend/services/automation_engine.py`, `backend/routers/tag_definitions.py`, `backend/routers/widget_config.py`, `backend/routers/admin_analytics.py`, `backend/routers/team.py`, `backend/routers/invoices.py`, `backend/routers/widget_chat.py`, `backend/routers/analytics.py`, `backend/routers/leads.py`
+**Fix:** All 22+ blocks now log with `logger.warning(exc_info=True)` or `logger.debug()` per project conventions. Frontend: 4 empty `.catch(() => {})` replaced with `console.warn`.
+**Prevention:** Pre-commit hook already blocks bare `except:`. Extend to also flag `except Exception: pass` and `except Exception: continue` without logging. Every except block must log or have an explicit comment explaining silence.
+*Auto-logged 2026-04-08 evening — needs human enrichment for root cause details*
