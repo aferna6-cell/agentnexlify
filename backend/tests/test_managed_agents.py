@@ -1,0 +1,328 @@
+"""Unit tests for backend.services.managed_agents (raw-HTTP client)."""
+
+import json
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import httpx
+import pytest
+
+from backend.services.managed_agents import (
+    ManagedAgentsClient,
+    ManagedAgentsError,
+    MANAGED_AGENTS_BETA,
+    ANTHROPIC_VERSION,
+    SessionTerminalState,
+)
+
+
+def _ok_response(payload: Any) -> httpx.Response:
+    return httpx.Response(
+        status_code=200,
+        json=payload,
+        request=httpx.Request("POST", "https://api.anthropic.com/v1/test"),
+    )
+
+
+def _make_client() -> ManagedAgentsClient:
+    return ManagedAgentsClient(api_key="sk-test-noop")
+
+
+class TestHeaders:
+    def test_required_headers_present(self):
+        client = _make_client()
+        headers = client._headers()
+        assert headers["x-api-key"] == "sk-test-noop"
+        assert headers["anthropic-version"] == ANTHROPIC_VERSION
+        assert headers["anthropic-beta"] == MANAGED_AGENTS_BETA
+        assert headers["content-type"] == "application/json"
+
+    def test_extra_beta_appended(self):
+        client = _make_client()
+        headers = client._headers(extra_beta="files-api-2025-04-14")
+        assert headers["anthropic-beta"] == (
+            f"{MANAGED_AGENTS_BETA},files-api-2025-04-14"
+        )
+
+    def test_extra_beta_same_as_managed_agents_not_duplicated(self):
+        client = _make_client()
+        headers = client._headers(extra_beta=MANAGED_AGENTS_BETA)
+        assert headers["anthropic-beta"] == MANAGED_AGENTS_BETA
+
+
+class TestCreateEnvironment:
+    def test_create_environment_body_shape(self):
+        client = _make_client()
+
+        mock_http = MagicMock()
+        mock_http.__enter__.return_value = mock_http
+        mock_http.__exit__.return_value = False
+        mock_http.request.return_value = _ok_response(
+            {"id": "env_abc", "name": "my-env"}
+        )
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            result = client.create_environment(name="my-env")
+
+        assert result == {"id": "env_abc", "name": "my-env"}
+        call = mock_http.request.call_args
+        assert call.args[0] == "POST"
+        assert call.args[1].endswith("/v1/environments")
+        assert call.kwargs["json"] == {
+            "name": "my-env",
+            "config": {
+                "type": "cloud",
+                "networking": {"type": "unrestricted"},
+            },
+        }
+
+
+class TestCreateAgentBody:
+    def test_minimal_agent_body(self):
+        client = _make_client()
+        mock_http = MagicMock()
+        mock_http.__enter__.return_value = mock_http
+        mock_http.__exit__.return_value = False
+        mock_http.request.return_value = _ok_response(
+            {"id": "agent_abc", "name": "Bot", "version": 1}
+        )
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            client.create_agent(name="Bot", model="claude-opus-4-6")
+
+        body = mock_http.request.call_args.kwargs["json"]
+        assert body == {"name": "Bot", "model": "claude-opus-4-6"}
+        # Optional fields must be omitted, not sent as None/empty
+        assert "system" not in body
+        assert "tools" not in body
+        assert "skills" not in body
+
+    def test_full_agent_body(self):
+        client = _make_client()
+        tools = [{"type": "agent_toolset_20260401"}]
+        skills = [{"type": "anthropic", "skill_id": "xlsx"}]
+
+        mock_http = MagicMock()
+        mock_http.__enter__.return_value = mock_http
+        mock_http.__exit__.return_value = False
+        mock_http.request.return_value = _ok_response({"id": "agent_abc"})
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            client.create_agent(
+                name="Bot",
+                model="claude-opus-4-6",
+                system="You are a bot.",
+                tools=tools,
+                skills=skills,
+                description="Test bot.",
+            )
+
+        body = mock_http.request.call_args.kwargs["json"]
+        assert body["system"] == "You are a bot."
+        assert body["tools"] == tools
+        assert body["skills"] == skills
+        assert body["description"] == "Test bot."
+
+
+class TestCreateSessionAgentRef:
+    def test_string_shorthand_when_no_version(self):
+        client = _make_client()
+        mock_http = MagicMock()
+        mock_http.__enter__.return_value = mock_http
+        mock_http.__exit__.return_value = False
+        mock_http.request.return_value = _ok_response({"id": "sess_1"})
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            client.create_session(agent_id="agent_abc", environment_id="env_abc")
+
+        body = mock_http.request.call_args.kwargs["json"]
+        assert body["agent"] == "agent_abc"  # string shorthand
+        assert body["environment_id"] == "env_abc"
+
+    def test_version_object_when_pinning(self):
+        client = _make_client()
+        mock_http = MagicMock()
+        mock_http.__enter__.return_value = mock_http
+        mock_http.__exit__.return_value = False
+        mock_http.request.return_value = _ok_response({"id": "sess_1"})
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            client.create_session(
+                agent_id="agent_abc",
+                environment_id="env_abc",
+                agent_version=42,
+            )
+
+        body = mock_http.request.call_args.kwargs["json"]
+        assert body["agent"] == {
+            "type": "agent",
+            "id": "agent_abc",
+            "version": 42,
+        }
+
+
+class TestErrorMapping:
+    def test_4xx_raises_with_envelope_fields(self):
+        client = _make_client()
+        bad = httpx.Response(
+            status_code=400,
+            json={
+                "type": "error",
+                "error": {
+                    "type": "invalid_request_error",
+                    "message": "Invalid tool config",
+                },
+                "request_id": "req_abc",
+            },
+            headers={"request-id": "req_abc"},
+            request=httpx.Request("POST", "https://api.anthropic.com/v1/agents"),
+        )
+
+        mock_http = MagicMock()
+        mock_http.__enter__.return_value = mock_http
+        mock_http.__exit__.return_value = False
+        mock_http.request.return_value = bad
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            with pytest.raises(ManagedAgentsError) as exc_info:
+                client.create_agent(name="Bot", model="claude-opus-4-6")
+
+        err = exc_info.value
+        assert err.status == 400
+        assert err.error_type == "invalid_request_error"
+        assert err.request_id == "req_abc"
+        assert "Invalid tool config" in str(err)
+
+    def test_5xx_retries_then_raises(self):
+        client = _make_client()
+        fail = httpx.Response(
+            status_code=500,
+            json={"type": "error", "error": {"type": "api_error", "message": "boom"}},
+            request=httpx.Request("POST", "https://api.anthropic.com/v1/agents"),
+        )
+
+        mock_http = MagicMock()
+        mock_http.__enter__.return_value = mock_http
+        mock_http.__exit__.return_value = False
+        mock_http.request.return_value = fail
+
+        # Stub sleep so retries don't actually wait.
+        with (
+            patch("backend.services.managed_agents.httpx.Client", return_value=mock_http),
+            patch("backend.services.managed_agents.time.sleep"),
+        ):
+            with pytest.raises(ManagedAgentsError) as exc_info:
+                client.create_agent(name="Bot", model="claude-opus-4-6")
+
+        # retries=2 default → 3 total attempts
+        assert mock_http.request.call_count == 3
+        assert exc_info.value.status == 500
+
+
+class TestStreamEvents:
+    def _make_sse_client(self, body: bytes) -> MagicMock:
+        """Build a fake httpx.Client whose .stream() returns canned SSE bytes."""
+        stream_ctx = MagicMock()
+        stream_resp = MagicMock()
+        stream_resp.status_code = 200
+        stream_resp.iter_lines.return_value = iter(
+            body.decode("utf-8").splitlines()
+        )
+        stream_ctx.__enter__.return_value = stream_resp
+        stream_ctx.__exit__.return_value = False
+
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value = mock_client
+        mock_client.__exit__.return_value = False
+        mock_client.stream.return_value = stream_ctx
+        return mock_client
+
+    def test_parses_data_frames(self):
+        client = _make_client()
+        body = (
+            b": heartbeat\n"
+            b"event: agent.message\n"
+            b'data: {"type":"agent.message","id":"sevt_1","content":[{"type":"text","text":"hello"}]}\n'
+            b"\n"
+            b"event: session.status_idle\n"
+            b'data: {"type":"session.status_idle","id":"sevt_2","stop_reason":{"type":"end_turn"}}\n'
+            b"\n"
+        )
+        mock_http = self._make_sse_client(body)
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            events = list(client.stream_events("sess_1"))
+
+        assert len(events) == 2
+        assert events[0]["type"] == "agent.message"
+        assert events[0]["content"][0]["text"] == "hello"
+        assert events[1]["type"] == "session.status_idle"
+
+    def test_skips_malformed_json(self):
+        client = _make_client()
+        body = (
+            b"data: {not-json}\n\n"
+            b'data: {"type":"agent.message","id":"sevt_1"}\n\n'
+        )
+        mock_http = self._make_sse_client(body)
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
+            events = list(client.stream_events("sess_1"))
+        # The malformed frame is logged and skipped, the good one yields.
+        assert len(events) == 1
+        assert events[0]["id"] == "sevt_1"
+
+    def test_stream_http_error_raises(self):
+        client = _make_client()
+        stream_resp = MagicMock()
+        stream_resp.status_code = 401
+        stream_resp.read.return_value = (
+            b'{"type":"error","error":{"type":"authentication_error","message":"bad key"}}'
+        )
+
+        stream_ctx = MagicMock()
+        stream_ctx.__enter__.return_value = stream_resp
+        stream_ctx.__exit__.return_value = False
+
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value = mock_client
+        mock_client.__exit__.return_value = False
+        mock_client.stream.return_value = stream_ctx
+
+        with patch("backend.services.managed_agents.httpx.Client", return_value=mock_client):
+            with pytest.raises(ManagedAgentsError) as exc_info:
+                # stream_events is a generator — must iterate to trigger
+                list(client.stream_events("sess_1"))
+
+        assert exc_info.value.status == 401
+
+
+class TestRegistry:
+    def test_missing_env_vars_raises_actionable_error(self):
+        from backend.services.managed_agents_registry import (
+            ManagedAgentNotConfigured,
+            lead_qualifier,
+        )
+        from backend.config import settings
+
+        with (
+            patch.object(settings, "managed_agents_environment_id", ""),
+            patch.object(settings, "lead_qualifier_agent_id", ""),
+        ):
+            with pytest.raises(ManagedAgentNotConfigured) as exc_info:
+                lead_qualifier()
+
+        assert "LEAD_QUALIFIER_AGENT_ID" in str(exc_info.value) or \
+               "MANAGED_AGENTS_ENVIRONMENT_ID" in str(exc_info.value)
+
+    def test_handle_returned_when_configured(self):
+        from backend.services.managed_agents_registry import lead_qualifier
+        from backend.config import settings
+
+        with (
+            patch.object(settings, "managed_agents_environment_id", "env_abc"),
+            patch.object(settings, "lead_qualifier_agent_id", "agent_abc"),
+        ):
+            handle = lead_qualifier()
+
+        assert handle.agent_id == "agent_abc"
+        assert handle.environment_id == "env_abc"

@@ -83,7 +83,18 @@ class Settings(BaseSettings):
     tiktok_client_key: str = ""
     tiktok_client_secret: str = ""
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    # Claude Managed Agents — populated by scripts/managed_agents/provision.py.
+    # Load via BaseSettings from .env AND from .env.managed_agents (see model_config).
+    managed_agents_environment_id: str = ""
+    lead_qualifier_agent_id: str = ""
+    document_drafter_agent_id: str = ""
+    codebase_reviewer_agent_id: str = ""
+
+    model_config = {
+        "env_file": (".env", ".env.managed_agents"),
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
 
 settings = Settings()

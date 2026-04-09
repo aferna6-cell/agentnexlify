@@ -51,6 +51,7 @@ from backend.routers import (
     jobs,
     leads,
     local_seo,
+    managed_agent_runs,
     marketing_analytics,
     marketing_campaigns,
     menu,
@@ -746,6 +747,7 @@ app.include_router(client_portal.router)
 app.include_router(bids.router)
 app.include_router(calls.router)
 app.include_router(local_seo.router)
+app.include_router(managed_agent_runs.router)
 app.include_router(onboarding.router)
 app.include_router(phone.router)
 app.include_router(gbp.router)

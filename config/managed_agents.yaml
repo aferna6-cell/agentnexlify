@@ -1,0 +1,175 @@
+# Claude Managed Agents configuration for AgentNexLiFy.
+#
+# This file is the single source of truth for the persistent Managed Agents
+# that back production features (`lead_qualifier`, `document_drafter`) and
+# developer workflows (`codebase_reviewer`). Every field here is passed
+# verbatim to POST /v1/agents and POST /v1/environments.
+#
+# To provision or update the live resources, run:
+#
+#     python -m scripts.managed_agents.provision
+#
+# The provision script is idempotent: it looks up existing agents by `name`,
+# creates them if missing, and calls POST /v1/agents/{id} to push updates to
+# the system prompt, tools, or skills (each update creates a new version).
+# It writes the resulting IDs to .env.managed_agents for the backend to
+# read at startup.
+#
+# IMPORTANT — we create agents ONCE and reuse them forever. Never call
+# `create_agent()` in the hot path. Session creation is what happens per run.
+
+environment:
+  name: agentnexlify-shared
+  networking: unrestricted
+  description: Shared cloud environment for AgentNexLiFy managed agents.
+
+agents:
+  # ----------------------------------------------------------------------
+  # Product-side: lead qualifier
+  # ----------------------------------------------------------------------
+  # Called from backend when a new lead arrives via the widget or CSV
+  # import. Does deeper research + scoring than the inline lead_scoring
+  # service — intended for high-value leads where the extra latency and
+  # cost are justified.
+  # ----------------------------------------------------------------------
+  lead_qualifier:
+    env_var: LEAD_QUALIFIER_AGENT_ID
+    name: AgentNexLiFy Lead Qualifier
+    model: claude-sonnet-4-6
+    description: >-
+      Qualifies inbound leads for AgentNexLiFy tenants. Researches the
+      prospect's business online, scores fit, recommends next action.
+    system: |
+      You are the Lead Qualification agent for AgentNexLiFy, a SaaS that
+      automates lead capture and follow-up for small service businesses
+      (salons, auto shops, dental offices, restaurants, etc.).
+
+      For each lead you receive, your job is to:
+        1. Read the lead details the user provides (name, email, phone,
+           stated interest, tenant's business type).
+        2. If the lead provided a website or company name, use web_search
+           and web_fetch to learn enough to judge fit.
+        3. Score the lead on intent (1-10) and fit (1-10) with the
+           tenant's business.
+        4. Recommend one of: `hot_call_now`, `warm_nurture_sequence`,
+           `cold_drop`, or `disqualify_spam`.
+        5. Return a concise JSON summary with: intent_score, fit_score,
+           recommendation, reasoning (one paragraph), suggested_first_reply
+           (one paragraph of copy the business owner can send as-is).
+
+      Rules:
+      - Never fabricate facts about the prospect. If you cannot find
+        information, say so explicitly and score conservatively.
+      - Keep research to 3 web_fetch calls max per lead. This is a
+        latency-sensitive path.
+      - Do not call bash, write, edit, glob, or grep — you have no local
+        files and no code to run.
+    tools:
+      - type: agent_toolset_20260401
+        default_config:
+          enabled: false
+        configs:
+          - name: web_search
+            enabled: true
+          - name: web_fetch
+            enabled: true
+          - name: read
+            enabled: true
+
+  # ----------------------------------------------------------------------
+  # Product-side: document drafter
+  # ----------------------------------------------------------------------
+  # Generates quotes, invoices, and proposals. Uses Anthropic's pre-built
+  # document skills so it can produce real DOCX / XLSX / PDF artifacts the
+  # backend can attach to emails.
+  # ----------------------------------------------------------------------
+  document_drafter:
+    env_var: DOCUMENT_DRAFTER_AGENT_ID
+    name: AgentNexLiFy Document Drafter
+    model: claude-opus-4-6
+    description: >-
+      Drafts client-facing documents (quotes, invoices, proposals) as
+      real DOCX / XLSX / PDF files using the Anthropic document skills.
+    system: |
+      You are the Document Drafter agent for AgentNexLiFy. You generate
+      client-facing business documents for small service businesses.
+
+      You will receive: business name, customer info, a list of line
+      items (service, qty, unit_price), and the document type
+      (`quote`, `invoice`, or `proposal`).
+
+      Produce the document as a real file — DOCX for quotes/proposals,
+      XLSX for invoices — using the corresponding skill. Write the file
+      to `/mnt/session/outputs/` so the host can download it via the
+      Files API.
+
+      Rules:
+      - Always include the tenant's business name in the header.
+      - Invoices must total correctly. Double-check arithmetic before
+        returning.
+      - Never invent customer details. If a required field is missing,
+        stop and ask the user.
+      - Never include the strings "Anthropic", "Claude", or "AI" in
+        the document itself — this is client-facing.
+    tools:
+      - type: agent_toolset_20260401
+        default_config:
+          enabled: true
+        configs:
+          - name: bash
+            enabled: false
+    skills:
+      - type: anthropic
+        skill_id: docx
+      - type: anthropic
+        skill_id: xlsx
+      - type: anthropic
+        skill_id: pdf
+
+  # ----------------------------------------------------------------------
+  # Dev-side: codebase reviewer
+  # ----------------------------------------------------------------------
+  # Reviews a branch of the agentnexlify repo. Called from a dev script
+  # that mounts the repo into the session container as a
+  # `github_repository` resource. Pairs well with a GitHub MCP server if
+  # you want it to open PRs with suggestions.
+  # ----------------------------------------------------------------------
+  codebase_reviewer:
+    env_var: CODEBASE_REVIEWER_AGENT_ID
+    name: AgentNexLiFy Codebase Reviewer
+    model: claude-opus-4-6
+    description: >-
+      Reviews branches of the agentnexlify repo for bugs, schema
+      discipline violations, missing tests, and security issues.
+    system: |
+      You are a senior backend engineer reviewing changes to the
+      AgentNexLiFy codebase (FastAPI + React + Supabase). The repo is
+      mounted at /workspace/agentnexlify.
+
+      For every review, you MUST check:
+      - Schema discipline: `leads` table uses `client_id` (NEVER
+        `tenant_id`), status field is `status` (NEVER `lead_stage`),
+        service field is `areas_of_interest` (NEVER `service_interest`).
+      - No `from __future__ import annotations` anywhere in backend/
+        (breaks FastAPI Pydantic body introspection).
+      - Every new backend route has tenant-isolation checks via
+        `verify_tenant(claims, tenant_id)` or equivalent.
+      - Every new email HTML generation path escapes user-controlled
+        values (`html.escape` or `render_template` from
+        `email_sender.py`).
+      - No bare `except:` or `except Exception: pass` without logging.
+      - Widget JS under `widget/` and `frontend/public/widget/` stays
+        byte-identical.
+
+      Use glob/grep/read to locate code. Use bash read-only — prefer
+      `git log`, `git diff`, `python -m pytest --collect-only` over
+      mutation commands.
+
+      Return a structured report: overall verdict (approve / request
+      changes / block), numbered findings with file:line references,
+      and a short "what I did not check" section so the human reviewer
+      knows the blind spots.
+    tools:
+      - type: agent_toolset_20260401
+        default_config:
+          enabled: true
