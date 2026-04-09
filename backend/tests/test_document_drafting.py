@@ -7,12 +7,14 @@ Focus areas:
   1. Plan gating — free tier must NOT spend on the agent.
   2. Kind/shape validation — reject bad kind, empty line items.
   3. JSON extraction from the agent reply — fenced, bare, prose-wrapped.
-  4. File metadata lookup path (we sidestep get_file_content for V1).
-  5. Persisted row shape — kind, file_type, file_name, anthropic_file_id,
-     draft_metadata.
+  4. Base64 contract: decode, magic-byte validation, whitespace tolerance.
+  5. Persisted row shape — file_bytes hex escape, metadata with
+     redacted content_base64.
   6. Safe filename handling — no path traversal.
 """
 
+import base64
+import zlib
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,6 +25,14 @@ from backend.services.document_drafting import (
     _safe_filename,
     draft_document,
 )
+
+
+# A minimal real DOCX (ZIP archive) for tests — just needs the PK magic
+# header for the magic-byte validator to pass.
+_FAKE_DOCX_BYTES = b"PK\x03\x04" + b"minimal docx body for testing only"
+_FAKE_DOCX_B64 = base64.b64encode(_FAKE_DOCX_BYTES).decode("ascii")
+_FAKE_PDF_BYTES = b"%PDF-1.4\n%fake pdf body for testing only"
+_FAKE_PDF_B64 = base64.b64encode(_FAKE_PDF_BYTES).decode("ascii")
 
 
 class TestExtractJson:
@@ -154,8 +164,32 @@ class TestPlanGate:
                 )
 
 
+def _mock_agent_session(reply_text: str, handle_agent_id: str = "agent_abc"):
+    events = iter([
+        {
+            "type": "agent.message",
+            "id": "sevt_1",
+            "content": [{"type": "text", "text": reply_text}],
+        },
+        {
+            "type": "session.status_idle",
+            "id": "sevt_2",
+            "stop_reason": {"type": "end_turn"},
+        },
+    ])
+    mock_client = MagicMock()
+    mock_client.create_session.return_value = {"id": "sess_1"}
+    mock_client.stream_events.return_value = events
+    mock_client.send_user_message.return_value = None
+
+    mock_handle = MagicMock()
+    mock_handle.agent_id = handle_agent_id
+    mock_handle.environment_id = "env_abc"
+    return mock_client, mock_handle
+
+
 class TestFullFlow:
-    def test_growth_plan_persists_document(self):
+    def test_growth_plan_persists_docx_with_bytes(self):
         tenant = {
             "id": "t1",
             "business_name": "Acme Services",
@@ -166,49 +200,20 @@ class TestFullFlow:
             "id": "doc_abc",
             "title": "Quote for Bob (2026-04-09)",
             "kind": "quote",
-            "file_type": "pdf",
-            "file_name": "acme-quote.pdf",
-            "anthropic_file_id": "file_123",
-            "draft_metadata": {"file_size_bytes": 12345, "session_id": "sess_1"},
+            "file_type": "docx",
+            "file_name": "acme-quote.docx",
+            "draft_metadata": {"file_size_bytes": len(_FAKE_DOCX_BYTES), "session_id": "sess_1"},
         }
         db = _fake_supabase(tenant, insert_result=inserted_row)
 
-        # Agent session: single message with file spec, then idle end_turn.
-        events = iter([
-            {
-                "type": "agent.message",
-                "id": "sevt_1",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": (
-                            '```json\n'
-                            '{"file_id": "file_123", "file_name": "acme-quote.pdf", '
-                            '"file_type": "pdf", "total": 300, "summary": "ok"}\n'
-                            '```'
-                        ),
-                    }
-                ],
-            },
-            {
-                "type": "session.status_idle",
-                "id": "sevt_2",
-                "stop_reason": {"type": "end_turn"},
-            },
-        ])
-        mock_client = MagicMock()
-        mock_client.create_session.return_value = {"id": "sess_1"}
-        mock_client.stream_events.return_value = events
-        mock_client.send_user_message.return_value = None
-        # Metadata lookup returns a size — we don't fetch bytes in V1.
-        mock_client.get_file_metadata.return_value = {
-            "id": "file_123",
-            "size_bytes": 12345,
-        }
-
-        mock_handle = MagicMock()
-        mock_handle.agent_id = "agent_abc"
-        mock_handle.environment_id = "env_abc"
+        reply = (
+            "```json\n"
+            '{"file_name": "acme-quote.docx", "file_type": "docx", '
+            '"total": 300, "summary": "ok", '
+            f'"content_base64": "{_FAKE_DOCX_B64}"}}\n'
+            "```"
+        )
+        mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
             patch("backend.services.document_drafting.get_supabase", return_value=db),
@@ -232,59 +237,66 @@ class TestFullFlow:
         insert_call = db.table("documents").insert.call_args
         row = insert_call.args[0]
         assert row["kind"] == "quote"
-        assert row["file_type"] == "pdf"
-        assert row["file_name"] == "acme-quote.pdf"
-        assert row["anthropic_file_id"] == "file_123"
+        assert row["file_type"] == "docx"
+        assert row["file_name"] == "acme-quote.docx"
         assert row["generated_by_agent"] == "document_drafter"
         assert row["tenant_id"] == "t1"
         assert row["lead_id"] == "lead_1"
         assert row["signer_name"] == "Bob"
         assert row["signer_email"] == "bob@example.com"
-        assert row["draft_metadata"]["file_size_bytes"] == 12345
-        assert row["draft_metadata"]["customer"]["name"] == "Bob"
-        assert len(row["draft_metadata"]["line_items"]) == 1
-        assert "file_bytes" not in row  # V1 stores nothing inline
 
-        # Get metadata was called; get_file_content was NOT (V1 lazy).
-        mock_client.get_file_metadata.assert_called_once_with("file_123")
+        # file_bytes stored as \x<hex>
+        assert row["file_bytes"].startswith("\\x")
+        assert row["file_bytes"] == "\\x" + _FAKE_DOCX_BYTES.hex()
+
+        # content_base64 redacted from stored spec (don't double-store)
+        assert "content_base64" not in row["draft_metadata"]["spec"]
+        assert row["draft_metadata"]["file_size_bytes"] == len(_FAKE_DOCX_BYTES)
+
+        # Files API should NOT have been touched — we now use inline bytes.
+        mock_client.get_file_metadata.assert_not_called()
         mock_client.get_file_content.assert_not_called()
 
-        # Session metadata tags
-        session_kwargs = mock_client.create_session.call_args.kwargs
-        assert session_kwargs["metadata"]["flow"] == "document_drafting"
-        assert session_kwargs["metadata"]["kind"] == "quote"
-        assert session_kwargs["metadata"]["tenant_id"] == "t1"
-
-    def test_reply_missing_file_id_raises(self):
+    def test_pdf_magic_bytes_accepted(self):
         tenant = {"id": "t1", "business_name": "Shop", "plan": "professional"}
-        db = _fake_supabase(tenant)
+        inserted = {"id": "doc_pdf"}
+        db = _fake_supabase(tenant, insert_result=inserted)
 
-        events = iter([
-            {
-                "type": "agent.message",
-                "id": "sevt_1",
-                "content": [{"type": "text", "text": '{"total": 100}'}],
-            },
-            {
-                "type": "session.status_idle",
-                "id": "sevt_2",
-                "stop_reason": {"type": "end_turn"},
-            },
-        ])
-        mock_client = MagicMock()
-        mock_client.create_session.return_value = {"id": "sess_1"}
-        mock_client.stream_events.return_value = events
-
-        mock_handle = MagicMock()
-        mock_handle.agent_id = "agent_abc"
-        mock_handle.environment_id = "env_abc"
+        reply = (
+            '{"file_name": "proposal.pdf", "file_type": "pdf", '
+            '"total": 1000, "summary": "ok", '
+            f'"content_base64": "{_FAKE_PDF_B64}"}}'
+        )
+        mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
             patch("backend.services.document_drafting.get_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
         ):
-            with pytest.raises(DocumentDraftingError, match="missing file_id"):
+            result = draft_document(
+                tenant_id="t1",
+                lead_id=None,
+                kind="proposal",
+                customer={"name": "X"},
+                line_items=[{"description": "A", "qty": 1, "unit_price": 1000}],
+            )
+
+        assert result["id"] == "doc_pdf"
+
+    def test_reply_missing_content_base64_raises(self):
+        tenant = {"id": "t1", "business_name": "Shop", "plan": "professional"}
+        db = _fake_supabase(tenant)
+
+        reply = '{"file_name": "x.docx", "file_type": "docx", "total": 100, "summary": "ok"}'
+        mock_client, mock_handle = _mock_agent_session(reply)
+
+        with (
+            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
+            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+        ):
+            with pytest.raises(DocumentDraftingError, match="missing content_base64"):
                 draft_document(
                     tenant_id="t1",
                     lead_id=None,
@@ -297,30 +309,11 @@ class TestFullFlow:
         tenant = {"id": "t1", "business_name": "Shop", "plan": "growth"}
         db = _fake_supabase(tenant)
 
-        events = iter([
-            {
-                "type": "agent.message",
-                "id": "sevt_1",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": '{"file_id": "f_1", "file_type": "zip", "file_name": "x.zip"}',
-                    }
-                ],
-            },
-            {
-                "type": "session.status_idle",
-                "id": "sevt_2",
-                "stop_reason": {"type": "end_turn"},
-            },
-        ])
-        mock_client = MagicMock()
-        mock_client.create_session.return_value = {"id": "sess_1"}
-        mock_client.stream_events.return_value = events
-
-        mock_handle = MagicMock()
-        mock_handle.agent_id = "agent_abc"
-        mock_handle.environment_id = "env_abc"
+        reply = (
+            '{"file_name": "x.zip", "file_type": "zip", "total": 1, '
+            '"summary": "ok", "content_base64": "aGVsbG8="}'
+        )
+        mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
             patch("backend.services.document_drafting.get_supabase", return_value=db),
@@ -335,3 +328,75 @@ class TestFullFlow:
                     customer={"name": "X"},
                     line_items=[{"description": "A", "qty": 1, "unit_price": 1}],
                 )
+
+    def test_bad_magic_bytes_rejected(self):
+        """If the agent returns base64 that decodes to something that
+        isn't actually a DOCX, we must reject it rather than persist
+        garbage."""
+        tenant = {"id": "t1", "business_name": "Shop", "plan": "growth"}
+        db = _fake_supabase(tenant)
+
+        fake_not_docx = base64.b64encode(b"this is not a docx").decode()
+        reply = (
+            '{"file_name": "x.docx", "file_type": "docx", "total": 1, '
+            f'"summary": "ok", "content_base64": "{fake_not_docx}"}}'
+        )
+        mock_client, mock_handle = _mock_agent_session(reply)
+
+        with (
+            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
+            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+        ):
+            with pytest.raises(DocumentDraftingError, match="do not look like a docx"):
+                draft_document(
+                    tenant_id="t1",
+                    lead_id=None,
+                    kind="quote",
+                    customer={"name": "X"},
+                    line_items=[{"description": "A", "qty": 1, "unit_price": 1}],
+                )
+
+    def test_whitespace_tolerant_base64(self):
+        """The agent sometimes wraps base64 despite `-w0`. We should
+        strip whitespace before decoding.
+
+        Realistic failure mode: the agent omits `-w0` → `base64` emits
+        wrapped output → when the agent serializes that into the JSON
+        reply, the whitespace ends up as escaped `\\n` in the JSON
+        source, which parses back to real `\\n` in the Python string.
+        We emulate that by building the reply via json.dumps so the
+        escaping matches the real wire format.
+        """
+        import json as _json
+        tenant = {"id": "t1", "business_name": "Shop", "plan": "growth"}
+        inserted = {"id": "doc_ws"}
+        db = _fake_supabase(tenant, insert_result=inserted)
+
+        # Insert real whitespace into the base64 to mimic a wrapping agent.
+        wrapped = "\n".join(_FAKE_DOCX_B64[i:i + 20] for i in range(0, len(_FAKE_DOCX_B64), 20))
+        reply = _json.dumps(
+            {
+                "file_name": "x.docx",
+                "file_type": "docx",
+                "total": 1,
+                "summary": "ok",
+                "content_base64": wrapped,
+            }
+        )
+        mock_client, mock_handle = _mock_agent_session(reply)
+
+        with (
+            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
+            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+        ):
+            result = draft_document(
+                tenant_id="t1",
+                lead_id=None,
+                kind="quote",
+                customer={"name": "X"},
+                line_items=[{"description": "A", "qty": 1, "unit_price": 1}],
+            )
+
+        assert result["id"] == "doc_ws"

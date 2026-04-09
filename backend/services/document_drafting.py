@@ -1,23 +1,43 @@
 """AI document drafting via Claude Managed Agents.
 
 Runs the `document_drafter` Managed Agent to produce real DOCX / XLSX /
-PDF files for quotes, invoices, and proposals. The agent writes the
-file to `/mnt/session/outputs/` inside its sandbox container; this
-service downloads the bytes via the Anthropic Files API (beta:
-files-api-2025-04-14) and persists them inline on the existing
-`documents` table.
+PDF files for quotes, invoices, and proposals.
 
-Why inline bytea instead of Supabase storage?
-  - Drafted documents are small (<1 MB typical).
-  - RLS / tenant isolation is already trivial on the documents table.
-  - No new bucket provisioning required.
-  - Can migrate to storage buckets later if file sizes grow.
+### Runtime contract
 
-This is a blocking path — the Managed Agents client is sync httpx.
-Call from a FastAPI threadpool or BackgroundTask, never directly from
-an async handler.
+The agent writes the file inside its sandbox container (via the docx /
+xlsx / pdf anthropic skills, which use bash + Node.js/Python to
+generate the binary). Because the Managed Agents runtime does NOT
+auto-upload `/mnt/session/outputs/` to the Files API, and there is no
+`file_create` tool on the agent toolset, the agent's final reply
+includes the file as a base64-encoded `content_base64` field:
+
+    {
+      "file_name":      "quote_smoke_test.docx",
+      "file_type":      "docx" | "xlsx" | "pdf",
+      "total":          450,
+      "summary":        "...",
+      "content_base64": "UEsDBAoAAAAA..."  # full file bytes
+    }
+
+This contract is documented in `config/managed_agents.yaml` in the
+`document_drafter.system` prompt. Re-run `provision.py document_drafter`
+after any change to the prompt.
+
+### Persistence
+
+The decoded bytes are stored inline in `documents.file_bytes` (bytea)
+via migration 100. PostgreSQL bytea is sent as a backslash-x-hex
+escape so PostgREST can pass it through untouched. The download
+endpoint reads the bytes back, so there is no Files API round-trip on
+retrieval.
+
+This module is blocking (sync httpx under the hood). Call from a
+FastAPI threadpool or BackgroundTask, never directly from an async
+handler.
 """
 
+import base64
 import json
 import logging
 import re
@@ -60,8 +80,13 @@ def _build_prompt(
     line_items: list[dict[str, Any]],
     notes: str | None,
 ) -> str:
-    """Build the user message sent to the document_drafter agent."""
-    lines = [f"Draft a {kind} as a real file (DOCX for quotes/proposals, XLSX for invoices)."]
+    """Build the user message sent to the document_drafter agent.
+
+    The agent's system prompt defines the full output contract
+    (including `content_base64`). This function only needs to supply
+    the data.
+    """
+    lines = [f"Draft a {kind}."]
     lines.append("")
     lines.append("Business:")
     lines.append(f"  - Name: {tenant.get('business_name') or '(unknown)'}")
@@ -88,13 +113,10 @@ def _build_prompt(
         lines.append(f"Notes: {notes}")
     lines.append("")
     lines.append(
-        "Save the file to `/mnt/session/outputs/` with a descriptive name. "
-        "In your final reply, return a JSON block with keys: "
-        "`file_id` (the Anthropic Files API id of the saved file), "
-        "`file_name` (the basename of the file you wrote), "
-        "`file_type` (one of 'docx', 'xlsx', 'pdf'), "
-        "`total` (the grand total as a number), "
-        "`summary` (one sentence describing what you produced)."
+        "Follow your system prompt exactly: generate the file via the "
+        "appropriate skill, export with `base64 -w0`, and return only "
+        "the JSON reply with file_name, file_type, total, summary, "
+        "content_base64."
     )
     return "\n".join(lines)
 
@@ -300,39 +322,56 @@ def draft_document(
             "drafter reply did not contain parseable JSON"
         )
 
-    file_id = spec.get("file_id")
-    if not isinstance(file_id, str) or not file_id.strip():
-        raise DocumentDraftingError(
-            f"drafter reply missing file_id (spec={spec!r})"
-        )
-
     file_type = (spec.get("file_type") or "").lower().strip()
     if file_type not in _VALID_FILE_TYPES:
         raise DocumentDraftingError(
             f"drafter reply has invalid file_type {file_type!r}"
         )
 
+    b64 = spec.get("content_base64")
+    if not isinstance(b64, str) or not b64.strip():
+        raise DocumentDraftingError(
+            "drafter reply missing content_base64 (agent must base64-encode the file)"
+        )
+
+    # Strip any whitespace the agent may have introduced despite the
+    # `base64 -w0` instruction — we've seen it wrap lines occasionally.
+    b64 = re.sub(r"\s+", "", b64)
+
+    try:
+        file_bytes = base64.b64decode(b64, validate=True)
+    except Exception as exc:
+        raise DocumentDraftingError(
+            f"content_base64 failed to decode: {exc}"
+        ) from exc
+
+    if not file_bytes:
+        raise DocumentDraftingError("decoded file_bytes is empty")
+
+    # Magic-byte sanity check — the agent is supposed to produce a real
+    # DOCX/XLSX/PDF, not a text blob. DOCX/XLSX are ZIP archives
+    # (PK\x03\x04); PDF starts with %PDF-.
+    if file_type in ("docx", "xlsx"):
+        if not file_bytes.startswith(b"PK\x03\x04"):
+            raise DocumentDraftingError(
+                f"decoded bytes do not look like a {file_type} (missing PK header)"
+            )
+    elif file_type == "pdf":
+        if not file_bytes.startswith(b"%PDF-"):
+            raise DocumentDraftingError(
+                "decoded bytes do not look like a PDF (missing %PDF- magic)"
+            )
+
+    file_size = len(file_bytes)
     default_name = f"{kind}-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M')}.{file_type}"
     file_name = _safe_filename(spec.get("file_name") or "", default_name)
 
-    # 5. Verify the file actually exists + get size (cheap metadata call
-    #    before we commit to a DB row). Full bytes are fetched lazily by
-    #    the download endpoint; keeping bytea empty for V1 sidesteps
-    #    PostgREST bytea-encoding footguns and lets us upgrade to inline
-    #    storage or Supabase storage buckets later without migrating data.
-    try:
-        metadata = client.get_file_metadata(file_id)
-    except ManagedAgentsError as exc:
-        raise DocumentDraftingError(
-            f"failed to look up file {file_id}: {exc}"
-        ) from exc
+    # 5. Persist the document row. `file_bytes` is stored inline as a
+    #    PostgreSQL bytea hex escape (`\x<hex>`) so PostgREST can pass
+    #    it through as-is. Redact content_base64 from the stored spec
+    #    so we don't double up on storage.
+    spec_for_metadata = {k: v for k, v in spec.items() if k != "content_base64"}
 
-    file_size = metadata.get("size_bytes") if isinstance(metadata, dict) else None
-
-    # 6. Persist the document row. `file_bytes` stays NULL in V1 — the
-    #    download endpoint streams fresh from Anthropic on demand. If
-    #    Anthropic's session-file retention proves too short, V2 will
-    #    cache bytes inline or in Supabase storage.
     row: dict[str, Any] = {
         "tenant_id": tenant_id,
         "title": (
@@ -343,11 +382,11 @@ def draft_document(
         "kind": kind,
         "file_type": file_type,
         "file_name": file_name,
-        "anthropic_file_id": file_id,
+        "file_bytes": "\\x" + file_bytes.hex(),
         "generated_by_agent": "document_drafter",
         "draft_metadata": {
             "session_id": session_id,
-            "spec": spec,
+            "spec": spec_for_metadata,
             "customer": customer,
             "line_items": line_items,
             "notes": notes,
@@ -367,7 +406,7 @@ def draft_document(
 
     persisted = insert_res.data[0]
     logger.info(
-        "document_drafting: persisted %s (size=%s bytes, type=%s) as document %s",
+        "document_drafting: persisted %s (%d bytes, type=%s) as document %s",
         kind, file_size, file_type, persisted.get("id"),
     )
     return persisted

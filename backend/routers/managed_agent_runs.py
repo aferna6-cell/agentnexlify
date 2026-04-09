@@ -328,14 +328,44 @@ _CONTENT_TYPES = {
 }
 
 
-def _fetch_drafted_document(tenant_id: str, document_id: str) -> dict[str, Any]:
-    """Load a drafted document row, enforcing tenant isolation. Raises
-    HTTPException on missing, cross-tenant, or legacy-format rows.
+def _decode_bytea(raw: Any) -> bytes | None:
+    """Decode a PostgREST-returned bytea value to raw bytes.
+
+    PostgREST serializes bytea as a JSON string. Depending on server
+    config it may come back as:
+      - `\\x<hex>` escape (PostgreSQL default bytea_output = hex)
+      - base64 (rare, only if `bytea_output = base64` is set)
+    We handle both. Returns None if the input is empty/invalid.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, (bytes, bytearray)):
+        return bytes(raw)
+    if not isinstance(raw, str) or not raw:
+        return None
+    if raw.startswith("\\x") or raw.startswith("\\\\x"):
+        hex_part = raw.lstrip("\\").lstrip("x")
+        try:
+            return bytes.fromhex(hex_part)
+        except ValueError:
+            return None
+    # Fallback: try base64 (covers bytea_output=escape as well, since
+    # b64decode will raise on non-b64 input which we catch).
+    import base64
+    try:
+        return base64.b64decode(raw, validate=True)
+    except Exception:
+        return None
+
+
+def _fetch_drafted_document_bytes(tenant_id: str, document_id: str) -> tuple[bytes, str, str]:
+    """Load a drafted document's bytes + filename + type. Enforces
+    tenant isolation. Raises HTTPException on missing rows.
     """
     db = get_supabase()
     result = (
         db.table("documents")
-        .select("id, tenant_id, file_name, file_type, anthropic_file_id, generated_by_agent")
+        .select("id, tenant_id, file_name, file_type, file_bytes, generated_by_agent")
         .eq("id", document_id)
         .eq("tenant_id", tenant_id)
         .limit(1)
@@ -344,17 +374,18 @@ def _fetch_drafted_document(tenant_id: str, document_id: str) -> dict[str, Any]:
     if not result.data:
         raise HTTPException(status_code=404, detail="Document not found")
     row = result.data[0]
-    if not row.get("anthropic_file_id"):
+
+    raw = row.get("file_bytes")
+    decoded = _decode_bytea(raw)
+    if not decoded:
         raise HTTPException(
             status_code=404,
-            detail="Document has no AI-drafted file attached",
+            detail="Document has no AI-drafted file bytes",
         )
-    return row
 
-
-def _download_drafted_blocking(file_id: str) -> bytes:
-    """Blocking Files API fetch — wrap in run_in_threadpool."""
-    return ManagedAgentsClient().get_file_content(file_id)
+    file_type = (row.get("file_type") or "").lower()
+    file_name = row.get("file_name") or f"{document_id}.{file_type or 'bin'}"
+    return decoded, file_name, file_type
 
 
 @router.get("/{tenant_id}/documents/{document_id}/download")
@@ -365,36 +396,15 @@ async def download_drafted_document(
     request: Request,
     claims: dict = Depends(_get_current_tenant),
 ):
-    """Stream the bytes of a drafted document.
-
-    V1 fetches fresh from the Anthropic Files API every time. If
-    retention proves too short we will cache inline or in Supabase
-    storage.
+    """Stream the bytes of a drafted document from inline bytea
+    storage. No upstream calls — the file was captured at draft time
+    via the agent's base64 reply.
     """
     _verify_tenant(claims, tenant_id)
 
-    row = _fetch_drafted_document(tenant_id, document_id)
-    file_id = row["anthropic_file_id"]
-    file_type = (row.get("file_type") or "").lower()
-    file_name = row.get("file_name") or f"{document_id}.{file_type or 'bin'}"
-
-    try:
-        file_bytes = await run_in_threadpool(_download_drafted_blocking, file_id)
-    except ManagedAgentsError as exc:
-        logger.warning(
-            "download_drafted_document failed tenant=%s doc=%s: %s",
-            tenant_id, document_id, exc,
-        )
-        status = exc.status or 502
-        # Upstream 404 → treat as gone (session file expired)
-        if status == 404:
-            raise HTTPException(
-                status_code=410,
-                detail="Upstream file is no longer available; regenerate the document",
-            )
-        if status < 400 or status >= 500:
-            status = 502
-        raise HTTPException(status_code=status, detail=str(exc))
+    file_bytes, file_name, file_type = await run_in_threadpool(
+        _fetch_drafted_document_bytes, tenant_id, document_id,
+    )
 
     content_type = _CONTENT_TYPES.get(file_type, "application/octet-stream")
     return Response(

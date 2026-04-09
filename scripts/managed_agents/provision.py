@@ -231,7 +231,15 @@ def _ensure_agent(
         if dry_run:
             logger.info("[dry-run] would update agent %s (%s)", slug, existing_id)
             return env_var, existing_id, None
-        updated = client.update_agent(existing_id, **body)
+        # POST /v1/agents/{id} requires the current version as an
+        # optimistic-lock check. Fetch it first, then pass it through.
+        current = client.get_agent(existing_id)
+        current_version = current.get("version")
+        if current_version is None:
+            raise SystemExit(
+                f"get_agent({existing_id}) returned no version field: {current!r}"
+            )
+        updated = client.update_agent(existing_id, version=current_version, **body)
         version = updated.get("version")
         logger.info(
             "updated agent %s → %s (version=%s)", slug, existing_id, version,
