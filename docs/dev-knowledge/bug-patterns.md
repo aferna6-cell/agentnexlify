@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Stale tests left behind after dead code sweeps
+**Date:** 2026-04-09
+**Symptom:** `pytest` fails during collection or test execution with `ModuleNotFoundError` / `AttributeError` because a test imports or patches a service module that no longer exists.
+**Root Cause:** Commit `954a951` intentionally deleted `backend/services/intent_detection.py` and `backend/services/embeddings.py` as dead code, but `tests/test_intent_detection.py` and `tests/test_embeddings.py` were left behind and still referenced those modules.
+**Files Changed:** `tests/test_intent_detection.py`, `tests/test_embeddings.py`
+**Fix:** Removed the orphaned test files after verifying the deleted services had no remaining production call sites and only survived in stale tests.
+**Prevention:** Any dead code sweep that deletes modules must grep `tests/` for imports, patch targets, and helper references to the removed module names in the same change. If only stale tests remain, delete or rewrite them before merging.
+
+---
+
 ### from __future__ import annotations breaks FastAPI routes
 **Date:** 2025
 **Symptom:** Every POST/PUT request returns 422 regardless of payload.

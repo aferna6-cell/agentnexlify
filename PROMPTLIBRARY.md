@@ -108,7 +108,7 @@ Each prompt follows this structure:
 
 ## Debugging
 
-### DEBUG Bug Investigation (v1.1.0)
+### DEBUG Bug Investigation (v1.2.0)
 
 **When to use:** "Something is broken", "This error is happening", "Why doesn't X work?", "Investigate this bug"
 
@@ -123,10 +123,11 @@ Each prompt follows this structure:
 3. **Check inputs:** What data flows into this code? Is it what we expect? Add logging if needed.
 4. **Check dependencies:** What does this code depend on? Are those dependencies healthy? (DB connection, API keys, file existence)
 5. **Check recent changes:** Run `git log --oneline -10 -- <affected files>` — was this working before? What changed?
-6. **Form a hypothesis:** State what you think the root cause is, with evidence.
-7. **Test the hypothesis:** Make the smallest possible change to verify. If you can't test, state what test would confirm.
-8. **Fix:** Apply the minimal fix. Do not refactor while debugging.
-9. **Verify:** Run tests, check the specific failure is resolved.
+6. **Check for stale references:** If the failure is "module/function not found", verify whether the target was intentionally removed or renamed. Grep tests and recent commits before restoring deleted code.
+7. **Form a hypothesis:** State what you think the root cause is, with evidence.
+8. **Test the hypothesis:** Make the smallest possible change to verify. If you can't test, state what test would confirm.
+9. **Fix:** Apply the minimal fix. Do not refactor while debugging.
+10. **Verify:** Run tests, check the specific failure is resolved.
 
 **Output:** 
 - Root cause (one sentence)
@@ -139,10 +140,11 @@ Each prompt follows this structure:
 - **DO NOT** add "just in case" defensive code — fix the actual root cause
 - **DO NOT** refactor while debugging — fix first, refactor separately
 - Check if the error is a symptom of a different problem (e.g., missing env var, DB connection)
+- When a test references a missing module, confirm whether the test is orphaned before re-adding deleted production code
 - Read the `docs/dev-knowledge/bug-patterns.md` — this may be a known issue
 - Check `.claude/agent-comms/` for previous debugging sessions on this topic
 
-**Last improved:** 2026-04-07 — Added "check recent changes" step and "check bug patterns doc". Previous version didn't check git history and missed regression-caused bugs.
+**Last improved:** 2026-04-09 — Added stale-reference check for missing modules/functions after dead code sweeps. This debugging pass found orphaned tests that survived intentional service deletion.
 
 ---
 
@@ -499,7 +501,7 @@ Each prompt follows this structure:
 |----------|--------|---------|--------------|
 | Research | Codebase Investigation | 1.1.0 | 2026-04-07 |
 | Summarize | Code Change Summary | 1.0.0 | 2026-04-07 |
-| Debug | Bug Investigation | 1.1.0 | 2026-04-07 |
+| Debug | Bug Investigation | 1.2.0 | 2026-04-09 |
 | Debug | Production Error Analysis | 1.0.0 | 2026-04-07 |
 | Write | Documentation Article | 1.0.0 | 2026-04-07 |
 | Write | Commit Message | 1.0.0 | 2026-04-07 |
