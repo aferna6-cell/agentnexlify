@@ -52,11 +52,11 @@ Prompts user for confirmation on potentially exfil/destructive commands:
 - Project (agentnexlify): `enableAllProjectMcpServers: true` — trusted, own MCP config
 - When cloning new repo, `.mcp.json` will require explicit approval
 
-### Level 1 — Sandbox (CONFIGURED, NOT ENABLED)
+### Level 1 — Sandbox (ENABLED)
 Sandbox config in `~/.claude/settings.json` and `.claude/settings.json`:
 ```json
 "sandbox": {
-  "enabled": false,
+  "enabled": true,
   "failIfUnavailable": false,
   "filesystem": {
     "denyRead": ["**/.env", "**/*.pem", ...]
@@ -64,33 +64,31 @@ Sandbox config in `~/.claude/settings.json` and `.claude/settings.json`:
 }
 ```
 
-**Why disabled:** Sandbox requires `bubblewrap` + `socat` on Linux. Not yet installed on this host.
+**Status:** `bubblewrap 0.9.0` + `socat 1.8.0.0` verified installed at `/usr/bin/bwrap` and `/usr/bin/socat`. Sandbox active.
 
-**To activate:**
-```bash
-sudo apt-get install bubblewrap socat
-```
-Then flip `sandbox.enabled` to `true` in `~/.claude/settings.json` OR run `/sandbox` in Claude Code (auto-allow mode).
-
-Once enabled:
-- Deny rules apply at OS level (Seatbelt on Mac, bubblewrap on Linux)
+**Effect:**
+- Deny rules apply at OS level (bubblewrap on Linux, Seatbelt on Mac)
 - Bash commands can't bypass rules
 - Sub-processes spawned by Claude also restricted
 - 84% fewer confirmation popups per Anthropic data
 
-### Level 2 — Trail of Bits (PARTIAL)
-Trail of Bits publishes a Claude Code security config at `github.com/trailofbits/claude-code-config`. Their plugin:
+**Fallback:** `failIfUnavailable: false` — if bubblewrap ever missing, warns at startup but doesn't block work.
+
+### Level 2 — Trail of Bits (INSTALLED)
+Trail of Bits marketplace `github.com/trailofbits/skills` added to `extraKnownMarketplaces`. Installed security skills (user scope):
+- **seatbelt-sandboxer** — sandbox configuration helper
+- **insecure-defaults** — checks codebase for insecure defaults
+- **supply-chain-risk-auditor** — audit npm/pip dependencies for risk
+- **sharp-edges** — identifies dangerous patterns in codebases
+- **devcontainer-setup** — Level 3 devcontainer scaffolding
+- **ask-questions-if-underspecified** — clarification discipline (pairs with our no-assumptions rule)
+
+Full marketplace catalog includes ~35+ security/audit skills. Add more as needed via:
 ```bash
-claude plugin marketplace add trailofbits/skills
-/trailofbits:config
+claude plugin install <skill-name>@trailofbits
 ```
 
-**Not yet installed.** Their config adds:
-- Security skills (vulnerability patterns, auditor checklists)
-- Workflow hooks (plan → execute → verify gate)
-- CLAUDE.md template (no speculative code, justify every dep)
-
-**Action:** Install when convenient — their config is additive, won't conflict with ours.
+Skills auto-activate when Claude detects matching task context. Not installed yet (35 additional skills available): static-analysis, semgrep-rule-creator, yara-authoring, dwarf-expert, agentic-actions-auditor, entry-point-analyzer, audit-context-building, etc.
 
 ### Level 3 — Devcontainer (NOT APPLIED)
 Full host isolation via `trailofbits/claude-code-devcontainer`. Runs Claude in a container with zero host access. Recommended for:

@@ -340,7 +340,7 @@
     ]
   },
   "sandbox": {
-    "enabled": false,
+    "enabled": true,
     "failIfUnavailable": false,
     "filesystem": {
       "denyRead": [
