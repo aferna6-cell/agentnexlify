@@ -1264,3 +1264,23 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Fix:** All 22+ blocks now log with `logger.warning(exc_info=True)` or `logger.debug()` per project conventions. Frontend: 4 empty `.catch(() => {})` replaced with `console.warn`.
 **Prevention:** Pre-commit hook already blocks bare `except:`. Extend to also flag `except Exception: pass` and `except Exception: continue` without logging. Every except block must log or have an explicit comment explaining silence.
 *Auto-logged 2026-04-08 evening — needs human enrichment for root cause details*
+
+---
+
+### 70. No-show recovery follow-ups silently dropped for tenants without current no-shows
+**Date:** 2026-04-09
+**Symptom:** No-show follow-up SMS/emails (sent 24h after the initial recovery message) never fired for tenants whose latest no-show was more than 24h ago. Follow-ups worked only when the same tenant also had a brand-new no-show in the same automation tick.
+**Root Cause:** `_send_noshow_followups()` in `backend/services/noshow_recovery.py` read tenants from `tenant_cache`, but the cache was populated only in the primary `process_noshow_recovery()` loop — which queries no-show appointments where `noshow_recovery_sent_at IS NULL`. Follow-up appointments live in a disjoint set (`noshow_recovery_sent_at IS NOT NULL`), so their tenants were never loaded into the cache. The loop silently `continue`d past them (`if not tenant: continue`).
+**Files Changed:** `backend/services/noshow_recovery.py`
+**Fix:** Lazily load tenant into cache inside `_send_noshow_followups` when `tenant_id not in tenant_cache`. Also moved the `noshow_recovery_enabled` feature toggle check into the follow-up loop (it was only enforced in the primary loop).
+**Prevention:** When sharing a cache between two loops, document the cache keyspace or make each loop self-sufficient. Never assume a cache populated elsewhere covers the current loop's key set.
+
+---
+
+### 71. Pipeline notify-team email body vulnerable to HTML injection
+**Date:** 2026-04-09
+**Symptom:** `_execute_notify_team_action()` in `backend/routers/pipeline_automations.py` interpolated `lead_name`, `old_stage`, `new_stage`, and `message` directly into an HTML email via f-strings, without HTML-escaping. A lead name submitted through the widget (e.g. `<img src=x onerror=alert(1)>`) would render as live HTML in the business owner's inbox.
+**Root Cause:** Direct f-string HTML construction instead of using `html.escape()` or the existing `render_template()` helper (which already escapes variables).
+**Files Changed:** `backend/routers/pipeline_automations.py`
+**Fix:** Added `import html`; wrapped every interpolated value (`business_name`, `lead_name`, `old_stage`, `new_stage`, `message`) in `html.escape()` before interpolating into the subject and body HTML.
+**Prevention:** All new email HTML construction must either (a) use `render_template()` from `email_sender.py`, or (b) pre-escape values with `html.escape()`. Grep for `f"<.*{[^}]+}` in `backend/` after touching email code.

@@ -6,6 +6,7 @@ When a lead moves to a pipeline stage, configured automations fire:
 - notify_team: Email the business owner / team about the stage change
 """
 
+import html
 import logging
 from datetime import datetime, timezone
 
@@ -327,14 +328,23 @@ async def _execute_notify_team_action(
     tenant_id = tenant.get("id", "")
     business_name = tenant.get("business_name") or "Your Business"
     lead_name = lead.get("name") or lead.get("email") or "A lead"
-    message = action.get("message") or f"{lead_name} moved from '{old_stage}' to '{new_stage}'"
+    raw_message = action.get("message") or f"{lead_name} moved from '{old_stage}' to '{new_stage}'"
 
-    subject = f"[{business_name}] Pipeline update: {lead_name} \u2192 {new_stage}"
+    # HTML-escape all interpolated values — lead_name and stage names can be
+    # user-supplied via the widget and would otherwise allow HTML injection
+    # into the owner's inbox.
+    safe_business = html.escape(business_name)
+    safe_lead = html.escape(lead_name)
+    safe_old = html.escape(old_stage)
+    safe_new = html.escape(new_stage)
+    safe_message = html.escape(raw_message)
+
+    subject = f"[{safe_business}] Pipeline update: {safe_lead} \u2192 {safe_new}"
     body_html = (
         f"<h2>Pipeline Stage Change</h2>"
-        f"<p><strong>{lead_name}</strong> has moved from "
-        f"<em>{old_stage}</em> to <em>{new_stage}</em>.</p>"
-        f"<p>{message}</p>"
+        f"<p><strong>{safe_lead}</strong> has moved from "
+        f"<em>{safe_old}</em> to <em>{safe_new}</em>.</p>"
+        f"<p>{safe_message}</p>"
         f"<p>\u2014 AgentNexLiFy</p>"
     )
 

@@ -245,8 +245,29 @@ async def _send_noshow_followups(
         tenant_id = appt["tenant_id"]
         appt_id = appt["id"]
 
+        # Lazily load tenant into cache — follow-up appointments can belong to
+        # tenants that had no new no-shows this tick, so they won't be cached yet.
+        if tenant_id not in tenant_cache:
+            try:
+                t = (
+                    db.table("tenants")
+                    .select("business_name, plan, google_review_link, owner_email, noshow_recovery_enabled")
+                    .eq("id", tenant_id)
+                    .limit(1)
+                    .execute()
+                )
+                tenant_cache[tenant_id] = t.data[0] if t.data else None
+            except Exception:
+                logger.warning(
+                    "noshow_followup: failed to load tenant %s", tenant_id, exc_info=True,
+                )
+                tenant_cache[tenant_id] = None
+
         tenant = tenant_cache.get(tenant_id)
         if not tenant:
+            continue
+
+        if not tenant.get("noshow_recovery_enabled", True):
             continue
 
         plan = tenant.get("plan") or "free"
