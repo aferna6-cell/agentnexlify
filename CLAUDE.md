@@ -13,7 +13,20 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 - Database schema changes ONLY via numbered migration files in migrations/
 - NEVER use WebFetch or WebSearch — use `agent-browser` via Bash instead
 
-> Domain-specific rules in `.claude/rules/`: schema-discipline, python-fastapi, frontend-patterns, security-rules, widget-rules, api-conventions, testing-standards, gitnexus, workflow-orchestration
+## Operating Rules (behavioral)
+- **Caveman mode** output by default — drop filler, fragments OK. See `.claude/rules/caveman-mode.md`
+- **UltraPlan + UltraThink** always — extended thinking, plan mode for 2+ files. See `.claude/rules/ultrathink.md`
+- **No assumptions** — confidence <80% → ask. See `.claude/rules/no-assumptions.md`
+- **Model routing** — Haiku for mechanical, Sonnet for code, Opus for planning. See `.claude/rules/model-routing.md`
+- **Parallel approaches** — 2 worktree agents when approach unclear. See `.claude/rules/parallel-approaches.md`
+- **Prompt library first** — read `PROMPTLIBRARY.md` before tasks. See `.claude/rules/prompt-library.md`
+- **KB first** — check `knowledge-base/wiki/` before researching. See `.claude/rules/kb-first.md`
+- **12 usage patterns** — fight-me, interview-first, specific-reader, decision-framework, stress-test, living-doc, build-the-system, etc. See `.claude/rules/claude-usage-patterns.md`
+- **Personality** — direct, evidence-first, no preamble/hedging. See `.claude/rules/personality.md`
+
+> Domain-specific rules in `.claude/rules/`: schema-discipline, python-fastapi, frontend-patterns, security-rules, widget-rules, api-conventions, testing-standards, gitnexus, workflow-orchestration, codex-subagents
+>
+> Behavioral rules in `.claude/rules/`: caveman-mode, model-routing, no-assumptions, parallel-approaches, ultrathink, prompt-library, kb-first, claude-usage-patterns, personality
 
 ## Tech Stack
 - Backend: FastAPI, Python 3.11, Pydantic, Supabase Python client

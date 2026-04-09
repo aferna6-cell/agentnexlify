@@ -194,6 +194,11 @@
           },
           {
             "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"12 CLAUDE USAGE PATTERNS — use proactively when task matches: (1) Fight me — before decisions, argue against the plan, find failure points. (2) Interview first — ask 8-10 questions before writing anything. (3) Specific reader — read as named audience (skeptical CFO, hiring mgr). (4) Voice training — match user voice samples. (5) Decision framework — matrix with criteria/weights/tradeoffs, not gut feel. (6) Compress long docs — 500-word brief, 5 findings, 3 actions. (7) Stress-test — cynical operator walks through failure sequence. (8) Data analysis — write Python, run it, return tables. (9) Living document — update session file with decisions/open items. (10) Rehearse hard conversations — roleplay toughest counterparty. (11) Reformat for audiences — tech / exec / Slack / etc in parallel. (12) Build the SYSTEM not the answer — checklist + rubric + 5 questions for every future instance. Suggest the matching pattern when user task triggers it. See .claude/rules/claude-usage-patterns.md for full details.\"}}'",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "command": "bash scripts/claude-hooks/ultrathink-trigger.sh",
             "timeout": 5,
             "statusMessage": "Checking complexity..."
