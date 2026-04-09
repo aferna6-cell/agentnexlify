@@ -460,6 +460,78 @@ class ManagedAgentsClient:
                     yield payload
 
     # ------------------------------------------------------------------
+    # files (Anthropic Files API — beta: files-api-2025-04-14)
+    # ------------------------------------------------------------------
+    #
+    # Managed Agents sessions expose the files an agent writes to
+    # `/mnt/session/outputs/` through the Files API. The agent gets a
+    # `file_id` when it writes, and we can retrieve the bytes via
+    # `GET /v1/files/{file_id}/content` using the files-api-2025-04-14
+    # beta header.
+    #
+    # Unlike the other endpoints on this client, the Files API is a
+    # SEPARATE beta and must be opted in to by passing `extra_beta`.
+
+    def get_file_metadata(self, file_id: str) -> dict[str, Any]:
+        """Return metadata for an uploaded or session-written file."""
+        return self._request(
+            "GET",
+            f"/v1/files/{file_id}",
+            extra_beta=FILES_BETA,
+        )
+
+    def get_file_content(self, file_id: str) -> bytes:
+        """Download the raw bytes of a file.
+
+        The Files API returns a binary body — not JSON — so we bypass
+        `_request` (which parses JSON) and go straight to httpx.
+        """
+        url = f"{self._base_url}/v1/files/{file_id}/content"
+        headers = self._headers(extra_beta=FILES_BETA)
+        # Accept anything — the server picks the content-type.
+        headers["accept"] = "*/*"
+
+        last_exc: ManagedAgentsError | None = None
+        for attempt in range(3):
+            try:
+                with httpx.Client(timeout=self._timeout) as client:
+                    resp = client.get(url, headers=headers)
+            except httpx.RequestError as exc:
+                last_exc = ManagedAgentsError(f"Transport error: {exc}")
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise last_exc
+
+            if resp.status_code == 200:
+                return resp.content
+
+            # Map the error envelope for consistent debugging.
+            try:
+                body = resp.json()
+            except json.JSONDecodeError:
+                body = {"error": {"message": resp.text[:500]}}
+            error = body.get("error") if isinstance(body, dict) else None
+            msg = (
+                error.get("message") if isinstance(error, dict) else str(body)
+            )
+            err = ManagedAgentsError(
+                f"HTTP {resp.status_code}: {msg}",
+                status=resp.status_code,
+                request_id=resp.headers.get("request-id"),
+                error_type=error.get("type") if isinstance(error, dict) else None,
+            )
+            if resp.status_code in _RETRYABLE_STATUSES and attempt < 2:
+                time.sleep(2 ** attempt)
+                last_exc = err
+                continue
+            raise err
+
+        if last_exc:
+            raise last_exc
+        raise ManagedAgentsError("get_file_content: exhausted retries")
+
+    # ------------------------------------------------------------------
     # convenience: run until terminal
     # ------------------------------------------------------------------
 

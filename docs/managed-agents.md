@@ -217,6 +217,27 @@ custom-tool result. The correct break gate is:
 
 > `status_terminated` OR (`status_idle` AND `stop_reason.type != "requires_action"`)
 
+### Document drafter (quotes / invoices / proposals)
+
+The `document_drafter` agent produces real DOCX / XLSX / PDF files via
+Anthropic's pre-built skills. Wire-up lives in
+`backend/services/document_drafting.py` and is exposed at:
+
+```
+POST /api/v1/managed-agents/{tenant_id}/draft-document
+GET  /api/v1/managed-agents/{tenant_id}/documents/{document_id}/download
+```
+
+The POST endpoint runs the agent, the GET endpoint streams the file.
+**V1 does not cache bytes inline** — the download endpoint calls the
+Anthropic Files API fresh each time. If Anthropic's session-file
+retention proves too short for your use case, switch `document_drafting.py`
+to store `file_bytes` on the row at drafting time (migration 100 has
+the column reserved).
+
+Plan gating is the same as lead qualification: free tier is blocked
+server-side before the agent is invoked.
+
 ### From a dev script (repo review)
 
 ```bash
