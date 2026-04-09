@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.tenant_scope import tenant_table
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/portal", tags=["client-portal"])
 
-_PORTAL_BASE_URL = "https://agentnexlify.vercel.app/client"
+_PORTAL_BASE_URL = f"{settings.frontend_url}/client"
 _JWT_ALGORITHM = "HS256"
 _CLIENT_JWT_EXPIRE_DAYS = 30
 
@@ -78,7 +78,7 @@ async def create_service_record(
     """Create a service record for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     row = {
         "tenant_id": tenant_id,
         "title": body.title,
@@ -113,7 +113,7 @@ async def list_service_records(
     """List service records for a tenant, optionally filtered by lead_id."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         query = (
             tenant_table(db, "service_records", tenant_id)
@@ -145,7 +145,7 @@ async def update_service_record(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             tenant_table(db, "service_records", tenant_id)
@@ -173,7 +173,7 @@ async def delete_service_record(
     """Delete a service record."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             tenant_table(db, "service_records", tenant_id)
@@ -224,7 +224,7 @@ async def upload_service_photo(
     if len(data) > _MAX_PHOTO_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 10 MB)")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify the service record exists and belongs to this tenant
     try:
@@ -293,7 +293,7 @@ async def generate_portal_link(
     """Generate (or return existing) a portal token for a lead and return the public URL."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check if a token already exists for this tenant + lead
     try:
@@ -338,7 +338,7 @@ async def get_portal_data(token: str, request: Request):
 
     Rate limited to 60 requests per minute per IP.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Look up the token
     try:
@@ -506,7 +506,7 @@ async def client_register(req: ClientRegisterRequest, request: Request):
     The portal token validates the client is a real lead for a real business.
     After registration, the client can log in with email + password.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Validate the portal token
     try:
@@ -583,7 +583,7 @@ async def client_register(req: ClientRegisterRequest, request: Request):
 @limiter.limit("10/minute")
 async def client_login(req: ClientLoginRequest, request: Request):
     """Log in as a client using email + password, scoped to a business by slug."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Find the tenant by business_slug
     try:
@@ -637,7 +637,7 @@ async def client_login(req: ClientLoginRequest, request: Request):
 @router.get("/client/me")
 async def client_me(claims: dict = Depends(_get_current_client)):
     """Get the authenticated client's portal data — same as the public portal but via JWT."""
-    db = get_supabase()
+    db = get_service_supabase()
     tenant_id = claims["tenant_id"]
     lead_id = claims["lead_id"]
 
@@ -769,7 +769,7 @@ async def toggle_client_login(
     """Enable or disable client login for a tenant (toggle)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         # Get current state
         current = (

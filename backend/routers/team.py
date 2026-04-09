@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import (
     AcceptInviteRequest,
     InviteValidationResponse,
@@ -19,11 +19,13 @@ from backend.models.schemas import (
 from backend.routers.auth import _create_token, _get_current_tenant, _hash_password
 from backend.services.email_sender import send_email
 
+from backend.config import settings
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/team", tags=["team"])
 
-INVITE_BASE_URL = "https://www.agentnexlify.com/invite"
+INVITE_BASE_URL = f"{settings.frontend_url}/invite"
 
 
 def _build_invite_email_html(business_name: str, role: str, invite_url: str) -> str:
@@ -84,7 +86,7 @@ async def invite_member(req: TeamInviteRequest, claims: dict = Depends(_get_curr
     tenant_id = claims["tenant_id"]
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Check if already invited
         existing = (
@@ -174,7 +176,7 @@ async def invite_member(req: TeamInviteRequest, claims: dict = Depends(_get_curr
 @router.get("/invite/{token}", response_model=InviteValidationResponse)
 @limiter.limit("30/minute")
 async def validate_invite(request: Request, token: str):
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("team_members")
         .select("email, role, tenant_id, invite_accepted")
@@ -212,7 +214,7 @@ async def validate_invite(request: Request, token: str):
 @router.post("/accept-invite")
 @limiter.limit("10/minute")
 async def accept_invite(request: Request, req: AcceptInviteRequest):
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("team_members")
         .select("id, email, role, tenant_id, invite_accepted")
@@ -274,7 +276,7 @@ async def list_members(tenant_id: str, claims: dict = Depends(_get_current_tenan
     _require_owner_or_admin(claims)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("team_members")
             .select("id, email, name, role, invite_accepted, last_login, created_at")
@@ -344,7 +346,7 @@ async def update_member_role(
 
     new_role = req.role
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check member exists and isn't the tenant owner
     member = (
@@ -375,7 +377,7 @@ async def remove_member(
         raise HTTPException(status_code=403, detail="Not authorized")
     _require_owner_or_admin(claims)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify member exists
     member = (
@@ -410,7 +412,7 @@ async def resend_invite(
         raise HTTPException(status_code=403, detail="Not authorized")
     _require_owner_or_admin(claims)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     member = (
         db.table("team_members")
@@ -494,7 +496,7 @@ async def get_team_activity(
     from datetime import datetime, timedelta, timezone
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("activity_log")
         .select("id, activity_type, description, lead_id, metadata, created_at")

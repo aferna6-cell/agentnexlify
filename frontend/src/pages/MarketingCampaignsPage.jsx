@@ -174,8 +174,8 @@ export default function MarketingCampaignsPage({ onNavigate }) {
     setCampaignDetail(null);
     try {
       const [detail, analytics] = await Promise.all([
-        fetchCampaignDetail(user.tenantId, token, campaign.id).catch(() => null),
-        fetchCampaignAnalytics(user.tenantId, token, campaign.id).catch(() => null),
+        fetchCampaignDetail(user.tenantId, token, campaign.id).catch((e) => { console.warn('Failed to load campaign detail:', e?.message); return null; }),
+        fetchCampaignAnalytics(user.tenantId, token, campaign.id).catch((e) => { console.warn('Failed to load campaign analytics:', e?.message); return null; }),
       ]);
       setCampaignDetail({ ...(detail || campaign), analytics: analytics || null });
     } catch {

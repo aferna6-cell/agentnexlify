@@ -14,7 +14,7 @@ from jose import JWTError, jwt
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 import stripe
 
 from backend.models.schemas import (
@@ -210,7 +210,7 @@ def _provision_tenant_account(
     phone: str | None = None,
     website_url: str | None = None,
 ) -> tuple[str, str]:
-    db = get_supabase()
+    db = get_service_supabase()
     normalized_email = email.lower().strip()
 
     existing = (
@@ -297,7 +297,7 @@ async def _run_signup_side_effects(
                 "<li>Embed the widget on your website with one line of code</li>"
                 "</ol>"
                 "<p>Your AI assistant will start capturing leads and booking appointments automatically.</p>"
-                f"<p><a href='https://agentnexlify.vercel.app/dashboard' style='background:#3b82f6;color:#fff;"
+                f"<p><a href='{settings.frontend_url}/dashboard' style='background:#3b82f6;color:#fff;'"
                 "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
                 "Go to Dashboard &rarr;</a></p>"
                 "<p>&mdash; The AgentNexLiFy Team</p>"
@@ -420,7 +420,7 @@ def _seed_industry_faqs(tenant_id: str, industry: str, business_name: str, city:
     faqs = INDUSTRY_FAQS.get(faq_key, [])
     if not faqs:
         return
-    db = get_supabase()
+    db = get_service_supabase()
     rows = []
     for faq in faqs:
         answer = faq["answer"]
@@ -475,7 +475,7 @@ async def register(request: Request, req: RegisterRequest):
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit("5/minute")
 async def login(request: Request, req: LoginRequest):
-    db = get_supabase()
+    db = get_service_supabase()
     email = req.email.lower().strip()
 
     # 1. Check tenants table (owner login)
@@ -647,7 +647,7 @@ async def google_auth_callback(
     if profile.get("email_verified") is False:
         raise HTTPException(status_code=400, detail="Google account email must be verified")
 
-    db = get_supabase()
+    db = get_service_supabase()
     existing = (
         db.table("tenants")
         .select("id, business_name, plan, business_type")
@@ -736,7 +736,7 @@ async def forgot_password(request: Request):
     if not email:
         raise HTTPException(status_code=400, detail="Email required")
 
-    db = get_supabase()
+    db = get_service_supabase()
     # Check tenants table for the email
     try:
         result = (
@@ -809,7 +809,7 @@ async def reset_password(request: Request):
     if len(new_password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
-    db = get_supabase()
+    db = get_service_supabase()
     # Hash the incoming token to match stored hash
     import hashlib as _hashlib
     hashed_token = _hashlib.sha256(token.encode()).hexdigest()
@@ -853,7 +853,7 @@ async def reset_password(request: Request):
 
 @router.get("/me", response_model=MeResponse)
 async def me(claims: dict = Depends(_get_current_tenant)):
-    db = get_supabase()
+    db = get_service_supabase()
 
     result = (
         db.table("tenants")
@@ -882,7 +882,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Tenant row
     tenant_result = (
@@ -1066,7 +1066,7 @@ async def update_widget_config(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get tenant plan for branding filtering
     tenant_result = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()
@@ -1120,7 +1120,7 @@ async def list_faq(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("faq_entries")
         .select("id, question, answer, category, is_active")
@@ -1141,7 +1141,7 @@ async def create_faq(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("faq_entries")
         .insert({
@@ -1176,7 +1176,7 @@ async def update_faq(
     """Update an existing FAQ entry."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    db = get_supabase()
+    db = get_service_supabase()
     update_data = {"question": req.question, "answer": req.answer}
     if req.category is not None:
         update_data["category"] = req.category
@@ -1201,7 +1201,7 @@ async def delete_faq(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     # Soft delete — mark inactive
     db.table("faq_entries").update({"is_active": False}).eq("id", faq_id).eq("tenant_id", tenant_id).execute()
 
@@ -1219,7 +1219,7 @@ async def list_conversations(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     # Fetch recent chat messages grouped by session
     result = (
         db.table("chat_messages")
@@ -1332,7 +1332,7 @@ async def get_conversation_messages(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("chat_messages")
         .select("id, role, content, created_at")
@@ -1361,7 +1361,7 @@ async def update_conversation_tags(
     # Sanitize: strings only, max 30 chars, max 10 tags
     tags = [str(t)[:30] for t in tags if isinstance(t, str)][:10]
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Upsert into conversations table (may not have a row yet for this session)
     existing = (
@@ -1396,7 +1396,7 @@ async def generate_mcp_key(tenant_id: str, claims: dict = Depends(require_role("
     import secrets as sec
     mcp_key = f"mcp_{sec.token_urlsafe(32)}"
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .update({"mcp_api_key": mcp_key, "mcp_enabled": True})
@@ -1415,7 +1415,7 @@ async def revoke_mcp_key(tenant_id: str, claims: dict = Depends(require_role("ow
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("tenants").update({"mcp_api_key": None, "mcp_enabled": False}).eq("id", tenant_id).execute()
     return {"success": True}
 
@@ -1439,7 +1439,7 @@ async def update_settings(
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     logger.info("update_settings tenant_id=%s fields=%s", tenant_id, sorted(updates))
     try:
         result = db.table("tenants").update(updates).eq("id", tenant_id).execute()
@@ -1456,7 +1456,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled")
@@ -1485,7 +1485,7 @@ async def billing_checkout(
     if not plan or plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("tenants").select("id, owner_email, business_name").eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -1539,7 +1539,7 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(require_role("ow
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("tenants").select("stripe_customer_id").eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -1568,7 +1568,7 @@ async def billing_change_plan(
     if not new_plan or new_plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -1613,7 +1613,7 @@ async def billing_cancel(
     """Cancel subscription at end of billing period."""
     tenant_id = claims["tenant_id"]
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -1673,7 +1673,7 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select("plan, free_trial_started_at, created_at")
@@ -1719,7 +1719,7 @@ async def get_activity(tenant_id: str, claims: dict = Depends(_get_current_tenan
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     items: list[dict] = []
 
     # 1. Try activity_log table first
@@ -1828,7 +1828,7 @@ async def get_knowledge_stats(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     stats = {
         "faq_count": 0,
         "website_pages_crawled": 0,

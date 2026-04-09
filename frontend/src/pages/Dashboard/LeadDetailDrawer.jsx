@@ -563,8 +563,8 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
   useEffect(() => {
     if (!user?.tenantId || !token || !lead.id) return;
     Promise.all([
-      fetchFieldDefinitions(user.tenantId, token).catch(() => null),
-      fetchLeadFieldValues(user.tenantId, token, lead.id).catch(() => null),
+      fetchFieldDefinitions(user.tenantId, token).catch((e) => { console.warn('Failed to load field definitions:', e?.message); return null; }),
+      fetchLeadFieldValues(user.tenantId, token, lead.id).catch((e) => { console.warn('Failed to load field values:', e?.message); return null; }),
     ]).then(([defs, vals]) => {
       setCustomFieldDefs(Array.isArray(defs) ? defs : defs?.fields || []);
       setCustomFieldValues(vals && typeof vals === "object" ? vals : {});

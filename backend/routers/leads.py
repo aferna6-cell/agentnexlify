@@ -1,5 +1,6 @@
 """Lead management endpoints."""
 
+import asyncio
 import csv
 import io
 import logging
@@ -9,7 +10,7 @@ from fastapi.responses import Response
 
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
@@ -45,7 +46,7 @@ async def get_leads(
     if sort not in _ALLOWED_SORT:
         sort = "lead_score"
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         query = tenant_select(
             db,
@@ -100,7 +101,7 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = tenant_select(db, "leads", tenant_id, "status, lead_score").execute()
         leads = result.data or []
@@ -123,7 +124,8 @@ async def rescore_all(request: Request, tenant_id: str, claims: dict = Depends(_
     """Re-score all leads for a tenant."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    result = score_all_leads(tenant_id)
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, score_all_leads, tenant_id)
     return ScoreAllResponse(**result)
 
 
@@ -165,7 +167,7 @@ async def create_lead(
     if not req.name and not req.email and not req.phone:
         raise HTTPException(status_code=400, detail="At least one of name, email, or phone is required")
 
-    db = get_supabase()
+    db = get_service_supabase()
     lead_data = {
         "client_id": tenant_id,
         "name": req.name,
@@ -213,7 +215,7 @@ async def update_lead(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = tenant_update(db, "leads", tenant_id, updates).eq("id", lead_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -245,7 +247,7 @@ async def delete_lead(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = tenant_delete(db, "leads", tenant_id).eq("id", lead_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -268,7 +270,7 @@ async def send_lead_email(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     lead_result = (
         tenant_select(db, "leads", tenant_id, "id, email, name")
         .eq("id", lead_id)
@@ -344,7 +346,7 @@ async def send_lead_sms(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     lead_result = (
         tenant_select(db, "leads", tenant_id, "id, phone, name")
         .eq("id", lead_id)
@@ -387,7 +389,7 @@ async def find_duplicate_leads(tenant_id: str, claims: dict = Depends(_get_curre
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = tenant_select(
         db,
         "leads",
@@ -444,7 +446,7 @@ async def merge_leads(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch both leads
     keep_result = tenant_select(db, "leads", tenant_id).eq("id", req.keep_id).limit(1).execute()
@@ -548,7 +550,7 @@ async def export_leads_csv(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     query = tenant_select(
         db,
@@ -643,7 +645,7 @@ async def import_leads_csv(
             detail=f"No recognized columns. Expected: {', '.join(sorted(set(_CSV_FIELD_MAP.values())))}"
         )
 
-    db = get_supabase()
+    db = get_service_supabase()
     created = 0
     updated = 0
     errors = []
@@ -746,7 +748,7 @@ async def assign_lead(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify team member exists if assigning
     if req.assigned_to:
@@ -802,7 +804,7 @@ async def list_lead_suggestions(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         tenant_select(db, "activity_log", tenant_id, "id, lead_id, description, metadata, created_at")
         .eq("activity_type", "lead_suggestion")
@@ -830,7 +832,7 @@ async def handle_suggestion(
     if req.action not in ("approve", "dismiss"):
         raise HTTPException(status_code=400, detail="Action must be 'approve' or 'dismiss'")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the suggestion
     suggestion = (
@@ -869,7 +871,7 @@ async def generate_lead_summary(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get the lead's conversation
     lead = (
@@ -941,7 +943,7 @@ async def get_lead_activity(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify lead exists
     lead = (
@@ -1034,7 +1036,7 @@ async def bulk_update_leads(
     if not req.status and not req.assigned_to and not req.tags_add:
         raise HTTPException(status_code=400, detail="Nothing to update. Provide status, assigned_to, or tags_add.")
 
-    db = get_supabase()
+    db = get_service_supabase()
     updated = 0
     errors = []
 
@@ -1086,7 +1088,7 @@ async def debug_lead_capture(
     if claims.get("role") not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Owner or admin access required")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         # Total leads count

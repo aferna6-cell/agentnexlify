@@ -221,9 +221,9 @@ async def _safe_run(name: str, fn, timeout: float = 30.0):
 def _try_acquire_automation_lock(lock_name: str, ttl_seconds: int = 90) -> bool:
     """Acquire a short DB-backed lock so only one worker runs scheduler work."""
     try:
-        from backend.models.database import get_supabase
+        from backend.models.database import get_service_supabase
 
-        result = get_supabase().rpc(
+        result = get_service_supabase().rpc(
             "try_acquire_automation_lock",
             {
                 "p_name": lock_name,
@@ -242,9 +242,9 @@ def _try_acquire_automation_lock(lock_name: str, ttl_seconds: int = 90) -> bool:
 
 def _release_automation_lock(lock_name: str) -> None:
     try:
-        from backend.models.database import get_supabase
+        from backend.models.database import get_service_supabase
 
-        get_supabase().rpc(
+        get_service_supabase().rpc(
             "release_automation_lock",
             {"p_name": lock_name, "p_owner": _LOCK_OWNER},
         ).execute()
@@ -362,9 +362,9 @@ async def _automation_loop():
 async def _recover_stalled_campaigns():
     """Mark marketing campaigns stuck in 'sending' for >30 minutes as 'failed'."""
     from datetime import datetime, timedelta, timezone
-    from backend.models.database import get_supabase
+    from backend.models.database import get_service_supabase
 
-    db = get_supabase()
+    db = get_service_supabase()
     stale_cutoff = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
     try:
         stale_started = (
@@ -413,9 +413,9 @@ async def _process_scheduled_posts():
     in the future, this is where the actual API publish call will go.
     """
     from datetime import datetime, timezone
-    from backend.models.database import get_supabase
+    from backend.models.database import get_service_supabase
 
-    db = get_supabase()
+    db = get_service_supabase()
     now_iso = datetime.now(timezone.utc).isoformat()
     try:
         due_posts = (
@@ -462,13 +462,13 @@ async def _process_scheduled_campaigns():
     identical to the manual send flow.
     """
     from datetime import datetime, timezone
-    from backend.models.database import get_supabase
+    from backend.models.database import get_service_supabase
     from backend.routers.marketing_campaigns import (
         _query_target_leads,
         _send_campaign_background,
     )
 
-    db = get_supabase()
+    db = get_service_supabase()
     now_iso = datetime.now(timezone.utc).isoformat()
     try:
         due_campaigns = (
@@ -806,9 +806,9 @@ async def readyz():
     )
 
 
-@app.get("/version")
-@app.get("/api/version")
-@app.get("/api/v1/version")
+@app.api_route("/version", methods=["GET", "HEAD"])
+@app.api_route("/api/version", methods=["GET", "HEAD"])
+@app.api_route("/api/v1/version", methods=["GET", "HEAD"])
 async def version():
     return {
         "service": "agentnexlify",
@@ -825,9 +825,9 @@ async def health():
     # Supabase connectivity check
     supabase_status = "disconnected"
     try:
-        from backend.models.database import get_supabase
+        from backend.models.database import get_service_supabase
 
-        db = get_supabase()
+        db = get_service_supabase()
         db.table("tenants").select("id").limit(1).execute()
         supabase_status = "connected"
     except Exception:

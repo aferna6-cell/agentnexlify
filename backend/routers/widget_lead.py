@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import WidgetLeadRequest, WidgetLeadResponse, WidgetOfflineContactRequest
 from backend.services.activity import log_activity
 from backend.services.lead_qualification import qualify_lead_background
@@ -53,7 +53,7 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     if not fields:
         raise HTTPException(status_code=400, detail="No lead fields provided")
 
-    db = get_supabase()
+    db = get_service_supabase()
     lead_id = None
     is_new = False
 
@@ -152,7 +152,7 @@ async def submit_offline_contact(
             tenant_id, body.name, body.email,
         )
 
-        db = get_supabase()
+        db = get_service_supabase()
 
         # 2. Dedup by email + client_id (leads table uses client_id)
         lead_id = None
@@ -236,14 +236,8 @@ async def submit_offline_contact(
                     "offline_contact: fire_event_background failed", exc_info=True,
                 )
 
-            # Score the lead
-            try:
-                score_lead_background(lead_id)
-            except Exception:
-                logger.warning(
-                    "offline_contact: score_lead_background failed for lead %s",
-                    lead_id, exc_info=True,
-                )
+            # Score the lead (non-blocking via BackgroundTasks)
+            background_tasks.add_task(score_lead_background, lead_id)
 
             # AI qualification for new leads on eligible plans.
             if offline_is_new:

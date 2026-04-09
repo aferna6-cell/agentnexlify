@@ -10,7 +10,6 @@ import hashlib
 import hmac
 import html
 import logging
-import os
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -19,7 +18,7 @@ from pydantic import BaseModel
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.booking import generate_available_slots, link_appointment_to_lead
 from backend.services.email_sender import send_email
 from backend.services.tenant_scope import tenant_table
@@ -53,7 +52,7 @@ class BookingSubmitRequest(BaseModel):
 
 def _lookup_tenant_by_slug(slug: str) -> dict:
     """Return tenant row for the given business_slug. Raises 404 on miss."""
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("tenants")
@@ -74,7 +73,7 @@ def _lookup_tenant_by_slug(slug: str) -> dict:
 
 def _fetch_widget_color(tenant_id: str) -> str:
     """Return the tenant's primary branding color, or a safe default."""
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             tenant_table(db, "widget_configs", tenant_id)
@@ -91,7 +90,7 @@ def _fetch_widget_color(tenant_id: str) -> str:
 
 def _slot_available(tenant_id: str, target_date: date, start_time_str: str, end_time_str: str) -> bool:
     """Return True if the requested slot is still open (no overlapping confirmed appt)."""
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             tenant_table(db, "appointments", tenant_id)
@@ -557,7 +556,7 @@ async def booking_page(request: Request, business_slug: str):
     # Fetch service types for this tenant
     service_types = []
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         st_result = (
             tenant_table(db, "service_types", tenant_id)
             .select("id, name, duration_minutes, description, price")
@@ -636,7 +635,7 @@ async def booking_submit(
             detail="That time slot is no longer available. Please choose another.",
         )
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Resolve service type name if provided
     service_note = "Booked via public booking page"
@@ -803,7 +802,7 @@ def _verify_reschedule_token(appointment_id: str, token: str) -> bool:
 def build_reschedule_url(appointment_id: str, business_slug: str) -> str:
     """Build a public reschedule URL with signed token."""
     token = _generate_reschedule_token(appointment_id)
-    base_url = os.environ.get("BACKEND_URL", "https://agentnexlify-production.up.railway.app")
+    base_url = settings.api_url
     return f"{base_url}/api/v1/book/reschedule/{appointment_id}?token={token}"
 
 
@@ -814,7 +813,7 @@ async def reschedule_page(request: Request, appointment_id: str, token: str = Qu
     if not _verify_reschedule_token(appointment_id, token):
         return HTMLResponse("<h2>Invalid or expired reschedule link.</h2>", status_code=403)
 
-    db = get_supabase()
+    db = get_service_supabase()
     appt = db.table("appointments").select("*").eq("id", appointment_id).limit(1).execute()
     if not appt.data:
         return HTMLResponse("<h2>Appointment not found.</h2>", status_code=404)
@@ -974,7 +973,7 @@ async def reschedule_submit(request: Request, appointment_id: str, body: _Resche
     if not _verify_reschedule_token(appointment_id, body.token):
         raise HTTPException(status_code=403, detail="Invalid or expired reschedule link")
 
-    db = get_supabase()
+    db = get_service_supabase()
     appt = db.table("appointments").select("*").eq("id", appointment_id).limit(1).execute()
     if not appt.data:
         raise HTTPException(status_code=404, detail="Appointment not found")
@@ -1056,7 +1055,7 @@ async def reschedule_cancel(request: Request, appointment_id: str, body: _Cancel
     if not _verify_reschedule_token(appointment_id, body.token):
         raise HTTPException(status_code=403, detail="Invalid or expired link")
 
-    db = get_supabase()
+    db = get_service_supabase()
     appt = db.table("appointments").select("id, tenant_id, lead_id, status").eq("id", appointment_id).limit(1).execute()
     if not appt.data:
         raise HTTPException(status_code=404, detail="Appointment not found")

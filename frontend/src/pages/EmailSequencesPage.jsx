@@ -782,8 +782,8 @@ function SequenceDetail({ sequenceId, token, onClose, onEdit }) {
       setLoading(true);
       try {
         const [detailRes, enrollRes] = await Promise.all([
-          getEmailSequence(sequenceId, token).catch(() => null),
-          fetchEmailSequenceEnrollments(sequenceId, token).catch(() => []),
+          getEmailSequence(sequenceId, token).catch((e) => { console.warn('Failed to load email sequence:', e?.message); return null; }),
+          fetchEmailSequenceEnrollments(sequenceId, token).catch((e) => { console.warn('Failed to load enrollments:', e?.message); return []; }),
         ]);
         setDetail(detailRes);
         setEnrollments(enrollRes?.enrollments || enrollRes || []);
