@@ -50,7 +50,7 @@ def _mock_db():
 
 class TestEmailSequences:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.email_sequences.get_supabase")
+    @patch("backend.routers.email_sequences.get_service_supabase")
     def test_list_sequences(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -62,7 +62,7 @@ class TestEmailSequences:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.email_sequences.get_supabase")
+    @patch("backend.routers.email_sequences.get_service_supabase")
     def test_create_sequence(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -89,7 +89,7 @@ class TestEmailSequences:
 
 class TestConversationInbox:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.conversation_inbox.get_supabase")
+    @patch("backend.routers.conversation_inbox.get_service_supabase")
     def test_get_notes(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -104,7 +104,7 @@ class TestConversationInbox:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.conversation_inbox.get_supabase")
+    @patch("backend.routers.conversation_inbox.get_service_supabase")
     def test_create_note(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -120,7 +120,7 @@ class TestConversationInbox:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.conversation_inbox.get_supabase")
+    @patch("backend.routers.conversation_inbox.get_service_supabase")
     def test_get_presence(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -164,7 +164,7 @@ class TestResendWebhooks:
 
 
 class TestTwilioWebhooks:
-    @patch("backend.routers.twilio_webhooks.get_supabase")
+    @patch("backend.routers.twilio_webhooks.get_service_supabase")
     def test_missed_call_no_signature_rejects(self, mock_db):
         """Twilio webhooks require valid signature — unsigned requests fail."""
         db = MagicMock()
@@ -176,7 +176,7 @@ class TestTwilioWebhooks:
         # Should fail signature verification, return TwiML error, or 422 (validation)
         assert resp.status_code in (200, 400, 403, 422, 500)
 
-    @patch("backend.routers.twilio_webhooks.get_supabase")
+    @patch("backend.routers.twilio_webhooks.get_service_supabase")
     def test_sms_reply_no_signature_rejects(self, mock_db):
         db = MagicMock()
         mock_db.return_value = db
@@ -221,7 +221,7 @@ class TestChannelsFacebook:
         assert resp.text == "test-challenge-123"
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.channels_facebook.get_supabase")
+    @patch("backend.routers.channels_facebook.get_service_supabase")
     def test_facebook_status_no_integration(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -244,7 +244,7 @@ class TestChannelsFacebook:
 
 class TestGBP:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.gbp.get_supabase")
+    @patch("backend.routers.gbp.get_service_supabase")
     def test_gbp_status_no_integration(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -267,7 +267,7 @@ class TestGBP:
 
 class TestAutomations:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.automations.get_supabase")
+    @patch("backend.routers.automations.get_service_supabase")
     def test_list_automations(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()

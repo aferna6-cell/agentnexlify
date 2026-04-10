@@ -74,7 +74,7 @@ class TestAnalyzeSEO:
 
     @patch("backend.routers.local_seo._generate_keywords")
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_analyze_full_profile(self, mock_db, mock_settings, mock_keywords):
         mock_settings.api_secret_key = _TEST_SECRET
         mock_keywords.return_value = ["plumber in Austin", "emergency plumber Austin TX"]
@@ -110,7 +110,7 @@ class TestAnalyzeSEO:
 
     @patch("backend.routers.local_seo._generate_keywords")
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_analyze_empty_profile(self, mock_db, mock_settings, mock_keywords):
         mock_settings.api_secret_key = _TEST_SECRET
         mock_keywords.return_value = []
@@ -146,7 +146,7 @@ class TestAnalyzeSEO:
 
     @patch("backend.routers.local_seo._generate_keywords")
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_analyze_partial_profile(self, mock_db, mock_settings, mock_keywords):
         mock_settings.api_secret_key = _TEST_SECRET
         mock_keywords.return_value = ["dentist in Denver"]
@@ -184,7 +184,7 @@ class TestAnalyzeSEO:
 
     @patch("backend.routers.local_seo._generate_keywords")
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_analyze_updates_existing_profile(self, mock_db, mock_settings, mock_keywords):
         """When a profile already exists, it should update (not insert)."""
         mock_settings.api_secret_key = _TEST_SECRET
@@ -248,7 +248,7 @@ class TestAnalyzeSEO:
 
     @patch("backend.routers.local_seo._generate_keywords")
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_analyze_tenant_not_found(self, mock_db, mock_settings, mock_keywords):
         mock_settings.api_secret_key = _TEST_SECRET
         mock_keywords.return_value = []
@@ -276,7 +276,7 @@ class TestGetSEOProfile:
     """Tests for GET /api/v1/seo/{tenant_id}."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_get_profile_success(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -311,7 +311,7 @@ class TestGetSEOProfile:
         assert data["keyword_suggestions"] == ["plumber Austin"]
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_get_profile_not_found(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -349,7 +349,7 @@ class TestGetKeywords:
     """Tests for GET /api/v1/seo/{tenant_id}/keywords."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_get_keywords_success(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -373,7 +373,7 @@ class TestGetKeywords:
         assert data["tenant_id"] == "tenant-001"
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_get_keywords_no_profile(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -410,7 +410,7 @@ class TestDashboardWidget:
     """Tests for GET /api/v1/seo/{tenant_id}/dashboard-widget."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_dashboard_widget_with_profile(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -465,7 +465,7 @@ class TestDashboardWidget:
         assert data["keyword_count"] == 3
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.local_seo.get_supabase")
+    @patch("backend.routers.local_seo.get_service_supabase")
     def test_dashboard_widget_no_profile(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 

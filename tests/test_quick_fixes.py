@@ -114,7 +114,7 @@ class TestGenerateSlotsWithExceptions:
             "max_advance_days": 90,
         }
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_closed_holiday_returns_no_slots(self, mock_get_bh, mock_db):
         """A date marked closed in exceptions should return zero slots."""
@@ -130,7 +130,7 @@ class TestGenerateSlotsWithExceptions:
         slots = generate_available_slots("test-tenant", target)
         assert slots == []
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_partial_day_override_limits_slots(self, mock_get_bh, mock_db):
         """A date with open/close override should use those hours instead of normal day hours."""
@@ -162,7 +162,7 @@ class TestGenerateSlotsWithExceptions:
         assert slots[0]["start"] == "10:00"
         assert slots[-1]["start"] == "13:00"
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_normal_day_unaffected_by_other_exceptions(self, mock_get_bh, mock_db):
         """Days not in exceptions should use normal hours."""
@@ -233,7 +233,7 @@ class TestLeadTemperatureCalculation:
         db.table = mock_table
         return db
 
-    @patch("backend.services.lead_scoring.get_supabase")
+    @patch("backend.services.lead_scoring.get_service_supabase")
     def test_hot_temperature(self, mock_get_db):
         """Lead with email + phone + pricing + availability + recent = hot."""
         from backend.services.lead_scoring import score_lead
@@ -260,7 +260,7 @@ class TestLeadTemperatureCalculation:
         assert result["temperature"] == "hot"
         assert result["score"] >= 70
 
-    @patch("backend.services.lead_scoring.get_supabase")
+    @patch("backend.services.lead_scoring.get_service_supabase")
     def test_warm_temperature(self, mock_get_db):
         """Lead with email + name + some messages = warm."""
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -286,7 +286,7 @@ class TestLeadTemperatureCalculation:
         assert result["temperature"] == "warm"
         assert 40 <= result["score"] < 70
 
-    @patch("backend.services.lead_scoring.get_supabase")
+    @patch("backend.services.lead_scoring.get_service_supabase")
     def test_cold_temperature(self, mock_get_db):
         """Lead with minimal info = cold."""
         old_time = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
@@ -342,7 +342,7 @@ class TestScoreFactors:
         db.table = mock_table
         return db
 
-    @patch("backend.services.lead_scoring.get_supabase")
+    @patch("backend.services.lead_scoring.get_service_supabase")
     def test_factors_include_email_phone(self, mock_get_db):
         """Factors list includes email and phone when present."""
         from backend.services.lead_scoring import score_lead
@@ -366,7 +366,7 @@ class TestScoreFactors:
         assert any("Has phone" in f for f in factor_texts)
         assert any("Has name" in f for f in factor_texts)
 
-    @patch("backend.services.lead_scoring.get_supabase")
+    @patch("backend.services.lead_scoring.get_service_supabase")
     def test_factors_include_intent_keywords(self, mock_get_db):
         """Factors list includes intent keywords when user asked about pricing."""
         from backend.services.lead_scoring import score_lead
@@ -390,7 +390,7 @@ class TestScoreFactors:
         factor_texts = result["factors"]
         assert any("pricing" in f.lower() for f in factor_texts)
 
-    @patch("backend.services.lead_scoring.get_supabase")
+    @patch("backend.services.lead_scoring.get_service_supabase")
     def test_factors_returned_in_result(self, mock_get_db):
         """Result dict always has factors and temperature keys."""
         from backend.services.lead_scoring import score_lead

@@ -44,7 +44,7 @@ class TestSocialPostsCRUD:
     """Test social media post create/list."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.social_media.get_supabase")
+    @patch("backend.routers.social_media.get_service_supabase")
     def test_create_post(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
@@ -62,7 +62,7 @@ class TestSocialPostsCRUD:
         assert resp.json()["platform"] == "twitter"
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.social_media.get_supabase")
+    @patch("backend.routers.social_media.get_service_supabase")
     def test_list_posts(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
@@ -105,7 +105,7 @@ class TestAIGeneration:
     """Test AI content generation endpoints."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.social_media.get_supabase")
+    @patch("backend.routers.social_media.get_service_supabase")
     @patch("backend.routers.social_media.call_claude_messages", new_callable=AsyncMock)
     def test_generate_content(self, mock_call_claude, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
@@ -138,7 +138,7 @@ class TestMarketingCampaigns:
     """Test marketing campaign CRUD."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.marketing_campaigns.get_supabase")
+    @patch("backend.routers.marketing_campaigns.get_service_supabase")
     def test_create_email_campaign(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
@@ -181,7 +181,7 @@ class TestMarketingCampaigns:
         assert resp.status_code == 400
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.marketing_campaigns.get_supabase")
+    @patch("backend.routers.marketing_campaigns.get_service_supabase")
     @patch("backend.routers.marketing_campaigns._query_target_leads")
     def test_estimate_recipients(self, mock_query, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET

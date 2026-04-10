@@ -44,14 +44,14 @@ MOCK_CONFIG = {
 class TestSlotGeneration:
     """Test slot generation logic."""
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_no_config_returns_empty(self, mock_hours, mock_db):
         mock_hours.return_value = None
         slots = generate_available_slots("tenant-1", date(2026, 3, 16))  # Monday
         assert slots == []
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_disabled_day_returns_empty(self, mock_hours, mock_db):
         mock_hours.return_value = MOCK_CONFIG
@@ -59,7 +59,7 @@ class TestSlotGeneration:
         slots = generate_available_slots("tenant-1", date(2026, 3, 14))  # Saturday
         assert slots == []
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_generates_slots_for_enabled_day(self, mock_hours, mock_db):
         mock_hours.return_value = MOCK_CONFIG
@@ -84,7 +84,7 @@ class TestSlotGeneration:
             assert "start_utc" in slot
             assert "end_utc" in slot
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_filters_out_booked_slots(self, mock_hours, mock_db):
         """Slots overlapping with existing appointments should be excluded."""
@@ -114,7 +114,7 @@ class TestSlotGeneration:
         slot_starts = [s["start"] for s in slots]
         assert "10:00" not in slot_starts
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     @patch("backend.services.booking.get_business_hours")
     def test_buffer_minutes_respected(self, mock_hours, mock_db):
         """Buffer minutes should increase the step between slots."""
@@ -248,7 +248,7 @@ class TestOverlapDetection:
 class TestLeadLinkage:
     """Test that appointments get linked to existing or new leads."""
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     def test_links_to_existing_lead(self, mock_db):
         mock_table = MagicMock()
         mock_table.select.return_value = mock_table
@@ -263,12 +263,12 @@ class TestLeadLinkage:
         })
         assert result == "lead-123"
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     def test_no_email_returns_none(self, mock_db):
         result = link_appointment_to_lead("tenant-1", {"customer_name": "John"})
         assert result is None
 
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     def test_creates_new_lead_when_none_exists(self, mock_db):
         """When no lead exists for the email, creates a new one with client_id."""
         call_count = 0
@@ -312,7 +312,7 @@ class TestCreateAppointment:
 
     @patch("backend.services.booking._send_appointment_confirmation")
     @patch("backend.services.booking.link_appointment_to_lead")
-    @patch("backend.services.booking.get_supabase")
+    @patch("backend.services.booking.get_service_supabase")
     def test_creates_confirmed_appointment(self, mock_db, mock_link, mock_confirm):
         mock_link.return_value = None
         mock_table = MagicMock()

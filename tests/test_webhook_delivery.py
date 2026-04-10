@@ -111,7 +111,7 @@ class TestFireEvent:
         _daily_deliveries.clear()
 
     @pytest.mark.asyncio
-    @patch("backend.services.webhook_dispatcher.get_supabase")
+    @patch("backend.services.webhook_dispatcher.get_service_supabase")
     async def test_unknown_event_skipped(self, mock_db):
         assert _daily_deliveries.get("tenant-1", 0) == 0
         await fire_event("tenant-1", "not.a.real.event", {})
@@ -119,7 +119,7 @@ class TestFireEvent:
         assert _daily_deliveries.get("tenant-1", 0) == 0
 
     @pytest.mark.asyncio
-    @patch("backend.services.webhook_dispatcher.get_supabase")
+    @patch("backend.services.webhook_dispatcher.get_service_supabase")
     async def test_no_matching_webhooks_skipped(self, mock_db):
         mock_table = MagicMock()
         mock_table.select.return_value = mock_table
@@ -135,7 +135,7 @@ class TestFireEvent:
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher._deliver")
-    @patch("backend.services.webhook_dispatcher.get_supabase")
+    @patch("backend.services.webhook_dispatcher.get_service_supabase")
     async def test_fires_to_matching_webhooks(self, mock_db, mock_deliver):
         mock_deliver.return_value = None
         mock_table = MagicMock()
@@ -159,7 +159,7 @@ class TestFireEvent:
         assert "timestamp" in payload
 
     @pytest.mark.asyncio
-    @patch("backend.services.webhook_dispatcher.get_supabase")
+    @patch("backend.services.webhook_dispatcher.get_service_supabase")
     async def test_daily_limit_blocks_fire(self, mock_db):
         _daily_deliveries["tenant-full"] = _DAILY_LIMIT
         await fire_event("tenant-full", "lead.created", {"lead_id": "123"})
@@ -172,7 +172,7 @@ class TestFireEvent:
 
 class TestDeliver:
     @pytest.mark.asyncio
-    @patch("backend.services.webhook_dispatcher.get_supabase")
+    @patch("backend.services.webhook_dispatcher.get_service_supabase")
     @patch("backend.services.webhook_dispatcher.httpx.AsyncClient")
     async def test_successful_delivery_logs(self, mock_client_cls, mock_db):
         # Mock HTTP response
@@ -222,7 +222,7 @@ class TestDeliver:
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher.asyncio.sleep", new_callable=AsyncMock)
-    @patch("backend.services.webhook_dispatcher.get_supabase")
+    @patch("backend.services.webhook_dispatcher.get_service_supabase")
     @patch("backend.services.webhook_dispatcher.httpx.AsyncClient")
     async def test_failed_delivery_retries_until_max_attempts(self, mock_client_cls, mock_db, mock_sleep):
         # Mock HTTP response with 500
@@ -257,7 +257,7 @@ class TestDeliver:
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_dispatcher.asyncio.sleep", new_callable=AsyncMock)
-    @patch("backend.services.webhook_dispatcher.get_supabase")
+    @patch("backend.services.webhook_dispatcher.get_service_supabase")
     @patch("backend.services.webhook_dispatcher.httpx.AsyncClient")
     async def test_retry_does_not_retry_again(self, mock_client_cls, mock_db, mock_sleep):
         mock_resp = MagicMock()

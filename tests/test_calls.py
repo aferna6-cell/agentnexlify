@@ -191,7 +191,7 @@ class TestRecordingComplete:
     @patch("backend.routers.calls.send_sms", new_callable=AsyncMock)
     @patch("backend.routers.calls.log_activity")
     @patch("backend.routers.calls._find_tenant_by_phone")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     def test_recording_complete_stores_call(
         self, mock_db, mock_find, mock_activity, mock_sms, mock_fire
     ):
@@ -299,7 +299,7 @@ class TestListCalls:
     """Tests for GET /api/v1/calls/{tenant_id}."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     def test_list_calls_success(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -356,7 +356,7 @@ class TestGetCallStats:
     """Tests for GET /api/v1/calls/{tenant_id}/stats."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     def test_stats_returns_defaults(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -393,7 +393,7 @@ class TestGetCall:
     """Tests for GET /api/v1/calls/{tenant_id}/{call_id}."""
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     def test_get_call_success(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -435,7 +435,7 @@ class TestGetCall:
         assert data["summary"] == "Caller asked about pricing"
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     def test_get_call_not_found(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
 
@@ -527,7 +527,7 @@ class TestTwimlHelpers:
 class TestTranscriptionComplete:
     """Tests for POST /api/v1/calls/voice/transcription-complete."""
 
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     def test_transcription_stores_and_triggers_summary(self, mock_db):
         """Completed transcription should store transcript and trigger background summary."""
         mock_client = MagicMock()
@@ -599,7 +599,7 @@ class TestTranscriptionComplete:
 
         assert resp.status_code == 200
 
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     def test_transcription_unknown_call_sid(self, mock_db):
         """Transcription for an unknown call SID should return OK without error."""
         mock_client = MagicMock()
@@ -653,7 +653,7 @@ class TestVoiceRespond:
     """Tests for POST /api/v1/calls/voice/respond."""
 
     @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     @patch("backend.routers.calls._find_tenant_by_phone")
     def test_voice_respond_uses_llm_runtime(self, mock_find, mock_db, mock_call_claude):
         mock_find.return_value = {
@@ -716,7 +716,7 @@ class TestGenerateCallSummary:
 
     @pytest.mark.asyncio
     @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_parses_json_response(self, mock_call_claude, mock_db, mock_activity):
         """Summary should parse Claude's JSON response and update the call."""
@@ -792,7 +792,7 @@ class TestGenerateCallSummary:
         assert activity_kwargs["metadata"]["action_item_count"] == 1
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_skips_empty_transcript(self, mock_call_claude, mock_db):
         """Empty transcript should skip summary generation."""
@@ -809,7 +809,7 @@ class TestGenerateCallSummary:
         mock_db.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_skips_whitespace_transcript(self, mock_call_claude, mock_db):
         """Whitespace-only transcript should skip summary generation."""
@@ -836,7 +836,7 @@ class TestInsertCallActionItems:
 
     @pytest.mark.asyncio
     @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     async def test_inserts_action_items(self, mock_db, mock_activity):
         """Should insert each action item into action_items table."""
         from backend.routers.calls import _insert_call_action_items
@@ -862,7 +862,7 @@ class TestInsertCallActionItems:
 
     @pytest.mark.asyncio
     @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     async def test_skips_empty_items(self, mock_db, mock_activity):
         """Empty item list should not insert anything."""
         from backend.routers.calls import _insert_call_action_items
@@ -881,7 +881,7 @@ class TestInsertCallActionItems:
 
     @pytest.mark.asyncio
     @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_supabase")
+    @patch("backend.routers.calls.get_service_supabase")
     async def test_sets_high_priority(self, mock_db, mock_activity):
         """Call action items should always be high priority."""
         from backend.routers.calls import _insert_call_action_items

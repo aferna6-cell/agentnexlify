@@ -46,7 +46,7 @@ class TestRepurposeCreate:
     @patch("backend.routers.auth.settings")
     @patch("backend.routers.content_repurpose._run_repurpose_job")
     @patch("backend.routers.content_repurpose._verify_plan", _pass_plan_check)
-    @patch("backend.routers.content_repurpose.get_supabase")
+    @patch("backend.routers.content_repurpose.get_service_supabase")
     def test_create_job(self, mock_db, mock_run, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
@@ -70,7 +70,7 @@ class TestRepurposeCreate:
         assert data["status"] == "processing"
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.content_repurpose.get_supabase")
+    @patch("backend.routers.content_repurpose.get_service_supabase")
     def test_create_job_free_plan_rejected(self, mock_db, mock_settings):
         """Free plan should not access repurposer."""
         mock_settings.api_secret_key = _TEST_SECRET
@@ -93,7 +93,7 @@ class TestRepurposeCreate:
 
     @patch("backend.routers.auth.settings")
     @patch("backend.routers.content_repurpose._verify_plan", _pass_plan_check)
-    @patch("backend.routers.content_repurpose.get_supabase")
+    @patch("backend.routers.content_repurpose.get_service_supabase")
     def test_create_job_invalid_source_type(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
@@ -114,7 +114,7 @@ class TestRepurposeCreate:
 class TestRepurposeList:
     @patch("backend.routers.auth.settings")
     @patch("backend.routers.content_repurpose._verify_plan", _pass_plan_check)
-    @patch("backend.routers.content_repurpose.get_supabase")
+    @patch("backend.routers.content_repurpose.get_service_supabase")
     def test_list_jobs(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
@@ -131,7 +131,7 @@ class TestRepurposeList:
 
     @patch("backend.routers.auth.settings")
     @patch("backend.routers.content_repurpose._verify_plan", _pass_plan_check)
-    @patch("backend.routers.content_repurpose.get_supabase")
+    @patch("backend.routers.content_repurpose.get_service_supabase")
     def test_get_single_job(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()
@@ -146,7 +146,7 @@ class TestRepurposeList:
 class TestRepurposeDelete:
     @patch("backend.routers.auth.settings")
     @patch("backend.routers.content_repurpose._verify_plan", _pass_plan_check)
-    @patch("backend.routers.content_repurpose.get_supabase")
+    @patch("backend.routers.content_repurpose.get_service_supabase")
     def test_delete_job(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = MagicMock()

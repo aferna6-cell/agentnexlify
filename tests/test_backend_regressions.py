@@ -78,7 +78,7 @@ def test_webhook_delivery_route_is_registered_and_returns_summary(mock_supabase,
             {"id": "log-2", "webhook_id": "wh-123", "event": "lead.updated", "payload": {}, "response_status": 500, "success": False, "created_at": "2026-04-03T11:00:00Z"},
         ],
     )
-    monkeypatch.setattr("backend.routers.webhook_deliveries.get_supabase", lambda: mock_supabase)
+    monkeypatch.setattr("backend.routers.webhook_deliveries.get_service_supabase", lambda: mock_supabase)
     app.dependency_overrides[_get_current_tenant] = lambda: {"tenant_id": "tenant-123", "role": "owner"}
     client = TestClient(app)
 
@@ -141,7 +141,7 @@ def test_dashboard_returns_business_profile_for_hvac(mock_supabase, monkeypatch)
     mock_supabase.set_table_data("faq_entries", [], count=0)
     mock_supabase.set_table_data("chat_messages", [])
     mock_supabase.set_table_data("activity_log", [], count=0)
-    monkeypatch.setattr("backend.routers.auth.get_supabase", lambda: mock_supabase)
+    monkeypatch.setattr("backend.routers.auth.get_service_supabase", lambda: mock_supabase)
     app.dependency_overrides[_get_current_tenant] = lambda: {"tenant_id": "tenant-123", "role": "owner"}
     client = TestClient(app)
 
@@ -221,7 +221,7 @@ class _OnboardingRecordingDb:
 def test_onboarding_preserves_existing_widget_customizations_when_fields_are_omitted(monkeypatch):
     """Preset defaults should not overwrite an already customized widget on re-run."""
     db = _OnboardingRecordingDb()
-    monkeypatch.setattr("backend.routers.onboarding.get_supabase", lambda: db)
+    monkeypatch.setattr("backend.routers.onboarding.get_service_supabase", lambda: db)
 
     async def _no_ai_content(*args, **kwargs):
         return None

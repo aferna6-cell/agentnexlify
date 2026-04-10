@@ -56,7 +56,7 @@ class TestProcessPendingSteps:
     """Tests for process_pending_steps()."""
 
     @patch("backend.services.automation_engine.execute_step", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_happy_path_one_due_execution(self, mock_get_db, mock_execute_step):
         """One due execution → execute_step called once → returns 1."""
         db, table = _make_db_mock()
@@ -70,7 +70,7 @@ class TestProcessPendingSteps:
         assert result == 1
         mock_execute_step.assert_awaited_once_with("exec-001")
 
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_no_pending_steps_returns_zero(self, mock_get_db):
         """Empty result from DB → returns 0 without calling execute_step."""
         db, table = _make_db_mock()
@@ -83,7 +83,7 @@ class TestProcessPendingSteps:
         assert result == 0
 
     @patch("backend.services.automation_engine.execute_step", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_multiple_executions_all_processed(self, mock_get_db, mock_execute_step):
         """Three due executions → execute_step called three times → returns 3."""
         db, table = _make_db_mock()
@@ -100,7 +100,7 @@ class TestProcessPendingSteps:
         assert mock_execute_step.await_count == 3
 
     @patch("backend.services.automation_engine.execute_step", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_failed_execute_step_does_not_block_others(
         self, mock_get_db, mock_execute_step
     ):
@@ -129,7 +129,7 @@ class TestProcessPendingSteps:
 class TestTriggerSequence:
     """Tests for trigger_sequence()."""
 
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_matching_stage_creates_execution(self, mock_get_db):
         """Matching sequence + first step → creates execution row → returns 1."""
         db = MagicMock()
@@ -166,7 +166,7 @@ class TestTriggerSequence:
         result = await trigger_sequence("tenant-001", "lead-001", "new_lead")
         assert result == 1
 
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_non_matching_stage_skips_enrollment(self, mock_get_db):
         """Sequence targets 'closed' but new_stage='contacted' → no enrollment → 0."""
         db = MagicMock()
@@ -205,7 +205,7 @@ class TestTriggerSequence:
         )
         assert result == 0
 
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_no_active_sequences_returns_zero(self, mock_get_db):
         """No sequences for this tenant+trigger → returns 0 immediately."""
         db = MagicMock()
@@ -228,7 +228,7 @@ class TestTriggerSequence:
         result = await trigger_sequence("tenant-001", "lead-001", "no_response_24h")
         assert result == 0
 
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_already_enrolled_insert_exception_skips(self, mock_get_db):
         """DB insert raises (UNIQUE constraint) → caught, enrollment count stays 0.
 
@@ -283,7 +283,7 @@ class TestSendInvoicePaymentReminders:
 
     @patch("backend.services.automation_engine.send_sms", new_callable=AsyncMock)
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_overdue_invoice_marked_overdue_and_email_sent(
         self, mock_get_db, mock_send_email, mock_send_sms
     ):
@@ -341,7 +341,7 @@ class TestSendInvoicePaymentReminders:
 
     @patch("backend.services.automation_engine.send_sms", new_callable=AsyncMock)
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_due_tomorrow_sends_reminder(
         self, mock_get_db, mock_send_email, mock_send_sms
     ):
@@ -397,7 +397,7 @@ class TestSendInvoicePaymentReminders:
         assert "tomorrow" in call_kwargs.get("subject", "").lower()
 
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_already_reminded_today_skips(self, mock_get_db, mock_send_email):
         """activity_log dedup hit for today → email NOT sent → returns 0."""
         db = MagicMock()
@@ -443,7 +443,7 @@ class TestSendInvoicePaymentReminders:
         mock_send_email.assert_not_awaited()
 
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_invoice_with_no_lead_id_skips_gracefully(
         self, mock_get_db, mock_send_email
     ):
@@ -501,7 +501,7 @@ class TestSendWeeklyIntelligenceBriefs:
     """
 
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_tuesday_returns_zero_immediately(self, mock_get_db, mock_send_email):
         """Non-Monday weekday → returns 0, no email sent.
 
@@ -522,7 +522,7 @@ class TestSendWeeklyIntelligenceBriefs:
         mock_send_email.assert_not_awaited()
 
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_monday_paid_tenant_sends_brief(self, mock_get_db, mock_send_email):
         """Monday + paid tenant + no dedup hit → email sent → returns 1."""
         db = MagicMock()
@@ -573,7 +573,7 @@ class TestSendWeeklyIntelligenceBriefs:
         assert "My Biz" in call_kwargs.get("subject", "")
 
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_already_sent_this_week_skips(self, mock_get_db, mock_send_email):
         """Monday but dedup hit in activity_log → returns 0, no email sent."""
         db = MagicMock()
@@ -620,7 +620,7 @@ class TestSendWeeklyIntelligenceBriefs:
         mock_send_email.assert_not_awaited()
 
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_free_plan_tenant_skipped(self, mock_get_db, mock_send_email):
         """Free-plan tenants are excluded by .neq('plan', 'free') at the DB level.
 
@@ -719,7 +719,7 @@ class TestProcessRecurringInvoices:
         return db, state
 
     @patch("backend.services.automation_engine.fire_event_background")
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_claim_lost_skips_duplicate_child_invoice(self, mock_get_db, mock_fire_event):
         """If another worker advances the parent first, no duplicate child invoice is created."""
         parent = {
@@ -751,7 +751,7 @@ class TestProcessRecurringInvoices:
         mock_fire_event.assert_not_called()
 
     @patch("backend.services.automation_engine.fire_event_background")
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_insert_failure_rolls_back_parent_claim(self, mock_get_db, mock_fire_event):
         """If child invoice creation fails after the claim, next_invoice_date is restored."""
         parent = {
@@ -797,7 +797,7 @@ class TestCheckNoResponseLeads:
     """Tests for check_no_response_leads()."""
 
     @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_lead_with_no_response_triggers_sequence(
         self, mock_get_db, mock_trigger
     ):
@@ -841,7 +841,7 @@ class TestCheckNoResponseLeads:
         )
 
     @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_lead_with_recent_message_skips(self, mock_get_db, mock_trigger):
         """Lead has a message within the last 24h → skip, trigger_sequence NOT called."""
         db = MagicMock()
@@ -894,7 +894,7 @@ class TestCheckNoResponseLeads:
 
 
     @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_already_enrolled_in_progress_execution_skips(
         self, mock_get_db, mock_trigger
     ):
@@ -953,7 +953,7 @@ class TestCheckNoResponseLeads:
 
 
     @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_no_candidate_leads_returns_zero(self, mock_get_db, mock_trigger):
         """No new leads older than 24h returns 0 and does not trigger a sequence."""
         db, table = _make_db_mock()
@@ -987,7 +987,7 @@ def _chain_table(result=None):
 
 class TestAutomationRules:
     @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_execute_rule_loads_lead_with_rule_tenant(
         self, mock_get_db, mock_send_email
     ):
@@ -1041,7 +1041,7 @@ class TestAutomationRules:
         assert mock_send_email.call_args.kwargs["to"] == "lead@example.com"
         assert mock_send_email.call_args.kwargs["tenant_id"] == "tenant-001"
 
-    @patch("backend.services.automation_engine.get_supabase")
+    @patch("backend.services.automation_engine.get_service_supabase")
     async def test_enroll_in_sequence_action_creates_processable_execution(
         self, mock_get_db
     ):

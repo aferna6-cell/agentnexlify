@@ -92,18 +92,18 @@ def test_client(mock_settings):
     db_mock = MagicMock()
     patches = [
         patch("backend.models.database.get_supabase", return_value=db_mock),
-        patch("backend.routers.auth.get_supabase", return_value=db_mock),
+        patch("backend.routers.auth.get_service_supabase", return_value=db_mock),
         patch("backend.routers.auth.settings", mock_settings),
-        patch("backend.routers.widget_chat.get_supabase", return_value=db_mock),
-        patch("backend.routers.widget_config.get_supabase", return_value=db_mock),
-        patch("backend.routers.widget_lead.get_supabase", return_value=db_mock),
-        patch("backend.routers.widget_booking.get_supabase", return_value=db_mock),
-        patch("backend.routers.widget_helpers.get_supabase", return_value=db_mock),
-        patch("backend.routers.appointments.get_supabase", return_value=db_mock),
-        patch("backend.services.booking.get_supabase", return_value=db_mock),
-        patch("backend.services.activity.get_supabase", return_value=db_mock),
-        patch("backend.services.webhook_dispatcher.get_supabase", return_value=db_mock),
-        patch("backend.services.lead_scoring.get_supabase", return_value=db_mock),
+        patch("backend.routers.widget_chat.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_config.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_lead.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_booking.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.appointments.get_service_supabase", return_value=db_mock),
+        patch("backend.services.booking.get_service_supabase", return_value=db_mock),
+        patch("backend.services.activity.get_service_supabase", return_value=db_mock),
+        patch("backend.services.webhook_dispatcher.get_service_supabase", return_value=db_mock),
+        patch("backend.services.lead_scoring.get_service_supabase", return_value=db_mock),
     ]
     for p in patches:
         p.start()

@@ -111,7 +111,7 @@ def control_center_client(mock_settings):
     db = _StaticDb({})
     patches = [
         patch("backend.models.database.get_supabase", return_value=db),
-        patch("backend.routers.analytics.get_supabase", return_value=db),
+        patch("backend.routers.analytics.get_service_supabase", return_value=db),
         patch("backend.routers.auth.settings", mock_settings),
     ]
     for item in patches:

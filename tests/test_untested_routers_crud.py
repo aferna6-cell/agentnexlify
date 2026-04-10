@@ -51,7 +51,7 @@ def _mock_db():
 
 class TestSnippets:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.snippets.get_supabase")
+    @patch("backend.routers.snippets.get_service_supabase")
     def test_list_snippets(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -63,7 +63,7 @@ class TestSnippets:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.snippets.get_supabase")
+    @patch("backend.routers.snippets.get_service_supabase")
     def test_create_snippet(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -90,7 +90,7 @@ class TestSnippets:
 
 class TestTagDefinitions:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.tag_definitions.get_supabase")
+    @patch("backend.routers.tag_definitions.get_service_supabase")
     def test_list_tags(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -102,7 +102,7 @@ class TestTagDefinitions:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.tag_definitions.get_supabase")
+    @patch("backend.routers.tag_definitions.get_service_supabase")
     def test_create_tag(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -129,7 +129,7 @@ class TestTagDefinitions:
 
 class TestScoringConfig:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.scoring_config.get_supabase")
+    @patch("backend.routers.scoring_config.get_service_supabase")
     def test_list_scoring_factors(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -141,7 +141,7 @@ class TestScoringConfig:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.scoring_config.get_supabase")
+    @patch("backend.routers.scoring_config.get_service_supabase")
     def test_create_scoring_factor(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -168,7 +168,7 @@ class TestScoringConfig:
 
 class TestEmailTemplates:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.email_templates.get_supabase")
+    @patch("backend.routers.email_templates.get_service_supabase")
     def test_list_templates(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -180,7 +180,7 @@ class TestEmailTemplates:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.email_templates.get_supabase")
+    @patch("backend.routers.email_templates.get_service_supabase")
     def test_create_template(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -207,7 +207,7 @@ class TestEmailTemplates:
 
 class TestCustomFields:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.custom_fields.get_supabase")
+    @patch("backend.routers.custom_fields.get_service_supabase")
     def test_list_fields(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -219,7 +219,7 @@ class TestCustomFields:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.custom_fields.get_supabase")
+    @patch("backend.routers.custom_fields.get_service_supabase")
     def test_create_field(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -250,7 +250,7 @@ class TestCustomFields:
 
 class TestPipelineAutomations:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.pipeline_automations.get_supabase")
+    @patch("backend.routers.pipeline_automations.get_service_supabase")
     def test_list_automations(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -262,7 +262,7 @@ class TestPipelineAutomations:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.pipeline_automations.get_supabase")
+    @patch("backend.routers.pipeline_automations.get_service_supabase")
     def test_create_automation(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -289,7 +289,7 @@ class TestPipelineAutomations:
 
 class TestWaitlist:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.waitlist.get_supabase")
+    @patch("backend.routers.waitlist.get_service_supabase")
     def test_list_waitlist(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -300,7 +300,7 @@ class TestWaitlist:
         resp = client.get("/api/v1/waitlist/tenant-001", headers=_auth())
         assert resp.status_code == 200
 
-    @patch("backend.routers.waitlist.get_supabase")
+    @patch("backend.routers.waitlist.get_service_supabase")
     def test_public_waitlist_join(self, mock_db):
         """Public endpoint — no auth needed, uses api_key."""
         db = _mock_db()
@@ -333,7 +333,7 @@ class TestWaitlist:
 
 class TestWizardAnalytics:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.wizard_analytics.get_supabase")
+    @patch("backend.routers.wizard_analytics.get_service_supabase")
     def test_post_event(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -347,7 +347,7 @@ class TestWizardAnalytics:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.wizard_analytics.get_supabase")
+    @patch("backend.routers.wizard_analytics.get_service_supabase")
     def test_get_stats(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -365,7 +365,7 @@ class TestWizardAnalytics:
 
 
 class TestCSAT:
-    @patch("backend.routers.csat.get_supabase")
+    @patch("backend.routers.csat.get_service_supabase")
     def test_submit_csat(self, mock_db):
         """Public endpoint — token format is tenant_id:session_id."""
         db = _mock_db()
@@ -383,7 +383,7 @@ class TestCSAT:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.csat.get_supabase")
+    @patch("backend.routers.csat.get_service_supabase")
     def test_csat_stats(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -409,7 +409,7 @@ class TestCSAT:
 
 class TestSmartLists:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.smart_lists.get_supabase")
+    @patch("backend.routers.smart_lists.get_service_supabase")
     def test_list_smart_lists(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -421,7 +421,7 @@ class TestSmartLists:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.smart_lists.get_supabase")
+    @patch("backend.routers.smart_lists.get_service_supabase")
     def test_create_smart_list(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -448,7 +448,7 @@ class TestSmartLists:
 
 class TestBids:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.bids.get_supabase")
+    @patch("backend.routers.bids.get_service_supabase")
     def test_list_bids(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -460,7 +460,7 @@ class TestBids:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.bids.get_supabase")
+    @patch("backend.routers.bids.get_service_supabase")
     def test_create_bid(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()

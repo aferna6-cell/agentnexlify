@@ -150,7 +150,7 @@ class TestWrapperCentralization:
     @patch("backend.routers.social_media.call_claude_messages", new_callable=AsyncMock)
     @patch("backend.routers.social_media.get_business_context")
     @patch("backend.routers.social_media.verify_tenant")
-    @patch("backend.routers.social_media.get_supabase")
+    @patch("backend.routers.social_media.get_service_supabase")
     async def test_social_generate_post_uses_runtime_wrapper(self, mock_db, mock_verify, mock_ctx, mock_call):
         from backend.routers.social_media import AIGenerateRequest, generate_post_content
 
@@ -169,7 +169,7 @@ class TestWrapperCentralization:
         assert mock_call.await_count == 1
 
     @patch("backend.routers.leads.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.leads.get_supabase")
+    @patch("backend.routers.leads.get_service_supabase")
     async def test_lead_summary_uses_runtime_wrapper(self, mock_db, mock_call):
         from backend.routers.leads import generate_lead_summary
 
