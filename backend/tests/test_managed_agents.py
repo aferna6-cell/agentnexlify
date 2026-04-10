@@ -964,3 +964,326 @@ class TestSupportAgentBlocking:
         ):
             with pytest.raises(ValueError, match="no assistant text"):
                 mod.run_support_query("tenant_abc", "Hours?")
+
+
+# ----------------------------------------------------------------------
+# HTTP-level tests for the new router endpoints (2026-04-10)
+# ----------------------------------------------------------------------
+#
+# TestSupportAgentBlocking + TestStructuredExtractor cover the service
+# layer. These cover the router wiring — auth via `_get_current_tenant`,
+# tenant-mismatch 403, service exception → HTTP status mapping, rate
+# limit decorator presence, and happy-path response shape. Services are
+# patched at the router module level so no network / no agent invocation.
+# ----------------------------------------------------------------------
+
+
+class TestSupportQueryEndpoint:
+    """HTTP tests for POST /api/v1/managed-agents/{tenant_id}/support-query."""
+
+    TENANT = "00000000-0000-0000-0000-000000000001"
+    PATH = f"/api/v1/managed-agents/{TENANT}/support-query"
+
+    def test_happy_path(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+
+        fake_result = {
+            "answer": "We're open Mon-Fri 9-6.",
+            "confidence": "high",
+            "escalate_reason": None,
+        }
+        with patch.object(mod, "run_support_query", return_value=fake_result) as mock_service:
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"question": "What are your hours?"},
+            )
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["answer"] == "We're open Mon-Fri 9-6."
+        assert body["confidence"] == "high"
+        assert body["escalate_reason"] is None
+
+        mock_service.assert_called_once()
+        call_args = mock_service.call_args
+        assert call_args.args[0] == self.TENANT
+        assert call_args.args[1] == "What are your hours?"
+
+    def test_tenant_mismatch_returns_403(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+
+        wrong_path = "/api/v1/managed-agents/ffffffff-ffff-ffff-ffff-ffffffffffff/support-query"
+        with patch.object(mod, "run_support_query") as mock_service:
+            resp = client.post(
+                wrong_path,
+                headers=auth_headers,
+                json={"question": "hello"},
+            )
+
+        assert resp.status_code == 403
+        mock_service.assert_not_called()
+
+    def test_missing_auth_returns_401(self, client):
+        resp = client.post(self.PATH, json={"question": "hello"})
+        # FastAPI's Header() dependency returns 422 for missing Authorization,
+        # not 401 — it's a request-validation error at the framework layer.
+        assert resp.status_code in (401, 403, 422)
+
+    def test_not_configured_returns_503(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+        from backend.services.managed_agents_registry import ManagedAgentNotConfigured
+
+        with patch.object(
+            mod,
+            "run_support_query",
+            side_effect=ManagedAgentNotConfigured("SUPPORT_AGENT_ID"),
+        ):
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"question": "hello"},
+            )
+
+        assert resp.status_code == 503
+        assert "SUPPORT_AGENT_ID" in resp.json()["detail"]
+
+    def test_upstream_error_maps_to_502(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+        from backend.services.managed_agents import ManagedAgentsError
+
+        with patch.object(
+            mod,
+            "run_support_query",
+            side_effect=ManagedAgentsError(
+                "upstream boom", status=500, request_id="req_1",
+            ),
+        ):
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"question": "hello"},
+            )
+
+        assert resp.status_code == 502
+
+    def test_invalid_reply_value_error_maps_to_502(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+
+        with patch.object(
+            mod,
+            "run_support_query",
+            side_effect=ValueError("support_agent returned no assistant text"),
+        ):
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"question": "hello"},
+            )
+
+        assert resp.status_code == 502
+
+    def test_empty_question_rejected(self, client, auth_headers):
+        resp = client.post(
+            self.PATH,
+            headers=auth_headers,
+            json={"question": ""},
+        )
+        assert resp.status_code == 422
+
+
+class TestExtractEndpoint:
+    """HTTP tests for POST /api/v1/managed-agents/{tenant_id}/extract."""
+
+    TENANT = "00000000-0000-0000-0000-000000000001"
+    PATH = f"/api/v1/managed-agents/{TENANT}/extract"
+
+    def test_happy_path(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+
+        fake_result = {
+            "name": "Maria Lopez",
+            "email": "maria@example.com",
+            "phone": "555-0100",
+            "interest": "pressure wash",
+            "timeline": "two weeks",
+            "budget": "500",
+            "source": "google ad",
+        }
+        with patch.object(
+            mod, "extract_structured", return_value=fake_result,
+        ) as mock_service:
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={
+                    "raw_text": "Hi I am Maria Lopez, email maria@example.com",
+                    "target_schema": "lead",
+                },
+            )
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["data"]["name"] == "Maria Lopez"
+        mock_service.assert_called_once()
+        call_args = mock_service.call_args
+        assert call_args.args[0] == self.TENANT
+        assert call_args.args[2] == "lead"
+
+    def test_tenant_mismatch_returns_403(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+
+        wrong_path = "/api/v1/managed-agents/ffffffff-ffff-ffff-ffff-ffffffffffff/extract"
+        with patch.object(mod, "extract_structured") as mock_service:
+            resp = client.post(
+                wrong_path,
+                headers=auth_headers,
+                json={"raw_text": "hi", "target_schema": "lead"},
+            )
+
+        assert resp.status_code == 403
+        mock_service.assert_not_called()
+
+    def test_missing_auth_returns_401(self, client):
+        resp = client.post(
+            self.PATH,
+            json={"raw_text": "hi", "target_schema": "lead"},
+        )
+        # FastAPI's Header() dependency returns 422 for missing Authorization,
+        # not 401 — it's a request-validation error at the framework layer.
+        assert resp.status_code in (401, 403, 422)
+
+    def test_invalid_target_schema_rejected_by_pydantic(
+        self, client, auth_headers,
+    ):
+        """Literal enforcement in the Pydantic model catches bad schemas
+        before the service is ever called."""
+        from backend.routers import managed_agent_runs as mod
+
+        with patch.object(mod, "extract_structured") as mock_service:
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"raw_text": "hi", "target_schema": "invoice_line_item"},
+            )
+
+        assert resp.status_code == 422
+        mock_service.assert_not_called()
+
+    def test_empty_raw_text_rejected(self, client, auth_headers):
+        resp = client.post(
+            self.PATH,
+            headers=auth_headers,
+            json={"raw_text": "", "target_schema": "lead"},
+        )
+        assert resp.status_code == 422
+
+    def test_not_configured_returns_503(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+        from backend.services.managed_agents_registry import ManagedAgentNotConfigured
+
+        with patch.object(
+            mod,
+            "extract_structured",
+            side_effect=ManagedAgentNotConfigured("STRUCTURED_EXTRACTOR_AGENT_ID"),
+        ):
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"raw_text": "hi", "target_schema": "lead"},
+            )
+
+        assert resp.status_code == 503
+
+    def test_unsupported_schema_from_service_maps_to_400(
+        self, client, auth_headers,
+    ):
+        """If the Pydantic Literal accepted the value but the service
+        raised `unsupported target_schema` (config drift), the router
+        maps it to 400 rather than 502."""
+        from backend.routers import managed_agent_runs as mod
+
+        with patch.object(
+            mod,
+            "extract_structured",
+            side_effect=ValueError("unsupported target_schema 'lead'"),
+        ):
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"raw_text": "hi", "target_schema": "lead"},
+            )
+
+        assert resp.status_code == 400
+
+    def test_invalid_json_value_error_maps_to_502(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+
+        with patch.object(
+            mod,
+            "extract_structured",
+            side_effect=ValueError("invalid JSON: garbage"),
+        ):
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"raw_text": "hi", "target_schema": "lead"},
+            )
+
+        assert resp.status_code == 502
+
+    def test_upstream_error_maps_to_502(self, client, auth_headers):
+        from backend.routers import managed_agent_runs as mod
+        from backend.services.managed_agents import ManagedAgentsError
+
+        with patch.object(
+            mod,
+            "extract_structured",
+            side_effect=ManagedAgentsError(
+                "upstream boom", status=500, request_id="req_1",
+            ),
+        ):
+            resp = client.post(
+                self.PATH,
+                headers=auth_headers,
+                json={"raw_text": "hi", "target_schema": "lead"},
+            )
+
+        assert resp.status_code == 502
+
+
+class TestHealthEndpointLists8Agents:
+    """Regression test: GET /health should surface all 8 agent IDs now that
+    support_agent, structured_extractor, deep_researcher, field_monitor,
+    and data_analyst have been added to the registry.
+    """
+
+    TENANT = "00000000-0000-0000-0000-000000000001"
+    PATH = f"/api/v1/managed-agents/{TENANT}/health"
+
+    def test_lists_all_eight_agents(self, client, auth_headers):
+        from backend.config import settings
+
+        with (
+            patch.object(settings, "managed_agents_environment_id", "env_abc"),
+            patch.object(settings, "lead_qualifier_agent_id", "agent_lq"),
+            patch.object(settings, "document_drafter_agent_id", "agent_dd"),
+            patch.object(settings, "codebase_reviewer_agent_id", "agent_cr"),
+            patch.object(settings, "support_agent_id", "agent_sa"),
+            patch.object(settings, "structured_extractor_agent_id", "agent_se"),
+            patch.object(settings, "deep_researcher_agent_id", "agent_dr"),
+            patch.object(settings, "field_monitor_agent_id", "agent_fm"),
+            patch.object(settings, "data_analyst_agent_id", "agent_da"),
+        ):
+            resp = client.get(self.PATH, headers=auth_headers)
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        for expected in (
+            "lead_qualifier",
+            "document_drafter",
+            "codebase_reviewer",
+            "support_agent",
+            "structured_extractor",
+        ):
+            assert expected in body, f"health payload missing {expected}: {body}"

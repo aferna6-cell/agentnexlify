@@ -160,14 +160,100 @@ same way.
 python3 -m pytest backend/tests/test_managed_agents.py -v
 ```
 
-15 tests should pass. They exercise the client, error mapping, SSE
-parsing, and the registry in isolation — no live API calls.
+49 tests should pass (as of 2026-04-10 — 32 service + registry, 17
+router HTTP). They exercise the client, error mapping, SSE parsing,
+the registry, the tenant-facing services, and the new `/support-query`
+`/extract` endpoints in isolation — no live API calls.
 
-Hit the health endpoint from your dashboard once the backend is deployed:
+#### Live smoke tests (hit real Anthropic API)
+
+Each smoke script creates a real session, streams events, and asserts
+the session_id contract. Run with your `ANTHROPIC_API_KEY` in the
+environment. Approximate cost per run:
+
+| Script | Agent | Model | ~Cost | Notes |
+|---|---|---|---|---|
+| `session_smoke` | lead_qualifier | Sonnet | $0.05 | pre-existing |
+| `drafter_smoke` | document_drafter | Opus | $0.30 | pre-existing |
+| `support_smoke` | support_agent | Sonnet | $0.05 | new 2026-04-10 |
+| `extractor_smoke` | structured_extractor | Haiku | $0.01 | new 2026-04-10 |
+| `researcher_smoke` | deep_researcher | Opus | $0.30-1.00 | new 2026-04-10 |
+| `field_monitor_smoke` | field_monitor | Sonnet | $0.10-0.40 | new 2026-04-10 |
+| `analyst_smoke` | data_analyst | Opus | $0.20-0.60 | new 2026-04-10 |
 
 ```bash
-curl -H "Authorization: Bearer $JWT" \
-     https://agentnexlify-production.up.railway.app/api/v1/managed-agents/$TENANT_ID/health
+set -a && source .env && source .env.managed_agents && set +a
+
+python3 -m scripts.managed_agents.support_smoke
+python3 -m scripts.managed_agents.extractor_smoke
+python3 -m scripts.managed_agents.researcher_smoke
+python3 -m scripts.managed_agents.field_monitor_smoke
+python3 -m scripts.managed_agents.analyst_smoke
+```
+
+Total for all 5 new smokes: ~$1-3 per full pass.
+
+#### Production health check
+
+After Railway picks up the new env vars, hit the health endpoint from
+your dashboard to confirm all 8 agents register:
+
+```bash
+export JWT="<dashboard JWT from a valid tenant session>"
+export TENANT_ID="<your tenant UUID>"
+
+curl -s -H "Authorization: Bearer $JWT" \
+     "https://agentnexlify-production.up.railway.app/api/v1/managed-agents/$TENANT_ID/health" \
+     | python3 -m json.tool
+```
+
+Expected response shape:
+
+```json
+{
+  "environment_id": "env_019YgeAySxkW8BsXaFGvXJ3j",
+  "lead_qualifier":       true,
+  "document_drafter":     true,
+  "codebase_reviewer":    true,
+  "support_agent":        true,
+  "structured_extractor": true,
+  "deep_researcher":      true,
+  "field_monitor":        true,
+  "data_analyst":         true
+}
+```
+
+If any agent is `false`, the corresponding `*_AGENT_ID` env var is
+missing from Railway production. Re-sync with:
+
+```bash
+railway variables set --service agentnexlify \
+    SUPPORT_AGENT_ID=<id> \
+    STRUCTURED_EXTRACTOR_AGENT_ID=<id> \
+    DEEP_RESEARCHER_AGENT_ID=<id> \
+    FIELD_MONITOR_AGENT_ID=<id> \
+    DATA_ANALYST_AGENT_ID=<id>
+```
+
+#### Live endpoint smoke tests
+
+Once health returns all-true, verify the 2 new tenant-facing routes
+with real traffic:
+
+```bash
+# Support query (tenant-scoped, KB-grounded)
+curl -s -X POST \
+     -H "Authorization: Bearer $JWT" \
+     -H "Content-Type: application/json" \
+     -d '{"question": "What are your hours?"}' \
+     "https://agentnexlify-production.up.railway.app/api/v1/managed-agents/$TENANT_ID/support-query"
+
+# Structured extraction (text → typed JSON)
+curl -s -X POST \
+     -H "Authorization: Bearer $JWT" \
+     -H "Content-Type: application/json" \
+     -d '{"raw_text": "Hi Im Maria, 973-555-0134, want a pressure wash", "target_schema": "lead"}' \
+     "https://agentnexlify-production.up.railway.app/api/v1/managed-agents/$TENANT_ID/extract"
 ```
 
 ---
