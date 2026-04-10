@@ -574,3 +574,342 @@ class TestRegistry:
 
         assert handle.agent_id == "agent_abc"
         assert handle.environment_id == "env_abc"
+
+
+# ----------------------------------------------------------------------
+# New agents (2026-04-10): support_agent, structured_extractor
+# ----------------------------------------------------------------------
+#
+# These mirror TestQualifyLeadBlocking but cover the service-level
+# wrappers rather than the router helper. Both services use the
+# `_CapturingManagedAgentClient` pattern which wraps a real
+# ManagedAgentsClient instance AND calls back into
+# `ManagedAgentsClient.run_until_idle(self, ...)` as an unbound class
+# method. That means we cannot just replace the whole class with a
+# MagicMock — the wrapper's delegation would resolve the class method
+# to a sub-mock and return a MagicMock instead of a SessionTerminalState.
+#
+# `_patch_managed_agents_class(mod, mock_inner)` is the helper that
+# does the right thing: it replaces the constructor so `ManagedAgentsClient()`
+# returns `mock_inner`, but keeps `ManagedAgentsClient.run_until_idle`
+# pointing at the real function so the capturing wrapper still works.
+# ----------------------------------------------------------------------
+
+
+def _mock_inner_client(events: list[dict[str, Any]]) -> MagicMock:
+    inner = MagicMock()
+    inner.create_session.return_value = {"id": "sess_1"}
+    inner.stream_events.return_value = iter(events)
+    inner.send_user_message.return_value = None
+    return inner
+
+
+def _patch_managed_agents_class(mod: Any, mock_inner: MagicMock):
+    """Patch `mod.ManagedAgentsClient` so the constructor returns `mock_inner`
+    while preserving the real unbound `run_until_idle` classmethod for the
+    capturing wrapper to delegate into.
+    """
+    from backend.services.managed_agents import ManagedAgentsClient as _Real
+
+    replacement = MagicMock(name="ManagedAgentsClient")
+    replacement.return_value = mock_inner
+    # The capturing wrapper resolves `ManagedAgentsClient.run_until_idle`
+    # at call time via the module globals — keep it pointing at the real
+    # function so it actually drains the stream.
+    replacement.run_until_idle = _Real.run_until_idle
+    return patch.object(mod, "ManagedAgentsClient", replacement)
+
+
+class TestStructuredExtractor:
+    """Tests for backend.services.structured_extractor.extract_structured."""
+
+    def test_unsupported_schema_raises(self):
+        from backend.services.structured_extractor import extract_structured
+
+        with pytest.raises(ValueError, match="unsupported target_schema"):
+            extract_structured("tenant_abc", "any text", "nope")
+
+    def test_happy_path_parses_json_and_enforces_session_id_contract(self):
+        from backend.services import structured_extractor as mod
+        from backend.services.managed_agents_registry import ManagedAgentHandle
+
+        events = [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "name": "Maria Lopez",
+                                "email": "maria.lopez@example.com",
+                                "phone": "973-555-0134",
+                                "interest": "pressure wash + deck sealing",
+                                "timeline": "2 weeks",
+                                "budget": 500,
+                                "source": "google ad",
+                            }
+                        ),
+                    },
+                ],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_2",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_inner = _mock_inner_client(events)
+        fake_handle = ManagedAgentHandle(
+            agent_id="agent_extract", environment_id="env_abc",
+        )
+
+        with (
+            _patch_managed_agents_class(mod, mock_inner),
+            patch.object(mod, "structured_extractor", return_value=fake_handle),
+        ):
+            parsed = mod.extract_structured(
+                "tenant_abc", "Hi I am Maria...", "lead",
+            )
+
+        assert parsed["name"] == "Maria Lopez"
+        assert parsed["budget"] == 500
+
+        # Prompt embeds schema + raw text in labeled blocks.
+        send_call = mock_inner.send_user_message.call_args
+        assert send_call is not None, "send_user_message was never called"
+        prompt = send_call.args[1]
+        assert "[SCHEMA]" in prompt
+        assert "target_schema: lead" in prompt
+        assert "[RAW_TEXT]" in prompt
+        assert "Maria" in prompt
+
+        # Note: the stream-before-send contract lives at the wrapper level —
+        # `_CapturingManagedAgentClient.stream_events` is a generator that
+        # only touches the inner client when iterated inside `run_until_idle`.
+        # That's why on the inner mock, `send_user_message` is recorded
+        # *before* `stream_events`. The real invariant (stream opened before
+        # send on the wrapper itself) is already exercised end-to-end by
+        # `run_until_idle`, which is covered in TestQualifyLeadBlocking.
+
+        # Session metadata carries tenant_id + flow.
+        create_kwargs = mock_inner.create_session.call_args.kwargs
+        assert create_kwargs["agent_id"] == "agent_extract"
+        assert create_kwargs["environment_id"] == "env_abc"
+        assert create_kwargs["metadata"]["tenant_id"] == "tenant_abc"
+        assert create_kwargs["metadata"]["flow"] == "structured_extractor"
+        assert create_kwargs["metadata"]["target_schema"] == "lead"
+
+    def test_invalid_json_raises_value_error(self):
+        from backend.services import structured_extractor as mod
+        from backend.services.managed_agents_registry import ManagedAgentHandle
+
+        events = [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [
+                    {"type": "text", "text": "sorry, I can't do JSON today"},
+                ],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_2",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_inner = _mock_inner_client(events)
+        fake_handle = ManagedAgentHandle(
+            agent_id="agent_extract", environment_id="env_abc",
+        )
+
+        with (
+            _patch_managed_agents_class(mod, mock_inner),
+            patch.object(mod, "structured_extractor", return_value=fake_handle),
+        ):
+            with pytest.raises(ValueError, match="invalid JSON"):
+                mod.extract_structured("tenant_abc", "garbage", "lead")
+
+    def test_empty_reply_raises_value_error(self):
+        from backend.services import structured_extractor as mod
+        from backend.services.managed_agents_registry import ManagedAgentHandle
+
+        events = [
+            {
+                "type": "session.status_idle",
+                "id": "sevt_1",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_inner = _mock_inner_client(events)
+        fake_handle = ManagedAgentHandle(
+            agent_id="agent_extract", environment_id="env_abc",
+        )
+
+        with (
+            _patch_managed_agents_class(mod, mock_inner),
+            patch.object(mod, "structured_extractor", return_value=fake_handle),
+        ):
+            with pytest.raises(ValueError, match="no assistant text"):
+                mod.extract_structured("tenant_abc", "anything", "lead")
+
+
+class TestSupportAgentBlocking:
+    """Tests for backend.services.support_agent.run_support_query."""
+
+    def _fake_tenant_ctx(self):
+        tenant = {
+            "id": "tenant_abc",
+            "business_name": "Smoke Salon",
+            "business_type": "hair salon",
+        }
+        widget = {
+            "knowledge_base": "Walk-ins Monday-Friday before 4pm.",
+            "custom_instructions": "Warm and concise tone.",
+        }
+        faq_entries = [
+            {"question": "Do you take walk-ins?", "answer": "Yes, M-F before 4pm."},
+        ]
+        hours_row = {
+            "timezone": "America/New_York",
+            "hours": {
+                "monday": {"enabled": True, "start": "09:00", "end": "18:00"},
+                "sunday": {"enabled": False},
+            },
+        }
+        return tenant, widget, faq_entries, hours_row
+
+    def test_happy_path_parses_json_reply(self):
+        from backend.services import support_agent as mod
+        from backend.services.managed_agents_registry import ManagedAgentHandle
+
+        events = [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "answer": "We're open Monday to Friday 9-6.",
+                                "confidence": "high",
+                                "escalate_reason": None,
+                            }
+                        ),
+                    },
+                ],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_2",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_inner = _mock_inner_client(events)
+        fake_handle = ManagedAgentHandle(
+            agent_id="agent_support", environment_id="env_abc",
+        )
+
+        with (
+            _patch_managed_agents_class(mod, mock_inner),
+            patch.object(mod, "support_agent", return_value=fake_handle),
+            patch.object(
+                mod, "_load_tenant_context", return_value=self._fake_tenant_ctx(),
+            ),
+            patch.object(mod, "_load_conversation_history", return_value=[]),
+        ):
+            parsed = mod.run_support_query("tenant_abc", "What are your hours?")
+
+        assert parsed["answer"].startswith("We're open")
+        assert parsed["confidence"] == "high"
+        assert parsed["escalate_reason"] is None
+
+        # Prompt contains all four labeled blocks.
+        send_call = mock_inner.send_user_message.call_args
+        assert send_call is not None
+        prompt = send_call.args[1]
+        for block in (
+            "[TENANT_CONTEXT]",
+            "[KB_SNIPPET]",
+            "[CONVERSATION_HISTORY]",
+            "[QUESTION]",
+        ):
+            assert block in prompt, f"prompt missing {block}"
+        assert "Smoke Salon" in prompt
+        assert "What are your hours?" in prompt
+
+        # See the note in TestStructuredExtractor about the stream-before-send
+        # ordering — the wrapper generator hides that call from the inner mock.
+
+        # Session metadata carries tenant_id + flow.
+        create_kwargs = mock_inner.create_session.call_args.kwargs
+        assert create_kwargs["agent_id"] == "agent_support"
+        assert create_kwargs["metadata"]["tenant_id"] == "tenant_abc"
+        assert create_kwargs["metadata"]["flow"] == "support_agent"
+
+    def test_plain_text_reply_falls_back_to_string(self):
+        from backend.services import support_agent as mod
+        from backend.services.managed_agents_registry import ManagedAgentHandle
+
+        events = [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [
+                    {"type": "text", "text": "We're open Mon-Fri 9 to 6."},
+                ],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_2",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_inner = _mock_inner_client(events)
+        fake_handle = ManagedAgentHandle(
+            agent_id="agent_support", environment_id="env_abc",
+        )
+
+        with (
+            _patch_managed_agents_class(mod, mock_inner),
+            patch.object(mod, "support_agent", return_value=fake_handle),
+            patch.object(
+                mod, "_load_tenant_context", return_value=self._fake_tenant_ctx(),
+            ),
+            patch.object(mod, "_load_conversation_history", return_value=[]),
+        ):
+            parsed = mod.run_support_query("tenant_abc", "Hours?")
+
+        assert parsed["answer"] == "We're open Mon-Fri 9 to 6."
+        # Confidence heuristic: plain-text non-escalating reply defaults to medium.
+        assert parsed["confidence"] == "medium"
+        assert parsed["escalate_reason"] is None
+
+    def test_empty_reply_raises_value_error(self):
+        from backend.services import support_agent as mod
+        from backend.services.managed_agents_registry import ManagedAgentHandle
+
+        events = [
+            {
+                "type": "session.status_idle",
+                "id": "sevt_1",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_inner = _mock_inner_client(events)
+        fake_handle = ManagedAgentHandle(
+            agent_id="agent_support", environment_id="env_abc",
+        )
+
+        with (
+            _patch_managed_agents_class(mod, mock_inner),
+            patch.object(mod, "support_agent", return_value=fake_handle),
+            patch.object(
+                mod, "_load_tenant_context", return_value=self._fake_tenant_ctx(),
+            ),
+            patch.object(mod, "_load_conversation_history", return_value=[]),
+        ):
+            with pytest.raises(ValueError, match="no assistant text"):
+                mod.run_support_query("tenant_abc", "Hours?")
