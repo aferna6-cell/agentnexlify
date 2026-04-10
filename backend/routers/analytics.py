@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from backend.dependencies import verify_tenant
 from backend.limiter import limiter
 from backend.models.schemas import AgentControlCenterResponse
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.tenant_scope import tenant_table
 from backend.routers.auth import _get_current_tenant
@@ -205,7 +205,7 @@ async def get_overview(
     days = _period_to_days(period)
     start, prev_start = _date_range(days)
     now_iso = datetime.now(timezone.utc).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Current period conversations — count unique sessions in chat_messages.
     # The conversations table is not reliably populated for all tenants, so
@@ -401,7 +401,7 @@ async def get_conversations_trend(
     days = _period_to_days(period)
     now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         # Query chat_messages for session_id + created_at — conversations table
@@ -461,7 +461,7 @@ async def get_leads_analytics(
     days = _period_to_days(period)
     now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # All leads in period
     try:
@@ -532,7 +532,7 @@ async def get_widget_analytics(
     days = _period_to_days(period)
     now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Conversations started (unique sessions with messages)
     try:
@@ -625,7 +625,7 @@ async def get_response_time_analytics(
     days = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}[period]
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             tenant_table(db, "response_metrics", tenant_id)
@@ -700,7 +700,7 @@ async def get_missed_opportunities(
     days = _period_to_days(period)
     now_iso = datetime.now(timezone.utc).isoformat()
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # --- Batch query 1: All chat messages in the period ---
     try:
@@ -861,7 +861,7 @@ async def get_missed_call_analytics(
     days = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}[period]
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         entries = (
             tenant_table(db, "activity_log", tenant_id)
@@ -911,7 +911,7 @@ async def get_ai_insights(
     if cached:
         return cached
 
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     week_ago = (now - timedelta(days=7)).isoformat()
     prev_week_start = (now - timedelta(days=14)).isoformat()
@@ -1059,7 +1059,7 @@ async def lead_source_breakdown(
     if cached and time.time() - cached[0] < _CACHE_TTL:
         return cached[1]
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = tenant_table(db, "leads", tenant_id).select("source").eq("client_id", tenant_id).execute()
     except Exception:
@@ -1102,7 +1102,7 @@ async def kpi_deltas(
     if cached:
         return cached
 
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     this_week_start = (now - timedelta(days=7)).isoformat()
     last_week_start = (now - timedelta(days=14)).isoformat()
@@ -1256,7 +1256,7 @@ async def get_agent_control_center(
     days = _period_to_days(period)
     now = datetime.now(timezone.utc)
     start = (now - timedelta(days=days)).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         msgs_res = (
@@ -1780,7 +1780,7 @@ async def analytics_health(
 ):
     """Debug endpoint: returns raw data counts for this tenant to diagnose analytics issues."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Count unique sessions from chat_messages
     try:
@@ -1863,7 +1863,7 @@ async def get_tester_snapshot(
     if cached:
         return cached
 
-    db = get_supabase()
+    db = get_service_supabase()
     days = _period_to_days(period)
     now = datetime.now(timezone.utc)
     start = (now - timedelta(days=days)).isoformat()
@@ -1965,7 +1965,7 @@ async def get_recovery_stats(
     """Get no-show recovery and review request stats for dashboard ROI widget."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     # No-show recoveries sent

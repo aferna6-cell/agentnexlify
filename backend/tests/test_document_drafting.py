@@ -138,7 +138,7 @@ class TestPlanGate:
         tenant = {"id": "t1", "business_name": "Shop", "plan": "free"}
         db = _fake_supabase(tenant)
         with (
-            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient") as client_cls,
         ):
             with pytest.raises(DocumentDraftingError, match="not eligible"):
@@ -153,7 +153,7 @@ class TestPlanGate:
 
     def test_missing_tenant_raises(self):
         db = _fake_supabase(None)
-        with patch("backend.services.document_drafting.get_supabase", return_value=db):
+        with patch("backend.services.document_drafting.get_service_supabase", return_value=db):
             with pytest.raises(DocumentDraftingError, match="tenant .* not found"):
                 draft_document(
                     tenant_id="nope",
@@ -164,19 +164,42 @@ class TestPlanGate:
                 )
 
 
-def _mock_agent_session(reply_text: str, handle_agent_id: str = "agent_abc"):
-    events = iter([
-        {
-            "type": "agent.message",
-            "id": "sevt_1",
-            "content": [{"type": "text", "text": reply_text}],
-        },
-        {
-            "type": "session.status_idle",
-            "id": "sevt_2",
-            "stop_reason": {"type": "end_turn"},
-        },
-    ])
+def _mock_agent_session(
+    reply_text: str,
+    handle_agent_id: str = "agent_abc",
+    tool_result_text: str | None = None,
+):
+    """Build a mock Managed Agents client + handle for drafter tests.
+
+    If ``tool_result_text`` is provided, a synthetic ``agent.tool_result``
+    event carrying that text is emitted BEFORE the final ``agent.message``.
+    Use this to simulate the server-side ``base64 -w0`` tool output so the
+    drafter code can pluck the authoritative payload from the stream.
+    """
+    events_list: list[dict] = []
+    if tool_result_text is not None:
+        events_list.append(
+            {
+                "type": "agent.tool_result",
+                "id": "sevt_tr_1",
+                "content": [{"type": "text", "text": tool_result_text}],
+            }
+        )
+    events_list.extend(
+        [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [{"type": "text", "text": reply_text}],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_2",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+    )
+    events = iter(events_list)
     mock_client = MagicMock()
     mock_client.create_session.return_value = {"id": "sess_1"}
     mock_client.stream_events.return_value = events
@@ -216,7 +239,7 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
         ):
@@ -270,7 +293,7 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
         ):
@@ -292,7 +315,7 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
         ):
@@ -316,7 +339,7 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
         ):
@@ -344,7 +367,7 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
         ):
@@ -356,6 +379,87 @@ class TestFullFlow:
                     customer={"name": "X"},
                     line_items=[{"description": "A", "qty": 1, "unit_price": 1}],
                 )
+
+    def test_tool_result_base64_preferred_over_corrupted_reply(self):
+        """Regression (2026-04-09): Opus corrupted the base64 it copied
+        into its final reply (observed: single-char flip at offset 2762 +
+        ~1900 hallucinated chars in a 14876-char docx payload). The
+        ``agent.tool_result`` event that streamed the raw ``base64 -w0``
+        output IS correct, so the drafter must prefer the tool_result
+        over the agent's echoed copy.
+        """
+        tenant = {"id": "t1", "business_name": "Shop", "plan": "growth"}
+        inserted = {"id": "doc_tool"}
+        db = _fake_supabase(tenant, insert_result=inserted)
+
+        # Authoritative base64 — from the tool_result stream.
+        good_b64 = _FAKE_DOCX_B64
+
+        # "Corrupted" reply — the agent flipped a middle char and appended
+        # junk that makes the length mod-4 invalid.
+        bad_b64 = good_b64[:10] + "X" + good_b64[11:] + "extraJunk!"
+
+        reply = (
+            '{"file_name": "quote.docx", "file_type": "docx", '
+            '"total": 10, "summary": "ok", '
+            f'"content_base64": "{bad_b64}"}}'
+        )
+        mock_client, mock_handle = _mock_agent_session(
+            reply, tool_result_text=good_b64
+        )
+
+        with (
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
+            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
+            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+        ):
+            result = draft_document(
+                tenant_id="t1",
+                lead_id=None,
+                kind="quote",
+                customer={"name": "X"},
+                line_items=[{"description": "A", "qty": 1, "unit_price": 10}],
+            )
+
+        # The call succeeds despite the corrupted agent reply because we
+        # used the tool_result base64 instead.
+        assert result["id"] == "doc_tool"
+        insert_call = db.table("documents").insert.call_args
+        row = insert_call.args[0]
+        # The decoded bytes must match the GOOD docx, not the corrupted reply.
+        assert row["file_bytes"] == "\\x" + _FAKE_DOCX_BYTES.hex()
+
+    def test_tool_result_fallback_when_reply_only(self):
+        """When no ``agent.tool_result`` is captured (e.g. the agent
+        used a different tool name or the stream was filtered), we must
+        fall back to the agent's echoed ``content_base64``.
+        """
+        tenant = {"id": "t1", "business_name": "Shop", "plan": "growth"}
+        inserted = {"id": "doc_fallback"}
+        db = _fake_supabase(tenant, insert_result=inserted)
+
+        reply = (
+            '{"file_name": "quote.docx", "file_type": "docx", '
+            '"total": 10, "summary": "ok", '
+            f'"content_base64": "{_FAKE_DOCX_B64}"}}'
+        )
+        # No tool_result_text → only the reply is available.
+        mock_client, mock_handle = _mock_agent_session(reply)
+
+        with (
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
+            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
+            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+        ):
+            result = draft_document(
+                tenant_id="t1",
+                lead_id=None,
+                kind="quote",
+                customer={"name": "X"},
+                line_items=[{"description": "A", "qty": 1, "unit_price": 10}],
+            )
+
+        assert result["id"] == "doc_fallback"
 
     def test_whitespace_tolerant_base64(self):
         """The agent sometimes wraps base64 despite `-w0`. We should
@@ -387,7 +491,7 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_supabase", return_value=db),
+            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
             patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
         ):

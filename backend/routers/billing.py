@@ -8,7 +8,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
 from backend.routers.auth import _get_current_tenant
 from backend.services.stripe_service import (
@@ -45,7 +45,7 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
             detail=f"Invalid plan '{req.plan}'. Must be one of: {', '.join(PLAN_PRICES)}",
         )
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("tenants").select("id, owner_email, business_name").eq("id", req.tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -117,7 +117,7 @@ async def stripe_webhook(request: Request):
     event_type = event["type"]
     data = event["data"]["object"]
     logger.info("Stripe webhook received: type=%s, id=%s", event_type, event.get("id"))
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         if event_type == "checkout.session.completed":
@@ -389,7 +389,7 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_ten
     """Create a Stripe Customer Portal session for managing subscriptions."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("tenants").select("stripe_customer_id").eq("id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")

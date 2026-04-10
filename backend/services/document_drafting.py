@@ -44,7 +44,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
@@ -131,6 +131,47 @@ def _extract_text_blocks(content: list[Any] | None) -> str:
     return "".join(parts)
 
 
+# Base64 prefixes of the supported file magic headers. We look for
+# these at the start of agent.tool_result text blocks to pluck the
+# authoritative base64 straight from the `base64 -w0` tool output
+# before the LLM gets a chance to corrupt it in its echoed reply.
+#
+# - DOCX / XLSX / PPTX are ZIP archives → magic `PK\x03\x04` → base64 `UEsDB`
+# - PDF → magic `%PDF-` → base64 `JVBERi0`
+_B64_MAGIC_PREFIXES = ("UEsDB", "JVBERi0")
+
+
+def _scan_tool_result_for_base64(event: dict[str, Any]) -> str | None:
+    """Return the first base64 payload in a tool_result that starts with
+    one of the known file-magic prefixes, or ``None``.
+
+    LLMs corrupt long base64 strings when they copy them from tool
+    output into their final reply (confirmed empirically 2026-04-09: an
+    Opus-generated docx was 14876 chars in the tool output and 16774
+    chars in the agent reply, with a single-char flip at offset 2762
+    followed by 1898 hallucinated chars). The tool_result text is the
+    raw bash stdout of ``base64 -w0`` and is therefore the ground truth.
+    """
+    content = event.get("content") or []
+    if not isinstance(content, list):
+        return None
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "text":
+            continue
+        text = block.get("text", "")
+        if not isinstance(text, str) or not text:
+            continue
+        stripped = text.strip()
+        # The magic-byte prefix is the strong signal. Keep a small
+        # lower bound (40 chars ≈ 30 raw bytes) so we never grab a
+        # non-file string that happens to match the prefix.
+        if len(stripped) < 40:
+            continue
+        if any(stripped.startswith(p) for p in _B64_MAGIC_PREFIXES):
+            return stripped
+    return None
+
+
 def _extract_json_from_reply(text: str) -> dict[str, Any] | None:
     """Pull the first JSON object from the agent's final reply."""
     text = text.strip()
@@ -170,9 +211,16 @@ def _run_drafter_session(
     tenant_id: str,
     lead_id: str | None,
     kind: str,
-) -> tuple[SessionTerminalState, str, str | None]:
+) -> tuple[SessionTerminalState, str, str | None, str | None]:
     """Run the document drafter session and return:
-        (terminal_state, final_assistant_text, session_id)
+        (terminal_state, final_assistant_text, session_id,
+         authoritative_tool_base64 | None)
+
+    The fourth element is the most recent base64 payload captured
+    directly from an ``agent.tool_result`` event whose text starts with
+    a known file-magic prefix. When present, the caller MUST prefer
+    this over the agent's echoed ``content_base64`` (the LLM corrupts
+    long base64 strings when copying them into its final reply).
     """
     session = client.create_session(
         agent_id=agent_id,
@@ -195,6 +243,7 @@ def _run_drafter_session(
     client.send_user_message(session_id, prompt)
 
     assistant_chunks: list[str] = []
+    tool_base64: str | None = None
     terminal = SessionTerminalState(
         terminated=False,
         stop_reason_type=None,
@@ -206,6 +255,17 @@ def _run_drafter_session(
         event_type = event.get("type", "")
         if event_type == "agent.message":
             assistant_chunks.append(_extract_text_blocks(event.get("content")))
+        elif event_type == "agent.tool_result":
+            # Scoop up the last tool_result that looks like a real
+            # `base64 -w0` output — that's our authoritative copy.
+            captured = _scan_tool_result_for_base64(event)
+            if captured:
+                tool_base64 = captured
+                logger.info(
+                    "document_drafting: captured %d-char base64 from tool_result %s",
+                    len(captured),
+                    event.get("id"),
+                )
         elif event_type == "session.status_terminated":
             terminal = SessionTerminalState(
                 terminated=True,
@@ -228,7 +288,12 @@ def _run_drafter_session(
                 )
                 break
 
-    return terminal, "\n".join(c for c in assistant_chunks if c), session_id
+    return (
+        terminal,
+        "\n".join(c for c in assistant_chunks if c),
+        session_id,
+        tool_base64,
+    )
 
 
 def _safe_filename(name: str, default: str) -> str:
@@ -269,7 +334,7 @@ def draft_document(
     if not line_items:
         raise DocumentDraftingError("line_items must not be empty")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # 1. Load + plan-gate tenant
     tenant_res = (
@@ -300,7 +365,7 @@ def draft_document(
     client = ManagedAgentsClient()
 
     try:
-        terminal, reply_text, session_id = _run_drafter_session(
+        terminal, reply_text, session_id, tool_base64 = _run_drafter_session(
             client,
             agent_id=handle.agent_id,
             environment_id=handle.environment_id,
@@ -333,8 +398,33 @@ def draft_document(
             f"drafter reply has invalid file_type {file_type!r}"
         )
 
-    b64 = spec.get("content_base64")
-    if not isinstance(b64, str) or not b64.strip():
+    # Prefer the base64 captured directly from the `base64 -w0` tool
+    # output over the agent's echoed copy. LLMs (especially Opus on
+    # long payloads) corrupt base64 during copy — we observed a single-
+    # char flip at offset 2762 followed by ~1900 hallucinated chars in
+    # a 14876-char docx payload (2026-04-09). The tool_result is the
+    # authoritative source.
+    reply_b64 = spec.get("content_base64")
+    if not isinstance(reply_b64, str) or not reply_b64.strip():
+        reply_b64 = None
+
+    if tool_base64:
+        b64 = tool_base64
+        source = "tool_result"
+        if reply_b64 and reply_b64 != tool_base64:
+            logger.warning(
+                "document_drafting: agent reply content_base64 differs from "
+                "tool_result (reply=%d chars, tool=%d chars) — using tool_result",
+                len(reply_b64),
+                len(tool_base64),
+            )
+    elif reply_b64:
+        b64 = reply_b64
+        source = "agent_reply"
+        logger.warning(
+            "document_drafting: no tool_result base64 captured, falling back to agent reply"
+        )
+    else:
         raise DocumentDraftingError(
             "drafter reply missing content_base64 (agent must base64-encode the file)"
         )
@@ -342,6 +432,9 @@ def draft_document(
     # Strip any whitespace the agent may have introduced despite the
     # `base64 -w0` instruction — we've seen it wrap lines occasionally.
     b64 = re.sub(r"\s+", "", b64)
+    logger.info(
+        "document_drafting: decoding base64 (source=%s length=%d)", source, len(b64)
+    )
 
     try:
         file_bytes = base64.b64decode(b64, validate=True)

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.twilio_service import send_sms
@@ -83,7 +83,7 @@ async def list_documents(
 ):
     """List documents for a tenant."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     q = db.table("documents").select("*").eq("tenant_id", tenant_id).order("created_at", desc=True)
     if status:
         q = q.eq("status", status)
@@ -101,7 +101,7 @@ async def create_document(
 ):
     """Create a new document from raw HTML."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     data = {
         "tenant_id": tenant_id,
@@ -142,7 +142,7 @@ async def create_from_template(
 ):
     """Create a document from a saved template, substituting variables."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load template
     tmpl = db.table("document_templates").select("*").eq("id", req.template_id).eq("tenant_id", tenant_id).limit(1).execute()
@@ -197,7 +197,7 @@ async def list_templates(
 ):
     """List document templates."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("document_templates")
         .select("id, name, category, variables, is_active, created_at")
@@ -217,7 +217,7 @@ async def create_template(
 ):
     """Create a reusable document template."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Auto-detect variables in template: {{variable_name}}
     detected = re.findall(r"\{\{(\w+)\}\}", req.template_html)
@@ -253,7 +253,7 @@ async def update_template(
         updates["variables"] = list(set(updates.get("variables", []) + detected))
 
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("document_templates").update(updates).eq("id", template_id).eq("tenant_id", tenant_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Template not found")
@@ -268,7 +268,7 @@ async def delete_template(
 ):
     """Soft-delete a document template."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("document_templates")
         .update({"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()})
@@ -293,7 +293,7 @@ async def get_document(
 ):
     """Get a single document with details."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("documents").select("*").eq("id", document_id).eq("tenant_id", tenant_id).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -318,7 +318,7 @@ async def delete_document(
 ):
     """Delete a draft document."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Only allow deleting draft documents
     doc = db.table("documents").select("status").eq("id", document_id).eq("tenant_id", tenant_id).limit(1).execute()
@@ -344,7 +344,7 @@ async def send_document(
 ):
     """Send a document for signature via email and/or SMS."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     doc = db.table("documents").select("*").eq("id", document_id).eq("tenant_id", tenant_id).limit(1).execute()
     if not doc.data:
@@ -419,7 +419,7 @@ async def send_document(
 @limiter.limit("30/minute")
 async def get_document_for_signing(request: Request, token: str):
     """Public endpoint: load a document for signing by token."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("documents").select(
         "id, title, rendered_html, status, signer_name, expires_at, tenant_id"
     ).eq("signing_token", token).limit(1).execute()
@@ -467,7 +467,7 @@ async def get_document_for_signing(request: Request, token: str):
 @limiter.limit("10/minute")
 async def sign_document(request: Request, token: str, req: SignDocumentRequest):
     """Public endpoint: submit a signature."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("documents").select("id, status, tenant_id, title, signer_email, lead_id").eq("signing_token", token).limit(1).execute()
 
     if not result.data:

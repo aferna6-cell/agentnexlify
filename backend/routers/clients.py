@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import (
     ActivityItem,
     ClientListItem,
@@ -51,7 +51,7 @@ async def get_clients(
     if sort not in _ALLOWED_SORT:
         sort = "created_at"
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = db.table("leads").select("*").eq("client_id", tenant_id)
 
     if stage:
@@ -124,7 +124,7 @@ async def get_dashboard_widgets(
     """CRM dashboard widgets: recent activity, needs attention, weekly stats."""
     _check_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Recent activity (last 20)
     recent = []
@@ -226,7 +226,7 @@ async def get_client_profile(
     """Full client profile: lead + notes + conversations + recent activity."""
     _check_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Lead (live schema uses client_id)
     lead_result = (
@@ -375,7 +375,7 @@ async def get_client_timeline(
     """Paginated activity timeline for a client."""
     _check_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify lead exists (live schema: client_id)
     lead_check = (
@@ -429,7 +429,7 @@ async def add_client_note(
     """Add a note to a client."""
     _check_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify lead exists (live schema: client_id)
     lead_check = (
@@ -490,7 +490,7 @@ async def update_client(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("leads")
         .update(updates)
@@ -529,7 +529,7 @@ async def change_client_stage(
     """Quick stage change with activity logging."""
     _check_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get current stage (live schema: status, client_id)
     current = (

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.twilio_service import send_sms
@@ -57,7 +57,7 @@ async def join_waitlist_public(
     req: WaitlistJoinRequest,
 ):
     """Public endpoint: customer joins the waitlist via the chat widget or booking page."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Resolve tenant from widget API key
     wc = db.table("widget_configs").select("tenant_id").eq("api_key", api_key).limit(1).execute()
@@ -133,7 +133,7 @@ async def list_waitlist(
 ):
     """List waitlist entries for a tenant, optionally filtered by status and date range."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     query = (
         db.table("waitlist_entries")
@@ -159,7 +159,7 @@ async def waitlist_stats(
 ):
     """Waitlist summary stats."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     all_entries = (
         db.table("waitlist_entries")
@@ -188,7 +188,7 @@ async def update_waitlist_entry(
 ):
     """Update a waitlist entry (status, notes, dates)."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     update_data = {}
     if req.status is not None:
@@ -228,7 +228,7 @@ async def delete_waitlist_entry(
 ):
     """Delete a waitlist entry."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("waitlist_entries").delete().eq("id", entry_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}
 
@@ -242,7 +242,7 @@ async def notify_waitlisted_customer(
 ):
     """Notify a waitlisted customer that a slot is available."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     entry = (
         db.table("waitlist_entries")
@@ -324,7 +324,7 @@ async def check_waitlist_for_date(
 ):
     """Check how many people are waiting for a specific date. Useful when cancellations happen."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     result = (
         db.table("waitlist_entries")

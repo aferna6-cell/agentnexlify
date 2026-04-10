@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import httpx
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def _is_safe_url(url: str) -> bool:
 
 async def start_crawl(tenant_id: str, url: str) -> dict:
     """Start a website crawl for a tenant. Returns the crawl record."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Normalize URL
     if not url.startswith(("http://", "https://")):
@@ -119,7 +119,7 @@ async def start_crawl(tenant_id: str, url: str) -> dict:
 
 async def _execute_crawl(crawl_id: str, tenant_id: str, url: str) -> None:
     """Call Cloudflare Browser Rendering /crawl endpoint and store results."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     if not settings.cloudflare_account_id or not settings.cloudflare_api_token:
         # Fallback: mark as needing config
@@ -200,7 +200,7 @@ async def _execute_crawl(crawl_id: str, tenant_id: str, url: str) -> None:
 
 def get_crawl_status(tenant_id: str) -> dict | None:
     """Get the latest crawl status for a tenant."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("website_content")
         .select("id, url, crawl_status, error_message, pages_found, crawled_at, created_at")
@@ -214,7 +214,7 @@ def get_crawl_status(tenant_id: str) -> dict | None:
 
 def get_crawled_content(tenant_id: str) -> str | None:
     """Get the extracted text content for injection into AI system prompt."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("website_content")
         .select("extracted_text")

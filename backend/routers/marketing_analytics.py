@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ async def get_marketing_dashboard(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         campaigns_result = (
             db.table("marketing_campaigns")
@@ -116,7 +116,7 @@ async def get_marketing_trends(
     start_date = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         campaigns_result = (
             db.table("marketing_campaigns")

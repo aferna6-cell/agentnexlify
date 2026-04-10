@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import build_unsubscribe_url, render_template, send_email
 
@@ -158,7 +158,7 @@ async def enroll_lead_in_sequences(tenant_id: str, lead_id: str) -> None:
 
     Called from widget_lead.py on new lead creation.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         sequences_result = (
             db.table("email_sequences")
@@ -206,7 +206,7 @@ async def list_sequences(
 ):
     """List all email sequences for the tenant with step_count and enrollment_count."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         result = (
@@ -262,7 +262,7 @@ async def create_sequence(
 ):
     """Create a new email sequence, optionally with steps in the same request."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         seq_result = (
@@ -322,7 +322,7 @@ async def get_sequence(
 ):
     """Get a single sequence with its steps and enrollment stats."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         seq_result = (
@@ -388,7 +388,7 @@ async def update_sequence(
 ):
     """Update sequence fields."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     raw = req.model_dump()
     new_steps = raw.pop("steps", None)
@@ -454,7 +454,7 @@ async def delete_sequence(
 ):
     """Soft-delete a sequence by setting is_active=False."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         result = (
@@ -488,7 +488,7 @@ async def add_step(
 ):
     """Add a step to a sequence."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify sequence ownership
     try:
@@ -542,7 +542,7 @@ async def update_step(
 ):
     """Update a step in a sequence."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify sequence ownership
     try:
@@ -592,7 +592,7 @@ async def delete_step(
 ):
     """Delete a step from a sequence."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify sequence ownership
     try:
@@ -640,7 +640,7 @@ async def list_enrollments(
 ):
     """List enrollments for a sequence with lead info."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify sequence ownership
     try:
@@ -703,7 +703,7 @@ async def enroll_lead(
 ):
     """Manually enroll a lead in a sequence."""
     tenant_id = claims["tenant_id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify sequence ownership and that it is active
     try:
@@ -783,7 +783,7 @@ async def process_sequences(
     if x_internal_key != settings.api_secret_key:
         raise HTTPException(status_code=401, detail="Invalid internal key")
 
-    db = get_supabase()
+    db = get_service_supabase()
     now_iso = datetime.now(timezone.utc).isoformat()
 
     try:
@@ -951,7 +951,7 @@ def _update_send_status(
 
 async def run_sequence_processor() -> dict:
     """Standalone callable for the automation loop (no HTTP context needed)."""
-    db = get_supabase()
+    db = get_service_supabase()
     now_iso = datetime.now(timezone.utc).isoformat()
     try:
         due_result = (

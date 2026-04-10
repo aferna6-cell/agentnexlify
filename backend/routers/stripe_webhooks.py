@@ -12,7 +12,7 @@ import stripe
 from fastapi import APIRouter, HTTPException, Request
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.billing import (
     _handle_checkout_completed,
     _handle_payment_failed,
@@ -46,7 +46,7 @@ async def stripe_webhook(request: Request):
     event_type = event["type"]
     data = event["data"]["object"]
     logger.info("Stripe webhook received: type=%s, id=%s", event_type, event.get("id"))
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         if event_type == "checkout.session.completed":

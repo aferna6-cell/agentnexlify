@@ -33,7 +33,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
@@ -253,7 +253,7 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
         LeadQualificationError: the agent ran but its output could not
             be parsed or normalized.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # 1. Load lead
     lead_res = (

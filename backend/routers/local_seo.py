@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.llm_runtime import call_claude_messages
 
@@ -603,7 +603,7 @@ async def analyze_seo_profile(
     """Analyze the tenant's profile for SEO completeness and generate keyword suggestions."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load tenant data
     try:
@@ -749,7 +749,7 @@ async def get_seo_profile(
     """Get the cached SEO profile for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         result = (
@@ -791,7 +791,7 @@ async def get_keyword_suggestions(
     """Get keyword suggestions from the cached SEO profile."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         result = (
@@ -823,7 +823,7 @@ async def get_dashboard_widget(
     """Return a summary card for the main dashboard."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load SEO profile
     completeness_score = 0
@@ -882,7 +882,7 @@ async def run_seo_audit(
     """Run a full SEO audit using crawled website content and Claude AI analysis."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load tenant info
     try:
@@ -1029,7 +1029,7 @@ async def get_latest_audit(
     """Get the latest SEO audit results for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         result = (
@@ -1074,7 +1074,7 @@ async def get_audit_history(
     """Get SEO audit history for the last N days (default 30)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     try:
@@ -1123,7 +1123,7 @@ async def calculate_geo_score(
     """Calculate GEO (Generative Engine Optimization) visibility score using Claude AI."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load tenant info for defaults
     try:
@@ -1235,7 +1235,7 @@ async def get_latest_geo_score(
     """Get the latest GEO visibility score for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         result = (
@@ -1282,7 +1282,7 @@ async def track_keywords(
     """Add keywords to track and analyze their competitiveness using Claude AI."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load tenant info for context
     try:
@@ -1403,7 +1403,7 @@ async def get_keyword_rankings(
     """Get all tracked keyword rankings for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         result = (
@@ -1454,7 +1454,7 @@ async def run_competitor_analysis(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get your business context
     tenant_result = (

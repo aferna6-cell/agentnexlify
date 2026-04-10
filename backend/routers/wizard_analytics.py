@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ async def log_wizard_event(
     _verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         db.table("wizard_events").insert({
             "tenant_id": tenant_id,
             "step": event.step,
@@ -56,7 +56,7 @@ async def get_wizard_stats(
     _verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("wizard_events")
             .select("step, action")

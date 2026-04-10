@@ -10,7 +10,7 @@ import logging
 import re
 from typing import Any
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.email_sender import send_email
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -161,7 +161,7 @@ async def _process_order_from_chat(
     """Create an order record and send notifications to owner + customer."""
     import html as html_mod
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Build order record
     items = order_data.get("items", [])
@@ -399,7 +399,7 @@ def _process_bid_request_from_chat(
     tenant_id: str, session_id: str, bid_data: dict,
 ) -> None:
     """Log a bid request as a high-priority action item for the business owner."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     scope = bid_data.get("scope", "")
     customer_name = bid_data.get("customer_name", "Unknown")

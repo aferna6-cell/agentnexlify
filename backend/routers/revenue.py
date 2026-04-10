@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ async def revenue_overview(
     start = (now - timedelta(days=days)).isoformat()
     prev_start = (now - timedelta(days=days * 2)).isoformat()
     now_iso = now.isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # -- Invoices --
     invoice_paid = 0.0
@@ -291,7 +291,7 @@ async def revenue_trend(
     now = datetime.now(timezone.utc)
     start = (now - timedelta(days=days)).isoformat()
     now_iso = now.isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     daily: dict[str, dict[str, float]] = defaultdict(
         lambda: {"invoices": 0.0, "orders": 0.0, "pipeline": 0.0, "bids": 0.0}
@@ -429,7 +429,7 @@ async def top_customers(
     now = datetime.now(timezone.utc)
     start = (now - timedelta(days=days)).isoformat()
     now_iso = now.isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     customer_revenue: dict[str, float] = defaultdict(float)
     customer_names: dict[str, str] = {}

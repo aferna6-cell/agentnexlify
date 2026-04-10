@@ -21,8 +21,8 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def db():
     """Real Supabase client for schema verification."""
-    from backend.models.database import get_supabase
-    return get_supabase()
+    from backend.models.database import get_service_supabase
+    return get_service_supabase()
 
 
 @pytest.fixture(scope="module")

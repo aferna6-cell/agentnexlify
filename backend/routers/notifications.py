@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import NotificationItem, NotificationsResponse
 from backend.routers.auth import _get_current_tenant
 
@@ -28,7 +28,7 @@ async def get_notifications(
     """Get aggregated notifications for the dashboard bell."""
     _check_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     twenty_four_hours_ago = (now - timedelta(hours=24)).isoformat()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()

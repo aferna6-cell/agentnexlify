@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.activity import log_activity
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
@@ -118,7 +118,7 @@ async def assign_conversation(
     """Assign or unassign a conversation to a team member."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify conversation belongs to tenant (supports UUID or session_id)
     conv_row = _find_conversation(db, conversation_id, tenant_id, select="id, session_id, lead_id")
@@ -213,7 +213,7 @@ async def list_notes(
     """List internal notes for a conversation. Team-only, never visible to customers."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     # Resolve conversation_id (may be UUID or session_id from frontend)
     conv_row = _find_conversation(db, conversation_id, tenant_id)
     if not conv_row:
@@ -239,7 +239,7 @@ async def create_note(
     """Add an internal note to a conversation."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Resolve conversation_id (may be UUID or session_id from frontend)
     conv_row = _find_conversation(db, conversation_id, tenant_id)
@@ -283,7 +283,7 @@ async def delete_note(
     """Delete an internal note."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     tenant_delete(db, "conversation_notes", tenant_id).eq("id", note_id).execute()
     return {"deleted": True}
 
@@ -335,7 +335,7 @@ async def reply_to_conversation(
     """
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # 1. Verify conversation belongs to tenant and get session_id (supports UUID or session_id)
     try:
@@ -433,7 +433,7 @@ async def update_presence(
     if not team_member_id:
         return {"ok": True}  # Owner without team_member record — skip
 
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc).isoformat()
     try:
         tenant_update(db, "team_members", tenant_id, {
@@ -454,7 +454,7 @@ async def get_presence(
     """Get which team members are currently active and which conversations they're viewing."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     # Consider "active" if last_active_at is within the last 5 minutes
     from datetime import timedelta
     five_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()

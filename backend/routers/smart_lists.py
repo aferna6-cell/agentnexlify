@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -169,7 +169,7 @@ async def list_smart_lists(
     """List all smart lists for a tenant, ordered by creation date."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("smart_lists")
@@ -194,7 +194,7 @@ async def create_smart_list(
     """Create a new smart list with a name and filter definition."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Compute initial cached lead count
     cached_count = 0
@@ -249,7 +249,7 @@ async def update_smart_list(
 
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # If filter changed, refresh the cached count
     if req.filter_json is not None:
@@ -287,7 +287,7 @@ async def delete_smart_list(
     """Delete a smart list."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Prevent deletion of default lists
     try:
@@ -329,7 +329,7 @@ async def get_smart_list_leads(
     """Execute the smart list's filter and return matching leads with pagination."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the smart list to get its filter_json
     try:
@@ -392,7 +392,7 @@ async def refresh_smart_list(
     """Refresh the cached lead count for a smart list."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the smart list
     try:
@@ -453,7 +453,7 @@ async def export_smart_list(
     """Export matching leads as a CSV file download."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the smart list
     try:

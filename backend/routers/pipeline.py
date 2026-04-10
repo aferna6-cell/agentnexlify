@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.webhook_dispatcher import fire_event_background
@@ -169,7 +169,7 @@ async def list_stages(
     """List pipeline stages ordered by sort_order. Auto-seeds defaults if none exist."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("pipeline_stages")
@@ -199,7 +199,7 @@ async def create_stage(
     """Create a custom pipeline stage."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("pipeline_stages")
@@ -237,7 +237,7 @@ async def update_stage(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("pipeline_stages")
@@ -265,7 +265,7 @@ async def delete_stage(
     """Delete a pipeline stage. Fails if any leads are currently in this stage."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch stage name so we can check leads by status value
     try:
@@ -329,7 +329,7 @@ async def get_pipeline_board(
     """Get all leads grouped by status with deal values and time-in-stage metrics."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch stages
     try:
@@ -419,7 +419,7 @@ async def get_pipeline_analytics(
     """Pipeline metrics: pipeline value, won value, conversion rate, avg deal, avg days-to-close."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch stages so we know which are won/lost
     try:
@@ -546,7 +546,7 @@ async def move_lead(
     """Move a lead to a new pipeline stage. Updates status and stage_changed_at."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify the lead belongs to this tenant
     try:

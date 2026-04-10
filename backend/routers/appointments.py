@@ -8,7 +8,7 @@ from backend.services.task_utils import safe_create_task
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import (
     AppointmentListResponse,
     AppointmentUpdateRequest,
@@ -45,7 +45,7 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
 
 
 def _get_widget_config(api_key: str) -> dict:
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("widget_configs").select("*").eq("api_key", api_key).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Widget not found")
@@ -346,7 +346,7 @@ async def delete_appointment(
     _verify_tenant(claims, tenant_id)
 
     # Fetch appointment details before cancelling (for webhook payload)
-    db = get_supabase()
+    db = get_service_supabase()
     appt_result = (
         db.table("appointments")
         .select("customer_name, customer_email, start_time, end_time")
@@ -402,7 +402,7 @@ async def list_service_types(
     """List service types for appointment booking."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("service_types")
         .select("*")
@@ -423,7 +423,7 @@ async def create_service_type(
     """Create a new service type."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "name": req.name,
@@ -450,7 +450,7 @@ async def update_service_type(
     updates = {k: v for k, v in req.model_dump(exclude_none=True).items()}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("service_types").update(updates).eq("id", service_id).eq("tenant_id", tenant_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Service type not found")
@@ -466,7 +466,7 @@ async def delete_service_type(
     """Soft-delete a service type."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("service_types")
         .update({"is_active": False})
@@ -483,7 +483,7 @@ async def delete_service_type(
 @limiter.limit("60/minute")
 async def public_service_types(request: Request, tenant_id: str, api_key: str = Query(...)):
     """Public endpoint: list active service types for widget booking."""
-    db = get_supabase()
+    db = get_service_supabase()
     # Verify API key
     wc = db.table("widget_configs").select("tenant_id").eq("api_key", api_key).eq("tenant_id", tenant_id).limit(1).execute()
     if not wc.data:
@@ -508,7 +508,7 @@ async def get_no_show_stats(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get all completed + no_show appointments for rate calculation
     all_appts = (
@@ -558,7 +558,7 @@ async def ical_feed(
     from datetime import datetime, timedelta, timezone
     from fastapi.responses import Response as FastAPIResponse
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Validate API key
     wc = (

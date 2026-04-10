@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ async def list_webhook_deliveries(
 ):
     """Return recent webhook_logs for a specific webhook."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify webhook belongs to tenant
     try:

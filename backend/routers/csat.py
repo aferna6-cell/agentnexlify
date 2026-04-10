@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class SurveySubmit(BaseModel):
 @limiter.limit("30/minute")
 async def submit_survey(req: SurveySubmit, request: Request):
     """Public endpoint — customer submits their CSAT rating."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Decode token: format is {tenant_id}:{session_id}
     parts = req.token.split(":", 1)
@@ -109,7 +109,7 @@ async def csat_stats(
     days = {"7d": 7, "30d": 30, "90d": 90}[period]
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("csat_responses")
@@ -167,7 +167,7 @@ async def list_csat_responses(
     """List all CSAT responses."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("csat_responses")
         .select("*")

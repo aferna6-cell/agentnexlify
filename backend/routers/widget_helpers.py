@@ -18,7 +18,7 @@ import anthropic
 from fastapi import HTTPException, Request
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.services.lead_scoring import score_lead_background
@@ -240,7 +240,7 @@ def _get_widget_config(api_key: str) -> dict[str, Any]:
     if cached is not None:
         return cached
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = db.table("widget_configs").select("*").eq("api_key", api_key).limit(1).execute()
     except Exception:
         logger.warning("Database unreachable in _get_widget_config", exc_info=True)
@@ -256,7 +256,7 @@ def _get_tenant(tenant_id: str) -> dict[str, Any]:
     if cached is not None:
         return cached
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = db.table("tenants").select(
             "id, business_name, business_type, city, plan, plan_status, "
             "free_trial_started_at, conversations_used_this_month, "
@@ -311,7 +311,7 @@ def _get_or_create_conversation(
     If the insert fails, falls back to session_id — but downstream code must
     validate the conversation_id is a real UUID before using it for updates.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Try to find an existing conversation
     try:
@@ -356,7 +356,7 @@ def _load_chat_history(
 ) -> list[dict[str, str]]:
     """Load recent chat messages from the chat_messages table."""
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             tenant_select(db, "chat_messages", tenant_id, "role, content")
             .eq("session_id", session_id)
@@ -377,7 +377,7 @@ def _load_chat_history(
         )
         # Retry without .order() in case created_at column is missing
         try:
-            db = get_supabase()
+            db = get_service_supabase()
             result = (
                 tenant_select(db, "chat_messages", tenant_id, "role, content")
                 .eq("session_id", session_id)
@@ -397,7 +397,7 @@ def _save_chat_messages(
 ) -> None:
     """Persist user and/or assistant messages to chat_messages table."""
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         rows = []
         if user_text:
             rows.append({"tenant_id": tenant_id, "session_id": session_id, "role": "user", "content": user_text})
@@ -781,7 +781,7 @@ def _build_flow_instructions(flow_json: dict) -> str:
 def _record_response_metric(tenant_id: str, session_id: str, conversation_id: str) -> None:
     """Background task: record response time for the first message exchange."""
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         messages = (
             tenant_select(db, "chat_messages", tenant_id, "role, created_at")
             .eq("session_id", session_id)
@@ -952,7 +952,7 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
         return
 
     # Load tenant's tag definitions
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         tag_defs = (
             tenant_select(db, "tenant_tag_definitions", tenant_id, "tag_name")
@@ -1063,7 +1063,7 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
         if not isinstance(items, list) or not items:
             return
 
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Find conversation_id for this session
         conv = (
@@ -1135,7 +1135,7 @@ async def _capture_leads_from_session(
             logger.info("lead_capture: no email or phone found, skipping")
             return
 
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Dedup: check by email + client_id first
         if combined.get("email"):
@@ -1362,7 +1362,7 @@ async def _send_new_lead_sms_notification(
         "sms_notification: starting for tenant=%s lead=%s info_keys=%s",
         tenant_id, lead_name, list(lead_info.keys()),
     )
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select("notification_phone, sms_notifications_enabled, business_name")
@@ -1402,7 +1402,7 @@ async def _send_new_lead_email_notification(
     """Send email notification to tenant owner when a new lead is captured."""
     import html as html_mod
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select("owner_email, business_name")

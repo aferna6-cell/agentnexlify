@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ async def list_ab_tests(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("ab_tests")
             .select("*")
@@ -131,7 +131,7 @@ async def create_ab_test(
         )
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         test_payload = {
             "tenant_id": tenant_id,
@@ -182,7 +182,7 @@ async def get_ab_test(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         test_result = (
             db.table("ab_tests")
             .select("*")
@@ -231,7 +231,7 @@ async def update_ab_test(
         raise HTTPException(status_code=400, detail="No fields to update")
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("ab_tests")
             .update(updates)
@@ -259,7 +259,7 @@ async def delete_ab_test(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("ab_tests")
             .delete()
@@ -286,7 +286,7 @@ async def start_ab_test(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         test_result = (
             db.table("ab_tests")
@@ -332,7 +332,7 @@ async def pause_ab_test(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         test_result = (
             db.table("ab_tests")
@@ -375,7 +375,7 @@ async def complete_ab_test(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         test_result = (
             db.table("ab_tests")
@@ -452,7 +452,7 @@ async def get_ab_test_results(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         test_result = (
             db.table("ab_tests")

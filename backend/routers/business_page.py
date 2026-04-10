@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -173,7 +173,7 @@ def _sanitize_slug(slug: str) -> str:
 @limiter.limit("120/minute")
 async def get_business_page(request: Request, slug: str):
     """Public endpoint: return business page data for a given slug."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select(
@@ -246,7 +246,7 @@ async def get_business_page_settings(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select(
@@ -298,7 +298,7 @@ async def update_business_page(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch tenant plan for tier enforcement
     tenant_row = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()

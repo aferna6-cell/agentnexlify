@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ async def list_scoring_factors(
 ):
     """List all scoring factors for a tenant. Seeds defaults on first access."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     _seed_defaults(db, tenant_id)
 
@@ -91,7 +91,7 @@ async def update_scoring_factor(
 ):
     """Update the weight or enabled state of a scoring factor."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     result = (
         db.table("scoring_configs")
@@ -113,7 +113,7 @@ async def create_scoring_factor(
 ):
     """Create a custom scoring factor."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     data = {
         "tenant_id": tenant_id,
@@ -142,7 +142,7 @@ async def delete_scoring_factor(
 ):
     """Delete a custom scoring factor."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("scoring_configs").delete().eq("id", factor_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}
 
@@ -154,7 +154,7 @@ async def reset_to_defaults(
 ):
     """Reset scoring factors to defaults (deletes all custom factors)."""
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Delete all existing
     db.table("scoring_configs").delete().eq("tenant_id", tenant_id).execute()

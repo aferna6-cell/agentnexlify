@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from mcp.server.fastmcp import FastMCP
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ mcp = FastMCP(
 
 def _get_tenant_by_api_key(api_key: str) -> dict | None:
     """Look up tenant by dedicated MCP API key only. Returns tenant dict or None."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     if not api_key or not api_key.startswith("mcp_"):
         return None
@@ -61,7 +61,7 @@ def list_recent_leads(api_key: str, days: int = 7, limit: int = 20) -> str:
     limit = min(limit, 50)
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("leads")
         .select("name, email, phone, status, lead_score, areas_of_interest, conversation_summary, created_at")
@@ -115,7 +115,7 @@ def list_today_appointments(api_key: str) -> str:
     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = start_of_day + timedelta(days=1)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("appointments")
         .select("customer_name, customer_email, customer_phone, start_time, end_time, status, notes")
@@ -161,7 +161,7 @@ def get_unread_conversations(api_key: str, limit: int = 10) -> str:
         return "Error: Invalid API key."
 
     limit = min(limit, 25)
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("conversations")
         .select("id, session_id, status, lead_id, tags, created_at")
@@ -199,7 +199,7 @@ def get_action_items(api_key: str, status: str = "pending") -> str:
     if not tenant:
         return "Error: Invalid API key."
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("action_items")
         .select("description, due_date, priority, status, created_at")
@@ -242,7 +242,7 @@ def get_analytics_summary(api_key: str, days: int = 30) -> str:
         return "Error: Invalid API key."
 
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Count leads
     leads = db.table("leads").select("id", count="exact").eq("client_id", tenant["id"]).gte("created_at", since).execute()
@@ -286,7 +286,7 @@ def reply_to_conversation(api_key: str, session_id: str, message: str) -> str:
     if not message or not message.strip():
         return "Error: Message cannot be empty."
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Insert into chat_messages as an assistant (team reply)
     db.table("chat_messages").insert({

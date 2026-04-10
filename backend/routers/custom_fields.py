@@ -9,7 +9,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ async def list_custom_fields(
     """List all custom field definitions for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("custom_field_definitions")
         .select("*")
@@ -67,7 +67,7 @@ async def create_custom_field(
     """Create a new custom field definition."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check for duplicate field name
     existing = (
@@ -128,7 +128,7 @@ async def update_custom_field(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("custom_field_definitions")
         .update(updates)
@@ -150,7 +150,7 @@ async def delete_custom_field(
     """Delete a custom field definition."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("custom_field_definitions").delete().eq("id", field_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}
 
@@ -172,7 +172,7 @@ async def set_lead_custom_fields(
     """Set custom field values on a lead."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get current custom_fields
     lead = (
@@ -213,7 +213,7 @@ async def get_lead_custom_fields(
     """Get custom field values for a lead."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     lead = (
         db.table("leads")
         .select("custom_fields")

@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ async def list_tag_definitions(
     """List all tag definitions for a tenant. Seeds system tags on first access."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check if tags exist; if not, seed system tags
     result = (
@@ -94,7 +94,7 @@ async def create_tag_definition(
     """Create a custom tag definition."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "tag_name": req.tag_name.strip(),
@@ -121,7 +121,7 @@ async def update_tag_definition(
     """Update a tag definition. System tags can only toggle is_enabled."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check if system tag
     existing = (
@@ -174,7 +174,7 @@ async def delete_tag_definition(
     """Delete a custom tag definition. System tags cannot be deleted."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check if system tag
     existing = (

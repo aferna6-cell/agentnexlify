@@ -175,7 +175,7 @@ class TestQualifyLead:
         db = _fake_supabase_for(lead, tenant)
 
         with (
-            patch("backend.services.lead_qualification.get_supabase", return_value=db),
+            patch("backend.services.lead_qualification.get_service_supabase", return_value=db),
             patch("backend.services.lead_qualification.ManagedAgentsClient") as mock_client_cls,
             patch("backend.services.lead_qualification.lead_qualifier"),
         ):
@@ -233,7 +233,7 @@ class TestQualifyLead:
         mock_handle.environment_id = "env_abc"
 
         with (
-            patch("backend.services.lead_qualification.get_supabase", return_value=db),
+            patch("backend.services.lead_qualification.get_service_supabase", return_value=db),
             patch("backend.services.lead_qualification.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.lead_qualification.lead_qualifier", return_value=mock_handle),
         ):
@@ -260,7 +260,7 @@ class TestQualifyLead:
     def test_missing_lead_returns_none(self):
         db = _fake_supabase_for(None, None)
         with (
-            patch("backend.services.lead_qualification.get_supabase", return_value=db),
+            patch("backend.services.lead_qualification.get_service_supabase", return_value=db),
             patch("backend.services.lead_qualification.ManagedAgentsClient") as mock_client_cls,
         ):
             result = qualify_lead("nonexistent")
@@ -293,7 +293,7 @@ class TestQualifyLead:
         mock_handle.environment_id = "env_abc"
 
         with (
-            patch("backend.services.lead_qualification.get_supabase", return_value=db),
+            patch("backend.services.lead_qualification.get_service_supabase", return_value=db),
             patch("backend.services.lead_qualification.ManagedAgentsClient", return_value=mock_client),
             patch("backend.services.lead_qualification.lead_qualifier", return_value=mock_handle),
         ):

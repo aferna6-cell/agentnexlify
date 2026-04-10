@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.llm_runtime import (
@@ -86,7 +86,7 @@ def _find_tenant_by_phone(phone: str) -> dict | None:
 
     Same pattern as twilio_webhooks.py._find_tenant_by_phone.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("tenants")
@@ -317,7 +317,7 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
     action_taken = " | ".join(action_taken_parts) if action_taken_parts else None
 
     # Update the call record with summary, sentiment, and action_taken
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         update_data: dict[str, Any] = {
             "summary": summary,
@@ -358,7 +358,7 @@ async def _insert_call_action_items(
     if not items:
         return
 
-    db = get_supabase()
+    db = get_service_supabase()
     inserted = 0
     for item_text in items:
         if not item_text or not item_text.strip():
@@ -455,7 +455,7 @@ async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twi
     # Save the greeting as the first assistant message
     try:
         session_id = f"call_{call_sid}"
-        db = get_supabase()
+        db = get_service_supabase()
         db.table("chat_messages").insert({
             "tenant_id": tenant["id"],
             "session_id": session_id,
@@ -538,7 +538,7 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     tenant_id = tenant["id"]
     business_name = tenant.get("business_name") or "our business"
     session_id = f"call_{call_sid}"
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Save the caller's message
     try:
@@ -745,7 +745,7 @@ async def handle_recording_complete(request: Request, _sig: None = Depends(verif
 
     tenant_id = tenant["id"]
     business_name = tenant.get("business_name") or "us"
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Parse duration
     try:
@@ -942,7 +942,7 @@ async def handle_transcription_complete(
         logger.warning("Transcription callback missing CallSid")
         return Response(content="OK", media_type="text/plain")
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Find the call record by twilio_call_sid
     call_record = None
@@ -1039,7 +1039,7 @@ async def list_calls(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         query = (
             db.table("calls")
@@ -1078,7 +1078,7 @@ async def get_call_stats(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     stats = CallStatsResponse()
 
     # Total calls
@@ -1156,7 +1156,7 @@ async def get_call(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("calls")

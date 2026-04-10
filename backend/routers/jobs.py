@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from backend.limiter import limiter
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
@@ -72,7 +72,7 @@ async def list_jobs(
     """List all jobs for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("jobs")
         .select("*")
@@ -95,7 +95,7 @@ async def create_job(
     """Create a new job posting."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "title": req.title,
@@ -125,7 +125,7 @@ async def update_job(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("jobs")
         .update(updates)
@@ -147,7 +147,7 @@ async def delete_job(
     """Delete a job posting."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("jobs")
         .delete()
@@ -169,7 +169,7 @@ async def ai_write_job_description(
     """AI generates a professional job posting from a plain-language description."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     tenant_result = (
         db.table("tenants")
         .select("business_name, business_type, city")
@@ -247,7 +247,7 @@ async def list_applications(
     """List applications for a specific job."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("job_applications")
         .select("*")
@@ -272,7 +272,7 @@ async def update_application_status(
     """Update an application's status."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     updates = {"status": req.status}
     if req.notes is not None:
         updates["notes"] = req.notes
@@ -295,7 +295,7 @@ async def update_application_status(
 @limiter.limit("120/minute")
 async def public_job_listings(request: Request, tenant_id: str):
     """Public endpoint — returns active job listings for a tenant."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get tenant info for display
     tenant_result = (
@@ -337,7 +337,7 @@ async def public_apply(
     req: JobApplicationCreate,
 ):
     """Public endpoint — submit a job application (SMS-first, no resume)."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify job exists and is active
     job_result = (

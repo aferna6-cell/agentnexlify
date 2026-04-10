@@ -6,7 +6,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ async def list_action_items(
     """List action items for a tenant, optionally filtered by status/priority."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("action_items")
         .select("*, leads(name, email), team_members(name)")
@@ -73,7 +73,7 @@ async def action_items_summary(
     """Get counts by status for the dashboard widget."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("action_items")
         .select("status")
@@ -113,7 +113,7 @@ async def create_action_item(
     """Create an action item manually."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "description": req.description.strip(),
@@ -159,7 +159,7 @@ async def update_action_item(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("action_items")
         .update(updates)
@@ -181,6 +181,6 @@ async def delete_action_item(
     """Delete an action item."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("action_items").delete().eq("id", item_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}

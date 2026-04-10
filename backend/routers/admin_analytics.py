@@ -12,7 +12,7 @@ from fastapi import APIRouter, Header, HTTPException, Query
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Total tenants
         total_tenants = (
@@ -170,7 +170,7 @@ async def get_monthly_growth(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Calculate the start month
         now = datetime.now(timezone.utc)
@@ -277,7 +277,7 @@ async def get_weekly_growth(
     }
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         now = datetime.now(timezone.utc)
         week_ago = now - timedelta(days=7)
@@ -377,7 +377,7 @@ async def get_plan_distribution(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         result = (
             db.table("tenants")
@@ -433,7 +433,7 @@ async def get_revenue_trends(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         now = datetime.now(timezone.utc)
         # Step back by calendar months (not timedelta) to avoid skipping months
@@ -466,7 +466,7 @@ async def get_revenue_trends(
     except Exception:
         # Table may not exist yet, fall back to live calculation
         try:
-            db = get_supabase()
+            db = get_service_supabase()
             now = datetime.now(timezone.utc)
             start_month = (now.replace(day=1) - timedelta(days=30 * (months - 1))).replace(
                 day=1, hour=0, minute=0, second=0, microsecond=0
@@ -553,7 +553,7 @@ async def get_promoted_businesses(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         result = (
             db.table("admin_promotions")
@@ -588,7 +588,7 @@ async def list_all_tenants(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         query = db.table("tenants").select(
             "id, business_name, business_type, owner_email, owner_name, "
@@ -645,7 +645,7 @@ async def get_industry_breakdown(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         result = (
             db.table("tenants")

@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import (
     LeadStageUpdate,
     SequenceCreateRequest,
@@ -158,7 +158,7 @@ def _verify_tenant(tenant_id: str, claims: dict) -> None:
 async def list_sequences(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """List all sequences with step count and execution stats."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     seqs = (
         db.table("automation_sequences")
@@ -218,7 +218,7 @@ async def create_sequence(
 ):
     """Create a new sequence with steps."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Create sequence
     seq_result = db.table("automation_sequences").insert({
@@ -251,7 +251,7 @@ async def create_sequence(
 async def get_sequence_stats(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """Dashboard stats for sequences."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Active sequences count
     active_seqs = (
@@ -334,7 +334,7 @@ async def get_sequence_detail(
 ):
     """Get sequence detail with steps and recent logs."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     seq = (
         db.table("automation_sequences")
@@ -406,7 +406,7 @@ async def update_sequence(
 ):
     """Update sequence and optionally replace steps."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify exists
     existing = (
@@ -458,7 +458,7 @@ async def delete_sequence(
 ):
     """Delete a sequence (cascade deletes steps/executions/logs)."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     result = (
         db.table("automation_sequences")
@@ -480,7 +480,7 @@ async def toggle_sequence(
 ):
     """Toggle sequence active/inactive."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     seq = (
         db.table("automation_sequences")
@@ -517,7 +517,7 @@ async def create_from_template(
         )
 
     template = TEMPLATES[template_id]
-    db = get_supabase()
+    db = get_service_supabase()
 
     seq_result = db.table("automation_sequences").insert({
         "tenant_id": tenant_id,
@@ -555,7 +555,7 @@ async def update_lead_stage(
 ):
     """Update a lead's stage and fire automation triggers."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify lead belongs to tenant
     lead = (
@@ -612,7 +612,7 @@ async def send_campaign(
     - created_before: ISO date string
     """
     _verify_tenant(tenant_id, tenant)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Build filtered query — leads table uses client_id, NOT tenant_id
     query = db.table("leads").select("id, name, email, phone, unsubscribed").eq("client_id", tenant_id)

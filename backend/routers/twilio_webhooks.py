@@ -14,7 +14,7 @@ from fastapi.responses import PlainTextResponse
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.twilio_service import format_textback_message, send_sms
@@ -58,7 +58,7 @@ def _verify_twilio_signature(request: Request, body: bytes) -> bool:
 
 def _find_tenant_by_phone(phone: str) -> dict | None:
     """Look up tenant by their configured notification_phone or Twilio number."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select("id, business_name, notification_phone, sms_notifications_enabled, plan, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end")
@@ -163,7 +163,7 @@ async def handle_missed_call(request: Request):
         )
 
         # Create/update lead from caller phone
-        db = get_supabase()
+        db = get_service_supabase()
         existing = (
             db.table("leads")
             .select("id")
@@ -221,7 +221,7 @@ async def handle_inbound_sms(request: Request):
         return PlainTextResponse("OK")
 
     tenant_id = tenant["id"]
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Use phone number as session ID for SMS conversations
     session_id = f"sms_{from_number.replace('+', '').replace(' ', '')}"

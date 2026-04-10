@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import OnlineStatusRequest, WidgetConfigResponse
 from backend.services.email_sender import _make_unsub_sig
 from backend.routers.widget_helpers import (
@@ -156,7 +156,7 @@ async def get_config(request: Request, api_key: str):
     menu_items = None
     if (tenant.get("business_type") or "").lower() == "restaurant":
         try:
-            db = get_supabase()
+            db = get_service_supabase()
             menu_result = (
                 db.table("menu_items")
                 .select("name, description, price, category, available")
@@ -204,7 +204,7 @@ async def toggle_online_status(
     if claims.get("tenant_id") != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("widget_configs")
             .update({"is_online": body.is_online})
@@ -242,7 +242,7 @@ async def upload_file(
     Max 5 MB. Allowed: images, PDF, Word docs.
     """
     # Validate API key
-    db = get_supabase()
+    db = get_service_supabase()
     wc = (
         db.table("widget_configs")
         .select("tenant_id, allowed_domains")
@@ -303,7 +303,7 @@ async def unsubscribe_lead(
     tid: str = Query("", description="Tenant ID", max_length=50),
 ):
     """Public endpoint clicked from email unsubscribe links."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("leads")
         .select("id, client_id, unsubscribed")
@@ -370,7 +370,7 @@ async def track_email_open(
 ):
     """Log an email open event and return a 1x1 tracking pixel."""
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         db.table("email_events").insert({
             "tenant_id": tid,
             "lead_id": lid or None,
@@ -393,7 +393,7 @@ async def submit_ai_feedback(request: Request, req: AIFeedbackRequest):
     widget = _get_widget_config(req.api_key)
     tenant_id = widget["tenant_id"]
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("ai_feedback").insert({
         "tenant_id": tenant_id,
         "session_id": req.session_id,
@@ -414,7 +414,7 @@ async def get_ai_feedback(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("ai_feedback")
         .select("*")
@@ -436,7 +436,7 @@ async def delete_ai_feedback(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("ai_feedback").delete().eq("id", feedback_id).eq("tenant_id", tenant_id).execute()
     return {"status": "deleted"}
 

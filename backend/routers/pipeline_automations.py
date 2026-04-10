@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import send_email, render_template, build_unsubscribe_url
 
@@ -60,7 +60,7 @@ async def list_pipeline_automations(
 ):
     """List all pipeline automations for a tenant."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("pipeline_automations")
@@ -83,7 +83,7 @@ async def create_pipeline_automation(
 ):
     """Create a new pipeline stage automation."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("pipeline_automations")
@@ -126,7 +126,7 @@ async def update_pipeline_automation(
         raise HTTPException(status_code=400, detail="No fields to update")
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("pipeline_automations")
@@ -151,7 +151,7 @@ async def delete_pipeline_automation(
 ):
     """Delete a pipeline stage automation."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         db.table("pipeline_automations").delete().eq("id", automation_id).eq("tenant_id", tenant_id).execute()
     except Exception:
@@ -175,7 +175,7 @@ async def execute_pipeline_automations(
 
     Returns count of actions executed.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         automations = (

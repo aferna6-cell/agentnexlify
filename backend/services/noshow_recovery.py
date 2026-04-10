@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.email_sender import build_unsubscribe_url, send_email
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.tenant_scope import tenant_table
@@ -36,7 +36,7 @@ async def process_noshow_recovery() -> int:
 
     Returns count of recovery messages sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     sent = 0
 

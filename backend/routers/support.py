@@ -6,7 +6,7 @@ import logging
 from fastapi import APIRouter, Request
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import ContactRequest, ContactResponse
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1/support", tags=["support"])
 @limiter.limit("5/minute")
 async def submit_contact(payload: ContactRequest, request: Request):
     """Accept a public contact-form submission."""
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("support_messages").insert(
         {"name": payload.name, "email": payload.email, "message": payload.message}
     ).execute()

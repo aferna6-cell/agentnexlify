@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ async def list_content(
     """List content items with optional status filter."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("content_items")
         .select("*")
@@ -137,7 +137,7 @@ async def get_content(
     """Get a single content item."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("content_items")
         .select("*")
@@ -171,7 +171,7 @@ async def create_content(
     if req.tags:
         payload["tags"] = req.tags[:10]  # max 10 tags
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("content_items").insert(payload).execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create content")
@@ -198,7 +198,7 @@ async def update_content(
 
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("content_items")
         .update(updates)
@@ -221,7 +221,7 @@ async def delete_content(
     """Delete a content item."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("content_items")
         .delete()
@@ -300,7 +300,7 @@ async def repurpose_content(
     """Generate platform-specific versions of source content using Claude AI."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("content_items")
         .select("*")

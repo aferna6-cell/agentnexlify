@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ SCOPES = [
 
 def get_integration(tenant_id: str) -> dict | None:
     """Fetch the google_calendar integration row for a tenant."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("integrations")
         .select("*")
@@ -51,7 +51,7 @@ def save_integration(
 
     ``token_expiry`` should be an ISO-8601 datetime string.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     payload: dict = {
         "tenant_id": tenant_id,
         "provider": "google_calendar",
@@ -78,7 +78,7 @@ def save_integration(
 
 def delete_integration(tenant_id: str) -> None:
     """Remove the google_calendar integration for a tenant."""
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("integrations").delete().eq("tenant_id", tenant_id).eq(
         "provider", "google_calendar"
     ).execute()

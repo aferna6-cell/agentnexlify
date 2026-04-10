@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ async def list_flows(
     """List all chat flows for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("chat_flows")
         .select("*")
@@ -158,7 +158,7 @@ async def create_flow(
     """Create a new chat flow."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "name": req.name.strip(),
@@ -186,7 +186,7 @@ async def create_from_template(
         raise HTTPException(status_code=400, detail="Invalid template index")
 
     template = PRESET_TEMPLATES[template_index]
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "name": template["name"],
@@ -219,14 +219,14 @@ async def update_flow(
     if req.is_active is not None:
         # Deactivate all other flows first if activating this one
         if req.is_active:
-            db = get_supabase()
+            db = get_service_supabase()
             db.table("chat_flows").update({"is_active": False}).eq("tenant_id", tenant_id).eq("is_active", True).execute()
         updates["is_active"] = req.is_active
 
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("chat_flows")
         .update(updates)
@@ -248,7 +248,7 @@ async def delete_flow(
     """Delete a chat flow."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("chat_flows").delete().eq("id", flow_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}
 
@@ -291,7 +291,7 @@ async def flow_analytics(
     days = _period_to_days(period)
     start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     now_iso = datetime.now(timezone.utc).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # 1. Verify the flow exists and belongs to the tenant
     try:

@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import require_role
 
 logger = logging.getLogger(__name__)
@@ -180,7 +180,7 @@ async def provision_number(
     """
     _verify_tenant(claims, tenant_id)
     auth = _twilio_auth()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check if tenant already has a provisioned number
     tenant_result = (
@@ -334,7 +334,7 @@ async def release_number(
     """
     _verify_tenant(claims, tenant_id)
     auth = _twilio_auth()
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get tenant's current number
     tenant_result = (

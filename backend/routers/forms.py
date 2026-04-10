@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -97,7 +97,7 @@ def _generate_public_token() -> str:
 @limiter.limit("30/minute")
 async def get_public_form(request: Request, token: str):
     """Get form definition by public token for rendering. No auth required."""
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("forms")
@@ -134,7 +134,7 @@ async def get_public_form(request: Request, token: str):
 @limiter.limit("30/minute")
 async def get_public_form_embed(request: Request, token: str):
     """Render the form as a self-contained HTML page for iframe embedding."""
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("forms")
@@ -279,7 +279,7 @@ async def submit_public_form(
 
     No auth required — this is the public submission endpoint for embedded forms.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the form by token
     try:
@@ -456,7 +456,7 @@ async def form_stats(
     """Form analytics: total forms, total submissions, conversion rate."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     try:
         forms_result = (
@@ -512,7 +512,7 @@ async def list_forms(
     """List all forms for a tenant."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("forms")
@@ -563,7 +563,7 @@ async def create_form(
     if req.success_message is not None:
         data["success_message"] = req.success_message
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = db.table("forms").insert(data).execute()
     except Exception:
@@ -616,7 +616,7 @@ async def create_form_from_preset(
         "success_message": preset.get("success_message"),
     }
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = db.table("forms").insert(data).execute()
     except Exception:
@@ -637,7 +637,7 @@ async def get_form(
     """Get a single form with submission stats."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("forms")
@@ -685,7 +685,7 @@ async def update_form(
     """Update form name, fields, settings, or active status."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify form exists
     try:
@@ -750,7 +750,7 @@ async def delete_form(
     """Delete a form and its submissions."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify form exists
     try:
@@ -796,7 +796,7 @@ async def list_submissions(
     """List form submissions with optional lead enrichment."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify form exists
     try:

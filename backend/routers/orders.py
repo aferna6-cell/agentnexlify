@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ async def list_orders(
     """List orders for a tenant, newest first."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("orders")
         .select("*")
@@ -78,7 +78,7 @@ async def order_stats(
     """Get order stats for dashboard cards."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("orders")
         .select("status, total")
@@ -105,7 +105,7 @@ async def create_order(
     """Create a new order (usually from the chat widget flow)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "customer_name": req.customer_name,
@@ -138,7 +138,7 @@ async def update_order_status(
     """Update order status (new -> confirmed -> preparing -> ready -> delivered)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("orders")
         .update({"status": req.status})
@@ -160,7 +160,7 @@ async def get_order(
     """Get a single order by ID."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("orders")
         .select("*")

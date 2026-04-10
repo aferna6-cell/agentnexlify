@@ -12,12 +12,14 @@ from backend.main import app
 def _stub_supabase_singletons():
     """Install a MagicMock as the module-level Supabase singleton.
 
-    Routers do ``from backend.models.database import get_supabase`` at import
-    time, so patching ``backend.models.database.get_supabase`` in a single
-    fixture is ineffective — the router already holds its own reference.
-    Instead, seed the module-level cache directly so any caller of
-    ``get_service_supabase()`` (and therefore ``get_supabase()``) returns the
-    mock without ever touching ``supabase.create_client``.
+    Routers import ``get_service_supabase`` (and its tenant-scoped
+    sibling) at module load time, so any attempt to patch the function
+    object in a single fixture would be ineffective — the router already
+    holds its own reference. Seed the module-level cache directly so
+    any caller of ``get_service_supabase()`` returns the mock without
+    touching ``supabase.create_client``. The deprecated ``get_supabase``
+    alias is still defined in ``backend.models.database`` as a safety
+    net but has no active call sites as of 2026-04-09.
     """
     mock = MagicMock()
     prev_service = _db_module._service_client

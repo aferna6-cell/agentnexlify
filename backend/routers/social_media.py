@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.dependencies import get_business_context, verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
 
@@ -179,7 +179,7 @@ async def create_post(
     }
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = db.table("social_posts").insert(payload).execute()
         if not result.data:
             raise HTTPException(status_code=500, detail="Failed to create post")
@@ -211,7 +211,7 @@ async def list_posts(
         _validate_status(status)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         query = (
             db.table("social_posts")
             .select("*")
@@ -273,7 +273,7 @@ async def update_post(
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("social_posts")
             .update(updates)
@@ -301,7 +301,7 @@ async def delete_post(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("social_posts")
             .delete()
@@ -330,7 +330,7 @@ async def generate_post_content(
     verify_tenant(claims, tenant_id)
     _validate_platform(req.platform)
 
-    db = get_supabase()
+    db = get_service_supabase()
     business_name, business_type = get_business_context(db, tenant_id)
 
     platform_info = PLATFORM_LIMITS[req.platform]
@@ -413,7 +413,7 @@ async def generate_campaign_content(
     for platform in req.platforms:
         _validate_platform(platform)
 
-    db = get_supabase()
+    db = get_service_supabase()
     business_name, business_type = get_business_context(db, tenant_id)
     biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
 
@@ -490,7 +490,7 @@ async def get_calendar(
     end_date = f"{year}-{month:02d}-{last_day}T23:59:59Z"
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Get scheduled/published posts in the date range
         scheduled = (
@@ -572,7 +572,7 @@ async def get_analytics(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Total posts by platform
         all_posts = (

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
@@ -60,7 +60,7 @@ async def list_menu_items(
     """List all menu items for a tenant, optionally filtered by category."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("menu_items")
         .select("*")
@@ -87,7 +87,7 @@ async def list_categories(
     """Get unique categories for a tenant's menu."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("menu_items")
         .select("category")
@@ -107,7 +107,7 @@ async def create_menu_item(
     """Create a new menu item."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "name": req.name,
@@ -139,7 +139,7 @@ async def update_menu_item(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("menu_items")
         .update(updates)
@@ -161,7 +161,7 @@ async def delete_menu_item(
     """Delete a menu item."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("menu_items")
         .delete()
@@ -183,7 +183,7 @@ async def toggle_availability(
     """Toggle menu item availability (in stock / out of stock)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     # Fetch current state
     current = (
         db.table("menu_items")
@@ -215,7 +215,7 @@ async def import_menu_from_website(
     """Extract menu items from crawled website content using Claude AI."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get crawled website content
     crawl_result = (

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import EmailTemplateCreate, EmailTemplateUpdate
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import render_template
@@ -137,7 +137,7 @@ def _verify_tenant(tenant_id: str, claims: dict) -> None:
 async def list_templates(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """List all email templates (starter + tenant custom)."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     custom = (
         db.table("email_templates")
@@ -161,7 +161,7 @@ async def create_template(
 ):
     """Create a custom email template."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     result = db.table("email_templates").insert({
         "tenant_id": tenant_id,
@@ -183,7 +183,7 @@ async def update_template(
 ):
     """Update a custom email template."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     updates = {"updated_at": datetime.now(timezone.utc).isoformat()}
     if req.name is not None:
@@ -217,7 +217,7 @@ async def delete_template(
 ):
     """Delete a custom email template."""
     _verify_tenant(tenant_id, claims)
-    db = get_supabase()
+    db = get_service_supabase()
 
     result = (
         db.table("email_templates")
@@ -243,7 +243,7 @@ async def preview_template(
     _verify_tenant(tenant_id, claims)
 
     # Use tenant business name if available
-    db = get_supabase()
+    db = get_service_supabase()
     tenant = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
     context = {**SAMPLE_CONTEXT}
     if tenant.data and tenant.data[0].get("business_name"):

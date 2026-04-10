@@ -35,7 +35,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import require_role
 from backend.services.business_profiles import get_widget_defaults
 from backend.services.llm_runtime import call_claude_messages, call_claude_messages_sync
@@ -263,7 +263,7 @@ async def complete_onboarding(
     """Enhanced onboarding endpoint that configures the tenant in one step."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # 1. Verify tenant exists
     tenant_result = (
@@ -633,7 +633,7 @@ Keep it concise. Do not invent facts not supported by the input. Do not add mark
 
     # Persist to widget_configs
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         db.table("widget_configs").update({"knowledge_base": kb_text}).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.error("Failed to persist knowledge_base for tenant %s", tenant_id, exc_info=True)
@@ -713,7 +713,7 @@ async def auto_populate_kb(
     content_for_prompt = extracted_text[:15000]
 
     # 3. Get tenant info for context
-    db = get_supabase()
+    db = get_service_supabase()
     tenant = db.table("tenants").select("business_name, business_type, city, phone").eq("id", tenant_id).single().execute()
     t = tenant.data or {}
 
@@ -816,7 +816,7 @@ async def onboarding_status(
     """Returns onboarding progress with completion percentage."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch tenant info
     tenant_result = (

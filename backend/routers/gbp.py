@@ -16,7 +16,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
@@ -130,7 +130,7 @@ async def gbp_oauth_callback(code: str = Query(...), state: str = Query(...)):
         raise HTTPException(status_code=502, detail="Failed to exchange authorization code")
 
     # Store tokens in integrations table
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         existing = (
             db.table("integrations")
@@ -169,7 +169,7 @@ async def gbp_connection_status(
     """Check if GBP is connected for this tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("integrations")
@@ -194,7 +194,7 @@ async def disconnect_gbp(
     """Disconnect Google Business Profile."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("integrations").delete().eq("tenant_id", tenant_id).eq("provider", "google_business_profile").execute()
     return {"success": True}
 
@@ -210,7 +210,7 @@ async def get_gbp_profile(
     """Fetch the tenant's GBP profile data (requires connected account)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     integration = (
         db.table("integrations")
         .select("access_token, refresh_token")

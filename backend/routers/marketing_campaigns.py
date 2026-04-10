@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.dependencies import get_business_context, verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import build_unsubscribe_url, send_email
 from backend.services.llm_runtime import call_claude_messages
@@ -171,7 +171,7 @@ async def create_campaign(
     }
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = db.table("marketing_campaigns").insert(payload).execute()
         if not result.data:
             raise HTTPException(status_code=500, detail="Failed to create campaign")
@@ -196,7 +196,7 @@ async def list_campaigns(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         query = (
             db.table("marketing_campaigns")
             .select("*")
@@ -242,7 +242,7 @@ async def get_campaign(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("marketing_campaigns")
             .select("*")
@@ -291,7 +291,7 @@ async def update_campaign(
         raise HTTPException(status_code=400, detail="No fields to update")
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("marketing_campaigns")
             .update(updates)
@@ -321,7 +321,7 @@ async def delete_campaign(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("marketing_campaigns")
             .delete()
@@ -356,7 +356,7 @@ async def _send_campaign_background(
     state.
     """
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         total_sent = 0
         total_failed = 0
         campaign_type = campaign["type"]
@@ -467,7 +467,7 @@ async def _send_campaign_background(
             campaign_id,
         )
         try:
-            db_bg = get_supabase()
+            db_bg = get_service_supabase()
             db_bg.table("marketing_campaigns").update(
                 {
                     "status": "failed",
@@ -504,7 +504,7 @@ async def send_campaign(
         raise HTTPException(status_code=403, detail="Campaign sending requires a paid plan")
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Fetch the campaign
         campaign_result = (
@@ -581,7 +581,7 @@ async def send_campaign(
             "Failed to initiate campaign %s for tenant %s", campaign_id, tenant_id
         )
         try:
-            db = get_supabase()
+            db = get_service_supabase()
             db.table("marketing_campaigns").update(
                 {
                     "status": "failed",
@@ -608,7 +608,7 @@ async def get_campaign_analytics(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Verify campaign belongs to tenant
         campaign_result = (
@@ -754,7 +754,7 @@ async def estimate_recipients(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         leads = _query_target_leads(db, tenant_id, body.model_dump() if body else None)
         return {"estimated_recipients": len(leads)}
     except Exception:
@@ -782,7 +782,7 @@ async def generate_campaign_email(
             detail=f"Invalid campaign_type. Must be one of: {', '.join(sorted(VALID_CAMPAIGN_CONTENT_TYPES))}",
         )
 
-    db = get_supabase()
+    db = get_service_supabase()
     business_name, business_type = get_business_context(db, tenant_id)
     biz_context = f" for {business_name}" + (
         f", a {business_type}" if business_type else ""

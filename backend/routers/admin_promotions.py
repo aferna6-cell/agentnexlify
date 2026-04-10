@@ -12,7 +12,7 @@ from starlette.requests import Request
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ async def list_promotions(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         query = (
             db.table("admin_promotions")
@@ -151,7 +151,7 @@ async def create_promotion(
         )
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Verify tenant exists
         tenant_result = (
@@ -230,7 +230,7 @@ async def get_promotion(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         result = (
             db.table("admin_promotions")
@@ -271,7 +271,7 @@ async def update_promotion(
         raise HTTPException(status_code=400, detail="No fields to update")
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         # Get current promotion to know tenant_id
         current = (
@@ -319,7 +319,7 @@ async def delete_promotion(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         result = (
             db.table("admin_promotions")
@@ -348,7 +348,7 @@ async def expire_promotion(
     _verify_admin_secret(x_api_secret)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         now = datetime.now(timezone.utc).isoformat()
         result = (

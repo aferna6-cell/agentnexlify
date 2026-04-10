@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ async def fire_event(
         logger.warning("Webhook daily limit reached for tenant %s", tenant_id)
         return
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("webhooks")
@@ -120,7 +120,7 @@ async def _deliver(
     if webhook.get("secret"):
         headers["X-Webhook-Signature"] = _sign_payload(payload_bytes, webhook["secret"])
 
-    db = get_supabase()
+    db = get_service_supabase()
     success = False
     status_code = None
     response_body = ""

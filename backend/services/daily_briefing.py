@@ -14,7 +14,7 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
@@ -48,7 +48,7 @@ async def send_daily_briefings() -> int:
 
     Returns count of briefings sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     today_iso = now.date().isoformat()
     sent = 0

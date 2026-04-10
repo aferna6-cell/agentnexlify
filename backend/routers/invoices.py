@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.tenant_scope import tenant_table
@@ -262,7 +262,7 @@ async def invoice_stats(
     """Invoice summary statistics: outstanding balance, paid total, overdue count, avg days to pay."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             tenant_table(db, "invoices", tenant_id)
@@ -322,7 +322,7 @@ async def create_invoice_from_bid(
     """Create an invoice by copying items and amounts from an accepted bid."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the bid
     try:
@@ -421,7 +421,7 @@ async def list_invoices(
     """List invoices for a tenant. Joins lead name for display."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         query = (
             tenant_table(db, "invoices", tenant_id)
@@ -484,7 +484,7 @@ async def create_invoice(
     if req.deposit_amount > total:
         raise HTTPException(status_code=400, detail="deposit_amount cannot exceed invoice total")
 
-    db = get_supabase()
+    db = get_service_supabase()
     invoice_number = await _get_next_invoice_number(db, tenant_id)
 
     data: dict = {
@@ -559,7 +559,7 @@ async def list_item_templates(
 ):
     """List all item templates for a tenant."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         tenant_table(db, "invoice_item_templates", tenant_id)
         .select("*")
@@ -580,7 +580,7 @@ async def create_item_template(
 ):
     """Create a reusable line item template."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = tenant_table(db, "invoice_item_templates", tenant_id).insert({
         "tenant_id": tenant_id,
         "description": req.description,
@@ -603,7 +603,7 @@ async def update_item_template(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         tenant_table(db, "invoice_item_templates", tenant_id)
         .update(updates)
@@ -624,7 +624,7 @@ async def delete_item_template(
 ):
     """Soft-delete an item template."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         tenant_table(db, "invoice_item_templates", tenant_id)
         .update({"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()})
@@ -651,7 +651,7 @@ async def get_invoice(
     """Get a single invoice with lead details."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             tenant_table(db, "invoices", tenant_id)
@@ -702,7 +702,7 @@ async def update_invoice(
     """Update an invoice. Only allowed when status is 'draft'."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify invoice exists and is in draft status
     try:
@@ -784,7 +784,7 @@ async def delete_invoice(
     """Delete an invoice. Only allowed when status is 'draft'."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify invoice exists and is in draft status
     try:
@@ -832,7 +832,7 @@ async def send_invoice(
     """
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch invoice
     try:
@@ -995,7 +995,7 @@ async def mark_invoice_paid(
     """Manually mark an invoice as paid."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Verify the invoice belongs to this tenant
     try:
@@ -1066,7 +1066,7 @@ async def record_partial_payment(
 ):
     """Record a partial payment against an invoice."""
     verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load current invoice
     inv = tenant_table(db, "invoices", tenant_id).select("total, amount_paid, status").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
@@ -1121,7 +1121,7 @@ async def bulk_send_invoices(
     if len(req.invoice_ids) > 50:
         raise HTTPException(status_code=400, detail="Maximum 50 invoices per bulk send")
 
-    db = get_supabase()
+    db = get_service_supabase()
     sent = 0
     failed = 0
     errors = []

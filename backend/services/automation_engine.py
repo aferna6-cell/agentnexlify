@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from typing import Any
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.email_sender import (
     build_branded_email_html,
     build_unsubscribe_url,
@@ -41,7 +41,7 @@ async def trigger_sequence(
     trigger_context: dict[str, Any] | None = None,
 ) -> int:
     """Find matching active sequences and enroll the lead. Returns count of enrollments created."""
-    db = get_supabase()
+    db = get_service_supabase()
     trigger_context = trigger_context or {}
 
     # Find active sequences for this trigger event
@@ -130,7 +130,7 @@ async def trigger_sequence(
 
 async def process_pending_steps() -> int:
     """Process all pending automation steps that are due. Returns count processed."""
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc).isoformat()
 
     # Find executions that are due
@@ -156,7 +156,7 @@ async def process_pending_steps() -> int:
 
 async def execute_step(execution_id: str) -> None:
     """Execute the current step of an automation execution."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load execution
     exec_result = (
@@ -637,7 +637,7 @@ async def check_no_response_leads() -> int:
 
     Returns count of sequences triggered.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(hours=24)
     triggered = 0
@@ -842,7 +842,7 @@ async def send_appointment_reminders() -> int:
     had a reminder sent yet (tracked via notes field with reminder tags).
     Returns count of reminders sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     sent = 0
 
@@ -1055,7 +1055,7 @@ async def send_rebook_suggestions() -> int:
     Checks completed appointments from 24-48 hours ago. Sends one rebook
     suggestion per appointment. Deduped via activity_log.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     sent = 0
 
@@ -1206,7 +1206,7 @@ async def send_aftercare_instructions() -> int:
 
     Deduped via activity_log (aftercare_sent per appointment).
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     sent = 0
 
@@ -1333,7 +1333,7 @@ async def send_pending_review_requests() -> int:
 
     Returns count of review requests sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     sent = 0
 
@@ -1808,7 +1808,7 @@ async def send_monthly_reports() -> int:
 
     Returns count of reports sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     cutoff = (now - timedelta(days=28)).isoformat()
     month_start = (now - timedelta(days=30)).isoformat()
@@ -2013,7 +2013,7 @@ async def send_portal_links() -> int:
     When an appointment is marked 'completed' and the lead has a portal token,
     auto-send an email with the portal link. Tracks delivery via activity_log.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     sent = 0
 
     try:
@@ -2136,7 +2136,7 @@ async def send_csat_surveys() -> int:
     Checks for conversations that ended 1-2 hours ago (to give a cooling period)
     where the lead has an email and no survey has been sent yet.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     window_start = (now - timedelta(hours=2)).isoformat()
     window_end = (now - timedelta(hours=1)).isoformat()
@@ -2247,7 +2247,7 @@ async def check_new_reviews() -> int:
 
     Returns count of alerts sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     cutoff = (now - timedelta(seconds=60)).isoformat()
     sent = 0
@@ -2346,7 +2346,7 @@ async def send_onboarding_emails() -> int:
     Uses activity_log to track which emails have been sent (avoids duplicates).
     Returns count of emails sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     sent = 0
 
@@ -2444,7 +2444,7 @@ async def send_invoice_payment_reminders() -> int:
 
     Returns count of reminders sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     today = now.date().isoformat()
     tomorrow = (now.date() + timedelta(days=1)).isoformat()
@@ -2644,7 +2644,7 @@ async def send_weekly_intelligence_briefs() -> int:
     """
     from backend.services.llm_runtime import call_claude_messages_sync
 
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
 
     # Only run on Mondays (weekday() == 0)
@@ -2947,7 +2947,7 @@ async def send_weekly_digest() -> int:
 
     Returns count of emails sent.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
 
     # Only run on Fridays (weekday() == 4)
@@ -3151,7 +3151,7 @@ async def send_birthday_greetings() -> int:
     Deduped via activity_log (birthday_greeting_{year} per lead).
     Runs daily, checks all tenants with paid plans.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     today_mmdd = now.strftime("%m-%d")
     current_year = now.year
@@ -3268,7 +3268,7 @@ async def process_recurring_invoices() -> int:
     """
     from datetime import date
 
-    db = get_supabase()
+    db = get_service_supabase()
     today_str = date.today().isoformat()
 
     try:
@@ -3439,7 +3439,7 @@ async def evaluate_trigger(
     Returns (matches, lead_data) where lead_data is the lead record if a lead
     was involved in the evaluation.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     context = context or {}
     lead_data = None
 
@@ -3647,7 +3647,7 @@ async def execute_automation_rule(
 
     Returns a dict with status, actions_run, and error_message.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     context = context or {}
     start_time = datetime.now(timezone.utc)
 
@@ -3769,7 +3769,7 @@ async def _execute_action(
     context: dict,
 ) -> dict:
     """Execute a single automation action and return result."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     if action_type == "send_email":
         if not lead_data or not lead_data.get("email"):
@@ -3942,7 +3942,7 @@ async def _send_campaign_for_rule(
     try:
         from backend.routers.marketing_campaigns import _send_campaign_background
 
-        db = get_supabase()
+        db = get_service_supabase()
         campaign_result = (
             tenant_table(db, "marketing_campaigns", tenant_id)
             .select("*")
@@ -3960,7 +3960,7 @@ async def _send_campaign_for_rule(
 
 async def check_lead_captured_triggers(lead_id: str) -> int:
     """Check and fire automation rules when a lead is captured."""
-    db = get_supabase()
+    db = get_service_supabase()
     triggered = 0
 
     try:
@@ -4016,7 +4016,7 @@ async def check_tag_triggers(
     tenant_id: str, lead_id: str, tag: str, added: bool = True
 ) -> int:
     """Check and fire automation rules when a tag is added or removed from a lead."""
-    db = get_supabase()
+    db = get_service_supabase()
     triggered = 0
     trigger_type = "tag_added" if added else "tag_removed"
 
@@ -4067,7 +4067,7 @@ async def check_form_submission_triggers(
     submission_id: str, form_id: str | None = None
 ) -> int:
     """Check and fire automation rules when a form is submitted."""
-    db = get_supabase()
+    db = get_service_supabase()
     triggered = 0
 
     try:
@@ -4150,7 +4150,7 @@ async def check_appointment_triggers(
     appointment_id: str, completed: bool = False
 ) -> int:
     """Check and fire automation rules when an appointment is completed."""
-    db = get_supabase()
+    db = get_service_supabase()
     triggered = 0
 
     try:
@@ -4228,7 +4228,7 @@ async def schedule_automation_check() -> int:
     Called every 5 minutes from the automation loop to evaluate
     scheduled_daily and scheduled_weekly triggers.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     now = datetime.now(timezone.utc)
     triggered = 0
 

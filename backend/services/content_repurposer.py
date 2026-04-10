@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 import httpx
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages_sync
 
 logger = logging.getLogger(__name__)
@@ -306,7 +306,7 @@ async def connect_outputs(
     Returns: {"social_post_ids": [...], "email_sequence_id": str | None}
     """
     if db is None:
-        db = get_supabase()
+        db = get_service_supabase()
 
     result = {"social_post_ids": [], "email_sequence_id": None}
 

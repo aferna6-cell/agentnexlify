@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.content_repurposer import extract_source, repurpose, connect_outputs
 
@@ -42,7 +42,7 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
 
 
 def _verify_plan(claims: dict) -> None:
-    db = get_supabase()
+    db = get_service_supabase()
     tenant = db.table("tenants").select("plan").eq("id", claims["tenant_id"]).single().execute()
     if not tenant.data or tenant.data.get("plan") not in ALLOWED_PLANS:
         raise HTTPException(
@@ -55,7 +55,7 @@ async def _run_repurpose_job(
     job_id: str, tenant_id: str, source_type: str, source_input: str, tone: str, formats: list[str]
 ):
     """Background task: extract source, generate content, update job."""
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         source = await extract_source(source_type, source_input)
         outputs = await repurpose(
@@ -97,7 +97,7 @@ async def create_repurpose_job(
         if fmt not in VALID_FORMATS:
             raise HTTPException(status_code=400, detail=f"Invalid format: {fmt}. Must be one of: {VALID_FORMATS}")
 
-    db = get_supabase()
+    db = get_service_supabase()
     job = db.table("repurpose_jobs").insert({
         "tenant_id": tenant_id,
         "source_type": req.source_type,
@@ -126,7 +126,7 @@ async def list_repurpose_jobs(
     _verify_tenant(claims, tenant_id)
     _verify_plan(claims)
 
-    db = get_supabase()
+    db = get_service_supabase()
     resp = (
         db.table("repurpose_jobs")
         .select("id, source_type, source_title, tone, status, created_via, created_at")
@@ -148,7 +148,7 @@ async def get_repurpose_job(
     _verify_tenant(claims, tenant_id)
     _verify_plan(claims)
 
-    db = get_supabase()
+    db = get_service_supabase()
     resp = db.table("repurpose_jobs").select("*").eq("id", job_id).eq("tenant_id", tenant_id).execute()
     if not resp.data:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -174,7 +174,7 @@ async def update_repurpose_job(
     if not update_data:
         raise HTTPException(status_code=400, detail="Nothing to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     resp = db.table("repurpose_jobs").update(update_data).eq("id", job_id).eq("tenant_id", tenant_id).execute()
     if not resp.data:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -197,7 +197,7 @@ async def connect_repurpose_outputs(
         if t not in valid_targets:
             raise HTTPException(status_code=400, detail=f"Invalid target: {t}. Must be one of: {valid_targets}")
 
-    db = get_supabase()
+    db = get_service_supabase()
     job = db.table("repurpose_jobs").select("outputs, status").eq("id", job_id).eq("tenant_id", tenant_id).execute()
     if not job.data:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -219,7 +219,7 @@ async def delete_repurpose_job(
     """Delete a repurpose job."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     resp = db.table("repurpose_jobs").delete().eq("id", job_id).eq("tenant_id", tenant_id).execute()
     if not resp.data:
         raise HTTPException(status_code=404, detail="Job not found")

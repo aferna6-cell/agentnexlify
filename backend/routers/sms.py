@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
@@ -37,7 +37,7 @@ async def send_sms_endpoint(
 ):
     tenant_id = claims["tenant_id"]
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch live plan from DB (not JWT) for accurate rate limiting
     tenant_result = db.table("tenants").select("plan").eq("id", tenant_id).limit(1).execute()
@@ -148,7 +148,7 @@ async def initiate_sms_conversation(
     # Verify the authenticated tenant matches the path parameter
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load tenant — verify they have a provisioned Twilio number
     try:

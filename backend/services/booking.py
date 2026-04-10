@@ -7,7 +7,7 @@ import logging
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ DEFAULT_HOURS = {
 
 def get_business_hours(tenant_id: str) -> dict | None:
     """Fetch business hours config for a tenant. Returns None if not configured."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         tenant_table(db, "business_hours", tenant_id)
         .select("*")
@@ -39,7 +39,7 @@ def get_business_hours(tenant_id: str) -> dict | None:
 
 def upsert_business_hours(tenant_id: str, data: dict) -> dict:
     """Create or update business hours for a tenant."""
-    db = get_supabase()
+    db = get_service_supabase()
     existing = get_business_hours(tenant_id)
 
     payload = {
@@ -166,7 +166,7 @@ def generate_available_slots(
     day_start_utc = datetime.combine(target_date, day_start, tzinfo=tz).astimezone(timezone.utc)
     day_end_utc = datetime.combine(target_date, day_end, tzinfo=tz).astimezone(timezone.utc)
 
-    db = get_supabase()
+    db = get_service_supabase()
     booked = (
         tenant_table(db, "appointments", tenant_id)
         .select("start_time, end_time")
@@ -221,7 +221,7 @@ def create_appointment(
     Uses a pre-insert overlap check plus DB EXCLUDE constraint as safety net.
     Raises ValueError on conflict so callers can return 409.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Pre-insert overlap check — catch most races before hitting DB constraint
     existing = (
@@ -316,7 +316,7 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
     from backend.services.email_sender import send_email
     from backend.services.twilio_service import send_sms
 
-    db = get_supabase()
+    db = get_service_supabase()
     tenant = tenant_table(db, "tenants", tenant_id).select("business_name, business_phone").limit(1).execute()
     business_name = tenant.data[0]["business_name"] if tenant.data else "Our business"
     business_phone = (tenant.data[0].get("business_phone") or "") if tenant.data else ""
@@ -387,7 +387,7 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
     if not email:
         return None
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Check for existing lead with same email
     existing = (
@@ -432,7 +432,7 @@ def create_recurring_series(
     Returns:
         List of created appointment dicts (excluding parent).
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the parent appointment
     parent_result = (
@@ -519,7 +519,7 @@ def list_appointments(
     status: str | None = None,
 ) -> list[dict]:
     """List appointments with optional filters."""
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         tenant_table(db, "appointments", tenant_id)
         .select("*")
@@ -539,7 +539,7 @@ def list_appointments(
 
 def update_appointment(tenant_id: str, appointment_id: str, data: dict) -> dict:
     """Update appointment fields (status, notes, reschedule)."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         tenant_table(db, "appointments", tenant_id)
         .update(data)
@@ -573,7 +573,7 @@ def update_appointment(tenant_id: str, appointment_id: str, data: dict) -> dict:
 def cancel_appointment(tenant_id: str, appointment_id: str) -> dict:
     """Soft-delete: set status to cancelled."""
     # Fetch appointment first to get google_event_id
-    db = get_supabase()
+    db = get_service_supabase()
     existing = (
         tenant_table(db, "appointments", tenant_id)
         .select("google_event_id")

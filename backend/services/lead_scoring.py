@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ def _compute_decay(
 
 def score_lead(lead_id: str) -> dict[str, Any]:
     """Score a single lead and persist the result. Returns scoring details."""
-    db = get_supabase()
+    db = get_service_supabase()
 
     # 1. Fetch lead
     lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
@@ -264,7 +264,7 @@ def score_lead(lead_id: str) -> dict[str, Any]:
 
 def score_all_leads(tenant_id: str) -> dict[str, Any]:
     """Re-score all leads for a tenant. Returns summary."""
-    db = get_supabase()
+    db = get_service_supabase()
     result = db.table("leads").select("id").eq("client_id", tenant_id).execute()
     lead_ids = [r["id"] for r in (result.data or [])]
 

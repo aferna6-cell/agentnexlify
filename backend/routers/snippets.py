@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
@@ -45,7 +45,7 @@ async def list_snippets(
     """List snippets, sorted by usage_count descending (most-used first)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("snippets")
         .select("*")
@@ -74,7 +74,7 @@ async def get_snippet(
     """Get a single snippet and increment its usage count."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("snippets")
         .select("*")
@@ -108,7 +108,7 @@ async def create_snippet(
     """Create a new snippet."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     data = {
         "tenant_id": tenant_id,
         "title": req.title.strip(),
@@ -151,7 +151,7 @@ async def update_snippet(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("snippets")
         .update(updates)
@@ -173,7 +173,7 @@ async def delete_snippet(
     """Delete a snippet."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     db.table("snippets").delete().eq("id", snippet_id).eq("tenant_id", tenant_id).execute()
     return {"deleted": True}
 
@@ -191,7 +191,7 @@ async def suggest_snippet(
     """AI suggests the best matching snippet based on conversation context."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     snippets_result = (
         db.table("snippets")
         .select("id, title, content, category")

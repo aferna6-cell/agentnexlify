@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ async def _handle_bounce(event_data: dict, event_type: str) -> None:
         logger.warning("Resend bounce event with no 'to' addresses")
         return
 
-    db = get_supabase()
+    db = get_service_supabase()
     now_iso = datetime.now(timezone.utc).isoformat()
 
     # Try to identify the originating tenant from the Resend email_id

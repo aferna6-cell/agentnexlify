@@ -138,6 +138,7 @@ def main() -> int:
 
     discovered_file_ids: list[str] = []
     final_text_chunks: list[str] = []
+    tool_b64: str | None = None
 
     try:
         for event in stream:
@@ -156,7 +157,7 @@ def main() -> int:
                     discovered_file_ids.append(fid)
                     logger.info("    >>> captured file_id from session event: %s", fid)
 
-            # Pattern B: tool_result content carries a file block
+            # Pattern B: tool_result content carries a file block OR raw base64
             if event.get("type") == "agent.tool_result":
                 for block in event.get("content") or []:
                     if isinstance(block, dict):
@@ -167,6 +168,19 @@ def main() -> int:
                                 "    >>> captured file_id from tool_result: %s",
                                 fid,
                             )
+                        # Authoritative base64 capture (2026-04-09 fix) —
+                        # the `base64 -w0` tool output is ground truth;
+                        # the LLM's echoed content_base64 is often corrupt.
+                        if block.get("type") == "text":
+                            t = (block.get("text") or "").strip()
+                            if len(t) >= 40 and (
+                                t.startswith("UEsDB") or t.startswith("JVBERi0")
+                            ):
+                                tool_b64 = t
+                                logger.info(
+                                    "    >>> captured %d-char base64 from tool_result",
+                                    len(t),
+                                )
 
             # Pattern C: agent.message text
             if event.get("type") == "agent.message":
@@ -213,16 +227,28 @@ def main() -> int:
     }
     logger.info("Parsed final JSON (redacted): %s", pformat(redacted))
 
-    b64 = parsed.get("content_base64")
+    # Source selection: prefer tool_result base64 over agent reply
+    # (see backend/services/document_drafting._scan_tool_result_for_base64).
+    b64_source = "tool_result" if tool_b64 else "agent_reply"
+    b64 = tool_b64 or parsed.get("content_base64")
     if not isinstance(b64, str) or not b64:
-        logger.error("Agent reply did not include content_base64.")
+        logger.error("no content_base64 available in tool_result or agent reply")
         return 2
+
+    # Strip whitespace the agent may have introduced despite `base64 -w0` —
+    # production `document_drafting.draft_document` does the same.
+    b64 = re.sub(r"\s+", "", b64)
+    logger.info("decoding base64 from %s (%d chars)", b64_source, len(b64))
 
     import base64
     try:
         raw = base64.b64decode(b64, validate=True)
     except Exception as exc:
         logger.error("content_base64 failed to decode: %s", exc)
+        logger.error(
+            "length after whitespace strip: %d (mod 4 = %d, source=%s)",
+            len(b64), len(b64) % 4, b64_source,
+        )
         return 2
 
     logger.info("Decoded %d bytes", len(raw))

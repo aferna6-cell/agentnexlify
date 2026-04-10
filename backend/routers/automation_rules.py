@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -207,7 +207,7 @@ async def list_automation_rules(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         query = (
             db.table("automation_rules")
             .select("*")
@@ -265,7 +265,7 @@ async def create_automation_rule(
             )
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         payload = {
             "tenant_id": tenant_id,
             "name": req.name,
@@ -303,7 +303,7 @@ async def get_tenant_automation_logs(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         query = (
             db.table("automation_rule_executions")
@@ -352,7 +352,7 @@ async def get_automation_rule(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("automation_rules")
             .select("*")
@@ -412,7 +412,7 @@ async def update_automation_rule(
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("automation_rules")
             .update(updates)
@@ -440,7 +440,7 @@ async def delete_automation_rule(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         result = (
             db.table("automation_rules")
             .delete()
@@ -467,7 +467,7 @@ async def toggle_automation_rule(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         rule_result = (
             db.table("automation_rules")
@@ -512,7 +512,7 @@ async def get_automation_rule_logs(
     verify_tenant(claims, tenant_id)
 
     try:
-        db = get_supabase()
+        db = get_service_supabase()
 
         rule_result = (
             db.table("automation_rules")

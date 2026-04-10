@@ -14,7 +14,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import WidgetChatRequest, WidgetChatResponse
 from backend.services.activity import log_activity
 from backend.services.llm_runtime import (
@@ -108,7 +108,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         })
 
     # Get DB handle for conversation operations
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Increment usage counter only for new conversations
     # Uses compare-and-swap to avoid lost increments under concurrent requests.
@@ -360,7 +360,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
     # 6. Build system prompt with compact, intent-aware context.
     tid = tenant["id"]
-    db = get_supabase()
+    db = get_service_supabase()
     context_started = perf_counter()
     intent_window = _build_intent_window(req.message, messages)
     needs_job_context = _needs_job_context(intent_window)

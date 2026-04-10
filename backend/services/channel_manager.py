@@ -9,7 +9,7 @@ Schema notes (confirmed by live schema and migration 057):
 import logging
 from datetime import datetime, timezone
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def ingest_channel_message(
         A dict with keys ``tenant_id`` and ``conversation_id`` on success, or
         ``None`` when the page_id cannot be resolved to a tenant.
     """
-    db = get_supabase()
+    db = get_service_supabase()
 
     # 1. Resolve tenant from the integration record
     try:

@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from backend.config import settings
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant, require_role
 
@@ -106,7 +106,7 @@ async def list_bids(
     """List bids for a tenant with optional status filter and pagination."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         query = (
             db.table("bids")
@@ -159,7 +159,7 @@ async def create_bid(
     if req.lead_id:
         data["lead_id"] = req.lead_id
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = db.table("bids").insert(data).execute()
     except Exception:
@@ -179,7 +179,7 @@ async def bid_stats(
     """Return bid statistics: total bids, win rate, average value, pipeline value."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("bids")
@@ -227,7 +227,7 @@ async def list_bid_templates(
     """List bid templates for a tenant."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("bid_templates")
@@ -259,7 +259,7 @@ async def create_bid_template(
         "default_items": [item.model_dump() for item in req.default_items],
     }
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = db.table("bid_templates").insert(data).execute()
     except Exception:
@@ -280,7 +280,7 @@ async def delete_bid_template(
     """Delete a bid template."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         db.table("bid_templates").delete().eq("id", template_id).eq(
             "tenant_id", tenant_id
@@ -306,7 +306,7 @@ async def ai_generate_bid(
     _verify_tenant(claims, tenant_id)
 
     # Fetch business context
-    db = get_supabase()
+    db = get_service_supabase()
     biz_name = ""
     biz_type = ""
     city = ""
@@ -421,7 +421,7 @@ async def get_bid(
     """Get a single bid by ID."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("bids")
@@ -474,7 +474,7 @@ async def update_bid(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("bids")
@@ -501,7 +501,7 @@ async def delete_bid(
     """Delete a bid."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         db.table("bids").delete().eq("id", bid_id).eq(
             "tenant_id", tenant_id
@@ -523,7 +523,7 @@ async def update_bid_status(
     """Update a bid's status (draft -> sent -> viewed -> accepted/rejected/expired)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch current bid to validate status transition
     try:
@@ -790,7 +790,7 @@ async def generate_bid_pdf(
     """
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the bid
     try:

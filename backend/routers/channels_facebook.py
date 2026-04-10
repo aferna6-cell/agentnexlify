@@ -35,7 +35,7 @@ from pydantic import BaseModel
 
 from backend.config import settings
 from backend.dependencies import verify_tenant
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.channel_manager import ingest_channel_message
 
@@ -284,7 +284,7 @@ async def facebook_oauth_callback(
         raise HTTPException(status_code=400, detail="Missing code or state parameter")
 
     tenant_id, nonce = _decode_oauth_state(state)
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         state_row = (
             db.table("oauth_states")
@@ -471,7 +471,7 @@ async def get_facebook_auth_url(
     state = _encode_oauth_state(tenant_id, nonce)
 
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES)
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         db.table("oauth_states").insert({
             "provider": "facebook",
@@ -502,7 +502,7 @@ async def facebook_connection_status(
     """Check whether this tenant has a connected Facebook Page."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     try:
         result = (
             db.table("integrations")
@@ -539,7 +539,7 @@ async def facebook_disconnect(
     """Remove the Facebook integration and unsubscribe the page from webhooks."""
     verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch the current integration to get page_id and page_access_token
     try:

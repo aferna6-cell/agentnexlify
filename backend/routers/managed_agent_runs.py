@@ -35,7 +35,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.document_drafting import (
     DocumentDraftingError,
@@ -395,7 +395,7 @@ def _fetch_drafted_document_bytes(tenant_id: str, document_id: str) -> tuple[byt
     """Load a drafted document's bytes + filename + type. Enforces
     tenant isolation. Raises HTTPException on missing rows.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("documents")
         .select("id, tenant_id, file_name, file_type, file_bytes, generated_by_agent")

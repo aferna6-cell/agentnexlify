@@ -148,9 +148,9 @@ def _reserve_send_quota(tenant_id: str) -> bool:
         return False
 
     try:
-        from backend.models.database import get_supabase
+        from backend.models.database import get_service_supabase
 
-        result = get_supabase().rpc(
+        result = get_service_supabase().rpc(
             "reserve_email_send_quota",
             {"p_tenant_id": tenant_id, "p_daily_limit": DAILY_LIMIT},
         ).execute()

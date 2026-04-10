@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import send_email, build_unsubscribe_url
@@ -72,7 +72,7 @@ async def list_reviews(
     """List reviews with optional filters."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     query = (
         db.table("reviews")
         .select("*")
@@ -119,7 +119,7 @@ async def get_response_stats(
     """
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     stats = ReviewResponseStats()
 
     try:
@@ -196,7 +196,7 @@ async def create_review(
     """Manually add a review (for platforms without API integration)."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Dedup by external_review_id if provided
     if req.external_review_id:
@@ -260,7 +260,7 @@ async def update_review(
 
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("reviews")
         .update(updates)
@@ -283,7 +283,7 @@ async def delete_review(
     """Delete a review."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("reviews")
         .delete()
@@ -307,7 +307,7 @@ async def generate_ai_draft(
     """Generate an AI draft response for a review using Claude."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
     review_result = (
         db.table("reviews")
         .select("*")
@@ -398,7 +398,7 @@ async def send_review_request(
     """Send a one-click review request to a specific lead via email and/or SMS."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Load lead
     lead_result = db.table("leads").select("name, email, phone, unsubscribed").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()

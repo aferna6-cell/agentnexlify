@@ -11,7 +11,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.limiter import limiter
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 from backend.models.schemas import (
     WebhookCreateRequest,
     WebhookListResponse,
@@ -71,7 +71,7 @@ async def webhook_events_schema():
 @router.get("/{tenant_id}", response_model=list[WebhookListResponse])
 async def list_webhooks(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("webhooks")
         .select("id, tenant_id, name, url, events, is_active, last_triggered_at, failure_count, created_at")
@@ -99,7 +99,7 @@ async def create_webhook(
         )
 
     # Limit webhooks per tenant
-    db = get_supabase()
+    db = get_service_supabase()
     existing = (
         db.table("webhooks")
         .select("id", count="exact")
@@ -147,7 +147,7 @@ async def update_webhook(
                 detail=f"Invalid events: {invalid}. Valid: {sorted(SUPPORTED_EVENTS)}",
             )
 
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("webhooks")
         .update(updates)
@@ -168,7 +168,7 @@ async def toggle_webhook(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     current = (
         db.table("webhooks")
@@ -205,7 +205,7 @@ async def delete_webhook(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
     result = (
         db.table("webhooks")
         .delete()
@@ -224,7 +224,7 @@ async def recent_logs(
     limit: int = Query(20, ge=1, le=100),
 ):
     _verify_tenant(claims, tenant_id)
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Get webhook IDs for this tenant
     webhooks = (
@@ -373,7 +373,7 @@ async def test_webhook(
     """Send a sample event to a webhook URL to verify it is working."""
     _verify_tenant(claims, tenant_id)
 
-    db = get_supabase()
+    db = get_service_supabase()
 
     # Fetch webhook and verify ownership
     try:

@@ -4,7 +4,7 @@
 import logging
 from typing import Any
 
-from backend.models.database import get_supabase
+from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ def log_activity(
 ) -> None:
     """Insert a row into activity_log. Silently swallows errors."""
     try:
-        db = get_supabase()
+        db = get_service_supabase()
         row: dict[str, Any] = {
             "tenant_id": tenant_id,
             "activity_type": activity_type,

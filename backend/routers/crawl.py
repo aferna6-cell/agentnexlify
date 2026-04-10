@@ -24,8 +24,8 @@ async def trigger_crawl(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    from backend.models.database import get_supabase
-    db = get_supabase()
+    from backend.models.database import get_service_supabase
+    db = get_service_supabase()
 
     # Get tenant's website_url (or fall back to business page)
     result = (
