@@ -1304,3 +1304,85 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `backend/routers/pipeline_automations.py`
 **Fix:** Added `import html`; wrapped every interpolated value (`business_name`, `lead_name`, `old_stage`, `new_stage`, `message`) in `html.escape()` before interpolating into the subject and body HTML.
 **Prevention:** All new email HTML construction must either (a) use `render_template()` from `email_sender.py`, or (b) pre-escape values with `html.escape()`. Grep for `f"<.*{[^}]+}` in `backend/` after touching email code.
+
+---
+
+### 72. Managed Agents session_id response returned wrong identifier
+**Date:** 2026-04-09 (Commit 91651b0)
+**Symptom:** `POST /api/v1/managed-agents/{tenant_id}/lead-qualify` response contained `terminal.last_event_id` in the `session_id` field instead of the actual Anthropic session ID, mixing two different identifiers.
+**Root Cause:** `managed_agents.py` returned `SessionTerminalState` without threading the real session ID through. The response serialized whichever field happened to be there.
+**Files Changed:** `backend/services/managed_agents.py`, `backend/routers/managed_agent_runs.py`
+**Fix:** Threaded real session ID through `SessionTerminalState.session_id` and surfaced it in the API response.
+**Prevention:** When wrapping external API responses, explicitly map each field — don't assume field names align. Add regression tests for response shape contracts.
+
+*Auto-logged 2026-04-09 evening*
+
+---
+
+### 73. HTTP header injection via Content-Disposition filename
+**Date:** 2026-04-09 (Commit 91651b0)
+**Symptom:** `GET /managed-agents/.../download/{file_id}` built `Content-Disposition: attachment; filename="{file_name}"` via raw f-string from a DB value. CR/LF or embedded double-quotes in the filename would allow HTTP response header injection / response splitting.
+**Root Cause:** No sanitization of `file_name` before interpolation into HTTP headers.
+**Files Changed:** `backend/routers/managed_agent_runs.py`
+**Fix:** Added `_safe_content_disposition()` — strips control chars, neutralizes quotes/backslashes, adds RFC 6266 `filename*=UTF-8''…` for non-ASCII. Regression tests cover CRLF, embedded quote, Unicode, and empty filename.
+**Prevention:** Never interpolate user/DB values into HTTP headers without sanitization. Use dedicated header-safe formatters for Content-Disposition.
+
+*Auto-logged 2026-04-09 evening*
+
+---
+
+### 74. daily_briefing.py swallowed timezone and time-parse errors
+**Date:** 2026-04-09 (Commit 91651b0)
+**Symptom:** Two `except Exception: pass` blocks in `daily_briefing.py` silently swallowed errors from business_hours timezone lookup and appointment time parser. Failed briefings appeared normal but with missing or malformed data.
+**Root Cause:** Broad exception handlers with `pass` instead of logging.
+**Files Changed:** `backend/services/daily_briefing.py`
+**Fix:** Converted both to `logger.debug(..., exc_info=True)`. Fixed appointment row rendering to avoid dangling em-dash when time can't be parsed.
+**Prevention:** Same as bug #69 — no `except Exception: pass`. All exception handlers must log or justify silence. Pre-commit hook extension (backlog item) should flag this pattern.
+
+*Auto-logged 2026-04-09 evening*
+
+---
+
+### 75. score_all_leads() blocking async event loop — stalled all requests
+**Date:** 2026-04-09 (Commit f0a1c37)
+**Symptom:** When `score_all_leads()` ran, all concurrent HTTP requests to the FastAPI server stalled until scoring completed. CRITICAL performance issue on any tenant with >50 leads.
+**Root Cause:** `score_all_leads()` was a synchronous function called directly from an async endpoint, blocking the single-threaded event loop. Every DB query and scoring computation ran synchronously.
+**Files Changed:** `backend/routers/leads.py`
+**Fix:** Dispatched via `run_in_executor()` to move heavy sync work off the async event loop.
+**Prevention:** Any sync function doing significant I/O or computation MUST be dispatched via `run_in_executor()` or `BackgroundTasks` when called from async context. Grep for `def score_` or similar sync patterns called from `async def` endpoints.
+
+*Auto-logged 2026-04-09 evening*
+
+---
+
+### 76. Widget lead scoring dispatched as blocking sync call
+**Date:** 2026-04-09 (Commit f0a1c37)
+**Symptom:** `score_lead_background()` in `widget_lead.py` was called as a direct sync function inside an async handler, blocking the widget chat response until scoring completed.
+**Root Cause:** Direct sync call instead of using FastAPI's `BackgroundTasks.add_task()`.
+**Files Changed:** `backend/routers/widget_lead.py`
+**Fix:** Changed to `BackgroundTasks.add_task()` dispatch so scoring runs after the response is sent.
+**Prevention:** Lead scoring in the widget path must never block the chat response. Any post-capture processing (scoring, AI qualification, tag extraction) goes through BackgroundTasks.
+
+*Auto-logged 2026-04-09 evening*
+
+---
+
+### 77. Hardcoded production URLs in 4 backend routers
+**Date:** 2026-04-09 (Commit f0a1c37)
+**Symptom:** `booking_page.py`, `team.py`, `client_portal.py`, and `auth.py` contained hardcoded Vercel/production URLs (BACKEND_URL env var, invite links, portal links, dashboard links). Local dev and staging environments generated links pointing to production.
+**Root Cause:** URLs were set during initial development and never parameterized via config.
+**Files Changed:** `backend/routers/booking_page.py`, `backend/routers/team.py`, `backend/routers/client_portal.py`, `backend/routers/auth.py`
+**Fix:** Replaced all hardcoded URLs with `settings.api_url` or `settings.frontend_url` from the centralized config.
+**Prevention:** Never hardcode domain names in routers. All external URLs must come from `settings.*`. Grep for `https://.*vercel` or `https://.*railway` in `backend/` periodically.
+
+*Auto-logged 2026-04-09 evening*
+
+---
+
+### 78. Missing HEAD method on /version health check endpoint
+**Date:** 2026-04-09 (Commit f0a1c37)
+**Symptom:** Load balancers sending HEAD requests to `/version` and `/api/v1/version` received 405 Method Not Allowed, causing false health check failures.
+**Root Cause:** Endpoints only registered GET method. Load balancers commonly use HEAD for health probes.
+**Files Changed:** `backend/main.py`
+**Fix:** Added HEAD method support to version endpoints.
+**Prevention:** Health check endpoints should support both GET and HEAD methods. Document this in API conventions.
