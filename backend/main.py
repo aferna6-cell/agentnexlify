@@ -559,10 +559,22 @@ app = FastAPI(
 )
 
 # --- CORS ---
-# allow_origins=["*"] is required because the embeddable widget runs on
-# third-party domains. Dashboard routes are protected by JWT auth in Authorization
-# header, which cannot be sent cross-origin automatically.
-# allow_credentials=False prevents cookie-based CSRF.
+# allow_origins=["*"] is REQUIRED and must stay hard-coded here, because the
+# embeddable widget runs on arbitrary third-party tenant domains that we do
+# not know ahead of time. Dashboard routes are protected by JWT auth in the
+# Authorization header, which browsers do not send cross-origin automatically,
+# and allow_credentials=False prevents cookie-based CSRF.
+#
+# History: a previous revision wired this to `_cors_origins()`, which reads
+# WIDGET_ALLOWED_ORIGINS / CORS_ALLOWED_ORIGINS from the environment. In
+# production Railway had that env var set to the dashboard domains only
+# ("https://app.agentnexlify.com,https://agentnexlify.com"), which caused
+# every widget OPTIONS preflight from tenant customer sites to return 400
+# ("invalid origin"). Widget POSTs then failed with "I'm having trouble
+# connecting" in the browser. Do not re-introduce the env-driven path here —
+# `_cors_origins()` is kept only for the readiness-snapshot indicator
+# (`widget_allowed_origins_explicit`) so ops can still see whether an env
+# override is configured.
 _CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -571,7 +583,7 @@ _CORS_HEADERS = {
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins(),
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
