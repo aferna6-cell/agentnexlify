@@ -1,22 +1,22 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-09 (automated evening routine)
+Updated: 2026-04-10 (automated morning routine)
 
-## Tomorrow's Top 3 Priorities
+## Today's Top 3 Priorities
 
-1. **Review and commit 94 uncommitted files** — Large batch of unstaged changes across 60+ routers, 15+ services, tests, and config. Drift risk HIGH. Review in logical chunks and commit before any new work.
-2. **ROTATE compromised admin API key in Railway** — DAY 6 of exposure. Key committed in 9c87335, scrubbed in d4463d7. Still live in Railway. Agent: **devops** / Human action required. **CRITICAL.**
+1. **ROTATE compromised admin API key in Railway** — DAY 7 of exposure. Key committed in 9c87335, scrubbed in d4463d7. Still live in Railway. Agent: **devops** / Human action required. **CRITICAL.**
+2. **QA the 81-file auto-commit (tenant_scope adoption)** — Commit 11363a1 landed overnight touching 60+ routers. Cross-tenant leak risk if any router lost its tenant scoping. Agent: **qa-tester**.
 3. **Apply migrations 077-100** — 24 pending migrations blocking features (autopilot plan, onboarding wizard, RLS fixes, no-show recovery, daily briefing, AI lead qualification, AI document drafting). Agent: **schema-guardian**.
 
 ## Active Tasks
 
 ### Priority 0 — Security (Immediate Action Required)
 
-- [ ] **ROTATE compromised API key in Railway** — Key committed in 9c87335, scrubbed in d4463d7. Key is still live. DAY 6 of exposure — **CRITICAL**. Agent: **devops** / Human. (Carried from Apr 5)
+- [ ] **ROTATE compromised API key in Railway** — Key committed in 9c87335, scrubbed in d4463d7. Key is still live. DAY 7 of exposure — **CRITICAL**. Agent: **devops** / Human. (Carried from Apr 5)
 
-### Priority 0 — Uncommitted Work (Risk of Drift)
+### Priority 0 — Resolved: Uncommitted Work
 
-- [ ] **Review and commit 94 uncommitted files** — Massive unstaged batch touching backend/dependencies.py, 60+ routers, 15+ services, tests, .env.example. Likely a broad refactor (tenant_scope adoption? import cleanup?). Must be reviewed before new work.
+- [x] **94 uncommitted files committed** — Auto-commit 11363a1 (2026-04-09 20:05) landed 81 files (773 insertions, 548 deletions). Tenant_scope adoption + import cleanup. **QA needed** — see Priority 1.
 
 ### Priority 0 — Schema (Critical / Pre-Launch Blocker)
 
@@ -30,6 +30,7 @@ Updated: 2026-04-09 (automated evening routine)
 
 ### Priority 1 — Critical / QA
 
+- [ ] **QA 81-file auto-commit (11363a1)** — tenant_scope adoption across 60+ routers. Cross-tenant leak = critical. Agent: **qa-tester**. (NEW — Apr 10)
 - [ ] **QA tenant_scope.py end-to-end** — Centralized tenant scoping touching 20+ routers. Bug = cross-tenant leak. Agent: **qa-tester**.
 - [ ] **QA marketing infrastructure** — A/B tests, automation rules, marketing dashboard. Zero QA. Agent: **qa-tester**.
 - [ ] **Verify security fixes (2ab39dd, d7572eb, e2dbf36, 29aca88)** — 25+ security patches. Agent: **qa-tester**.
@@ -100,18 +101,16 @@ Updated: 2026-04-09 (automated evening routine)
 - [x] Bug patterns #64-69 documented
 - [x] Schema-log updated through 098
 
-## Overall Progress (2026-04-09 Evening)
+## Overall Progress (2026-04-10 Morning)
 
-- **Last commit:** f0a1c37 (fix: hard debug session — 10 fixes, 2026-04-09 15:57)
-- **Codebase status:** 94 uncommitted modified files (NEEDS ATTENTION)
-- **Today's commits:** 17 (3 fix, 3 feat, 3 test, 2 security, 5 chore, 1 docs)
-- **Health check:** All green (frontend build 5.00s, widget sync OK, 0 bare excepts)
-- **Silent frontend catches:** 8 (down from 13 — 5 fixed today)
-- **Bug patterns total:** 78 (7 new today: #72-78)
-- **Pending migrations:** 24 (was 22 — added 099-100, none applied)
-- **SECURITY INCIDENT DAY 6:** admin API key — rotate in Railway immediately
-- **New features:** Claude Managed Agents (lead qualification + document drafter)
-- **Key concern:** 94 uncommitted files = immediate priority tomorrow
+- **Last commit:** 11363a1 (chore: auto-commit Claude edits, 2026-04-09 20:05)
+- **Codebase status:** Clean (auto-commit 11363a1 resolved 94-file backlog)
+- **Health check:** All green (frontend build 4.45s, widget sync OK, 0 bare excepts, 0 dangerous imports)
+- **Silent frontend catches:** 8 (stable — same as Apr 9 evening)
+- **Bug patterns total:** 78 (no new overnight)
+- **Pending migrations:** 24 (unchanged — none applied overnight)
+- **SECURITY INCIDENT DAY 7:** admin API key — rotate in Railway immediately
+- **Key concern:** QA the 81-file auto-commit for cross-tenant safety
 
 ---
 
