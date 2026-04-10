@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### FastAPI test stalls from Starlette TestClient + sync auth dependencies
+**Date:** 2026-04-10
+**Symptom:** Backend and root pytest files hang or hit the 30s timeout on auth-protected routes, dependency overrides, or even simple `TestClient(app)` startup in local tests.
+**Root Cause:** The installed FastAPI/Starlette/httpx/anyio stack deadlocked on the Starlette `TestClient` path in this environment. Protected routes were worse because `_get_current_tenant` and test overrides were synchronous, which pushed FastAPI through AnyIO worker threads and amplified the stall.
+**Files Changed:** `backend/tests/conftest.py`, `tests/conftest.py`, `backend/routers/auth.py`, `tests/test_backend_regressions.py`, `tests/test_marketing_infrastructure.py`
+**Fix:** Replaced test usage of Starlette `TestClient` with a lightweight `httpx.ASGITransport` shim in both test trees, converted `_get_current_tenant` and `require_role` checker to async dependencies, and updated auth dependency overrides in root tests to async callables.
+**Prevention:** If FastAPI tests suddenly hang, verify the test transport first before debugging endpoints. Keep cheap auth/header dependencies async, and when overriding async dependencies in tests, override them with async functions instead of sync lambdas.
+
+---
+
 ### Removing module-local `get_supabase` seams breaks shared test fixtures
 **Date:** 2026-04-09
 **Symptom:** Large backend test groups fail during fixture setup with `AttributeError: <module ...> does not have the attribute 'get_supabase'` before any endpoint assertions run.

@@ -16,6 +16,16 @@ TEST_SECRET = "test-secret-key-for-jwt"
 TEST_TENANT_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
 
+async def _tenant_override_claims():
+    return {
+        "tenant_id": TEST_TENANT_ID,
+        "email": "test@example.com",
+        "role": "owner",
+        "plan": "growth",
+        "is_team_member": False,
+    }
+
+
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
@@ -42,13 +52,7 @@ def auth_headers():
 @pytest.fixture
 def tenant_override():
     """Override tenant auth dependency for all requests."""
-    app.dependency_overrides[_get_current_tenant] = lambda: {
-        "tenant_id": TEST_TENANT_ID,
-        "email": "test@example.com",
-        "role": "owner",
-        "plan": "growth",
-        "is_team_member": False,
-    }
+    app.dependency_overrides[_get_current_tenant] = _tenant_override_claims
     yield
     app.dependency_overrides.pop(_get_current_tenant, None)
 

@@ -19,6 +19,10 @@ class _StopAutomationLoop(Exception):
     """Raised by tests to break the infinite automation loop."""
 
 
+async def _owner_claims_override():
+    return {"tenant_id": "tenant-123", "role": "owner"}
+
+
 def test_resend_webhook_route_is_registered():
     """The Resend webhook should be reachable through the main FastAPI app."""
     client = TestClient(app)
@@ -79,7 +83,7 @@ def test_webhook_delivery_route_is_registered_and_returns_summary(mock_supabase,
         ],
     )
     monkeypatch.setattr("backend.routers.webhook_deliveries.get_service_supabase", lambda: mock_supabase)
-    app.dependency_overrides[_get_current_tenant] = lambda: {"tenant_id": "tenant-123", "role": "owner"}
+    app.dependency_overrides[_get_current_tenant] = _owner_claims_override
     client = TestClient(app)
 
     try:
@@ -142,7 +146,7 @@ def test_dashboard_returns_business_profile_for_hvac(mock_supabase, monkeypatch)
     mock_supabase.set_table_data("chat_messages", [])
     mock_supabase.set_table_data("activity_log", [], count=0)
     monkeypatch.setattr("backend.routers.auth.get_service_supabase", lambda: mock_supabase)
-    app.dependency_overrides[_get_current_tenant] = lambda: {"tenant_id": "tenant-123", "role": "owner"}
+    app.dependency_overrides[_get_current_tenant] = _owner_claims_override
     client = TestClient(app)
 
     try:
@@ -227,7 +231,7 @@ def test_onboarding_preserves_existing_widget_customizations_when_fields_are_omi
         return None
 
     monkeypatch.setattr("backend.routers.onboarding._generate_ai_content", _no_ai_content)
-    app.dependency_overrides[_get_current_tenant] = lambda: {"tenant_id": "tenant-123", "role": "owner"}
+    app.dependency_overrides[_get_current_tenant] = _owner_claims_override
     client = TestClient(app)
 
     try:

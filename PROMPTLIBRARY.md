@@ -141,10 +141,11 @@ Each prompt follows this structure:
 - **DO NOT** refactor while debugging — fix first, refactor separately
 - Check if the error is a symptom of a different problem (e.g., missing env var, DB connection)
 - When a test references a missing module, confirm whether the test is orphaned before re-adding deleted production code
+- If FastAPI tests hang, verify the transport/harness before blaming the endpoint. Check `TestClient` compatibility and whether sync dependencies or sync dependency overrides are forcing threadpool execution.
 - Read the `docs/dev-knowledge/bug-patterns.md` — this may be a known issue
 - Check `.claude/agent-comms/` for previous debugging sessions on this topic
 
-**Last improved:** 2026-04-09 — Added stale-reference check for missing modules/functions after dead code sweeps. This debugging pass found orphaned tests that survived intentional service deletion.
+**Last improved:** 2026-04-10 — Added a FastAPI test-harness pitfall: hanging `TestClient` sessions can come from transport incompatibility plus sync dependencies/overrides, not the endpoint logic itself.
 
 ---
 

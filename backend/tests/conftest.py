@@ -1,11 +1,66 @@
 """Shared test fixtures for backend tests."""
 
+import asyncio
+import os
+from unittest.mock import MagicMock
+
+import httpx
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
 
 import backend.models.database as _db_module
+
+os.environ.setdefault("TESTING", "1")
+
 from backend.main import app
+
+_REAL_ASGI_TRANSPORT = httpx.ASGITransport
+_REAL_ASYNC_CLIENT = httpx.AsyncClient
+
+
+class SyncASGITestClient:
+    """Small sync wrapper around httpx.AsyncClient for ASGI app tests.
+
+    Starlette's TestClient currently deadlocks in this environment during
+    lifespan startup, so backend tests issue isolated ASGI requests through
+    httpx instead.
+    """
+
+    def __init__(self, asgi_app):
+        self._app = asgi_app
+
+    __test__ = False
+
+    async def _request(self, method, url, **kwargs):
+        transport = _REAL_ASGI_TRANSPORT(
+            app=self._app,
+            raise_app_exceptions=False,
+        )
+        async with _REAL_ASYNC_CLIENT(
+            transport=transport,
+            base_url="http://testserver",
+        ) as client:
+            return await client.request(method, url, **kwargs)
+
+    def request(self, method, url, **kwargs):
+        return asyncio.run(self._request(method, url, **kwargs))
+
+    def get(self, url, **kwargs):
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url, **kwargs):
+        return self.request("POST", url, **kwargs)
+
+    def put(self, url, **kwargs):
+        return self.request("PUT", url, **kwargs)
+
+    def patch(self, url, **kwargs):
+        return self.request("PATCH", url, **kwargs)
+
+    def delete(self, url, **kwargs):
+        return self.request("DELETE", url, **kwargs)
+
+    def close(self):
+        return None
 
 
 @pytest.fixture(autouse=True)
@@ -36,7 +91,11 @@ def _stub_supabase_singletons():
 @pytest.fixture()
 def client():
     """Unauthenticated test client."""
-    return TestClient(app, raise_server_exceptions=False)
+    test_client = SyncASGITestClient(app)
+    try:
+        yield test_client
+    finally:
+        test_client.close()
 
 
 @pytest.fixture()

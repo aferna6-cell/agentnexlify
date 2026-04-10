@@ -118,7 +118,7 @@ def _decode_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
 
-def _get_current_tenant(authorization: str = Header(...)) -> dict:
+async def _get_current_tenant(authorization: str = Header(...)) -> dict:
     """FastAPI dependency: extract tenant claims from Bearer token."""
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
@@ -327,7 +327,7 @@ async def _run_signup_side_effects(
 
 def require_role(*allowed_roles):
     """FastAPI dependency factory: restrict endpoint to specific roles."""
-    def checker(claims: dict = Depends(_get_current_tenant)):
+    async def checker(claims: dict = Depends(_get_current_tenant)):
         role = claims.get("role", "owner")
         if role not in allowed_roles:
             raise HTTPException(status_code=403, detail="Insufficient permissions")

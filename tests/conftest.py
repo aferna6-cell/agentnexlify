@@ -7,10 +7,75 @@ os.environ["TESTING"] = "1"
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import asyncio
+import httpx
+import fastapi.testclient as fastapi_testclient
 import pytest
+import starlette.testclient as starlette_testclient
 
 # Ensure project root is on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+_REAL_ASGI_TRANSPORT = httpx.ASGITransport
+_REAL_ASYNC_CLIENT = httpx.AsyncClient
+
+
+class SyncASGITestClient:
+    """Drop-in test client for environments where Starlette TestClient stalls."""
+    __test__ = False
+
+    def __init__(
+        self,
+        app,
+        base_url="http://testserver",
+        raise_server_exceptions=True,
+        **_,
+    ):
+        self.app = app
+        self.base_url = base_url
+        self.raise_server_exceptions = raise_server_exceptions
+
+    async def _request(self, method, url, **kwargs):
+        transport = _REAL_ASGI_TRANSPORT(
+            app=self.app,
+            raise_app_exceptions=self.raise_server_exceptions,
+        )
+        async with _REAL_ASYNC_CLIENT(
+            transport=transport,
+            base_url=self.base_url,
+        ) as client:
+            return await client.request(method, url, **kwargs)
+
+    def request(self, method, url, **kwargs):
+        return asyncio.run(self._request(method, url, **kwargs))
+
+    def get(self, url, **kwargs):
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url, **kwargs):
+        return self.request("POST", url, **kwargs)
+
+    def put(self, url, **kwargs):
+        return self.request("PUT", url, **kwargs)
+
+    def patch(self, url, **kwargs):
+        return self.request("PATCH", url, **kwargs)
+
+    def delete(self, url, **kwargs):
+        return self.request("DELETE", url, **kwargs)
+
+    def close(self):
+        return None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+fastapi_testclient.TestClient = SyncASGITestClient
+starlette_testclient.TestClient = SyncASGITestClient
 
 
 class MockSupabaseResponse:

@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pythonjsonlogger.jsonlogger import JsonFormatter
 from slowapi.errors import RateLimitExceeded
+from starlette.datastructures import Headers, MutableHeaders
 
 from backend.config import is_production, settings
 from backend.limiter import limiter
@@ -582,15 +583,12 @@ app.add_middleware(
 _EMBEDDABLE_PREFIXES = ("/api/v1/widget", "/api/v1/forms/public", "/api/v1/book")
 
 
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    path = request.url.path
+def _apply_security_headers(headers: MutableHeaders, path: str) -> None:
     is_embeddable = any(path.startswith(p) for p in _EMBEDDABLE_PREFIXES)
 
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = (
+    headers["X-Content-Type-Options"] = "nosniff"
+    headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    headers["Content-Security-Policy"] = (
         (
             "default-src 'self'; "
             "script-src 'self'; "
@@ -613,14 +611,12 @@ async def add_security_headers(request: Request, call_next):
     )
 
     if is_embeddable:
-        response.headers["X-Frame-Options"] = "ALLOWALL"
+        headers["X-Frame-Options"] = "ALLOWALL"
     else:
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Strict-Transport-Security"] = (
+        headers["X-Frame-Options"] = "DENY"
+        headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-
-    return response
 
 
 # --- Rate limiting ---
@@ -662,45 +658,70 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
 app.add_exception_handler(RequestValidationError, _validation_exception_handler)
 
 
-# --- Request logging middleware ---
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    request_id = str(uuid.uuid4())
-    request.state.request_id = request_id
+class RequestContextMiddleware:
+    """ASGI middleware for request IDs, security headers, and access logs.
 
-    # Extract tenant_id from JWT if present (decode-only, no auth enforcement)
-    tenant_id: str | None = None
-    auth_header = request.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
+    This avoids BaseHTTPMiddleware's call_next/receive edge cases on error
+    responses, which can stall ASGI test transports.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request_id = str(uuid.uuid4())
+        scope.setdefault("state", {})
+        scope["state"]["request_id"] = request_id
+
+        headers = Headers(scope=scope)
+        auth_header = headers.get("authorization", "")
+        tenant_id: str | None = None
+        if auth_header.startswith("Bearer "):
+            try:
+                from jose import jwt
+
+                payload = jwt.get_unverified_claims(auth_header[7:])
+                tenant_id = payload.get("tenant_id")
+            except Exception as exc:
+                logger.debug("JWT decode for logging failed: %s", exc)
+
+        method = scope["method"]
+        path = scope["path"]
+        start = time.time()
+        status_code = 500
+
+        async def send_wrapper(message):
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+                response_headers = MutableHeaders(scope=message)
+                response_headers["X-Request-ID"] = request_id
+                _apply_security_headers(response_headers, path)
+            await send(message)
+
         try:
-            from jose import jwt
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            duration_ms = (time.time() - start) * 1000
+            log_data = {
+                "method": method,
+                "path": path,
+                "status_code": status_code,
+                "duration_ms": round(duration_ms, 1),
+                "request_id": request_id,
+                "tenant_id": tenant_id,
+            }
+            if status_code >= 500:
+                logger.error("request completed", extra=log_data)
+            else:
+                logger.info("request completed", extra=log_data)
 
-            payload = jwt.get_unverified_claims(auth_header[7:])
-            tenant_id = payload.get("tenant_id")
-        except Exception as e:
-            logger.debug("JWT decode for logging failed: %s", e)
 
-    start = time.time()
-    response = await call_next(request)
-    duration_ms = (time.time() - start) * 1000
-
-    response.headers["X-Request-ID"] = request_id
-
-    log_data = {
-        "method": request.method,
-        "path": request.url.path,
-        "status_code": response.status_code,
-        "duration_ms": round(duration_ms, 1),
-        "request_id": request_id,
-        "tenant_id": tenant_id,
-    }
-
-    if response.status_code >= 500:
-        logger.error("request completed", extra=log_data)
-    else:
-        logger.info("request completed", extra=log_data)
-
-    return response
+app.add_middleware(RequestContextMiddleware)
 
 
 # --- Routers ---
