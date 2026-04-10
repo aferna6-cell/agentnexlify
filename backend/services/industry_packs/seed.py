@@ -50,7 +50,8 @@ _ALLOWED_TRIGGER_TYPES = frozenset({
     "website_visit", "smart_list_matched",
 })
 
-# Map pack-level trigger_event strings → DB-allowed trigger_type.
+# Map pack-level trigger_event strings → automation_rules.trigger_type
+# (constrained by CHECK enum in migration 087).
 _TRIGGER_EVENT_MAP = {
     "weekly_cron": "scheduled_weekly",
     "daily_cron": "scheduled_daily",
@@ -62,6 +63,56 @@ _TRIGGER_EVENT_MAP = {
     "new_lead": "lead_captured",
     "lead_stage_change": "pipeline_stage_changed",
 }
+
+# automation_sequences.trigger_event is validated by Pydantic at the router
+# level (backend/models/schemas.py:VALID_TRIGGER_EVENTS). Bypassing it with
+# service-role inserts works, but any future PATCH via the API would 422.
+# Remap pack sequences to the allowed set and stash the original event in
+# `trigger_config.original_trigger_event` so a future automation engine pass
+# can dispatch correctly.
+_SEQUENCE_VALID_TRIGGER_EVENTS = frozenset({
+    "new_lead",
+    "lead_stage_change",
+    "no_response_24h",
+    "appointment_completed",
+})
+
+_SEQUENCE_EVENT_MAP = {
+    # "when an appointment is booked" is modeled as a lead stage transition
+    # to the "appointment_booked" stage — the existing engine already filters
+    # lead_stage_change by trigger_config.target_stage.
+    "appointment_booked": ("lead_stage_change", {"target_stage": "appointment_booked"}),
+    "appointment_created": ("lead_stage_change", {"target_stage": "appointment_booked"}),
+    # Dunning + reactivation are cron-driven; map to new_lead as a safe
+    # placeholder and flag the real dispatch event in trigger_config. A
+    # future cron job can match on original_trigger_event to enroll leads.
+    "invoice_overdue": ("new_lead", {}),
+    "lapsed_client_weekly_cron": ("new_lead", {}),
+    # Already allowed — pass through.
+    "new_lead": ("new_lead", {}),
+    "appointment_completed": ("appointment_completed", {}),
+    "lead_stage_change": ("lead_stage_change", {}),
+    "no_response_24h": ("no_response_24h", {}),
+}
+
+
+def _remap_sequence_trigger(
+    original_event: str, original_config: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    """Map a pack sequence trigger to the API-valid set, preserving intent
+    in `trigger_config.original_trigger_event` for future dispatch.
+    """
+    mapped_event, extra_config = _SEQUENCE_EVENT_MAP.get(
+        original_event, ("new_lead", {}),
+    )
+    merged = dict(original_config)
+    merged.update(extra_config)
+    if mapped_event != original_event:
+        merged["original_trigger_event"] = original_event
+    if mapped_event not in _SEQUENCE_VALID_TRIGGER_EVENTS:
+        # defensive — should never hit this because map is closed over valid set
+        mapped_event = "new_lead"
+    return mapped_event, merged
 
 
 # ----------------------------------------------------------------------
@@ -122,7 +173,10 @@ def _seed_sequences(
     """Seed automation_sequences + automation_steps."""
     for seq in pack.sequence_templates:
         try:
-            trigger_config = dict(seq.trigger_config)
+            # Remap pack event → API-valid event, preserving original in config
+            mapped_event, trigger_config = _remap_sequence_trigger(
+                seq.trigger_event, seq.trigger_config,
+            )
             trigger_config["industry_pack_source"] = pack.source_tag
 
             if not dry_run:
@@ -143,7 +197,7 @@ def _seed_sequences(
                     .insert({
                         "tenant_id": tenant_id,
                         "name": seq.name,
-                        "trigger_event": seq.trigger_event,
+                        "trigger_event": mapped_event,
                         "trigger_config": trigger_config,
                     })
                     .execute()

@@ -89,6 +89,52 @@ class TestTriggerEventMapping:
             )
 
 
+class TestSequenceTriggerRemap:
+    def test_appointment_booked_maps_to_lead_stage_change(self):
+        from backend.services.industry_packs.seed import _remap_sequence_trigger
+
+        event, config = _remap_sequence_trigger("appointment_booked", {})
+        assert event == "lead_stage_change"
+        assert config["target_stage"] == "appointment_booked"
+        assert config["original_trigger_event"] == "appointment_booked"
+
+    def test_invoice_overdue_maps_with_flag(self):
+        from backend.services.industry_packs.seed import _remap_sequence_trigger
+
+        event, config = _remap_sequence_trigger("invoice_overdue", {"days": 3})
+        assert event == "new_lead"  # placeholder until cron dispatches
+        assert config["original_trigger_event"] == "invoice_overdue"
+        assert config["days"] == 3  # preserved
+
+    def test_passthrough_for_allowed_events(self):
+        from backend.services.industry_packs.seed import (
+            _SEQUENCE_VALID_TRIGGER_EVENTS,
+            _remap_sequence_trigger,
+        )
+
+        for allowed in _SEQUENCE_VALID_TRIGGER_EVENTS:
+            event, config = _remap_sequence_trigger(allowed, {})
+            assert event == allowed, f"{allowed} should pass through"
+            assert "original_trigger_event" not in config
+
+    def test_all_pack_sequence_events_map_to_valid_set(self):
+        """Every sequence in every pack must remap to a Pydantic-valid event."""
+        from backend.services.industry_packs import list_available_packs
+        from backend.services.industry_packs.seed import (
+            _SEQUENCE_VALID_TRIGGER_EVENTS,
+            _remap_sequence_trigger,
+        )
+
+        for pack_info in list_available_packs():
+            pack = load_pack(pack_info["key"])
+            for seq in pack.sequence_templates:
+                event, _ = _remap_sequence_trigger(seq.trigger_event, {})
+                assert event in _SEQUENCE_VALID_TRIGGER_EVENTS, (
+                    f"pack={pack.key} seq={seq.key} event={seq.trigger_event} "
+                    f"remapped to {event} which is not in the valid set"
+                )
+
+
 class TestSeedDryRun:
     def test_dry_run_counts_without_db_writes(self):
         db = MagicMock()
