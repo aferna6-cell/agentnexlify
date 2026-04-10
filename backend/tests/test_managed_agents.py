@@ -754,6 +754,57 @@ class TestStructuredExtractor:
             with pytest.raises(ValueError, match="no assistant text"):
                 mod.extract_structured("tenant_abc", "anything", "lead")
 
+    def test_fenced_markdown_reply_parses(self):
+        """Regression: Haiku sometimes wraps the JSON in ```json fences even
+        when told not to. Live smoke on 2026-04-10 caught this — strict
+        json.loads raised ValueError in production. Extractor must tolerate
+        fenced replies."""
+        from backend.services import structured_extractor as mod
+        from backend.services.managed_agents_registry import ManagedAgentHandle
+
+        fenced_reply = (
+            "```json\n"
+            "{\n"
+            '  "name": "Maria Lopez",\n'
+            '  "email": "maria.lopez@example.com",\n'
+            '  "phone": "973-555-0134",\n'
+            '  "interest": "driveway pressure wash",\n'
+            '  "timeline": "two weeks",\n'
+            '  "budget": "around 500 dollars",\n'
+            '  "source": "Google ad"\n'
+            "}\n"
+            "```"
+        )
+        events = [
+            {
+                "type": "agent.message",
+                "id": "sevt_1",
+                "content": [{"type": "text", "text": fenced_reply}],
+            },
+            {
+                "type": "session.status_idle",
+                "id": "sevt_2",
+                "stop_reason": {"type": "end_turn"},
+            },
+        ]
+        mock_inner = _mock_inner_client(events)
+        fake_handle = ManagedAgentHandle(
+            agent_id="agent_extract", environment_id="env_abc",
+        )
+
+        with (
+            _patch_managed_agents_class(mod, mock_inner),
+            patch.object(mod, "structured_extractor", return_value=fake_handle),
+        ):
+            parsed = mod.extract_structured(
+                "tenant_abc", "Hi I am Maria...", "lead",
+            )
+
+        assert parsed["name"] == "Maria Lopez"
+        assert parsed["email"] == "maria.lopez@example.com"
+        assert parsed["phone"] == "973-555-0134"
+        assert parsed["source"] == "Google ad"
+
 
 class TestSupportAgentBlocking:
     """Tests for backend.services.support_agent.run_support_query."""

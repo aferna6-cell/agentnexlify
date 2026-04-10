@@ -1,8 +1,11 @@
 """Structured extraction via Claude Managed Agents.
 
 Runs the `structured_extractor` managed agent with a target schema and
-raw text input. The agent contract is strict JSON-only output, so this
-service fails fast if the reply cannot be parsed directly.
+raw text input. The agent contract asks for strict JSON-only output,
+but Haiku will occasionally wrap its reply in ```json fences or add a
+leading explanation even when told not to — `_extract_json_from_reply`
+tolerates those cases so callers do not see spurious ValueError in
+production.
 
 This service is blocking because the Managed Agents client is sync
 httpx. Call it from a FastAPI threadpool.
@@ -10,6 +13,7 @@ httpx. Call it from a FastAPI threadpool.
 
 import json
 import logging
+import re
 from typing import Any
 
 from backend.services.managed_agents import ManagedAgentsClient, SessionTerminalState
@@ -97,6 +101,49 @@ def _extract_text_blocks(content: list[Any] | None) -> str:
     return "".join(parts)
 
 
+def _extract_json_from_reply(text: str) -> dict[str, Any] | None:
+    """Return the first JSON object found in the reply, or None.
+
+    Tolerates three shapes in priority order:
+      1. Pure JSON (strict json.loads)
+      2. Fenced ```json { ... } ``` or ``` { ... } ```
+      3. First {...} substring in the reply (last-resort regex)
+    """
+    text = text.strip()
+    if not text:
+        return None
+
+    # 1. Pure JSON
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Fenced code block
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if fenced:
+        try:
+            parsed = json.loads(fenced.group(1))
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+    # 3. Greedy brace fallback
+    brace = re.search(r"\{.*\}", text, re.DOTALL)
+    if brace:
+        try:
+            parsed = json.loads(brace.group(0))
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
 def _build_prompt(raw_text: str, target_schema: str) -> str:
     fields = _SCHEMA_FIELDS[target_schema]
     field_lines = [f"- {field_name}" for field_name in fields]
@@ -155,16 +202,10 @@ def extract_structured(
             f"(terminated={terminal.terminated} stop={terminal.stop_reason_type})"
         )
 
-    try:
-        parsed = json.loads(reply_text)
-    except json.JSONDecodeError as exc:
+    parsed = _extract_json_from_reply(reply_text)
+    if parsed is None:
         raise ValueError(
             f"structured_extractor returned invalid JSON: {reply_text}"
-        ) from exc
-
-    if not isinstance(parsed, dict):
-        raise ValueError(
-            f"structured_extractor must return a JSON object, got: {reply_text}"
         )
 
     return parsed
