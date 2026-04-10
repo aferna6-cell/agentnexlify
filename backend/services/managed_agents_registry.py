@@ -69,6 +69,28 @@ def codebase_reviewer() -> ManagedAgentHandle:
     )
 
 
+def support_agent() -> ManagedAgentHandle:
+    return _handle(settings.support_agent_id, "SUPPORT_AGENT_ID")
+
+
+def structured_extractor() -> ManagedAgentHandle:
+    return _handle(
+        settings.structured_extractor_agent_id, "STRUCTURED_EXTRACTOR_AGENT_ID",
+    )
+
+
+def deep_researcher() -> ManagedAgentHandle:
+    return _handle(settings.deep_researcher_agent_id, "DEEP_RESEARCHER_AGENT_ID")
+
+
+def field_monitor() -> ManagedAgentHandle:
+    return _handle(settings.field_monitor_agent_id, "FIELD_MONITOR_AGENT_ID")
+
+
+def data_analyst() -> ManagedAgentHandle:
+    return _handle(settings.data_analyst_agent_id, "DATA_ANALYST_AGENT_ID")
+
+
 def is_any_configured() -> bool:
     """Return True if at least one agent is provisioned. Useful for health
     checks and admin UIs.
@@ -79,6 +101,11 @@ def is_any_configured() -> bool:
             settings.lead_qualifier_agent_id
             or settings.document_drafter_agent_id
             or settings.codebase_reviewer_agent_id
+            or settings.support_agent_id
+            or settings.structured_extractor_agent_id
+            or settings.deep_researcher_agent_id
+            or settings.field_monitor_agent_id
+            or settings.data_analyst_agent_id
         )
     )
 

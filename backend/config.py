@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     lead_qualifier_agent_id: str = ""
     document_drafter_agent_id: str = ""
     codebase_reviewer_agent_id: str = ""
+    support_agent_id: str = ""
+    structured_extractor_agent_id: str = ""
+    deep_researcher_agent_id: str = ""
+    field_monitor_agent_id: str = ""
+    data_analyst_agent_id: str = ""
 
     model_config = {
         "env_file": (".env", ".env.managed_agents"),

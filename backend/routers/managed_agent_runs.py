@@ -41,6 +41,7 @@ from backend.services.document_drafting import (
     DocumentDraftingError,
     draft_document,
 )
+from backend.services.structured_extractor import extract_structured
 from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
@@ -51,6 +52,7 @@ from backend.services.managed_agents_registry import (
     is_any_configured,
     lead_qualifier,
 )
+from backend.services.support_agent import run_support_query
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/managed-agents", tags=["managed-agents"])
@@ -237,6 +239,11 @@ async def managed_agents_health(
         "lead_qualifier": bool(settings.lead_qualifier_agent_id),
         "document_drafter": bool(settings.document_drafter_agent_id),
         "codebase_reviewer": bool(settings.codebase_reviewer_agent_id),
+        "support_agent": bool(settings.support_agent_id),
+        "structured_extractor": bool(settings.structured_extractor_agent_id),
+        "deep_researcher": bool(settings.deep_researcher_agent_id),
+        "field_monitor": bool(settings.field_monitor_agent_id),
+        "data_analyst": bool(settings.data_analyst_agent_id),
     }
 
 
@@ -273,6 +280,26 @@ class DraftDocumentResponse(BaseModel):
     file_name: str
     file_size_bytes: int | None = None
     download_url: str
+
+
+class SupportQueryRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=5000)
+    conversation_id: str | None = Field(default=None, max_length=128)
+
+
+class SupportQueryResponse(BaseModel):
+    answer: str
+    confidence: str
+    escalate_reason: str | None = None
+
+
+class ExtractRequest(BaseModel):
+    raw_text: str = Field(..., min_length=1, max_length=20000)
+    target_schema: Literal["lead", "appointment", "invoice", "contact"]
+
+
+class ExtractResponse(BaseModel):
+    data: dict[str, Any]
 
 
 @router.post("/{tenant_id}/draft-document", response_model=DraftDocumentResponse)
@@ -324,6 +351,73 @@ async def draft_document_endpoint(
         file_size_bytes=metadata.get("file_size_bytes") if isinstance(metadata, dict) else None,
         download_url=f"/api/v1/managed-agents/{tenant_id}/documents/{doc_id}/download",
     )
+
+
+@router.post("/{tenant_id}/support-query", response_model=SupportQueryResponse)
+@limiter.limit("20/minute")
+async def support_query_endpoint(
+    tenant_id: str,
+    request: Request,
+    body: SupportQueryRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Run the tenant-scoped support agent with KB grounding."""
+    _verify_tenant(claims, tenant_id)
+
+    try:
+        result = await run_in_threadpool(
+            run_support_query,
+            tenant_id,
+            body.question,
+            body.conversation_id,
+        )
+    except ManagedAgentNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except ManagedAgentsError as exc:
+        logger.exception("support_query failed for tenant %s", tenant_id)
+        status = exc.status or 502
+        if status < 400 or status >= 500:
+            status = 502
+        raise HTTPException(status_code=status, detail=str(exc))
+    except ValueError as exc:
+        logger.warning("support_query invalid response for tenant %s: %s", tenant_id, exc)
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    return SupportQueryResponse(**result)
+
+
+@router.post("/{tenant_id}/extract", response_model=ExtractResponse)
+@limiter.limit("30/minute")
+async def extract_endpoint(
+    tenant_id: str,
+    request: Request,
+    body: ExtractRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Run the structured extractor managed agent for this tenant."""
+    _verify_tenant(claims, tenant_id)
+
+    try:
+        extracted = await run_in_threadpool(
+            extract_structured,
+            tenant_id,
+            body.raw_text,
+            body.target_schema,
+        )
+    except ManagedAgentNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except ManagedAgentsError as exc:
+        logger.exception("extract failed for tenant %s", tenant_id)
+        status = exc.status or 502
+        if status < 400 or status >= 500:
+            status = 502
+        raise HTTPException(status_code=status, detail=str(exc))
+    except ValueError as exc:
+        logger.warning("extract invalid response for tenant %s: %s", tenant_id, exc)
+        status = 400 if "unsupported target_schema" in str(exc) else 502
+        raise HTTPException(status_code=status, detail=str(exc))
+
+    return ExtractResponse(data=extracted)
 
 
 _CONTENT_TYPES = {
