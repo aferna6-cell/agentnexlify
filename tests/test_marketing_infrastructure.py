@@ -57,14 +57,14 @@ def tenant_override():
 def mock_supabase(mock_supabase):
     """Use global mock_supabase fixture + patch router-level imports.
 
-    Routers use `from backend.models.database import get_supabase` which
-    creates a local binding. The conftest patches the module, but we also
-    need to patch each router's local reference.
+    Routers use `from backend.models.database import get_service_supabase`
+    which creates a local binding. The conftest patches the module, but we
+    also need to patch each router's local reference.
     """
-    with patch("backend.routers.marketing_campaigns.get_supabase", return_value=mock_supabase), \
-         patch("backend.routers.marketing_analytics.get_supabase", return_value=mock_supabase), \
-         patch("backend.routers.ab_tests.get_supabase", return_value=mock_supabase), \
-         patch("backend.routers.automation_rules.get_supabase", return_value=mock_supabase):
+    with patch("backend.routers.marketing_campaigns.get_service_supabase", return_value=mock_supabase), \
+         patch("backend.routers.marketing_analytics.get_service_supabase", return_value=mock_supabase), \
+         patch("backend.routers.ab_tests.get_service_supabase", return_value=mock_supabase), \
+         patch("backend.routers.automation_rules.get_service_supabase", return_value=mock_supabase):
         yield mock_supabase
 
 

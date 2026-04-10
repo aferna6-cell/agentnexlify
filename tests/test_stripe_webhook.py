@@ -32,7 +32,7 @@ class TestStripeSignatureVerification:
             },
         }
 
-    @patch("backend.routers.stripe_webhooks.get_supabase")
+    @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks._handle_checkout_completed")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
@@ -118,7 +118,7 @@ class TestStripeEventRouting:
             "data": {"object": data_object or {}},
         }
 
-    @patch("backend.routers.stripe_webhooks.get_supabase")
+    @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks._handle_subscription_updated")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
@@ -151,7 +151,7 @@ class TestStripeEventRouting:
         mock_handler.assert_called_once_with(db_client, event["data"]["object"])
         mock_construct.assert_called_once()
 
-    @patch("backend.routers.stripe_webhooks.get_supabase")
+    @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks._handle_subscription_deleted")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
@@ -180,7 +180,7 @@ class TestStripeEventRouting:
         mock_handler.assert_called_once_with(db_client, event["data"]["object"])
         mock_construct.assert_called_once()
 
-    @patch("backend.routers.stripe_webhooks.get_supabase")
+    @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks._handle_payment_failed", new_callable=AsyncMock)
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
@@ -209,7 +209,7 @@ class TestStripeEventRouting:
         mock_handler.assert_awaited_once_with(db_client, event["data"]["object"])
         mock_construct.assert_called_once()
 
-    @patch("backend.routers.stripe_webhooks.get_supabase")
+    @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
     async def test_unhandled_event_still_returns_ok(self, mock_construct, mock_db):
