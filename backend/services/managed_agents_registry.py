@@ -81,3 +81,55 @@ def is_any_configured() -> bool:
             or settings.codebase_reviewer_agent_id
         )
     )
+
+
+# ----------------------------------------------------------------------
+# Advisor-Executor helpers (2026-04-10)
+#
+# These wrap the existing agent handles in an AdvisorExecutorRunner so the
+# caller gets an Opus-advised, Sonnet-executed run with a single call.
+# Opt-in per call site — existing direct handle callers keep working.
+# ----------------------------------------------------------------------
+
+
+def advised_lead_qualifier(
+    *, advisor_model: str = "claude-opus-4-6", enable_advisor: bool = True,
+):
+    """Return an AdvisorExecutorRunner bound to the lead_qualifier agent.
+
+    Imported lazily to keep the registry module free of heavy imports
+    for callers that only need plain handles.
+    """
+    from backend.services.advisor_executor import AdvisorExecutorRunner
+
+    return AdvisorExecutorRunner(
+        executor_handle=lead_qualifier(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
+
+
+def advised_document_drafter(
+    *, advisor_model: str = "claude-opus-4-6", enable_advisor: bool = True,
+):
+    """Return an AdvisorExecutorRunner bound to the document_drafter agent."""
+    from backend.services.advisor_executor import AdvisorExecutorRunner
+
+    return AdvisorExecutorRunner(
+        executor_handle=document_drafter(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
+
+
+def advised_codebase_reviewer(
+    *, advisor_model: str = "claude-opus-4-6", enable_advisor: bool = True,
+):
+    """Return an AdvisorExecutorRunner bound to the codebase_reviewer agent."""
+    from backend.services.advisor_executor import AdvisorExecutorRunner
+
+    return AdvisorExecutorRunner(
+        executor_handle=codebase_reviewer(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )

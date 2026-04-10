@@ -16,6 +16,43 @@ paths:
 ## Pattern for non-trivial tasks
 **Opus plans → Sonnet executes → Haiku cleans up.**
 
+## Advisor-Executor Pattern (dev-time)
+
+Claude Platform launched the advisor pattern: pair Opus as an advisor with Sonnet or Haiku as an executor. Near-Opus intelligence at ~1.3x pure-Sonnet cost instead of 5x pure-Opus.
+
+**Two subagents (ship 2026-04-10):**
+- `.claude/agents/opus-advisor.md` — Opus, read-only (Read/Grep/Glob). Produces a written brief.
+- `.claude/agents/sonnet-executor.md` — Sonnet, full tools. Consumes the brief, executes, runs test gates.
+
+**Flow:**
+1. Main session receives complex task → invokes `opus-advisor` with task description
+2. Advisor reads relevant files (≤15 tool calls), outputs brief: `{files, constraints, gotchas, plan, test gates, risks}`
+3. Main session saves brief to `.claude/agent-comms/advisor-brief-{timestamp}.md`
+4. Main session invokes `sonnet-executor` with brief path
+5. Executor reads brief, executes in order, runs test gates, writes Executor Report
+
+**When to use the advisor-executor pair:**
+- Task touches 3+ files
+- Task involves schema changes
+- Task touches security-critical code (auth, payments, tenant isolation)
+- Task requires architectural decisions
+- User prefixes request with `advisor:`
+
+**When NOT to use:**
+- Renames, grammar, lookups (Haiku direct)
+- Single-file bug fixes under 20 lines (Sonnet direct)
+- Tasks already scoped by a plan doc (Sonnet executes the plan doc itself)
+- Tasks under 5 minutes (overhead > benefit)
+
+**Cost model:**
+- Advisor: ~2-5k Opus output tokens ≈ $0.15-0.40 per brief
+- Executor: ~20-50k Sonnet tokens ≈ $0.30-0.75 per execution
+- Net: ~1.3x pure-Sonnet cost, ~25% pure-Opus cost
+- Opus-only baseline: ~$2.00-5.00 per task
+- Savings: 65-80% vs pure Opus on complex tasks
+
+**Product-runtime mirror:** Same pattern ships for tenant-facing agents in `backend/services/advisor_executor.py` (A2). Opt-in per call site via `advised_lead_qualifier()` etc. in `managed_agents_registry.py`.
+
 ## Never
 - Never Opus for mechanical work (rename, format, lookup)
 - Never Haiku for architecture or security design

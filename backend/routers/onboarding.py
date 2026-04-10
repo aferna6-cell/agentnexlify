@@ -930,3 +930,138 @@ async def onboarding_status(
         onboarding_completed=onboarding_completed,
         completion_percentage=completion_percentage,
     )
+
+
+# ---------------------------------------------------------------------------
+# Industry Pack endpoints — seed turnkey workflow bundles by business_type
+# ---------------------------------------------------------------------------
+
+
+class ApplyIndustryPackRequest(BaseModel):
+    """Payload for applying an industry pack.
+
+    If `business_type` is omitted, the tenant's stored business_type is used.
+    `dry_run=True` returns the expected seed counts without writing anything.
+    """
+
+    business_type: str | None = Field(default=None, max_length=50)
+    dry_run: bool = False
+
+
+class IndustryPackSummary(BaseModel):
+    key: str
+    label: str
+    version: int
+    counts: dict[str, int]
+
+
+class ApplyIndustryPackResponse(BaseModel):
+    pack: IndustryPackSummary
+    dry_run: bool
+    forms_inserted: int
+    forms_skipped: int
+    sequences_inserted: int
+    sequences_skipped: int
+    smart_lists_inserted: int
+    smart_lists_skipped: int
+    automation_rules_inserted: int
+    automation_rules_skipped: int
+    kb_articles_inserted: int
+    kb_articles_skipped: int
+    total_inserted: int
+    errors: list[str]
+
+
+class ListIndustryPacksResponse(BaseModel):
+    packs: list[IndustryPackSummary]
+
+
+@router.get("/industry-packs", response_model=ListIndustryPacksResponse)
+async def list_industry_packs(
+    claims: dict = Depends(require_role("owner", "admin", "member")),
+):
+    """List all available industry packs with their component counts.
+
+    Not tenant-scoped — packs are global read-only content. Used by the
+    onboarding wizard to show the user which pack will be applied.
+    """
+    from backend.services.industry_packs import list_available_packs
+
+    raw = list_available_packs()
+    return ListIndustryPacksResponse(
+        packs=[IndustryPackSummary(**p) for p in raw],
+    )
+
+
+@router.post(
+    "/{tenant_id}/apply-industry-pack",
+    response_model=ApplyIndustryPackResponse,
+)
+async def apply_industry_pack(
+    tenant_id: str,
+    req: ApplyIndustryPackRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Seed a turnkey industry pack (forms, sequences, smart lists, rules,
+    KB seed articles) into the tenant. Idempotent — re-running skips any
+    rows already seeded with the same source tag.
+
+    If `business_type` is omitted, uses the tenant's stored business_type.
+    Falls back to `default` pack if the business_type isn't recognized.
+    """
+    _verify_tenant(claims, tenant_id)
+    from backend.services.industry_packs import load_pack
+    from backend.services.industry_packs.seed import apply_pack_to_tenant
+
+    db = get_service_supabase()
+
+    # Resolve business_type (from body or tenant record)
+    business_type = (req.business_type or "").strip() or None
+    if business_type is None:
+        tenant_row = (
+            db.table("tenants")
+            .select("business_type")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not tenant_row.data:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        business_type = tenant_row.data[0].get("business_type") or "default"
+
+    pack = load_pack(business_type)
+    logger.info(
+        "apply_industry_pack: tenant=%s business_type=%s → pack=%s dry_run=%s",
+        tenant_id, business_type, pack.key, req.dry_run,
+    )
+
+    try:
+        result = apply_pack_to_tenant(db, tenant_id, pack, dry_run=req.dry_run)
+    except Exception as exc:
+        logger.exception("apply_industry_pack failed for tenant=%s pack=%s", tenant_id, pack.key)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to apply industry pack: {type(exc).__name__}: {exc}",
+        )
+
+    return ApplyIndustryPackResponse(
+        pack=IndustryPackSummary(
+            key=pack.key,
+            label=pack.label,
+            version=pack.version,
+            counts=pack.summary(),
+        ),
+        dry_run=req.dry_run,
+        forms_inserted=result.forms_inserted,
+        forms_skipped=result.forms_skipped,
+        sequences_inserted=result.sequences_inserted,
+        sequences_skipped=result.sequences_skipped,
+        smart_lists_inserted=result.smart_lists_inserted,
+        smart_lists_skipped=result.smart_lists_skipped,
+        automation_rules_inserted=result.automation_rules_inserted,
+        automation_rules_skipped=result.automation_rules_skipped,
+        kb_articles_inserted=result.kb_articles_inserted,
+        kb_articles_skipped=result.kb_articles_skipped,
+        total_inserted=result.total_inserted(),
+        errors=result.errors,
+    )
