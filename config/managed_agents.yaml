@@ -313,10 +313,6 @@ agents:
       - Output MUST be parseable by json.loads() with no preprocessing.
       - Output MUST be a JSON object, never a list or string.
       - Output MUST contain only supported keys for the requested schema.
-    tools:
-      - type: agent_toolset_20260401
-        default_config:
-          enabled: false
 
   # ----------------------------------------------------------------------
   # Internal: deep researcher

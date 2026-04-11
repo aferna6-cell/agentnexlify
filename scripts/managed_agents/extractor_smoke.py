@@ -12,8 +12,7 @@ Usage:
 
 Exit codes:
     0 — JSON reply parsed and contains expected lead keys
-    1 — transport / credential / configuration failure
-    2 — session streamed but JSON parse or schema check failed
+    1 — transport, configuration, JSON parse, or schema check failure
 """
 
 import json
@@ -102,7 +101,7 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    return run_smoke_session(
+    result = run_smoke_session(
         handle_factory=structured_extractor,
         agent_label="structured_extractor",
         kickoff_prompt=_PROMPT,
@@ -116,6 +115,7 @@ def main() -> int:
         logger_name="managed_agents.extractor_smoke",
         validator=_validate,
     )
+    return 0 if result == 0 else 1
 
 
 if __name__ == "__main__":

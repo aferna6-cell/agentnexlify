@@ -48,10 +48,17 @@ class _CapturingManagedAgentClient:
         return self._inner.send_user_message(session_id, text)
 
     def stream_events(self, session_id: str):
-        for event in self._inner.stream_events(session_id):
-            if event.get("type") == "agent.message":
-                self._assistant_chunks.append(_extract_text_blocks(event.get("content")))
-            yield event
+        stream = self._inner.stream_events(session_id)
+
+        def _capture_events():
+            for event in stream:
+                if event.get("type") == "agent.message":
+                    self._assistant_chunks.append(
+                        _extract_text_blocks(event.get("content"))
+                    )
+                yield event
+
+        return _capture_events()
 
     def run_until_idle(
         self, session_id: str, *, kickoff_text: str | None = None,

@@ -620,6 +620,23 @@ def _patch_managed_agents_class(mod: Any, mock_inner: MagicMock):
     return patch.object(mod, "ManagedAgentsClient", replacement)
 
 
+def _capture_terminal_state(mod: Any, captured: dict[str, SessionTerminalState]):
+    """Patch the capturing wrapper to expose the terminal state to tests."""
+    original = mod._CapturingManagedAgentClient.run_until_idle
+
+    def capture(
+        self,
+        session_id: str,
+        *,
+        kickoff_text: str | None = None,
+    ) -> SessionTerminalState:
+        terminal = original(self, session_id, kickoff_text=kickoff_text)
+        captured["terminal"] = terminal
+        return terminal
+
+    return patch.object(mod._CapturingManagedAgentClient, "run_until_idle", capture)
+
+
 class TestStructuredExtractor:
     """Tests for backend.services.structured_extractor.extract_structured."""
 
@@ -664,17 +681,26 @@ class TestStructuredExtractor:
         fake_handle = ManagedAgentHandle(
             agent_id="agent_extract", environment_id="env_abc",
         )
+        captured_terminal: dict[str, SessionTerminalState] = {}
 
         with (
             _patch_managed_agents_class(mod, mock_inner),
+            _capture_terminal_state(mod, captured_terminal),
             patch.object(mod, "structured_extractor", return_value=fake_handle),
         ):
             parsed = mod.extract_structured(
                 "tenant_abc", "Hi I am Maria...", "lead",
             )
 
-        assert parsed["name"] == "Maria Lopez"
-        assert parsed["budget"] == 500
+        assert parsed == {
+            "name": "Maria Lopez",
+            "email": "maria.lopez@example.com",
+            "phone": "973-555-0134",
+            "interest": "pressure wash + deck sealing",
+            "timeline": "2 weeks",
+            "budget": 500,
+            "source": "google ad",
+        }
 
         # Prompt embeds schema + raw text in labeled blocks.
         send_call = mock_inner.send_user_message.call_args
@@ -685,13 +711,11 @@ class TestStructuredExtractor:
         assert "[RAW_TEXT]" in prompt
         assert "Maria" in prompt
 
-        # Note: the stream-before-send contract lives at the wrapper level —
-        # `_CapturingManagedAgentClient.stream_events` is a generator that
-        # only touches the inner client when iterated inside `run_until_idle`.
-        # That's why on the inner mock, `send_user_message` is recorded
-        # *before* `stream_events`. The real invariant (stream opened before
-        # send on the wrapper itself) is already exercised end-to-end by
-        # `run_until_idle`, which is covered in TestQualifyLeadBlocking.
+        # Stream was opened before the kickoff message was sent.
+        call_order = [c[0] for c in mock_inner.method_calls]
+        stream_idx = call_order.index("stream_events")
+        send_idx = call_order.index("send_user_message")
+        assert stream_idx < send_idx
 
         # Session metadata carries tenant_id + flow.
         create_kwargs = mock_inner.create_session.call_args.kwargs
@@ -700,6 +724,10 @@ class TestStructuredExtractor:
         assert create_kwargs["metadata"]["tenant_id"] == "tenant_abc"
         assert create_kwargs["metadata"]["flow"] == "structured_extractor"
         assert create_kwargs["metadata"]["target_schema"] == "lead"
+
+        terminal = captured_terminal["terminal"]
+        assert terminal.session_id == "sess_1"
+        assert terminal.session_id != terminal.last_event_id
 
     def test_invalid_json_raises_value_error(self):
         from backend.services import structured_extractor as mod
@@ -862,9 +890,11 @@ class TestSupportAgentBlocking:
         fake_handle = ManagedAgentHandle(
             agent_id="agent_support", environment_id="env_abc",
         )
+        captured_terminal: dict[str, SessionTerminalState] = {}
 
         with (
             _patch_managed_agents_class(mod, mock_inner),
+            _capture_terminal_state(mod, captured_terminal),
             patch.object(mod, "support_agent", return_value=fake_handle),
             patch.object(
                 mod, "_load_tenant_context", return_value=self._fake_tenant_ctx(),
@@ -873,9 +903,11 @@ class TestSupportAgentBlocking:
         ):
             parsed = mod.run_support_query("tenant_abc", "What are your hours?")
 
-        assert parsed["answer"].startswith("We're open")
-        assert parsed["confidence"] == "high"
-        assert parsed["escalate_reason"] is None
+        assert parsed == {
+            "answer": "We're open Monday to Friday 9-6.",
+            "confidence": "high",
+            "escalate_reason": None,
+        }
 
         # Prompt contains all four labeled blocks.
         send_call = mock_inner.send_user_message.call_args
@@ -891,14 +923,21 @@ class TestSupportAgentBlocking:
         assert "Smoke Salon" in prompt
         assert "What are your hours?" in prompt
 
-        # See the note in TestStructuredExtractor about the stream-before-send
-        # ordering — the wrapper generator hides that call from the inner mock.
+        # Stream was opened before the kickoff message was sent.
+        call_order = [c[0] for c in mock_inner.method_calls]
+        stream_idx = call_order.index("stream_events")
+        send_idx = call_order.index("send_user_message")
+        assert stream_idx < send_idx
 
         # Session metadata carries tenant_id + flow.
         create_kwargs = mock_inner.create_session.call_args.kwargs
         assert create_kwargs["agent_id"] == "agent_support"
         assert create_kwargs["metadata"]["tenant_id"] == "tenant_abc"
         assert create_kwargs["metadata"]["flow"] == "support_agent"
+
+        terminal = captured_terminal["terminal"]
+        assert terminal.session_id == "sess_1"
+        assert terminal.session_id != terminal.last_event_id
 
     def test_plain_text_reply_falls_back_to_string(self):
         from backend.services import support_agent as mod
@@ -1285,5 +1324,8 @@ class TestHealthEndpointLists8Agents:
             "codebase_reviewer",
             "support_agent",
             "structured_extractor",
+            "deep_researcher",
+            "field_monitor",
+            "data_analyst",
         ):
             assert expected in body, f"health payload missing {expected}: {body}"

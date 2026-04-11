@@ -10,8 +10,7 @@ Usage:
 
 Exit codes:
     0 — digest returned with at least 3 stories and URLs
-    1 — transport / credential / configuration failure
-    2 — session streamed but the digest failed structural checks
+    1 — transport, configuration, or structural-check failure
 """
 
 import logging
@@ -29,10 +28,11 @@ from scripts.managed_agents._smoke_common import (  # noqa: E402
 from backend.services.managed_agents_registry import field_monitor  # noqa: E402
 
 _PROMPT = """\
-Produce this week's top 3 AI automation news items most relevant to a
-founder building service-business automation (lead capture, chat
-widgets, scheduling, small-SaaS tooling). This is an automated smoke
-test, so 3 stories is enough — do not return 5.
+Produce this week top 3 AI automation news items.
+
+Focus on items most relevant to a founder building service-business
+automation: lead capture, chat widgets, scheduling, and small-SaaS
+tooling. This is an automated smoke test, so 3 stories is enough.
 
 For each story include:
 - a headline
@@ -59,7 +59,7 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    return run_smoke_session(
+    result = run_smoke_session(
         handle_factory=field_monitor,
         agent_label="field_monitor",
         kickoff_prompt=_PROMPT,
@@ -71,6 +71,7 @@ def main() -> int:
         logger_name="managed_agents.field_monitor_smoke",
         validator=_validate,
     )
+    return 0 if result == 0 else 1
 
 
 if __name__ == "__main__":

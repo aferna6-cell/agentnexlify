@@ -14,8 +14,7 @@ Usage:
 
 Exit codes:
     0 — session completed with a non-empty reply
-    1 — transport / credential / configuration failure
-    2 — session streamed but assertions failed
+    1 — transport, configuration, or assertion failure
 """
 
 import logging
@@ -83,7 +82,7 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    return run_smoke_session(
+    result = run_smoke_session(
         handle_factory=support_agent,
         agent_label="support_agent",
         kickoff_prompt=_PROMPT,
@@ -96,6 +95,7 @@ def main() -> int:
         logger_name="managed_agents.support_smoke",
         validator=_validate,
     )
+    return 0 if result == 0 else 1
 
 
 if __name__ == "__main__":

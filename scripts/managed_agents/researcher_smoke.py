@@ -10,8 +10,7 @@ Usage:
 
 Exit codes:
     0 — brief returned with Summary / Key Findings / Sources sections
-    1 — transport / credential / configuration failure
-    2 — session streamed but the brief is missing required sections
+    1 — transport, configuration, or structural-check failure
 """
 
 import logging
@@ -29,10 +28,10 @@ from scripts.managed_agents._smoke_common import (  # noqa: E402
 from backend.services.managed_agents_registry import deep_researcher  # noqa: E402
 
 _PROMPT = """\
-Research GoHighLevel's pricing and core product features and produce
-a brief of around 300 words. This is an automated integration test so
-keep the investigation light — 3 to 5 sources is fine — but the final
-output must still follow your standard brief format:
+Research GoHighLevel pricing and core features, produce a 300-word brief.
+
+This is an automated integration test. The final output must still
+follow your standard brief format:
 
 Summary
 Key Findings
@@ -66,7 +65,7 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    return run_smoke_session(
+    result = run_smoke_session(
         handle_factory=deep_researcher,
         agent_label="deep_researcher",
         kickoff_prompt=_PROMPT,
@@ -79,6 +78,7 @@ def main() -> int:
         logger_name="managed_agents.researcher_smoke",
         validator=_validate,
     )
+    return 0 if result == 0 else 1
 
 
 if __name__ == "__main__":

@@ -10,8 +10,7 @@ Usage:
 
 Exit codes:
     0 — analyst returned a response mentioning all three columns
-    1 — transport / credential / configuration failure
-    2 — session streamed but structural checks failed
+    1 — transport, configuration, or structural-check failure
 """
 
 import logging
@@ -73,7 +72,7 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    return run_smoke_session(
+    result = run_smoke_session(
         handle_factory=data_analyst,
         agent_label="data_analyst",
         kickoff_prompt=_PROMPT,
@@ -85,6 +84,7 @@ def main() -> int:
         logger_name="managed_agents.analyst_smoke",
         validator=_validate,
     )
+    return 0 if result == 0 else 1
 
 
 if __name__ == "__main__":
