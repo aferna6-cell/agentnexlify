@@ -41,8 +41,12 @@ export default function Contact() {
       </Helmet>
 
       <nav className="legal-nav">
-        <Link to="/" className="legal-back">&larr; Back to Home</Link>
-        <Link to="/terms" className="legal-sibling">Terms of Service</Link>
+        <Link to="/" className="legal-back">
+          &larr; Back to Home
+        </Link>
+        <Link to="/terms" className="legal-sibling">
+          Terms of Service
+        </Link>
       </nav>
 
       <article className="legal-content">
@@ -53,31 +57,82 @@ export default function Contact() {
           we'll get back to you as soon as possible.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem", padding: "1.25rem", background: "var(--bg-secondary, #f8f9fa)", borderRadius: 10, border: "1px solid var(--border-color, #e2e8f0)" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "1rem",
+            marginBottom: "2rem",
+            padding: "1.25rem",
+            background: "var(--bg-secondary, #f8f9fa)",
+            borderRadius: 10,
+            border: "1px solid var(--border-color, #e2e8f0)",
+          }}
+        >
           <div>
-            <strong style={{ display: "block", marginBottom: 4 }}>Email us directly</strong>
-            <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>
+            <strong style={{ display: "block", marginBottom: 4 }}>
+              Email us directly
+            </strong>
+            <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>
           </div>
           <div>
-            <strong style={{ display: "block", marginBottom: 4 }}>Response time</strong>
+            <strong style={{ display: "block", marginBottom: 4 }}>
+              Response time
+            </strong>
             <span>We typically respond within 24 hours</span>
           </div>
           <div>
-            <strong style={{ display: "block", marginBottom: 4 }}>Business hours</strong>
+            <strong style={{ display: "block", marginBottom: 4 }}>
+              Business hours
+            </strong>
             <span>Monday - Friday, 9 AM - 6 PM EST</span>
           </div>
           <div>
-            <strong style={{ display: "block", marginBottom: 4 }}>Need a faster answer?</strong>
-            <span>Email us at <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a> for the fastest response.</span>
+            <strong style={{ display: "block", marginBottom: 4 }}>
+              Need a faster answer?
+            </strong>
+            <span>
+              Email us at{" "}
+              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+              for the fastest response.
+            </span>
           </div>
         </div>
 
-        <div style={{ marginBottom: "2rem", padding: "1.25rem", borderRadius: 10, background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.18)" }}>
-          <h2 style={{ marginTop: 0, marginBottom: "0.5rem", fontSize: "1.1rem" }}>Book a live demo instead</h2>
-          <p style={{ marginTop: 0, marginBottom: "1rem", color: "var(--text-secondary, #475569)" }}>
-            Want to see the full platform in action? Pick a time on our live calendar and we&apos;ll walk you through the dashboard, widget, and automation setup.
+        <div
+          style={{
+            marginBottom: "2rem",
+            padding: "1.25rem",
+            borderRadius: 10,
+            background: "rgba(59,130,246,0.08)",
+            border: "1px solid rgba(59,130,246,0.18)",
+          }}
+        >
+          <h2
+            style={{ marginTop: 0, marginBottom: "0.5rem", fontSize: "1.1rem" }}
+          >
+            Book a live demo instead
+          </h2>
+          <p
+            style={{
+              marginTop: 0,
+              marginBottom: "1rem",
+              color: "var(--text-secondary, #475569)",
+            }}
+          >
+            Want to see the full platform in action? Pick a time on our live
+            calendar and we&apos;ll walk you through the dashboard, widget, and
+            automation setup.
           </p>
-          <Link to="/demo" className="contact-submit" style={{ display: "inline-flex", textDecoration: "none", width: "auto" }}>
+          <Link
+            to="/demo"
+            className="contact-submit"
+            style={{
+              display: "inline-flex",
+              textDecoration: "none",
+              width: "auto",
+            }}
+          >
             Book a Demo
           </Link>
         </div>

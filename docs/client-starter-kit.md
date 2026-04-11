@@ -150,7 +150,7 @@ If all of that works, you are all set.
 
 If you run into any issues or have questions, reach out to us:
 
-- **Email:** support@agentnexlify.com
+- **Email:** help@agentnexlify.com
 - **Subject line:** Widget Installation Help -- [Your Business Name]
 
 Include the following in your email so we can help you quickly:
