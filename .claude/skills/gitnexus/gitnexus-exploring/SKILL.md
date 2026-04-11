@@ -85,3 +85,11 @@ gitnexus_context({name: "validateUser"})
    → Outgoing: validateCard, chargeStripe, saveTransaction
 4. Read src/payments/processor.ts for implementation details
 ```
+
+## Gotchas
+
+- **`context` resource is ~150 tokens, but `cluster/{name}` can be 500+.** Use context first, cluster only when narrowing.
+- **Symbol name collisions.** `gitnexus_context({name: "handle"})` returns every `handle()` across the repo. Add a file-path hint or use Cypher.
+- **Process names are capitalized pascal case.** `loginFlow` returns empty — use `LoginFlow`.
+- **Clusters auto-regenerate on re-analyze.** A cluster name stable today may not exist tomorrow. Don't hard-code cluster names in docs.
+- **External lib calls appear as orphan nodes.** If a function "ends" at an unknown symbol, it's probably a library call. Check the import map for the real target.

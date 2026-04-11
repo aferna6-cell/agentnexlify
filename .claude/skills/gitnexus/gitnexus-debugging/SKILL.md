@@ -96,3 +96,12 @@ RETURN [n IN nodes(path) | n.name] AS chain
 
 4. Root cause: fetchRates calls external API without proper timeout
 ```
+
+## Gotchas
+
+- **Query by error text, not by stack frame.** `gitnexus_query("ValueError: x")` rarely hits; `gitnexus_query("validate input x")` usually does.
+- **Dynamic dispatch is invisible.** `importlib`, `getattr()`, React.lazy — edges don't exist in the graph. Always cross-check with grep for meta-programming-heavy files.
+- **Intermittent bugs rarely show in the static graph.** Use `context` to find async/external boundaries (HTTP clients, queues, locks), then look at runtime logs.
+- **`detect_changes` only sees committed changes.** If your bug is in uncommitted work, stash/commit first OR use `git diff` + grep manually.
+- **Cypher performance degrades past depth 4.** `*1..4` is fine, `*1..8` will time out on large repos.
+- **Stale index after a rename** shows the old name in calls until re-analyze fires. Check `.gitnexus/meta.json` timestamp.
