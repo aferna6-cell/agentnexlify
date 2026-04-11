@@ -353,6 +353,11 @@ class WidgetChatResponse(BaseModel):
     show_watermark: bool
     trial_expired: bool = False
     handoff: bool = False
+    # True when the managed-agent fallback (support_agent) handled this turn
+    # instead of the inline widget Claude call. Optional metadata for the
+    # frontend to show a "deep AI" badge or for telemetry. Defaults to False
+    # so existing widget builds keep working without changes.
+    ai_fallback_fired: bool = False
 
 
 class WidgetConfigResponse(BaseModel):

@@ -417,6 +417,117 @@ the right tool when you genuinely need the container + tool loop.
 
 ---
 
+## Widget chat fallback (support_agent as second tier)
+
+**Status: shipped 2026-04-10, off by default, opt-in per tenant.**
+
+The widget chat endpoint (`backend/routers/widget_chat.py`) now supports a
+second-tier fallback to the `support_agent` managed agent for hard
+questions the inline Claude call can't answer from the tenant KB alone.
+
+### Flow
+
+```
+User → widget → inline Claude (sonnet, KB in system prompt)
+  ├─ confident answer → reply directly
+  ├─ "HANDOFF_REQUESTED" → human handoff (SMS + email + webhook)
+  └─ "FALLBACK_TO_SUPPORT_AGENT" (new)
+       └─ support_agent managed agent (with 8s timeout)
+            ├─ confidence=high/medium → swap reply, log success
+            ├─ confidence=low → append HANDOFF_REQUESTED, log low-confidence
+            └─ timeout / error / not_configured → force HANDOFF_REQUESTED
+```
+
+### Enabling the fallback
+
+Per-tenant opt-in via `widget_configs.enable_ai_fallback` (migration
+`101_widget_ai_fallback_flag.sql`). Default `false`.
+
+```sql
+UPDATE widget_configs
+SET enable_ai_fallback = true
+WHERE tenant_id = '<tenant_uuid>';
+```
+
+Tenants can also toggle this themselves from the Widget Settings page
+(checkbox: **AI deep fallback**, under Customization).
+
+When the flag is on, the inline Claude system prompt receives an extra
+FALLBACK PROTOCOL instruction telling it to emit the marker instead of
+guessing. When the flag is off, the inline Claude prompt does not mention
+the marker at all, and the helper strips any leaked marker defensively.
+
+### Where the code lives
+
+- `backend/routers/widget_chat.py::_run_support_fallback` — helper that
+  owns the entire fallback decision + execution + logging. Returns
+  `(new_assistant_text, ai_fallback_fired)`. The endpoint calls it
+  unconditionally after the inline Claude reply is finalized.
+- `FALLBACK_MARKER` — module-level constant so both the prompt builder
+  and the detector stay in sync.
+- `FALLBACK_TIMEOUT_SECONDS = 8.0` — hard ceiling on the round-trip.
+
+### Observability
+
+Every fallback invocation writes an `ai_fallback_fired` row to
+`activity_log` with metadata:
+
+```
+{
+  session_id,
+  confidence,          # 'high' / 'medium' / 'low' / null on error
+  escalate_reason,     # support_agent's own escalate_reason, if any
+  duration_ms,
+  success,             # true iff high/medium and an answer was returned
+  error                # 'timeout' | 'not_configured: ...' | 'exception: ClassName' | null
+}
+```
+
+Ops dashboard query:
+
+```sql
+SELECT
+  date_trunc('hour', created_at) AS hour,
+  count(*) FILTER (WHERE (metadata->>'success')::boolean) AS successes,
+  count(*) FILTER (WHERE NOT (metadata->>'success')::boolean) AS degraded,
+  avg((metadata->>'duration_ms')::int) AS avg_ms
+FROM activity_log
+WHERE activity_type = 'ai_fallback_fired'
+  AND created_at > now() - interval '24 hours'
+GROUP BY 1 ORDER BY 1 DESC;
+```
+
+### Cost model
+
+Each fallback invocation runs the full `support_agent` session — Sonnet
+with `web_search` + `web_fetch` tools. Empirically ~$0.03-0.08 per
+invocation based on the 2026-04-10 live smoke. Budget ~$0.05/fallback
+when sizing monthly limits.
+
+The fallback ONLY fires when the inline Claude emits the marker. On the
+2026-04-10 smoke with MTOptions's KB, the marker fired on roughly 5-10%
+of widget messages, so the average per-message cost uplift is well under
+a penny. Monitor `activity_log` for fallback volume per tenant.
+
+### Testing
+
+Unit tests live in `backend/tests/test_widget_chat_fallback.py`. 13
+tests cover: marker absent, marker + flag off (strip), success paths
+(high/medium confidence), low-confidence forcing handoff, timeout,
+`ManagedAgentNotConfigured`, generic exception, and the log_activity
+failure resilience case. All mocks — no live API calls in this file.
+
+### Rollout plan
+
+1. Ship with default `false`. No impact on existing tenants.
+2. Enable for Aidan's test tenant → run 10+ real messages.
+3. Enable for MTOptions (top widget driver) → monitor activity_log for
+   24 hours.
+4. Roll to remaining 4 testers if MTOptions results are clean.
+5. Default new widget configs to `true` after 1 week of clean prod data.
+
+---
+
 ## Known limitations
 
 This integration is intentionally minimal. The pieces below are **not
