@@ -47,5 +47,15 @@ CLAUDE.local.md
 
 # OpenClaw migration — contains secrets
 .openclaw-migration/morpheus/polymarket-bot-.env
+
+# autoskills installs mirror dirs for each supported IDE. We only use
+# Claude Code, so only .agents/ (canonical storage) + .claude/skills/
+# (symlinked from .agents/) are committed. Next `npx autoskills` run
+# will recreate these locally — safe to leave untracked.
+.augment/
+.codebuddy/
+.continue/
+.junie/
+.kiro/
 .openclaw-migration/openclaw.env
 .openclaw-migration/morpheus/morpheus-sync-.env.example
