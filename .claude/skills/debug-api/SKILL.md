@@ -36,12 +36,14 @@ effort: high
 | Chat sessions not appearing in inbox | Orphaned sessions — chat_messages rows with no matching conversations row | Check for sessions missing from conversations table; backfill or use INSERT ... ON CONFLICT DO NOTHING |
 | RLS enabled but writes silently fail | RLS policies missing on table | Check pg_policies for the table; add policies or use service_role key |
 
-### Step 2: Check for Known Killers
+### Step 2: Gotchas (known production killers)
 
-- NEVER have `from __future__ import annotations` in a file with FastAPI routes
-- Look for bare `except: pass` patterns that hide errors
-- Check if display data comes from stale JWT claims instead of live API
-- Verify leads queries use `client_id` (not `tenant_id`) and `status` (not `lead_stage`)
+- `from __future__ import annotations` in ANY file with FastAPI routes → every request 422s. Deferred annotations make FastAPI treat body models as strings.
+- Bare `except: pass` silently swallows the real error. Replace with `except Exception: logger.exception(...)` before debugging further.
+- Display data sourced from stale JWT claims (old plan, old email) → UI shows outdated values. Always fetch live from `/api/v1/dashboard` for plan/email fields.
+- Leads queries using `tenant_id` instead of `client_id`, or `lead_stage` instead of `status` → silent zero-row returns, not errors.
+- CORS preflight returning 400 on third-party domains → widget script dies with "sorry I'm having trouble connecting". Hard-code `allow_origins=["*"]` for the widget (`backend/main.py`). Regression history: fd24b43, 9b07a59.
+- Webhook 500s that disappear in prod logs → Railway log tail only shows the last N lines; use `railway logs --deployment <id>` for a full dump.
 
 ### Step 3: Trace the Full Request Path
 1. Frontend — exact fetch call and payload shape (check frontend/src/utils/api.js)

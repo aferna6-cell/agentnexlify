@@ -83,3 +83,15 @@ background_tasks.add_task(_categorize_thing, tenant_id, data)
 - [ ] Prompt includes output format instructions
 - [ ] max_tokens is right-sized (not wastefully large)
 - [ ] Background tasks have rate limiting if called per-message
+
+## Gotchas
+- **Haiku wraps JSON in ` ```json ` fences ~50% of the time** even when told not to. Strict `json.loads` will crash. Always use fence-tolerant parsing. See `backend/services/structured_extractor.py::_extract_json_from_reply` for the canonical helper.
+- **Model ID drift.** Only `claude-sonnet-4-6`, `claude-opus-4-6`, or `claude-haiku-4-5-20251001`. Any other ID → 404 from Anthropic. These change over time — verify against CLAUDE.md.
+- **Streaming responses + thinking mode.** Set `thinking.display: "omitted"` or the extended-thinking tokens get interleaved with user-visible text.
+- **max_tokens too small silently truncates mid-JSON.** A 512-token cap on a "return a JSON object" prompt will produce unparseable output in ~5% of calls. Right-size for the expected output, not the input.
+- **`temperature=0` is not deterministic.** Claude still varies slightly. Don't write regression tests that assert exact text output — assert on shape/fields.
+- **Background task + error swallowing.** `background_tasks.add_task` runs after response is returned — exceptions don't reach the client. Must log with `logger.exception(...)` or errors disappear.
+- **Leaking the API key in logs.** Never log `response.request` objects or full headers — the Anthropic SDK sometimes includes the Bearer token. Log only `response.id` and `stop_reason`.
+- **Per-message AI calls without rate limit = cost explosion.** Categorizer on every chat message runs up $50-$100/day on a busy tenant. Gate on message count (every 5th) or conversation milestone.
+- **`content[0].text` assumes text-only response.** If tools are enabled, the first block might be `tool_use`. Iterate with `[b for b in response.content if b.type == "text"]`.
+- **Prompt caching** (`cache_control`) only helps on identical prompts. System prompt drift between tenants → no cache hit → no savings.

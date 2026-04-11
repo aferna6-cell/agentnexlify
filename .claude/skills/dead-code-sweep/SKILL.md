@@ -117,4 +117,16 @@ Verified alive (false positives):
 - [list items checked but kept, with reason]
 ```
 
+## Gotchas
+- **`_archive/`, `landing-page-v2/`, `public/` are legacy but ALIVE.** They are hosted/deployed separately. Never delete without user approval.
+- **`widget/` duplicated on purpose** with `frontend/public/widget/`. Both copies must stay — one is the source, one is the build artifact. Pre-push hook enforces byte-identity.
+- **Python `from x import *` hides usage.** `ts-prune` and `knip` don't help for Python. Use `vulture` or manual grep — and still verify.
+- **Test-only functions look dead** because no non-test caller exists. Grep `backend/tests/` before removing any helper in `backend/services/`.
+- **Dynamic router registration via `include_router`** — a router file may be imported by `main.py` indirectly. Don't trust static import graphs alone.
+- **SQL migrations that look "dead" are not.** Applied migrations cannot be removed. They exist as a historical record. Only unapplied drafts can be deleted.
+- **Industry-content packs** (dental, gym, law, etc.) may appear unused if no tenant has that industry set yet. Never remove industry files on a grep-based pass.
+- **Frontend lazy imports: `React.lazy(() => import("./PageX"))`** — static grep misses these. Check `routes.tsx` and any `lazy(` call sites before removing pages.
+- **Cron + GitHub Actions entry points.** `scripts/daily/*.py` and files referenced from `.github/workflows/*.yml` look dead to grep. Always check `.github/workflows/` before removing a script.
+- **Auto-commit hook edits** can introduce short-lived branches with files that look dead. Check `git log --all` before calling a file "never referenced".
+
 Run `python3 -m pytest tests/ -x --tb=short` before committing.

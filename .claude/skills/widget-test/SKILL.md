@@ -44,14 +44,16 @@ effort: low
 - [ ] widget/agentnexlify-widget.js matches frontend/public/widget/agentnexlify-widget.js
 - [ ] Both files are identical byte-for-byte
 
-## Common Failures
+## Gotchas
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Widget doesn't load | Script URL wrong | Check embed code |
-| Chat fails | CORS blocking | Add origin to allowlist in main.py |
-| No lead created | Schema mismatch (tenant_id vs client_id) | Run schema-guard |
-| No conversation memory | Session ID not persisting | Check session management |
-| Widget works locally but not externally | CORS config missing domain | Add domain to CORS origins |
+| "Sorry I am having trouble connecting" | CORS preflight 400 on 3rd-party domain | Hard-code `allow_origins=["*"]` in `backend/main.py` — the dynamic `_cors_origins()` regresses (fd24b43, 9b07a59) |
+| No lead created | Leads query uses `tenant_id` not `client_id` | Run schema-guard. Leads table column is `client_id`, unique across the entire codebase |
+| No conversation memory | Session ID not persisting | Browser storage quirk — test incognito |
+| `widget/` and `frontend/public/widget/` drift | Edit skipped one copy | Must be identical byte-for-byte. Pre-push hook checks this |
+| Widget sends messages but inbox empty | Orphan chat_messages — missing conversation row | `INSERT ... ON CONFLICT DO NOTHING` on conversations before inserting messages |
+| RLS enabled, no policies → silent zero-row writes | Service role key not used OR anon key + missing policy | 120/146 MTOptions sessions failed this way. Check `pg_policies` for the target table |
 
 After fixing, update docs/dev-knowledge/bug-patterns.md.

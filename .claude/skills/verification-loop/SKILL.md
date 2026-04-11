@@ -130,3 +130,15 @@ Run: /verify
 
 This skill complements PostToolUse hooks but provides deeper verification.
 Hooks catch issues immediately; this skill provides comprehensive review.
+
+## Gotchas
+- **Agentnexlify doesn't use `npm test` at the root.** Frontend uses `cd frontend && npm run build`. Backend uses `python3 -m pytest backend/tests/`. No combined runner.
+- **`pyright` is not installed.** Use `python3 -m py_compile` or `ruff check` for Python. Skip the Phase 2 pyright step entirely.
+- **Ruff warnings ≠ blockers.** The project has intentional `# noqa: BLE001` on broad exception catches. Don't auto-fix them.
+- **Pytest hangs on `lifespan startup`.** Starlette TestClient deadlocks — the project uses a custom `SyncASGITestClient` in `backend/tests/conftest.py`. Don't "fix" by switching back to TestClient.
+- **`python` command doesn't exist.** Always use `python3`. The hook runs `python3 -m pytest ...`.
+- **Secret scan false-positives on `.env.example`.** These are template files with placeholder keys. Don't flag them.
+- **`console.log` in widget is intentional** for cross-origin debugging. Don't strip without reading context.
+- **Coverage target 80% is aspirational.** The backend sits at ~45% currently. Don't block a PR on coverage alone — block on `PASS/FAIL` of the tests that exist.
+- **Diff review before push.** `git log origin/main..HEAD --stat` is the real "what's about to ship". `git diff HEAD~1` misses multi-commit branches.
+- **Phase 5 `grep -rn "sk-"`** catches legitimate strings like "sk-" in comments. Prefer `grep -rn "sk-ant-\|sk-live-\|rk_live_"` for real key prefixes.

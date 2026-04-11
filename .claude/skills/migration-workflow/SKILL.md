@@ -58,7 +58,7 @@ SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'table_
 SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
 ```
 
-## Common Mistakes to Avoid
+## Gotchas
 
 1. **Creating migration file but not applying it** — This is the #1 failure mode. Features ship, schema doesn't exist, runtime errors.
 2. **Not documenting in schema-log.md** — Future sessions won't know the migration exists.

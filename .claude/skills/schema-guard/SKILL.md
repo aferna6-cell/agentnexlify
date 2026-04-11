@@ -33,8 +33,8 @@ Compare the actual schema against:
 2. Any SQL queries in the relevant router file
 3. The frontend component that displays this data
 
-### Step 3: Known Mismatch Patterns
-Watch for these — they've all caused production bugs before:
+### Step 3: Gotchas
+Schema-mismatch pitfalls that have already caused production bugs:
 
 | Code Says | DB Actually Has | Impact |
 |-----------|----------------|--------|

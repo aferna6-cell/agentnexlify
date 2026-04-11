@@ -49,3 +49,15 @@ effort: high
 - [ ] Verify no console errors
 - [ ] Update docs/dev-knowledge/schema-log.md if schema changed
 - [ ] Update CLAUDE.md if new table added
+
+## Gotchas
+- **`from __future__ import annotations`** in any router file → every request 422s. Zero tolerance.
+- **Static routes before dynamic routes.** `/templates` must be registered before `/{id}`. FastAPI matches in registration order.
+- **`tenant_id` vs `client_id`.** Leads and conversations tables use `client_id`. Everything else uses `tenant_id`. Always route through `backend/services/tenant_scope.py` helpers.
+- **In-memory state is per-process only.** Production runs 4 Uvicorn workers. A cache hit in one worker is a miss in another. Use Supabase for anything that needs to survive a worker restart.
+- **Pydantic response model mismatch → 500.** If the function returns extra keys and `response_model` is set, FastAPI raises. Always validate the response shape matches the model.
+- **Dark theme only.** New frontend pages must match the existing dashboard dark theme. See `design.md`.
+- **Display data from stale JWT.** Never render plan/email from `user` — fetch live from `/api/v1/dashboard`. JWT claims don't refresh on plan change.
+- **Migration file created but never applied.** See `migration-workflow` skill — file existing ≠ column existing in prod. Use Supabase MCP or Management API after creating.
+- **Widget must stay in sync.** `widget/` and `frontend/public/widget/` must be byte-identical. Pre-push hook enforces, but still easy to miss.
+- **Adding a new table ≠ adding to CLAUDE.md.** Update the schema table in CLAUDE.md or future sessions won't know about the new table.

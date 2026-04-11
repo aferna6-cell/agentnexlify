@@ -320,7 +320,7 @@ npm run test:coverage
 }
 ```
 
-## Common Testing Mistakes to Avoid
+## Gotchas
 
 ### FAIL: WRONG: Testing Implementation Details
 ```typescript

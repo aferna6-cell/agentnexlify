@@ -117,3 +117,16 @@ Report format:
 1. Fix CRITICAL first, then HIGH, MEDIUM, LOW
 2. Each fix: minimal targeted change, verify no regression
 3. Commit: `fix(security): patch N <SEVERITY> vulnerabilities — <list>`
+
+## Gotchas
+
+- **Widget CORS exception.** `backend/main.py` intentionally runs `allow_origins=["*"]` — the widget is embedded on unknown 3rd-party sites. Do NOT flag this as CRITICAL. Flag any OTHER endpoint running `["*"]` as CRITICAL.
+- **Service role key leakage via logs.** Never log `settings.service_role_key`, Stripe webhook secret, or Anthropic API key. Scan for `logger.*{key}` and `print.*key`.
+- **`verify_tenant` vs `_verify_tenant`.** Both exist, same purpose. Grep both. Also: bare `claims.get("tenant_id") == tenant_id` checks without importing the helper are equally valid — don't false-flag.
+- **RLS enabled with zero policies = silent failure.** 120/146 MTOptions sessions disappeared this way. Always query `pg_policies` after enabling RLS to confirm at least one policy exists.
+- **Stripe webhook signature must use raw body.** If a handler calls `await request.json()` before `stripe.Webhook.construct_event`, signature validation fails. Must use `await request.body()`.
+- **OAuth `state` param must be signed JWT.** Unsigned state = CSRF vulnerability. `backend/routers/integrations.py` has the canonical pattern.
+- **`innerHTML` in widget with interpolation.** Every `.innerHTML = \`... ${var} ...\`` must route through `_esc()` or the widget is XSS-able by the tenant's KB content.
+- **`dangerouslySetInnerHTML` in React.** Mandatory sanitization (DOMPurify/escapeHtml). No exceptions.
+- **`from __future__ import annotations` in router files.** Zero tolerance — every request 422s. Separate from security, but commonly found during audits.
+- **False-positive XSS on pure-backend templates.** `render_template` with escaped Jinja vars is safe; only flag f-string HTML.
