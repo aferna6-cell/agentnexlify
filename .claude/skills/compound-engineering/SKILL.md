@@ -556,3 +556,13 @@ Coordinator:
   4. Resolve any conflicts
   5. Final vertical check on merged result
 ```
+
+## Gotchas
+
+- **5 agents is heavy for small tasks.** Under 5 minutes of work, skip compound — just do it. Compound pays off on 30+ min tasks with unknowns.
+- **Brainstormer output can be too broad.** Planner has to narrow it. If you skip Brainstormer on a well-scoped task, start with Planner directly.
+- **Executor hitting test failures is normal** — the Reviewer gate catches them. Do not loop Executor on failing tests; pass to Reviewer.
+- **Reviewer without diff context hallucinates issues.** Always feed the actual git diff, not a summary.
+- **Vertical Checker is the only agent that touches prod concerns** (schema, RLS, widget sync). Do not skip even if the other 4 all pass.
+- **Worktree merges can conflict.** When parallel worktrees touch the same file, merge conflicts surface at the merge step — not the compound step. Run `git worktree list` before declaring done.
+- **Token cost.** Each compound run is ~3-5x the token cost of a single-shot execution. Justify with complexity, not habit.

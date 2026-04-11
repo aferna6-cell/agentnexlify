@@ -74,3 +74,13 @@ Lightweight reads (~100-500 tokens) for navigation:
 MATCH (caller)-[:CodeRelation {type: 'CALLS'}]->(f:Function {name: "myFunc"})
 RETURN caller.name, caller.filePath
 ```
+
+## Gotchas
+
+- **Index staleness.** `npx gitnexus analyze` must re-run after any significant commit or the MCP will return pre-refactor data. Post-commit hook fires automatically — verify the hook is installed.
+- **Cypher queries on a non-existent node** return empty, not an error. Validate the symbol exists with `gitnexus_context` before writing deep Cypher.
+- **MCP tool name drift.** If `gitnexus_query` stops working, check `npx gitnexus --version` — the MCP server spec may have renamed tools between versions.
+- **Embeddings are off by default.** Semantic search is keyword-based until `--embeddings` is enabled. Check `.gitnexus/meta.json` for current status.
+- **First query after restart is slow** (2-5s) on repos with 5k+ symbols. Subsequent queries are cached. Don't mistake this for a hang.
+- **`CodeRelation` edge label is a single node type** with `type` property — it's NOT separate `CALLS`, `IMPORTS` edge types at the Neo4j level. Cypher filter must use `WHERE r.type = 'CALLS'`.
+- **`gitnexus_impact` confidence reflects static analysis** — dynamic dispatch (`importlib`, React.lazy) is invisible. Manually verify for meta-programming-heavy code.
