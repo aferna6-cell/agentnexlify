@@ -1396,3 +1396,17 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `backend/main.py`
 **Fix:** Added HEAD method support to version endpoints.
 **Prevention:** Health check endpoints should support both GET and HEAD methods. Document this in API conventions.
+
+*Auto-logged 2026-04-09 evening*
+
+---
+
+### 79. Env-driven CORS allow_origins broke widget on customer domains
+**Date:** 2026-04-10 (Commit 9b07a59)
+**Symptom:** Widget POSTs from tenant customer sites fail with "I'm having trouble connecting." OPTIONS preflight returns 400 ("invalid origin"). Widget loads but cannot communicate with API.
+**Root Cause:** `_cors_origins()` read `WIDGET_ALLOWED_ORIGINS` / `CORS_ALLOWED_ORIGINS` from env. In production Railway, this was set to dashboard domains only (`https://app.agentnexlify.com,https://agentnexlify.com`), excluding all tenant customer sites. Since the widget is embedded on arbitrary third-party domains, env-driven origin filtering is fundamentally wrong for this use case.
+**Files Changed:** `backend/main.py`
+**Fix:** Hard-coded `allow_origins=["*"]` directly in the CORSMiddleware call. JWT auth via Authorization header (not cookies) + `allow_credentials=False` prevent CSRF. The `_cors_origins()` function kept only for ops readiness indicators.
+**Prevention:** The widget CORS must always be `["*"]` because we cannot enumerate tenant customer domains. Do not re-introduce env-driven CORS origin filtering for the main app. If per-route origin filtering is needed later, use middleware that checks the path prefix, not global CORSMiddleware.
+
+*Auto-logged 2026-04-10 evening*

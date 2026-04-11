@@ -1,12 +1,12 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-10 (automated morning routine)
+Updated: 2026-04-10 (automated evening routine)
 
-## Today's Top 3 Priorities
+## Tomorrow's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 7 of exposure. Key committed in 9c87335, scrubbed in d4463d7. Still live in Railway. Agent: **devops** / Human action required. **CRITICAL.**
-2. **QA the 81-file auto-commit (tenant_scope adoption)** — Commit 11363a1 landed overnight touching 60+ routers. Cross-tenant leak risk if any router lost its tenant scoping. Agent: **qa-tester**.
-3. **Apply migrations 077-100** — 24 pending migrations blocking features (autopilot plan, onboarding wizard, RLS fixes, no-show recovery, daily briefing, AI lead qualification, AI document drafting). Agent: **schema-guardian**.
+1. **ROTATE compromised admin API key in Railway** — DAY 8 of exposure. Key committed in 9c87335, scrubbed in d4463d7. Still live in Railway. Agent: **devops** / Human action required. **CRITICAL.**
+2. **Apply migrations 077-100** — 24 pending migrations blocking features (autopilot plan, onboarding wizard, RLS fixes, no-show recovery, daily briefing, AI lead qualification, AI document drafting). Agent: **schema-guardian**.
+3. **QA tenant_scope adoption + CORS fix in production** — 60+ routers touched, plus CORS now hardcoded to `["*"]`. Verify widget works on external customer domains. Agent: **qa-tester**.
 
 ## Active Tasks
 
@@ -30,13 +30,14 @@ Updated: 2026-04-10 (automated morning routine)
 
 ### Priority 1 — Critical / QA
 
-- [ ] **QA 81-file auto-commit (11363a1)** — tenant_scope adoption across 60+ routers. Cross-tenant leak = critical. Agent: **qa-tester**. (NEW — Apr 10)
-- [ ] **QA tenant_scope.py end-to-end** — Centralized tenant scoping touching 20+ routers. Bug = cross-tenant leak. Agent: **qa-tester**.
+- [ ] **QA tenant_scope adoption + CORS fix** — 60+ routers touched in auto-commits + CORS now hardcoded `["*"]`. Verify widget on external customer domains. Cross-tenant leak = critical. Agent: **qa-tester**.
+- [ ] **QA industry packs** — 14 new modules landed (881e026). No per-pack tests beyond base. Agent: **qa-tester**. (NEW — Apr 10)
 - [ ] **QA marketing infrastructure** — A/B tests, automation rules, marketing dashboard. Zero QA. Agent: **qa-tester**.
 - [ ] **Verify security fixes (2ab39dd, d7572eb, e2dbf36, 29aca88)** — 25+ security patches. Agent: **qa-tester**.
-- [ ] **QA Apr 8-9 fix batch** — 13+ bug fixes across 3 fix commits (noshow cache, session_id, header injection, async blocking, hardcoded URLs). Agent: **qa-tester**.
+- [ ] **QA Apr 8-10 fix batch** — 18+ bug fixes across multiple commits (noshow cache, session_id, header injection, async blocking, hardcoded URLs, CORS, test transport). Agent: **qa-tester**.
 - [ ] **Extend pre-commit hook** — Flag `except Exception: pass` and `except Exception: continue` (not just bare `except:`). Agent: **devops**.
-- [ ] **QA Managed Agents integration** — New feature (lead qualification + document drafter). Smoke tests pass but no production QA yet. Agent: **qa-tester**.
+- [ ] **QA Managed Agents integration** — Lead qualification + document drafter + field monitor + researcher. Smoke tests pass but no production QA yet. Agent: **qa-tester**.
+- [ ] **Ingest competitor briefs to KB** — 5 research briefs in `research-briefs/` need `/kb-ingest` to enter the wiki. Agent: manual.
 
 ### Priority 2 — Verification & Testing
 
@@ -60,12 +61,23 @@ Updated: 2026-04-10 (automated morning routine)
 - [ ] **Automated routine reliability** — March 26 evening and March 27 morning both failed; April 6 morning did not run.
 - [ ] **Create migration-gate hook** — Block new feature commits when pending migration count > 15. Suggested by evening review pattern analysis.
 
+## Completed (Recent) — 2026-04-10
+
+- [x] **Morning health check** — all green (0 dangerous imports, 0 bare excepts, widget sync OK, build PASS 4.45s)
+- [x] **Fix: CORS env-driven origins broke widget** — 9b07a59 (bug #79). Hard-coded `allow_origins=["*"]`.
+- [x] **Fix: FastAPI test transport deadlocks** — fd24b43. Replaced Starlette TestClient with httpx ASGITransport.
+- [x] **Fix: 24+ test files patched for get_service_supabase rename** — 74be54a, d7d73f5, 9277c0e
+- [x] **feat: Industry packs** — 14 industry-specific modules (salon, dental, HVAC, legal, medical, etc.) — 881e026
+- [x] **feat: Managed agents** — router HTTP tests + field_monitor cron + 5 competitor briefs — b97928a
+- [x] **Advisor-executor agents** — Opus advisor + Sonnet executor pattern scaffolded (.claude/agents/)
+- [x] **5 competitor research briefs** — GoHighLevel, Drillbit, Birdeye, Oscar Chat, Phonely
+- [x] **Bug pattern #79 documented** — CORS env-driven origins
+- [x] **Evening review** — this session
+- [x] **Task backlog updated** — this file (evening)
+
 ## Completed (Recent) — 2026-04-09
 
 - [x] **Morning health check** — all clear (0 dangerous imports, 0 bare excepts, widget sync OK, build PASS 5.82s)
-- [x] **Documentation gap scan** — no gaps in bug-patterns or schema-log
-- [x] **Daily log created** — docs/daily-logs/2026-04-09.md
-- [x] **Task backlog updated** — this file (morning)
 - [x] **Claude Managed Agents infrastructure** — Full integration with Anthropic Managed Agents API (6f59c42)
 - [x] **AI Lead Qualification agent** — Claude-powered lead scoring on paid plans (765adbe, migration 099)
 - [x] **AI Document Drafter agent** — Generate quotes/invoices/proposals (a4ffee7, migration 100)
@@ -79,13 +91,8 @@ Updated: 2026-04-10 (automated morning routine)
 - [x] **Fix: widget lead scoring blocking async** — f0a1c37 (bug #76)
 - [x] **Fix: hardcoded production URLs in 4 routers** — f0a1c37 (bug #77)
 - [x] **Fix: missing HEAD on /version endpoint** — f0a1c37 (bug #78)
-- [x] **Frontend: added console.warn to 5 swallowed .catch() blocks** — f0a1c37
 - [x] **Regression tests: bug-patterns #70 + #71** — 100d275
-- [x] **Regression tests: noshow toggle-off** — 4782b89
-- [x] **Regression tests: daily briefing SMS formatter** — 4f5e47b
-- [x] **Evening review + bug-patterns #72-78 documented** — this session
-- [x] **Schema-log verified** — migrations 099-100 accurate
-- [x] **Task backlog updated** — this file (evening)
+- [x] **Evening review + bug-patterns #72-78 documented**
 
 ## Previous Completed — 2026-04-08
 
@@ -101,16 +108,17 @@ Updated: 2026-04-10 (automated morning routine)
 - [x] Bug patterns #64-69 documented
 - [x] Schema-log updated through 098
 
-## Overall Progress (2026-04-10 Morning)
+## Overall Progress (2026-04-10 Evening)
 
-- **Last commit:** 11363a1 (chore: auto-commit Claude edits, 2026-04-09 20:05)
-- **Codebase status:** Clean (auto-commit 11363a1 resolved 94-file backlog)
-- **Health check:** All green (frontend build 4.45s, widget sync OK, 0 bare excepts, 0 dangerous imports)
-- **Silent frontend catches:** 8 (stable — same as Apr 9 evening)
-- **Bug patterns total:** 78 (no new overnight)
-- **Pending migrations:** 24 (unchanged — none applied overnight)
-- **SECURITY INCIDENT DAY 7:** admin API key — rotate in Railway immediately
-- **Key concern:** QA the 81-file auto-commit for cross-tenant safety
+- **Last commit:** 9b07a59 (fix(cors): hard-code allow_origins=['*'], 2026-04-10)
+- **Codebase status:** Clean (12 commits landed today, 165 files touched)
+- **Health check:** All green (widget sync OK, 0 bare excepts, 0 dangerous imports)
+- **Silent frontend catches:** 8 (unchanged — 2+ days stable, needs triage or fix)
+- **Bug patterns total:** 79 (+1 today: CORS env-driven origins)
+- **Pending migrations:** 24 (unchanged — none applied today)
+- **SECURITY INCIDENT DAY 8:** admin API key — rotate in Railway **IMMEDIATELY**
+- **Key concern:** Industry packs (14 modules) + managed agents (field monitor, researcher) need QA
+- **New assets:** 5 competitor research briefs, advisor-executor agent pattern, industry packs system
 
 ---
 
