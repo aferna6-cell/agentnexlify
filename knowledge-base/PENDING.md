@@ -15,3 +15,10 @@ Raw files awaiting compilation. Run `/kb-compile` to process.
 
 - [competitors] GoHighLevel home → `wiki/competitors/gohighlevel-agency-platform.md`
 - [competitors] GoHighLevel home v3 → `wiki/competitors/gohighlevel-scale-metrics-v3.md`
+
+## Ingested 2026-04-12T22:54:23Z — cron autopop
+
+- [ai-llm] Claude Opus 4.6 \ Anthropic — https://www.anthropic.com/news/claude-opus-4-6 → `raw/ai-llm/claude-opus-4-6.md`
+- [ai-llm] Introducing Sonnet 4.6 \ Anthropic — https://www.anthropic.com/news/claude-sonnet-4-6 → `raw/ai-llm/claude-sonnet-4-6.md`
+- [competitors] The 15-minute AI responder that follows up with every lead instantly — https://www.gohighlevel.com/post/the-15-minute-ai-responder-that-follows-up-with-every-lead-instantly → `raw/competitors/ghl-15-minute-ai-responder.md`
+- [competitors] HighLevel March 2026 Email Marketing Performance Report — https://www.gohighlevel.com/post/highlevel-february-2026-email-marketing-performance-report-6033-9007 → `raw/competitors/ghl-email-marketing-report-feb-2026.md`
