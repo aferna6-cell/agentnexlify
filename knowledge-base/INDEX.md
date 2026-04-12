@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 5
+- Total articles: 4 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-12
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 

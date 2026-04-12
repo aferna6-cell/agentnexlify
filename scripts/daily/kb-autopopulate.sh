@@ -25,6 +25,14 @@ mkdir -p "$LOG_DIR"
 log_line "$LOG_FILE" "Starting KB auto-populate ($HOUR:00)..."
 trap 'exit_code=$?; log_exit_status "$LOG_FILE" "KB auto-populate" "$exit_code"' EXIT
 
+# Resolve claude binary (cron has minimal PATH — same pattern as morning-auto.sh)
+CLAUDE_BIN="$(resolve_claude_bin 2>/dev/null || true)"
+if [ -z "$CLAUDE_BIN" ] || [ ! -x "$CLAUDE_BIN" ]; then
+  log_line "$LOG_FILE" "ERROR: claude CLI not found. Set AGENTNEXLIFY_CLAUDE_BIN in cron entry."
+  exit 1
+fi
+log_line "$LOG_FILE" "Using claude: $CLAUDE_BIN"
+
 # Pull latest before discovering (avoids merge conflicts on commit)
 git_pull_if_clean "$LOG_FILE"
 
@@ -32,7 +40,7 @@ git_pull_if_clean "$LOG_FILE"
 log_line "$LOG_FILE" "Running /kb-discover via headless Claude..."
 DISCOVER_PROMPT="Run /kb-discover across all categories in knowledge-base/sources.yaml. For each category: search the web using agent-browser, score results for relevance to AgentNexLiFy, deduplicate against knowledge-base/known-urls.json, and ingest the top 2 new articles per category into knowledge-base/raw/<category>/. Append ingested URLs to known-urls.json. Print a summary: categories processed, articles ingested, articles rejected."
 
-claude -p "$DISCOVER_PROMPT" \
+"$CLAUDE_BIN" -p "$DISCOVER_PROMPT" \
   --allowedTools Bash,Read,Write,Edit,Glob,Grep \
   >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "kb-discover step failed (non-fatal)"
 
@@ -40,7 +48,7 @@ claude -p "$DISCOVER_PROMPT" \
 log_line "$LOG_FILE" "Running /kb-compile on pending sources..."
 COMPILE_PROMPT="Run /kb-compile. For each file listed in knowledge-base/PENDING.md: read the raw source, generate a Karpathy-pattern wiki article using the template at .claude/skills/wiki/references/template.md, cross-reference existing wiki pages via [[slug]] links, update knowledge-base/INDEX.md with the new entry, generate a Voyage AI embedding (voyage-3-lite, 512-dim), and store in Supabase kb_articles table. Remove processed entries from PENDING.md. Print: articles compiled, wiki pages touched, embeddings stored."
 
-claude -p "$COMPILE_PROMPT" \
+"$CLAUDE_BIN" -p "$COMPILE_PROMPT" \
   --allowedTools Bash,Read,Write,Edit,Glob,Grep,mcp__supabase__* \
   >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "kb-compile step failed (non-fatal)"
 
