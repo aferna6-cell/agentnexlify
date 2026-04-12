@@ -9,6 +9,7 @@ MORNING_SCRIPT="$REPO_DIR/scripts/daily/morning-auto.sh"
 EVENING_SCRIPT="$REPO_DIR/scripts/daily/evening-auto.sh"
 SMOKE_SCRIPT="$REPO_DIR/scripts/daily/e2e-smoke.sh"
 CHALLENGES_SCRIPT="$REPO_DIR/scripts/daily/challenge-assumptions.sh"
+KB_AUTOPOP_SCRIPT="$REPO_DIR/scripts/daily/kb-autopopulate.sh"
 
 # Default times
 MORNING_HOUR="${1:-8}"
@@ -28,6 +29,7 @@ chmod +x "$MORNING_SCRIPT"
 chmod +x "$EVENING_SCRIPT"
 chmod +x "$SMOKE_SCRIPT"
 chmod +x "$CHALLENGES_SCRIPT"
+chmod +x "$KB_AUTOPOP_SCRIPT"
 
 # Check if claude is available
 if ! command -v claude &> /dev/null; then
@@ -61,6 +63,11 @@ printf '0 6 * * * bash -lc %q # AgentNexLiFy-E2E-Smoke\n' "$smoke_cmd" >> "$TMP_
 printf -v challenges_cmd 'cd %q && bash %q' "$REPO_DIR" "$CHALLENGES_SCRIPT"
 echo "# AgentNexLiFy Challenge Assumptions — 9 PM daily (after evening review)" >> "$TMP_CRONTAB"
 printf '0 21 * * * AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-ChallengeAssumptions\n' "$claude_bin_q" "$challenges_cmd" >> "$TMP_CRONTAB"
+
+printf -v kb_autopop_cmd 'cd %q && bash %q' "$REPO_DIR" "$KB_AUTOPOP_SCRIPT"
+echo "# AgentNexLiFy KB Auto-Populate — twice daily (6 AM + 6 PM)" >> "$TMP_CRONTAB"
+printf '0 6 * * * AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-KB-Morning\n' "$claude_bin_q" "$kb_autopop_cmd" >> "$TMP_CRONTAB"
+printf '0 18 * * * AGENTNEXLIFY_CLAUDE_BIN=%s bash -lc %q # AgentNexLiFy-KB-Evening\n' "$claude_bin_q" "$kb_autopop_cmd" >> "$TMP_CRONTAB"
 
 # Install
 crontab "$TMP_CRONTAB"

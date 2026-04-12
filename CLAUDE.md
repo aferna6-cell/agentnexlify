@@ -95,6 +95,8 @@ Automated: 8 AM morning, 8 PM evening (scripts/daily/). Interactive: `/morning`,
 ## Knowledge Base
 `docs/dev-knowledge/`: bug-patterns.md, schema-log.md, architecture-decisions.md. Always update after fixing bugs or changing schema.
 
+**LLM Wiki** (Karpathy pattern) at `knowledge-base/`. See `knowledge-base/CLAUDE.md` for schema, ops (ingest/compile/discover/query/lint), page conventions, and categories. Auto-populates twice daily (6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`). Chronological log at `knowledge-base/log.md`.
+
 ## Workspaces & Routing
 
 | Task | Go to | Read first |

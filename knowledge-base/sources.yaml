@@ -1,67 +1,99 @@
 # Knowledge Base Discovery Manifest
-# Defines search queries, competitor blogs, and feeds per category.
-# /kb-discover reads this to find new articles.
+# Read by /kb-discover (scripts/daily/kb-autopopulate.sh at 6am+6pm).
+# Tightened to AgentNexLiFy core scope: competitors we fight, AI as a whole
+# (Claude-first), verticals we sell to, tech we run on, regulations we hit.
 
 competitors:
   search_queries:
-    - "GoHighLevel AI update 2026"
-    - "AI chatbot small business CRM"
-    - "Drillbit AI contractor"
-    - "Phonely AI receptionist"
-    - "Toma AI receptionist"
-    - "Birdeye AI reviews 2026"
-    - "Podium AI reviews"
-    - "Oscar Chat AI chatbot"
-    - "Tidio AI chatbot update"
+    - "GoHighLevel AI Employee update 2026"
+    - "GoHighLevel pricing changes 2026"
+    - "Drillbit AI contractor CRM YC"
+    - "Phonely AI receptionist pricing"
+    - "Toma AI receptionist review"
+    - "Birdeye AI reviews reputation 2026"
+    - "Podium AI assistant small business"
+    - "Oscar Chat vs competitors"
+    - "Tidio Lyro AI chatbot update"
+    - "Intercom Fin AI pricing"
+    - "Drift Conversational AI 2026"
+    - "AI chatbot small business comparison 2026"
   blogs:
     - https://www.gohighlevel.com/blog
     - https://birdeye.com/blog
     - https://www.podium.com/resources
+    - https://www.tidio.com/blog
+    - https://www.intercom.com/blog
+    - https://www.drift.com/blog
 
 ai_llm:
+  # Scoped to: Claude-specific + agent patterns we might ship in AgentNexLiFy
   search_queries:
-    - "Anthropic Claude new features 2026"
-    - "OpenAI GPT update 2026"
-    - "LLM context window improvements"
-    - "AI agent frameworks 2026"
-    - "structured output LLM"
+    - "Anthropic Claude 4.6 release notes"
+    - "Anthropic Managed Agents pricing update"
+    - "Claude prompt caching cost reduction"
+    - "Claude tool use multi-turn"
+    - "Claude Sonnet Haiku Opus routing strategy"
+    - "AI agent framework production 2026"
+    - "LLM evaluation pass@k small business"
+    - "structured output JSON schema Anthropic"
+    - "context window cost optimization"
+    - "MCP Model Context Protocol adoption"
   blogs:
     - https://www.anthropic.com/news
-    - https://openai.com/blog
+    - https://www.anthropic.com/engineering
+    - https://www.anthropic.com/research
 
 small_biz_saas:
   search_queries:
-    - "small business SaaS churn 2026"
-    - "PLG small business"
-    - "vertical SaaS trends"
+    - "small business SaaS churn benchmark 2026"
+    - "PLG small business SaaS 2026"
+    - "vertical SaaS winners 2026"
+    - "SMB software pricing power"
+    - "usage-based pricing small business"
+    - "SaaS freemium conversion rate"
 
 verticals:
+  # Industries we ship tenant chatbots for
   search_queries:
-    - "AI for contractors 2026"
-    - "dental practice management AI"
+    - "AI receptionist contractor plumber 2026"
+    - "dental practice AI chat HIPAA"
     - "salon booking AI chatbot"
-    - "restaurant AI ordering"
-    - "legal intake AI"
+    - "restaurant AI ordering chatbot"
+    - "legal intake AI disclosure"
     - "real estate AI lead capture"
+    - "auto shop AI chat"
+    - "medical office AI chatbot HIPAA"
+    - "spa wellness AI booking"
 
 technical:
+  # Infra we actually run on
   search_queries:
-    - "prompt engineering best practices 2026"
-    - "RAG vs long context"
-    - "LLM streaming structured output"
-    - "AI agent tool use patterns"
-    - "pgvector semantic search"
+    - "pgvector Supabase production"
+    - "Voyage AI embeddings cost"
+    - "Anthropic streaming structured output"
+    - "FastAPI async best practice 2026"
+    - "React Vite Supabase auth pattern"
+    - "Railway deploy FastAPI"
+    - "Vercel React build optimization"
+    - "embedded widget cross-origin auth"
+    - "Stripe webhook signature verification"
+    - "tenant isolation Postgres RLS"
 
 regulations:
   search_queries:
-    - "HIPAA AI chatbot compliance"
-    - "TCPA SMS marketing rules 2026"
+    - "HIPAA AI chatbot compliance 2026"
+    - "TCPA SMS marketing 2026"
+    - "FTC AI guidelines 2026"
     - "AI disclosure laws United States"
-    - "FTC AI guidelines"
+    - "California AI chatbot disclosure"
+    - "GDPR AI processing small business"
 
 growth:
+  # Widget/embed distribution, GEO, SEO
   search_queries:
-    - "chat widget viral growth"
-    - "embedded SaaS distribution"
-    - "small business SEO AI"
-    - "GEO generative engine optimization"
+    - "chat widget viral distribution SaaS"
+    - "embedded widget attribution tracking"
+    - "generative engine optimization GEO 2026"
+    - "small business SEO AI Overviews"
+    - "website chat widget conversion rate"
+    - "AI citation in ChatGPT Perplexity"
