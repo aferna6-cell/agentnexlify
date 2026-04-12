@@ -60,6 +60,15 @@ Partners handle sales/marketing. Don't invoke from engineering sessions unless u
 - `finance` — budgets, forecasts
 - `productivity` — meetings, tasks
 
+## Disabled plugins (collision — do not enable)
+
+These duplicate project-level MCPs or skills. Re-enabling will cause dispatch ambiguity or auth failures:
+
+- `supabase@claude-plugins-official` — plugin registers HTTP MCP without project-ref; project `.mcp.json` has correct stdio+token
+- `context7@claude-plugins-official` — duplicates project `.mcp.json` entry
+- `playwright@claude-plugins-official` — duplicates project `.mcp.json` entry
+- `frontend-design@claude-plugins-official` — same skill name as `.claude/skills/frontend-design/`; project copy is the source of truth
+
 ## Conflict resolution
 
 When plugin skill + existing project skill overlap:
