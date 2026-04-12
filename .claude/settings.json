@@ -1,4 +1,78 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(git log*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git stash list*)",
+      "Bash(ls *)",
+      "Bash(which *)",
+      "Bash(echo *)",
+      "Bash(cat /dev/stdin*)",
+      "mcp__context7__*",
+      "mcp__playwright__*",
+      "mcp__deepwiki__*",
+      "mcp__supabase__*"
+    ],
+    "deny": [
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.azure/**)",
+      "Read(~/.kube/**)",
+      "Read(~/.gcp/**)",
+      "Read(~/.config/gcloud/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.npmrc)",
+      "Read(~/.pypirc)",
+      "Read(~/.netrc)",
+      "Read(~/.git-credentials)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa)",
+      "Read(**/id_ed25519)",
+      "Read(**/credentials.json)",
+      "Read(**/service-account*.json)",
+      "Edit(~/.ssh/**)",
+      "Edit(~/.aws/**)",
+      "Edit(~/.gnupg/**)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.zshrc)",
+      "Edit(~/.bash_profile)",
+      "Edit(~/.profile)",
+      "Edit(/etc/**)",
+      "Bash(nc:*)",
+      "Bash(ncat:*)",
+      "Bash(socat:*)",
+      "Bash(telnet:*)",
+      "Bash(bash -i*)",
+      "Bash(sh -i*)"
+    ],
+    "ask": [
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(rsync:*)",
+      "Bash(npm publish:*)",
+      "Bash(pip install:*)",
+      "Bash(sudo:*)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "hooks": {
     "PreToolUse": [
       {
@@ -22,10 +96,10 @@
           },
           {
             "type": "agent",
-            "if": "Bash(git push*)",
             "prompt": "Review all unpushed commits for this branch. Run: git log --oneline origin/main..HEAD and git diff origin/main..HEAD. Check for: (1) missing tenant isolation in DB queries (leads/conversations use client_id not tenant_id), (2) route shadowing (static routes must register before param routes), (3) unawaited async calls, (4) bare except:pass without logging, (5) security issues (secret leakage, XSS, missing auth). Output BLOCK with reason if critical issues found. Output PASS if clean.",
-            "model": "claude-haiku-4-5-20251001",
+            "if": "Bash(git push*)",
             "timeout": 120,
+            "model": "claude-haiku-4-5-20251001",
             "statusMessage": "Reviewing unpushed commits..."
           }
         ]
@@ -118,10 +192,10 @@
           },
           {
             "type": "agent",
-            "if": "Edit(backend/routers/auth.py)|Edit(backend/routers/stripe_webhooks.py)|Edit(backend/routers/billing.py)|Edit(backend/routers/client_portal.py)|Edit(backend/dependencies.py)|Write(backend/routers/auth.py)|Write(backend/routers/stripe_webhooks.py)|Write(backend/routers/billing.py)|Write(backend/routers/client_portal.py)|Write(backend/dependencies.py)",
             "prompt": "A security-critical file was just modified. Read the changed file and scan for: (1) auth bypass — missing verify_tenant or JWT validation, (2) tenant data leakage — queries without tenant_id/client_id filter, (3) secret leakage in logs or responses, (4) Stripe webhook missing signature verification, (5) missing input validation on request bodies. Report findings with line numbers. Exit code 2 if critical vulnerability found.",
-            "model": "claude-haiku-4-5-20251001",
+            "if": "Edit(backend/routers/auth.py)|Edit(backend/routers/stripe_webhooks.py)|Edit(backend/routers/billing.py)|Edit(backend/routers/client_portal.py)|Edit(backend/dependencies.py)|Write(backend/routers/auth.py)|Write(backend/routers/stripe_webhooks.py)|Write(backend/routers/billing.py)|Write(backend/routers/client_portal.py)|Write(backend/dependencies.py)",
             "timeout": 90,
+            "model": "claude-haiku-4-5-20251001",
             "statusMessage": "Security scanning modified auth/payment file..."
           }
         ]
@@ -269,75 +343,43 @@
       }
     ]
   },
-  "permissions": {
-    "allow": [
-      "Read",
-      "Glob",
-      "Grep",
-      "Bash(git log*)",
-      "Bash(git status*)",
-      "Bash(git diff*)",
-      "Bash(git show*)",
-      "Bash(git branch*)",
-      "Bash(git stash list*)",
-      "Bash(ls *)",
-      "Bash(which *)",
-      "Bash(echo *)",
-      "Bash(cat /dev/stdin*)",
-      "mcp__context7__*",
-      "mcp__playwright__*",
-      "mcp__deepwiki__*",
-      "mcp__supabase__*"
-    ],
-    "deny": [
-      "Read(~/.ssh/**)",
-      "Read(~/.gnupg/**)",
-      "Read(~/.aws/**)",
-      "Read(~/.azure/**)",
-      "Read(~/.kube/**)",
-      "Read(~/.gcp/**)",
-      "Read(~/.config/gcloud/**)",
-      "Read(~/.config/gh/**)",
-      "Read(~/.docker/config.json)",
-      "Read(~/.npmrc)",
-      "Read(~/.pypirc)",
-      "Read(~/.netrc)",
-      "Read(~/.git-credentials)",
-      "Read(**/.env)",
-      "Read(**/.env.*)",
-      "Read(**/*.pem)",
-      "Read(**/*.key)",
-      "Read(**/id_rsa)",
-      "Read(**/id_ed25519)",
-      "Read(**/credentials.json)",
-      "Read(**/service-account*.json)",
-      "Edit(~/.ssh/**)",
-      "Edit(~/.aws/**)",
-      "Edit(~/.gnupg/**)",
-      "Edit(~/.bashrc)",
-      "Edit(~/.zshrc)",
-      "Edit(~/.bash_profile)",
-      "Edit(~/.profile)",
-      "Edit(/etc/**)",
-      "Bash(nc:*)",
-      "Bash(ncat:*)",
-      "Bash(socat:*)",
-      "Bash(telnet:*)",
-      "Bash(bash -i*)",
-      "Bash(sh -i*)"
-    ],
-    "ask": [
-      "Bash(curl:*)",
-      "Bash(wget:*)",
-      "Bash(ssh:*)",
-      "Bash(scp:*)",
-      "Bash(rsync:*)",
-      "Bash(npm publish:*)",
-      "Bash(pip install:*)",
-      "Bash(sudo:*)",
-      "Bash(chmod:*)",
-      "Bash(chown:*)"
-    ]
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "plugin-dev@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "ruby-lsp@claude-plugins-official": true,
+    "ralph-loop@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "firecrawl@claude-plugins-official": true,
+    "sourcegraph@claude-plugins-official": true,
+    "data@claude-plugins-official": true,
+    "data-engineering@claude-plugins-official": true,
+    "amplitude@claude-plugins-official": true,
+    "vercel@claude-plugins-official": true,
+    "deploy-on-aws@claude-plugins-official": true,
+    "pagerduty@claude-plugins-official": true,
+    "mintlify@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "slack@claude-plugins-official": true,
+    "sentry@claude-plugins-official": true,
+    "linear@claude-plugins-official": true,
+    "supabase@claude-plugins-official": true,
+    "stripe@claude-plugins-official": true,
+    "brand-voice@knowledge-work-plugins": true,
+    "marketing@knowledge-work-plugins": true,
+    "sales@knowledge-work-plugins": true,
+    "legal@knowledge-work-plugins": true,
+    "finance@knowledge-work-plugins": true,
+    "productivity@knowledge-work-plugins": true
   },
   "sandbox": {
     "enabled": true,
@@ -352,13 +394,6 @@
         "**/id_ed25519"
       ]
     }
-  },
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  },
-  "enableAllProjectMcpServers": true,
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
   },
   "effortLevel": "high",
   "autoCompactWindow": 400000

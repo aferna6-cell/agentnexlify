@@ -30,6 +30,8 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 > Behavioral rules in `.claude/rules/`: caveman-mode, model-routing, no-assumptions, parallel-approaches, ultrathink, prompt-library, kb-first, claude-usage-patterns, personality
 >
 > Security hardening in `.claude/rules/`: claude-code-security (permissions.deny + ask + sandbox config per Trail of Bits-style guide)
+>
+> Plugin routing in `.claude/rules/plugins.md` — 36 plugins installed 2026-04-12 (frontend-design, sentry, vercel, stripe, supabase, chrome-devtools-mcp, typescript-lsp, pyright-lsp, code-review, security-guidance, context7, sourcegraph, commit-commands, feature-dev, github, playwright, firecrawl, + knowledge-work suite). Project skills win over plugin skills for AgentNexLiFy-specific patterns.
 
 ## Tech Stack
 - Backend: FastAPI, Python 3.11, Pydantic, Supabase Python client
