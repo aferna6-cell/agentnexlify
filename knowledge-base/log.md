@@ -46,3 +46,5 @@ Processed 4 of 6 pending entries this run (4-entry cap). Remaining: 2 HIPAA page
 - **INDEX.md** — updated with 4 new entries, total 10 articles; added Technical Patterns section population (was empty).
 - **Embeddings** — Supabase MCP returned Unauthorized (no SUPABASE_ACCESS_TOKEN in cron env). All 4 embeddings skipped. `kb_articles` table NOT updated this run. Follow-up: populate embeddings once MCP auth wired into cron environment, or run `/kb-compile --embed-only` interactively.
 - **Cross-references** — all 4 articles cite ≥1 existing wiki page via `[[slug]]` inline; two pgvector articles cross-link each other for strategic/tactical split.
+
+## [2026-04-12 19:00] discover+compile | cron 18:00 | commits=3 raw=4 wiki=4
