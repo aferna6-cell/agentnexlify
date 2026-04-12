@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 4 (plus 1 in `_outputs/`)
+- Total articles: 6 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-12
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -11,6 +11,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ### Competitors
 - [Competitive Landscape — March 2026](wiki/competitors/competitive-landscape-march-2026.md) — Analysis of 8 major competitors; AgentNexLiFy is feature-complete, gap is engagement/stickiness. Tags: intercom, drift, tidio, livechat, crisp, freshchat, hubspot, gohighlevel
+- [GoHighLevel — Agency-Focused All-in-One Platform](wiki/competitors/gohighlevel-agency-platform.md) — 1M+ businesses, 7M+ AI voice calls, $97–497/mo white-label SaaS; #1 direct competitor. Tags: gohighlevel, crm, ai-employee, agency, white-label
+- [GoHighLevel Scale Metrics (v3)](wiki/competitors/gohighlevel-scale-metrics-v3.md) — Scale benchmarks from GHL home page v3: leads, appointments, voice volume. Tags: gohighlevel, scale-metrics, benchmarks
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge

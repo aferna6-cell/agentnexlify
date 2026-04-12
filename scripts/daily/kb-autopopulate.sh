@@ -54,6 +54,14 @@ SCOPE (locked — do not ask, do not override):
 - Dedup against knowledge-base/known-urls.json before writing anything
 - Skip categories that have no new unique URLs — do not retry
 
+RELEVANCE FILTER (apply BEFORE fetching — reject obvious junk):
+- Must relate to AI, SaaS, the specified category, or AgentNexLiFy stack (FastAPI, Supabase, Vercel, Railway, Anthropic)
+- REJECT: sports leagues (P.LEAGUE, EASL), drug pricing (340B), unrelated nonprofits (Front Porch Forum), generic AI research papers that don'\''t apply to small business
+- REJECT: blog/vendor homepages with no article content (e.g. anthropic.com homepage, gohighlevel home-page-ver3)
+- PREFER: specific articles with a publish date, technical depth, or competitive/regulatory relevance
+- If a category has no passing URLs after filtering, SKIP it — better to ingest 4 good articles than 14 noisy ones
+- Always add REJECTED urls to known-urls.json so they won'\''t be retried next run
+
 PER ARTICLE:
 1. Fetch URL → convert to markdown (strip nav/ads)
 2. Write to knowledge-base/raw/<category>/<slug>.md with frontmatter: source_url, fetched_at, category
@@ -78,18 +86,19 @@ TASK: Compile all pending raw sources into wiki articles.
 
 SCOPE (locked):
 - Read knowledge-base/PENDING.md — if empty, print `no pending sources` and exit 0
+- Process UP TO 4 entries from PENDING.md per run (context cap — leave the rest for next run)
 - For each listed raw file, generate ONE wiki article
 - Use template at .claude/skills/wiki/references/template.md
 - Write to knowledge-base/wiki/<category>/<slug>.md
 - Cross-reference existing wiki pages via [[slug]] inline links (≥1 per article)
 - Update knowledge-base/INDEX.md (add entry under the right category section)
-- Generate Voyage AI embedding (voyage-3-lite, 512-dim) via Supabase MCP and store in kb_articles table (columns: slug, title, category, content, embedding, source_url, created_at)
-- After successful compile, remove the entry from PENDING.md
+- Generate Voyage AI embedding (voyage-3-lite, 512-dim) via Supabase MCP and store in kb_articles table (columns: slug, title, category, content, embedding, source_url, created_at). If Supabase MCP is unreachable, skip embedding but continue with markdown compile — log embedding_errors=N.
+- After EACH successful compile, remove that specific entry from PENDING.md (edit the file, do not batch)
 
 DO NOT:
 - Modify knowledge-base/raw/ (source of truth — read-only)
 - Ask clarifying questions
-- Skip the embedding step (it is required for kb-query to work)
+- Exceed the 4-entry cap — partial progress is expected
 
 OUTPUT: single summary:
   pending_count=N  compiled=N  wiki_pages_touched=N  embeddings_stored=N  errors=N'
