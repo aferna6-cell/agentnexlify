@@ -1,9 +1,14 @@
 ---
 name: strategic-compact
-description: "Suggest manual context compaction at logical task boundaries to preserve context through task phases rather than arbitrary auto-compaction."
+description: Suggest manual context compaction at logical task boundaries to preserve context through task phases rather than arbitrary auto-compaction. Use when user says 'strategic compact', 'manual compact', 'compact context', 'context compaction', 'suggest compact', or asks about strategic compact.
 version: 1.0.0
 origin: claude
-triggers: ["strategic compact", "manual compact", "compact context", "context compaction", "suggest compact"]
+triggers:
+- strategic compact
+- manual compact
+- compact context
+- context compaction
+- suggest compact
 effort: medium
 ---
 

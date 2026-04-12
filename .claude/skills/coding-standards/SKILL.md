@@ -1,10 +1,17 @@
 ---
 name: coding-standards
-description: "Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development."
+description: Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development. Use when user says 'coding standards', 'code style', 'best practices', 'linting rules', 'naming conventions', 'new project standards', or asks about coding standards.
 version: 1.0.0
 origin: claude
 allowed_tools: []
-triggers: ["coding standards", "code style", "best practices", "linting rules", "naming conventions", "new project standards", "onboarding conventions"]
+triggers:
+- coding standards
+- code style
+- best practices
+- linting rules
+- naming conventions
+- new project standards
+- onboarding conventions
 effort: low
 ---
 
@@ -162,88 +169,10 @@ function getMarket(id: any): Promise<any> {
 }
 ```
 
+
 ## React Best Practices
 
-### Component Structure
-
-```typescript
-// PASS: GOOD: Functional component with types
-interface ButtonProps {
-  children: React.ReactNode
-  onClick: () => void
-  disabled?: boolean
-  variant?: 'primary' | 'secondary'
-}
-
-export function Button({
-  children,
-  onClick,
-  disabled = false,
-  variant = 'primary'
-}: ButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`btn btn-${variant}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-// FAIL: BAD: No types, unclear structure
-export function Button(props) {
-  return <button onClick={props.onClick}>{props.children}</button>
-}
-```
-
-### Custom Hooks
-
-```typescript
-// PASS: GOOD: Reusable custom hook
-export function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
-
-    return () => clearTimeout(handler)
-  }, [value, delay])
-
-  return debouncedValue
-}
-
-// Usage
-const debouncedQuery = useDebounce(searchQuery, 500)
-```
-
-### State Management
-
-```typescript
-// PASS: GOOD: Proper state updates
-const [count, setCount] = useState(0)
-
-// Functional update for state based on previous state
-setCount(prev => prev + 1)
-
-// FAIL: BAD: Direct state reference
-setCount(count + 1)  // Can be stale in async scenarios
-```
-
-### Conditional Rendering
-
-```typescript
-// PASS: GOOD: Clear conditional rendering
-{isLoading && <Spinner />}
-{error && <ErrorMessage error={error} />}
-{data && <DataDisplay data={data} />}
-
-// FAIL: BAD: Ternary hell
-{isLoading ? <Spinner /> : error ? <ErrorMessage error={error} /> : data ? <DataDisplay data={data} /> : null}
-```
+See `references/react.md` for: Component Structure (functional components, props typing, small focused components), Custom Hooks (reusable state logic, naming `use*`), State Management (useState vs useReducer vs Context), and Conditional Rendering patterns.
 
 ## API Design Standards
 
@@ -398,86 +327,10 @@ export async function searchMarkets(
 }
 ```
 
-## Performance Best Practices
 
-### Memoization
+## Performance & Testing
 
-```typescript
-import { useMemo, useCallback } from 'react'
-
-// PASS: GOOD: Memoize expensive computations
-const sortedMarkets = useMemo(() => {
-  return markets.sort((a, b) => b.volume - a.volume)
-}, [markets])
-
-// PASS: GOOD: Memoize callbacks
-const handleSearch = useCallback((query: string) => {
-  setSearchQuery(query)
-}, [])
-```
-
-### Lazy Loading
-
-```typescript
-import { lazy, Suspense } from 'react'
-
-// PASS: GOOD: Lazy load heavy components
-const HeavyChart = lazy(() => import('./HeavyChart'))
-
-export function Dashboard() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <HeavyChart />
-    </Suspense>
-  )
-}
-```
-
-### Database Queries
-
-```typescript
-// PASS: GOOD: Select only needed columns
-const { data } = await supabase
-  .from('markets')
-  .select('id, name, status')
-  .limit(10)
-
-// FAIL: BAD: Select everything
-const { data } = await supabase
-  .from('markets')
-  .select('*')
-```
-
-## Testing Standards
-
-### Test Structure (AAA Pattern)
-
-```typescript
-test('calculates similarity correctly', () => {
-  // Arrange
-  const vector1 = [1, 0, 0]
-  const vector2 = [0, 1, 0]
-
-  // Act
-  const similarity = calculateCosineSimilarity(vector1, vector2)
-
-  // Assert
-  expect(similarity).toBe(0)
-})
-```
-
-### Test Naming
-
-```typescript
-// PASS: GOOD: Descriptive test names
-test('returns empty array when no markets match query', () => { })
-test('throws error when OpenAI API key is missing', () => { })
-test('falls back to substring search when Redis unavailable', () => { })
-
-// FAIL: BAD: Vague test names
-test('works', () => { })
-test('test search', () => { })
-```
+See `references/performance-testing.md` for: Memoization (useMemo, useCallback, React.memo), Lazy Loading (React.lazy, dynamic imports), Database Queries (N+1, indexes, pagination), Test Structure (AAA pattern), and Test Naming conventions.
 
 ## Code Smell Detection
 

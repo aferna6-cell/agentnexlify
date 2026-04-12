@@ -1,10 +1,26 @@
 ---
 name: coordinator
-description: "Multi-agent orchestrator. Auto-decomposes complex tasks into parallel workstreams with dependency resolution."
+description: Multi-agent orchestrator. Auto-decomposes complex tasks into parallel workstreams with dependency resolution. Use when user says 'coordinate this', 'orchestrate', 'multi-part task', 'complex task', '/new-feature', '/refactor', or asks about coordinator.
 version: 1.0.0
 origin: claude
-allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "TaskCreate", "TaskUpdate", "TaskList"]
-triggers: ["coordinate this", "orchestrate", "/new-feature", "/refactor", "multi-part task", "complex task"]
+allowed_tools:
+- Read
+- Write
+- Edit
+- Bash
+- Glob
+- Grep
+- Agent
+- TaskCreate
+- TaskUpdate
+- TaskList
+triggers:
+- coordinate this
+- orchestrate
+- /new-feature
+- /refactor
+- multi-part task
+- complex task
 effort: medium
 ---
 

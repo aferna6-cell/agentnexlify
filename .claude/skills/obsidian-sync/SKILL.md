@@ -1,10 +1,14 @@
 ---
 name: obsidian-sync
-description: "Sync wiki articles to an Obsidian vault with wikilinks and frontmatter in a one-way sync that never modifies source wiki files."
+description: Sync wiki articles to an Obsidian vault with wikilinks and frontmatter in a one-way sync that never modifies source wiki files. Use when user says 'obsidian-sync', 'sync to obsidian', 'sync wiki to vault', 'obsidian vault sync', or asks about obsidian sync.
 version: 1.0.0
 origin: claude
 user_invocable: true
-triggers: ["obsidian-sync", "sync to obsidian", "sync wiki to vault", "obsidian vault sync"]
+triggers:
+- obsidian-sync
+- sync to obsidian
+- sync wiki to vault
+- obsidian vault sync
 effort: low
 ---
 

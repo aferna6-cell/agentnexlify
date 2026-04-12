@@ -1,9 +1,18 @@
 ---
 name: tdd-workflow
-description: "Enforce test-driven development with 80 percent plus coverage including unit, integration, and E2E tests for new features, bug fixes, and refactoring."
+description: Enforce test-driven development with 80 percent plus coverage including unit, integration, and E2E tests for new features, bug fixes, and refactoring. Use when user says 'tdd', 'test-driven', 'test driven development', 'write tests first', 'test coverage', 'unit test', or asks about tdd workflow.
 version: 1.0.0
 origin: claude
-triggers: ["tdd", "test-driven", "test driven development", "write tests first", "test coverage", "unit test", "integration test", "e2e test", "playwright test"]
+triggers:
+- tdd
+- test-driven
+- test driven development
+- write tests first
+- test coverage
+- unit test
+- integration test
+- e2e test
+- playwright test
 effort: high
 ---
 

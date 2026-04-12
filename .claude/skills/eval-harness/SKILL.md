@@ -1,10 +1,23 @@
 ---
 name: eval-harness
-description: "Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles."
+description: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles. Use when user says 'eval-driven', 'pass@k', 'eval framework', 'regression eval', '/eval define', '/eval check', or asks about eval harness.
 version: 1.0.0
 origin: claude
-allowed_tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
-triggers: ["/eval define", "/eval check", "/eval report", "eval-driven", "pass@k", "eval framework", "regression eval"]
+allowed_tools:
+- Read
+- Write
+- Edit
+- Bash
+- Grep
+- Glob
+triggers:
+- /eval define
+- /eval check
+- /eval report
+- eval-driven
+- pass@k
+- eval framework
+- regression eval
 effort: high
 ---
 

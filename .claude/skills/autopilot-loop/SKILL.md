@@ -1,11 +1,22 @@
 ---
 name: autopilot-loop
-description: "Configure and operate the GitHub issue autopilot loop that classifies ai-ready issues, dispatches Codex worktrees, opens PRs, and handles autopilot PR review comments."
+description: Configure and operate the GitHub issue autopilot loop that classifies ai-ready issues, dispatches Codex worktrees, opens PRs, and handles autopilot PR review comments. Use when user says 'set up autopilot', 'enable autonomous loop', 'autopilot loop', 'issue autopilot', 'autonomous issue loop', or asks about autopilot loop.
 version: 1.0.0
 origin: claude
 user_invocable: true
-allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
-triggers: ["set up autopilot", "enable autonomous loop", "autopilot loop", "issue autopilot", "autonomous issue loop"]
+allowed_tools:
+- Read
+- Write
+- Edit
+- Bash
+- Glob
+- Grep
+triggers:
+- set up autopilot
+- enable autonomous loop
+- autopilot loop
+- issue autopilot
+- autonomous issue loop
 effort: high
 ---
 

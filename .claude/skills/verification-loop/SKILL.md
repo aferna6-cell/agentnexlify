@@ -1,9 +1,15 @@
 ---
 name: verification-loop
-description: "Run a comprehensive verification system for Claude Code sessions covering build, types, lint, tests, security, and diff review."
+description: Run a comprehensive verification system for Claude Code sessions covering build, types, lint, tests, security, and diff review. Use when user says 'verification loop', 'verify changes', 'quality gate', 'pre-PR check', 'verify build', 'run verification', or asks about verification loop.
 version: 1.0.0
 origin: claude
-triggers: ["verification loop", "verify changes", "quality gate", "pre-PR check", "verify build", "run verification"]
+triggers:
+- verification loop
+- verify changes
+- quality gate
+- pre-PR check
+- verify build
+- run verification
 effort: high
 ---
 

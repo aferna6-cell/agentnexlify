@@ -1,10 +1,17 @@
 ---
 name: deep-research
-description: "Multi-source deep research using firecrawl and exa MCPs. Searches the web, synthesizes findings, and delivers cited reports with source attribution."
+description: Multi-source deep research using firecrawl and exa MCPs. Searches the web, synthesizes findings, and delivers cited reports with source attribution. Use when user says 'research', 'deep dive', 'investigate', 'what's the current state', 'competitive analysis', 'market sizing', or asks about deep research.
 version: 1.0.0
 origin: claude
 allowed_tools: []
-triggers: ["research", "deep dive", "investigate", "what's the current state", "competitive analysis", "market sizing", "due diligence"]
+triggers:
+- research
+- deep dive
+- investigate
+- what's the current state
+- competitive analysis
+- market sizing
+- due diligence
 effort: high
 ---
 

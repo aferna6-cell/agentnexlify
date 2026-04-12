@@ -1,10 +1,15 @@
 ---
 name: security-patch-from-review
-description: "Systematically close every finding from a code review or audit report by parsing findings, fixing in severity order, tracking status, and committing with matching classification codes."
+description: Systematically close every finding from a code review or audit report by parsing findings, fixing in severity order, tracking status, and committing with matching classification codes. Use when user says 'security-patch-from-review', 'patch findings', 'fix review findings', 'close security findings', 'patch audit results', or asks about security patch from review.
 version: 1.0.0
 origin: claude
 user_invocable: true
-triggers: ["security-patch-from-review", "patch findings", "fix review findings", "close security findings", "patch audit results"]
+triggers:
+- security-patch-from-review
+- patch findings
+- fix review findings
+- close security findings
+- patch audit results
 effort: high
 ---
 

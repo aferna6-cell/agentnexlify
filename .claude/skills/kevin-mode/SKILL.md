@@ -1,11 +1,24 @@
 ---
 name: kevin-mode
-description: "Ultra-compressed caveman-style responses named after Kevin Malone, toggled on with 'kevin mode' and off with 'normal mode'."
+description: Ultra-compressed caveman-style responses named after Kevin Malone, toggled on with 'kevin mode' and off with 'normal mode'. Use when user says 'kevin mode', 'normal mode', 'ultra compressed', 'minimum words', or asks about kevin mode.
 version: 1.0.0
 origin: claude
 user_invocable: true
-allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "WebSearch", "WebFetch"]
-triggers: ["kevin mode", "normal mode", "ultra compressed", "minimum words"]
+allowed_tools:
+- Read
+- Write
+- Edit
+- Bash
+- Glob
+- Grep
+- Agent
+- WebSearch
+- WebFetch
+triggers:
+- kevin mode
+- normal mode
+- ultra compressed
+- minimum words
 effort: low
 ---
 

@@ -1,11 +1,15 @@
 ---
 name: challenge-assumptions
-description: "Generate steelman counterarguments for recent wiki articles. Prevents echo-chamber thinking by challenging assumptions in the knowledge base."
+description: Generate steelman counterarguments for recent wiki articles. Prevents echo-chamber thinking by challenging assumptions in the knowledge base. Use when user says 'challenge assumptions', 'assumption review', 'challenge wiki', '/challenge-assumptions', or asks about challenge assumptions.
 version: 1.0.0
 origin: claude
 user_invocable: true
 allowed_tools: []
-triggers: ["/challenge-assumptions", "challenge assumptions", "assumption review", "challenge wiki"]
+triggers:
+- /challenge-assumptions
+- challenge assumptions
+- assumption review
+- challenge wiki
 effort: medium
 ---
 

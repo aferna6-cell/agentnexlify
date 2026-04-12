@@ -1,10 +1,16 @@
 ---
 name: last30days
-description: "Synthesize recent knowledge accumulation into a 'State of Your Mind' report by grouping by theme, identifying patterns, and surfacing blind spots."
+description: Synthesize recent knowledge accumulation into a 'State of Your Mind' report by grouping by theme, identifying patterns, and surfacing blind spots. Use when user says 'last30days', 'state of your mind', 'knowledge synthesis', '30 day report', 'weekly review', 'bi-weekly review', or asks about last30days.
 version: 1.0.0
 origin: claude
 user_invocable: true
-triggers: ["last30days", "state of your mind", "knowledge synthesis", "30 day report", "weekly review", "bi-weekly review"]
+triggers:
+- last30days
+- state of your mind
+- knowledge synthesis
+- 30 day report
+- weekly review
+- bi-weekly review
 effort: medium
 ---
 

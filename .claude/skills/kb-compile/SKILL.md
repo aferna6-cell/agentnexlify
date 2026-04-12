@@ -1,10 +1,16 @@
 ---
 name: kb-compile
-description: "Compile raw sources into the wiki by reading pending sources, creating or updating wiki articles, generating embeddings, storing in Supabase pgvector, and rebuilding INDEX.md."
+description: Compile raw sources into the wiki by reading pending sources, creating or updating wiki articles, generating embeddings, storing in Supabase pgvector, and rebuilding INDEX.md. Use when user says 'kb-compile', 'compile sources', 'compile wiki', 'compile pending', 'recompile wiki', 'compile embeddings', or asks about kb compile.
 version: 1.0.0
 origin: claude
 user_invocable: true
-triggers: ["kb-compile", "compile sources", "compile wiki", "compile pending", "recompile wiki", "compile embeddings"]
+triggers:
+- kb-compile
+- compile sources
+- compile wiki
+- compile pending
+- recompile wiki
+- compile embeddings
 effort: medium
 ---
 

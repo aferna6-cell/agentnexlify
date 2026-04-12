@@ -1,11 +1,17 @@
 ---
 name: dead-code-sweep
-description: "Scan the codebase for dead code — unused files, unreachable functions, orphan imports, dead config. Verify each item is truly dead, then remove."
+description: Scan the codebase for dead code — unused files, unreachable functions, orphan imports, dead config. Verify each item is truly dead, then remove. Use when user says 'dead code', 'unused code', 'remove dead', 'orphan imports', 'cleanup unused', '/dead-code-sweep', or asks about dead code sweep.
 version: 1.0.0
 origin: claude
 user_invocable: true
 allowed_tools: []
-triggers: ["/dead-code-sweep", "dead code", "unused code", "remove dead", "orphan imports", "cleanup unused"]
+triggers:
+- /dead-code-sweep
+- dead code
+- unused code
+- remove dead
+- orphan imports
+- cleanup unused
 effort: medium
 ---
 

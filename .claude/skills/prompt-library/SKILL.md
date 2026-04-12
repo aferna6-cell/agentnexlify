@@ -1,9 +1,19 @@
 ---
 name: prompt-library
-description: "Reusable prompt library for consistent AI agent workflows. Always consult PROMPTLIBRARY.md before starting tasks to pick the right prompt, gather context, and execute with proven patterns."
+description: Reusable prompt library for consistent AI agent workflows. Always consult PROMPTLIBRARY.md before starting tasks to pick the right prompt, gather context, and execute with proven patterns. Use when user says 'any task', 'before starting work', 'research', 'debug', 'write', 'review', or asks about prompt library.
 version: 1.0.0
 origin: claude
-triggers: ["any task", "before starting work", "research", "debug", "write", "review", "build", "test", "summarize", "reason"]
+triggers:
+- any task
+- before starting work
+- research
+- debug
+- write
+- review
+- build
+- test
+- summarize
+- reason
 user_invocable: false
 effort: medium
 ---

@@ -1,9 +1,14 @@
 ---
 name: widget-test
-description: "Test, debug, or verify the chat widget covering load, conversation, data capture, cross-origin behavior, and file sync."
+description: Test, debug, or verify the chat widget covering load, conversation, data capture, cross-origin behavior, and file sync. Use when user says 'widget test', 'test widget', 'widget debugging', 'widget checklist', 'chat widget test', or asks about widget test.
 version: 1.0.0
 origin: claude
-triggers: ["widget test", "test widget", "widget debugging", "widget checklist", "chat widget test"]
+triggers:
+- widget test
+- test widget
+- widget debugging
+- widget checklist
+- chat widget test
 effort: low
 ---
 

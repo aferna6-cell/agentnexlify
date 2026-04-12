@@ -1,11 +1,15 @@
 ---
 name: build-loop
-description: "Autonomous infinite development loop. Constantly builds features, tests, debugs, refactors, and evolves the codebase. Reads backlog, picks highest-priority work, executes it, commits, and repeats."
+description: Autonomous infinite development loop. Constantly builds features, tests, debugs, refactors, and evolves the codebase. Reads backlog, picks highest-priority work, executes it, commits, and repeats. Use when user says 'build loop', 'autonomous loop', 'continuous build', '/build-loop', or asks about build loop.
 version: 1.0.0
 origin: claude
 user_invocable: true
 allowed_tools: []
-triggers: ["/build-loop", "build loop", "autonomous loop", "continuous build"]
+triggers:
+- /build-loop
+- build loop
+- autonomous loop
+- continuous build
 effort: medium
 ---
 

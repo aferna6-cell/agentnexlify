@@ -1,9 +1,15 @@
 ---
 name: gitnexus-exploring
-description: "Explore unfamiliar codebases, understand architecture, trace execution flows, and answer how code works using GitNexus."
+description: Explore unfamiliar codebases, understand architecture, trace execution flows, and answer how code works using GitNexus. Use when user says 'how does this work', 'project structure', 'show me the auth flow', 'explore codebase', 'understand architecture', 'what calls this function', or asks about gitnexus exploring.
 version: 1.0.0
 origin: claude
-triggers: ["how does this work", "project structure", "show me the auth flow", "explore codebase", "understand architecture", "what calls this function"]
+triggers:
+- how does this work
+- project structure
+- show me the auth flow
+- explore codebase
+- understand architecture
+- what calls this function
 ---
 
 # Exploring Codebases with GitNexus
