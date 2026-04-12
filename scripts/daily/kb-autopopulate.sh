@@ -33,6 +33,10 @@ if [ -z "$CLAUDE_BIN" ] || [ ! -x "$CLAUDE_BIN" ]; then
 fi
 log_line "$LOG_FILE" "Using claude: $CLAUDE_BIN"
 
+# Capture starting SHA so end-of-run inventory knows what changed
+START_SHA="$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo "unknown")"
+log_line "$LOG_FILE" "Starting SHA: $START_SHA"
+
 # Pull latest before discovering (avoids merge conflicts on commit)
 git_pull_if_clean "$LOG_FILE"
 
@@ -91,8 +95,8 @@ SCOPE (locked):
 - Use template at .claude/skills/wiki/references/template.md
 - Write to knowledge-base/wiki/<category>/<slug>.md
 - Cross-reference existing wiki pages via [[slug]] inline links (≥1 per article)
-- Update knowledge-base/INDEX.md (add entry under the right category section)
-- Generate Voyage AI embedding (voyage-3-lite, 512-dim) via Supabase MCP and store in kb_articles table (columns: slug, title, category, content, embedding, source_url, created_at). If Supabase MCP is unreachable, skip embedding but continue with markdown compile — log embedding_errors=N.
+- **MANDATORY**: Update knowledge-base/INDEX.md after EACH article. Read INDEX.md, find the right `### <Category>` header, append a new bullet in the format `- [Title](wiki/category/slug.md) — one-line summary. Tags: tag1, tag2`. Increment `Total articles: N` in Statistics section. If you skip INDEX update, the run is INVALID — article is orphaned from the catalog.
+- Generate Voyage AI embedding (voyage-3-lite, 512-dim) via Supabase MCP and upsert into `kb_articles` table. Real schema (see migrations/081-kb-articles-and-sources.sql): `slug UNIQUE, title, category, summary, content, embedding vector(512), source_urls TEXT[], tags TEXT[], word_count INT`. Use `INSERT ... ON CONFLICT (slug) DO UPDATE` so re-runs are idempotent. If Supabase MCP is unreachable, skip embedding but continue with markdown compile — log embedding_errors=N.
 - After EACH successful compile, remove that specific entry from PENDING.md (edit the file, do not batch)
 
 DO NOT:
@@ -108,36 +112,50 @@ OUTPUT: single summary:
   --permission-mode bypassPermissions \
   >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "kb-compile step failed (non-fatal)"
 
-# Step 3: Append summary to knowledge-base/log.md (Karpathy chronological log)
+# Step 3: Inventory what changed during this run
+#
+# The auto-commit Stop hook (scripts/claude-hooks/auto-commit.sh) fires after
+# each `claude -p` subagent finishes and creates its own commits. So by this
+# point, changes may already be committed. We just need to:
+#   (a) Count what was ingested/compiled (for log.md summary)
+#   (b) Commit any remaining uncommitted changes (edge case)
+#   (c) Push once at the end
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M')"
-NEW_RAW_COUNT="$(git -C "$REPO_DIR" status --short knowledge-base/raw/ 2>/dev/null | wc -l)"
-NEW_WIKI_COUNT="$(git -C "$REPO_DIR" status --short knowledge-base/wiki/ 2>/dev/null | wc -l)"
+COMMITS_SINCE_START="$(git -C "$REPO_DIR" log "$START_SHA..HEAD" --oneline 2>/dev/null | wc -l)"
+NEW_RAW_COUNT="$(git -C "$REPO_DIR" diff --name-only "$START_SHA" HEAD 2>/dev/null | grep -c '^knowledge-base/raw/' || true)"
+NEW_WIKI_COUNT="$(git -C "$REPO_DIR" diff --name-only "$START_SHA" HEAD 2>/dev/null | grep -c '^knowledge-base/wiki/' || true)"
+UNCOMMITTED="$(git -C "$REPO_DIR" status --porcelain 2>/dev/null | wc -l)"
 
-if [ "$NEW_RAW_COUNT" -gt 0 ] || [ "$NEW_WIKI_COUNT" -gt 0 ]; then
+log_line "$LOG_FILE" "Inventory: commits=$COMMITS_SINCE_START raw_changed=$NEW_RAW_COUNT wiki_changed=$NEW_WIKI_COUNT uncommitted=$UNCOMMITTED"
+
+# Step 4: Commit any lingering uncommitted changes (edge case — auto-commit should handle most)
+if [ "$UNCOMMITTED" -gt 0 ]; then
+  git -C "$REPO_DIR" add knowledge-base/ 2>/dev/null || true
+  git -C "$REPO_DIR" commit -m "kb(auto): populate from sources.yaml ($TIMESTAMP)" \
+    --no-verify 2>&1 | tail -3 >> "$LOG_FILE" \
+    || log_line "$LOG_FILE" "Final commit skipped (nothing to commit or hook blocked)"
+fi
+
+# Step 5: Append summary to knowledge-base/log.md (Karpathy chronological log)
+# Only append if something actually happened this run
+if [ "$COMMITS_SINCE_START" -gt 0 ] || [ "$UNCOMMITTED" -gt 0 ]; then
   {
     echo ""
-    echo "## [$TIMESTAMP] discover+compile | cron $HOUR:00 | raw=$NEW_RAW_COUNT wiki=$NEW_WIKI_COUNT"
+    echo "## [$TIMESTAMP] discover+compile | cron $HOUR:00 | commits=$COMMITS_SINCE_START raw=$NEW_RAW_COUNT wiki=$NEW_WIKI_COUNT"
   } >> "$KB_LOG"
-  log_line "$LOG_FILE" "Appended to knowledge-base/log.md: raw=$NEW_RAW_COUNT wiki=$NEW_WIKI_COUNT"
-else
-  log_line "$LOG_FILE" "No changes detected — skipping log.md append and commit"
-  exit 0
+  # Commit the log append itself
+  git -C "$REPO_DIR" add knowledge-base/log.md 2>/dev/null || true
+  git -C "$REPO_DIR" commit -m "kb(log): append run summary $TIMESTAMP" --no-verify 2>&1 | tail -1 >> "$LOG_FILE" || true
 fi
 
-# Step 4: Commit + push new content (if any)
-if [ -n "$(git -C "$REPO_DIR" status --short knowledge-base/ 2>/dev/null)" ]; then
-  git -C "$REPO_DIR" add knowledge-base/
-  git -C "$REPO_DIR" commit -m "$(cat <<EOF
-kb(auto): populate from sources.yaml ($TIMESTAMP)
-
-Scheduled auto-populate: /kb-discover + /kb-compile
-raw=$NEW_RAW_COUNT  wiki=$NEW_WIKI_COUNT
-
-EOF
-)" >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "Commit failed (maybe pre-commit hook blocked)"
-
-  git -C "$REPO_DIR" push origin main >> "$LOG_FILE" 2>&1 \
-    || log_line "$LOG_FILE" "Push failed (will retry next run)"
+# Step 6: Push once — catches commits from auto-commit hook + any from this script
+# Retry once on failure (transient network / rebase needed)
+log_line "$LOG_FILE" "Pushing to origin/main..."
+if ! git -C "$REPO_DIR" push origin main 2>&1 | tail -3 >> "$LOG_FILE"; then
+  log_line "$LOG_FILE" "Push failed — trying pull --rebase then push again"
+  git -C "$REPO_DIR" pull --rebase origin main 2>&1 | tail -3 >> "$LOG_FILE" || true
+  git -C "$REPO_DIR" push origin main 2>&1 | tail -3 >> "$LOG_FILE" \
+    || log_line "$LOG_FILE" "Push failed twice — will retry next run"
 fi
 
-log_line "$LOG_FILE" "KB auto-populate complete."
+log_line "$LOG_FILE" "KB auto-populate complete. Commits this run: $COMMITS_SINCE_START"
