@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 6 (plus 1 in `_outputs/`)
+- Total articles: 10 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-12
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -16,6 +16,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
+- [Anthropic — Mission, Safety Stance, and 2026 Release Cadence](wiki/ai-llm/anthropic-mission-and-latest-releases.md) — Opus 4.6 is the frontier model, "space to think" signals ad-free product stance, RSP gates downstream agentic capabilities. Tags: anthropic, claude, model-releases, ai-safety, responsible-scaling
+- [Anthropic Careers — Operating Principles and Vendor Durability Signals](wiki/ai-llm/anthropic-careers-and-culture.md) — Seven operating principles and hiring bar as vendor-durability signals for the Claude dependency. Tags: anthropic, culture, operating-principles, vendor-risk, hiring
 
 ### Small Business SaaS
 _No articles yet._
@@ -24,7 +26,8 @@ _No articles yet._
 - [Customer Gaps by Industry](wiki/verticals/customer-gaps-by-industry.md) — Product-market fit across 7 industries; Salon 9/10, Plumber 8/10, Dental 8/10. Tags: salon, plumber, dental, restaurant, fitness, lawyer, real-estate
 
 ### Technical Patterns
-_No articles yet._
+- [pgvector — Native Vector Search in Postgres](wiki/technical/pgvector-postgres-vector-search.md) — Open-source Postgres extension powering AgentNexLiFy's KB search; six distance metrics, HNSW/IVFFlat indexes, hybrid queries. Tags: pgvector, postgres, embeddings, semantic-search, hnsw, ivfflat
+- [pgvector Implementation Guide — Build, Enable, Query](wiki/technical/pgvector-implementation-guide.md) — Hands-on install, first query, and Python psycopg2 pattern for pgvector on self-managed Postgres. Tags: pgvector, postgres, installation, psycopg2, hybrid-search, tutorial
 
 ### Regulations & Compliance
 _No articles yet._

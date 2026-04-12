@@ -33,3 +33,16 @@ First real run of `scripts/daily/kb-autopopulate.sh`. Fired manually (cron next 
 - **INDEX.md** — updated manually to reflect 2 new wiki entries (compile didn't auto-update this run).
 
 **Remaining PENDING (8 entries):** 2 Anthropic pages, 2 pgvector refs, 2 HIPAA pages. Will process at next cron fires (6am + 6pm daily).
+
+## [2026-04-12 19:00] compile | headless-cron-batch-2 | compiled=4 embeddings=0 errors=4
+
+Processed 4 of 6 pending entries this run (4-entry cap). Remaining: 2 HIPAA pages + 4 entries ingested at 22:54:23Z (Claude Opus 4.6, Sonnet 4.6, GHL AI responder, GHL email report).
+
+- **Compiled:**
+  - `wiki/ai-llm/anthropic-mission-and-latest-releases.md` (from raw/ai-llm/home-anthropic.md)
+  - `wiki/ai-llm/anthropic-careers-and-culture.md` (from raw/ai-llm/careers-anthropic.md)
+  - `wiki/technical/pgvector-postgres-vector-search.md` (from raw/technical/github---pgvector-pgvector-*.md)
+  - `wiki/technical/pgvector-implementation-guide.md` (from raw/technical/pgvector---geeksforgeeks.md)
+- **INDEX.md** — updated with 4 new entries, total 10 articles; added Technical Patterns section population (was empty).
+- **Embeddings** — Supabase MCP returned Unauthorized (no SUPABASE_ACCESS_TOKEN in cron env). All 4 embeddings skipped. `kb_articles` table NOT updated this run. Follow-up: populate embeddings once MCP auth wired into cron environment, or run `/kb-compile --embed-only` interactively.
+- **Cross-references** — all 4 articles cite ≥1 existing wiki page via `[[slug]]` inline; two pgvector articles cross-link each other for strategic/tactical split.
