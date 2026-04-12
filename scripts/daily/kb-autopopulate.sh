@@ -37,19 +37,66 @@ log_line "$LOG_FILE" "Using claude: $CLAUDE_BIN"
 git_pull_if_clean "$LOG_FILE"
 
 # Step 1: kb-discover — search web, dedup, ingest top matches to raw/
+#
+# NON-INTERACTIVE PROMPT: cron has no user to answer clarifying questions.
+# All scope decisions are pre-specified. Override no-assumptions rule.
 log_line "$LOG_FILE" "Running /kb-discover via headless Claude..."
-DISCOVER_PROMPT="Run /kb-discover across all categories in knowledge-base/sources.yaml. For each category: search the web using agent-browser, score results for relevance to AgentNexLiFy, deduplicate against knowledge-base/known-urls.json, and ingest the top 2 new articles per category into knowledge-base/raw/<category>/. Append ingested URLs to known-urls.json. Print a summary: categories processed, articles ingested, articles rejected."
+DISCOVER_PROMPT='HEADLESS CRON RUN — no user to answer questions. Execute without asking. Apply these defaults:
+
+TASK: Auto-populate the knowledge base from knowledge-base/sources.yaml.
+
+TOOLS: Use agent-browser via Bash (per CLAUDE.md rule: NEVER use WebFetch/WebSearch). Command: `agent-browser fetch <url>` and `agent-browser search <query>`. If agent-browser unavailable, use `curl -sL` to fetch URLs directly.
+
+SCOPE (locked — do not ask, do not override):
+- Process ALL 7 categories in sources.yaml
+- Per category: run top 3 search queries from the file, pick top 2 NEW articles by relevance
+- Max 14 new articles total this run (2 per category × 7 categories)
+- Dedup against knowledge-base/known-urls.json before writing anything
+- Skip categories that have no new unique URLs — do not retry
+
+PER ARTICLE:
+1. Fetch URL → convert to markdown (strip nav/ads)
+2. Write to knowledge-base/raw/<category>/<slug>.md with frontmatter: source_url, fetched_at, category
+3. Append URL to knowledge-base/known-urls.json (JSON array — read, append, rewrite)
+4. Append entry to knowledge-base/PENDING.md for the compile step
+
+OUTPUT: single summary block at end:
+  categories_processed=N  urls_fetched=N  new_raw_files=N  deduped=N  errors=N
+
+DO NOT ask clarifying questions. DO NOT run Playwright (not allowed here). DO NOT touch knowledge-base/wiki/ — that is compile`\''s job. Use confidence >=80% to proceed; if genuinely blocked, print BLOCKED: <reason> and exit.'
 
 "$CLAUDE_BIN" -p "$DISCOVER_PROMPT" \
   --allowedTools Bash,Read,Write,Edit,Glob,Grep \
+  --permission-mode bypassPermissions \
   >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "kb-discover step failed (non-fatal)"
 
 # Step 2: kb-compile — process PENDING.md raw files into wiki/ with embeddings
 log_line "$LOG_FILE" "Running /kb-compile on pending sources..."
-COMPILE_PROMPT="Run /kb-compile. For each file listed in knowledge-base/PENDING.md: read the raw source, generate a Karpathy-pattern wiki article using the template at .claude/skills/wiki/references/template.md, cross-reference existing wiki pages via [[slug]] links, update knowledge-base/INDEX.md with the new entry, generate a Voyage AI embedding (voyage-3-lite, 512-dim), and store in Supabase kb_articles table. Remove processed entries from PENDING.md. Print: articles compiled, wiki pages touched, embeddings stored."
+COMPILE_PROMPT='HEADLESS CRON RUN — no user to answer questions. Execute without asking.
+
+TASK: Compile all pending raw sources into wiki articles.
+
+SCOPE (locked):
+- Read knowledge-base/PENDING.md — if empty, print `no pending sources` and exit 0
+- For each listed raw file, generate ONE wiki article
+- Use template at .claude/skills/wiki/references/template.md
+- Write to knowledge-base/wiki/<category>/<slug>.md
+- Cross-reference existing wiki pages via [[slug]] inline links (≥1 per article)
+- Update knowledge-base/INDEX.md (add entry under the right category section)
+- Generate Voyage AI embedding (voyage-3-lite, 512-dim) via Supabase MCP and store in kb_articles table (columns: slug, title, category, content, embedding, source_url, created_at)
+- After successful compile, remove the entry from PENDING.md
+
+DO NOT:
+- Modify knowledge-base/raw/ (source of truth — read-only)
+- Ask clarifying questions
+- Skip the embedding step (it is required for kb-query to work)
+
+OUTPUT: single summary:
+  pending_count=N  compiled=N  wiki_pages_touched=N  embeddings_stored=N  errors=N'
 
 "$CLAUDE_BIN" -p "$COMPILE_PROMPT" \
   --allowedTools Bash,Read,Write,Edit,Glob,Grep,mcp__supabase__* \
+  --permission-mode bypassPermissions \
   >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "kb-compile step failed (non-fatal)"
 
 # Step 3: Append summary to knowledge-base/log.md (Karpathy chronological log)
