@@ -1486,3 +1486,19 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `backend/services/automation_engine.py`, `backend/routers/client_portal.py`, current customer-facing docs under `docs/content/`
 **Fix:** Updated runtime links, portal fallback URLs, tests, and current docs to `https://app.agentnexlify.com`.
 **Prevention:** Production smoke should target the canonical app domain. Grep runtime code and customer-facing content for stale app aliases after domain or Vercel project changes.
+
+---
+
+### fix(ci): install pytest-timeout + pytest-asyncio in PR checks; stale URL in e2e doc
+
+- pr-check.yml: add pytest-asyncio and pytest-timeout to CI deps. pytest.ini declares `timeout = 30` but the package wasn't installed — every test run warned `Unknown config option: timeout`. CI was also silently running without asyncio plugin explicitly declared (worked by coincidence via supabase's transient dep).
+- .claude/commands/e2e.md: replace stale `agentnexlify.vercel.app` with canonical `app.agentnexlify.com`.
+
+Verified: pytest tests -q → 487 passed, 0 warnings.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-13
+**Commit:** 6b920db
+**Author:** aferna6-cell
+**Files Changed:** .claude/commands/e2e.md,.github/workflows/pr-check.yml
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
