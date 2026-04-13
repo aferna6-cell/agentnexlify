@@ -67,3 +67,16 @@ SMB SaaS churn is structurally different from enterprise churn. The dominant dri
 Twilio MessagingService is a managed transport layer, not a deliverability monitoring product. The real build/buy decision is between (a) building a custom monitoring layer on top of Twilio vs. (b) using Twilio Insights, a third-party SMS observability tool, or a lightweight internal webhook logger. That 
 
 ---
+
+## 2026-04-13 — is-gohighlevel-beatable-at-the-widget-layer-for-th
+
+**Question:** Is GoHighLevel beatable at the widget layer for the SMB contractor segment?
+**Depth:** standard
+**Folder:** [[projects/is-gohighlevel-beatable-at-the-widget-layer-for-th]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**Is GoHighLevel beatable at the widget layer for the SMB contractor segment? Yes — selectively, conditionally, and with an 18-month window.**
+GHL is a $200M+ ARR platform built for marketing agencies, not for field-service contractors. Its widget layer (booking, review, chat, forms) is broad but shallow — optimized for agency setup speed, not for the daily workflow of an HVAC technician, plumber,
+
+---

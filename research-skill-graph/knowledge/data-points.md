@@ -54,3 +54,23 @@ Example:
 - SMS volume threshold where in-house monitoring becomes economically competitive vs. buy | ~5–10M messages/month | Economic lens break-even analysis | 2026-04 | projects/sms-deliverability-build-buy
 - Twilio global carrier relationships | 600+ | Twilio documentation 2024 | 2024 | projects/sms-deliverability-build-buy
 - US SMS carrier market concentration (top 3 carriers) | >95% of US traffic | Industry standard telecom data | 2025 | projects/sms-deliverability-build-buy
+
+<!-- from projects/is-gohighlevel-beatable-at-the-widget-layer-for-th on 2026-04-13 -->
+- GHL reported agency customer count | 60,000+ | GoHighLevel company communications | 2024 | projects/ghl-widget-beatable
+- GHL estimated ARR | $200M+ | Industry estimates based on $100M ARR (2022) + growth trajectory | 2024 | projects/ghl-widget-beatable
+- GHL iOS App Store rating | 3.2/5 | iOS App Store (contractor-facing GHL mobile app) | 2025 | projects/ghl-widget-beatable
+- GHL G2 overall rating | 4.5/5 (1,000+ reviews) | G2.com | 2024-2025 | projects/ghl-widget-beatable
+- Jobber estimated customer count | 200,000+ | Jobber company communications / press coverage | 2024 | projects/ghl-widget-beatable
+- Jobber estimated valuation | ~$500M | Press coverage / funding rounds | 2024 | projects/ghl-widget-beatable
+- ServiceTitan IPO valuation | ~$9.5B | IPO filing / public markets | 2024 | projects/ghl-widget-beatable
+- Housecall Pro estimated valuation | ~$400M | Press coverage / funding rounds | 2024 | projects/ghl-widget-beatable
+- GHL Unlimited plan price | $297/mo | GHL public pricing page | 2025 | projects/ghl-widget-beatable
+- GHL SaaS Mode price | $497/mo | GHL public pricing page | 2025 | projects/ghl-widget-beatable
+- Typical agency GHL sub-account resale price to contractor | $197–$497/mo | Agency community forums / reported pricing | 2024-2025 | projects/ghl-widget-beatable
+- GHL API rate limit (sub-account level) | ~100 req/min | GHL developer documentation / community reports | 2025 | projects/ghl-widget-beatable
+- SMB contractor estimated total software spend (target ICP) | $380–$780/mo combined stack | Derived from Jobber + GHL + CompanyCam + QuickBooks pricing | 2025 | projects/ghl-widget-beatable
+- ServiceTitan Marketing Pro launch year | 2022 | ServiceTitan product announcements | 2022 | projects/ghl-widget-beatable
+- Jobber Grow launch year | 2023 | Jobber product announcements | 2023 | projects/ghl-widget-beatable
+- Estimated window for widget-layer competitive entry before GHL AI closes gap | 18 months | Synthesis of GHL AI investment pace + historical all-in-one improvement rates | 2026 | projects/ghl-widget-beatable
+- SMB contractor software market TAM (field service + CRM + marketing automation) | $8–12B | Comparable company valuations + market sizing research | 2024 | projects/ghl-widget-beatable
+- Procore (construction vertical SaaS) valuation | ~$9B | Public markets | 2024 | projects/ghl-widget-beatable
