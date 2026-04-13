@@ -1012,7 +1012,7 @@ async def get_ai_insights(
         try:
             response = await call_claude_messages(
                 operation="analytics.ai_insights",
-                model="claude-sonnet-4-6",
+                model="claude-haiku-4-5-20251001",
                 max_tokens=400,
                 timeout=30.0,
                 messages=[{"role": "user", "content": f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".

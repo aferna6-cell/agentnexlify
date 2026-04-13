@@ -198,6 +198,29 @@ fi
 
 echo ""
 
+# CHECK 8: Dropped schema columns referenced in queries
+# conversations.messages JSONB was removed in the reconciliation migration —
+# the canonical message store is chat_messages. Any new .select("messages") or
+# dict-shape query against the conversations table will 42703 in prod.
+echo -n "Checking for dropped conversations.messages queries... "
+DROPPED_COL_HITS=""
+for file in $STAGED_FILES; do
+    if [[ "$file" == *.py ]] && [ -f "$file" ]; then
+        MATCH=$(grep -nE 'table\(["'\'']conversations["'\'']\)[^.]*\.\s*select\(["'\''][^"'\'']*messages' "$file" 2>/dev/null || true)
+        if [ -n "$MATCH" ]; then
+            DROPPED_COL_HITS="$DROPPED_COL_HITS\n  $file: $MATCH"
+        fi
+    fi
+done
+if [ -n "$DROPPED_COL_HITS" ]; then
+    echo -e "${RED}BLOCKED${NC}"
+    echo -e "  conversations.messages column was dropped. Query chat_messages by session_id instead.${DROPPED_COL_HITS}"
+    echo "  See docs/dev-knowledge/bug-patterns.md entry dated 2026-04-13."
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
 if [ $ERRORS -gt 0 ]; then
     echo -e "${RED}COMMIT BLOCKED: $ERRORS critical issue(s) found.${NC}"
     echo "Fix the issues above before committing."

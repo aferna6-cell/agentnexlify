@@ -421,6 +421,28 @@ async def test_webhook(
     status_code = None
     response_body = None
 
+    from backend.services.url_validation import is_safe_url
+    if not is_safe_url(webhook["url"]):
+        response_body = "Refused: URL resolves to a private, loopback, or reserved IP"
+        logger.warning("Webhook test refused unsafe URL for webhook %s", webhook_id)
+        try:
+            db.table("webhook_logs").insert({
+                "webhook_id": webhook_id,
+                "event": event,
+                "payload": payload,
+                "response_status": None,
+                "response_body": response_body,
+                "success": False,
+            }).execute()
+        except Exception:
+            logger.exception("Failed to log blocked webhook test for %s", webhook_id)
+        return WebhookTestResponse(
+            success=False,
+            status_code=None,
+            response_body=response_body,
+            event=event,
+        )
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(webhook["url"], content=payload_bytes, headers=headers)

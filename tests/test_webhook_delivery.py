@@ -172,9 +172,10 @@ class TestFireEvent:
 
 class TestDeliver:
     @pytest.mark.asyncio
+    @patch("backend.services.webhook_dispatcher.is_safe_url", return_value=True)
     @patch("backend.services.webhook_dispatcher.get_service_supabase")
     @patch("backend.services.webhook_dispatcher.httpx.AsyncClient")
-    async def test_successful_delivery_logs(self, mock_client_cls, mock_db):
+    async def test_successful_delivery_logs(self, mock_client_cls, mock_db, mock_safe):
         # Mock HTTP response
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -221,10 +222,11 @@ class TestDeliver:
         assert "last_triggered_at" in update_payload
 
     @pytest.mark.asyncio
+    @patch("backend.services.webhook_dispatcher.is_safe_url", return_value=True)
     @patch("backend.services.webhook_dispatcher.asyncio.sleep", new_callable=AsyncMock)
     @patch("backend.services.webhook_dispatcher.get_service_supabase")
     @patch("backend.services.webhook_dispatcher.httpx.AsyncClient")
-    async def test_failed_delivery_retries_until_max_attempts(self, mock_client_cls, mock_db, mock_sleep):
+    async def test_failed_delivery_retries_until_max_attempts(self, mock_client_cls, mock_db, mock_sleep, mock_safe):
         # Mock HTTP response with 500
         mock_resp = MagicMock()
         mock_resp.status_code = 500
@@ -256,10 +258,11 @@ class TestDeliver:
         assert mock_client.post.call_count == _MAX_RETRIES + 1
 
     @pytest.mark.asyncio
+    @patch("backend.services.webhook_dispatcher.is_safe_url", return_value=True)
     @patch("backend.services.webhook_dispatcher.asyncio.sleep", new_callable=AsyncMock)
     @patch("backend.services.webhook_dispatcher.get_service_supabase")
     @patch("backend.services.webhook_dispatcher.httpx.AsyncClient")
-    async def test_retry_does_not_retry_again(self, mock_client_cls, mock_db, mock_sleep):
+    async def test_retry_does_not_retry_again(self, mock_client_cls, mock_db, mock_sleep, mock_safe):
         mock_resp = MagicMock()
         mock_resp.status_code = 500
         mock_resp.text = "Error"

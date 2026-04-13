@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 
 from backend.models.database import get_service_supabase
+from backend.services.url_validation import is_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,24 @@ async def _deliver(
     success = False
     status_code = None
     response_body = ""
+
+    if not is_safe_url(url):
+        logger.warning(
+            "webhook_dispatcher: blocked unsafe URL for tenant=%s webhook=%s",
+            tenant_id, webhook_id,
+        )
+        try:
+            db.table("webhook_logs").insert({
+                "webhook_id": webhook_id,
+                "event": payload.get("event", ""),
+                "payload": payload,
+                "response_status": None,
+                "response_body": "Refused: URL resolves to a private, loopback, or reserved IP",
+                "success": False,
+            }).execute()
+        except Exception:
+            logger.exception("Failed to log blocked webhook delivery for %s", webhook_id)
+        return
 
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
