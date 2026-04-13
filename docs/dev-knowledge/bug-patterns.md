@@ -1661,3 +1661,34 @@ MEDIUM fixes:
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/client_portal.py,docs/daily-logs/e2e-smoke-2026-04-13.md,docs/dev-knowledge/bug-patterns.md,tests/test_client_portal.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: production runtime errors from Railway deploy logs
+
+Surfaced two high-frequency production bugs via `railway logs --filter @level:error`:
+
+1. `backend/services/lead_scoring.py` selected the dropped
+   `conversations.messages` JSONB column, causing every widget lead to
+   log a postgrest 42703 warning and skip scoring. Re-pointed at the
+   canonical `chat_messages` table, joined on `tenant_id` + `session_id`
+   resolved from `conversations`.
+
+2. `backend/routers/clients.py` passed `None` into
+   `ClientListItem.lead_score` / `ClientProfile.lead_score` (Pydantic
+   `int = 0`) because `dict.get(key, default)` returns `None` when the
+   column is explicitly null. Switched all three sites (plus the
+   `mcp_server.py` display string) to `row.get(key) or 0`.
+
+Updated the shared `_mock_db` in `tests/test_quick_fixes.py` to mirror
+the new `chat_messages` shape so `TestLeadTemperatureCalculation` and
+`TestScoreFactors` still cover the post-reconciliation schema.
+
+Full pytest: 654 passed, 20 skipped.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-13
+**Commit:** cc7e1f8
+**Author:** aferna6-cell
+**Files Changed:** backend/mcp_server.py,backend/routers/clients.py,backend/services/lead_scoring.py,docs/dev-knowledge/bug-patterns.md,tests/test_quick_fixes.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
