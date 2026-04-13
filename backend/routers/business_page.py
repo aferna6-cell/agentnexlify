@@ -227,7 +227,7 @@ async def get_business_page(request: Request, slug: str):
         widget_position=widget.get("position", "bottom-right"),
         color_theme=tenant.get("bp_color_theme", "default") if "bp_color_theme" in allowed else "default",
         font_family=tenant.get("bp_font_family") if "bp_font_family" in allowed else None,
-        hide_powered_by=tenant.get("bp_hide_powered_by", False) if "bp_hide_powered_by" in allowed else False,
+        hide_powered_by=(tenant.get("bp_hide_powered_by") or False) if "bp_hide_powered_by" in allowed else False,
         custom_css=tenant.get("bp_custom_css") if "bp_custom_css" in allowed else None,
         meta_title=tenant.get("bp_meta_title") if "bp_meta_title" in allowed else None,
         meta_description=tenant.get("bp_meta_description") if "bp_meta_description" in allowed else None,
