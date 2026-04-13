@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pythonjsonlogger.jsonlogger import JsonFormatter
+from pythonjsonlogger.json import JsonFormatter
 from slowapi.errors import RateLimitExceeded
 from starlette.datastructures import Headers, MutableHeaders
 

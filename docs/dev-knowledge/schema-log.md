@@ -704,3 +704,13 @@ Relaxes `documents.template_html` from NOT NULL to nullable so AI-drafted rows (
 Partial indexes `idx_documents_kind` and `idx_documents_generated_by_agent` on non-null rows.
 
 **Applied:** 2026-04-09 via Supabase Management API. Required for AI document drafting feature (backend/services/document_drafting.py + POST /api/v1/managed-agents/{tid}/draft-document).
+
+### 101 — Widget AI Fallback Flag
+**Date:** 2026-04-10
+Adds opt-in boolean to `widget_configs` controlling whether widget chat escalates to the `support_agent` managed agent as a second-tier fallback when the first-tier Claude reply emits the `FALLBACK_TO_SUPPORT_AGENT` marker.
+
+- `widget_configs.enable_ai_fallback` BOOLEAN NOT NULL DEFAULT false — rollout is tenant-by-tenant
+
+See `backend/routers/widget_chat.py:Step 9a` and `docs/managed-agents.md` for the full flow description.
+
+**Applied:** Pending — created 2026-04-10. Apply via Supabase MCP.

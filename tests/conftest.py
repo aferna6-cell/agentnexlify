@@ -64,6 +64,12 @@ class SyncASGITestClient:
     def delete(self, url, **kwargs):
         return self.request("DELETE", url, **kwargs)
 
+    def options(self, url, **kwargs):
+        return self.request("OPTIONS", url, **kwargs)
+
+    def head(self, url, **kwargs):
+        return self.request("HEAD", url, **kwargs)
+
     def close(self):
         return None
 

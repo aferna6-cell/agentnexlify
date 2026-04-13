@@ -26,7 +26,7 @@ export function draftDocument(tenantId, token, body) {
  */
 export async function downloadDraftedDocument(tenantId, token, documentId) {
   const resp = await fetch(
-    `${import.meta.env.VITE_API_URL || ""}/api/v1/managed-agents/${tenantId}/documents/${documentId}/download`,
+    `${import.meta.env.VITE_API_BASE_URL || ""}/api/v1/managed-agents/${tenantId}/documents/${documentId}/download`,
     {
       headers: { Authorization: `Bearer ${token}` },
     },
