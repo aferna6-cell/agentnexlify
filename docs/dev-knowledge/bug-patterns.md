@@ -1585,3 +1585,12 @@ MEDIUM fixes:
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/client_portal.py,docs/dev-knowledge/bug-patterns.md,frontend/src/pages/Dashboard/index.jsx
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: harden production smoke gates
+**Date:** 2026-04-13
+**Commit:** e494b6a
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/models/database.py,backend/routers/client_portal.py,docs/daily-logs/e2e-smoke-2026-04-13.md,docs/dev-knowledge/bug-patterns.md,tests/test_client_portal.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
