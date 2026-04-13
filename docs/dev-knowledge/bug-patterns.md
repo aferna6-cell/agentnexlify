@@ -4,6 +4,36 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Production portal links trusted stale Vercel FRONTEND_URL
+**Date:** 2026-04-13
+**Symptom:** Authenticated production smoke generated a portal link whose URL did not start with `https://app.agentnexlify.com/client/`, even after the local fallback constants were restored.
+**Root Cause:** `_portal_base_url()` accepted any non-local `FRONTEND_URL`, including stale Vercel deployment aliases. Production still had a non-canonical frontend URL configured, so customer-facing portal links followed that stale value instead of the canonical app domain.
+**Files Changed:** `backend/routers/client_portal.py`, `tests/test_client_portal.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Treat `.vercel.app` frontend hosts as stale aliases for client portal link generation and fall back to `https://app.agentnexlify.com/client`. Added regression tests for stale Vercel aliases and valid custom frontend URLs.
+**Prevention:** Customer-facing links may use configured frontend URLs only after rejecting local development hosts and known deployment aliases. Production smoke should assert the URL origin, not only the HTTP status.
+
+---
+
+### PR Validation push runs had no merge base for origin/main...HEAD
+**Date:** 2026-04-13
+**Symptom:** The GitHub Actions `PR Validation` workflow failed immediately on pushes to `main` at the diff hygiene step with `fatal: origin/main...HEAD: no merge base`.
+**Root Cause:** The workflow always compared `origin/main...HEAD`. On push-triggered `main` runs, the checked-out commit can already be the remote `main` tip, making `origin/main` and `HEAD` the same ref instead of a useful comparison base.
+**Files Changed:** `.github/workflows/pr-check.yml`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Resolve an event-aware `COMPARE_REF`: pull requests compare against the base branch merge base, push events compare against the pushed `before` SHA, and orphan-style pushes fall back to `HEAD^`.
+**Prevention:** CI diff gates that run on both PR and push events must resolve their compare ref from the event payload instead of assuming `origin/main...HEAD`.
+
+---
+
+### Supabase client construction emitted timeout/verify deprecation warnings
+**Date:** 2026-04-13
+**Symptom:** Backend pytest and pre-push critical backend tests passed but emitted Supabase/PostgREST deprecation warnings for `timeout` and `verify`.
+**Root Cause:** `backend/models/database.py` used `create_client()` without passing an explicit `httpx_client`. Supabase's default sync PostgREST client path still passes deprecated `timeout` and `verify` arguments internally.
+**Files Changed:** `backend/models/database.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Added a local `_create_supabase_client()` helper that provides `SyncClientOptions` with `SyncMemoryStorage` and an explicit `httpx.Client(timeout=120.0)`.
+**Prevention:** When upgrading Supabase/PostgREST, instantiate clients through the repo helper and keep transport-level options on the HTTP client, not deprecated PostgREST constructor kwargs.
+
+---
+
 ### Portal link fallback captured localhost from default settings
 **Date:** 2026-04-13
 **Symptom:** `POST /api/v1/portal/{tenant_id}/portal-link/{lead_id}` returned `http://localhost:5173/client/...` URLs under the default local test settings instead of the canonical public portal URL.

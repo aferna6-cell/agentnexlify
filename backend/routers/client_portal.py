@@ -4,6 +4,7 @@ import logging
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 import bcrypt
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, UploadFile
@@ -24,6 +25,7 @@ _PUBLIC_PORTAL_FRONTEND_URL = "https://app.agentnexlify.com"
 _PUBLIC_API_BASE_URL = "https://agentnexlify-production.up.railway.app"
 _JWT_ALGORITHM = "HS256"
 _CLIENT_JWT_EXPIRE_DAYS = 30
+_STALE_FRONTEND_HOST_SUFFIXES = (".vercel.app",)
 
 
 def get_supabase():
@@ -41,7 +43,11 @@ def _portal_base_url() -> str:
     if not isinstance(frontend_url, str):
         frontend_url = ""
     frontend_url = frontend_url.rstrip("/")
-    if frontend_url and "localhost" not in frontend_url and "127.0.0.1" not in frontend_url:
+    parsed = urlparse(frontend_url)
+    hostname = parsed.hostname or ""
+    is_local = hostname in {"localhost", "127.0.0.1", "::1"}
+    is_stale_alias = any(hostname.endswith(suffix) for suffix in _STALE_FRONTEND_HOST_SUFFIXES)
+    if parsed.scheme in {"http", "https"} and hostname and not is_local and not is_stale_alias:
         return f"{frontend_url}/client"
     return f"{_PUBLIC_PORTAL_FRONTEND_URL}/client"
 

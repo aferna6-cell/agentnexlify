@@ -14,13 +14,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ensure compare branch is available
+      - name: Resolve compare ref
         run: |
-          git fetch --no-tags --prune --depth=1 origin main || true
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags --prune origin "${{ github.base_ref }}"
+            BASE_REF="origin/${{ github.base_ref }}"
+          elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_REF="${{ github.event.before }}"
+          else
+            BASE_REF="HEAD^"
+          fi
+
+          COMPARE_REF="$(git merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
+          if [ -z "$COMPARE_REF" ]; then
+            COMPARE_REF="$BASE_REF"
+          fi
+
+          echo "COMPARE_REF=$COMPARE_REF" >> "$GITHUB_ENV"
+          echo "Resolved compare ref: $COMPARE_REF"
 
       - name: Check diff hygiene
         run: |
-          git diff --check origin/main...HEAD
+          git diff --check "$COMPARE_REF" HEAD
 
       - uses: actions/setup-python@v5
         with:
@@ -59,7 +74,7 @@ jobs:
           fi
 
           # .env files in PR
-          if git diff --name-only origin/main...HEAD 2>/dev/null | grep -q "\.env"; then
+          if git diff --name-only "$COMPARE_REF" HEAD 2>/dev/null | grep -q "\.env"; then
             echo "::error::.env file in diff. Never commit env files."
             ERRORS=$((ERRORS + 1))
           fi
@@ -118,7 +133,7 @@ jobs:
       - name: Enforce changed-lines coverage
         run: |
           python scripts/check_changed_lines_coverage.py \
-            --compare-branch origin/main \
+            --compare-branch "$COMPARE_REF" \
             --python-report coverage-python.xml \
             --python-fail-under 85 \
             --js-report frontend/coverage/lcov.info \
@@ -145,7 +160,7 @@ jobs:
 
       - name: Check migration numbering
         run: |
-          CHANGED_MIGRATIONS=$(git diff --name-only origin/main...HEAD -- migrations/ 2>/dev/null || true)
+          CHANGED_MIGRATIONS=$(git diff --name-only "$COMPARE_REF" HEAD -- migrations/ 2>/dev/null || true)
           if [ -n "$CHANGED_MIGRATIONS" ]; then
             echo "New/changed migrations:"
             echo "$CHANGED_MIGRATIONS"

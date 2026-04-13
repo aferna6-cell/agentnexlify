@@ -2,7 +2,10 @@
 import logging
 import warnings
 
-from supabase import create_client, Client
+import httpx
+from supabase import Client, create_client
+from supabase.lib.client_options import SyncClientOptions
+from supabase_auth import SyncMemoryStorage
 
 from backend.config import is_production, settings
 from backend.services.tenant_scope import TenantScopedClient, tenant_client
@@ -12,6 +15,14 @@ logger = logging.getLogger(__name__)
 _service_client: Client | None = None
 _public_client: Client | None = None
 _get_supabase_warned: bool = False
+
+
+def _create_supabase_client(supabase_url: str, supabase_key: str) -> Client:
+    options = SyncClientOptions(
+        storage=SyncMemoryStorage(),
+        httpx_client=httpx.Client(timeout=120.0),
+    )
+    return create_client(supabase_url, supabase_key, options)
 
 
 def get_service_supabase() -> Client:
@@ -24,7 +35,7 @@ def get_service_supabase() -> Client:
     if _service_client is None:
         if is_production() and not settings.supabase_service_key:
             raise RuntimeError("SUPABASE_SERVICE_KEY is required in production")
-        _service_client = create_client(settings.supabase_url, settings.supabase_service_key)
+        _service_client = _create_supabase_client(settings.supabase_url, settings.supabase_service_key)
     return _service_client
 
 
@@ -34,7 +45,10 @@ def get_public_supabase() -> Client:
     if _public_client is None:
         if is_production() and not settings.supabase_key:
             raise RuntimeError("SUPABASE_KEY is required for the public Supabase client in production")
-        _public_client = create_client(settings.supabase_url, settings.supabase_key or settings.supabase_service_key)
+        _public_client = _create_supabase_client(
+            settings.supabase_url,
+            settings.supabase_key or settings.supabase_service_key,
+        )
     return _public_client
 
 

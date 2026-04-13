@@ -9,6 +9,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from backend.routers import client_portal
+
 
 _TEST_JWT_SECRET = "test-secret-key-for-jwt"
 
@@ -273,6 +275,16 @@ class TestDeleteServiceRecord:
 
 class TestGeneratePortalLink:
     """Test POST /{tenant_id}/portal-link/{lead_id}."""
+
+    def test_portal_base_url_rejects_stale_vercel_alias(self, monkeypatch):
+        monkeypatch.setattr(client_portal.settings, "frontend_url", "https://agentnexlify.vercel.app")
+
+        assert client_portal._portal_base_url() == "https://app.agentnexlify.com/client"
+
+    def test_portal_base_url_allows_valid_custom_frontend(self, monkeypatch):
+        monkeypatch.setattr(client_portal.settings, "frontend_url", "https://dashboard.example.com/")
+
+        assert client_portal._portal_base_url() == "https://dashboard.example.com/client"
 
     def test_generate_new_token(self, test_client):
         client, db_mock = test_client
