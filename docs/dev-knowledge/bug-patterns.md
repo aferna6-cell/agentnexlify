@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### ASGI response tests stall on threadpool-backed background work
+**Date:** 2026-04-13
+**Symptom:** `pytest` intermittently timed out after the endpoint had already logged a 200/500 response. Failures clustered around Starlette `BackgroundTasks`, FastAPI `run_in_threadpool`, managed-agent endpoint tests, widget fallback tests, and widget/call endpoints that enqueue post-response work.
+**Root Cause:** In the local sandbox, async threadpool wakeups can stall even after the worker callable returns. `httpx.ASGITransport` also waits for Starlette background tasks before returning the response, so response-level tests accidentally executed slow or network-backed post-response work.
+**Files Changed:** `tests/conftest.py`, `backend/tests/conftest.py`, `package.json`
+**Fix:** Test harnesses now skip Starlette background task execution for ASGI response tests and run explicit `run_in_threadpool` call sites inline under pytest. Root npm quality-gate scripts use `python3`, matching the available interpreter in this environment.
+**Prevention:** Keep endpoint-response tests focused on response contracts. Unit-test background callables directly, patch production service call sites at the router/helper module where they are resolved, and avoid relying on Starlette background task execution inside ASGITransport tests.
+
+---
+
 ### FastAPI test stalls from Starlette TestClient + sync auth dependencies
 **Date:** 2026-04-10
 **Symptom:** Backend and root pytest files hang or hit the 30s timeout on auth-protected routes, dependency overrides, or even simple `TestClient(app)` startup in local tests.

@@ -2,10 +2,10 @@
   "name": "agentnexlify-quality-gates",
   "private": true,
   "scripts": {
-    "check:test-local-refs": "python scripts/check_test_local_refs.py",
+    "check:test-local-refs": "python3 scripts/check_test_local_refs.py",
     "lint:test-quality": "eslint --no-error-on-unmatched-pattern --config eslint.test-quality.config.cjs \"**/*.test.{js,jsx,ts,tsx}\" \"**/*.spec.{js,jsx,ts,tsx}\" \"**/__tests__/**/*.{js,jsx,ts,tsx}\"",
     "lint:test-quality:staged": "node scripts/lint-test-quality-staged.cjs",
-    "coverage:changed-lines": "python scripts/check_changed_lines_coverage.py --compare-branch origin/main --python-report coverage-python.xml --js-report frontend/coverage/lcov.info --js-report demo-platform/coverage/lcov.info --js-report coverage/lcov.info"
+    "coverage:changed-lines": "python3 scripts/check_changed_lines_coverage.py --compare-branch origin/main --python-report coverage-python.xml --js-report frontend/coverage/lcov.info --js-report demo-platform/coverage/lcov.info --js-report coverage/lcov.info"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.46.1",

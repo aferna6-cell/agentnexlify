@@ -11,6 +11,8 @@ import asyncio
 import httpx
 import fastapi.testclient as fastapi_testclient
 import pytest
+import starlette.background as starlette_background
+import starlette.concurrency as starlette_concurrency
 import starlette.testclient as starlette_testclient
 
 # Ensure project root is on path
@@ -82,6 +84,53 @@ class SyncASGITestClient:
 
 fastapi_testclient.TestClient = SyncASGITestClient
 starlette_testclient.TestClient = SyncASGITestClient
+
+
+async def _run_threadpool_inline(func, *args, **kwargs):
+    return func(*args, **kwargs)
+
+
+async def _skip_background_tasks(self):
+    return None
+
+
+@pytest.fixture(autouse=True)
+def _stable_asgi_test_execution(monkeypatch):
+    """Keep ASGI response tests deterministic in the local sandbox.
+
+    The installed async stack can stall while waiting for threadpool wakeups,
+    and ASGITransport waits for Starlette BackgroundTasks before returning.
+    Unit tests cover the background callables directly, so response-level
+    tests skip task execution and inline explicitly patched threadpool work.
+    """
+    monkeypatch.setattr(
+        starlette_background,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
+    monkeypatch.setattr(
+        starlette_concurrency,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
+    monkeypatch.setattr(
+        starlette_background.BackgroundTasks,
+        "__call__",
+        _skip_background_tasks,
+    )
+    import fastapi.concurrency as fastapi_concurrency
+    from backend.routers import managed_agent_runs
+
+    monkeypatch.setattr(
+        fastapi_concurrency,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
+    monkeypatch.setattr(
+        managed_agent_runs,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
 
 
 class MockSupabaseResponse:

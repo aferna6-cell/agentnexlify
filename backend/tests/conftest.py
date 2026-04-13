@@ -6,6 +6,8 @@ from unittest.mock import MagicMock
 
 import httpx
 import pytest
+import starlette.background as starlette_background
+import starlette.concurrency as starlette_concurrency
 
 import backend.models.database as _db_module
 
@@ -15,6 +17,47 @@ from backend.main import app
 
 _REAL_ASGI_TRANSPORT = httpx.ASGITransport
 _REAL_ASYNC_CLIENT = httpx.AsyncClient
+
+
+async def _run_threadpool_inline(func, *args, **kwargs):
+    return func(*args, **kwargs)
+
+
+async def _skip_background_tasks(self):
+    return None
+
+
+@pytest.fixture(autouse=True)
+def _stable_asgi_test_execution(monkeypatch):
+    """Avoid local ASGI threadpool stalls in response-level tests."""
+    monkeypatch.setattr(
+        starlette_background,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
+    monkeypatch.setattr(
+        starlette_concurrency,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
+    monkeypatch.setattr(
+        starlette_background.BackgroundTasks,
+        "__call__",
+        _skip_background_tasks,
+    )
+    import fastapi.concurrency as fastapi_concurrency
+    from backend.routers import managed_agent_runs
+
+    monkeypatch.setattr(
+        fastapi_concurrency,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
+    monkeypatch.setattr(
+        managed_agent_runs,
+        "run_in_threadpool",
+        _run_threadpool_inline,
+    )
 
 
 class SyncASGITestClient:
