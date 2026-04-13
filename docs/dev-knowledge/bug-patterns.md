@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### GitHub Actions frontend coverage used stale Node 18 runtime
+**Date:** 2026-04-13
+**Symptom:** `PR Validation` reached the frontend coverage step and failed before collecting tests with `ERR_REQUIRE_ESM` from `html-encoding-sniffer` requiring `@exodus/bytes/encoding-lite.js`.
+**Root Cause:** The workflow installed the current frontend dependency graph under Node 18. Several dependencies now require Node 20.19+ or Node 22+, including jsdom-related packages and React Router.
+**Files Changed:** `.github/workflows/pr-check.yml`, `.github/workflows/health-check.yml`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Updated GitHub Actions Node setup from 18 to 22 so CI matches the supported frontend runtime used locally.
+**Prevention:** When frontend dependencies move to newer engine requirements, update every workflow `setup-node` pin in the same change. Treat `npm WARN EBADENGINE` in Actions logs as a real CI compatibility signal.
+
+---
+
 ### Production portal links trusted stale Vercel FRONTEND_URL
 **Date:** 2026-04-13
 **Symptom:** Authenticated production smoke generated a portal link whose URL did not start with `https://app.agentnexlify.com/client/`, even after the local fallback constants were restored.
