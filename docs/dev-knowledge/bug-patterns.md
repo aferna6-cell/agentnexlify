@@ -4,6 +4,26 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Lead scoring queried dropped conversations.messages JSONB column
+**Date:** 2026-04-13
+**Symptom:** Railway logs showed `WARNING backend.services.lead_scoring: Background scoring failed for lead <id>` with `postgrest.exceptions.APIError: {'message': 'column conversations.messages does not exist', 'code': '42703'}` on every new widget lead.
+**Root Cause:** `backend/services/lead_scoring.py` selected `messages, last_message_at` from the `conversations` table. The live schema dropped the `messages` JSONB column — individual messages live in the `chat_messages` table, keyed by `tenant_id` + `session_id`.
+**Files Changed:** `backend/services/lead_scoring.py`, `tests/test_quick_fixes.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Fetch `session_id` + `last_message_at` from `conversations`, then pull `role, content, created_at` rows from `chat_messages` filtered by `tenant_id=lead.client_id` and the resolved `session_id`. Updated the shared pytest `_mock_db` so both `TestLeadTemperatureCalculation` and `TestScoreFactors` return the new `chat_messages` shape.
+**Prevention:** When a service reads `conversations.messages`, assume the column is gone on live prod. The canonical message store is `chat_messages`. Any new scoring/summarization code must join via `session_id` on `chat_messages`, not `conversations.messages`.
+
+---
+
+### Dashboard widget builder sent None into ClientListItem.lead_score int field
+**Date:** 2026-04-13
+**Symptom:** Railway logs showed `WARNING backend.routers.clients: Failed to fetch needs-attention leads` with `pydantic_core._pydantic_core.ValidationError: 1 validation error for ClientListItem lead_score — Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]`. The client dashboard widget for needs-attention leads swallowed the error and returned an empty list.
+**Root Cause:** `backend/routers/clients.py` built `ClientListItem(lead_score=l.get("lead_score", 0))` and `ClientProfile(lead_score=lead.get("lead_score", 0))`. `dict.get(key, default)` only returns `default` when the key is missing — when the DB row has `lead_score: None` (the common case before the lead has been scored), `.get` returns `None`. Both Pydantic models declare `lead_score: int = 0`, so validation rejects `None`.
+**Files Changed:** `backend/routers/clients.py`, `backend/mcp_server.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Use `l.get("lead_score") or 0` at all three sites so explicit `None` values coerce to `0`. Fixed the same defensive pattern in `backend/mcp_server.py` for display consistency.
+**Prevention:** When coercing a nullable DB int into a Pydantic `int`-typed field, never rely on `dict.get(key, default)` — the DB returns `None` for unpopulated integer columns, and `.get` treats that as a present value. Use `row.get(key) or 0` (or explicit `None` handling) anywhere a Pydantic `int` field sources data from `Nullable` Supabase columns.
+
+---
+
 ### Client portal public read selected missing tenants.industry column
 **Date:** 2026-04-13
 **Symptom:** Authenticated production smoke could generate a canonical client portal link, but `GET /api/v1/portal/portal/{token}` returned 500.

@@ -221,7 +221,13 @@ class TestLeadTemperatureCalculation:
             if name == "leads":
                 result.data = [lead_data]
             elif name == "conversations":
-                result.data = [{"messages": messages or [], "last_message_at": None}] if messages else []
+                result.data = (
+                    [{"session_id": "sess-001", "last_message_at": None}]
+                    if messages
+                    else []
+                )
+            elif name == "chat_messages":
+                result.data = messages or []
             elif name == "activity_log":
                 result.data = [{"id": "log-001"}]
             else:
@@ -331,7 +337,13 @@ class TestScoreFactors:
             if name == "leads":
                 result.data = [lead_data]
             elif name == "conversations":
-                result.data = [{"messages": messages or [], "last_message_at": None}] if messages else []
+                result.data = (
+                    [{"session_id": "sess-001", "last_message_at": None}]
+                    if messages
+                    else []
+                )
+            elif name == "chat_messages":
+                result.data = messages or []
             elif name == "activity_log":
                 result.data = [{"id": "log-001"}]
             else:

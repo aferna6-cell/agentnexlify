@@ -82,7 +82,7 @@ def list_recent_leads(api_key: str, days: int = 7, limit: int = 20) -> str:
         email = lead.get("email") or "no email"
         phone = lead.get("phone") or "no phone"
         status = lead.get("status", "new")
-        score = lead.get("lead_score", 0)
+        score = lead.get("lead_score") or 0
         interest = lead.get("areas_of_interest") or ""
         summary = lead.get("conversation_summary") or ""
         created = lead.get("created_at", "")[:10]

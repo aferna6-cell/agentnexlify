@@ -162,21 +162,34 @@ def score_lead(lead_id: str) -> dict[str, Any]:
         raise ValueError(f"Lead {lead_id} not found")
     lead = lead_result.data[0]
 
-    # 2. Fetch conversation messages
+    # 2. Fetch conversation messages via chat_messages (canonical store).
+    # Live schema dropped conversations.messages JSONB — messages live in
+    # chat_messages, linked by tenant_id + session_id.
     messages: list[dict[str, Any]] = []
     last_message_at: str | None = None
     conv_id = lead.get("conversation_id")
+    tenant_id = lead.get("client_id")
     if conv_id:
         conv_result = (
             db.table("conversations")
-            .select("messages, last_message_at")
+            .select("session_id, last_message_at")
             .eq("id", conv_id)
             .limit(1)
             .execute()
         )
         if conv_result.data:
-            messages = conv_result.data[0].get("messages") or []
+            session_id = conv_result.data[0].get("session_id")
             last_message_at = conv_result.data[0].get("last_message_at")
+            if session_id and tenant_id:
+                msg_result = (
+                    db.table("chat_messages")
+                    .select("role, content, created_at")
+                    .eq("tenant_id", tenant_id)
+                    .eq("session_id", session_id)
+                    .order("created_at")
+                    .execute()
+                )
+                messages = msg_result.data or []
 
     # 3. Count user messages
     user_msg_count = sum(1 for m in messages if m.get("role") == "user")
