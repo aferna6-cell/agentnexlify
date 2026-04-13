@@ -1692,3 +1692,21 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/mcp_server.py,backend/routers/clients.py,backend/services/lead_scoring.py,docs/dev-knowledge/bug-patterns.md,tests/test_quick_fixes.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: coerce null bp_hide_powered_by, consolidate onboarding SSRF
+
+- business_page.py:230 — use `or False` pattern so DB NULL coerces to
+  False before hitting BusinessPagePublic.hide_powered_by: bool (same
+  bug class as lead_score / teaser_delay_seconds).
+- onboarding.py auto-kb — replace 18-line inline SSRF check with the
+  shared is_safe_url() helper; also now blocks .local/.internal/.lan
+  TLDs and IP literals the inline version missed.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-13
+**Commit:** ab90042
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/business_page.py,backend/routers/onboarding.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
