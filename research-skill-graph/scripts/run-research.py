@@ -41,7 +41,35 @@ DATA_POINTS = ROOT / "knowledge" / "data-points.md"
 
 DEFAULT_MODEL = os.environ.get("RESEARCH_MODEL", "claude-sonnet-4-6")
 MAX_TOKENS = int(os.environ.get("RESEARCH_MAX_TOKENS", "32000"))
+MAX_RETRIES = int(os.environ.get("RESEARCH_MAX_RETRIES", "5"))
+QUEUE_PENDING_CAP = int(os.environ.get("RESEARCH_QUEUE_CAP", "50"))
 AUTO_ITERATED_MARKER = "<!-- open-questions from completed projects land below this line -->"
+
+
+def atomic_write(path: pathlib.Path, content: str) -> None:
+    """Write content to path via temp file + rename for crash-safety."""
+    tmp = path.with_suffix(path.suffix + f".tmp.{os.getpid()}")
+    tmp.write_text(content)
+    os.replace(tmp, path)
+
+
+def atomic_append(path: pathlib.Path, content: str) -> None:
+    existing = path.read_text() if path.exists() else ""
+    atomic_write(path, existing + content)
+
+
+def count_pending(text: str) -> int:
+    in_fence = False
+    count = 0
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if re.match(r"^- \[ \]\s", line):
+            count += 1
+    return count
 
 
 def load_env() -> None:
@@ -91,18 +119,31 @@ def pick_queue_item() -> Optional[tuple[int, str]]:
 def mark_queue_done(line_index: int) -> None:
     lines = QUEUE.read_text().splitlines()
     lines[line_index] = lines[line_index].replace("- [ ]", "- [x]", 1)
-    QUEUE.write_text("\n".join(lines) + "\n")
+    atomic_write(QUEUE, "\n".join(lines) + "\n")
 
 
-def append_auto_iterated(questions: list[str]) -> None:
+def append_auto_iterated(questions: list[str], cap: int = QUEUE_PENDING_CAP) -> int:
     if not questions:
-        return
+        return 0
     text = QUEUE.read_text()
+    pending = count_pending(text)
+    slots = max(0, cap - pending)
+    if slots == 0:
+        print(
+            f"queue at cap ({cap} pending) — skipping {len(questions)} new questions. "
+            f"Prune queue or raise RESEARCH_QUEUE_CAP to resume auto-iteration.",
+            file=sys.stderr,
+        )
+        return 0
     if AUTO_ITERATED_MARKER not in text:
         text += f"\n\n{AUTO_ITERATED_MARKER}\n"
-    new_lines = [f"- [ ] {q.strip()}" for q in questions if q.strip()]
+    accepted = [q.strip() for q in questions[:slots] if q.strip()]
+    new_lines = [f"- [ ] {q}" for q in accepted]
+    if len(questions) > slots:
+        print(f"queue cap: kept {len(accepted)} of {len(questions)} new questions (cap={cap})")
     text = text.rstrip() + "\n" + "\n".join(new_lines) + "\n"
-    QUEUE.write_text(text)
+    atomic_write(QUEUE, text)
+    return len(accepted)
 
 
 def read_all(path: pathlib.Path, glob: str = "*.md") -> str:
@@ -141,7 +182,7 @@ def call_claude(question: str, depth: str, model: str) -> str:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         sys.exit("ANTHROPIC_API_KEY not set (checked env and backend/.env)")
-    client = Anthropic(api_key=api_key)
+    client = Anthropic(api_key=api_key, max_retries=MAX_RETRIES)
     system = build_system_prompt()
     prior = load_prior_context()
     user = (
@@ -210,24 +251,21 @@ def append_log(slug: str, question: str, depth: str, model: str, exec_summary: s
         f"**Model:** {model}\n\n"
         f"### Headline\n{first_lines}\n\n---\n"
     )
-    with LOG.open("a") as f:
-        f.write(entry)
+    atomic_append(LOG, entry)
 
 
 def append_concepts(text: str, slug: str) -> None:
     if not text.strip():
         return
     stamped = f"\n<!-- from projects/{slug} on {dt.date.today().isoformat()} -->\n{text.strip()}\n"
-    with CONCEPTS.open("a") as f:
-        f.write(stamped)
+    atomic_append(CONCEPTS, stamped)
 
 
 def append_data_points(text: str, slug: str) -> None:
     if not text.strip():
         return
     stamped = f"\n<!-- from projects/{slug} on {dt.date.today().isoformat()} -->\n{text.strip()}\n"
-    with DATA_POINTS.open("a") as f:
-        f.write(stamped)
+    atomic_append(DATA_POINTS, stamped)
 
 
 def extract_open_questions(text: str) -> list[str]:

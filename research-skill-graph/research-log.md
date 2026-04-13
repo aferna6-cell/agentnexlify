@@ -27,3 +27,17 @@ Chronological log of every research project run through the graph. Each entry li
 ---
 
 <!-- entries appended below -->
+
+## 2026-04-13 — what-is-the-single-highest-leverage-feature-agentn
+
+**Question:** What is the single highest-leverage feature AgentNexLiFy could ship this quarter to reduce churn for SMB tenants?
+**Depth:** quick
+**Folder:** [[projects/what-is-the-single-highest-leverage-feature-agentn]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**The single highest-leverage feature AgentNexLiFy should ship this quarter to reduce SMB churn is a proactive Health Score Dashboard with automated intervention triggers — essentially making the product's own value visible to the operator before they decide to cancel.**
+**What the research shows:**
+SMB SaaS churn is structurally different from enterprise churn. The dominant driver is not price, c
+
+---

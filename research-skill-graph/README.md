@@ -46,9 +46,20 @@ python scripts/run-research.py --question "..."  # ad-hoc
 ```
 
 ### Auto-populating via cron
+One-liner install (non-destructive — preserves existing crontab):
 ```bash
-# add to crontab (runs every 6 hours)
-0 */6 * * * /home/aidan/agentnexlify/research-skill-graph/scripts/run-research.sh >> /tmp/research.log 2>&1
+./scripts/install-cron.sh
+```
+
+Or manually — add to crontab (runs every 6 hours, auto-commits each result):
+```bash
+0 */6 * * * /home/aidan/agentnexlify/research-skill-graph/scripts/run-research.sh --auto-commit >> /tmp/research.log 2>&1
+```
+
+Requires `cron` daemon running. On WSL:
+```bash
+sudo service cron start
+sudo systemctl enable cron  # if systemd present
 ```
 
 ### Seed the queue
@@ -82,6 +93,25 @@ Plus appends to `research-log.md`, `knowledge/concepts.md`, `knowledge/data-poin
 ## Model
 
 Default: `claude-sonnet-4-6`. Override via `--model` or `RESEARCH_MODEL` env.
+
+## Hardening
+
+- **Atomic writes** — `research-queue.md`, `research-log.md`, `knowledge/*.md` all use tmp-file + `os.replace`. Process kill mid-write won't corrupt state.
+- **API retry** — Anthropic client `max_retries=5` (override with `RESEARCH_MAX_RETRIES`). Handles 429 and transient network failures.
+- **Queue cap** — default 50 pending. New auto-iterated questions dropped when cap hit. Override with `RESEARCH_QUEUE_CAP`.
+- **Parse guard** — run aborts with exit 2 if response missing `===EXECUTIVE_SUMMARY===` or `===DEEP_DIVE===` markers. Queue item NOT marked done, next cron retries.
+- **Raw backup** — every run writes `projects/{slug}/_raw-response.md` before parsing, so malformed responses are never lost.
+
+## Auto-commit + push
+
+`--auto-commit` runs `git add research-skill-graph && git commit -m "research: {slug}"`. It does NOT push.
+
+If you want auto-push:
+```bash
+0 */6 * * * ... run-research.sh --auto-commit && cd /home/aidan/agentnexlify && git push origin main
+```
+
+**SSH note:** `git push` via SSH needs `ssh-agent` loaded or unencrypted key. If cron runs in a minimal env, either (a) use HTTPS remote with token in `~/.git-credentials`, or (b) source `~/.bashrc` / load `ssh-agent` in the cron line.
 
 ## Design principles
 
