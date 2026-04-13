@@ -71,3 +71,5 @@ Headless cron run. DDG rate-limited after first query — fell back to direct bl
 - **embeddings**: 0/4 stored (Supabase MCP unreachable — SUPABASE_ACCESS_TOKEN auth failure)
 - **INDEX.md**: updated — 14 total articles
 - **PENDING.md**: 4 entries removed, 12 remaining
+
+## [2026-04-13 06:15] discover+compile | cron 06:00 | commits=2 raw=10 wiki=8
