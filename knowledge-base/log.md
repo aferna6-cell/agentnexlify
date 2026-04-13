@@ -74,17 +74,17 @@ Headless cron run. DDG rate-limited after first query — fell back to direct bl
 
 ## [2026-04-13 06:15] discover+compile | cron 06:00 | commits=2 raw=10 wiki=8
 
-## [2026-04-13 18:12] discover | cron autopop | raw=+10 categories=7/7 deduped=3 errors=1
+## [2026-04-13 18:12] discover | cron autopop | raw=+0 categories=7/7 urls_found=10 content_failed=10
 
 Headless cron run. Sandbox blocked outbound curl — fell back to Google News RSS (xml.etree) + googlenewsdecoder for URL resolution. All 7 categories searched (top 3 queries each), relevance-filtered, deduped against known-urls.json.
 
-- **competitors** (1): GHL AI Employee announcement (Newswire)
-- **ai-llm** (2): Claude Opus 4.6 on GitHub Copilot (GitHub Blog), Claude Sonnet 4.6 CNBC analysis
-- **small-biz-saas** (1): SaaS statistics 2026 (Hostinger)
-- **verticals** (2): AI phone system for contractors, Best AI answering services 2026
-- **technical** (2): MongoDB Voyage 4 embeddings (PR Newswire + Techzine)
-- **regulations** (1): Epic Ask Emmie AI chatbot for patients (TechTarget) — HIPAA Journal 403'd
-- **growth** (1): Henkel/Azurally GEO strategy for AI search visibility
+**Discovery succeeded** — found 10 new relevant URLs across all 7 categories. **Content extraction failed** — all 10 sites are JS-rendered; curl fetched empty HTML shells. Raw files written then deleted after content quality check revealed zero usable text.
+
+**Root cause:** `agent-browser` not installed on this machine. Curl cannot extract content from JS-rendered pages (Newswire, CNBC, GitHub Blog, Hostinger, TechTarget, etc.). Previous successful cron runs used agent-browser which handles JS.
+
+**Action needed:** Install agent-browser, or re-fetch these 10 URLs interactively via `/kb-ingest`.
+
+- URLs discovered and saved to known-urls.json (10 new + 4 rejected = 14 added)
 - **Rejected** (3): Chandigarh TiECon (generic conference), Forbes small business loans (not SaaS), Digital Piloto openPR (low-value press release)
 - **Failed** (1): hipaajournal.com 403 Forbidden
 - **known-urls.json**: 41 → 55 total

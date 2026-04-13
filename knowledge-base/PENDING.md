@@ -39,15 +39,18 @@ _All compiled._
 - [growth] Answer Engine Optimization (AEO) Guide 2026 — https://birdeye.com/blog/answer-engine-optimization/ → `raw/growth/birdeye-answer-engine-optimization.md`
 - [growth] How forums now dominate AI search results — https://birdeye.com/blog/brand-discovery-through-community-and-ai/ → `raw/growth/birdeye-brand-discovery-community-ai.md`
 
-## Ingested 2026-04-13T22:12:56Z — cron autopop
+## Attempted 2026-04-13T22:12:56Z — cron autopop (FAILED: JS-rendered sites)
 
-- [competitors] HighLevel Unveils New AI Employee to Revolutionize Business Automation — https://www.newswire.com/news/highlevel-unveils-new-ai-employee-to-revolutionize-business-automation-22467082 → `raw/competitors/ghl-ai-employee-announcement.md`
-- [ai-llm] Claude Opus 4.6 Generally Available for GitHub Copilot — https://github.blog/changelog/2026-02-05-claude-opus-4-6-is-now-generally-available-for-github-copilot/ → `raw/ai-llm/claude-opus-46-github-copilot.md`
-- [ai-llm] Anthropic Releases Claude Sonnet 4.6 — CNBC Analysis — https://www.cnbc.com/2026/02/17/anthropic-ai-claude-sonnet-4-6-default-free-pro.html → `raw/ai-llm/claude-sonnet-46-cnbc-analysis.md`
-- [small-biz-saas] SaaS Statistics for 2026: Market Trends, Growth Insights, and Key Metrics — https://www.hostinger.com/uk/tutorials/saas-statistics → `raw/small-biz-saas/saas-statistics-2026-hostinger.md`
-- [verticals] AI Phone System for Contractors Announced — https://markets.chroniclejournal.com/chroniclejournal/article/marketersmedia-2026-3-31-ai-phone-system-for-contractors-announced-never-miss-calls-respond-first → `raw/verticals/ai-phone-system-contractors.md`
-- [verticals] Best AI Answering Services for 2026: Top 8 Solutions Reviewed — https://www.technology.org/2026/02/17/best-ai-answering-services-for-2026-top-8-solutions-reviewed/ → `raw/verticals/best-ai-answering-services-2026.md`
-- [technical] MongoDB Voyage 4 Models for Production-Ready AI Applications — https://www.prnewswire.com/news-releases/mongodb-sets-a-new-standard-for-retrieval-accuracy-with-voyage-4-models-for-production-ready-ai-applications-302662558.html → `raw/technical/mongodb-voyage-4-embeddings.md`
-- [technical] MongoDB launches Voyage 4 embedding models for AI apps — https://www.techzine.eu/news/devops/137985/mongodb-launches-voyage-4-embedding-models-for-ai-apps/ → `raw/technical/mongodb-voyage-4-techzine.md`
-- [regulations] Epic's Ask Emmie: EHR-backed AI Chatbot for Patients — https://www.techtarget.com/patientengagement/feature/Epics-Ask-Emmie-offers-EHR-backed-AI-chatbot-option-for-patients → `raw/regulations/epic-ask-emmie-ai-chatbot.md`
-- [growth] Henkel, Azurally Push GEO Strategy for AI Search Visibility — https://mexicobusiness.news/tech/news/henkel-azurally-push-geo-strategy-ai-search-visibility → `raw/growth/henkel-azurally-geo-strategy.md`
+_All 10 articles fetched empty content via curl (JS-rendered). Raw files deleted. URLs added to known-urls.json. agent-browser needed for these sites — curl cannot extract content from JS-rendered pages._
+
+URLs discovered (saved to known-urls.json for dedup):
+- https://www.newswire.com/news/highlevel-unveils-new-ai-employee-to-revolutionize-business-automation-22467082
+- https://github.blog/changelog/2026-02-05-claude-opus-4-6-is-now-generally-available-for-github-copilot/
+- https://www.cnbc.com/2026/02/17/anthropic-ai-claude-sonnet-4-6-default-free-pro.html
+- https://www.hostinger.com/uk/tutorials/saas-statistics
+- https://markets.chroniclejournal.com/chroniclejournal/article/marketersmedia-2026-3-31-ai-phone-system-for-contractors-announced-never-miss-calls-respond-first
+- https://www.technology.org/2026/02/17/best-ai-answering-services-for-2026-top-8-solutions-reviewed/
+- https://www.prnewswire.com/news-releases/mongodb-sets-a-new-standard-for-retrieval-accuracy-with-voyage-4-models-for-production-ready-ai-applications-302662558.html
+- https://www.techzine.eu/news/devops/137985/mongodb-launches-voyage-4-embedding-models-for-ai-apps/
+- https://www.techtarget.com/patientengagement/feature/Epics-Ask-Emmie-offers-EHR-backed-AI-chatbot-option-for-patients
+- https://mexicobusiness.news/tech/news/henkel-azurally-push-geo-strategy-ai-search-visibility
