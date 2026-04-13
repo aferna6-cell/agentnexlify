@@ -41,3 +41,29 @@ Chronological log of every research project run through the graph. Each entry li
 SMB SaaS churn is structurally different from enterprise churn. The dominant driver is not price, c
 
 ---
+
+## 2026-04-13 — what-is-the-fastest-path-for-agentnexlify-to-hit-1
+
+**Question:** What is the fastest path for AgentNexLiFy to hit 1M ARR in 12 months?
+**Depth:** quick
+**Folder:** [[projects/what-is-the-fastest-path-for-agentnexlify-to-hit-1]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**What we learned:** AgentNexLiFy hitting $1M ARR in 12 months is arithmetically achievable but requires near-perfect execution on three interdependent bets: price point selection, channel concentration, and churn control. The fastest path is not "more customers" — it's "fewer, better-monetized customers retained longer."
+**The core math:** $1M ARR = $83,333 MRR. At a mid-market price point of $50
+
+---
+
+## 2026-04-13 — should-agentnexlify-build-sms-deliverability-monit
+
+**Question:** Should AgentNexLiFy build SMS deliverability monitoring in-house or outsource to Twilio MessagingService?
+**Depth:** quick
+**Folder:** [[projects/should-agentnexlify-build-sms-deliverability-monit]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**The question is slightly mis-framed — and the right answer is: buy now, revisit at scale.**
+Twilio MessagingService is a managed transport layer, not a deliverability monitoring product. The real build/buy decision is between (a) building a custom monitoring layer on top of Twilio vs. (b) using Twilio Insights, a third-party SMS observability tool, or a lightweight internal webhook logger. That 
+
+---

@@ -34,3 +34,20 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [ ] Has AgentNexLiFy run any exit surveys or cancellation-flow data collection? The stated vs. behavioral churn reason gap (contrarian lens) can only be resolved with this data.
 - [ ] What is the current monthly SMB churn rate for AgentNexLiFy specifically, and how does it compare to the 4.7% industry median? If churn is already below median, the return on this investment changes.
 - [ ] Are there agent output quality issues (failed tasks, low completion rates) that would make surfacing a health score counterproductive without a quality improvement pass first?
+- [ ] What is AgentNexLiFy's current MRR and customer count? (The 12-month path is entirely different from a $0 baseline vs. a $50K MRR baseline — this is the most critical unknown)
+- [ ] What is the current monthly churn rate? (If above 4%, churn infrastructure must be the only priority before any channel investment)
+- [ ] Does AgentNexLiFy have existing warm relationships with agency partners or vertical operators who could fast-track the partner channel?
+- [ ] Which vertical has been validated (if any) as highest pain + lowest competitive noise in 2026? (Legal, real estate, home services, e-commerce ops, and healthcare admin are candidates — none confirmed)
+- [ ] What is the product's current TTFV for a new customer completing self-serve setup? (If >48 hours, PLG is not viable and the path must be sales-assisted)
+- [ ] Is pricing validated? Has $1,000/month been tested against SMB buyers, or is current pricing sub-$300 based on assumed price sensitivity?
+- [ ] What is AgentNexLiFy's available runway? (A 12-month ARR target that requires burning through 18 months of runway to achieve is not a viable path regardless of growth rate)
+- [ ] What is the gross margin on the product? (Agentic products with high compute costs may have 40–50% gross margins vs. 70–80% for traditional SaaS, which changes the LTV/CAC calculus significantly)
+- [ ] Has the competitive displacement thesis been tested — are target SMBs actually evaluating AgentNexLiFy vs. Salesforce/HubSpot AI add-ons, or is AgentNexLiFy addressing a workflow those incumbents don't touch?
+- [ ] What is AgentNexLiFy's current monthly SMS message volume (platform-wide and per tenant)? — this is the single most important variable; answer changes the recommendation materially above/below ~500K messages/month
+- [ ] Are AgentNexLiFy's tenants the SMS senders (platform play: tenants use AgentNexLiFy to send their own messages) or does AgentNexLiFy send on behalf of tenants (managed service)? — this changes 10DLC registration structure, compliance ownership, and monitoring accountability entirely
+- [ ] Is SMS deliverability monitoring being considered as an internal operational tool OR as a tenant-facing product feature? — if it's a product feature tenants pay for, in-house build immediately becomes the correct answer regardless of current scale
+- [ ] Has AgentNexLiFy completed 10DLC brand and campaign registration for all active sending use cases? — if not, this is higher urgency than monitoring infrastructure and should be addressed first
+- [ ] What specific deliverability failures or incidents have prompted this question? — understanding the actual failure mode (registration issue vs. carrier filtering vs. operational visibility gap) determines the right solution; "we want to monitor" vs. "we have active delivery failures" are very different situations
+- [ ] What is AgentNexLiFy's international SMS exposure (% of messages going outside US)? — any meaningful international volume strongly argues against in-house build
+- [ ] Does AgentNexLiFy's product roadmap include RCS, WhatsApp Business API, or other messaging channels in 12–18 months? — if yes, investing in SMS-specific monitoring infrastructure has a shorter useful life
+- [ ] What is the current TCPA/CASL/GDPR compliance posture for SMS workflows? — if compliance gaps exist, they represent higher expected cost risk than deliverability gaps and should be prioritized

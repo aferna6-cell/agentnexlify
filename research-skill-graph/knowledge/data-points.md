@@ -28,3 +28,29 @@ Example:
 - Involuntary churn share of SMB SaaS churn | ~20–30% of SMB churn | ProfitWell/Paddle retention research | 2023 | projects/agentexlify-smb-churn
 - SMB SaaS customer acquisition cost range | $200–$800 (self-serve to inside sales) | OpenView SaaS Benchmarks 2024 | 2024 | projects/agentexlify-smb-churn
 - Pre-churn engagement drop lead time | 30–45 days before cancellation in 60–70% of SMB cases | Mixpanel/Amplitude benchmark reports 2022–2025 | 2022–2025 | projects/agentexlify-smb-churn
+
+<!-- from projects/what-is-the-fastest-path-for-agentnexlify-to-hit-1 on 2026-04-13 -->
+- Self-serve trial-to-paid conversion rate (agentic SaaS, 2025) | <2% | Emerging operator reports, agentic SaaS cohort 2024–2025 | 2025 | projects/agentnexlify-1m-arr
+- Self-serve PLG trial-to-paid conversion rate (standard SaaS benchmark) | 5–8% | OpenView PLG benchmarks 2023 | 2023 | projects/agentnexlify-1m-arr
+- Agency channel close rate vs. self-serve | 25–40% vs. 2–5% | OpenView SaaS Benchmarks / channel sales research | 2024 | projects/agentnexlify-1m-arr
+- Vertical SaaS time-to-$1M ARR advantage vs. horizontal | 2–3× faster (horizontal takes longer at equivalent team size) | SaaS Capital research on vertical vs. horizontal SaaS 2018–2022 | 2022 | projects/agentnexlify-1m-arr
+- Typical CAC: inside sales (SMB SaaS) | $800–$1,500 | OpenView SaaS Benchmarks 2024 | 2024 | projects/agentnexlify-1m-arr
+- Typical CAC: agency/reseller channel development | $300–$600 per account (excl. channel dev time) | SaaS channel economics research | 2024 | projects/agentnexlify-1m-arr
+- MRR required for $1M ARR | $83,333 | Arithmetic | 2026 | projects/agentnexlify-1m-arr
+- Monthly churn rate at which 10 customers/month addition leads to $1M ARR in 12 months at $500 ACV | <1.5% | Derived model (Net MRR growth formula) | 2026 | projects/agentnexlify-1m-arr
+- Monthly churn rate at which same acquisition rate fails to reach $1M ARR in 12 months | >3.5% | Derived model | 2026 | projects/agentnexlify-1m-arr
+- Gross margin range: agentic SaaS with high compute dependency | 40–60% | Andreessen Horowitz AI company benchmarks 2024 | 2024 | projects/agentnexlify-1m-arr
+
+<!-- from projects/should-agentnexlify-build-sms-deliverability-monit on 2026-04-13 -->
+- SMS deliverability monitoring MVP build time (senior engineer) | 5–8 weeks | Technical lens analysis, industry benchmarks | 2026-04 | projects/sms-deliverability-build-buy
+- SMS deliverability monitoring in-house Year 1 cost (fully loaded) | $47,000–$97,000 | Economic lens calculation (engineering time + maintenance + infra) | 2026-04 | projects/sms-deliverability-build-buy
+- Twilio Insights cost at 100K messages/month | ~$10–$100/month | Twilio pricing documentation (estimated) | 2026-04 | projects/sms-deliverability-build-buy
+- Twilio Insights cost at 1M messages/month | ~$100–$1,000/month | Twilio pricing documentation (estimated) | 2026-04 | projects/sms-deliverability-build-buy
+- Lightweight webhook logger build time (DLR ingestion + basic dashboard) | 3–5 days senior engineer | Technical lens analysis | 2026-04 | projects/sms-deliverability-build-buy
+- Twilio SMS outbound price (US) | $0.0079/message | Twilio public pricing 2025 | 2025 | projects/sms-deliverability-build-buy
+- TCR direct registration cost (independent CSP path) | $6,000+/year | The Campaign Registry published fees | 2025 | projects/sms-deliverability-build-buy
+- TCPA statutory damages per violation | $500–$1,500 per message | 47 U.S.C. § 227 (TCPA) | current | projects/sms-deliverability-build-buy
+- In-house SMS monitoring ongoing maintenance | 0.5–1 day/week ($15,000–$30,000/year) | Technical lens analysis, email deliverability analog | 2026-04 | projects/sms-deliverability-build-buy
+- SMS volume threshold where in-house monitoring becomes economically competitive vs. buy | ~5–10M messages/month | Economic lens break-even analysis | 2026-04 | projects/sms-deliverability-build-buy
+- Twilio global carrier relationships | 600+ | Twilio documentation 2024 | 2024 | projects/sms-deliverability-build-buy
+- US SMS carrier market concentration (top 3 carriers) | >95% of US traffic | Industry standard telecom data | 2025 | projects/sms-deliverability-build-buy
