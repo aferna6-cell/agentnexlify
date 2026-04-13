@@ -5,8 +5,8 @@ Updated: 2026-04-13 (automated morning routine)
 ## Today's Top 3 Priorities
 
 1. **ROTATE compromised admin API key in Railway** — DAY 10 of exposure. Key committed in 9c87335, scrubbed in d4463d7. Still live in Railway. Agent: **devops** / Human action required. **CRITICAL.**
-2. **Apply migrations 077-101** — 25 pending migrations blocking features (autopilot plan, onboarding wizard, RLS fixes, no-show recovery, daily briefing, AI lead qualification, AI document drafting, widget AI fallback). Agent: **schema-guardian**.
-3. **QA tenant_scope adoption + CORS fix in production** — 60+ routers touched, plus CORS now hardcoded to `["*"]`. Verify widget works on external customer domains. Agent: **qa-tester**.
+2. **QA tenant_scope adoption + CORS fix in production** — 60+ routers touched, plus CORS now hardcoded to `["*"]`. Verify widget works on external customer domains. Agent: **qa-tester**.
+3. **Bug sweep on auth, stripe, widget CORS, tenant isolation** — surface bugs caught in 2026-04-13 debug session; deeper coverage needed.
 
 ## Active Tasks
 
@@ -16,14 +16,7 @@ Updated: 2026-04-13 (automated morning routine)
 
 ### Priority 0 — Schema (Critical / Pre-Launch Blocker)
 
-- [ ] **Apply migration 090 (autopilot plan)** — autopilot subscriptions fail at DB level. Created 2026-04-06.
-- [ ] **Apply migration 093 (fix RLS policies)** — migration 091's auth.uid() policies are semantically broken. Created 2026-04-07.
-- [ ] **Apply migration 101 (widget AI fallback)** — enable_ai_fallback flag for support_agent escalation. Created 2026-04-10.
-- [ ] **Apply migrations 097-098** — no-show recovery columns, daily briefing toggles, pre-chat form. Created 2026-04-08.
-- [ ] **Apply migrations 099-100** — AI lead qualification fields, AI-drafted documents. Created 2026-04-09.
-- [ ] **Apply migrations 094-096 (schema reconciliation + hardening)** — Production columns, conversation memory, FK canonicalization. Created 2026-04-07.
-- [ ] **Apply migrations 077-079 (onboarding blockers)** — Blocks wizard for new signups. Created 2026-04-01.
-- [ ] **Apply migrations 083-092** — waitlist, scoring configs, password reset, A/B tests, automation rules, campaign analytics, admin tracking, reminder tracking. Agent: **schema-guardian**.
+- [x] **All migrations 077-101 applied** — verified 2026-04-13 via direct schema probe (script in commit history). Memory was correct, this list was stale.
 
 ### Priority 1 — Critical / QA
 
