@@ -1632,3 +1632,12 @@ MEDIUM fixes:
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/health-check.yml,.github/workflows/pr-check.yml,docs/dev-knowledge/bug-patterns.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: stop portal tenant industry query
+**Date:** 2026-04-13
+**Commit:** 8b5c570
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/client_portal.py,docs/daily-logs/e2e-smoke-2026-04-13.md,docs/dev-knowledge/bug-patterns.md,tests/test_client_portal.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
