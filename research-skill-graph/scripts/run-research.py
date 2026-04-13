@@ -40,7 +40,7 @@ CONCEPTS = ROOT / "knowledge" / "concepts.md"
 DATA_POINTS = ROOT / "knowledge" / "data-points.md"
 
 DEFAULT_MODEL = os.environ.get("RESEARCH_MODEL", "claude-sonnet-4-6")
-MAX_TOKENS = int(os.environ.get("RESEARCH_MAX_TOKENS", "16000"))
+MAX_TOKENS = int(os.environ.get("RESEARCH_MAX_TOKENS", "32000"))
 AUTO_ITERATED_MARKER = "<!-- open-questions from completed projects land below this line -->"
 
 
@@ -274,6 +274,17 @@ def run(question: Optional[str], model: str, auto_commit: bool) -> int:
     sections = parse_sections(raw)
 
     folder = write_project(slug, clean_q, depth, model, sections, raw)
+
+    parse_ok = bool(sections.get("EXECUTIVE_SUMMARY") and sections.get("DEEP_DIVE"))
+    if not parse_ok:
+        print(
+            f"WARNING: response missing required ===EXECUTIVE_SUMMARY=== or "
+            f"===DEEP_DIVE=== markers. Raw response saved to {folder}/"
+            f"_raw-response.md. Queue item NOT marked done so it retries.",
+            file=sys.stderr,
+        )
+        return 2
+
     append_log(slug, clean_q, depth, model, sections.get("EXECUTIVE_SUMMARY", ""))
     append_concepts(sections.get("NEW_CONCEPTS", ""), slug)
     append_data_points(sections.get("NEW_DATA_POINTS", ""), slug)
