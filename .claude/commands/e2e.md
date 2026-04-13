@@ -27,7 +27,7 @@ Priority test targets:
 
 ## Rules
 
-- Base URL: `http://localhost:5173` (frontend dev) or `https://agentnexlify.vercel.app` (prod)
+- Base URL: `http://localhost:5173` (frontend dev) or `https://app.agentnexlify.com` (prod)
 - API: `http://localhost:8000` (dev) or `https://agentnexlify-production.up.railway.app` (prod)
 - Use `data-testid` attributes for selectors when available
 - Always wait for network idle before assertions
