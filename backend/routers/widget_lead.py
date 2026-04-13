@@ -39,6 +39,53 @@ def get_service_supabase():
     return get_supabase()
 
 
+async def _run_new_lead_followups(
+    tenant_id: str,
+    lead_id: str,
+    fields: dict[str, str],
+) -> None:
+    """Run best-effort post-submit work after the lead response is sent."""
+    logger.info(
+        "SMS_TRIGGER[/lead]: new lead created lead_id=%s, about to trigger automation",
+        lead_id,
+    )
+    try:
+        from backend.services.automation_engine import trigger_sequence
+        await trigger_sequence(tenant_id, lead_id, "new_lead")
+        logger.info("SMS_TRIGGER[/lead]: trigger_sequence completed for lead %s", lead_id)
+    except Exception:
+        logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
+
+    logger.info(
+        "SMS_TRIGGER[/lead]: about to call SMS notification for lead %s email=%s",
+        lead_id,
+        fields.get("email"),
+    )
+    try:
+        await _send_new_lead_sms_notification(
+            tenant_id,
+            fields.get("name", "Unknown"),
+            fields,
+        )
+    except Exception:
+        logger.error("SMS_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
+
+    try:
+        await _send_new_lead_email_notification(
+            tenant_id,
+            fields.get("name", "Unknown"),
+            fields,
+        )
+    except Exception:
+        logger.error("EMAIL_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
+
+    try:
+        from backend.routers.email_sequences import enroll_lead_in_sequences
+        await enroll_lead_in_sequences(tenant_id, lead_id)
+    except Exception:
+        logger.warning("Failed to enroll lead %s in email sequences", lead_id, exc_info=True)
+
+
 @router.post("/lead", response_model=WidgetLeadResponse)
 @limiter.limit("60/minute")
 async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks: BackgroundTasks):
@@ -111,33 +158,12 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
         background_tasks.add_task(qualify_lead_background, lead_id)
 
     if lead_id and is_new:
-        logger.info("SMS_TRIGGER[/lead]: new lead created lead_id=%s, about to trigger automation", lead_id)
-        try:
-            from backend.services.automation_engine import trigger_sequence
-            await trigger_sequence(tenant["id"], lead_id, "new_lead")
-            logger.info("SMS_TRIGGER[/lead]: trigger_sequence completed for lead %s", lead_id)
-        except Exception:
-            logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
-
-        # SMS notification to owner
-        logger.info("SMS_TRIGGER[/lead]: about to call SMS notification for lead %s email=%s", lead_id, fields.get("email"))
-        try:
-            await _send_new_lead_sms_notification(tenant["id"], fields.get("name", "Unknown"), fields)
-        except Exception:
-            logger.error("SMS_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
-
-        # Email notification to owner
-        try:
-            await _send_new_lead_email_notification(tenant["id"], fields.get("name", "Unknown"), fields)
-        except Exception:
-            logger.error("EMAIL_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
-
-        # Email sequence enrollment trigger
-        try:
-            from backend.routers.email_sequences import enroll_lead_in_sequences
-            await enroll_lead_in_sequences(tenant["id"], lead_id)
-        except Exception:
-            logger.warning("Failed to enroll lead %s in email sequences", lead_id, exc_info=True)
+        background_tasks.add_task(
+            _run_new_lead_followups,
+            tenant["id"],
+            lead_id,
+            dict(fields),
+        )
 
     return WidgetLeadResponse(
         lead_id=lead_id,

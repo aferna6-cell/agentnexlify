@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/portal", tags=["client-portal"])
 
-_PUBLIC_PORTAL_FRONTEND_URL = "https://agentnexlify.vercel.app"
+_PUBLIC_PORTAL_FRONTEND_URL = "https://app.agentnexlify.com"
 _PUBLIC_API_BASE_URL = "https://agentnexlify-production.up.railway.app"
 _JWT_ALGORITHM = "HS256"
 _CLIENT_JWT_EXPIRE_DAYS = 30

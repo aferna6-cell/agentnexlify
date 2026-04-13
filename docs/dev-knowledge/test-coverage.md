@@ -81,6 +81,15 @@ All tests follow the same pattern:
 6. `_cache.clear()` from `widget_helpers` in fixture teardown
 7. JWT tokens generated via `jose.jwt.encode` with test secret
 
+## ASGI Harness Behavior
+
+Root tests and `backend/tests` use a lightweight `SyncASGITestClient` built on `httpx.ASGITransport` instead of Starlette's `TestClient`. The harness is intentionally response-focused:
+
+- Starlette `BackgroundTasks` execution is skipped during ASGI response tests so post-response scoring, qualification, emails, SMS, and webhook work cannot stall endpoint assertions or hit live services.
+- Known `run_in_threadpool` call sites execute inline under pytest to avoid local sandbox threadpool wakeups hanging after the callable returns.
+- Tests that need background behavior should unit-test the background callable directly, or patch the router/helper symbol where the endpoint resolves it and assert the task was scheduled.
+- If an endpoint awaits slow follow-up work directly, that is still part of the response path and should be moved to explicit background execution or covered by a latency-sensitive regression test.
+
 ## Adding Tests
 
 1. Create `tests/test_<module>.py`

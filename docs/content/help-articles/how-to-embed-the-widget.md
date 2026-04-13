@@ -6,11 +6,11 @@ Your AgentNexLiFy chat widget is an AI assistant that lives on your website. It 
 
 ### 1. Find your embed code
 
-Log in to your [AgentNexLiFy dashboard](https://agentnexlify.vercel.app). Your embed code is on the main dashboard page under "Widget Setup." It looks like this:
+Log in to your [AgentNexLiFy dashboard](https://app.agentnexlify.com). Your embed code is on the main dashboard page under "Widget Setup." It looks like this:
 
 ```html
 <script
-  src="https://agentnexlify.vercel.app/widget/agentnexlify-widget.js"
+  src="https://app.agentnexlify.com/widget/agentnexlify-widget.js"
   data-api-key="YOUR_API_KEY"
   data-api-base="https://agentnexlify-production.up.railway.app">
 </script>

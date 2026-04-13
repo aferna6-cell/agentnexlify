@@ -18,7 +18,7 @@ Copy this code and paste it before the `</body>` tag on your website:
 
 ```html
 <script
-  src="https://agentnexlify.vercel.app/widget/agentnexlify-widget.js"
+  src="https://app.agentnexlify.com/widget/agentnexlify-widget.js"
   data-api-key="{{api_key}}"
   data-api-base="https://agentnexlify-production.up.railway.app">
 </script>

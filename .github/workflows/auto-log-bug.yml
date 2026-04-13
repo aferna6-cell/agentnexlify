@@ -49,15 +49,15 @@ jobs:
           # Append to bug patterns file
           cat >> docs/dev-knowledge/bug-patterns.md << EOF
 
----
+          ---
 
-### $COMMIT_MSG
-**Date:** $DATE
-**Commit:** $COMMIT_SHORT
-**Author:** $AUTHOR
-**Files Changed:** $FILES_CHANGED
-**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
-EOF
+          ### $COMMIT_MSG
+          **Date:** $DATE
+          **Commit:** $COMMIT_SHORT
+          **Author:** $AUTHOR
+          **Files Changed:** $FILES_CHANGED
+          **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+          EOF
 
           echo "Bug fix logged to docs/dev-knowledge/bug-patterns.md"
 

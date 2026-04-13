@@ -1456,3 +1456,33 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Files Changed:** `tests/conftest.py`
 **Fix:** Added `options()` and `head()` methods to the test client.
 **Prevention:** When creating custom test clients, implement all HTTP methods, not just the common CRUD subset.
+
+---
+
+### 83. Auto bug logger workflow failed before creating jobs
+**Date:** 2026-04-13
+**Symptom:** GitHub Actions showed `.github/workflows/auto-log-bug.yml` as failed with zero jobs and no downloadable logs on every push to `main`.
+**Root Cause:** The Markdown heredoc body in the workflow was not indented inside the YAML block scalar. The `---` separator was parsed as a second YAML document, so GitHub rejected the workflow before scheduling a runner.
+**Files Changed:** `.github/workflows/auto-log-bug.yml`
+**Fix:** Indented the heredoc body and terminator so YAML strips the block indentation before the shell script runs.
+**Prevention:** Validate workflow YAML after editing heredocs; any heredoc payload inside `run: |` must stay indented in the YAML source.
+
+---
+
+### 84. Widget lead submission awaited post-response follow-up work
+**Date:** 2026-04-13
+**Symptom:** `/api/v1/widget/lead` created the lead, then awaited automation trigger, owner SMS/email notifications, and email sequence enrollment before returning the response.
+**Root Cause:** Some new-lead follow-ups were left as direct awaits even though scoring and AI qualification already used `BackgroundTasks`.
+**Files Changed:** `backend/routers/widget_lead.py`, `tests/test_login_and_chat.py`
+**Fix:** Moved new-lead follow-ups into `_run_new_lead_followups()` and scheduled it through FastAPI `BackgroundTasks`.
+**Prevention:** Widget response-path work should stop after the user-visible persistence contract is satisfied. Follow-up automation, notifications, scoring, qualification, and webhook work must run post-response and have direct unit coverage.
+
+---
+
+### 85. Customer-facing links pointed at stale Vercel app alias
+**Date:** 2026-04-13
+**Symptom:** Production smoke passed on `https://app.agentnexlify.com`, but `https://agentnexlify.vercel.app/dashboard`, `/api/v1/healthz`, and `/widget/agentnexlify-widget.js` returned 404.
+**Root Cause:** Runtime email templates and current customer docs still linked to the stale `agentnexlify.vercel.app` deployment instead of the canonical app domain.
+**Files Changed:** `backend/services/automation_engine.py`, `backend/routers/client_portal.py`, current customer-facing docs under `docs/content/`
+**Fix:** Updated runtime links, portal fallback URLs, tests, and current docs to `https://app.agentnexlify.com`.
+**Prevention:** Production smoke should target the canonical app domain. Grep runtime code and customer-facing content for stale app aliases after domain or Vercel project changes.

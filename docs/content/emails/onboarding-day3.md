@@ -13,7 +13,7 @@ By now your AI assistant has probably had a few conversations with visitors. Her
 
 **See every conversation**
 
-Go to [Conversations](https://agentnexlify.vercel.app) in your dashboard. You'll see every chat your AI had — what visitors asked, how the AI responded, and whether it captured their info.
+Go to [Conversations](https://app.agentnexlify.com) in your dashboard. You'll see every chat your AI had — what visitors asked, how the AI responded, and whether it captured their info.
 
 **Improve the AI with one click**
 
@@ -21,11 +21,11 @@ See a response you don't love? Click the thumbs-down button on that message and 
 
 **Check your leads**
 
-Go to [Leads](https://agentnexlify.vercel.app) to see everyone who shared their contact info. The AI captures names, emails, and phone numbers automatically from the conversation.
+Go to [Leads](https://app.agentnexlify.com) to see everyone who shared their contact info. The AI captures names, emails, and phone numbers automatically from the conversation.
 
 **Quick tip:** Sort leads by "New" to see who just came in. Follow up within an hour — studies show response time is the #1 factor in converting a lead.
 
-[Check your conversations →](https://agentnexlify.vercel.app)
+[Check your conversations →](https://app.agentnexlify.com)
 
 — The AgentNexLiFy Team
 

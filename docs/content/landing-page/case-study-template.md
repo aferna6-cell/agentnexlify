@@ -49,7 +49,7 @@ After [X weeks/months] with AgentNexLiFy:
 
 ---
 
-*Ready to capture more leads? [Start free →](https://agentnexlify.vercel.app)*
+*Ready to capture more leads? [Start free →](https://app.agentnexlify.com)*
 
 ---
 

@@ -180,19 +180,19 @@ The repository also contains a self-improving autonomous development layer:
 ### Commands
 ```bash
 # Rebuild skill index
-python -m ai.skill_registry rebuild
+python3 -m ai.skill_registry rebuild
 
 # Resolve skills for a task
-python -m ai.skill_engine prepare "fix widget API drift"
+python3 -m ai.skill_engine prepare "fix widget API drift"
 
 # Record a completed task
-python -m ai.skill_engine complete "fix widget API drift" \
+python3 -m ai.skill_engine complete "fix widget API drift" \
   --skills-used agentnexlify-widget-integrity,agentnexlify-schema-guard \
   --files-modified widget/agentnexlify-widget.js \
   --fixes "mirrored widget files" --outcome success
 
 # Run autonomous improvement pass
-python -m ai.auto_improve --create-skills --write-report docs/ai-auto-improve-report.md --refresh-docs
+python3 -m ai.auto_improve --create-skills --write-report docs/ai-auto-improve-report.md --refresh-docs
 ```
 
 ## The Key Insight

@@ -52,13 +52,24 @@ ALTER TABLE conversations VALIDATE CONSTRAINT conversations_client_id_fkey;
 
 Set these locally or as GitHub Actions secrets:
 
+Current production values:
+
+```bash
+PUBLIC_BASE_URL=https://app.agentnexlify.com
+API_BASE_URL=https://agentnexlify-production.up.railway.app
+```
+
 ```powershell
-$env:PUBLIC_BASE_URL = "https://your-frontend-domain"
-$env:API_BASE_URL = "https://your-backend-domain"
+$env:PUBLIC_BASE_URL = "https://app.agentnexlify.com"
+$env:API_BASE_URL = "https://agentnexlify-production.up.railway.app"
 $env:PUBLIC_WIDGET_API_KEY = "optional-widget-key"
 ```
 
 Run:
+
+```bash
+python3 scripts/public_smoke.py
+```
 
 ```powershell
 .\.venv312\Scripts\python.exe scripts\public_smoke.py

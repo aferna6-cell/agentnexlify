@@ -16,7 +16,7 @@ cd agentnexlify
 cp .env.example .env
 # Edit .env with your keys
 
-pip install -r backend/requirements.txt
+python3 -m pip install -r backend/requirements.txt
 ```
 
 ### 3. Database
@@ -25,13 +25,13 @@ Apply the SQL files in `migrations/` in numeric order. The active schema is docu
 
 Verify connectivity:
 ```bash
-python -m scripts.setup_supabase
+python3 -m scripts.setup_supabase
 ```
 
 ### 4. Seed Demo Client
 
 ```bash
-python -m scripts.seed_demo_client
+python3 -m scripts.seed_demo_client
 ```
 
 Save the printed API key.
@@ -45,7 +45,7 @@ uvicorn backend.main:app --reload --port 8000
 ### 6. Test in Terminal
 
 ```bash
-python -m scripts.test_conversation --api-key <YOUR_API_KEY>
+python3 -m scripts.test_conversation --api-key <YOUR_API_KEY>
 ```
 
 ### 7. Test the Widget

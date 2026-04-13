@@ -19,18 +19,18 @@ Check: is the embed code on every page of your site?
 
 **Are you following up on leads?**
 
-Go to your [Leads](https://agentnexlify.vercel.app) page and check for any "New" leads you haven't contacted yet. Click any lead to send a follow-up email right from the dashboard.
+Go to your [Leads](https://app.agentnexlify.com) page and check for any "New" leads you haven't contacted yet. Click any lead to send a follow-up email right from the dashboard.
 
 **Set up automations**
 
-The AI captures leads. Automations nurture them. Go to [Automations](https://agentnexlify.vercel.app) and create a follow-up sequence — a series of emails that go out automatically after a lead comes in. We have templates to get you started.
+The AI captures leads. Automations nurture them. Go to [Automations](https://app.agentnexlify.com) and create a follow-up sequence — a series of emails that go out automatically after a lead comes in. We have templates to get you started.
 
 **Your AI is getting smarter**
 
 Every conversation teaches the AI more about your business. Every FAQ you add and every thumbs-down correction makes it better. Keep at it.
 
-[Open your dashboard →](https://agentnexlify.vercel.app)
+[Open your dashboard →](https://app.agentnexlify.com)
 
 — The AgentNexLiFy Team
 
-P.S. Getting value from AgentNexLiFy? The Growth plan ($199/mo) gives you SMS notifications, Google Calendar sync, and automated follow-up sequences. [See plans →](https://agentnexlify.vercel.app)
+P.S. Getting value from AgentNexLiFy? The Growth plan ($199/mo) gives you SMS notifications, Google Calendar sync, and automated follow-up sequences. [See plans →](https://app.agentnexlify.com)

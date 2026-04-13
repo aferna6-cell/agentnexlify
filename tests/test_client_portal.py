@@ -293,7 +293,7 @@ class TestGeneratePortalLink:
         data = resp.json()
         assert "token" in data
         assert "url" in data
-        assert data["url"].startswith("https://agentnexlify.vercel.app/client/")
+        assert data["url"].startswith("https://app.agentnexlify.com/client/")
 
     def test_return_existing_token(self, test_client):
         client, db_mock = test_client
@@ -310,7 +310,7 @@ class TestGeneratePortalLink:
         assert resp.status_code == 200
         data = resp.json()
         assert data["token"] == "existing-abc123"
-        assert data["url"] == "https://agentnexlify.vercel.app/client/existing-abc123"
+        assert data["url"] == "https://app.agentnexlify.com/client/existing-abc123"
 
 
 # ── Public Portal Tests ────────────────────────────────────────

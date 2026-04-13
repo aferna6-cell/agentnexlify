@@ -1714,7 +1714,7 @@ _ONBOARDING_STEPS = [
             "<h2>Hi {{owner_name}},</h2>"
             "<p>Your chat widget is ready to go. Now let's make it sound like <em>you</em>.</p>"
             "<p><strong>The fastest way to improve your AI: add your top 5 FAQs.</strong></p>"
-            "<p>Go to your <a href='https://agentnexlify.vercel.app'>FAQ Manager</a> and add the "
+            "<p>Go to your <a href='https://app.agentnexlify.com'>FAQ Manager</a> and add the "
             "questions your customers ask the most: your hours, pricing, service area, what makes "
             "you different, and how to book.</p>"
             "<p>Each FAQ you add makes the AI smarter. Customers get instant, accurate answers "
@@ -1722,7 +1722,7 @@ _ONBOARDING_STEPS = [
             "<p><strong>Bonus:</strong> If you have a website, go to Settings and paste your URL. "
             "Click &ldquo;Scan Website&rdquo; &mdash; the AI will read your site and learn your "
             "services automatically.</p>"
-            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "<p><a href='https://app.agentnexlify.com' style='background:#3b82f6;color:#fff;"
             "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
             "Open your dashboard &rarr;</a></p>"
             "<p>Talk soon,<br>The AgentNexLiFy Team</p>"
@@ -1737,14 +1737,14 @@ _ONBOARDING_STEPS = [
             "<h2>Hi {{owner_name}},</h2>"
             "<p>By now your AI assistant has probably had a few conversations with visitors.</p>"
             "<p><strong>See every conversation:</strong> Go to "
-            "<a href='https://agentnexlify.vercel.app'>Conversations</a> to see what visitors "
+            "<a href='https://app.agentnexlify.com'>Conversations</a> to see what visitors "
             "asked and how the AI responded.</p>"
             "<p><strong>Improve the AI with one click:</strong> See a response you don't love? "
             "Click the thumbs-down button and type what the AI <em>should</em> have said. "
             "It learns from your corrections.</p>"
             "<p><strong>Check your leads:</strong> Go to Leads to see everyone who shared their "
             "contact info. Follow up within an hour for the best results.</p>"
-            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "<p><a href='https://app.agentnexlify.com' style='background:#3b82f6;color:#fff;"
             "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
             "Check your conversations &rarr;</a></p>"
             "<p>&mdash; The AgentNexLiFy Team</p>"
@@ -1764,7 +1764,7 @@ _ONBOARDING_STEPS = [
             "for any &ldquo;New&rdquo; leads you haven't contacted yet.</p>"
             "<p><strong>Set up automations:</strong> Go to Automations and create a follow-up "
             "sequence &mdash; emails that go out automatically after a lead comes in.</p>"
-            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "<p><a href='https://app.agentnexlify.com' style='background:#3b82f6;color:#fff;"
             "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
             "Open your dashboard &rarr;</a></p>"
             "<p>&mdash; The AgentNexLiFy Team</p>"
@@ -1789,7 +1789,7 @@ _ONBOARDING_STEPS = [
             "<p>One captured lead that turns into a customer pays for months of AgentNexLiFy. "
             "The Growth plan is $249/month &mdash; less than a single Google ad click in most industries. "
             "Now with SEO audit tools and AI content writer included.</p>"
-            "<p><a href='https://agentnexlify.vercel.app' style='background:#3b82f6;color:#fff;"
+            "<p><a href='https://app.agentnexlify.com' style='background:#3b82f6;color:#fff;"
             "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
             "See what you're missing &rarr;</a></p>"
             "<p>&mdash; The AgentNexLiFy Team</p>"
@@ -1956,7 +1956,7 @@ async def send_monthly_reports() -> int:
             f"<td style='padding:12px 16px;border:1px solid #e5e7eb;text-align:right;font-size:1.2em;'>{reviews_count}</td>"
             f"</tr>"
             f"</table>"
-            f"<p>Keep up the great work! Visit your <a href='https://agentnexlify.vercel.app'>dashboard</a> "
+            f"<p>Keep up the great work! Visit your <a href='https://app.agentnexlify.com'>dashboard</a> "
             f"to see detailed analytics and manage your business.</p>"
             f"<p>Best,<br>The AgentNexLiFy Team</p>"
         )
@@ -2073,7 +2073,7 @@ async def send_portal_links() -> int:
             continue
 
         token = tok_result.data[0]["token"]
-        portal_url = f"https://agentnexlify.vercel.app/client/{token}"
+        portal_url = f"https://app.agentnexlify.com/client/{token}"
 
         # Get business name
         try:
@@ -2197,7 +2197,7 @@ async def send_csat_surveys() -> int:
 
         customer_name = appt.get("customer_name") or "there"
         survey_token = f"{tenant_id}:appt_{appt['id']}"
-        survey_url = f"https://agentnexlify.vercel.app/survey?token={survey_token}"
+        survey_url = f"https://app.agentnexlify.com/survey?token={survey_token}"
 
         subject = f"How was your experience with {biz_name}?"
         body = (
@@ -2904,7 +2904,7 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
             )
         body_html += (
             f"<p style='margin-top:24px;color:#374151;'>View your full dashboard at "
-            f"<a href='https://agentnexlify.vercel.app' style='color:#3b82f6;'>agentnexlify.vercel.app</a></p>"
+            f"<a href='https://app.agentnexlify.com' style='color:#3b82f6;'>app.agentnexlify.com</a></p>"
             f"<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p></div>"
         )
 

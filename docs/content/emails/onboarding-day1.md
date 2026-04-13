@@ -13,7 +13,7 @@ Your chat widget is ready to go. Now let's make it sound like *you*.
 
 **The fastest way to improve your AI: add your top 5 FAQs.**
 
-Go to [FAQ Manager](https://agentnexlify.vercel.app) and add the questions your customers ask the most:
+Go to [FAQ Manager](https://app.agentnexlify.com) and add the questions your customers ask the most:
 
 1. Your hours
 2. Your pricing (even "starting at $X" works)
@@ -27,7 +27,7 @@ Each FAQ you add makes the AI smarter. Customers get instant, accurate answers i
 
 If you have a website, go to Settings and paste your URL. Click "Scan Website" — the AI will read your site and learn your services automatically. Takes about 30 seconds.
 
-[Open your dashboard →](https://agentnexlify.vercel.app)
+[Open your dashboard →](https://app.agentnexlify.com)
 
 Talk soon,
 The AgentNexLiFy Team

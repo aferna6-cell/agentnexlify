@@ -37,7 +37,7 @@ Invite team members to handle conversations. Assign leads. Leave internal notes.
 
 One captured lead that turns into a customer pays for months of AgentNexLiFy. The Growth plan is $199/month — less than a single Google ad click in most industries.
 
-[See what you're missing →](https://agentnexlify.vercel.app)
+[See what you're missing →](https://app.agentnexlify.com)
 
 — The AgentNexLiFy Team
 

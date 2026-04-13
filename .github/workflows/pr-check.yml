@@ -42,9 +42,6 @@ jobs:
       - name: Check local Python test references
         run: python scripts/check_test_local_refs.py
 
-      - name: Managed Agents preflight
-        run: python scripts/managed_agents/preflight.py
-
       - name: Check for dangerous patterns
         run: |
           ERRORS=0
@@ -90,6 +87,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r backend/requirements.txt
           python -m pip install pytest pytest-cov diff-cover pip-audit
+
+      - name: Managed Agents preflight
+        run: python scripts/managed_agents/preflight.py
 
       - name: Run backend tests with coverage
         run: |

@@ -441,3 +441,55 @@ class TestLeadCaptureEdgeCases:
         # uses `if req.name:` which is falsy for empty string)
         assert "name" not in data.get("updated_fields", [])
         assert "email" in data.get("updated_fields", [])
+
+    def test_new_lead_followups_are_background_tasks(self, test_client, monkeypatch):
+        """New-lead notifications and automations must not block the response path."""
+        client, db_mock = test_client
+
+        tables = self._widget_and_tenant_tables()
+        tables["leads"] = [
+            [],
+            [{"id": "lead-followup-001"}],
+        ]
+        _setup_table_mock(db_mock, tables)
+
+        scheduled = []
+
+        from starlette.background import BackgroundTasks
+
+        def capture_add_task(self, func, *args, **kwargs):
+            scheduled.append((func, args, kwargs))
+
+        monkeypatch.setattr(BackgroundTasks, "add_task", capture_add_task)
+
+        response = client.post("/api/v1/widget/lead", json={
+            "api_key": "anx_lead_test_key",
+            "session_id": "sess-followup",
+            "name": "Casey",
+            "email": "casey@example.com",
+            "service": "Consultation",
+        })
+
+        assert response.status_code == 200
+
+        from backend.routers import widget_lead
+
+        followup_tasks = [
+            (args, kwargs)
+            for func, args, kwargs in scheduled
+            if func is widget_lead._run_new_lead_followups
+        ]
+        assert followup_tasks == [
+            (
+                (
+                    "tenant-lead-001",
+                    "lead-followup-001",
+                    {
+                        "name": "Casey",
+                        "email": "casey@example.com",
+                        "areas_of_interest": "Consultation",
+                    },
+                ),
+                {},
+            )
+        ]
