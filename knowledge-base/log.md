@@ -102,3 +102,5 @@ Processed 4 of 12 pending entries (4-entry cap). Remaining: 8 entries (2 ai-llm,
 - **INDEX.md**: updated — 18 total articles (was 14)
 - **PENDING.md**: 4 entries marked compiled, 8 remaining
 - **Embeddings**: 0/4 stored (Supabase MCP Unauthorized — SUPABASE_ACCESS_TOKEN not available in cron env)
+
+## [2026-04-13 18:22] discover+compile | cron 18:00 | commits=3 raw=0 wiki=0
