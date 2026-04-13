@@ -48,3 +48,16 @@ Processed 4 of 6 pending entries this run (4-entry cap). Remaining: 2 HIPAA page
 - **Cross-references** — all 4 articles cite ≥1 existing wiki page via `[[slug]]` inline; two pgvector articles cross-link each other for strategic/tactical split.
 
 ## [2026-04-12 19:00] discover+compile | cron 18:00 | commits=3 raw=4 wiki=4
+
+## [2026-04-13 06:00] discover | cron autopop | raw=+10 categories=5/7 deduped=13 errors=0
+
+Headless cron run. DDG rate-limited after first query — fell back to direct blog index scraping (GHL blog, Anthropic engineering, Birdeye blog, Intercom blog). Searched blog index pages via curl, applied relevance filter, deduped against known-urls.json.
+
+- **competitors** (2): GHL automate-billing, Intercom Fin Apex vertical models
+- **ai-llm** (2): Anthropic managed-agents engineering, building-effective-agents
+- **technical** (2): Anthropic advanced-tool-use, contextual-retrieval
+- **regulations** (2): HIPAA AI chatbots 2026 (edinsol), HIPAA AI tools 2026 (justinhealthcareai)
+- **growth** (2): Birdeye AEO guide, Birdeye community/AI brand discovery
+- **small_biz_saas** — SKIPPED (no blog sources, DDG rate-limited)
+- **verticals** — SKIPPED (no blog sources, DDG rate-limited)
+- **known-urls.json** — 41 total (was 18, +10 fetched, +13 rejected/filtered)
