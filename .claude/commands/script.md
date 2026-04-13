@@ -1,5 +1,5 @@
 ---
-description: Generate a client-ready demo script from current working features only.
+description: Generate a client-ready demo script from working features. Use when prepping a sales demo or walkthrough.
 model: sonnet
 ---
 

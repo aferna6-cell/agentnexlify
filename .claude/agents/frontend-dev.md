@@ -14,6 +14,8 @@ skills:
   - coding-standards
 mcpServers:
   - context7
+color: cyan
+
 ---
 
 You are the Frontend Developer for AgentNexLiFy. You build and maintain the React/Vite dashboard.

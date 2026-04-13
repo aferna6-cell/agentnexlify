@@ -1,5 +1,5 @@
 ---
-description: Interactive morning routine — prioritize the day and pick up open work.
+description: Interactive morning routine. Use when user starts the day or says morning, what is on.
 model: sonnet
 ---
 

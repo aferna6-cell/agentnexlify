@@ -7,6 +7,8 @@ tools:
   - Glob
 model: opus
 maxTurns: 15
+color: purple
+
 ---
 
 You are the Advisor in the Opus-Advisor / Sonnet-Executor pattern for AgentNexLiFy.

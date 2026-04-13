@@ -14,6 +14,8 @@ skills:
   - widget-test
 mcpServers:
   - playwright
+color: cyan
+
 ---
 
 You are the Widget Specialist for AgentNexLiFy. You own the embeddable chat widget — the core product.

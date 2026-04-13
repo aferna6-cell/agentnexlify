@@ -134,8 +134,15 @@ Compliance: **OK**.
 - [x] Daily `/morning` + `/evening` routines
 - [x] Memory system at `~/.claude/projects/.../memory/`
 
+## Round 2 follow-ups (closed 2026-04-13)
+
+- Commands: rewrote descriptions as triggers ("Use when X") per Thariq tip
+- Agents: added `color:` to all 18 (purple=planning, blue=backend, red=critical, cyan=frontend/widget, green=execution, yellow=review, orange=ops, pink=eval)
+- Hooks: `.claude/hooks` now symlinks → `../scripts/claude-hooks` (convention alignment without breaking settings.json paths)
+- Project-custom frontmatter (`version`, `origin`, `triggers`) retained — required by `scripts/claude-hooks/validate-skill.sh` hook
+- JSON validation: `jq -e .` passes on `.claude/settings.json` + `.mcp.json`
+
 ## Open follow-ups
 
-- Add Excalidraw MCP when architecture-diagram need arises (not today)
-- Consider `color:` field per agent for visual distinction in task list
-- Consider migrating `scripts/claude-hooks/` → `.claude/hooks/` for convention alignment (requires settings.json path updates; high-risk, low-value)
+- Add Excalidraw MCP when architecture-diagram need arises
+- Runtime verify after session restart that trigger-style descriptions improve auto-invocation (no measurable gain yet — next session)

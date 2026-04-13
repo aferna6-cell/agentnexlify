@@ -1,5 +1,5 @@
 ---
-description: Recover context after compaction or a session restart from the checkpoint.
+description: Restore context after compaction. Use when session lost history or user says recover, where were we.
 model: sonnet
 ---
 

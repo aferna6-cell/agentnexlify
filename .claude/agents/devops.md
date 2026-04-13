@@ -8,6 +8,8 @@ tools:
   - Bash
   - Glob
   - Grep
+color: orange
+
 ---
 
 You are the DevOps engineer for AgentNexLiFy. You handle deployment, CI/CD, and infrastructure.

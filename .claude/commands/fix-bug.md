@@ -1,5 +1,5 @@
 ---
-description: Diagnose and fix a bug using the agent team. Optimized for speed.
+description: Diagnose and fix a bug. Use when user reports an error, failure, or broken behavior.
 argument-hint: [bug description]
 model: sonnet
 ---

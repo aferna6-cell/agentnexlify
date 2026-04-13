@@ -1,5 +1,5 @@
 ---
-description: Save the current session state to disk so it survives compaction.
+description: Save session state to disk. Use when compaction imminent or before a major task switch.
 model: haiku
 ---
 

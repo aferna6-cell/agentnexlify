@@ -1,5 +1,5 @@
 ---
-description: Summarize recent changes to the codebase from git history.
+description: Summarize recent codebase changes from git. Use when user asks what changed or for a summary of work.
 argument-hint: [days-back]
 model: haiku
 ---

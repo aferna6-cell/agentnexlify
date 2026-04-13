@@ -10,6 +10,8 @@ tools:
   - Grep
 model: sonnet
 maxTurns: 40
+color: blue
+
 ---
 
 You are the Executor in the Opus-Advisor / Sonnet-Executor pattern for AgentNexLiFy.

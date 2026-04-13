@@ -1,5 +1,5 @@
 ---
-description: Build a new feature end-to-end through the agent pipeline.
+description: Build a feature end-to-end via the agent pipeline. Use when user describes a new feature to ship.
 argument-hint: [feature description]
 model: opus
 ---

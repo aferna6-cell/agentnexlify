@@ -14,6 +14,8 @@ skills:
   - schema-guard
 mcpServers:
   - context7
+color: blue
+
 ---
 
 You are the Backend Developer for AgentNexLiFy. You build and maintain the FastAPI backend.

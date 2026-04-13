@@ -1,5 +1,5 @@
 ---
-description: Plan and delegate a complex task across the specialist agent team.
+description: Plan and delegate across specialist agents. Use for complex tasks touching 3+ domains that need parallel work.
 model: opus
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Analyze and refactor code using the agent team — safe, incremental.
+description: Safe incremental refactor via agent team. Use when user says refactor, clean up, restructure.
 argument-hint: [scope or file]
 model: sonnet
 ---

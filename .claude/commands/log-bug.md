@@ -1,5 +1,5 @@
 ---
-description: Document a just-fixed bug into docs/dev-knowledge/bug-patterns.md.
+description: Document a just-fixed bug to bug-patterns.md. Use AFTER resolving a bug to capture the pattern.
 model: haiku
 ---
 

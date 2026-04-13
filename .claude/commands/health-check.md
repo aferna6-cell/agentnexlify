@@ -1,5 +1,5 @@
 ---
-description: Codebase health check — schema, imports, dead code, security, bug patterns.
+description: Codebase audit. Use when user says health check, audit the code, or before a major release.
 model: sonnet
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Run a pre-deploy check before pushing to production (secrets, tests, build, schema).
+description: Pre-deploy gate. Use BEFORE pushing to main — checks secrets, tests, build, schema.
 model: sonnet
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Run the full pre-deploy validation pipeline and prepare for deployment.
+description: Full deploy pipeline. Use when user says deploy, ship it, or is ready to push production.
 model: sonnet
 ---
 

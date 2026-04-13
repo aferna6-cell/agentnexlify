@@ -1,5 +1,5 @@
 ---
-description: Interactive evening routine — review the day and prep for tomorrow.
+description: Interactive evening routine. Use when user ends the day or says wrap up, end of day.
 model: sonnet
 ---
 
