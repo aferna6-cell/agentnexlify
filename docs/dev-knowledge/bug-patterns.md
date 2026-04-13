@@ -1546,3 +1546,12 @@ MEDIUM fixes:
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/client_portal.py,backend/routers/forms.py,frontend/src/pages/Dashboard/LeadDetailDrawer.jsx,frontend/src/pages/Dashboard/OnboardingChecklist.jsx,frontend/src/pages/Dashboard/RecoveryStatsWidget.jsx,frontend/src/pages/Dashboard/TodayAppointments.jsx,frontend/src/pages/Dashboard/index.jsx,frontend/src/pages/FormBuilderPage.jsx,frontend/src/pages/MCPSetupPage.jsx,frontend/src/pages/MarketingCampaignsPage.jsx,frontend/src/pages/SettingsPage.jsx,widget/agentnexlify-widget.js
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: restore portal link production fallback
+**Date:** 2026-04-13
+**Commit:** 88372e0
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/client_portal.py,docs/dev-knowledge/bug-patterns.md,frontend/src/pages/Dashboard/index.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
