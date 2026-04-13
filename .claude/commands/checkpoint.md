@@ -1,5 +1,5 @@
 ---
-description: Save session state to disk. Use when compaction imminent or before a major task switch.
+description: Save session state to disk. Use before a major task switch or when context window is filling up.
 model: haiku
 ---
 

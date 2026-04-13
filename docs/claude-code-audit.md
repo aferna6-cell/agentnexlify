@@ -128,7 +128,7 @@ Compliance: **OK**.
 - [x] Permission review routed to Haiku (pre-push git hook)
 - [x] `/permissions` wildcard patterns (not `--dangerously-skip-permissions`)
 - [x] `/sandbox` enabled
-- [x] Squash-merge + small PRs convention (git hooks)
+- [x] Small-PR + pre-push gate convention (git hooks enforce checks; squash-merge is repo setting)
 - [x] `/code-review` plugin enabled
 - [x] Cross-model workflow (Codex via `codex:codex-rescue`)
 - [x] Daily `/morning` + `/evening` routines
@@ -138,7 +138,7 @@ Compliance: **OK**.
 
 - Commands: rewrote descriptions as triggers ("Use when X") per Thariq tip
 - Agents: added `color:` to all 18 (purple=planning, blue=backend, red=critical, cyan=frontend/widget, green=execution, yellow=review, orange=ops, pink=eval)
-- Hooks: `.claude/hooks` now symlinks → `../scripts/claude-hooks` (convention alignment without breaking settings.json paths)
+- Hooks: evaluated `.claude/hooks` symlink → removed after review (settings.json still points at `scripts/claude-hooks/*.sh`, so the symlink was non-functional dead weight and created Windows portability risk)
 - Project-custom frontmatter (`version`, `origin`, `triggers`) retained — required by `scripts/claude-hooks/validate-skill.sh` hook
 - JSON validation: `jq -e .` passes on `.claude/settings.json` + `.mcp.json`
 
