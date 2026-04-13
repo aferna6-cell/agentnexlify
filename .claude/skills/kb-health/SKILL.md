@@ -3,7 +3,7 @@ name: kb-health
 description: Audit the knowledge base for staleness, gaps, contradictions, and missing cross-links, reporting a health score and suggesting improvements. Use when user says 'kb-health', 'knowledge base health', 'audit wiki', 'kb audit', 'check knowledge base quality', or asks about kb health.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - kb-health
 - knowledge base health

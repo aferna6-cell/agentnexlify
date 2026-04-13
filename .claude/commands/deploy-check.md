@@ -1,3 +1,8 @@
+---
+description: Run a pre-deploy check before pushing to production (secrets, tests, build, schema).
+model: sonnet
+---
+
 Run a pre-deploy check before pushing to production.
 
 1. No secrets exposed — scan staged/modified files for API keys, tokens, passwords, connection strings. Check .env is in .gitignore.

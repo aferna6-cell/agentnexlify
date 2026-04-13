@@ -1,3 +1,9 @@
+---
+description: Analyze and refactor code using the agent team — safe, incremental.
+argument-hint: [scope or file]
+model: sonnet
+---
+
 Analyze and refactor code using the agent team. Safe, incremental improvements.
 
 ## Step 1: Scope the Refactor

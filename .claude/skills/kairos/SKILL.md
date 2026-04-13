@@ -3,7 +3,7 @@ name: kairos
 description: Persistent background agent for memory consolidation, project monitoring, and dream reports. Use when user says 'kairos start', 'kairos stop', 'kairos status', 'what did kairos find', 'memory consolidation', 'project monitoring', or asks about kairos.
 version: 1.0.0
 origin: claude
-allowed_tools:
+allowed-tools:
 - Read
 - Bash
 - Glob

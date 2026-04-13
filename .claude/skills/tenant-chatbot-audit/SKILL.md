@@ -3,7 +3,7 @@ name: tenant-chatbot-audit
 description: Audit a specific tenant chatbot for data gaps, RLS failures, FAQ quality, orphaned sessions, and knowledge base issues. Use when user says 'tenant chatbot audit', 'chatbot audit', 'bot audit', 'tenant bot not working', 'leads not capturing', 'chatbot diagnosis', or asks about tenant chatbot audit.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - tenant chatbot audit
 - chatbot audit

@@ -3,7 +3,7 @@ name: buddy
 description: Tamagotchi-style coding companion. Deterministic creature generated from user ID. Has species, rarity, stats, and personality. Shows up in responses with mood based on session health. Use when user says 'buddy', 'companion', 'pet', 'buddy status', 'buddy stats', 'buddy feed', or asks about buddy.
 version: 1.0.0
 origin: claude
-allowed_tools:
+allowed-tools:
 - Read
 - Write
 - Bash

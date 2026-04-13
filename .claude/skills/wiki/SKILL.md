@@ -3,7 +3,7 @@ name: wiki
 description: Capture any input (screenshot, URL, text, file, YouTube) into a Karpathy-style wiki article in one step from raw to wiki. Use when user says 'wiki', 'capture knowledge', 'ingest screenshot', 'ingest url', 'ingest text', 'create wiki article', or asks about wiki.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - wiki
 - capture knowledge

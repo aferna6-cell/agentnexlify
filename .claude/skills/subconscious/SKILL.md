@@ -3,7 +3,7 @@ name: subconscious
 description: Self-improvement loop that gathers evidence, generates improvement ideas, debates them, synthesizes one recommendation, and writes artifacts. Use when user says 'subconscious', 'self-improvement', 'improvement loop', 'generate improvement ideas', 'debate ideas', or asks about subconscious.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - subconscious
 - self-improvement

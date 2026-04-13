@@ -1,3 +1,8 @@
+---
+description: Run the full pre-deploy validation pipeline and prepare for deployment.
+model: sonnet
+---
+
 Run the full pre-deploy validation pipeline and prepare for deployment.
 
 ## Step 1: Create Checkpoint

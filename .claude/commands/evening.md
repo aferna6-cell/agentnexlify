@@ -1,3 +1,8 @@
+---
+description: Interactive evening routine — review the day and prep for tomorrow.
+model: sonnet
+---
+
 This command runs the INTERACTIVE evening routine. For the automated version, scripts/daily/evening-auto.sh runs via Task Scheduler (8 PM weekdays).
 
 If the automated evening hasn't run yet, this interactive version will do the full review. If it already ran, read the log and supplement anything it missed.

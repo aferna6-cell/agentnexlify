@@ -3,7 +3,7 @@ name: ai-feature-pattern
 description: "Use this skill when building any feature that calls the Claude API for AI-powered functionality (text generation, categorization, extraction, analysis). Ensures consistent prompt engineering, JSON parsing, and error handling."
 version: 1.0.0
 origin: claude
-allowed_tools: []
+allowed-tools: []
 triggers: ["AI-powered feature", "Claude API", "text generation", "categorization", "extraction", "AI job writer", "content repurposer", "review response"]
 effort: medium
 ---

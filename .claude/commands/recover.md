@@ -1,3 +1,8 @@
+---
+description: Recover context after compaction or a session restart from the checkpoint.
+model: sonnet
+---
+
 Recover context after compaction or a session restart.
 
 ## Step 1: Read the Checkpoint

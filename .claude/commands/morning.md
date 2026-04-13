@@ -1,3 +1,8 @@
+---
+description: Interactive morning routine — prioritize the day and pick up open work.
+model: sonnet
+---
+
 This command runs the INTERACTIVE morning routine. For the automated version, the system runs scripts/daily/morning-auto.sh via Task Scheduler (8 AM weekdays).
 
 If the automated morning already ran today, read docs/daily-logs/ for today's date first. Then pick up where it left off — it may have identified tasks that need human judgment to execute.

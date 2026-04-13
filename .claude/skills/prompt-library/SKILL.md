@@ -14,7 +14,7 @@ triggers:
 - test
 - summarize
 - reason
-user_invocable: false
+user-invocable: false
 effort: medium
 ---
 

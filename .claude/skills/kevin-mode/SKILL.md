@@ -3,8 +3,8 @@ name: kevin-mode
 description: Ultra-compressed caveman-style responses named after Kevin Malone, toggled on with 'kevin mode' and off with 'normal mode'. Use when user says 'kevin mode', 'normal mode', 'ultra compressed', 'minimum words', or asks about kevin mode.
 version: 1.0.0
 origin: claude
-user_invocable: true
-allowed_tools:
+user-invocable: true
+allowed-tools:
 - Read
 - Write
 - Edit

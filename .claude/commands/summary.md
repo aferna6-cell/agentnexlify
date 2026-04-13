@@ -1,3 +1,9 @@
+---
+description: Summarize recent changes to the codebase from git history.
+argument-hint: [days-back]
+model: haiku
+---
+
 Generate a comprehensive summary of all recent changes to the codebase.
 
 ## Step 1: Gather Change Data

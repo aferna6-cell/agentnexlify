@@ -3,9 +3,9 @@ name: autonomous-webapp-test
 description: "Use when user says 'test everything' or wants autonomous end-to-end testing of the web app. Claude drives the whole dashboard + widget via Playwright MCP — reads the accessibility tree, clicks every button, fills every form, checks console + network for errors. Returns structured bug report. Type 2 (Product Verification) skill per the 9-type taxonomy."
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers: ["test everything", "autonomous test", "autotest", "full app test", "e2e autonomous", "point claude at the app", "crawl the app", "find all the bugs"]
-allowed_tools: ["mcp__playwright__browser_navigate", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_click", "mcp__playwright__browser_type", "mcp__playwright__browser_fill_form", "mcp__playwright__browser_hover", "mcp__playwright__browser_press_key", "mcp__playwright__browser_wait_for", "mcp__playwright__browser_console_messages", "mcp__playwright__browser_network_requests", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_evaluate", "mcp__playwright__browser_navigate_back", "mcp__playwright__browser_tabs", "Read", "Write", "Bash"]
+allowed-tools: ["mcp__playwright__browser_navigate", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_click", "mcp__playwright__browser_type", "mcp__playwright__browser_fill_form", "mcp__playwright__browser_hover", "mcp__playwright__browser_press_key", "mcp__playwright__browser_wait_for", "mcp__playwright__browser_console_messages", "mcp__playwright__browser_network_requests", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_evaluate", "mcp__playwright__browser_navigate_back", "mcp__playwright__browser_tabs", "Read", "Write", "Bash"]
 effort: high
 ---
 

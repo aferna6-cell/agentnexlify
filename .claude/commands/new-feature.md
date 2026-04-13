@@ -1,3 +1,9 @@
+---
+description: Build a new feature end-to-end through the agent pipeline.
+argument-hint: [feature description]
+model: opus
+---
+
 Build a new feature end-to-end using the agent team. This command orchestrates the full pipeline.
 
 ## Step 1: Understand the Feature

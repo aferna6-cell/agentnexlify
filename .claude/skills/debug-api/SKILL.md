@@ -3,7 +3,7 @@ name: debug-api
 description: "Use this skill when diagnosing any API error — 422s, 500s, CORS failures, silent data loss, or webhook issues."
 version: 1.0.0
 origin: claude
-allowed_tools: []
+allowed-tools: []
 triggers: ["422 error", "500 error", "API error", "CORS error", "webhook issue", "silent data loss", "debug API", "API not working"]
 effort: high
 ---

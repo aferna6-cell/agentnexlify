@@ -3,7 +3,7 @@ name: kb-lint
 description: Validate every wiki article against the Karpathy template — frontmatter fields, required sections, ≥1 wikilink, banned filler phrases, INDEX.md coverage. Use when user says 'kb-lint', 'lint wiki', 'check wiki', 'validate wiki', 'lint knowledge base', or asks about wiki quality violations.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - kb-lint
 - lint wiki

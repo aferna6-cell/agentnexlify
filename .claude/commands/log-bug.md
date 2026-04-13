@@ -1,3 +1,8 @@
+---
+description: Document a just-fixed bug into docs/dev-knowledge/bug-patterns.md.
+model: haiku
+---
+
 I just fixed a bug. Help me document it for future reference.
 
 Ask me:

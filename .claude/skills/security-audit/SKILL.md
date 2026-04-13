@@ -3,7 +3,7 @@ name: security-audit
 description: Scan the codebase for security vulnerabilities including missing tenant verification, unverified webhooks, unsigned OAuth state, XSS, and dangerous imports. Use when user says 'security-audit', 'security scan', 'vulnerability scan', 'audit security', 'check for XSS', 'check RLS', or asks about security audit.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - security-audit
 - security scan

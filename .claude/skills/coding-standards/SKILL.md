@@ -3,7 +3,7 @@ name: coding-standards
 description: Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development. Use when user says 'coding standards', 'code style', 'best practices', 'linting rules', 'naming conventions', 'new project standards', or asks about coding standards.
 version: 1.0.0
 origin: claude
-allowed_tools: []
+allowed-tools: []
 triggers:
 - coding standards
 - code style

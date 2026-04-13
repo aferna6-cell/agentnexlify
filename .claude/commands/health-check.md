@@ -1,3 +1,8 @@
+---
+description: Codebase health check — schema, imports, dead code, security, bug patterns.
+model: sonnet
+---
+
 Perform a health check on the AgentNexLiFy codebase. Check for:
 
 1. Schema mismatches: Compare Pydantic models against migration files. Flag any column name in code but not in the latest migration.

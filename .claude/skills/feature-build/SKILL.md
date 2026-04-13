@@ -3,7 +3,7 @@ name: feature-build
 description: "Use this skill when building any new feature. Ensures schema safety, consistent patterns, and proper documentation."
 version: 1.0.0
 origin: claude
-allowed_tools: []
+allowed-tools: []
 triggers: ["new feature", "new API endpoint", "new dashboard page", "new integration", "build feature", "feature build"]
 effort: high
 ---

@@ -1,3 +1,8 @@
+---
+description: Generate a client-ready demo script from current working features only.
+model: sonnet
+---
+
 Generate a client-ready demo script based on the current state of the codebase. The script should only reference features that actually work right now.
 
 ## Step 1: Discover What's Actually Built

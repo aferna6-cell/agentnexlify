@@ -1,3 +1,8 @@
+---
+description: Plan and delegate a complex task across the specialist agent team.
+model: opus
+---
+
 You have a team of specialized agents available. Before starting any complex task, create a delegation plan.
 
 ## Step 1: Analyze the Task

@@ -1,3 +1,8 @@
+---
+description: Save the current session state to disk so it survives compaction.
+model: haiku
+---
+
 Save the current session state to disk so it survives compaction.
 
 Read the current conversation context and create/update `.claude/agent-comms/checkpoint.md` with:

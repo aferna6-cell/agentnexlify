@@ -3,9 +3,9 @@ name: deploy-workflow
 description: "Use BEFORE pushing to main or triggering a Railway/Vercel deploy. Runs pre-deploy gates (build, tests, migration status, widget-file sync) and flags any blocker before remote deploy starts. This is the Type 7 (CI/CD & Deployment) skill per the 9-type taxonomy."
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers: ["deploy", "deploy check", "ship", "push to main", "ready to deploy", "pre-deploy"]
-allowed_tools: ["Bash", "Read", "Grep", "Glob"]
+allowed-tools: ["Bash", "Read", "Grep", "Glob"]
 effort: medium
 ---
 

@@ -3,7 +3,7 @@ name: e2e-testing
 description: Playwright E2E testing patterns, Page Object Model, configuration, CI/CD integration, artifact management, and flaky test strategies. Use when user says 'e2e test', 'end-to-end test', 'playwright test', 'page object model', 'flaky test', 'E2E configuration', or asks about e2e testing.
 version: 1.0.0
 origin: claude
-allowed_tools: []
+allowed-tools: []
 triggers:
 - e2e test
 - end-to-end test

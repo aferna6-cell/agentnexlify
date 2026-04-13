@@ -1,3 +1,9 @@
+---
+description: Diagnose and fix a bug using the agent team. Optimized for speed.
+argument-hint: [bug description]
+model: sonnet
+---
+
 Diagnose and fix a bug using the agent team. Optimized for speed — find it, fix it, document it.
 
 ## Step 1: Understand the Bug

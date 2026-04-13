@@ -3,7 +3,7 @@ name: kb-query
 description: Ask natural language questions against the knowledge base using semantic search with pgvector cosine similarity. Use when user says 'kb-query', 'search knowledge base', 'ask the wiki', 'semantic search wiki', 'query kb', or asks about kb query.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - kb-query
 - search knowledge base

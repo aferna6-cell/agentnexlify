@@ -3,8 +3,8 @@ name: worktree-orchestrator
 description: Manage 4-8 parallel git worktrees, each running its own compound engineering pipeline for high quality at high throughput. Use when user says 'worktree', 'parallel worktrees', 'orchestrate worktrees', 'run in parallel', 'compound engineering', 'worktree setup', or asks about worktree orchestrator.
 version: 1.0.0
 origin: claude
-user_invocable: true
-allowed_tools:
+user-invocable: true
+allowed-tools:
 - Read
 - Write
 - Edit

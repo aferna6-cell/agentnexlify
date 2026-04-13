@@ -3,7 +3,7 @@ name: kb-discover
 description: Automated article discovery for the knowledge base that searches the web, scores relevance, and ingests high-quality results. Use when user says 'kb-discover', 'discover articles', 'find new articles', 'automated discovery', 'search for articles', or asks about kb discover.
 version: 1.0.0
 origin: claude
-user_invocable: true
+user-invocable: true
 triggers:
 - kb-discover
 - discover articles
