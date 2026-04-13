@@ -93,7 +93,7 @@ Updated: 2026-04-13 (automated morning routine)
 - **Codebase status:** Clean (git status clean)
 - **Health check:** All green (widget sync OK, 0 bare excepts, 0 dangerous imports, 0 silent frontend catches)
 - **Frontend build:** PASS (5.18s)
-- **Bug patterns total:** 79 (unchanged since Apr 10)
+- **Bug patterns total:** 82 (+3 today: logger deprecation #80, env var mismatch #81, test client methods #82)
 - **Pending migrations:** 25 (077-101, +1 since Apr 10: migration 101 widget AI fallback)
 - **SECURITY INCIDENT DAY 10:** admin API key — rotate in Railway **IMMEDIATELY**
 - **Key activity (Apr 11-13):** KB infrastructure (Karpathy wiki, auto-populate, lint), plugin/skill overhaul, GitHub autopilot loop

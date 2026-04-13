@@ -1410,3 +1410,39 @@ _New entries are auto-appended by the bug logging GitHub Action. Add root cause 
 **Prevention:** The widget CORS must always be `["*"]` because we cannot enumerate tenant customer domains. Do not re-introduce env-driven CORS origin filtering for the main app. If per-route origin filtering is needed later, use middleware that checks the path prefix, not global CORSMiddleware.
 
 *Auto-logged 2026-04-10 evening*
+
+---
+
+## 2026-04-13
+
+### 80. Deprecated pythonjsonlogger import path — warning on every boot
+**Date:** 2026-04-13 (Commit 600e18c)
+**Symptom:** Deprecation warning logged on every Uvicorn worker startup: `pythonjsonlogger.jsonlogger` is deprecated.
+**Root Cause:** `backend/main.py` imported from `pythonjsonlogger.jsonlogger` instead of the new `pythonjsonlogger.json` path.
+**Files Changed:** `backend/main.py`
+**Fix:** Updated import to `pythonjsonlogger.json`.
+**Prevention:** When upgrading Python logging libraries, check for deprecation warnings in startup logs.
+
+*Auto-logged 2026-04-13 morning*
+
+---
+
+### 81. Env var mismatch in managed-agents.js — document download hitting relative path in prod
+**Date:** 2026-04-13 (Commit 600e18c)
+**Symptom:** Document download from managed agents endpoint fails in production — request goes to relative path instead of API base URL.
+**Root Cause:** `frontend/src/utils/api/managed-agents.js` used `VITE_API_URL` but the rest of the app uses `VITE_API_BASE_URL`. In production where only `VITE_API_BASE_URL` is set, the fetch used `undefined` as base, falling back to relative path.
+**Files Changed:** `frontend/src/utils/api/managed-agents.js`
+**Fix:** Changed to `VITE_API_BASE_URL` to match the rest of the app.
+**Prevention:** All frontend API modules must use `VITE_API_BASE_URL`. Grep for `VITE_API_URL[^_]` periodically to catch mismatches.
+
+*Auto-logged 2026-04-13 morning*
+
+---
+
+### 82. SyncASGITestClient missing OPTIONS/HEAD methods — CORS preflight tests fail
+**Date:** 2026-04-13 (Commit 600e18c)
+**Symptom:** `test_cors_preflight` raised `AttributeError` because the test client had no `options()` or `head()` methods.
+**Root Cause:** The custom `SyncASGITestClient` in `tests/conftest.py` (introduced to replace Starlette TestClient per bug #80) only implemented `get`, `post`, `put`, `patch`, `delete` — missing `options` and `head`.
+**Files Changed:** `tests/conftest.py`
+**Fix:** Added `options()` and `head()` methods to the test client.
+**Prevention:** When creating custom test clients, implement all HTTP methods, not just the common CRUD subset.
