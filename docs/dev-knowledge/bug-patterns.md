@@ -1502,3 +1502,37 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .claude/commands/e2e.md,.github/workflows/pr-check.yml
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: hard debug session — XSS, hardcoded URLs, React bugs, swallowed errors
+
+CRITICAL fixes:
+- widget: Fix stored XSS in _inlineMd() — add double-quote escaping to
+  prevent href attribute breakout via markdown links (e.g.
+  [click](https://x.com"onmouseover="alert(1)))
+- widget: Fix XSS in booking slots — escape slot.start/formatBookingDate
+  with _esc() before innerHTML assignment (3 locations: slot grid,
+  contact form, confirmation)
+
+HIGH fixes:
+- frontend: Add VITE_API_BASE_URL env var fallback to all hardcoded
+  production URLs (SettingsPage.jsx, FormBuilderPage.jsx,
+  MCPSetupPage.jsx)
+- backend: Replace hardcoded URLs in client_portal.py with
+  settings.frontend_url / settings.api_url
+- frontend: Fix OnboardingChecklist useEffect with empty dependency
+  array — add [steps, allDone, activeStep] deps so auto-select fires
+  after async data loads instead of only on mount
+
+MEDIUM fixes:
+- backend: Remove unused form_token variable in forms.py
+- frontend: Replace 6 silent .catch(() => fallback) patterns with
+  .catch((err) => { console.warn(...); fallback }) for observability
+  (Dashboard index, LeadDetailDrawer, RecoveryStatsWidget,
+  TodayAppointments, OnboardingChecklist, MarketingCampaignsPage)
+**Date:** 2026-04-13
+**Commit:** 0bbe6c8
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/client_portal.py,backend/routers/forms.py,frontend/src/pages/Dashboard/LeadDetailDrawer.jsx,frontend/src/pages/Dashboard/OnboardingChecklist.jsx,frontend/src/pages/Dashboard/RecoveryStatsWidget.jsx,frontend/src/pages/Dashboard/TodayAppointments.jsx,frontend/src/pages/Dashboard/index.jsx,frontend/src/pages/FormBuilderPage.jsx,frontend/src/pages/MCPSetupPage.jsx,frontend/src/pages/MarketingCampaignsPage.jsx,frontend/src/pages/SettingsPage.jsx,widget/agentnexlify-widget.js
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
