@@ -1594,3 +1594,12 @@ MEDIUM fixes:
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/pr-check.yml,backend/models/database.py,backend/routers/client_portal.py,docs/daily-logs/e2e-smoke-2026-04-13.md,docs/dev-knowledge/bug-patterns.md,tests/test_client_portal.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: force canonical portal app domain
+**Date:** 2026-04-13
+**Commit:** da81576
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/client_portal.py,docs/dev-knowledge/bug-patterns.md,tests/test_client_portal.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
