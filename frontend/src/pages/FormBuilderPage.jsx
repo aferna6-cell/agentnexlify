@@ -22,7 +22,7 @@ const FIELD_TYPES = [
   { value: "date", label: "Date" },
 ];
 
-const EMBED_BASE = "https://agentnexlify-production.up.railway.app";
+const EMBED_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";

@@ -1004,7 +1004,7 @@
 
   function _inlineMd(s) {
     // Escape HTML entities first to prevent XSS
-    s = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    s = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     // Bold **text**
     s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
     // Italic *text* (only when not inside bold)
@@ -1525,7 +1525,7 @@
     } else {
       html += `<div class="anx-slots-grid">`;
       availableSlots.forEach((slot, i) => {
-        html += `<button class="anx-slot-btn" data-idx="${i}">${slot.start}</button>`;
+        html += `<button class="anx-slot-btn" data-idx="${i}">${_esc(slot.start)}</button>`;
       });
       html += `</div>`;
     }
@@ -1551,7 +1551,7 @@
     const booking = document.getElementById("anx-booking");
     let html = `<button class="anx-booking-back" onclick="document.getElementById('anx-booking').__anxBack()">&#8592; Back</button>`;
     html += `<div class="anx-booking-title">Your Details</div>`;
-    html += `<div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px;">${formatBookingDate(selectedDate)} at ${selectedSlot.start}</div>`;
+    html += `<div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px;">${_esc(formatBookingDate(selectedDate))} at ${_esc(selectedSlot.start)}</div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Name *</label><input class="anx-form-input" id="anx-book-name" placeholder="Your name" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Email *</label><input class="anx-form-input" id="anx-book-email" type="email" placeholder="your@email.com" required></div>`;
     html += `<div class="anx-form-group"><label class="anx-form-label">Phone</label><input class="anx-form-input" id="anx-book-phone" type="tel" placeholder="(optional)"></div>`;
@@ -1644,7 +1644,7 @@
     const booking = document.getElementById("anx-booking");
     let html = `<div class="anx-confirm-check">&#10003;</div>`;
     html += `<div class="anx-confirm-title">Appointment Confirmed!</div>`;
-    html += `<div class="anx-confirm-detail">${formatBookingDate(selectedDate)} at ${selectedSlot.start}</div>`;
+    html += `<div class="anx-confirm-detail">${_esc(formatBookingDate(selectedDate))} at ${_esc(selectedSlot.start)}</div>`;
     html += `<button class="anx-confirm-back" id="anx-book-done">Back to Chat</button>`;
     booking.innerHTML = html;
 

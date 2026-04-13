@@ -115,7 +115,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
     if (!user?.tenantId || !token) return;
     fetchAnalyticsHealth(user.tenantId, token)
       .then((data) => setLastActivity(data.last_message_at || null))
-      .catch(() => setLastActivity(null));
+      .catch((err) => { console.warn("Analytics health fetch failed:", err?.message); setLastActivity(null); });
   }, [user?.tenantId, token]);
 
   const handleStepComplete = useCallback(() => {

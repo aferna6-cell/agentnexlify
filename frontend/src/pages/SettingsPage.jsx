@@ -31,6 +31,7 @@ import { toggleClientLogin } from "../utils/api/portal";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function SettingsPage({ onNavigate }) {
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
   const { user, token, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1412,7 +1413,7 @@ export default function SettingsPage({ onNavigate }) {
               <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
                 <input
                   readOnly
-                  value={`https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}`}
+                  value={`${apiBase}/api/v1/book/${businessSlug}`}
                   style={{
                     flex: 1,
                     fontFamily: "monospace",
@@ -1426,7 +1427,7 @@ export default function SettingsPage({ onNavigate }) {
                   onClick={() => {
                     navigator.clipboard
                       .writeText(
-                        `https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}`,
+                        `${apiBase}/api/v1/book/${businessSlug}`,
                       )
                       .catch(() => {
                         /* clipboard unavailable in insecure context */
@@ -1448,7 +1449,7 @@ export default function SettingsPage({ onNavigate }) {
                 <textarea
                   readOnly
                   rows={4}
-                  value={`<iframe\n  src="https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border:none;border-radius:12px;"\n></iframe>`}
+                  value={`<iframe\n  src="${apiBase}/api/v1/book/${businessSlug}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border:none;border-radius:12px;"\n></iframe>`}
                   style={{
                     flex: 1,
                     fontFamily: "monospace",
@@ -1468,7 +1469,7 @@ export default function SettingsPage({ onNavigate }) {
                   onClick={() => {
                     navigator.clipboard
                       .writeText(
-                        `<iframe\n  src="https://agentnexlify-production.up.railway.app/api/v1/book/${businessSlug}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border:none;border-radius:12px;"\n></iframe>`,
+                        `<iframe\n  src="${apiBase}/api/v1/book/${businessSlug}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border:none;border-radius:12px;"\n></iframe>`,
                       )
                       .catch(() => {
                         /* clipboard unavailable in insecure context */

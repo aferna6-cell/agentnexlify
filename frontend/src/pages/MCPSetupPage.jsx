@@ -36,6 +36,8 @@ const MCP_TOOLS = [
   },
 ];
 
+const MCP_API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+
 const EXAMPLE_PROMPTS = [
   "What leads came in this week?",
   "Do I have any appointments today?",
@@ -50,7 +52,7 @@ function buildConfigJson(apiKey) {
       mcpServers: {
         agentnexlify: {
           command: "npx",
-          args: ["-y", "mcp-remote", "https://agentnexlify-production.up.railway.app/mcp"],
+          args: ["-y", "mcp-remote", `${MCP_API_BASE}/mcp`],
           env: {
             API_KEY: apiKey || "YOUR_API_KEY_HERE",
           },

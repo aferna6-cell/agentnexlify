@@ -22,7 +22,7 @@ export default function TodayAppointments({ tenantId, token, onNavigate }) {
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
     fetchAppointments(tenantId, token, { startDate: today, endDate: tomorrow, status: "confirmed" })
       .then(res => { setAppointments(res.appointments || []); if (res.timezone) setBizTz(res.timezone); })
-      .catch(() => setAppointments([]))
+      .catch((err) => { console.warn("Appointments fetch failed:", err?.message); setAppointments([]); })
       .finally(() => setLoading(false));
   }, [tenantId, token]);
 

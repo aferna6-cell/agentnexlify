@@ -585,7 +585,7 @@ function CreateCampaignModal({ tenantId, token, onClose, onCreated }) {
     if (!tenantId || !token) return;
     fetchTagDefinitions(tenantId, token)
       .then((res) => setAvailableTags(res.tags || res || []))
-      .catch(() => setAvailableTags([]));
+      .catch((err) => { console.warn("Tag definitions fetch failed:", err?.message); setAvailableTags([]); });
   }, [tenantId, token]);
 
   // Estimate recipients

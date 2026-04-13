@@ -203,7 +203,7 @@ export default function OnboardingChecklist({
           }
           setHoursLoaded(true);
         })
-        .catch(() => setHoursLoaded(true));
+        .catch((err) => { console.warn("Business hours fetch failed:", err?.message); setHoursLoaded(true); });
     }
   }, [activeStep, tenantId, token, hoursLoaded]);
 
@@ -246,7 +246,7 @@ export default function OnboardingChecklist({
       const first = steps.find((s) => !s.complete);
       if (first) setActiveStep(first.key);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [steps, allDone, activeStep]);
 
   if (stored.dismissed && !allDone) {
     return null;

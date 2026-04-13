@@ -160,7 +160,6 @@ async def get_public_form_embed(request: Request, token: str):
     submit_text = html.escape(settings.get("submit_button_text", "Submit"))
     form_name = html.escape(form.get("name", "Form"))
     form_desc = html.escape(form.get("description") or "")
-    form_token = html.escape(form.get("public_token", token))
 
     # Build field HTML
     field_html_parts = []

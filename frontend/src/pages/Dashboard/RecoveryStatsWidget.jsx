@@ -9,7 +9,7 @@ export default function RecoveryStatsWidget({ tenantId, token }) {
     if (!tenantId || !token) return;
     fetchRecoveryStats(tenantId, token, 30)
       .then(setStats)
-      .catch(() => setStats(null))
+      .catch((err) => { console.warn("Recovery stats fetch failed:", err?.message); setStats(null); })
       .finally(() => setLoading(false));
   }, [tenantId, token]);
 

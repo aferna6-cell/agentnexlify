@@ -577,7 +577,7 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
     setTimelineLoading(true);
     fetchLeadActivity(user.tenantId, token, lead.id)
       .then((data) => setTimeline(data.timeline || []))
-      .catch(() => setTimeline([]))
+      .catch((err) => { console.warn("Lead activity fetch failed:", err?.message); setTimeline([]); })
       .finally(() => setTimelineLoading(false));
   }, [user?.tenantId, token, lead.id]);
 
