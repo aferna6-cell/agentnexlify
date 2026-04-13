@@ -61,3 +61,13 @@ Headless cron run. DDG rate-limited after first query — fell back to direct bl
 - **small_biz_saas** — SKIPPED (no blog sources, DDG rate-limited)
 - **verticals** — SKIPPED (no blog sources, DDG rate-limited)
 - **known-urls.json** — 41 total (was 18, +10 fetched, +13 rejected/filtered)
+
+## [2026-04-13 06:08] compile | batch (4 entries)
+
+- **regulations** HIPAA — Privacy Rule, Security Rule, and Covered Entities → `wiki/regulations/hipaa-overview-cdc.md` (indexed; article pre-existed from prior partial compile)
+- **regulations** HIPAA Five Titles and the 2024 Security Rule NPRM → `wiki/regulations/hipaa-titles-and-security-rule-2024-nprm.md` (indexed; article pre-existed from prior partial compile)
+- **ai-llm** Claude Opus 4.6 — Frontier Agentic Intelligence and 1M Context → `wiki/ai-llm/claude-opus-4-6-capabilities.md` (new)
+- **ai-llm** Claude Sonnet 4.6 — Opus-Class Performance at Sonnet Pricing → `wiki/ai-llm/claude-sonnet-4-6-capabilities.md` (new)
+- **embeddings**: 0/4 stored (Supabase MCP unreachable — SUPABASE_ACCESS_TOKEN auth failure)
+- **INDEX.md**: updated — 14 total articles
+- **PENDING.md**: 4 entries removed, 12 remaining

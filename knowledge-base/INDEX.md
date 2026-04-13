@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 10 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-12
+- Total articles: 14 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-13
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -18,6 +18,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
 - [Anthropic — Mission, Safety Stance, and 2026 Release Cadence](wiki/ai-llm/anthropic-mission-and-latest-releases.md) — Opus 4.6 is the frontier model, "space to think" signals ad-free product stance, RSP gates downstream agentic capabilities. Tags: anthropic, claude, model-releases, ai-safety, responsible-scaling
 - [Anthropic Careers — Operating Principles and Vendor Durability Signals](wiki/ai-llm/anthropic-careers-and-culture.md) — Seven operating principles and hiring bar as vendor-durability signals for the Claude dependency. Tags: anthropic, culture, operating-principles, vendor-risk, hiring
+- [Claude Opus 4.6 — Frontier Agentic Intelligence and 1M Context](wiki/ai-llm/claude-opus-4-6-capabilities.md) — Opus 4.6 leads Terminal-Bench 2.0, HLE, and GDPval-AA by 144 Elo over GPT-5.2; 1M context, agent teams, adaptive thinking. Tags: claude, opus-4-6, agentic-coding, 1m-context, extended-thinking
+- [Claude Sonnet 4.6 — Opus-Class Performance at Sonnet Pricing](wiki/ai-llm/claude-sonnet-4-6-capabilities.md) — Sonnet 4.6 approaches Opus at $3/$15; 70% preferred over Sonnet 4.5 in Claude Code, state-of-the-art computer use. Tags: claude, sonnet-4-6, computer-use, cost-efficiency, osworld
 
 ### Small Business SaaS
 _No articles yet._
@@ -30,7 +32,8 @@ _No articles yet._
 - [pgvector Implementation Guide — Build, Enable, Query](wiki/technical/pgvector-implementation-guide.md) — Hands-on install, first query, and Python psycopg2 pattern for pgvector on self-managed Postgres. Tags: pgvector, postgres, installation, psycopg2, hybrid-search, tutorial
 
 ### Regulations & Compliance
-_No articles yet._
+- [HIPAA — Privacy Rule, Security Rule, and Covered Entities](wiki/regulations/hipaa-overview-cdc.md) — HIPAA Privacy/Security Rules bind any business associate handling PHI; defines AgentNexLiFy's exposure for dental/medical tenants. Tags: hipaa, phi, ephi, privacy-rule, security-rule, healthcare-compliance
+- [HIPAA Five Titles and the 2024 Security Rule NPRM](wiki/regulations/hipaa-titles-and-security-rule-2024-nprm.md) — Title II drives SaaS compliance; 2024 NPRM mandates encryption, MFA, annual audits, 72-hour recovery for ePHI platforms. Tags: hipaa, hitech, security-rule, nprm-2024, encryption, mfa
 
 ### Growth & Distribution
 - [Post-Launch Growth Strategy](wiki/growth/post-launch-growth-strategy.md) — Top 10 features for activation, viral growth, daily engagement, and lock-in. Tags: activation, retention, viral-growth, onboarding, quickbooks, reviews
