@@ -281,6 +281,11 @@ class TestGeneratePortalLink:
 
         assert client_portal._portal_base_url() == "https://app.agentnexlify.com/client"
 
+    def test_portal_base_url_rejects_marketing_root_domain(self, monkeypatch):
+        monkeypatch.setattr(client_portal.settings, "frontend_url", "https://agentnexlify.com")
+
+        assert client_portal._portal_base_url() == "https://app.agentnexlify.com/client"
+
     def test_portal_base_url_allows_valid_custom_frontend(self, monkeypatch):
         monkeypatch.setattr(client_portal.settings, "frontend_url", "https://dashboard.example.com/")
 

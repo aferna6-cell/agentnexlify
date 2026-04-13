@@ -7,10 +7,10 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 ### Production portal links trusted stale Vercel FRONTEND_URL
 **Date:** 2026-04-13
 **Symptom:** Authenticated production smoke generated a portal link whose URL did not start with `https://app.agentnexlify.com/client/`, even after the local fallback constants were restored.
-**Root Cause:** `_portal_base_url()` accepted any non-local `FRONTEND_URL`, including stale Vercel deployment aliases. Production still had a non-canonical frontend URL configured, so customer-facing portal links followed that stale value instead of the canonical app domain.
+**Root Cause:** `_portal_base_url()` accepted any non-local `FRONTEND_URL`, including the marketing root domain and stale Vercel deployment aliases. Production still had `FRONTEND_URL=https://agentnexlify.com`, so customer-facing portal links followed that non-app surface instead of the canonical app domain.
 **Files Changed:** `backend/routers/client_portal.py`, `tests/test_client_portal.py`, `docs/dev-knowledge/bug-patterns.md`
-**Fix:** Treat `.vercel.app` frontend hosts as stale aliases for client portal link generation and fall back to `https://app.agentnexlify.com/client`. Added regression tests for stale Vercel aliases and valid custom frontend URLs.
-**Prevention:** Customer-facing links may use configured frontend URLs only after rejecting local development hosts and known deployment aliases. Production smoke should assert the URL origin, not only the HTTP status.
+**Fix:** Updated the Railway production `FRONTEND_URL` variable to `https://app.agentnexlify.com`. Also treat `agentnexlify.com` and `.vercel.app` frontend hosts as stale aliases for client portal link generation and fall back to `https://app.agentnexlify.com/client`. Added regression tests for stale aliases and valid custom frontend URLs.
+**Prevention:** Customer-facing links may use configured frontend URLs only after rejecting local development hosts, marketing/root domains, and known deployment aliases. Production smoke should assert the URL origin, not only the HTTP status.
 
 ---
 

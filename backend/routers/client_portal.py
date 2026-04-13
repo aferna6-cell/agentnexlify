@@ -25,6 +25,7 @@ _PUBLIC_PORTAL_FRONTEND_URL = "https://app.agentnexlify.com"
 _PUBLIC_API_BASE_URL = "https://agentnexlify-production.up.railway.app"
 _JWT_ALGORITHM = "HS256"
 _CLIENT_JWT_EXPIRE_DAYS = 30
+_STALE_FRONTEND_HOSTS = {"agentnexlify.com"}
 _STALE_FRONTEND_HOST_SUFFIXES = (".vercel.app",)
 
 
@@ -46,7 +47,10 @@ def _portal_base_url() -> str:
     parsed = urlparse(frontend_url)
     hostname = parsed.hostname or ""
     is_local = hostname in {"localhost", "127.0.0.1", "::1"}
-    is_stale_alias = any(hostname.endswith(suffix) for suffix in _STALE_FRONTEND_HOST_SUFFIXES)
+    is_stale_alias = (
+        hostname in _STALE_FRONTEND_HOSTS
+        or any(hostname.endswith(suffix) for suffix in _STALE_FRONTEND_HOST_SUFFIXES)
+    )
     if parsed.scheme in {"http", "https"} and hostname and not is_local and not is_stale_alias:
         return f"{frontend_url}/client"
     return f"{_PUBLIC_PORTAL_FRONTEND_URL}/client"
