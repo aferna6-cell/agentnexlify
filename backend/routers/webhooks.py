@@ -33,6 +33,16 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+def _coerce_webhook_row(row: dict) -> dict:
+    """Coerce nullable DB ints to their Pydantic-expected defaults.
+
+    `webhooks.failure_count` is DEFAULT 0 but nullable — legacy rows or
+    manual nulls would fail Pydantic `int = 0` validation.
+    """
+    row["failure_count"] = row.get("failure_count") or 0
+    return row
+
+
 @router.get("/schema/events")
 async def webhook_events_schema():
     """Public endpoint: returns all webhook events with sample payloads for Zapier/integration setup."""
@@ -79,7 +89,7 @@ async def list_webhooks(tenant_id: str, claims: dict = Depends(_get_current_tena
         .order("created_at", desc=True)
         .execute()
     )
-    return [WebhookListResponse(**row) for row in (result.data or [])]
+    return [WebhookListResponse(**_coerce_webhook_row(row)) for row in (result.data or [])]
 
 
 @router.post("/{tenant_id}", response_model=WebhookResponse, status_code=201)
@@ -122,7 +132,7 @@ async def create_webhook(
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create webhook")
 
-    return WebhookResponse(**result.data[0])
+    return WebhookResponse(**_coerce_webhook_row(result.data[0]))
 
 
 @router.put("/{tenant_id}/{webhook_id}", response_model=WebhookListResponse)
@@ -158,7 +168,7 @@ async def update_webhook(
     if not result.data:
         raise HTTPException(status_code=404, detail="Webhook not found")
 
-    return WebhookListResponse(**result.data[0])
+    return WebhookListResponse(**_coerce_webhook_row(result.data[0]))
 
 
 @router.patch("/{tenant_id}/{webhook_id}/toggle")

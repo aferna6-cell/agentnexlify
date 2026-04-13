@@ -187,7 +187,7 @@ async def get_config(request: Request, api_key: str):
         menu_items=menu_items,
         business_type=tenant.get("business_type"),
         teaser_message=widget.get("teaser_message"),
-        teaser_delay_seconds=widget.get("teaser_delay_seconds", 3),
+        teaser_delay_seconds=widget.get("teaser_delay_seconds") or 3,
         teaser_enabled=widget.get("teaser_enabled", True),
         plan=tenant_plan,
         pre_chat_form=widget.get("pre_chat_form"),

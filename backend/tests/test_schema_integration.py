@@ -84,6 +84,38 @@ class TestConversationsSchema:
         result = db.table("conversations").select("tags").limit(0).execute()
         assert result is not None
 
+    def test_conversations_messages_column_is_gone(self, db):
+        """conversations.messages JSONB was dropped in the reconciliation.
+
+        Regression guard for 2026-04-13 bug: `lead_scoring.py` queried this
+        column, which 42703'd on every new lead. Canonical store is the
+        chat_messages table. If this test starts FAILING, the column was
+        re-added — investigate whether the migration is intentional.
+        """
+        from postgrest.exceptions import APIError
+
+        with pytest.raises(APIError) as exc_info:
+            db.table("conversations").select("messages").limit(0).execute()
+        # 42703 = undefined_column
+        assert "messages" in str(exc_info.value) or "42703" in str(exc_info.value)
+
+
+class TestChatMessagesSchema:
+    """Canonical message store — used by widget, SMS, Twilio, calls."""
+
+    def test_chat_messages_has_tenant_id(self, db):
+        """chat_messages uses tenant_id (not client_id)."""
+        result = db.table("chat_messages").select("tenant_id").limit(0).execute()
+        assert result is not None
+
+    def test_chat_messages_has_session_id(self, db):
+        result = db.table("chat_messages").select("session_id").limit(0).execute()
+        assert result is not None
+
+    def test_chat_messages_has_role_content(self, db):
+        result = db.table("chat_messages").select("role, content, created_at").limit(0).execute()
+        assert result is not None
+
 
 class TestAppointmentsSchema:
     """Verify appointments table matches code assumptions."""

@@ -933,7 +933,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             is_online=w.get("is_online", True),
             offline_message=w.get("offline_message"),
             teaser_message=w.get("teaser_message"),
-            teaser_delay_seconds=w.get("teaser_delay_seconds", 3),
+            teaser_delay_seconds=w.get("teaser_delay_seconds") or 3,
             teaser_enabled=w.get("teaser_enabled", True),
         )
     else:
@@ -1002,7 +1002,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Supabase REST doesn't support COUNT(DISTINCT), so we fetch session_ids
     # and deduplicate in Python.  Limit raised to 5000 to avoid under-counting
     # tenants with many messages per session (88 sessions × ~6 msgs = ~528 rows).
-    conversations_used = t.get("conversations_used_this_month", 0)
+    conversations_used = t.get("conversations_used_this_month") or 0
     try:
         chat_sessions = (
             db.table("chat_messages")
@@ -1117,7 +1117,7 @@ async def update_widget_config(
         position=w.get("position", "bottom-right"),
         branding=w.get("branding") or None,
         teaser_message=w.get("teaser_message"),
-        teaser_delay_seconds=w.get("teaser_delay_seconds", 3),
+        teaser_delay_seconds=w.get("teaser_delay_seconds") or 3,
         teaser_enabled=w.get("teaser_enabled", True),
     )
 

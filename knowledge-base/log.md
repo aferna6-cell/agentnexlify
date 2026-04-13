@@ -88,3 +88,17 @@ Headless cron run. Sandbox blocked outbound curl — fell back to Google News RS
 - **Rejected** (3): Chandigarh TiECon (generic conference), Forbes small business loans (not SaaS), Digital Piloto openPR (low-value press release)
 - **Failed** (1): hipaajournal.com 403 Forbidden
 - **known-urls.json**: 41 → 55 total
+
+## [2026-04-13 18:30] compile | headless-cron-batch | compiled=4 embeddings=0 embedding_errors=4
+
+Processed 4 of 12 pending entries (4-entry cap). Remaining: 8 entries (2 ai-llm, 2 technical, 2 regulations, 2 growth).
+
+- **Compiled (indexed from prior partial run — articles existed, INDEX.md/PENDING.md not updated):**
+  - `wiki/competitors/ghl-15-minute-ai-responder.md` (from raw/competitors/ghl-15-minute-ai-responder.md)
+  - `wiki/competitors/ghl-email-marketing-march-2026.md` (from raw/competitors/ghl-email-marketing-report-feb-2026.md)
+- **Compiled (new articles):**
+  - `wiki/competitors/ghl-subscription-billing-automation.md` (from raw/competitors/ghl-automate-billing.md)
+  - `wiki/competitors/intercom-fin-apex-vertical-models.md` (from raw/competitors/intercom-fin-apex-vertical-models.md)
+- **INDEX.md**: updated — 18 total articles (was 14)
+- **PENDING.md**: 4 entries marked compiled, 8 remaining
+- **Embeddings**: 0/4 stored (Supabase MCP Unauthorized — SUPABASE_ACCESS_TOKEN not available in cron env)

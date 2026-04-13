@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 14 (plus 1 in `_outputs/`)
+- Total articles: 18 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-13
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -13,6 +13,10 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Competitive Landscape — March 2026](wiki/competitors/competitive-landscape-march-2026.md) — Analysis of 8 major competitors; AgentNexLiFy is feature-complete, gap is engagement/stickiness. Tags: intercom, drift, tidio, livechat, crisp, freshchat, hubspot, gohighlevel
 - [GoHighLevel — Agency-Focused All-in-One Platform](wiki/competitors/gohighlevel-agency-platform.md) — 1M+ businesses, 7M+ AI voice calls, $97–497/mo white-label SaaS; #1 direct competitor. Tags: gohighlevel, crm, ai-employee, agency, white-label
 - [GoHighLevel Scale Metrics (v3)](wiki/competitors/gohighlevel-scale-metrics-v3.md) — Scale benchmarks from GHL home page v3: leads, appointments, voice volume. Tags: gohighlevel, scale-metrics, benchmarks
+- [GoHighLevel's 15-Minute AI Responder Positioning](wiki/competitors/ghl-15-minute-ai-responder.md) — Speed-to-lead pitch: HBR stats (7x conversations in 1hr, 80% drop after 5min), one-platform AI consolidation. Tags: gohighlevel, lead-response-time, ai-responder, voice-ai
+- [GoHighLevel Email Infrastructure — March 2026 Performance Benchmarks](wiki/competitors/ghl-email-marketing-march-2026.md) — 1.37B emails in March 2026; 97.47% delivery, 40.80% open, 5.46% CTR on dedicated domains. Tags: gohighlevel, email-deliverability, open-rate, ctr
+- [GoHighLevel Subscription Billing — Recurring Revenue Automation](wiki/competitors/ghl-subscription-billing-automation.md) — Native recurring billing extends GHL's all-in-one positioning into payments infrastructure. Tags: gohighlevel, subscription-billing, recurring-revenue, payments
+- [Intercom Fin Apex — Custom Vertical Model for Customer Service](wiki/competitors/intercom-fin-apex-vertical-models.md) — Custom-trained model beats GPT-5.4 and Opus 4.5 at service; ~2M issues/week, ~$100M ARR, signals vertical AI companies building own models. Tags: intercom, fin-apex, vertical-models, customer-service-ai
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
