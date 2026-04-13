@@ -339,10 +339,10 @@ class TestPublicPortal:
     def test_portal_success(self, test_client):
         client, db_mock = test_client
 
-        call_idx = {"n": 0}
+        tenant_selects = []
         table_data = {
             "portal_tokens": [{"tenant_id": "tenant-001", "lead_id": "lead-001", "token": "abc"}],
-            "tenants": [{"id": "tenant-001", "business_name": "Test Biz", "owner_email": "a@b.com", "industry": "auto", "city": "NYC"}],
+            "tenants": [{"id": "tenant-001", "business_name": "Test Biz", "owner_email": "a@b.com", "city": "NYC"}],
             "leads": [{"id": "lead-001", "name": "Jane", "email": "jane@x.com", "phone": "555-1234"}],
             "service_records": [{"id": "sr-001", "title": "Oil Change"}],
             "widget_configs": [{"booking_enabled": True, "api_key": "wk_test123"}],
@@ -357,6 +357,11 @@ class TestPublicPortal:
                 "in_", "is_", "or_", "contains",
             ]:
                 getattr(table, method).return_value = table
+            if name == "tenants":
+                def select(columns="*"):
+                    tenant_selects.append(columns)
+                    return table
+                table.select.side_effect = select
             result = MagicMock()
             result.data = data
             result.count = len(data)
@@ -374,6 +379,7 @@ class TestPublicPortal:
         assert data["rebook_enabled"] is True
         assert data["widget_api_key"] == "wk_test123"
         assert data["api_base"] == "https://agentnexlify-production.up.railway.app"
+        assert all("industry" not in columns for columns in tenant_selects)
 
     def test_portal_invalid_token(self, test_client):
         client, db_mock = test_client

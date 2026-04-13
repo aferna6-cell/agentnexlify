@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Client portal public read selected missing tenants.industry column
+**Date:** 2026-04-13
+**Symptom:** Authenticated production smoke could generate a canonical client portal link, but `GET /api/v1/portal/portal/{token}` returned 500.
+**Root Cause:** `backend/routers/client_portal.py` selected `industry` from the `tenants` table. The production schema uses `business_type`; `industry` is not a live tenants column.
+**Files Changed:** `backend/routers/client_portal.py`, `tests/test_client_portal.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Removed the stale `industry` column from public and authenticated client portal tenant selects. Added a regression assertion that public portal tenant selects do not request `industry`.
+**Prevention:** Use `docs/dev-knowledge/canonical-schema.md` before editing portal/dashboard queries. If a tenant-facing field is not listed there, do not select it from production routes.
+
+---
+
 ### GitHub Actions frontend coverage used stale Node 18 runtime
 **Date:** 2026-04-13
 **Symptom:** `PR Validation` reached the frontend coverage step and failed before collecting tests with `ERR_REQUIRE_ESM` from `html-encoding-sniffer` requiring `@exodus/bytes/encoding-lite.js`.

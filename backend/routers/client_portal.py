@@ -402,7 +402,7 @@ async def get_portal_data(token: str, request: Request):
     try:
         tenant_result = (
             tenant_table(db, "tenants", tenant_id)
-            .select("id, business_name, owner_email, industry, city")
+            .select("id, business_name, owner_email, city")
             .eq("id", tenant_id)
             .limit(1)
             .execute()
@@ -683,7 +683,7 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     try:
         tenant_result = (
             tenant_table(db, "tenants", tenant_id)
-            .select("id, business_name, owner_email, industry, city, business_slug")
+            .select("id, business_name, owner_email, city, business_slug")
             .eq("id", tenant_id)
             .limit(1)
             .execute()
