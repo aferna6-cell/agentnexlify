@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Portal link fallback captured localhost from default settings
+**Date:** 2026-04-13
+**Symptom:** `POST /api/v1/portal/{tenant_id}/portal-link/{lead_id}` returned `http://localhost:5173/client/...` URLs under the default local test settings instead of the canonical public portal URL.
+**Root Cause:** The module-level public fallback constants in `backend/routers/client_portal.py` were changed to read `settings.frontend_url` / `settings.api_url` at import time. Because `frontend_url` defaults to localhost for local development, `_portal_base_url()` fell back to the captured localhost value whenever the active setting was local.
+**Files Changed:** `backend/routers/client_portal.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Restored canonical public fallback constants while keeping `_portal_base_url()` and `_api_base_url()` able to use configured non-local settings.
+**Prevention:** Public customer-facing fallback URLs must be stable canonical domains, not values captured from development defaults. If a helper rejects local URLs, its fallback constant must also be non-local.
+
+---
+
 ### ASGI response tests stall on threadpool-backed background work
 **Date:** 2026-04-13
 **Symptom:** `pytest` intermittently timed out after the endpoint had already logged a 200/500 response. Failures clustered around Starlette `BackgroundTasks`, FastAPI `run_in_threadpool`, managed-agent endpoint tests, widget fallback tests, and widget/call endpoints that enqueue post-response work.
