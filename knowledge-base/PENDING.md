@@ -30,10 +30,10 @@ _All compiled._
 
 - ~~[competitors] Automate Billing for Subscription Services~~ → compiled `wiki/competitors/ghl-subscription-billing-automation.md`
 - ~~[competitors] Announcing Fin Apex~~ → compiled `wiki/competitors/intercom-fin-apex-vertical-models.md`
-- [ai-llm] Scaling Managed Agents: Decoupling the brain from the hands — https://www.anthropic.com/engineering/managed-agents → `raw/ai-llm/anthropic-managed-agents-engineering.md`
-- [ai-llm] Building Effective AI Agents — https://www.anthropic.com/engineering/building-effective-agents → `raw/ai-llm/anthropic-building-effective-agents.md`
-- [technical] Introducing advanced tool use on the Claude Developer Platform — https://www.anthropic.com/engineering/advanced-tool-use → `raw/technical/anthropic-advanced-tool-use.md`
-- [technical] Contextual Retrieval in AI Systems — https://www.anthropic.com/engineering/contextual-retrieval → `raw/technical/anthropic-contextual-retrieval.md`
+- ~~[ai-llm] Scaling Managed Agents: Decoupling the brain from the hands~~ → compiled `wiki/ai-llm/anthropic-managed-agents-architecture.md`
+- ~~[ai-llm] Building Effective AI Agents~~ → compiled `wiki/ai-llm/anthropic-building-effective-agents.md`
+- ~~[technical] Introducing advanced tool use on the Claude Developer Platform~~ → compiled `wiki/technical/anthropic-advanced-tool-use.md`
+- ~~[technical] Contextual Retrieval in AI Systems~~ → compiled `wiki/technical/anthropic-contextual-retrieval.md`
 - [regulations] HIPAA-Compliant AI Chatbots for Healthcare 2026 — https://edinsol.com/hipaa-compliant-ai-chatbots-for-healthcare-2026/ → `raw/regulations/hipaa-ai-chatbots-2026-edinsol.md`
 - [regulations] HIPAA-Compliant AI Tools in 2026: The Definitive Guide — https://justinhealthcareai.com/blog/hipaa-compliant-ai-tools-2026 → `raw/regulations/hipaa-ai-tools-2026-justinhealthcare.md`
 - [growth] Answer Engine Optimization (AEO) Guide 2026 — https://birdeye.com/blog/answer-engine-optimization/ → `raw/growth/birdeye-answer-engine-optimization.md`

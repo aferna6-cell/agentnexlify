@@ -117,3 +117,17 @@ Processed 4 of 12 pending entries (4-entry cap). Remaining: 8 entries (2 ai-llm,
 - **Rejected (added to known-urls.json)**: ~20 new URLs (Anthropic JS pages, GHL homepages, Drillbit plagiarism checker, dental clinics, HIPAA Journal Cloudflare block)
 - **known-urls.json**: updated (57 → 76 entries)
 - **Note**: Anthropic news pages (acquires-vercept, the-anthropic-institute) have relevant content but are fully JS-rendered — need agent-browser or Playwright to extract
+
+## [2026-04-14 06:14] compile | headless-cron-batch | compiled=4 embeddings=0 embedding_errors=4
+
+Processed 4 of 11 pending entries (4-entry cap). Remaining: 7 entries (2 regulations, 2 growth, 1 verticals, 1 technical, 1 regulations).
+
+- **Compiled (new articles):**
+  - `wiki/ai-llm/anthropic-managed-agents-architecture.md` (from raw/ai-llm/anthropic-managed-agents-engineering.md)
+  - `wiki/ai-llm/anthropic-building-effective-agents.md` (from raw/ai-llm/anthropic-building-effective-agents.md)
+  - `wiki/technical/anthropic-advanced-tool-use.md` (from raw/technical/anthropic-advanced-tool-use.md)
+  - `wiki/technical/anthropic-contextual-retrieval.md` (from raw/technical/anthropic-contextual-retrieval.md)
+- **INDEX.md**: updated — 22 total articles (was 18)
+- **PENDING.md**: 4 entries marked compiled, 7 remaining
+- **Embeddings**: 0/4 stored (Supabase MCP Unauthorized — SUPABASE_ACCESS_TOKEN not available in cron env)
+- **Cross-references**: all 4 articles cite ≥1 existing wiki page via `[[slug]]`; managed-agents and advanced-tool-use cross-link each other
