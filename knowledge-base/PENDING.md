@@ -47,6 +47,21 @@ _All compiled._
 
 Skipped categories: competitors (all GHL URLs known/homepages), ai_llm (Anthropic pages JS-rendered), small_biz_saas (all noise — P.LEAGUE, stackexchange), growth (all noise — Microsoft answers, generic AI). agent-browser needed for JS-rendered sites (Anthropic, GHL help center, HIPAA Journal).
 
+## Ingested 2026-04-14T18:00:00Z — cron autopop (evening)
+
+- [ai-llm] Memory for AI Agents: Context Engineering — https://thenewstack.io/memory-for-ai-agents-a-new-paradigm-of-context-engineering/ → `raw/ai-llm/tns-memory-ai-agents-context-engineering.md`
+- [ai-llm] Why Agentic LLM Systems Fail — https://thenewstack.io/why-agentic-llm-systems-fail-control-cost-and-reliability/ → `raw/ai-llm/tns-why-agentic-llm-systems-fail.md`
+- [technical] Production AI Agents with RAG and FastAPI — https://thenewstack.io/how-to-build-production-ready-ai-agents-with-rag-and-fastapi/ → `raw/technical/tns-production-ai-agents-rag-fastapi.md`
+- [technical] Why pgvector Benchmarks Lie — https://thenewstack.io/why-pgvector-benchmarks-lie/ → `raw/technical/tns-pgvector-benchmarks-lie.md`
+- [small-biz-saas] Dawn of a SaaSpocalypse — https://thenewstack.io/dawn-of-a-saaspocalypse/ → `raw/small-biz-saas/tns-dawn-saaspocalypse.md`
+- [small-biz-saas] AI Models Redefining Cost Efficiency in Subscriptions — https://dataconomy.com/2026/04/how-specialised-ai-models-are-redefining-cost-efficiency-in-subscription/ → `raw/small-biz-saas/dataconomy-ai-models-subscription-cost.md`
+- [growth] 2026 Blueprint: Search Visibility — https://pctechmag.com/2026/the-2026-blueprint-small-fixes-for-massive-search-visibility/ → `raw/growth/pctechmag-2026-blueprint-search-visibility.md`
+- [growth] Top 10 AI Chatbots of 2026 — https://programminginsider.com/top-10-ai-chatbots-of-2026-whos-leading-the-conversation/ → `raw/growth/proginsider-top-10-ai-chatbots-2026.md`
+- [competitors] Compare 50+ AI Agent Tools 2026 — https://aimultiple.com/ai-agent-tools → `raw/competitors/aimultiple-ai-agent-tools-2026.md`
+- [verticals] AI Assistant for Contractors — https://bizneworleans.com/build-a-way-unveils-ai-assistant-for-contractors/ → `raw/verticals/bizneworleans-ai-assistant-contractors.md`
+
+Skipped categories: regulations (all HIPAA/FTC/AI-compliance sites returned 403 — bot protection). 29 URLs added to known-urls.json (10 fetched + 19 rejected/blocked).
+
 ## Attempted 2026-04-13T22:12:56Z — cron autopop (FAILED: JS-rendered sites)
 
 _All 10 articles fetched empty content via curl (JS-rendered). Raw files deleted. URLs added to known-urls.json. agent-browser needed for these sites — curl cannot extract content from JS-rendered pages._

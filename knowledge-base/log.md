@@ -133,3 +133,25 @@ Processed 4 of 11 pending entries (4-entry cap). Remaining: 7 entries (2 regulat
 - **Cross-references**: all 4 articles cite ≥1 existing wiki page via `[[slug]]`; managed-agents and advanced-tool-use cross-link each other
 
 ## [2026-04-14 06:20] discover+compile | cron 06:00 | commits=3 raw=3 wiki=4
+
+## [2026-04-14 18:00] discover | cron autopop | raw=+10 categories=6/7 deduped=29 errors=0
+
+Headless cron run. agent-browser unavailable, DDG blocked curl, Google News RSS (xml.etree) used for URL discovery. TheNewStack sitemap crawled for article URLs. Content extracted via JSON-LD articleBody (TheNewStack) and HTML paragraph extraction (others).
+
+- **Search method**: Google News RSS for discovery → TheNewStack sitemap for URL resolution → curl + content extraction
+- **Categories processed**: 7 searched, 6 yielded articles
+- **Ingested** (10 articles):
+  - `raw/ai-llm/tns-memory-ai-agents-context-engineering.md` — Memory for AI Agents: Context Engineering (1825 words)
+  - `raw/ai-llm/tns-why-agentic-llm-systems-fail.md` — Why Agentic LLM Systems Fail (2610 words)
+  - `raw/technical/tns-production-ai-agents-rag-fastapi.md` — Production AI Agents with RAG and FastAPI (2291 words)
+  - `raw/technical/tns-pgvector-benchmarks-lie.md` — Why pgvector Benchmarks Lie (2828 words)
+  - `raw/small-biz-saas/tns-dawn-saaspocalypse.md` — Dawn of a SaaSpocalypse (1853 words)
+  - `raw/small-biz-saas/dataconomy-ai-models-subscription-cost.md` — AI Models Redefining Subscription Cost Efficiency (2532 words)
+  - `raw/growth/pctechmag-2026-blueprint-search-visibility.md` — 2026 Blueprint for Search Visibility (536 words)
+  - `raw/growth/proginsider-top-10-ai-chatbots-2026.md` — Top 10 AI Chatbots of 2026 (1505 words)
+  - `raw/competitors/aimultiple-ai-agent-tools-2026.md` — Compare 50+ AI Agent Tools 2026 (3337 words)
+  - `raw/verticals/bizneworleans-ai-assistant-contractors.md` — AI Assistant for Contractors (576 words)
+- **Skipped**: regulations (all HIPAA/FTC/compliance sites returned 403 — Cloudflare bot protection)
+- **Rejected** (19 URLs added to known-urls.json for dedup): drbicuspid, dentistrytoday, dataprotectionreport, letsdatascience, learn.g2.com, saastr, morganlewis, cyberscoop, transparencycoalition, hunton, jdsupra, pillsburylaw, dealershipguy, cybernews, bbntimes, augmentcode, mobihealthnews, solutionsreview
+- **known-urls.json**: 76 → 104 total (+29)
+- **Note**: TheNewStack is the most curl-friendly source — serves full HTML with content-column-post-body class. Regulations category consistently blocked across runs; needs agent-browser or Playwright for HIPAA Journal, Morgan Lewis, CyberScoop.
