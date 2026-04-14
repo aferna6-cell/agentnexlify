@@ -169,3 +169,5 @@ Processed 4 of 17 pending entries (4-entry cap). Remaining: 13 entries (3 regula
 - **PENDING.md**: 4 entries marked compiled, 13 remaining
 - **Embeddings**: 0/4 stored (Supabase MCP Unauthorized — SUPABASE_ACCESS_TOKEN not available in cron env)
 - **Cross-references**: all 4 articles cite ≥1 existing wiki page; HIPAA articles cross-link each other + hipaa-overview-cdc + hipaa-titles; growth articles cross-link each other + post-launch-growth-strategy
+
+## [2026-04-14 18:26] discover+compile | cron 18:00 | commits=16 raw=10 wiki=4
