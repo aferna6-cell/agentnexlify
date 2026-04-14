@@ -80,3 +80,16 @@ Twilio MessagingService is a managed transport layer, not a deliverability monit
 GHL is a $200M+ ARR platform built for marketing agencies, not for field-service contractors. Its widget layer (booking, review, chat, forms) is broad but shallow — optimized for agency setup speed, not for the daily workflow of an HVAC technician, plumber,
 
 ---
+
+## 2026-04-14 — what-is-the-true-12-month-cac-and-churn-profile-of
+
+**Question:** What is the true 12-month CAC and churn profile of SMB AI widget products under $500/mo?
+**Depth:** standard
+**Folder:** [[projects/what-is-the-true-12-month-cac-and-churn-profile-of]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**What we learned:** The true 12-month CAC and churn profile of SMB AI widget products under $500/month is substantially worse than published SaaS benchmarks suggest — and the gap is widening as the 2025–2026 AI vendor fatigue cycle matures.
+**The core numbers:** Blended CAC for SMB AI widget products in the sub-$500/month tier ranges from **$300–$900** depending on channel mix, with self-serve at
+
+---

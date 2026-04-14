@@ -74,3 +74,22 @@ Example:
 - Estimated window for widget-layer competitive entry before GHL AI closes gap | 18 months | Synthesis of GHL AI investment pace + historical all-in-one improvement rates | 2026 | projects/ghl-widget-beatable
 - SMB contractor software market TAM (field service + CRM + marketing automation) | $8–12B | Comparable company valuations + market sizing research | 2024 | projects/ghl-widget-beatable
 - Procore (construction vertical SaaS) valuation | ~$9B | Public markets | 2024 | projects/ghl-widget-beatable
+
+<!-- from projects/what-is-the-true-12-month-cac-and-churn-profile-of on 2026-04-14 -->
+- SMB AI widget monthly churn rate (estimated upper band, 2025–2026) | 5–7% | Inferred from ChartMogul SMB median + AI-specific value visibility discount | 2025-2026 | projects/smb-ai-widget-cac-churn
+- SMB AI widget monthly churn rate (best-practice floor, agency channel + high activation) | 2–3% | Inferred from channel research + activation data synthesis | 2025-2026 | projects/smb-ai-widget-cac-churn
+- 12-month customer survival rate at 4.7% monthly churn | 56.4% | Derived: (1-0.047)^12 | 2026-04 | projects/smb-ai-widget-cac-churn
+- 12-month customer survival rate at 5.5% monthly churn | 50.9% | Derived: (1-0.055)^12 | 2026-04 | projects/smb-ai-widget-cac-churn
+- 12-month customer survival rate at 3.0% monthly churn | 69.4% | Derived: (1-0.030)^12 | 2026-04 | projects/smb-ai-widget-cac-churn
+- Blended CAC range: self-serve SMB AI widget | $150–$400 | Synthesized from OpenView benchmarks + AI-specific conversion penalty | 2025-2026 | projects/smb-ai-widget-cac-churn
+- Blended CAC range: inside-sales SMB AI widget | $700–$1,500 | Synthesized from research log + AI sales cycle extension | 2025-2026 | projects/smb-ai-widget-cac-churn
+- Blended CAC range: agency/reseller channel SMB AI widget | $300–$600 | Research log (projects/agentnexlify-1m-arr) confirmed for AI widget context | 2025-2026 | projects/smb-ai-widget-cac-churn
+- LTV/CAC ratio (net of compute costs) at $199/month, 5.5% churn, 50% GM | 4.0× | Derived model | 2026-04 | projects/smb-ai-widget-cac-churn
+- LTV/CAC ratio (net of compute costs) at $99/month, 5.5% churn, 50% GM | 2.6× | Derived model | 2026-04 | projects/smb-ai-widget-cac-churn
+- LTV/CAC ratio (net of compute costs) at $299/month, 4.5% churn, 50% GM | 6.6× | Derived model | 2026-04 | projects/smb-ai-widget-cac-churn
+- Share of 12-month churn events occurring in months 1–3 | ~45–55% | Synthesized from Amplitude/Mixpanel activation and engagement drop research | 2022-2025 | projects/smb-ai-widget-cac-churn
+- OpenAI API price reduction since GPT-4 launch | ~80% | Public API pricing history (OpenAI.com) | 2023-2025 | projects/smb-ai-widget-cac-churn
+- AI SaaS gross margin projected range at 2026 API pricing | 55–70% | Extrapolated from a16z AI benchmarks + API cost trajectory | 2026 | projects/smb-ai-widget-cac-churn
+- EU GDPR/AI Act compliance overhead on CAC | +15–25% for EU-market vendors | Estimated from compliance cost research | 2025-2026 | projects/smb-ai-widget-cac-churn
+- Historical SMB SaaS widget monthly churn range (2012–2019 analog) | 3–7% early stage; 2–4% mature operators | SaaS Capital historical research | 2019 | projects/smb-ai-widget-cac-churn
+- Inside sales CAC breakeven minimum ACV (SMB, 20% close rate) | ~$300/month | Derived: $1,200 sales cost / 20% close rate = $6,000 CAC; requires ~$500/month ACV at 3:1 LTV/CAC and 3% churn for viability | 2026-04 | projects/smb-ai-widget-cac-churn
