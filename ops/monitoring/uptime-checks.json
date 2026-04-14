@@ -1,0 +1,48 @@
+{
+  "service": "agentnexlify",
+  "checks": [
+    {
+      "name": "AgentNexLiFy marketing site",
+      "url": "https://agentnexlify.vercel.app/",
+      "method": "GET",
+      "expected_status": 200,
+      "interval_seconds": 60,
+      "alert_after_failures": 2
+    },
+    {
+      "name": "AgentNexLiFy dashboard app",
+      "url": "https://app.agentnexlify.com/",
+      "method": "GET",
+      "expected_status": 200,
+      "interval_seconds": 60,
+      "alert_after_failures": 2
+    },
+    {
+      "name": "AgentNexLiFy Railway API health",
+      "url": "https://agentnexlify-production.up.railway.app/api/v1/healthz",
+      "method": "GET",
+      "expected_status": 200,
+      "expected_json": {
+        "status": "ok",
+        "service": "agentnexlify"
+      },
+      "interval_seconds": 60,
+      "alert_after_failures": 2
+    },
+    {
+      "name": "AgentNexLiFy Railway API version",
+      "url": "https://agentnexlify-production.up.railway.app/api/v1/version",
+      "method": "GET",
+      "expected_status": 200,
+      "expected_json": {
+        "service": "agentnexlify"
+      },
+      "interval_seconds": 300,
+      "alert_after_failures": 2
+    }
+  ],
+  "recommended_alert_channels": [
+    "Slack #agentnexlify-alerts",
+    "email ops owner"
+  ]
+}

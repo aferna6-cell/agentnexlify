@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 import backend.config as backend_config
+import backend.main as backend_main
 from backend.main import app
 from backend.routers.auth import _get_current_tenant
 from backend.routers.analytics import _period_to_days
@@ -48,6 +49,15 @@ def test_healthz_readyz_and_version_are_registered():
     assert version_response.status_code == 200
     assert version_response.json()["service"] == "agentnexlify"
     assert version_response.json()["version"]
+
+
+def test_version_metadata_prefers_explicit_release_env(monkeypatch):
+    """Deploy metadata should not depend only on files inside the image."""
+    monkeypatch.setenv("APP_VERSION", "2026.04.14")
+    monkeypatch.setenv("APP_COMMIT_SHA", "a" * 40)
+
+    assert backend_main._app_version() == "2026.04.14"
+    assert backend_main._build_sha() == "a" * 40
 
 
 def test_production_secret_check_allows_api_secret_fallbacks():

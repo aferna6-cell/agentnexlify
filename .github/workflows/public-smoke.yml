@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   smoke:
+    name: Public Smoke Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

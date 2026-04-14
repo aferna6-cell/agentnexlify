@@ -41,6 +41,14 @@ Optional:
 - `PRODUCTION_WIDGET_API_KEY`: enables the authenticated widget config smoke check.
 - `APP_PUBLIC_URL`: enables an additional dashboard app smoke pass, usually `https://app.agentnexlify.com`.
 
+`PRODUCTION_WIDGET_API_KEY` should point at the dedicated Supabase smoke tenant:
+
+- business name: `AgentNexLiFy Smoke Test`
+- owner email: `smoke-test@agentnexlify.invalid`
+- reusable smoke lead email: `smoke-e2e@agentnexlify.invalid`
+
+Use this tenant for uptime and deployment checks so production monitoring does not depend on a real customer or demo account.
+
 ## Widget Asset Sync
 
 The canonical widget files live in `widget/`. Run this after changing either widget asset:
@@ -64,3 +72,14 @@ CI enforces that these copies stay identical:
 python scripts/public_smoke.py
 npm --prefix frontend run build
 ```
+
+## Uptime Monitoring
+
+Use `ops/monitoring/uptime-checks.json` as the source of truth for external uptime monitors. Import those checks into Better Stack, UptimeRobot, Uptime Kuma, or the hosted monitor you use for production alerting. The production checks should alert after two consecutive failures and should notify an external channel, such as Slack or email, so outages are not only visible inside GitHub Actions.
+
+The `Public Uptime Watch` workflow runs the same probe every five minutes and can post failures to Slack when `SLACK_ALERT_WEBHOOK_URL` is set. Keep the external monitor provider as the primary pager because GitHub-hosted scheduled jobs can be delayed during platform incidents.
+
+GitHub repository secrets currently needed for Slack/Railway log alerts:
+
+- `SLACK_ALERT_WEBHOOK_URL`
+- `RAILWAY_TOKEN`

@@ -124,6 +124,10 @@ def _app_uptime_seconds() -> float:
 
 
 def _app_version() -> str:
+    for env_name in ("APP_VERSION", "RELEASE_VERSION", "SERVICE_VERSION"):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return value[:80]
     try:
         return _VERSION_FILE.read_text(encoding="utf-8").strip() or "unknown"
     except Exception:
@@ -132,9 +136,11 @@ def _app_version() -> str:
 
 def _build_sha() -> str:
     for env_name in (
+        "APP_COMMIT_SHA",
         "RAILWAY_GIT_COMMIT_SHA",
         "VERCEL_GIT_COMMIT_SHA",
         "GITHUB_SHA",
+        "GIT_SHA",
         "COMMIT_SHA",
         "SOURCE_VERSION",
     ):
