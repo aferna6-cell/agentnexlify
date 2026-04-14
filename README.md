@@ -5,7 +5,7 @@ AI-powered lead capture and qualification chatbot for real estate agents. Each c
 ## Quick Start
 
 ### 1. Prerequisites
-- Python 3.11 or 3.12. Python 3.14 is not supported by the pinned backend dependency set.
+- Python 3.11 or 3.12. The repo includes `.python-version` set to Python 3.12; Python 3.14 is not supported by the pinned backend dependency set.
 - A [Supabase](https://supabase.com) project
 - An [Anthropic API key](https://console.anthropic.com)
 
@@ -16,8 +16,11 @@ cd agentnexlify
 cp .env.example .env
 # Edit .env with your keys
 
-python3 -m pip install -r backend/requirements.txt
+python3.12 scripts/setup_backend_env.py
+source .venv/bin/activate
 ```
+
+On Windows, run the setup helper with an explicit Python 3.12 executable if `python` points at Python 3.14, then activate with `.venv\Scripts\Activate.ps1`.
 
 ### 3. Database
 

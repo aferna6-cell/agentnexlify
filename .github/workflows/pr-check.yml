@@ -45,8 +45,16 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install test-quality lint dependencies
-        run: npm ci
+      - name: Install and audit root JS dependencies
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+      - name: Audit demo JS dependencies
+        run: |
+          cd demo-platform
+          npm ci
+          npm audit --audit-level=high
 
       - name: Lint JS/TS test quality
         run: npm run lint:test-quality
@@ -147,10 +155,10 @@ jobs:
           npm ci
           npm run test -- --run
 
-      - name: Audit frontend production dependencies
+      - name: Audit frontend JS dependencies
         run: |
           cd frontend
-          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high
 
       - name: Frontend build check
         run: |
