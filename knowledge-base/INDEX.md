@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 22 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-13
+- Total articles: 26 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-14
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -42,9 +42,13 @@ _No articles yet._
 ### Regulations & Compliance
 - [HIPAA — Privacy Rule, Security Rule, and Covered Entities](wiki/regulations/hipaa-overview-cdc.md) — HIPAA Privacy/Security Rules bind any business associate handling PHI; defines AgentNexLiFy's exposure for dental/medical tenants. Tags: hipaa, phi, ephi, privacy-rule, security-rule, healthcare-compliance
 - [HIPAA Five Titles and the 2024 Security Rule NPRM](wiki/regulations/hipaa-titles-and-security-rule-2024-nprm.md) — Title II drives SaaS compliance; 2024 NPRM mandates encryption, MFA, annual audits, 72-hour recovery for ePHI platforms. Tags: hipaa, hitech, security-rule, nprm-2024, encryption, mfa
+- [HIPAA-Compliant AI Chatbots — Requirements for Healthcare Deployment in 2026](wiki/regulations/hipaa-ai-chatbot-compliance-2026.md) — BAA-covered vendors, end-to-end encryption, audit logging, and data minimization required for any chatbot handling PHI. Tags: hipaa, chatbot, phi, baa, healthcare-compliance, encryption, ai-chatbot
+- [HIPAA-Compliant AI Tools — BAA Availability and Vendor Verification in 2026](wiki/regulations/hipaa-compliant-ai-tools-baa-guide.md) — Only ChatGPT Enterprise/Team, Claude Enterprise API, BastionGPT, GoHighLevel Healthcare, and Hathr.AI offer BAAs; consumer AI tools are HIPAA violations. Tags: hipaa, baa, ai-tools, chatgpt-enterprise, claude-enterprise, gohighlevel, vendor-compliance
 
 ### Growth & Distribution
 - [Post-Launch Growth Strategy](wiki/growth/post-launch-growth-strategy.md) — Top 10 features for activation, viral growth, daily engagement, and lock-in. Tags: activation, retention, viral-growth, onboarding, quickbooks, reviews
+- [Answer Engine Optimization (AEO) — Visibility in AI-Generated Search Results](wiki/growth/answer-engine-optimization-aeo-2026.md) — AEO structures content for AI-generated answers; 9x higher conversion rates; distinct from SEO/GEO. Tags: aeo, seo, geo, ai-search, zero-click, structured-data, schema-markup
+- [Community-Driven Brand Discovery — How Forums Shape AI Search Results](wiki/growth/community-forums-ai-brand-discovery.md) — AI Overviews summarize Reddit/forum threads as primary answer layer; brands absent from community conversations lose narrative control. Tags: forums, reddit, ai-overviews, brand-discovery, local-search, social-proof, zero-click
 
 ## Cross-Reference Map
 - [[competitive-landscape-march-2026]] ← referenced by: [[customer-gaps-by-industry]], [[post-launch-growth-strategy]], [[llm-wiki-karpathy-pattern]]

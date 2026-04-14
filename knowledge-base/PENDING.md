@@ -34,10 +34,10 @@ _All compiled._
 - ~~[ai-llm] Building Effective AI Agents~~ → compiled `wiki/ai-llm/anthropic-building-effective-agents.md`
 - ~~[technical] Introducing advanced tool use on the Claude Developer Platform~~ → compiled `wiki/technical/anthropic-advanced-tool-use.md`
 - ~~[technical] Contextual Retrieval in AI Systems~~ → compiled `wiki/technical/anthropic-contextual-retrieval.md`
-- [regulations] HIPAA-Compliant AI Chatbots for Healthcare 2026 — https://edinsol.com/hipaa-compliant-ai-chatbots-for-healthcare-2026/ → `raw/regulations/hipaa-ai-chatbots-2026-edinsol.md`
-- [regulations] HIPAA-Compliant AI Tools in 2026: The Definitive Guide — https://justinhealthcareai.com/blog/hipaa-compliant-ai-tools-2026 → `raw/regulations/hipaa-ai-tools-2026-justinhealthcare.md`
-- [growth] Answer Engine Optimization (AEO) Guide 2026 — https://birdeye.com/blog/answer-engine-optimization/ → `raw/growth/birdeye-answer-engine-optimization.md`
-- [growth] How forums now dominate AI search results — https://birdeye.com/blog/brand-discovery-through-community-and-ai/ → `raw/growth/birdeye-brand-discovery-community-ai.md`
+- ~~[regulations] HIPAA-Compliant AI Chatbots for Healthcare 2026~~ → compiled `wiki/regulations/hipaa-ai-chatbot-compliance-2026.md`
+- ~~[regulations] HIPAA-Compliant AI Tools in 2026: The Definitive Guide~~ → compiled `wiki/regulations/hipaa-compliant-ai-tools-baa-guide.md`
+- ~~[growth] Answer Engine Optimization (AEO) Guide 2026~~ → compiled `wiki/growth/answer-engine-optimization-aeo-2026.md`
+- ~~[growth] How forums now dominate AI search results~~ → compiled `wiki/growth/community-forums-ai-brand-discovery.md`
 
 ## Ingested 2026-04-14T06:00:00Z — cron autopop
 

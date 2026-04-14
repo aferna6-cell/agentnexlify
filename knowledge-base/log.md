@@ -155,3 +155,17 @@ Headless cron run. agent-browser unavailable, DDG blocked curl, Google News RSS 
 - **Rejected** (19 URLs added to known-urls.json for dedup): drbicuspid, dentistrytoday, dataprotectionreport, letsdatascience, learn.g2.com, saastr, morganlewis, cyberscoop, transparencycoalition, hunton, jdsupra, pillsburylaw, dealershipguy, cybernews, bbntimes, augmentcode, mobihealthnews, solutionsreview
 - **known-urls.json**: 76 → 104 total (+29)
 - **Note**: TheNewStack is the most curl-friendly source — serves full HTML with content-column-post-body class. Regulations category consistently blocked across runs; needs agent-browser or Playwright for HIPAA Journal, Morgan Lewis, CyberScoop.
+
+## [2026-04-14 18:20] compile | headless-cron-batch | compiled=4 embeddings=0 embedding_errors=4
+
+Processed 4 of 17 pending entries (4-entry cap). Remaining: 13 entries (3 regulations, 3 technical, 2 ai-llm, 2 small-biz-saas, 2 growth, 1 competitors, 1 verticals — from 2026-04-14 morning + evening batches).
+
+- **Compiled (new articles):**
+  - `wiki/regulations/hipaa-ai-chatbot-compliance-2026.md` (from raw/regulations/hipaa-ai-chatbots-2026-edinsol.md) — BAA, encryption, audit logging, data minimization for healthcare chatbots
+  - `wiki/regulations/hipaa-compliant-ai-tools-baa-guide.md` (from raw/regulations/hipaa-ai-tools-2026-justinhealthcare.md) — BAA availability matrix for AI tools; GHL has healthcare BAA
+  - `wiki/growth/answer-engine-optimization-aeo-2026.md` (from raw/growth/birdeye-answer-engine-optimization.md) — AEO vs SEO vs GEO; 9x conversion for AEO-optimized brands
+  - `wiki/growth/community-forums-ai-brand-discovery.md` (from raw/growth/birdeye-brand-discovery-community-ai.md) — Forums/Reddit as AI answer layer; community signals drive AI Overviews
+- **INDEX.md**: updated — 26 total articles (was 22)
+- **PENDING.md**: 4 entries marked compiled, 13 remaining
+- **Embeddings**: 0/4 stored (Supabase MCP Unauthorized — SUPABASE_ACCESS_TOKEN not available in cron env)
+- **Cross-references**: all 4 articles cite ≥1 existing wiki page; HIPAA articles cross-link each other + hipaa-overview-cdc + hipaa-titles; growth articles cross-link each other + post-launch-growth-strategy
