@@ -44,7 +44,7 @@ jobs:
 
       - name: Create pull request
         if: ${{ (github.event_name == 'workflow_dispatch' && inputs.open_pr) || vars.AI_AUTO_IMPROVE_OPEN_PR == 'true' }}
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: codex/ai-auto-improve
           commit-message: "chore(ai): update autonomous improvement outputs"
