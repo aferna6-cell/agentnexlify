@@ -2,10 +2,10 @@
 source_url: https://bizneworleans.com/build-a-way-unveils-ai-assistant-for-contractors/
 fetched_at: 2026-04-14T22:14:26Z
 category: verticals
-title: "Build"
+title: "Build-A-Way Unveils AI Assistant for Contractors"
 ---
 
-# Build
+# Build-A-Way Unveils AI Assistant for Contractors
 
 [Technology](https://bizneworleans.com/category/technology/)
 
