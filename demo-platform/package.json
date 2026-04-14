@@ -12,7 +12,7 @@
     "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
-    "react": "^18.3.1",
+    "react": "^19.2.5",
     "react-dom": "^18.3.1",
     "react-helmet-async": "^2.0.5"
   },
