@@ -2,8 +2,14 @@ name: Public Smoke Test
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
   schedule:
     - cron: "15 6 * * *"
+
+concurrency:
+  group: public-smoke-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   smoke:
@@ -15,9 +21,42 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run public smoke checks
+      - name: Run marketing smoke checks with retry
         env:
-          PUBLIC_BASE_URL: ${{ secrets.PRODUCTION_PUBLIC_URL }}
-          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL }}
+          PUBLIC_BASE_URL: ${{ secrets.PRODUCTION_PUBLIC_URL || 'https://agentnexlify.vercel.app' }}
+          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL || 'https://agentnexlify-production.up.railway.app' }}
           PUBLIC_WIDGET_API_KEY: ${{ secrets.PRODUCTION_WIDGET_API_KEY }}
-        run: python scripts/public_smoke.py
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            echo "Marketing smoke attempt $attempt"
+            if python scripts/public_smoke.py; then
+              exit 0
+            fi
+            if [ "$attempt" = "6" ]; then
+              exit 1
+            fi
+            sleep 30
+          done
+
+      - name: Run app smoke checks when configured
+        env:
+          APP_PUBLIC_URL: ${{ secrets.APP_PUBLIC_URL }}
+          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL || 'https://agentnexlify-production.up.railway.app' }}
+          PUBLIC_WIDGET_API_KEY: ${{ secrets.PRODUCTION_WIDGET_API_KEY }}
+        run: |
+          if [ -z "$APP_PUBLIC_URL" ]; then
+            echo "Skipping app smoke checks because APP_PUBLIC_URL is not set."
+            exit 0
+          fi
+
+          export PUBLIC_BASE_URL="$APP_PUBLIC_URL"
+          for attempt in 1 2 3 4 5 6; do
+            echo "App smoke attempt $attempt"
+            if python scripts/public_smoke.py; then
+              exit 0
+            fi
+            if [ "$attempt" = "6" ]; then
+              exit 1
+            fi
+            sleep 30
+          done

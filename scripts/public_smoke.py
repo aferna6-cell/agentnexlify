@@ -147,6 +147,9 @@ def main() -> int:
         prefix = "PASS" if result.ok else "FAIL"
         print(f"{prefix}: {result.name} - {result.detail}")
 
+    if not args.widget_api_key:
+        print("SKIP: widget config loads - PUBLIC_WIDGET_API_KEY is not set")
+
     return 0 if all(result.ok for result in results) else 1
 
 

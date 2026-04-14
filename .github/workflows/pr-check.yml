@@ -180,9 +180,4 @@ jobs:
           fi
 
       - name: Widget sync check
-        run: |
-          if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then
-            if ! diff -q "widget/agentnexlify-widget.js" "frontend/public/widget/agentnexlify-widget.js" > /dev/null 2>&1; then
-              echo "::warning::Widget files are out of sync. widget/ and frontend/public/widget/ should be identical."
-            fi
-          fi
+        run: python scripts/sync_widget_assets.py --check

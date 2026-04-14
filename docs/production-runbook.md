@@ -52,15 +52,17 @@ ALTER TABLE conversations VALIDATE CONSTRAINT conversations_client_id_fkey;
 
 Set these locally or as GitHub Actions secrets:
 
-Current production values:
+Current marketing/public production values:
 
 ```bash
-PUBLIC_BASE_URL=https://app.agentnexlify.com
+PUBLIC_BASE_URL=https://agentnexlify.vercel.app
 API_BASE_URL=https://agentnexlify-production.up.railway.app
 ```
 
+Dashboard app smoke checks use `PUBLIC_BASE_URL=https://app.agentnexlify.com` with the same `API_BASE_URL`.
+
 ```powershell
-$env:PUBLIC_BASE_URL = "https://app.agentnexlify.com"
+$env:PUBLIC_BASE_URL = "https://agentnexlify.vercel.app"
 $env:API_BASE_URL = "https://agentnexlify-production.up.railway.app"
 $env:PUBLIC_WIDGET_API_KEY = "optional-widget-key"
 ```
@@ -130,6 +132,7 @@ GitHub smoke workflow:
 - `PRODUCTION_PUBLIC_URL`
 - `PRODUCTION_API_URL`
 - `PRODUCTION_WIDGET_API_KEY` optional
+- `APP_PUBLIC_URL` optional, enables dashboard app smoke checks
 
 ## Log Locations
 
