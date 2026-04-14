@@ -1721,3 +1721,12 @@ fix demo tooling audit issues
 **Author:** aferna6-cell
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix landing vercel routes
+**Date:** 2026-04-14
+**Commit:** 9d48907
+**Author:** Codex
+**Files Changed:** landing-page-v2/vercel.json,landing-page-v2/widget/agentnexlify-widget.js,landing-page-v2/widget/preview.html
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
