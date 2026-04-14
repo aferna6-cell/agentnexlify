@@ -39,6 +39,14 @@ _All compiled._
 - [growth] Answer Engine Optimization (AEO) Guide 2026 — https://birdeye.com/blog/answer-engine-optimization/ → `raw/growth/birdeye-answer-engine-optimization.md`
 - [growth] How forums now dominate AI search results — https://birdeye.com/blog/brand-discovery-through-community-and-ai/ → `raw/growth/birdeye-brand-discovery-community-ai.md`
 
+## Ingested 2026-04-14T06:00:00Z — cron autopop
+
+- [verticals] Study: AI chatbots provide less-accurate information to vulnerable users — https://news.mit.edu/2026/study-ai-chatbots-provide-less-accurate-information-vulnerable-users-0219 → `raw/verticals/mit-ai-chatbot-vulnerable-users-2026.md`
+- [technical] You probably don't need a vector database — pgvector Guide — https://encore.dev/blog/you-probably-dont-need-a-vector-database → `raw/technical/encore-pgvector-guide-2026.md`
+- [regulations] FTC Warns 97 Auto Dealership Groups About Deceptive Pricing — https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-warns-97-auto-dealership-groups-about-deceptive-pricing → `raw/regulations/ftc-warns-auto-dealers-deceptive-pricing-2026.md`
+
+Skipped categories: competitors (all GHL URLs known/homepages), ai_llm (Anthropic pages JS-rendered), small_biz_saas (all noise — P.LEAGUE, stackexchange), growth (all noise — Microsoft answers, generic AI). agent-browser needed for JS-rendered sites (Anthropic, GHL help center, HIPAA Journal).
+
 ## Attempted 2026-04-13T22:12:56Z — cron autopop (FAILED: JS-rendered sites)
 
 _All 10 articles fetched empty content via curl (JS-rendered). Raw files deleted. URLs added to known-urls.json. agent-browser needed for these sites — curl cannot extract content from JS-rendered pages._

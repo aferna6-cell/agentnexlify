@@ -104,3 +104,16 @@ Processed 4 of 12 pending entries (4-entry cap). Remaining: 8 entries (2 ai-llm,
 - **Embeddings**: 0/4 stored (Supabase MCP Unauthorized — SUPABASE_ACCESS_TOKEN not available in cron env)
 
 ## [2026-04-13 18:22] discover+compile | cron 18:00 | commits=3 raw=0 wiki=0
+
+## [2026-04-14 06:00] discover | cron 06:00 | found=3 ingested=3 skipped=4cats
+
+- **Search method**: Bing RSS (agent-browser unavailable, DDG blocked curl, Bing RSS worked)
+- **Categories processed**: 7 searched, 3 yielded articles (verticals, technical, regulations)
+- **Skipped**: competitors (all known URLs), ai_llm (JS-rendered), small_biz_saas (noise: P.LEAGUE, stackexchange), growth (noise: Microsoft answers)
+- **Ingested**:
+  - `raw/verticals/mit-ai-chatbot-vulnerable-users-2026.md` — MIT study: AI chatbots less accurate for vulnerable users (2026-02-19)
+  - `raw/technical/encore-pgvector-guide-2026.md` — Encore blog: pgvector vs dedicated vector DBs (2026-03-09)
+  - `raw/regulations/ftc-warns-auto-dealers-deceptive-pricing-2026.md` — FTC warns 97 auto dealers on pricing (2026-03)
+- **Rejected (added to known-urls.json)**: ~20 new URLs (Anthropic JS pages, GHL homepages, Drillbit plagiarism checker, dental clinics, HIPAA Journal Cloudflare block)
+- **known-urls.json**: updated (57 → 76 entries)
+- **Note**: Anthropic news pages (acquires-vercept, the-anthropic-institute) have relevant content but are fully JS-rendered — need agent-browser or Playwright to extract
