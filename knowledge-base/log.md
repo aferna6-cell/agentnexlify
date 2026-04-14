@@ -131,3 +131,5 @@ Processed 4 of 11 pending entries (4-entry cap). Remaining: 7 entries (2 regulat
 - **PENDING.md**: 4 entries marked compiled, 7 remaining
 - **Embeddings**: 0/4 stored (Supabase MCP Unauthorized — SUPABASE_ACCESS_TOKEN not available in cron env)
 - **Cross-references**: all 4 articles cite ≥1 existing wiki page via `[[slug]]`; managed-agents and advanced-tool-use cross-link each other
+
+## [2026-04-14 06:20] discover+compile | cron 06:00 | commits=3 raw=3 wiki=4
