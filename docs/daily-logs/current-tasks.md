@@ -1,22 +1,22 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-13 (automated morning routine)
+Updated: 2026-04-14 (automated morning routine)
 
 ## Today's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 10 of exposure. Key committed in 9c87335, scrubbed in d4463d7. Still live in Railway. Agent: **devops** / Human action required. **CRITICAL.**
+1. **ROTATE compromised admin API key in Railway** — DAY 11 of exposure. Key committed in 9c87335, scrubbed in d4463d7. Still live in Railway. Agent: **devops** / Human action required. **CRITICAL.**
 2. **QA tenant_scope adoption + CORS fix in production** — 60+ routers touched, plus CORS now hardcoded to `["*"]`. Verify widget works on external customer domains. Agent: **qa-tester**.
-3. **Bug sweep on auth, stripe, widget CORS, tenant isolation** — surface bugs caught in 2026-04-13 debug session; deeper coverage needed.
+3. **QA Managed Agents integration** — Lead qualification + document drafter + field monitor + researcher. Smoke tests pass but no production QA yet. Agent: **qa-tester**.
 
 ## Active Tasks
 
 ### Priority 0 — Security (Immediate Action Required)
 
-- [ ] **ROTATE compromised API key in Railway** — Key committed in 9c87335, scrubbed in d4463d7. Key is still live. DAY 10 of exposure — **CRITICAL**. Agent: **devops** / Human. (Carried from Apr 5)
+- [ ] **ROTATE compromised API key in Railway** — Key committed in 9c87335, scrubbed in d4463d7. Key is still live. DAY 11 of exposure — **CRITICAL**. Agent: **devops** / Human. (Carried from Apr 5)
 
 ### Priority 0 — Schema (Critical / Pre-Launch Blocker)
 
-- [x] **All migrations 077-101 applied** — verified 2026-04-13 via direct schema probe (script in commit history). Memory was correct, this list was stale.
+- [x] **All migrations 001-101 documented** — verified 2026-04-14 morning health check. Schema-log.md covers every migration file.
 
 ### Priority 1 — Critical / QA
 
@@ -29,14 +29,16 @@ Updated: 2026-04-13 (automated morning routine)
 - [ ] **QA Managed Agents integration** — Lead qualification + document drafter + field monitor + researcher. Smoke tests pass but no production QA yet. Agent: **qa-tester**.
 - [ ] **Ingest competitor briefs to KB** — 5 research briefs in `research-briefs/` need `/kb-ingest` to enter the wiki. Agent: manual.
 
-### Priority 2 — Verification & Testing
+### Priority 2 — Code Quality & Verification
 
-- [ ] **Apply migrations 065-070** — client_accounts, waitlist(old), scoring_configs(old), invoice unique, email bounce, pipeline automations. 14+ days stale.
+- [ ] **Review 4 non-admin silent .catch(() => null) patterns** — MarketingDashboardPage (1), LocalSEOPage (1), DocumentsPage (1), InvoicesPage (1). AdminAnalyticsPage (6) are intentional admin-only degraded mode. Agent: **frontend-dev**.
+- [ ] **Implement JS silent catch pre-commit guard** — Subconscious run `365d6ea` recommended adding silent `.catch(() => {})` detection to pre-commit hook. Agent: **devops**.
+- [ ] **Validate 47 rewritten skills** — `b83577f` rewrote skills to match Anthropic canon. Spot-check critical skills still trigger correctly.
 - [ ] **E2E test onboarding wizard** — 6-step wizard shipped 2026-04-01. Needs QA.
 - [ ] **Verify expired JWT token handling (6d10cf5)** — 401 interceptor + proactive expiry check.
-- [ ] **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset: **19+ days unverified.**
+- [ ] **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset: **20+ days unverified.**
 - [ ] **Audit `.get() or ""` operator precedence pattern** — 3 fixed, likely more.
-- [ ] **Review 8 silent .catch(() => null) patterns** — AdminAnalyticsPage (6), MarketingDashboardPage (1), LocalSEOPage (1). Health check now shows 0 — verify if fixed or if check changed.
+- [ ] **QA GitHub autopilot loop** — `feat(autopilot)` landed (5ddbbce). PR review scripts + skill. Needs testing. Agent: **qa-tester**.
 
 ### Priority 3 — Knowledge & Documentation
 
@@ -46,16 +48,15 @@ Updated: 2026-04-13 (automated morning routine)
 
 ### Priority 4 — Carried Forward
 
-- [ ] **Two-way email sync** — still pending from previous backlog (3+ weeks)
+- [ ] **Two-way email sync** — still pending from previous backlog (4+ weeks)
 - [ ] **Fix 16 test isolation failures** — partially addressed, may still have remaining failures
 - [ ] **Automated routine reliability** — March 26 evening and March 27 morning both failed; April 6 morning did not run.
 - [ ] **Create migration-gate hook** — Block new feature commits when pending migration count > 15. Suggested by evening review pattern analysis.
 
-### Priority 5 — New (Apr 11-13)
+## Completed (Recent) — 2026-04-14
 
-- [ ] **QA GitHub autopilot loop** — `feat(autopilot)` landed (5ddbbce). PR review scripts + skill. Needs testing. Agent: **qa-tester**.
-- [ ] **Validate 47 rewritten skills** — `b83577f` rewrote skills to match Anthropic canon. Spot-check critical skills still trigger correctly.
-- [ ] **Implement JS silent catch pre-commit guard** — Subconscious run `365d6ea` recommended adding silent `.catch(() => {})` detection to pre-commit hook. Agent: **devops**.
+- [x] **Morning health check** — all green except silent_frontend_catch_count=10 (6 intentional admin, 4 need review)
+- [x] **Documentation gap check** — all migrations + bug fixes documented
 
 ## Completed (Recent) — 2026-04-11-13
 
@@ -65,32 +66,25 @@ Updated: 2026-04-13 (automated morning routine)
 - [x] **47 skills rewritten** — aligned to Anthropic canon format (b83577f)
 - [x] **4 plugin collisions fixed** — disabled duplicates of existing MCPs (e0aa0c2)
 - [x] **GitHub autopilot loop** — P3 spec + implementation (b596364, 5ddbbce)
-- [x] **Support email rename** — support@ → help@ across legal + contact pages (730d75b)
+- [x] **Support email rename** — support@ -> help@ across legal + contact pages (730d75b)
 - [x] **KB auto-populate fixes** — cron race condition, CLI resolution, schema correction (67bb565, 5bda9b3)
 - [x] **KB content** — 15+ new wiki articles (competitors, AI/LLM, regulations, technical)
 - [x] **Subconscious run** — JS silent catch guard recommendation (365d6ea)
+- [x] **9 bug fixes** — portal, CI, CORS, runtime errors, null coercion, SSRF (Apr 13-14)
+- [x] **Launch readiness rubric** — weighted scoring + go/no-go rules (d6a4546)
+- [x] **2 research articles** — AI chat widget plateau, CAC/churn profile
 
-## Completed (Recent) — 2026-04-10
+## Overall Progress (2026-04-14 Morning)
 
-- [x] **Morning health check** — all green (0 dangerous imports, 0 bare excepts, widget sync OK, build PASS 4.45s)
-- [x] **Fix: CORS env-driven origins broke widget** — 9b07a59 (bug #79). Hard-coded `allow_origins=["*"]`.
-- [x] **Fix: FastAPI test transport deadlocks** — fd24b43. Replaced Starlette TestClient with httpx ASGITransport.
-- [x] **Fix: 24+ test files patched for get_service_supabase rename** — 74be54a, d7d73f5, 9277c0e
-- [x] **feat: Industry packs** — 14 industry-specific modules (salon, dental, HVAC, legal, medical, etc.) — 881e026
-- [x] **feat: Managed agents** — router HTTP tests + field_monitor cron + 5 competitor briefs — b97928a
-- [x] **5 competitor research briefs** — GoHighLevel, Drillbit, Birdeye, Oscar Chat, Phonely
-
-## Overall Progress (2026-04-13 Morning)
-
-- **Last commit:** 1360063 (kb log append, 2026-04-13 06:15)
+- **Last commit:** d490899 (kb log append, 2026-04-14 06:20)
 - **Codebase status:** Clean (git status clean)
-- **Health check:** All green (widget sync OK, 0 bare excepts, 0 dangerous imports, 0 silent frontend catches)
-- **Frontend build:** PASS (5.18s)
-- **Bug patterns total:** 82 (+3 today: logger deprecation #80, env var mismatch #81, test client methods #82)
-- **Pending migrations:** 25 (077-101, +1 since Apr 10: migration 101 widget AI fallback)
-- **SECURITY INCIDENT DAY 10:** admin API key — rotate in Railway **IMMEDIATELY**
-- **Key activity (Apr 11-13):** KB infrastructure (Karpathy wiki, auto-populate, lint), plugin/skill overhaul, GitHub autopilot loop
-- **silent_frontend_catch_count:** 0 (was 8 on Apr 10 — verify if code was fixed or check was updated)
+- **Health check:** Green (widget sync OK, 0 bare excepts, 0 dangerous imports, 10 silent frontend catches)
+- **Frontend build:** PASS (3.55s)
+- **Bug patterns total:** 85+ (all auto-logged)
+- **Migrations documented:** 001-101 (all covered in schema-log.md)
+- **SECURITY INCIDENT DAY 11:** admin API key — rotate in Railway **IMMEDIATELY**
+- **Key activity (Apr 13-14):** 9 bug fixes, hardening sweep, 2 research articles, launch readiness rubric, KB auto-populate
+- **silent_frontend_catch_count:** 10 (6 intentional admin, 4 need review — was reported as 0 on Apr 13 due to less thorough grep)
 
 ---
 
