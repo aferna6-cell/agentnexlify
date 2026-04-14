@@ -76,6 +76,13 @@ Widget is tenant-scoped. Every request carries a tenant/client ID. Multi-tenant 
 - **Pre-push hook** — frontend build + schema consistency check
 - **GitHub Actions** — daily health check, PR validation, auto bug logging, AI auto-improve
 - **Claude Code hooks** — pre-edit sensitive file warning, post-edit pattern scan, anti-desperation, UltraPlan/UltraThink, 90% confidence gate
+- **Issue → PR loop** — `.claude/skills/issue-to-pr-loop/SKILL.md` + `scripts/automation/{issue-to-pr,pr-feedback}.sh`. Polls assigned GitHub issues every 15 min, Haiku classifies, Sonnet worktree implements, PR opens, PR feedback loop patches reviews. Replaces `autopilot-loop` (kept for reference).
+
+## Agent Roster (on-demand)
+57 subagents in `.claude/agents/`. Project-specific (backend-dev, frontend-dev, schema-guardian, widget-specialist, devops, gan-*, sonnet-executor, opus-advisor, vertical-checker, qa-tester) + 39 from `everything-claude-code` (planners, reviewers per-language, build-error-resolvers, loop-operator, chief-of-staff, etc.). Load only what task needs — agents are lazy, don't burn context unless invoked.
+
+## Karpathy Rules (enforced)
+Think before coding · Simplicity first · Surgical changes · Goal-driven. Full spec: `.claude/skills/karpathy-guidelines/SKILL.md`. Applies to every non-trivial edit.
 
 ## Daily Routine
 Automated: 8 AM morning, 8 PM evening (scripts/daily/). Interactive: `/morning`, `/evening`.
