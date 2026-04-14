@@ -1710,3 +1710,14 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/business_page.py,backend/routers/onboarding.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #10 from aferna6-cell/codex/hard-debug-agentnexlify
+
+fix demo tooling audit issues
+**Date:** 2026-04-14
+**Commit:** 5849ba5
+**Author:** aferna6-cell
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
