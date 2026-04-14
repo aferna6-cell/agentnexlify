@@ -93,3 +93,18 @@ GHL is a $200M+ ARR platform built for marketing agencies, not for field-service
 **The core numbers:** Blended CAC for SMB AI widget products in the sub-$500/month tier ranges from **$300–$900** depending on channel mix, with self-serve at
 
 ---
+
+## 2026-04-14 — why-do-most-ai-chat-widget-companies-plateau-or-fa
+
+**Question:** Why do most AI chat widget companies plateau or fail in months 6-18?
+**Depth:** standard
+**Folder:** [[projects/why-do-most-ai-chat-widget-companies-plateau-or-fa]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**Why AI chat widget companies plateau or fail in months 6-18: the four-layer trap**
+Most AI chat widget companies don't fail because their product stops working. They fail because four structural forces — each manageable alone, but lethal in combination — converge between month 6 and month 18, precisely when founders believe they've survived the early danger zone.
+**What the research shows:**
+The
+
+---

@@ -93,3 +93,20 @@ Example:
 - EU GDPR/AI Act compliance overhead on CAC | +15–25% for EU-market vendors | Estimated from compliance cost research | 2025-2026 | projects/smb-ai-widget-cac-churn
 - Historical SMB SaaS widget monthly churn range (2012–2019 analog) | 3–7% early stage; 2–4% mature operators | SaaS Capital historical research | 2019 | projects/smb-ai-widget-cac-churn
 - Inside sales CAC breakeven minimum ACV (SMB, 20% close rate) | ~$300/month | Derived: $1,200 sales cost / 20% close rate = $6,000 CAC; requires ~$500/month ACV at 3:1 LTV/CAC and 3% churn for viability | 2026-04 | projects/smb-ai-widget-cac-churn
+
+<!-- from projects/why-do-most-ai-chat-widget-companies-plateau-or-fa on 2026-04-14 -->
+- AI chat widget feature half-life (differentiator to table stakes) | ~2-3 quarters | Derived from competitive analysis of GPT-4 integration, RAG, multimodal rollout timelines 2023-2025 | 2025 | projects/ai-chat-widget-plateau
+- Estimated full activation rate (widget → configured KB → CRM integration) | 15-20% of installed customers | Derived from OpenView PLG benchmarks and operator reports | 2025 | projects/ai-chat-widget-plateau
+- LTV at $197/month pricing with 4.7% monthly churn | $4,137 gross / ~$2,482 at 60% margin | Derived calculation | 2026 | projects/ai-chat-widget-plateau
+- LTV/CAC ratio range for AI chat widget companies | 2.75x (stressed) to 8.3x (best case) | Derived from CAC range ($300-$900) and LTV calculation | 2026 | projects/ai-chat-widget-plateau
+- Drift acquisition price by Salesloft | est. $50-150M (undisclosed) vs. $1B 2021 valuation | Tech press reports 2023 | 2023 | projects/ai-chat-widget-plateau
+- ManyChat Series A raise | $18M | Crunchbase / press reports | 2019 | projects/ai-chat-widget-plateau
+- Hallucination rate in production SMB deployments without guardrails | 3-8% of domain-specific queries | Derived from LLM benchmark studies and production deployment reports 2024-2025 | 2025 | projects/ai-chat-widget-plateau
+- GPT-4 API cost reduction 2023-2025 | ~80% reduction in per-token cost | OpenAI pricing history | 2025 | projects/ai-chat-widget-plateau
+- LLM first-token latency range (production, GPT-4-turbo) | 0.8-3 seconds | Provider documentation and independent benchmarks | 2025 | projects/ai-chat-widget-plateau
+- EU AI Act compliance cost estimate for small AI vendors | $50-200K/year | EU AI Act implementation analyses, legal/consulting estimates | 2025 | projects/ai-chat-widget-plateau
+- Shopify merchant count | 2.4M | Shopify investor relations | 2024 | projects/ai-chat-widget-plateau
+- Tidio estimated ARR | ~$20M | Industry estimates, press coverage | 2024 | projects/ai-chat-widget-plateau
+- Live chat consolidation timeline (Cycle 1) | ~6 years (2008-2014) | Historical industry record | 2026 | projects/ai-chat-widget-plateau
+- Chatbot consolidation timeline (Cycle 2) | ~3 years (2016-2019) | Historical industry record | 2026 | projects/ai-chat-widget-plateau
+- Projected AI chat widget consolidation timeline (Cycle 3) | 18-24 months from first wave (est. 2023-2025) | Historical compression pattern applied to current cycle | 2026 | projects/ai-chat-widget-plateau

@@ -15,7 +15,7 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 
 - [x] Is GoHighLevel beatable at the widget layer for the SMB contractor segment? (depth:standard)
 - [x] What is the true 12-month CAC and churn profile of SMB AI widget products under $500/mo? (depth:standard)
-- [ ] Why do most AI chat widget companies plateau or fail in months 6-18? (depth:standard)
+- [x] Why do most AI chat widget companies plateau or fail in months 6-18? (depth:standard)
 - [ ] What happens to AgentNexLiFy unit economics if Anthropic raises prices 3x in 12 months? (depth:standard)
 - [ ] Should AgentNexLiFy vertical-specialize (contractors only) or stay horizontal across SMBs? (depth:deep)
 - [ ] How have historical document-automation waves (fax, email, workflow SaaS) priced and distributed to SMBs, and what applies now? (depth:standard)
@@ -68,3 +68,4 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [ ] What is the 12-month CAC and churn profile segmented by product category within "AI widgets" (chat widget vs. review management vs. scheduling AI vs. content generation)? Aggregating across categories may be masking divergent economics.
 - [ ] Is there a minimum viable activation completion rate threshold (e.g., 60% core workflow completion) below which no retention intervention recovers churn? The data suggests this exists but the specific threshold is unknown.
 - [ ] How does the EU AI Act compliance overhead translate into specific CAC increases for EU-market SMB AI widget vendors in 2026?
+- [ ] Is there a measurable LTV/CAC difference between "widget-only" companies and "widget-as-wedge" companies at the same ARR level, and at what ARR does the divergence become statistically significant?
