@@ -108,3 +108,17 @@ Most AI chat widget companies don't fail because their product stops working. Th
 The
 
 ---
+
+## 2026-04-14 — what-happens-to-agentnexlify-unit-economics-if-ant
+
+**Question:** What happens to AgentNexLiFy unit economics if Anthropic raises prices 3x in 12 months?
+**Depth:** standard
+**Folder:** [[projects/what-happens-to-agentnexlify-unit-economics-if-ant]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**What happens to AgentNexLiFy unit economics if Anthropic raises prices 3x in 12 months?**
+The short answer: a 3× Anthropic price increase is an existential stress test, not a manageable headwind — unless AgentNexLiFy has already built structural insulation it almost certainly does not yet have at its current stage.
+**The math is brutal.** Prior research established AgentNexLiFy's gross margin at
+
+---

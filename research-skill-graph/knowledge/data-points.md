@@ -110,3 +110,20 @@ Example:
 - Live chat consolidation timeline (Cycle 1) | ~6 years (2008-2014) | Historical industry record | 2026 | projects/ai-chat-widget-plateau
 - Chatbot consolidation timeline (Cycle 2) | ~3 years (2016-2019) | Historical industry record | 2026 | projects/ai-chat-widget-plateau
 - Projected AI chat widget consolidation timeline (Cycle 3) | 18-24 months from first wave (est. 2023-2025) | Historical compression pattern applied to current cycle | 2026 | projects/ai-chat-widget-plateau
+
+<!-- from projects/what-happens-to-agentnexlify-unit-economics-if-ant on 2026-04-14 -->
+- Anthropic Claude 3.5 Sonnet pricing (input) | ~$3.00/MTok | Anthropic pricing page | 2026-Q1 | projects/agentnexlify-anthropic-price-shock
+- Anthropic Claude 3.5 Sonnet pricing (output) | ~$15.00/MTok | Anthropic pricing page | 2026-Q1 | projects/agentnexlify-anthropic-price-shock
+- Anthropic Claude Haiku pricing (input/output) | ~$0.25/$1.25/MTok | Anthropic pricing page | 2026-Q1 | projects/agentnexlify-anthropic-price-shock
+- Google Gemini 1.5/2.0 Flash pricing (input/output) | ~$0.075/$0.30/MTok | Google AI pricing page | 2026-Q1 | projects/agentnexlify-anthropic-price-shock
+- Self-hosted Llama 3.x 70B inference cost equivalent | ~$0.20–$0.50/MTok (RunPod/Lambda Labs) | Derived from GPU rental pricing + inference throughput benchmarks | 2026-Q1 | projects/agentnexlify-anthropic-price-shock
+- Estimated API cost per 10-turn agentic conversation (Claude Sonnet) | $0.08–$0.35 per session | Derived from token pricing × estimated agentic workflow token consumption | 2026 | projects/agentnexlify-anthropic-price-shock
+- Prompt caching savings potential (agentic workflow) | 30–90% reduction in input token cost | Anthropic prompt caching documentation + engineering benchmarks | 2026 | projects/agentnexlify-anthropic-price-shock
+- Model tiering cost reduction potential | 40–55% blended cost reduction if 60% of interactions routed to cheap models | Derived from pricing differential × interaction complexity distribution | 2026 | projects/agentnexlify-anthropic-price-shock
+- Required price increase to restore 60% GM after 3× API cost shock (API = 25% of revenue) | ~2.25× current price | Derived arithmetic model | 2026 | projects/agentnexlify-anthropic-price-shock
+- Gross margin impact: API cost 20% of revenue, 3× increase, no mitigation | 60% → 20% | Derived arithmetic model | 2026 | projects/agentnexlify-anthropic-price-shock
+- Gross margin impact: API cost 35% of revenue, 3× increase, no mitigation | 50% → negative | Derived arithmetic model | 2026 | projects/agentnexlify-anthropic-price-shock
+- LTV/CAC post-shock (API = 20% revenue, GM drops 60%→20%, CAC $600, MRR $300) | ~2.1× (below 3:1 minimum viable) | Derived model | 2026 | projects/agentnexlify-anthropic-price-shock
+- Historical frequency of 3× LLM API price increase within 12 months | 0 observed cases 2020–2026 (direction has been deflationary) | Review of OpenAI, Anthropic, Google pricing history | 2026 | projects/agentnexlify-anthropic-price-shock
+- LLM frontier model price reduction 2023→2024 | ~80–95% real-terms reduction across major providers | Multiple provider pricing histories | 2024 | projects/agentnexlify-anthropic-price-shock
+- Estimated probability of 3× Anthropic price increase in any 12-month period | 10–20% (tail risk estimate, not base case) | Derived from historical LLM pricing behavior + competitive dynamics analysis | 2026 | projects/agentnexlify-anthropic-price-shock
