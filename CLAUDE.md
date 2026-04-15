@@ -127,6 +127,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **Agent system guardrail** - `scripts/check_agent_system.py` runs in PR validation and proves CLAUDE.md, Everything Claude Code agents, Claude Code 2.1.98 pin, and issue-to-PR workflows are intact.
 - **Claude Code hooks** — pre-edit sensitive-file warn, post-edit pattern scan, anti-desperation, UltraPlan/UltraThink, 90% confidence gate, 15-msg handoff summary (`scripts/claude-hooks/message-counter.sh`)
 - **Issue → PR loop** — `.claude/skills/issue-to-pr-loop/SKILL.md`. Polls assigned GH issues every 15 min, Haiku classifies, Sonnet worktree implements, PR opens + feedback loop patches reviews. Replaces `autopilot-loop` (kept for reference).
+- **Nightly commit review** — `.claude/skills/nightly-commit-review/SKILL.md`. Fires daily 2:37 AM local via scheduled-tasks MCP. Haiku triages last 24h commits, Sonnet fixes LOW-risk bugs (commits + pushes), MEDIUM/HIGH → GH issue feeding issue-to-pr-loop. Manual trigger: `bash scripts/daily/nightly-commit-review.sh`. Disable: `CLAUDE_NIGHTLY_REVIEW=0`.
 - **KB auto-populate** — twice daily 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`. Log at `knowledge-base/log.md`.
 
 ### Daily routine
