@@ -88,6 +88,7 @@ cd frontend && npm run build            # prod build
 python -m uvicorn backend.main:app --reload --port 8000   # backend dev (requires .venv)
 npm run agent-system:check              # verify Claude/Codex agent control plane
 npm run claude:2.1.98 -- --version      # pinned Claude Code runner
+npm run claude:noflicker                # pinned + experimental no-flicker renderer
 bash scripts/install-hooks.sh           # install git hooks
 bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 ```
@@ -116,7 +117,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **Domain** — schema-discipline, python-fastapi, frontend-patterns, security-rules, widget-rules, api-conventions, testing-standards, gitnexus, workflow-orchestration, codex-subagents
 - **Behavioral** — caveman-mode, model-routing, no-assumptions, parallel-approaches, ultrathink, prompt-library, kb-first, claude-usage-patterns, personality, user-rules, one-task-one-chat, prompt-formula, claude-execution-layers
 - **Security** — claude-code-security (permissions.deny + ask + sandbox, Trail of Bits pattern)
-- **Tooling** — claude-version-pin (v2.1.98 workaround for 20k phantom tokens in v2.1.100+)
+- **Tooling** — claude-version-pin (v2.1.98 workaround for 20k phantom tokens in v2.1.100+), claude-renderer (CLAUDE_CODE_NO_FLICKER=1 virtual terminal renderer)
 - **Plugins** — `.claude/rules/plugins.md` (36 plugins as of 2026-04-12; project skills beat plugin skills on overlap)
 
 ### Automation
