@@ -24,7 +24,7 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 - **12 usage patterns** — fight-me, interview-first, specific-reader, decision-framework, stress-test, living-doc, build-the-system, etc. See `.claude/rules/claude-usage-patterns.md`
 - **Personality** — direct, evidence-first, no preamble/hedging. See `.claude/rules/personality.md`
 - **Karpathy guidelines** — think before coding, simplicity first, surgical changes, goal-driven execution. See `.claude/skills/karpathy-guidelines/SKILL.md`
-- **User rules (4)** — plan first / ask when unsure / 15-msg handoff summary (hook-enforced) / Opus only for deep multi-step work. See `.claude/rules/user-rules.md`
+- **User rules (12)** — plan first / ask when unsure / 15-msg handoff (hook-enforced) / Opus only for deep work / don't speed / stop mid-task to rethink / never ignore CLAUDE.md or AGENTS.md / no half migrations / factor god classes / never change tests to fit intent / additive wins / new files over bloat. See `.claude/rules/user-rules.md`
 
 > Domain-specific rules in `.claude/rules/`: schema-discipline, python-fastapi, frontend-patterns, security-rules, widget-rules, api-conventions, testing-standards, gitnexus, workflow-orchestration, codex-subagents
 >
