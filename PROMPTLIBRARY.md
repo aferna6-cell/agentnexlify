@@ -322,6 +322,29 @@ Each prompt follows this structure:
 
 ---
 
+### BUILD Copy Design Inspiration from URL (v1.0.0)
+
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a frontend designer extracting tokens from a reference URL to inspire (not clone) a new dashboard page.
+
+**Task:** Given a reference URL, extract the design system (colors, typography, spacing, radius, shadows, components, layout) using `chrome-devtools-mcp` or `playwright` MCP, write a markdown artifact to `.claude/artifacts/design-references/`, and use that artifact when building or refactoring a dashboard page.
+1. Invoke `ui-reference` skill — it has the extraction schema + anti-patterns.
+2. Navigate to URL via `chrome-devtools-mcp.navigate` (fallback: `playwright.browser_navigate`).
+3. Snapshot DOM + computed styles for `h1,h2,h3,button,nav,main,section,[role=button]` (first 30).
+4. Dedupe colors (<5% delta), build token table for all 7 categories.
+5. Write `.claude/artifacts/design-references/{source-slug}-{YYYY-MM-DD}.md` using the schema in `.claude/skills/ui-reference/SKILL.md`.
+6. Build the target page under `frontend/src/pages/` using our `design.md` CSS variables but inspired by the artifact's patterns (button radius, card shadow ladder, typography hierarchy).
+7. PR description cites artifact path + source URL.
+
+**Context:** Read `.claude/skills/ui-reference/SKILL.md` for extraction pipeline and anti-patterns; `design.md` for our canonical tokens; `frontend/CONTEXT.md` for page structure and dark-theme rule. Guardrails: NEVER clone a page 1:1 — use as inspiration; NEVER extract logos, icons, illustrations, photos, or copy; NEVER extract from sites behind auth without permission; NEVER extract from tenant sites (multi-tenant privacy); if source is a direct competitor (e.g. GoHighLevel), refuse verbatim copy and offer to extract abstract patterns only.
+
+**Format:** Design reference artifact committed + target page built + PR description linking both. Commit message: `feat(ui): {page name} inspired by {source} (ref artifact included)`.
+
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-15 — Initial version following viral Twitter post about Claude Code UI extraction MCPs. Implementation uses installed `chrome-devtools-mcp` + `playwright` (not third-party MCP) for security.
+
+---
+
 ## Migration & Database
 
 ### DATABASE Schema Change (v1.0.0)
