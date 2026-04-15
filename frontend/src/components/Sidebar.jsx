@@ -94,6 +94,19 @@ const NAV_GROUPS = [
 
 const DEFAULT_EXPANDED = ["overview", "crm"];
 
+// Gated by Marketing Suite add-on ($49.99/mo). If tenant lacks
+// `marketing_addon_active`, these items are hidden from the sidebar entirely.
+// Backend also enforces via addon_gate dependency (defense in depth).
+const MARKETING_ADDON_KEYS = new Set([
+  "local_seo",
+  "social_media",
+  "campaigns",
+  "marketing_dashboard",
+  "ab_tests",
+  "automation_rules",
+  "trigger_logs",
+]);
+
 const ChevronIcon = ({ expanded }) => (
   <svg
     width="12"
@@ -191,11 +204,13 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
   };
 
   const businessType = (user?.businessType || "").toLowerCase();
+  const marketingAddonActive = Boolean(user?.marketing_addon_active);
   const navItems = allNavItems.filter(
     (item) =>
       !item.hidden &&
       (!item.roles || item.roles.includes(userRole)) &&
-      (!item.businessTypes || item.businessTypes.includes(businessType))
+      (!item.businessTypes || item.businessTypes.includes(businessType)) &&
+      (marketingAddonActive || !MARKETING_ADDON_KEYS.has(item.key))
   );
 
   return (

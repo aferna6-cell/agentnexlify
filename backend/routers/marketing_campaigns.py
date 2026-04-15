@@ -16,10 +16,15 @@ from backend.routers.auth import _get_current_tenant
 from backend.services.email_sender import build_unsubscribe_url, send_email
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.twilio_service import send_sms
+from backend.services.addon_gate import require_marketing_addon
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/campaigns", tags=["marketing-campaigns"])
+router = APIRouter(
+    prefix="/api/v1/campaigns",
+    tags=["marketing-campaigns"],
+    dependencies=[Depends(require_marketing_addon)],
+)
 
 VALID_CAMPAIGN_TYPES = {"email", "sms"}
 VALID_CAMPAIGN_STATUSES = {"draft", "scheduled", "sending", "sent", "failed"}

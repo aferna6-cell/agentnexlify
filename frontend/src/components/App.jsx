@@ -9,6 +9,9 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
 import LoginPage from "./LoginPage";
+import MarketingAddonUpsell, {
+  MARKETING_ADDON_GATED_KEYS,
+} from "./MarketingAddonUpsell";
 import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
@@ -354,6 +357,12 @@ export default function App() {
 
   const PageComponent = pages[currentPage] || Dashboard;
 
+  // Marketing Suite add-on gate — block 7 pages when tenant lacks the add-on.
+  // Backend enforces via addon_gate dependency; this is the UI half (answer #5 = C).
+  const marketingAddonGated =
+    MARKETING_ADDON_GATED_KEYS.has(currentPage) &&
+    !user.marketing_addon_active;
+
   return (
     <div className="app">
       <Sidebar
@@ -384,6 +393,8 @@ export default function App() {
         <main className="content">
           {loading ? (
             <SkeletonLoader />
+          ) : marketingAddonGated ? (
+            <MarketingAddonUpsell pageKey={currentPage} />
           ) : (
             <PageErrorBoundary pageKey={currentPage}>
               <Suspense fallback={<SkeletonLoader />}>

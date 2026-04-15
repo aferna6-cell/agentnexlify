@@ -13,10 +13,15 @@ from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
 from backend.routers.auth import _get_current_tenant
+from backend.services.addon_gate import require_marketing_addon
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/social", tags=["social-media"])
+router = APIRouter(
+    prefix="/api/v1/social",
+    tags=["social-media"],
+    dependencies=[Depends(require_marketing_addon)],
+)
 
 VALID_PLATFORMS = {"facebook", "instagram", "twitter", "linkedin", "google_business"}
 VALID_STATUSES = {"draft", "scheduled", "published", "failed"}

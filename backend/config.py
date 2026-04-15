@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     stripe_price_professional_monthly: str = ""
     stripe_price_autopilot_monthly: str = ""
     stripe_price_enterprise_monthly: str = ""
+    stripe_price_marketing_addon_monthly: str = ""
     frontend_url: str = "http://localhost:5173"
     api_url: str = "https://agentnexlify-production.up.railway.app"
     cors_allowed_origins: str = ""

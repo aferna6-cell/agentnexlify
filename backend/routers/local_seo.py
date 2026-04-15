@@ -12,11 +12,16 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
+from backend.services.addon_gate import require_marketing_addon
 from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/seo", tags=["local-seo"])
+router = APIRouter(
+    prefix="/api/v1/seo",
+    tags=["local-seo"],
+    dependencies=[Depends(require_marketing_addon)],
+)
 
 
 # ---------------------------------------------------------------------------

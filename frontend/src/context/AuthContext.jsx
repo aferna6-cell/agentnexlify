@@ -61,7 +61,32 @@ export function AuthProvider({ children }) {
       isTeamMember: payload.is_team_member || false,
       name: payload.name || "",
       userId: payload.user_id || null,
+      marketing_addon_active: false,
+      marketing_addon_grandfathered: false,
     });
+
+    // Fetch live add-on status from /me — JWT claims don't carry addon flags
+    // and plan/addon data must come from live API (frontend-patterns.md).
+    fetch(`${import.meta.env.VITE_API_URL || ""}/api/v1/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => {
+        if (!me) return;
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                plan: me.plan || prev.plan,
+                marketing_addon_active: Boolean(me.marketing_addon_active),
+                marketing_addon_grandfathered: Boolean(
+                  me.marketing_addon_grandfathered
+                ),
+              }
+            : prev
+        );
+      })
+      .catch(() => {});
 
     // Proactive expiry check — logs out before next API call can 401
     const intervalId = setInterval(() => {

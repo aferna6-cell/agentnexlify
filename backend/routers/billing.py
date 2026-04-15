@@ -13,6 +13,10 @@ from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, Port
 from backend.routers.auth import _get_current_tenant
 from backend.services.stripe_service import (
     PLAN_PRICES,
+    STRIPE_ADDON_MARKETING_VALUE,
+    STRIPE_ADDON_METADATA_KEY,
+    cancel_marketing_addon_subscription,
+    create_marketing_addon_checkout_session,
     get_or_create_customer,
 )
 
@@ -121,11 +125,20 @@ async def stripe_webhook(request: Request):
 
     try:
         if event_type == "checkout.session.completed":
-            _handle_checkout_completed(db, data)
+            if _is_marketing_addon_subscription(data):
+                _handle_addon_checkout_completed(db, data)
+            else:
+                _handle_checkout_completed(db, data)
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
-            _handle_subscription_updated(db, data)
+            if _is_marketing_addon_subscription(data):
+                _handle_addon_subscription_updated(db, data)
+            else:
+                _handle_subscription_updated(db, data)
         elif event_type == "customer.subscription.deleted":
-            _handle_subscription_deleted(db, data)
+            if _is_marketing_addon_subscription(data):
+                _handle_addon_subscription_deleted(db, data)
+            else:
+                _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_failed":
             await _handle_payment_failed(db, data)
         else:
@@ -403,3 +416,144 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_ten
         return_url=f"{settings.frontend_url}/billing",
     )
     return PortalResponse(portal_url=session.url)
+
+
+# ---------------------------------------------------------------------------
+# Marketing Suite Add-on — separate $49.99/mo subscription
+# ---------------------------------------------------------------------------
+#
+# Gates 7 features: SEO Audit Hub, Social Media, Marketing Campaigns,
+# Marketing Dashboard, A/B Tests, Automation Rules, Trigger Logs.
+#
+# Add-on is a SEPARATE Stripe subscription (not a subscription item on the
+# primary plan) so billing lifecycle is isolated: cancellation of the main
+# plan does not cancel the add-on and vice versa.
+
+
+@router.post("/marketing-addon/checkout", response_model=CheckoutResponse)
+async def marketing_addon_checkout(claims: dict = Depends(_get_current_tenant)):
+    """Create a Stripe Checkout session for the $49.99/mo Marketing Suite add-on."""
+    tenant_id = claims["tenant_id"]
+    db = get_service_supabase()
+    result = (
+        db.table("tenants")
+        .select("id, owner_email, business_name, marketing_addon_active, "
+                "marketing_addon_stripe_sub_id")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant = result.data[0]
+
+    if tenant.get("marketing_addon_active") and tenant.get(
+        "marketing_addon_stripe_sub_id"
+    ):
+        raise HTTPException(status_code=409, detail="Add-on already active")
+
+    customer = get_or_create_customer(
+        email=tenant.get("owner_email") or "",
+        tenant_id=tenant_id,
+        business_name=tenant.get("business_name"),
+    )
+
+    try:
+        session = create_marketing_addon_checkout_session(
+            tenant_id=tenant_id,
+            customer_id=customer.id,
+            success_url=(
+                f"{settings.frontend_url}/billing/success"
+                "?addon=marketing&session_id={CHECKOUT_SESSION_ID}"
+            ),
+            cancel_url=f"{settings.frontend_url}/billing/cancel?addon=marketing",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+    logger.info("Created marketing addon checkout session %s for tenant %s",
+                session.id, tenant_id)
+    return CheckoutResponse(checkout_url=session.url)
+
+
+@router.post("/marketing-addon/cancel")
+async def marketing_addon_cancel(claims: dict = Depends(_get_current_tenant)):
+    """Cancel the Marketing Suite add-on at period end."""
+    tenant_id = claims["tenant_id"]
+    db = get_service_supabase()
+    result = (
+        db.table("tenants")
+        .select("marketing_addon_stripe_sub_id, marketing_addon_grandfathered")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    sub_id = result.data[0].get("marketing_addon_stripe_sub_id")
+    grandfathered = result.data[0].get("marketing_addon_grandfathered")
+
+    if grandfathered and not sub_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Access is grandfathered — no subscription to cancel",
+        )
+    if not sub_id:
+        raise HTTPException(status_code=404, detail="No active add-on subscription")
+
+    cancel_marketing_addon_subscription(sub_id)
+    logger.info("Marketing addon cancel-at-period-end for tenant %s sub %s",
+                tenant_id, sub_id)
+    return {"status": "scheduled_cancel"}
+
+
+def _is_marketing_addon_subscription(obj: dict) -> bool:
+    """Return True when Stripe subscription/checkout metadata tags it as marketing add-on."""
+    metadata = obj.get("metadata") or {}
+    if metadata.get(STRIPE_ADDON_METADATA_KEY) == STRIPE_ADDON_MARKETING_VALUE:
+        return True
+    sub_meta = (obj.get("subscription_data") or {}).get("metadata") or {}
+    return sub_meta.get(STRIPE_ADDON_METADATA_KEY) == STRIPE_ADDON_MARKETING_VALUE
+
+
+def _handle_addon_checkout_completed(db, session: dict) -> None:
+    tenant_id = _resolve_tenant_id(db, session)
+    if not tenant_id:
+        logger.warning("addon checkout: could not resolve tenant")
+        return
+    subscription_id = session.get("subscription")
+    from datetime import datetime, timezone
+    db.table("tenants").update({
+        "marketing_addon_active": True,
+        "marketing_addon_stripe_sub_id": subscription_id,
+        "marketing_addon_started_at": datetime.now(timezone.utc).isoformat(),
+        "marketing_addon_grandfathered": False,
+    }).eq("id", tenant_id).execute()
+    logger.info("Tenant %s marketing add-on activated via subscription %s",
+                tenant_id, subscription_id)
+
+
+def _handle_addon_subscription_updated(db, subscription: dict) -> None:
+    tenant_id = _resolve_tenant_from_subscription(db, subscription)
+    if not tenant_id:
+        return
+    status = subscription.get("status")
+    active = status in {"active", "trialing"}
+    db.table("tenants").update({
+        "marketing_addon_active": active,
+        "marketing_addon_stripe_sub_id": subscription.get("id"),
+    }).eq("id", tenant_id).execute()
+    logger.info("Tenant %s marketing add-on sub %s -> status=%s (active=%s)",
+                tenant_id, subscription.get("id"), status, active)
+
+
+def _handle_addon_subscription_deleted(db, subscription: dict) -> None:
+    tenant_id = _resolve_tenant_from_subscription(db, subscription)
+    if not tenant_id:
+        return
+    db.table("tenants").update({
+        "marketing_addon_active": False,
+        "marketing_addon_stripe_sub_id": None,
+    }).eq("id", tenant_id).execute()
+    logger.info("Tenant %s marketing add-on cancelled", tenant_id)

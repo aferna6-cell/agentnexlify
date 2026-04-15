@@ -10,10 +10,15 @@ from pydantic import BaseModel, Field
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
+from backend.services.addon_gate import require_marketing_addon
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/automation-rules", tags=["automation-rules"])
+router = APIRouter(
+    prefix="/api/v1/automation-rules",
+    tags=["automation-rules"],
+    dependencies=[Depends(require_marketing_addon)],
+)
 
 VALID_TRIGGER_TYPES = {
     "lead_captured",
