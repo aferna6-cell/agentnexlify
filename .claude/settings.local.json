@@ -7,7 +7,10 @@
       "Bash(mkdir -p \"C:/Users/aidan/AppData/Local/Programs/nodejs/node_modules/npm/node_modules/walk-up-path\")",
       "Read(//c/Users/aidan/AppData/Local/Programs/nodejs/node_modules/npm/node_modules/**)",
       "Bash(tar -xzf /tmp/wup.tgz --strip-components=1)",
-      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\);console.log\\(d.version,d.dist.tarball\\)\")"
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\);console.log\\(d.version,d.dist.tarball\\)\")",
+      "Bash(rm -f \"C:/Users/aidan/Downloads/agentnexlify-main/.claude/state/message-count\")",
+      "Bash(git -C \"C:/Users/aidan/Downloads/agentnexlify-main\" add .claude/rules/user-rules.md .claude/settings.json scripts/claude-hooks/message-counter.sh CLAUDE.md)",
+      "Bash(git -C \"C:/Users/aidan/Downloads/agentnexlify-main\" status --short)"
     ]
   }
 }
