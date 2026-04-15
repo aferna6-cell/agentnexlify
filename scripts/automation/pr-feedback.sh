@@ -8,10 +8,15 @@ cd "$REPO_ROOT"
 LOG_DIR="$REPO_ROOT/logs"
 mkdir -p "$LOG_DIR"
 TS="$(date -Iseconds)"
+CLAUDE_CODE_PACKAGE="${CLAUDE_CODE_PACKAGE:-@anthropic-ai/claude-code@2.1.98}"
+
+run_claude() {
+  npx -y "$CLAUDE_CODE_PACKAGE" "$@"
+}
 
 command -v gh >/dev/null || exit 1
 gh auth status >/dev/null 2>&1 || exit 1
-command -v claude >/dev/null || exit 1
+command -v npx >/dev/null || exit 1
 
 # find oldest open PR with auto-pr label on its linked issue
 pr_json="$(gh pr list --state open --json number,headRefName,title,url --limit 20)"
@@ -57,7 +62,7 @@ Rules:
 EOF
 )
 
-echo "$FEEDBACK_PROMPT" | claude -p --model claude-sonnet-4-6 --dangerously-skip-permissions 2>&1 | tee "$LOG_DIR/pr-$PR_NUM.log"
+echo "$FEEDBACK_PROMPT" | run_claude -p --model claude-sonnet-4-6 --dangerously-skip-permissions 2>&1 | tee "$LOG_DIR/pr-$PR_NUM.log"
 
 if git log "origin/$BRANCH..HEAD" --oneline | grep -q .; then
   git push origin "$BRANCH"

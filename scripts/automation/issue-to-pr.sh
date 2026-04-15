@@ -16,11 +16,16 @@ ASSIGNEE="${ASSIGNEE:-@me}"
 MAX_CONCURRENT="${MAX_CONCURRENT:-1}"
 BUDGET_USD="${ANTHROPIC_BUDGET_USD:-5}"
 BRANCH_PREFIX="auto/issue"
+CLAUDE_CODE_PACKAGE="${CLAUDE_CODE_PACKAGE:-@anthropic-ai/claude-code@2.1.98}"
+
+run_claude() {
+  npx -y "$CLAUDE_CODE_PACKAGE" "$@"
+}
 
 # --- guardrails ---
 command -v gh >/dev/null || { echo "gh not installed"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "gh not authed"; exit 1; }
-command -v claude >/dev/null || { echo "claude CLI not installed"; exit 1; }
+command -v npx >/dev/null || { echo "npx not installed"; exit 1; }
 
 # --- pick issue ---
 issue_json="$(gh issue list \
@@ -65,7 +70,7 @@ Ready = goal concrete, files identifiable, success criteria inferable, no archit
 EOF
 )
 
-classification="$(echo "$CLASSIFY_PROMPT" | claude -p --model claude-haiku-4-5-20251001 --output-format text 2>/dev/null || echo '{"ready":false,"reason":"classifier failed","clarifying_questions":["rerun manually"]}')"
+classification="$(echo "$CLASSIFY_PROMPT" | run_claude -p --model claude-haiku-4-5-20251001 --output-format text 2>/dev/null || echo '{"ready":false,"reason":"classifier failed","clarifying_questions":["rerun manually"]}')"
 
 ready="$(echo "$classification" | jq -r .ready 2>/dev/null || echo false)"
 
@@ -109,7 +114,7 @@ EOF
 )
 
 cd "$WT_DIR"
-echo "$EXEC_PROMPT" | claude -p --model claude-sonnet-4-6 --dangerously-skip-permissions 2>&1 | tee "$LOG_DIR/issue-$N.log"
+echo "$EXEC_PROMPT" | run_claude -p --model claude-sonnet-4-6 --dangerously-skip-permissions 2>&1 | tee "$LOG_DIR/issue-$N.log"
 
 # --- check for commits ---
 if ! git log origin/main..HEAD --oneline | grep -q .; then

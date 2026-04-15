@@ -16,6 +16,7 @@ Use this file as a **thin adapter for Codex and general coding agents**.
 ## Canonical Sources
 - **Repo brain:** `CLAUDE.md`
 - **Machine-readable index:** `.ai/manifest.json`
+- **Agent-system guardrail:** `scripts/check_agent_system.py`
 - **Runtime AI audit:** `docs/AI_ARCHITECTURE_AUDIT.md`
 - **Agent-system policy:** `docs/AGENT_SYSTEM_PLAN.md`
 - **Architecture decisions:** `docs/dev-knowledge/architecture-decisions.md`
@@ -70,6 +71,8 @@ For non-trivial coding work:
 - Backend dev: `uvicorn backend.main:app --reload --port 8000`
 - Frontend dev: `cd frontend && npm run dev`
 - Frontend build: `cd frontend && npm run build`
+- Agent system check: `npm run agent-system:check`
+- Pinned Claude Code: `npm run claude:2.1.98 -- --version`
 
 ## Note
 If this file and `CLAUDE.md` disagree, **follow `CLAUDE.md`** and then update this adapter.

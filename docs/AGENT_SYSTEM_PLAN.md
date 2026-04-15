@@ -1,6 +1,6 @@
 # Agent System Plan
 
-_Last updated: 2026-04-05_
+_Last updated: 2026-04-15_
 
 ## Purpose
 This document defines the intended steady-state for AgentNexLiFy's coding-agent system.
@@ -12,6 +12,8 @@ It exists because the repo has grown a powerful agent stack across multiple file
 - `.claude/commands/*`
 - `.claude/skills/*`
 - `.codex/skills/*`
+- `.claude/everything-claude-code.lock.json`
+- `scripts/check_agent_system.py`
 
 This plan makes the hierarchy explicit.
 
@@ -103,6 +105,20 @@ Why:
 - `performance-optimizer`
 - `refactor-cleaner`
 - `architect`
+- `python-reviewer`
+- `typescript-reviewer`
+- `database-reviewer`
+- `type-design-analyzer`
+- `silent-failure-hunter`
+
+### Planning / loop operations
+- `planner`
+- `loop-operator`
+- `code-explorer`
+- `docs-lookup`
+- `e2e-runner`
+- `build-error-resolver`
+- `pr-test-analyzer`
 
 ### Experimental / harness
 - `gan-planner`
@@ -188,6 +204,19 @@ Default split:
    - `.ai/manifest.json`
    - `AGENTS.md`
 4. Keep `AGENTS.md` short enough that drift is obvious and easy to fix
+5. After touching `.claude/`, `.github/workflows/autopilot-*`, `package.json`, or this plan, run `npm run agent-system:check`
+
+## 2026-04-15 System Hardening
+
+AgentNexLiFy now vendors the Everything Claude Code agent roster lazily instead of installing the full plugin into every session.
+
+- Source pin: `affaan-m/everything-claude-code` at `7eb7c598fba384a5e5829928945d59868c6eb075`
+- Lock file: `.claude/everything-claude-code.lock.json`
+- Vendored license: `.claude/everything-claude-code.LICENSE`
+- Claude Code pin: `npm run claude:2.1.98`
+- Guardrail: `scripts/check_agent_system.py`, also wired into PR validation
+
+The upstream agents cover planning, docs lookup, loop operations, E2E execution, build-failure triage, language-specific review, PR test analysis, open-source packaging/sanitizing, accessibility, SEO, and silent-failure hunting. Project-specific agents still win for AgentNexLiFy invariants like `client_id`, widget sync, migrations, and FastAPI constraints.
 
 ## Recommended Near-Term Follow-Ups
 1. label experimental agents/skills directly in docs

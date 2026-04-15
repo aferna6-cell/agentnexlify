@@ -47,6 +47,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 
 ### Agents + skills
 - 57 agents in `.claude/agents/` — backend-dev, frontend-dev, schema-guardian, widget-specialist, devops, opus-advisor, sonnet-executor, vertical-checker, qa-tester, gan-*, + 39 from `everything-claude-code` (per-language reviewers, build resolvers, loop-operator, etc.). Load lazily; don't burn context unless invoked.
+- Everything Claude Code source is pinned in `.claude/everything-claude-code.lock.json`; do not load the full plugin surface by default.
 - Skills in `.claude/skills/` — caveman-mode, schema-guard, widget-test, karpathy-guidelines, compound-engineering, tdd-workflow, issue-to-pr-loop, feature-build, + research-backed additions (supabase-postgres-best-practices, vercel-react-best-practices, skill-creator, mcp-builder, churn-prevention, email-sequence, seo-audit-marketing).
 - Rules in `.claude/rules/` — domain + behavioral + security hardening. Index below.
 
@@ -68,7 +69,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 
 ### Design principles
 - **Multi-tenant from day one** — every request carries a tenant/client ID. Never write un-scoped queries.
-- **Karpathy** — think before coding, simplicity first, surgical changes, goal-driven. See `.claude/skills/karpathy-guidelines/SKILL.md`.
+- **Karpathy** — Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution. See `.claude/skills/karpathy-guidelines/SKILL.md`.
 - **Deterministic-first** — don't use an LLM for something a script can do.
 
 ### Competitive positioning (why we're building this)
@@ -85,6 +86,8 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 cd frontend && npm run dev              # frontend dev (Vite :3001)
 cd frontend && npm run build            # prod build
 python -m uvicorn backend.main:app --reload --port 8000   # backend dev (requires .venv)
+npm run agent-system:check              # verify Claude/Codex agent control plane
+npm run claude:2.1.98 -- --version      # pinned Claude Code runner
 bash scripts/install-hooks.sh           # install git hooks
 bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 ```
@@ -119,6 +122,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **Pre-commit hook** — blocks secrets, `from __future__ import annotations`, bare-except blocks
 - **Pre-push hook** — frontend build + schema consistency check
 - **GitHub Actions** — daily health check, PR validation, auto bug logging, AI auto-improve
+- **Agent system guardrail** - `scripts/check_agent_system.py` runs in PR validation and proves CLAUDE.md, Everything Claude Code agents, Claude Code 2.1.98 pin, and issue-to-PR workflows are intact.
 - **Claude Code hooks** — pre-edit sensitive-file warn, post-edit pattern scan, anti-desperation, UltraPlan/UltraThink, 90% confidence gate, 15-msg handoff summary (`scripts/claude-hooks/message-counter.sh`)
 - **Issue → PR loop** — `.claude/skills/issue-to-pr-loop/SKILL.md`. Polls assigned GH issues every 15 min, Haiku classifies, Sonnet worktree implements, PR opens + feedback loop patches reviews. Replaces `autopilot-loop` (kept for reference).
 - **KB auto-populate** — twice daily 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`. Log at `knowledge-base/log.md`.
