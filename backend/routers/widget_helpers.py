@@ -1450,3 +1450,180 @@ async def _send_new_lead_email_notification(
             "email_notification: FAILED for tenant=%s lead=%s",
             tenant_id, lead_name, exc_info=True,
         )
+
+
+# ---------------------------------------------------------------------------
+# Structured-extractor lead enrichment (background task)
+# ---------------------------------------------------------------------------
+
+
+# Map managed-agent schema field → live `leads` table column.
+# Fields the agent returns but we don't merge: source (set at lead creation).
+_ENRICHMENT_FIELD_MAP: dict[str, str] = {
+    "name": "name",
+    "email": "email",
+    "phone": "phone",
+    "interest": "areas_of_interest",  # live schema uses areas_of_interest
+    "timeline": "timeline",
+    "budget": "budget",
+}
+
+
+async def _enrich_lead_from_message(
+    tenant_id: str,
+    session_id: str,
+    raw_text: str,
+    regex_extracted: dict[str, str],
+) -> None:
+    """Background task: run structured_extractor on a single user message
+    and merge any new fields into the existing lead row.
+
+    Gated by `widget_configs.enable_structured_lead_parser` at the call
+    site (backend/routers/widget_chat.py). Failure modes:
+
+      - Extractor raises ValueError (parse failure) → log warning, return.
+      - Extractor raises any other exception → log exception, return.
+      - No safe dedup key (no email, no phone in either dict) → log info,
+        return.
+      - Lead row not found yet (race with `_capture_leads_from_session`)
+        → log info, return. The next message will retry naturally.
+
+    NEVER raises. FastAPI BackgroundTasks would propagate exceptions
+    into the response cycle if it did.
+
+    Merge policy: regex wins on fields both parsers populated. Extractor
+    only fills fields the regex left blank — regex is literal and cheap,
+    extractor is best-effort.
+    """
+    # Lazy import to avoid import-time hits when the flag is off in
+    # most tenants. The service module pulls in the managed-agents
+    # client which has its own httpx warmup cost.
+    from backend.services.structured_extractor import extract_structured
+
+    try:
+        result = extract_structured(
+            tenant_id=tenant_id,
+            raw_text=raw_text,
+            target_schema="lead",
+        )
+    except ValueError as exc:
+        logger.warning(
+            "lead_enrichment: structured_extractor parse failed for session=%s: %s",
+            session_id, exc,
+        )
+        return
+    except Exception:
+        logger.exception(
+            "lead_enrichment: unexpected extractor error for session=%s",
+            session_id,
+        )
+        return
+
+    # Merge: regex wins on overlapping fields, extractor fills blanks.
+    merged: dict[str, str] = dict(regex_extracted)
+    fields_added: list[str] = []
+    for agent_key in _ENRICHMENT_FIELD_MAP:
+        val = result.get(agent_key)
+        if not val:
+            continue
+        if not isinstance(val, str):
+            # Defensive: extractor occasionally returns non-strings for
+            # numeric budget. Coerce to str so the DB column accepts it.
+            val = str(val).strip()
+        if not val:
+            continue
+        if not merged.get(agent_key):
+            merged[agent_key] = val
+            fields_added.append(agent_key)
+
+    if not fields_added:
+        # Extractor had nothing new to offer.
+        return
+
+    # Find the lead row to update. Live schema dedups by email + client_id
+    # (matches `_capture_leads_from_session` above). If we don't have an
+    # email or phone, we can't safely dedup — skip and let the next
+    # message try again with hopefully better data.
+    lookup_email = merged.get("email")
+    lookup_phone = merged.get("phone")
+    if not lookup_email and not lookup_phone:
+        logger.info(
+            "lead_enrichment: no email/phone in merged dict for session=%s, skipping",
+            session_id,
+        )
+        return
+
+    db = get_service_supabase()
+    try:
+        if lookup_email:
+            existing = (
+                tenant_select(db, "leads", tenant_id, "id, name, email, phone, areas_of_interest, timeline, budget")
+                .eq("email", lookup_email)
+                .limit(1)
+                .execute()
+            )
+        else:
+            existing = (
+                tenant_select(db, "leads", tenant_id, "id, name, email, phone, areas_of_interest, timeline, budget")
+                .eq("phone", lookup_phone)
+                .limit(1)
+                .execute()
+            )
+    except Exception:
+        logger.warning(
+            "lead_enrichment: lead lookup failed for session=%s", session_id, exc_info=True,
+        )
+        return
+
+    if not existing.data:
+        # Race with regex capture path — lead not created yet. Drop it,
+        # next user message will retry once regex_capture has run.
+        logger.info(
+            "lead_enrichment: no lead found for session=%s (race with regex capture, will retry)",
+            session_id,
+        )
+        return
+
+    lead = existing.data[0]
+    lead_id = lead["id"]
+
+    # Build update payload mapped to live column names. Only include
+    # fields the existing row is missing — never overwrite.
+    update_payload: dict[str, str] = {}
+    truly_added: list[str] = []
+    for agent_key in fields_added:
+        db_col = _ENRICHMENT_FIELD_MAP[agent_key]
+        if not lead.get(db_col):
+            update_payload[db_col] = merged[agent_key]
+            truly_added.append(agent_key)
+
+    if not update_payload:
+        # Existing lead already has these fields populated from another path.
+        return
+
+    try:
+        tenant_update(db, "leads", tenant_id, update_payload).eq("id", lead_id).execute()
+    except Exception:
+        logger.warning(
+            "lead_enrichment: leads.update failed for lead=%s session=%s",
+            lead_id, session_id, exc_info=True,
+        )
+        return
+
+    try:
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="lead_enriched",
+            description=f"Lead fields enriched by structured_extractor: {', '.join(truly_added)}",
+            lead_id=lead_id,
+            metadata={
+                "session_id": session_id,
+                "fields_added": truly_added,
+                "source": "structured_extractor",
+            },
+        )
+    except Exception:
+        logger.warning(
+            "lead_enrichment: log_activity failed for lead=%s session=%s",
+            lead_id, session_id, exc_info=True,
+        )

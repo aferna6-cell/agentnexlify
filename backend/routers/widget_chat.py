@@ -35,6 +35,7 @@ from backend.routers.widget_helpers import (
     _capture_leads_from_session,
     _categorize_conversation,
     _check_origin,
+    _enrich_lead_from_message,
     _extract_action_items,
     _extract_lead_info,
     _get_cached,
@@ -948,6 +949,21 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     background_tasks.add_task(
         _capture_leads_from_session, tenant["id"], req.session_id, conversation_id,
     )
+
+    # 11b. Structured-extractor lead enrichment (opt-in per tenant).
+    # Runs the structured_extractor managed agent on this single message
+    # to fill in name/email/phone/interest/timeline/budget fields the
+    # regex parser missed. Background task → zero latency impact on the
+    # response. Gated on widget_configs.enable_structured_lead_parser
+    # (migration 103, default false). See specs/lead-parser-replacement_spec.md.
+    if widget.get("enable_structured_lead_parser"):
+        background_tasks.add_task(
+            _enrich_lead_from_message,
+            tenant["id"],
+            req.session_id,
+            req.message,
+            _extract_lead_info(req.message),
+        )
 
     # 12. AI conversation categorization (every 5th message to save API calls)
     total_msgs = len(messages) + 2  # current user message + assistant reply
