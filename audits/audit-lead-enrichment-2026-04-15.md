@@ -22,18 +22,11 @@
 
 ---
 
-## Step 1 — Find MTOptions tenant UUID
+## Step 1 — MTOptions tenant UUID
 
-```sql
-SELECT id, business_name, plan, created_at
-FROM tenants
-WHERE lower(business_name) LIKE '%mt%options%'
-   OR lower(business_name) LIKE '%mtoptions%'
-ORDER BY created_at DESC
-LIMIT 5;
-```
-
-Record UUID here: `________________________________`
+**Confirmed:** `6d76f24b-dd71-470c-9b86-03ee35b7e887`  
+Sources: `scripts/test_weekly_digest.py:27`, `skills/llm-council/transcripts/council-transcript-2026-04-02-chatbot-audit.md:7`  
+Note: a second record `69411b59-5b0a-4eb2-88a6-525eee47133d` exists (old duplicate pre-2026-04-01 merge). Active record is `6d76f24b`.
 
 ---
 
@@ -43,17 +36,17 @@ Record UUID here: `________________________________`
 -- Confirm current state first
 SELECT tenant_id, enable_structured_lead_parser, enable_ai_fallback
 FROM widget_configs
-WHERE tenant_id = '<MTOPTIONS-UUID>';
+WHERE tenant_id = '6d76f24b-dd71-470c-9b86-03ee35b7e887';
 
 -- Enable
 UPDATE widget_configs
 SET enable_structured_lead_parser = true
-WHERE tenant_id = '<MTOPTIONS-UUID>';
+WHERE tenant_id = '6d76f24b-dd71-470c-9b86-03ee35b7e887';
 
 -- Verify
 SELECT tenant_id, enable_structured_lead_parser
 FROM widget_configs
-WHERE tenant_id = '<MTOPTIONS-UUID>';
+WHERE tenant_id = '6d76f24b-dd71-470c-9b86-03ee35b7e887';
 ```
 
 **Enable timestamp:** ________________________________
@@ -74,7 +67,7 @@ SELECT
     lead_id
 FROM activity_log
 WHERE activity_type = 'lead_enriched'
-  AND tenant_id = '<MTOPTIONS-UUID>'
+  AND tenant_id = '6d76f24b-dd71-470c-9b86-03ee35b7e887'
 ORDER BY created_at DESC
 LIMIT 50;
 ```
@@ -92,7 +85,7 @@ SELECT
         / NULLIF(COUNT(*), 0), 1
     )                                                  AS pct_full_contact
 FROM leads
-WHERE client_id = '<MTOPTIONS-UUID>'
+WHERE client_id = '6d76f24b-dd71-470c-9b86-03ee35b7e887'
   AND created_at > now() - interval '7 days';
 ```
 
@@ -103,7 +96,7 @@ SELECT
     COUNT(*)                        AS enrichments
 FROM activity_log
 WHERE activity_type = 'lead_enriched'
-  AND tenant_id = '<MTOPTIONS-UUID>'
+  AND tenant_id = '6d76f24b-dd71-470c-9b86-03ee35b7e887'
   AND created_at > now() - interval '24 hours'
 GROUP BY 1
 ORDER BY 1;
