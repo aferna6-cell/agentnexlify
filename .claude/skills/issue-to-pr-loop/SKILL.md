@@ -10,9 +10,20 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 effort: high
 ---
 
-# Issue → PR Loop
+# Issue → PR Loop — Full GitHub Automation
 
 Full automation. Replaces `autopilot-loop`. Pattern: **classify → execute → PR feedback**.
+
+## When to Use
+- Setting up the autonomous GH issue → PR pipeline for the first time
+- User says "issue to pr", "automate my issues", "auto pr", "full automation"
+- Configuring the 15-min polling cadence or classification prompt
+- Debugging a stuck issue in the loop
+
+## When NOT to Use
+- One-off issue fix (handle manually)
+- Autopilot-loop maintenance (that's the legacy skill — keep them separate)
+- Nightly commit review (use `nightly-commit-review` skill instead)
 
 ## Flow
 

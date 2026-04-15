@@ -3,11 +3,28 @@ name: seo-audit-marketing
 description: On-page + local SEO audit workflow for tenant business sites. Load when editing backend/routers/local_seo.py, building SEO reports for tenants, or diagnosing organic traffic issues in the marketing addon.
 origin: coreyhaines31/marketingskills (adapted)
 version: 1.0.0
+triggers:
+  - seo audit
+  - tenant seo report
+  - local seo
+  - organic traffic issue
+  - on-page audit
 ---
 
-# SEO Audit (Marketing addon)
+# SEO Audit — Tenant Marketing Addon
 
 Tenant-facing SEO audit workflow for AgentNexLiFy marketing addon. Different from infra-level SEO — this is the audit we run FOR tenants on THEIR websites.
+
+## When to Use
+- Editing `backend/routers/local_seo.py`
+- Building an SEO report for a specific tenant
+- Diagnosing why a tenant's organic traffic dropped
+- Pre-launch checklist for a new tenant site
+
+## When NOT to Use
+- AgentNexLiFy's own marketing site (use `seo-specialist` agent instead)
+- Paid search / SEM (this is organic only)
+- Content strategy / topic research (use `deep-research` first)
 
 ## Audit phases
 

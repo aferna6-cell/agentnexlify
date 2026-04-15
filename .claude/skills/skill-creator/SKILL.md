@@ -3,7 +3,27 @@ name: skill-creator
 description: Create new skills, edit existing skills, or benchmark skill triggering accuracy. Load when user says "create a skill", "add a skill to .claude/skills/", "improve this SKILL.md description", "eval this skill", or "why isn't my skill triggering".
 origin: https://github.com/anthropics/skills/tree/main/skills/skill-creator
 version: 1.0.0
+triggers:
+  - create a skill
+  - add a skill
+  - improve SKILL.md
+  - eval this skill
+  - why isn't my skill triggering
+  - skill description
 ---
+
+# Skill Creator — SKILL.md Authoring + Eval
+
+## When to Use
+- Creating a new `.claude/skills/<name>/SKILL.md`
+- Rewriting an existing skill's description for better triggering
+- Evaluating whether a skill auto-loads on the right prompts
+- Debugging why a skill doesn't load when it should
+
+## When NOT to Use
+- Writing rules (use `.claude/rules/`, not skills)
+- Writing commands (use `.claude/commands/`, not skills)
+- Writing agents (use `.claude/agents/`, not skills)
 
 # Skill Creator (thin wrapper)
 

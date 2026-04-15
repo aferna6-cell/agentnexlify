@@ -3,11 +3,29 @@ name: churn-prevention
 description: Retention patterns for SaaS cancel/downgrade/pause flows. Load when editing frontend/src/pages/BillingPage.jsx cancel UX, backend/services/stripe_service.py subscription ops, or designing win-back logic for free/growth/professional/autopilot/enterprise tiers.
 origin: coreyhaines31/marketingskills (adapted)
 version: 1.0.0
+triggers:
+  - churn prevention
+  - cancel flow
+  - retention offers
+  - pause subscription
+  - downgrade instead of cancel
+  - win-back
 ---
 
-# Churn Prevention (thin wrapper)
+# Churn Prevention — Retention Playbook
 
 Retention playbook adapted for AgentNexLiFy plans: free, growth ($249), professional ($499), autopilot ($299), enterprise ($899).
+
+## When to Use
+- Editing `frontend/src/pages/BillingPage.jsx` cancel/downgrade UX
+- Editing `backend/services/stripe_service.py` subscription state transitions
+- Designing win-back email sequences or in-app offers
+- Reviewing churn metrics before a pricing change
+
+## When NOT to Use
+- Fresh signup / onboarding flows (use `industry-content` or `email-sequence`)
+- Pure billing bug-fixes with no retention logic change
+- Tenant-facing marketing content (use `email-sequence` / `seo-audit-marketing`)
 
 ## Core offer patterns (use in order of reversibility)
 

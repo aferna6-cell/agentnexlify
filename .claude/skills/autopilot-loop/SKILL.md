@@ -20,7 +20,18 @@ triggers:
 effort: high
 ---
 
-# Autopilot Loop
+# Autopilot Loop — GitHub Issue → PR Automation (legacy)
+
+## When to Use
+- Maintaining the legacy Codex-worktree autopilot pipeline
+- Explaining historical design to new contributors
+- Debugging classification of ai-ready labels
+- Transitional work before fully cutting over to `issue-to-pr-loop`
+
+## When NOT to Use
+- New autonomous workflow setup → use `issue-to-pr-loop` (replacement)
+- Nightly bug review → use `nightly-commit-review`
+- One-off PR work
 
 Use this skill when the user wants to configure, inspect, or operate the
 GitHub-issue-driven autopilot loop for AgentNexLiFy.

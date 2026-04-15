@@ -3,9 +3,29 @@ name: mcp-builder
 description: Build or debug MCP servers that expose external services (Railway, Twilio, Resend, custom) as Claude tools. Load when user says "add MCP server", "build an MCP for X", "FastMCP server", "new MCP tool", or when extending .mcp.json entries beyond existing supabase.
 origin: https://github.com/anthropics/skills/tree/main/skills/mcp-builder
 version: 1.0.0
+triggers:
+  - add MCP server
+  - build an MCP
+  - FastMCP server
+  - new MCP tool
+  - wire up MCP
+  - extend .mcp.json
 ---
 
-# MCP Server Development Guide (thin wrapper)
+# MCP Builder — FastMCP Server Development
+
+Adapted from anthropics/skills. Our stack is Python, so default to FastMCP.
+
+## When to Use
+- Building a new MCP server for Railway / Twilio / Resend / custom internal tool
+- Debugging existing MCP server connection or tool registration
+- Extending `.mcp.json` with a new entry
+- Designing the tool surface area for a newly wired external service
+
+## When NOT to Use
+- Simple HTTP API calls that don't need MCP abstraction
+- Calling existing MCPs (just invoke them — don't re-build)
+- OAuth-only integrations where a plain Python client suffices
 
 Adapted from anthropics/skills. Our stack is Python, so default to FastMCP.
 

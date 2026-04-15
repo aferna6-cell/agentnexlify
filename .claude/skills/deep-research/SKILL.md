@@ -15,6 +15,20 @@ triggers:
 effort: high
 ---
 
+# Deep Research — Multi-Source Cited Reports
+
+## When to Use
+- Multi-source web research with citations needed
+- User says "research", "deep dive", "investigate", "competitive analysis", "market sizing"
+- Pre-decision due diligence
+- Building a KB-ingestible source doc
+
+## When NOT to Use
+- Quick factual lookup (use `context7` MCP or direct web fetch)
+- Questions already answered in `knowledge-base/wiki/` (use `kb-query`)
+- Internal codebase research (use `code-explorer` agent)
+---
+
 # Deep Research
 
 Produce thorough, cited research reports from multiple web sources using firecrawl and exa MCP tools.

@@ -3,11 +3,29 @@ name: email-sequence
 description: Design multi-email campaigns (onboarding, nurture, re-engagement, upsell). Load when editing backend/routers/marketing_campaigns.py, backend/routers/sequences.py, or authoring tenant email flows via Resend integration.
 origin: coreyhaines31/marketingskills (adapted)
 version: 1.0.0
+triggers:
+  - email sequence
+  - drip campaign
+  - onboarding emails
+  - nurture sequence
+  - re-engagement flow
+  - upsell campaign
 ---
 
-# Email Sequence (thin wrapper)
+# Email Sequence — Multi-Email Campaign Design
 
 Multi-email campaign design for AgentNexLiFy marketing addon. Uses Resend via `backend/services/resend_service.py` (or equivalent).
+
+## When to Use
+- Editing `backend/routers/marketing_campaigns.py` or `backend/routers/sequences.py`
+- Authoring tenant-facing email flows via Resend
+- Designing onboarding/nurture/re-engagement/upsell sequences
+- Planning cadence + branching logic for campaigns
+
+## When NOT to Use
+- Single transactional emails (use Resend directly)
+- In-app notifications (different channel entirely)
+- Churn-specific retention emails (use `churn-prevention` first for offer design)
 
 ## Five sequence archetypes
 

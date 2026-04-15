@@ -13,6 +13,19 @@ triggers:
 effort: medium
 ---
 
+# Challenge Assumptions — Steelman Counterarguments
+
+## When to Use
+- Generating counter-arguments against recent wiki articles
+- User says "challenge assumptions" / "assumption review" / `/challenge-assumptions`
+- Preventing echo-chamber thinking in the KB
+- After a big wiki ingest batch — pressure-test before compiling
+
+## When NOT to Use
+- Fresh ingestion — pattern belongs AFTER compilation, not during
+- User wants a straightforward summary (use `kb-query` instead)
+- Single-article fact-check (use `kb-health` instead)
+
 # challenge-assumptions
 
 Question every belief in the knowledge base. Read recent wiki articles and generate steelman

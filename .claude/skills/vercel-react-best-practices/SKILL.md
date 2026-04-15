@@ -3,11 +3,31 @@ name: vercel-react-best-practices
 description: React performance + bundle best practices from Vercel Engineering. Load when writing, reviewing, or refactoring components in frontend/src/, data fetching in frontend/src/utils/api/, or diagnosing slow re-renders or large bundles. Project uses Vite (not Next.js) — ignore Next-specific rules.
 origin: https://github.com/vercel-labs/agent-skills
 version: 1.0.0
+triggers:
+  - slow re-render
+  - large bundle
+  - react performance
+  - waterfall fetch
+  - memo component
+  - bundle size
 ---
 
-# Vercel React Best Practices (thin wrapper)
+# Vercel React Best Practices
 
-70 rules from upstream, prioritized by impact. Core categories relevant to our Vite/React 18 stack:
+## When to Use
+- Writing/refactoring components in `frontend/src/`
+- Touching data fetching in `frontend/src/utils/api/`
+- Diagnosing slow re-renders or large bundles
+- Reviewing a PR that touches perf-sensitive UI
+
+## When NOT to Use
+- Next.js-specific rules (we're on Vite — skip)
+- Backend-only changes
+- Widget (different build pipeline — see `widget-rules.md`)
+
+## 70 rules prioritized
+
+Core categories relevant to our Vite/React 18 stack (upstream vercel-labs/agent-skills):
 
 1. **Eliminating waterfalls (CRITICAL, `async-` prefix)** — parallelize independent fetches with `Promise.all` or `Promise.allSettled`. Never chain awaits when data is independent.
 2. **Bundle size (CRITICAL, `bundle-` prefix)** — dynamic `import()` for heavy routes; tree-shake; avoid barrel exports that pull the world.

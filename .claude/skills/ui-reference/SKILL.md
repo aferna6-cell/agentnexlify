@@ -14,6 +14,20 @@ triggers:
 effort: medium
 ---
 
+# UI Reference — Design Token Extraction
+
+## When to Use
+- Building a new dashboard page and want inspiration from an existing site
+- Editing `frontend/src/pages/*.jsx` and need color/spacing/typography hints
+- User says "use X as reference" or "copy the design from"
+- Auditing visual consistency against a benchmark
+
+## When NOT to Use
+- Cloning a page 1:1 (forbidden — use as inspiration only)
+- Extracting from sites behind auth without permission
+- Extracting from direct competitors (e.g. GoHighLevel) — abstract patterns only
+- Tenant sites (multi-tenant privacy)
+
 # UI Reference — Extract design tokens, don't clone
 
 Dev-time skill for inspiration extraction. Not a product feature. Never copies verbatim — extracts tokens, generates artifact, Claude builds fresh UI using artifact as style guide.

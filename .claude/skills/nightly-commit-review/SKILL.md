@@ -1,11 +1,34 @@
 ---
 name: nightly-commit-review
 description: Nightly autonomous review of last 24h commits. Haiku triages, Sonnet fixes low-risk bugs only, commits + pushes to main. Medium/high risk → GH issue instead. Runs at 2:37 AM local via scheduled-tasks MCP. Use when user says "nightly review", "review last night's commits", or manual trigger.
+version: 1.0.0
+origin: agentnexlify
+user-invocable: true
+allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
+effort: high
+triggers:
+  - nightly review
+  - review last night's commits
+  - run nightly
+  - bug hunt last 24h
+  - autonomous review
 ---
 
 # Nightly Commit Review — Autonomous Bug Finder
 
 Runs unattended overnight. Finds bugs in last 24h of commits. Fixes the safe ones. Files issues for the risky ones.
+
+## When to Use
+- Scheduled firing at 2:37 AM local via `nightly-commit-review` task
+- Manual catch-up after a missed night: `bash scripts/daily/nightly-commit-review.sh`
+- After a big merge when you want a separate eyes-on review
+- Pre-deploy sanity sweep on recent commits
+
+## When NOT to Use
+- During active feature work (runs against your uncommitted state — noisy)
+- When working tree is dirty (script aborts anyway)
+- For medium/high-risk changes (it files issues, doesn't fix — use `/fix-bug` directly)
+- Inside FORBIDDEN paths (migrations, auth, stripe, widget — skill refuses)
 
 ## Trigger
 - Scheduled: `37 2 * * *` local (daily 2:37 AM) via `mcp__scheduled-tasks__create_scheduled_task`

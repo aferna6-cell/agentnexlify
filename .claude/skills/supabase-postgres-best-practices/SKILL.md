@@ -3,11 +3,31 @@ name: supabase-postgres-best-practices
 description: Postgres performance + schema best practices from Supabase. Load when writing, reviewing, or optimizing Postgres queries, designing tables/indexes in migrations/, reviewing RLS policies, or debugging slow Supabase queries in backend/routers/*.
 origin: https://github.com/supabase/agent-skills
 version: 1.0.0
+triggers:
+  - slow supabase query
+  - postgres optimization
+  - rls policy review
+  - index strategy
+  - query performance
+  - supabase best practices
 ---
 
-# Supabase Postgres Best Practices (thin wrapper)
+# Supabase Postgres Best Practices
 
-Top 8 rule categories from the upstream supabase/agent-skills skill, prioritized by impact:
+## When to Use
+- Writing new Supabase queries in `backend/routers/*`
+- Designing tables/indexes in a new `migrations/NNN_*.sql`
+- Reviewing or adding RLS policies
+- Debugging slow queries or connection pool issues
+
+## When NOT to Use
+- Simple CRUD against a single well-indexed table
+- Non-Supabase datastores (different rule set)
+- Migration structure questions (use `migration-workflow`)
+
+## Top 8 rule categories
+
+Prioritized by impact (upstream supabase/agent-skills):
 
 1. **Query performance** — avoid SELECT *; use specific columns. Avoid N+1 via joins or `.select()` nesting. Index WHERE/ORDER BY columns.
 2. **Connection management** — use Supabase client singletons (per-worker). Our backend does this via `backend/models/database.py:get_service_supabase()`.

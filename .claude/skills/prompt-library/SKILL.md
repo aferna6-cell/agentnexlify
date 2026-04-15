@@ -13,6 +13,22 @@ triggers:
 - build
 - test
 - summarize
+- prompt library
+- any task
+---
+
+# Prompt Library — Consult Before Every Task
+
+## When to Use
+- Before starting ANY non-trivial task in this repo
+- Needing the standard Role/Task/Context/Format/Tone prompt schema
+- Recording a new prompt pattern that worked (or didn't)
+- Version-bumping an improved prompt
+
+## When NOT to Use
+- One-line conversational replies
+- Reading-only lookups that don't benefit from structure
+- System/admin commands that map 1:1 to a CLI
 - reason
 user-invocable: false
 effort: medium
