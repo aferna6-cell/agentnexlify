@@ -20,14 +20,15 @@
 
 ## Prompt Format
 
-Each prompt follows this structure:
+Each prompt follows this structure (maps to ROLE + TASK + CONTEXT + CONSTRAINTS + OUTPUT formula — see `.claude/rules/prompt-formula.md`):
 
 ```
 ### [CATEGORY] Prompt Name (v1.0.0)
-**Role:** Who the executor is — usually "You are Claude Code working on AgentNexLiFy" plus any prompt-specific persona.
-**Task:** The imperative — what to do. 1-3 sentences. Numbered steps under Task if procedural detail is worth preserving.
-**Context:** What to read/know before starting. File paths, commands, and guardrails exact.
-**Format:** What the output should look like.
+**Role:** Who the executor is — usually "You are Claude Code working on AgentNexLiFy" plus any prompt-specific persona. [= ROLE]
+**Task:** The imperative — what to do. 1-3 sentences. Numbered steps under Task if procedural detail is worth preserving. [= TASK]
+**Context:** What to read/know before starting. File paths, commands, and guardrails exact. [= CONTEXT]
+**Constraints:** (optional) Hard limits — perf bounds, forbidden libs, max LOC, style. Omit when guardrails in Context cover it. [= CONSTRAINTS]
+**Format:** What the output should look like. [= OUTPUT]
 **Tone:** Caveman mode default — see `.claude/rules/personality.md`. Override per prompt only when clearly needed.
 **Last improved:** [date] — [what changed and why]
 ```
