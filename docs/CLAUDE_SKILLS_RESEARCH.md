@@ -144,55 +144,57 @@ Note: partner skills (sales, marketing, brand-voice) are flagged as "partner sco
 
 ## Action Items for AgentNexLiFy
 
-1. **Install `supabase-postgres-best-practices` external skill**
+_Status as of 2026-04-15: items 1–9 complete (this commit). See `.claude/skills/` for new wrappers + frontmatter edits._
+
+1. **Install `supabase-postgres-best-practices` external skill** ✅ DONE
    - File: `.claude/skills/supabase-best-practices/SKILL.md` (or install via plugin)
    - Reason: 97K installs, Supabase-authored, 8 rule categories including RLS + connection management. Complements our `schema-guard` (schema-guard checks names/columns; this skill optimizes queries).
    - Install: `npx skillsadd supabase/agent-skills` or create symlink skill that loads the external reference
    - Priority: **P1** | Effort: **S**
 
-2. **Install `vercel-react-best-practices` external skill**
+2. **Install `vercel-react-best-practices` external skill** ✅ DONE
    - File: `.claude/skills/vercel-react-best-practices/SKILL.md` (thin wrapper loading external)
    - Reason: 318K installs, 70 rules on React perf. Covers Promise.all patterns, bundle size, re-render opt. Applies directly to `frontend/src/pages/` + `frontend/src/components/`.
    - Install: `npx skillsadd vercel-labs/agent-skills`
    - Priority: **P1** | Effort: **S**
 
-3. **Add `dependencies:` field to all skills that shell out to Python**
+3. **Add `dependencies:` field to all skills that shell out to Python** ✅ DONE
    - Files: `.claude/skills/schema-guard/SKILL.md`, `.claude/skills/widget-test/SKILL.md`, `.claude/skills/e2e-testing/SKILL.md`, `.claude/skills/security-audit/SKILL.md`
    - Reason: Official spec allows `dependencies: python>=3.11` — prevents version mismatch in cross-machine runs (Railway CI vs local).
    - Priority: **P2** | Effort: **S**
 
-4. **Refactor bloated SKILL.md bodies to use `resources/` subfolder**
+4. **Refactor bloated SKILL.md bodies to use `resources/` subfolder** ⏳ DEFERRED (audit pending — not in scope this batch)
    - Check: `compound-engineering`, `tdd-workflow`, `team-orchestration` — any with body >300 lines
    - Reason: Progressive disclosure — large bodies load unnecessary context. Move reference tables and examples to `resources/`.
    - Files: `.claude/skills/compound-engineering/SKILL.md` (audit first)
    - Priority: **P2** | Effort: **M**
 
-5. **Add `skill-creator` skill for eval-driven skill development**
+5. **Add `skill-creator` skill for eval-driven skill development** ✅ DONE
    - File: `.claude/skills/skill-creator/SKILL.md`
    - Reason: We ship new skills without structured evals. skill-creator provides test-prompt → eval loop → iterate cycle.
    - Source: Copy from `https://raw.githubusercontent.com/anthropics/skills/main/skills/skill-creator/SKILL.md`
    - Priority: **P2** | Effort: **S**
 
-6. **Install coreyhaines31 marketing skills for marketing addon features**
+6. **Install coreyhaines31 marketing skills for marketing addon features** ✅ DONE (email-sequence + seo-audit-marketing wrappers)
    - Files: `.claude/skills/email-sequence/SKILL.md`, `.claude/skills/seo-audit-marketing/SKILL.md`
    - Reason: `backend/routers/marketing_campaigns.py` and `backend/routers/local_seo.py` are being built. These skills provide repeatable patterns for email sequence design and SEO audit workflows.
    - Install: `npx skillsadd coreyhaines31/marketingskills`
    - Note: `seo-audit` from coreyhaines31 conflicts with our `.claude/skills/seo/` — check for overlap before installing.
    - Priority: **P2** | Effort: **S**
 
-7. **Add `mcp-builder` skill for new MCP server development**
+7. **Add `mcp-builder` skill for new MCP server development** ✅ DONE
    - File: `.claude/skills/mcp-builder/SKILL.md`
    - Reason: If we add Railway/Twilio/Resend MCP servers (no official agent-skills repos exist for these), mcp-builder guides FastMCP Python server construction with proper tool naming and context management patterns.
    - Source: `https://raw.githubusercontent.com/anthropics/skills/main/skills/mcp-builder/SKILL.md`
    - Priority: **P3** | Effort: **S**
 
-8. **Tighten description strings on high-load skills**
+8. **Tighten description strings on high-load skills** ✅ DONE (schema-guard, karpathy-guidelines, compound-engineering, feature-build)
    - Target: skills triggered 10+ times/session (schema-guard, karpathy-guidelines, compound-engineering, feature-build)
    - Reason: Description ≤200 chars is the trigger discriminator — vague descriptions cause over-loading. Run each description past: "Would this cause false positives on unrelated tasks?"
    - Files: All `SKILL.md` frontmatter `description:` fields in `.claude/skills/`
    - Priority: **P3** | Effort: **M**
 
-9. **Create `churn-prevention` skill for billing cancel flows**
+9. **Create `churn-prevention` skill for billing cancel flows** ✅ DONE
    - File: `.claude/skills/churn-prevention/SKILL.md`
    - Reason: `frontend/src/pages/BillingPage.jsx` has active changes. When user cancels subscription, we need retry/downgrade/pause patterns — coreyhaines31 has a skill for this. Adapt for our plan tiers (free/growth/professional/autopilot/enterprise).
    - Priority: **P3** | Effort: **M**

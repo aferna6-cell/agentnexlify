@@ -1,6 +1,6 @@
 ---
 name: compound-engineering
-description: 5-agent compound pipeline for every task. Brainstorm → Plan → Execute → Review → Vertical Check. Each agent focused on one thing. Everything documented in markdown. Combined with worktree parallelism for 4-8x throughput. Use when user says 'compound this', 'full pipeline', '5-agent', 'compound pipeline', 'compound engineering', '/compound', or asks about compound engineering.
+description: Load when user says /compound, 'full pipeline', '5-agent', or task touches 2+ files needing Brainstorm→Plan→Execute→Review→VerticalCheck. Skip for single-file fixes or trivial renames.
 version: 1.0.0
 origin: claude
 user-invocable: true

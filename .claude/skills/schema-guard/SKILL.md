@@ -1,8 +1,9 @@
 ---
 name: schema-guard
-description: "Use this skill BEFORE writing any database query, migration, or Pydantic model that touches the database to prevent schema mismatch bugs."
+description: "Load BEFORE writing queries against Supabase leads/conversations tables in backend/routers/ or authoring migrations/NNN_*.sql. Catches client_id/status/areas_of_interest schema mismatches."
 version: 1.0.0
 origin: claude
+dependencies: python>=3.11
 triggers: ["schema guard", "check schema", "database query", "pydantic model", "schema mismatch", "RLS policy", "leads table"]
 effort: high
 ---

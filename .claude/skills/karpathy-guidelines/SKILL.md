@@ -1,6 +1,6 @@
 ---
 name: karpathy-guidelines
-description: "Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria. Derived from Andrej Karpathy's observations on LLM coding pitfalls."
+description: "Load when writing, reviewing, or refactoring code in backend/ or frontend/ to keep changes surgical, surface assumptions, avoid overcomplication. Bias: caution over speed on non-trivial work."
 version: 1.0.0
 origin: forrestchang/andrej-karpathy-skills
 license: MIT

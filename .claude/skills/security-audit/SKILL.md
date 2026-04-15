@@ -4,6 +4,7 @@ description: Scan the codebase for security vulnerabilities including missing te
 version: 1.0.0
 origin: claude
 user-invocable: true
+dependencies: python>=3.11
 triggers:
 - security-audit
 - security scan

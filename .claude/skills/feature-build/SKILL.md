@@ -1,6 +1,6 @@
 ---
 name: feature-build
-description: "Use this skill when building any new feature. Ensures schema safety, consistent patterns, and proper documentation."
+description: "Load when adding new API endpoint in backend/routers/, dashboard page in frontend/src/pages/, or external integration. Enforces schema-guard + widget sync + route+sidebar registration."
 version: 1.0.0
 origin: claude
 allowed-tools: []
