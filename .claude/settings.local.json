@@ -10,7 +10,9 @@
       "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\);console.log\\(d.version,d.dist.tarball\\)\")",
       "Bash(rm -f \"C:/Users/aidan/Downloads/agentnexlify-main/.claude/state/message-count\")",
       "Bash(git -C \"C:/Users/aidan/Downloads/agentnexlify-main\" add .claude/rules/user-rules.md .claude/settings.json scripts/claude-hooks/message-counter.sh CLAUDE.md)",
-      "Bash(git -C \"C:/Users/aidan/Downloads/agentnexlify-main\" status --short)"
+      "Bash(git -C \"C:/Users/aidan/Downloads/agentnexlify-main\" status --short)",
+      "Bash(mv \"C:/Users/aidan/Downloads/agentnexlify-main/.mcp.json\" \"C:/Users/aidan/Downloads/agentnexlify-main/.mcp.example.json\")",
+      "Bash(git -C \"C:/Users/aidan/Downloads/agentnexlify-main\" check-ignore -v .mcp.example.json)"
     ]
   }
 }
