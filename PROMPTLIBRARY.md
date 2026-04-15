@@ -24,13 +24,11 @@ Each prompt follows this structure:
 
 ```
 ### [CATEGORY] Prompt Name (v1.0.0)
-**When to use:** [triggers]
-**Context needed:** [files, data, commands to run first]
-**Steps:**
-1. ...
-2. ...
-**Output:** [what to produce]
-**Common pitfalls:** [what to watch for]
+**Role:** Who the executor is — usually "You are Claude Code working on AgentNexLiFy" plus any prompt-specific persona.
+**Task:** The imperative — what to do. 1-3 sentences. Numbered steps under Task if procedural detail is worth preserving.
+**Context:** What to read/know before starting. File paths, commands, and guardrails exact.
+**Format:** What the output should look like.
+**Tone:** Caveman mode default — see `.claude/rules/personality.md`. Override per prompt only when clearly needed.
 **Last improved:** [date] — [what changed and why]
 ```
 
@@ -40,14 +38,9 @@ Each prompt follows this structure:
 
 ### RESEARCH Codebase Investigation (v1.1.0)
 
-**When to use:** "Find how X works", "Where is Y implemented?", "What calls Z?", "Understand the flow of..."
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a senior codebase researcher tracing implementation and data flow.
 
-**Context needed:**
-- Start with `grep_search` for the keyword/concept
-- Use `glob` to find relevant files by pattern
-- Read 2-3 of the most relevant files to understand the pattern
-
-**Steps:**
+**Task:** Investigate how a concept, function, or system works. Search broad then narrow; trace the full call chain; map data entry and exit points; check tests for documented expected behavior; synthesize into a structured answer with file paths and line numbers.
 1. Search for the target concept using `grep_search` with a regex pattern. Start broad, then narrow.
 2. Use `glob` to find files matching likely naming conventions.
 3. Read the top 3 most relevant files completely — do not skim.
@@ -56,19 +49,17 @@ Each prompt follows this structure:
 6. Check for tests — they document expected behavior better than comments.
 7. Synthesize findings into a clear answer with file paths and line numbers.
 
-**Output:** A structured answer with:
+**Context:** Start with `grep_search` for the keyword/concept; use `glob` to find relevant files by pattern; read 2-3 of the most relevant files to understand the pattern. Guardrails: don't trust function names — read the implementation; don't assume a pattern is used everywhere — verify each call site; check `_archive/` for old implementations that may still be referenced; look at git history for recently changed files.
+
+**Format:** Structured answer with:
 - Where the concept lives (files + line numbers)
 - How it works (data flow, key functions)
 - Related concepts that might matter
 - Any risks or gotchas found
 
-**Common pitfalls:**
-- Don't trust function names — read the implementation
-- Don't assume a pattern is used everywhere — verify each call site
-- Check `_archive/` for old implementations that may still be referenced
-- Look at git history for recently changed files
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
 
-**Last improved:** 2026-04-07 — Added step 4 (trace call chains) and step 6 (check tests). Previous version skipped these and produced incomplete answers.
+**Last improved:** 2026-04-07 — Added step 4 (trace call chains) and step 6 (check tests). Previous version skipped these and produced incomplete answers. · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -76,33 +67,26 @@ Each prompt follows this structure:
 
 ### SUMMARIZE Code Change Summary (v1.0.0)
 
-**When to use:** "What changed?", "Summarize recent commits", "What does this PR do?", "Explain these diffs"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a technical historian summarizing what changed and why.
 
-**Context needed:**
-- Run `git log --oneline -20` for recent commits
-- Run `git diff HEAD~N --stat` for change scope
-- Read the commit messages and changed files
+**Task:** Summarize recent commits or a PR diff so a new team member understands the scope in 30 seconds. Run git commands to gather change scope, group changes by theme, and produce a categorized summary.
+1. Run `git status` to see current state.
+2. Run `git log --oneline -N` to get recent commits (default N=10, adjust if user specifies).
+3. For each commit of interest, run `git show <hash> --stat` to see what changed.
+4. Read the actual diffs for non-obvious changes (`git diff HEAD~N..HEAD -- <file>`).
+5. Group changes by theme (feature, fix, refactor, infra, docs).
+6. Write a summary that a new team member could understand in 30 seconds.
 
-**Steps:**
-1. Run `git status` to see current state
-2. Run `git log --oneline -N` to get recent commits (default N=10, adjust if user specifies)
-3. For each commit of interest, run `git show <hash> --stat` to see what changed
-4. Read the actual diffs for non-obvious changes (`git diff HEAD~N..HEAD -- <file>`)
-5. Group changes by theme (feature, fix, refactor, infra, docs)
-6. Write a summary that a new team member could understand in 30 seconds
+**Context:** Run `git log --oneline -20` for recent commits; run `git diff HEAD~N --stat` for change scope; read the commit messages and changed files. Guardrails: don't just list files — explain WHAT changed and WHY; don't ignore small files — they often contain critical fixes; check if migrations were added (database impact); check if tests were added/removed (quality signal).
 
-**Output:** A categorized summary with:
+**Format:** Categorized summary with:
 - High-level theme (one sentence)
 - Per-category bullet points with file references
 - Any breaking changes or risks called out
 
-**Common pitfalls:**
-- Don't just list files — explain WHAT changed and WHY
-- Don't ignore small files — they often contain critical fixes
-- Check if migrations were added (database impact)
-- Check if tests were added/removed (quality signal)
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
 
-**Last improved:** 2026-04-07 — Initial version
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -110,15 +94,10 @@ Each prompt follows this structure:
 
 ### DEBUG Bug Investigation (v1.2.0)
 
-**When to use:** "Something is broken", "This error is happening", "Why doesn't X work?", "Investigate this bug"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a methodical debugger who fixes root causes, not symptoms.
 
-**Context needed:**
-- The error message, stack trace, or observed behavior
-- The file(s) and line numbers involved
-- Recent changes to the affected code (`git log --oneline -10 -- <file>`)
-
-**Steps:**
-1. **Reproduce first:** Understand what the user expects vs what actually happens
+**Task:** Investigate a broken behavior. Reproduce the failure mentally; read 3 levels up the call stack; check inputs, dependencies, and recent changes; form and test a hypothesis; apply the minimal fix; verify resolution.
+1. **Reproduce first:** Understand what the user expects vs what actually happens.
 2. **Read the code:** Read the full function/method, not just the error line. Read 3 levels up the call stack.
 3. **Check inputs:** What data flows into this code? Is it what we expect? Add logging if needed.
 4. **Check dependencies:** What does this code depend on? Are those dependencies healthy? (DB connection, API keys, file existence)
@@ -129,52 +108,40 @@ Each prompt follows this structure:
 9. **Fix:** Apply the minimal fix. Do not refactor while debugging.
 10. **Verify:** Run tests, check the specific failure is resolved.
 
-**Output:** 
+**Context:** Need the error message, stack trace, or observed behavior; the file(s) and line numbers involved; recent changes to the affected code (`git log --oneline -10 -- <file>`). Guardrails: DO NOT add catch-all `try/except` blocks that hide errors; DO NOT add "just in case" defensive code — fix the actual root cause; DO NOT refactor while debugging — fix first, refactor separately; check if the error is a symptom of a different problem (e.g., missing env var, DB connection); when a test references a missing module, confirm whether the test is orphaned before re-adding deleted production code; if FastAPI tests hang, verify the transport/harness before blaming the endpoint — check `TestClient` compatibility and whether sync dependencies or sync dependency overrides are forcing threadpool execution; read `docs/dev-knowledge/bug-patterns.md` — this may be a known issue; check `.claude/agent-comms/` for previous debugging sessions on this topic.
+
+**Format:**
 - Root cause (one sentence)
 - Evidence (logs, stack traces, code snippets)
 - The fix applied
 - What test should be added to prevent regression
 
-**Common pitfalls:**
-- **DO NOT** add catch-all `try/except` blocks that hide errors
-- **DO NOT** add "just in case" defensive code — fix the actual root cause
-- **DO NOT** refactor while debugging — fix first, refactor separately
-- Check if the error is a symptom of a different problem (e.g., missing env var, DB connection)
-- When a test references a missing module, confirm whether the test is orphaned before re-adding deleted production code
-- If FastAPI tests hang, verify the transport/harness before blaming the endpoint. Check `TestClient` compatibility and whether sync dependencies or sync dependency overrides are forcing threadpool execution.
-- Read the `docs/dev-knowledge/bug-patterns.md` — this may be a known issue
-- Check `.claude/agent-comms/` for previous debugging sessions on this topic
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
 
-**Last improved:** 2026-04-10 — Added a FastAPI test-harness pitfall: hanging `TestClient` sessions can come from transport incompatibility plus sync dependencies/overrides, not the endpoint logic itself.
+**Last improved:** 2026-04-10 — Added a FastAPI test-harness pitfall: hanging `TestClient` sessions can come from transport incompatibility plus sync dependencies/overrides, not the endpoint logic itself. · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
 ### DEBUG Production Error Analysis (v1.0.0)
 
-**When to use:** "This error showed up in logs", "Users are reporting X", "Monitoring alert fired"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as an on-call engineer triaging a live production failure.
 
-**Context needed:**
-- Error logs or monitoring output
-- Affected endpoint or feature
-- Time window of the issue
-
-**Steps:**
-1. Read the error message and stack trace carefully
-2. Identify the affected endpoint, file, and line number
-3. Check if this is a new error or recurring (`grep` in logs/commits)
+**Task:** Analyze a production error from logs or a monitoring alert. Read the stack trace; identify the affected endpoint and code path; determine frequency, recency, and severity; propose a fix and rollback plan if needed.
+1. Read the error message and stack trace carefully.
+2. Identify the affected endpoint, file, and line number.
+3. Check if this is a new error or recurring (`grep` in logs/commits).
 4. Check the affected code path — what inputs could cause this?
-5. Check if recent deploys introduced the issue (`git log --since="2 days ago" -- <file>`)
+5. Check if recent deploys introduced the issue (`git log --since="2 days ago" -- <file>`).
 6. Determine severity: user-facing? data loss? revenue impact?
-7. Propose fix + rollback plan if needed
+7. Propose fix + rollback plan if needed.
 
-**Output:** Error analysis with severity, root cause, fix, and prevention recommendation.
+**Context:** Need the error logs or monitoring output; the affected endpoint or feature; the time window of the issue. Guardrails: don't assume a single error instance — check frequency; check if the error is masking a deeper issue (e.g., swallowed exception); consider whether the fix needs a migration or config change.
 
-**Common pitfalls:**
-- Don't assume a single error instance — check frequency
-- Check if the error is masking a deeper issue (e.g., swallowed exception)
-- Consider whether the fix needs a migration or config change
+**Format:** Error analysis with severity, root cause, fix, and prevention recommendation.
 
-**Last improved:** 2026-04-07 — Initial version
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -182,17 +149,12 @@ Each prompt follows this structure:
 
 ### WRITE Documentation Article (v1.0.0)
 
-**When to use:** "Write docs for X", "Document this feature", "Create a guide for..."
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a technical writer who documents precisely what the code does.
 
-**Context needed:**
-- The code/feature being documented
-- Target audience (developers, end users, admins)
-- Existing docs in `docs/` for style reference
-
-**Steps:**
-1. Read the code/feature thoroughly — you cannot document what you don't understand
-2. Check existing docs in `docs/` for style, tone, and structure conventions
-3. Identify the key concepts a reader needs to understand
+**Task:** Write documentation for a feature or system. Read the code thoroughly before writing; check existing docs for style conventions; structure the document from title through troubleshooting; write in dense technical prose with code examples and file references.
+1. Read the code/feature thoroughly — you cannot document what you don't understand.
+2. Check existing docs in `docs/` for style, tone, and structure conventions.
+3. Identify the key concepts a reader needs to understand.
 4. Structure the document:
    - Title and one-sentence summary
    - When to use this (and when NOT to)
@@ -201,45 +163,37 @@ Each prompt follows this structure:
    - Troubleshooting / FAQ
    - Related docs (cross-references)
 5. Write in dense, technical prose. No fluff, no marketing speak.
-6. Include code examples where applicable
-7. Add file paths and line numbers for reference
+6. Include code examples where applicable.
+7. Add file paths and line numbers for reference.
 
-**Output:** A markdown file ready for `docs/` directory.
+**Context:** Need the code/feature being documented; target audience (developers, end users, admins); existing docs in `docs/` for style reference. Guardrails: don't document the obvious — focus on what's non-obvious; don't write a tutorial when a reference is needed (know your audience); always cross-reference related docs; update the doc if you discover the code has drifted from existing docs.
 
-**Common pitfalls:**
-- Don't document the obvious — focus on what's non-obvious
-- Don't write a tutorial when a reference is needed (know your audience)
-- Always cross-reference related docs
-- Update the doc if you discover the code has drifted from existing docs
+**Format:** Markdown file ready for `docs/` directory.
 
-**Last improved:** 2026-04-07 — Initial version
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
 ### WRITE Commit Message (v1.0.0)
 
-**When to use:** After completing a task, before committing
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a precise commit author following repo conventions.
 
-**Context needed:**
-- `git status` to see changed files
-- `git diff --stat HEAD` for change scope
-- `git log -n 3` for recent commit style
-
-**Steps:**
-1. Run `git status && git diff --stat HEAD && git log -n 3`
-2. Write a subject line: imperative mood, <72 chars, starts with type prefix
+**Task:** Write a commit message for the current staged changes. Run git commands to understand scope and style; write an imperative subject line under 72 chars with type prefix; write a body explaining WHY if needed; match the repo's existing commit style.
+1. Run `git status && git diff --stat HEAD && git log -n 3`.
+2. Write a subject line: imperative mood, <72 chars, starts with type prefix.
 3. Write body (if needed): explain WHY, not WHAT. What problem does this solve?
-4. Follow the repo's commit style (check recent commits)
-5. Include `[main YYYY-MM-DD]` tag if the repo uses dated commits
+4. Follow the repo's commit style (check recent commits).
+5. Include `[main YYYY-MM-DD]` tag if the repo uses dated commits.
 
-**Output:** A commit message ready for `git commit -m "..."`
+**Context:** Run `git status` to see changed files; run `git diff --stat HEAD` for change scope; run `git log -n 3` for recent commit style. Guardrails: don't describe the change — describe the problem it solves; don't write a novel — 1-3 sentences max for body; match the existing commit style (check `git log`).
 
-**Common pitfalls:**
-- Don't describe the change — describe the problem it solves
-- Don't write a novel — 1-3 sentences max for body
-- Match the existing commit style (check `git log`)
+**Format:** Commit message ready for `git commit -m "..."`.
 
-**Last improved:** 2026-04-07 — Initial version
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -247,14 +201,9 @@ Each prompt follows this structure:
 
 ### REASON Architecture Decision (v1.0.0)
 
-**When to use:** "Should we use X or Y?", "What's the best approach for...", "Evaluate these options"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a senior architect evaluating options and recommending one.
 
-**Context needed:**
-- The decision to be made
-- The options being considered
-- Constraints (time, resources, existing tech stack)
-
-**Steps:**
+**Task:** Evaluate two or more architectural options and recommend one. Frame the decision clearly; list at least 2 options including "do nothing" where relevant; score each against implementation effort, maintenance cost, risk, architectural alignment, and reversibility; check prior decisions; document the outcome as an ADR.
 1. **Frame the decision:** State the problem clearly. "How should we X?" not "Should we use Y?"
 2. **List options:** At least 2, ideally 3. Include "do nothing" as an option when relevant.
 3. **Evaluate each option against criteria:**
@@ -264,30 +213,24 @@ Each prompt follows this structure:
    - Alignment with existing architecture (yes/no/partial)
    - Reversibility (easy/hard/impossible)
 4. **Check existing decisions:** Read `docs/dev-knowledge/architecture-decisions.md` — has this been decided before?
-5. **Recommend:** Pick one option with clear reasoning
-6. **Document:** Write an ADR (Architecture Decision Record) in `docs/dev-knowledge/`
+5. **Recommend:** Pick one option with clear reasoning.
+6. **Document:** Write an ADR (Architecture Decision Record) in `docs/dev-knowledge/`.
 
-**Output:** A recommendation with reasoning, or an ADR document.
+**Context:** Need the decision to be made; the options being considered; constraints (time, resources, existing tech stack). Read `docs/dev-knowledge/architecture-decisions.md` first. Guardrails: don't present options without a recommendation — that's dumping work on the human; don't ignore the "do nothing" option — sometimes the best choice is not to change; check if this decision was already made (avoid re-litigating); weight reversibility heavily (Bezos' type 1/type 2).
 
-**Common pitfalls:**
-- Don't present options without a recommendation — that's dumping work on the human
-- Don't ignore the "do nothing" option — sometimes the best choice is not to change
-- Check if this decision was already made (avoid re-litigating)
-- Consider the reversible vs irreversible distinction heavily (Bezos' type 1/type 2)
+**Format:** A recommendation with reasoning, or an ADR document.
 
-**Last improved:** 2026-04-07 — Initial version
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
 ### REASON Debugging Hypothesis (v1.0.0)
 
-**When to use:** "What could be causing this?", "I have no idea where to start"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a systematic debugger generating and ranking root-cause hypotheses.
 
-**Context needed:**
-- The observed symptom (error message, behavior, log output)
-- Any recent changes (deploys, config updates, data changes)
-
-**Steps:**
+**Task:** Generate a ranked list of hypotheses for an observed symptom. Order by likelihood (recent changes first, common failures before rare, external dependencies before internal logic); for each hypothesis state confirming evidence, ruling-out evidence, and a concrete test; work through the list in order and stop when the root cause is found.
 1. List all possible causes, ordered by likelihood:
    - Recent changes first
    - Common failures before rare ones
@@ -296,18 +239,16 @@ Each prompt follows this structure:
    - What evidence would confirm it
    - What evidence would rule it out
    - How to test it (specific command, log to check)
-3. Test hypotheses in order from most likely to least likely
-4. Stop when you find the root cause — don't keep going
+3. Test hypotheses in order from most likely to least likely.
+4. Stop when you find the root cause — don't keep going.
 
-**Output:** A ranked hypothesis with test plan, or the identified root cause.
+**Context:** Need the observed symptom (error message, behavior, log output); any recent changes (deploys, config updates, data changes). Guardrails: don't jump to the most interesting cause — start with the most likely; don't test in parallel if tests interfere with each other; don't skip the "is it plugged in" check (env vars, connections, permissions); write down what you tested and the result — avoid re-testing.
 
-**Common pitfalls:**
-- Don't jump to the most interesting cause — start with the most likely
-- Don't test in parallel if tests interfere with each other
-- Don't skip the "is it plugged in" check (env vars, connections, permissions)
-- Write down what you tested and the result — avoid re-testing
+**Format:** Ranked hypothesis list with test plan, or the identified root cause.
 
-**Last improved:** 2026-04-07 — Initial version
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -315,14 +256,10 @@ Each prompt follows this structure:
 
 ### REVIEW Code Review Checklist (v1.0.0)
 
-**When to use:** "Review this code", "Check this PR", "Is this safe to merge?"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a senior reviewer checking correctness, security, and architectural alignment.
 
-**Context needed:**
-- The changed files (`git diff HEAD~N` or PR diff)
-- The intent (what is this change supposed to do?)
-
-**Steps:**
-1. Read the diff completely
+**Task:** Review a diff or PR for correctness, security, and architecture. Read the diff completely; verify all critical invariants; check security, error handling, performance, and test coverage; report findings by severity.
+1. Read the diff completely.
 2. Check for the critical invariants (from `AGENTS.md`):
    - No `from __future__ import annotations` in FastAPI router files
    - `client_id` used for `leads` and `conversations` queries
@@ -349,14 +286,13 @@ Each prompt follows this structure:
    - Tests updated for changed behavior
    - Edge cases covered
 
-**Output:** Review findings organized by severity (critical/high/medium/low) with specific file references.
+**Context:** Need the changed files (`git diff HEAD~N` or PR diff) and the intent (what is this change supposed to do?). Guardrails: don't nitpick style — focus on correctness, security, and architecture; don't approve without checking the critical invariants; don't miss the "what problem does this solve?" check — code that solves the wrong problem is worse than no code.
 
-**Common pitfalls:**
-- Don't nitpick style — focus on correctness, security, and architecture
-- Don't approve without checking the critical invariants
-- Don't miss the "what problem does this solve?" check — code that solves the wrong problem is worse than no code
+**Format:** Review findings organized by severity (critical/high/medium/low) with specific file references.
 
-**Last improved:** 2026-04-07 — Initial version, based on patterns from the comprehensive debugging session.
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version, based on patterns from the comprehensive debugging session. · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -364,14 +300,9 @@ Each prompt follows this structure:
 
 ### BUILD New Feature (v1.0.0)
 
-**When to use:** "Add feature X", "Implement Y", "Build Z"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a full-stack feature developer building the minimum viable implementation.
 
-**Context needed:**
-- Feature requirements (what should it do?)
-- Existing related code (where does it fit?)
-- Database schema (does it need new tables?)
-
-**Steps:**
+**Task:** Implement a new feature end-to-end. Understand requirements; locate the feature's fit in the architecture; plan with smallest-possible changes first; write the migration before any code; implement backend before frontend; write tests alongside code; verify with the full test suite; commit.
 1. **Understand:** Read requirements. Ask clarifying questions if ambiguous.
 2. **Locate:** Find where this feature fits in the existing architecture.
 3. **Plan:** Create a todo list with specific, actionable items. Smallest possible changes first.
@@ -381,16 +312,13 @@ Each prompt follows this structure:
 7. **Verify:** Run the full test suite. Fix any failures.
 8. **Commit:** Write a descriptive commit message. Follow repo conventions.
 
-**Output:** Working feature with tests, committed and ready to push.
+**Context:** Need feature requirements (what should it do?); existing related code (where does it fit?); database schema (does it need new tables?). Read `docs/dev-knowledge/canonical-schema.md` before any DB work; read `docs/dev-knowledge/architecture-decisions.md` for prior decisions. Guardrails: don't add abstraction layers for a single call site; don't add "just in case" features not in the requirements; don't skip the migration step — schema drift causes most bugs in this repo.
 
-**Common pitfalls:**
-- Don't add abstraction layers for a single call site
-- Don't add "just in case" features not in the requirements
-- Don't skip the migration step — schema drift causes most bugs in this repo
-- Check `docs/dev-knowledge/canonical-schema.md` before any DB work
-- Check `docs/dev-knowledge/architecture-decisions.md` for prior decisions
+**Format:** Working feature with tests, committed and ready to push.
 
-**Last improved:** 2026-04-07 — Initial version
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -398,32 +326,24 @@ Each prompt follows this structure:
 
 ### DATABASE Schema Change (v1.0.0)
 
-**When to use:** "Add a column", "Create a table", "Change a constraint", "Fix the schema"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as the schema guardian ensuring safe, idempotent database migrations.
 
-**Context needed:**
-- `docs/dev-knowledge/canonical-schema.md` — the authoritative schema reference
-- `migrations/` — existing migrations
-- `git log --oneline -10 -- migrations/` — recent migration history
+**Task:** Apply a schema change via a numbered migration file. Check the canonical schema and existing migrations first; verify the column/table doesn't already exist; create the next sequential migration using `IF NOT EXISTS` guards; test it; update the canonical schema doc and any affected code.
+1. Check `canonical-schema.md` to understand the current state.
+2. Check if the column/table already exists (it may have been added ad-hoc).
+3. Create a new migration file with the next sequential number.
+4. Use `ADD COLUMN IF NOT EXISTS` for safety.
+5. Test the migration can run on the current DB state.
+6. Update `canonical-schema.md` with the new column/table.
+7. Update any code that was relying on the column not existing.
 
-**Steps:**
-1. Check `canonical-schema.md` to understand the current state
-2. Check if the column/table already exists (it may have been added ad-hoc)
-3. Create a new migration file with the next sequential number
-4. Use `ADD COLUMN IF NOT EXISTS` for safety
-5. Test the migration can run on the current DB state
-6. Update `canonical-schema.md` with the new column/table
-7. Update any code that was relying on the column not existing
+**Context:** Read `docs/dev-knowledge/canonical-schema.md` — the authoritative schema reference; check `migrations/` for existing migrations; run `git log --oneline -10 -- migrations/` for recent migration history. Guardrails: ALWAYS check if the column already exists in production before adding it; use `IF NOT EXISTS` guards — migrations may be run multiple times; never rename a migration file — it breaks applied migration tracking; check for duplicate migration numbers before creating a new one; column additions are safe — deletions need careful analysis of all consumers.
 
-**Output:** Migration file, updated schema doc, and updated code if needed.
+**Format:** Migration file, updated schema doc, and updated code if needed.
 
-**Common pitfalls:**
-- **ALWAYS** check if the column already exists in production before adding it
-- Use `IF NOT EXISTS` guards — migrations may be run multiple times
-- Never rename a migration file — it breaks applied migration tracking
-- Check for duplicate migration numbers before creating a new one
-- Column additions are safe — deletions need careful analysis of all consumers
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
 
-**Last improved:** 2026-04-07 — Initial version, informed by the schema reconciliation work in migration 094.
+**Last improved:** 2026-04-07 — Initial version, informed by the schema reconciliation work in migration 094. · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -431,35 +351,27 @@ Each prompt follows this structure:
 
 ### TEST Add Test Coverage (v1.0.0)
 
-**When to use:** "Add tests for X", "This needs test coverage", "Write tests for this code"
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a QA engineer writing behavior-driven tests against observable outcomes.
 
-**Context needed:**
-- The code to be tested
-- Existing test files for patterns and conventions
-- `pytest.ini` for test configuration
-
-**Steps:**
-1. Read the code to understand what needs testing
-2. Check existing tests in `tests/` for patterns, mocking style, and conventions
+**Task:** Add test coverage for a piece of code. Read the code and existing tests for patterns; identify happy path, edge cases, error cases, and security cases; write tests using existing mocking and fixture conventions; run them; verify coverage across all code paths.
+1. Read the code to understand what needs testing.
+2. Check existing tests in `tests/` for patterns, mocking style, and conventions.
 3. Identify the test cases:
    - Happy path (expected inputs → expected outputs)
    - Edge cases (empty inputs, boundary values, special characters)
    - Error cases (invalid inputs, missing dependencies, network failures)
    - Security cases (auth bypass, injection, privilege escalation)
-4. Write tests using the existing patterns (mocks, fixtures, parametrize)
-5. Run the tests — they must pass
+4. Write tests using the existing patterns (mocks, fixtures, parametrize).
+5. Run the tests — they must pass.
 6. Check coverage — are all code paths exercised?
 
-**Output:** Test file with comprehensive coverage, all passing.
+**Context:** Need the code to be tested; existing test files for patterns and conventions; `pytest.ini` for test configuration. Guardrails: don't test implementation details — test observable behavior; don't mock everything — test real integration where it matters; match the existing test style (check `tests/test_widget_api.py` for a good example); include negative tests (what should NOT happen); test the error paths, not just the happy path.
 
-**Common pitfalls:**
-- Don't test implementation details — test observable behavior
-- Don't mock everything — test real integration where it matters
-- Match the existing test style (check `tests/test_widget_api.py` for a good example)
-- Include negative tests (what should NOT happen)
-- Test the error paths, not just the happy path
+**Format:** Test file with comprehensive coverage, all passing.
 
-**Last improved:** 2026-04-07 — Initial version
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 
@@ -467,32 +379,25 @@ Each prompt follows this structure:
 
 ### PROMPT Create or Improve Prompt (v1.0.0)
 
-**When to use:** After completing any task where a prompt was used or should have been used
+**Role:** You are Claude Code working on AgentNexLiFy, acting as the prompt librarian keeping PROMPTLIBRARY.md accurate and useful.
 
-**Context needed:**
-- This file (`PROMPTLIBRARY.md`)
-- The task that was just completed
-- What worked and what didn't about the current prompt (if any)
-
-**Steps:**
+**Task:** Create a new prompt entry or improve an existing one based on real usage. If a prompt exists, assess whether you followed it and what was missing or wrong; if it doesn't exist, create a new entry in the correct category; add steps that were needed, remove steps that weren't, record new pitfalls, bump the version number, and update the "Last improved" line.
 1. **If prompt exists:** Read it. Did you follow it? Did it help? What was missing or wrong?
-2. **If prompt doesn't exist:** Create a new entry in the appropriate category
+2. **If prompt doesn't exist:** Create a new entry in the appropriate category.
 3. **Improve the prompt:**
    - Add steps you needed that weren't in the prompt
    - Remove steps that were unnecessary
    - Add pitfalls you encountered
    - Update the "Last improved" line with date and what changed
-4. **Version bump:** Increment the version number (patch for small fixes, minor for additions, major for rewrites)
+4. **Version bump:** Increment the version number (patch for small fixes, minor for additions, major for rewrites).
 
-**Output:** An improved prompt in this file.
+**Context:** Read this file (`PROMPTLIBRARY.md`) and the task that was just completed. Know what worked and what didn't about the current prompt (if any). Guardrails: don't improve prompts in theory — improve them based on actual usage; don't make prompts longer — make them more precise; every step should be actionable; "Context" (formerly "Common pitfalls") is the most valuable section — update it every time.
 
-**Common pitfalls:**
-- Don't improve prompts in theory — improve them based on actual usage
-- Don't make prompts longer — make them more precise
-- Every step should be actionable
-- "Common pitfalls" is the most valuable section — update it every time
+**Format:** An improved prompt entry in this file.
 
-**Last improved:** 2026-04-07 — Initial version (meta-prompt for maintaining this library)
+**Tone:** Caveman mode — see `.claude/rules/personality.md`.
+
+**Last improved:** 2026-04-07 — Initial version (meta-prompt for maintaining this library) · 2026-04-15: migrated to Role/Task/Context/Format/Tone schema.
 
 ---
 

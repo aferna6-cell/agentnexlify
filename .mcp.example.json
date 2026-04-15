@@ -1,0 +1,15 @@
+{
+  "_comment": "Project-scoped MCP servers for AgentNexLiFy. Plugin-provided MCPs in .claude/settings.json enabledPlugins take precedence for the same server name. Env vars resolve at launch via Claude Code's env expansion (${VAR_NAME}).",
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--access-token",
+        "${SUPABASE_ACCESS_TOKEN}"
+      ]
+    }
+  }
+}
