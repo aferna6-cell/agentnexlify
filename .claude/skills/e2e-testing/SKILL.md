@@ -4,7 +4,6 @@ description: Playwright E2E testing patterns, Page Object Model, configuration, 
 version: 1.0.0
 origin: claude
 allowed-tools: []
-dependencies: python>=3.11
 triggers:
 - e2e test
 - end-to-end test

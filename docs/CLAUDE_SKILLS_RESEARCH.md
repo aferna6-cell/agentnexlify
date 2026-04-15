@@ -158,7 +158,11 @@ _Status as of 2026-04-15: items 1–9 complete (this commit). See `.claude/skill
    - Install: `npx skillsadd vercel-labs/agent-skills`
    - Priority: **P1** | Effort: **S**
 
-3. **Add `dependencies:` field to all skills that shell out to Python** ✅ DONE
+3. **Add `dependencies:` field to all skills that shell out to Python** ✅ PARTIAL (applied to schema-guard + security-audit; widget-test is bash-driven and e2e-testing is Node/Playwright — neither needs Python)
+
+   _Follow-up deferred (not scored critical):_
+   - Skill-trigger evals not run (skill-creator prescribes 3-5 test prompts per skill — next batch)
+   - Name collision risk: `email-sequence` overlaps `marketing:email-sequence` plugin — project skill should win but dispatch precedence untested
    - Files: `.claude/skills/schema-guard/SKILL.md`, `.claude/skills/widget-test/SKILL.md`, `.claude/skills/e2e-testing/SKILL.md`, `.claude/skills/security-audit/SKILL.md`
    - Reason: Official spec allows `dependencies: python>=3.11` — prevents version mismatch in cross-machine runs (Railway CI vs local).
    - Priority: **P2** | Effort: **S**
