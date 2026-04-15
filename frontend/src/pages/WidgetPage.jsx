@@ -56,6 +56,7 @@ export default function WidgetPage() {
     position: "bottom-right",
     pre_chat_form: null,
     enable_ai_fallback: false,
+    enable_structured_lead_parser: false,
   });
   const [isOnline, setIsOnline] = useState(true);
   const [togglingOnline, setTogglingOnline] = useState(false);
@@ -89,6 +90,7 @@ export default function WidgetPage() {
           position: dash.widget_config.position || "bottom-right",
           pre_chat_form: dash.widget_config.pre_chat_form || null,
           enable_ai_fallback: dash.widget_config.enable_ai_fallback === true,
+          enable_structured_lead_parser: dash.widget_config.enable_structured_lead_parser === true,
         });
         setIsOnline(dash.widget_config.is_online !== false);
         if (dash.widget_config.branding) {
@@ -463,6 +465,38 @@ export default function WidgetPage() {
               knowledge base, a more capable agent with web access takes over.
               Adds 2-5s latency only for those cases. Costs approximately $0.05
               per fallback invocation.
+            </p>
+          </div>
+          <div className="settings-field">
+            <label
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <input
+                type="checkbox"
+                checked={form.enable_structured_lead_parser}
+                onChange={(e) => {
+                  setForm((f) => ({
+                    ...f,
+                    enable_structured_lead_parser: e.target.checked,
+                  }));
+                  setSaved(false);
+                }}
+                style={{ width: 16, height: 16, cursor: "pointer" }}
+              />
+              Smart lead enrichment
+            </label>
+            <p
+              style={{
+                fontSize: "0.75rem",
+                color: "#888",
+                marginTop: "0.25rem",
+                marginBottom: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              Uses a managed AI agent to fill in name, email, phone, and
+              interest fields the basic parser missed. Runs in the background
+              &mdash; zero latency impact. Adds ~$0.002 per chat message.
             </p>
           </div>
           <div className="settings-field">

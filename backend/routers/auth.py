@@ -940,6 +940,8 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             teaser_message=w.get("teaser_message"),
             teaser_delay_seconds=w.get("teaser_delay_seconds") or 3,
             teaser_enabled=w.get("teaser_enabled", True),
+            enable_ai_fallback=w.get("enable_ai_fallback", False),
+            enable_structured_lead_parser=w.get("enable_structured_lead_parser", False),
         )
     else:
         # Auto-create widget_config if missing
@@ -1124,6 +1126,8 @@ async def update_widget_config(
         teaser_message=w.get("teaser_message"),
         teaser_delay_seconds=w.get("teaser_delay_seconds") or 3,
         teaser_enabled=w.get("teaser_enabled", True),
+        enable_ai_fallback=w.get("enable_ai_fallback", False),
+        enable_structured_lead_parser=w.get("enable_structured_lead_parser", False),
     )
 
 

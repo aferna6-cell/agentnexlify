@@ -50,14 +50,16 @@
 **Files touched:** 1
 **Effort:** ~1h
 
-## Phase 4 — UI toggle in widget config
+## Phase 4 — UI toggle in widget config ✅ SHIPPED 2026-04-15
 **Goal:** tenants can self-enable via dashboard
 **Files:**
-- `frontend/src/pages/WidgetPage.jsx` — add ToggleField mirroring `enable_ai_fallback` pattern per spec File 3 (lines 156-167)
-- `backend/routers/widget_config.py` — accept the new flag in update payload (Pydantic model)
-- `backend/models/schemas.py` — add field to widget config schema
+- `frontend/src/pages/WidgetPage.jsx` — added checkbox toggle matching `enable_ai_fallback` pattern (plain checkbox, no ToggleField component — none existed in codebase)
+- `backend/models/schemas.py` — added `enable_structured_lead_parser: bool = False` to `WidgetConfigDetail`; `bool | None = None` to `WidgetConfigUpdateRequest`
+- `backend/routers/auth.py` — wired `enable_structured_lead_parser` into `WidgetConfigDetail` response in both `update_widget_config` and dashboard load
+- Also fixed pre-existing bug: `enable_ai_fallback` was in the DB (migration 101) but missing from both Pydantic models, so the dashboard toggle silently dropped the value on save. Fixed in same PR (Rule 11 additive win).
+- Spec deviation: `widget_config.py` not touched — update endpoint is in `auth.py::update_widget_config`, not in widget_config.py.
 **Gate:** toggle visible in dashboard, persists to DB, respects RLS, frontend build green
-**Rollback:** hide toggle via feature flag in frontend
+**Rollback:** flip flag off per tenant in DB
 **Files touched:** 3
 **Effort:** 1h
 
@@ -113,7 +115,7 @@ Per spec "Cost + latency budget":
 - [x] Phase 1 — Migration + flag (2026-04-15, applied to live Supabase by user)
 - [x] Phase 2 — Background helper (2026-04-15)
 - [x] Phase 3 — Tests (2026-04-15)
-- [ ] Phase 4 — UI toggle
+- [x] Phase 4 — UI toggle (2026-04-15)
 - [ ] Phase 5 — Rollout + audit
 
 ## Producer skill metadata

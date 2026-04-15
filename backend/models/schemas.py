@@ -192,6 +192,8 @@ class WidgetConfigDetail(BaseModel):
     teaser_message: str | None = None
     teaser_delay_seconds: int = 3
     teaser_enabled: bool = True
+    enable_ai_fallback: bool = False
+    enable_structured_lead_parser: bool = False
 
 
 class DashboardQuickAction(BaseModel):
@@ -270,6 +272,8 @@ class WidgetConfigUpdateRequest(BaseModel):
     teaser_delay_seconds: int | None = Field(None, ge=0, le=60)
     teaser_enabled: bool | None = None
     pre_chat_form: list[dict] | None = None
+    enable_ai_fallback: bool | None = None
+    enable_structured_lead_parser: bool | None = None
 
 
 class FaqEntryResponse(BaseModel):
