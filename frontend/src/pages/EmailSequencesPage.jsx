@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { notify } from "../utils/notify";
 import {
   fetchEmailSequences,
   createEmailSequence,
@@ -1250,7 +1251,7 @@ export default function EmailSequencesPage() {
         ),
       );
     } catch (e) {
-      alert("Failed to update: " + (e.message || "Unknown error"));
+      notify.error("Failed to update: " + (e.message || "Unknown error"));
     }
   };
 
@@ -1265,7 +1266,7 @@ export default function EmailSequencesPage() {
       await deleteEmailSequence(seq.id, token);
       setSequences((prev) => prev.filter((s) => s.id !== seq.id));
     } catch (e) {
-      alert("Failed to delete: " + (e.message || "Unknown error"));
+      notify.error("Failed to delete: " + (e.message || "Unknown error"));
     }
   };
 

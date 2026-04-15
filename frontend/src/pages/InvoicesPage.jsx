@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { notify } from "../utils/notify";
 
 import InvoiceDetailModal from "../components/invoices/InvoiceDetailModal";
 import InvoiceFormModal from "../components/invoices/InvoiceFormModal";
@@ -362,7 +363,7 @@ export default function InvoicesPage() {
       setError(null);
       setSelectedIds(new Set());
       await loadData();
-      alert(
+      notify.error(
         `Sent: ${result.sent}, Failed: ${result.failed}${
           result.errors?.length ? "\n" + result.errors.join("\n") : ""
         }`,

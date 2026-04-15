@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { notify } from "../utils/notify";
 import {
   fetchPipelineAutomations,
   createPipelineAutomation,
@@ -87,7 +88,7 @@ export default function PipelineAutomationsPage({ onNavigate }) {
       setShowModal(false);
       await loadData();
     } catch (err) {
-      alert(err.message || "Failed to save automation");
+      notify.error(err.message || "Failed to save automation");
     } finally {
       setSaving(false);
     }
@@ -98,7 +99,7 @@ export default function PipelineAutomationsPage({ onNavigate }) {
       await updatePipelineAutomation(tenantId, token, auto.id, { is_active: !auto.is_active });
       await loadData();
     } catch (err) {
-      alert(err.message || "Failed to toggle automation");
+      notify.error(err.message || "Failed to toggle automation");
     }
   };
 
@@ -108,7 +109,7 @@ export default function PipelineAutomationsPage({ onNavigate }) {
       setDeleteConfirm(null);
       await loadData();
     } catch (err) {
-      alert(err.message || "Failed to delete automation");
+      notify.error(err.message || "Failed to delete automation");
     }
   };
 

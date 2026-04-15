@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { notify } from "../utils/notify";
 import {
   fetchTenant,
   updateTenantSettings,
@@ -214,7 +215,7 @@ export default function SettingsPage({ onNavigate }) {
       setNewFieldRequired(false);
     } catch (err) {
       console.warn("Create custom field failed:", err.message);
-      alert(err.message || "Failed to create field");
+      notify.error(err.message || "Failed to create field");
     } finally {
       setSavingField(false);
     }
@@ -227,7 +228,7 @@ export default function SettingsPage({ onNavigate }) {
       setCustomFieldDefs((prev) => prev.filter((f) => f.id !== fieldId));
     } catch (err) {
       console.warn("Delete custom field failed:", err.message);
-      alert(err.message || "Failed to delete field");
+      notify.error(err.message || "Failed to delete field");
     } finally {
       setDeletingFieldId(null);
     }

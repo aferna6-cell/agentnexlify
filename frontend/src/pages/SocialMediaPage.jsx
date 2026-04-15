@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { notify } from "../utils/notify";
 import {
   fetchSocialPosts,
   createSocialPost,
@@ -178,7 +179,7 @@ export default function SocialMediaPage() {
       await deleteSocialPost(user.tenantId, token, postId);
       loadPosts();
     } catch (e) {
-      alert("Failed to delete: " + (e.message || "Unknown error"));
+      notify.error("Failed to delete: " + (e.message || "Unknown error"));
     }
   };
 

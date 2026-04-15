@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { notify } from "../utils/notify";
 import {
   createRepurposeJob,
   listRepurposeJobs,
@@ -172,7 +173,7 @@ export default function ContentRepurposePage() {
         }
       }, 3000);
     } catch (err) {
-      alert(err.message || "Failed to create repurpose job");
+      notify.error(err.message || "Failed to create repurpose job");
     } finally {
       setCreating(false);
     }
@@ -183,9 +184,9 @@ export default function ContentRepurposePage() {
     setConnecting((prev) => ({ ...prev, [target]: true }));
     try {
       await connectRepurposeOutputs(tenantId, selectedJob.id, [target]);
-      alert(`Pushed to ${target.replace("_", " ")} successfully!`);
+      notify.error(`Pushed to ${target.replace("_", " ")} successfully!`);
     } catch (err) {
-      alert(err.message || `Failed to push to ${target}`);
+      notify.error(err.message || `Failed to push to ${target}`);
     } finally {
       setConnecting((prev) => ({ ...prev, [target]: false }));
     }

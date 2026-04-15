@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { BASE } from "../utils/api/_client";
 import SkeletonLoader from "../components/SkeletonLoader";
+import { notify } from "../utils/notify";
 
 const cardStyle = {
   background: "var(--bg-secondary, var(--card-bg))",
@@ -448,7 +449,7 @@ export default function AdminPromotionsPage() {
       await apiFetch(`/promotions/${id}/expire`, { method: "POST" });
       loadPromotions();
     } catch (e) {
-      alert("Failed to expire: " + (e.message || "Unknown error"));
+      notify.error("Failed to expire: " + (e.message || "Unknown error"));
     }
   };
 
@@ -458,7 +459,7 @@ export default function AdminPromotionsPage() {
       await apiFetch(`/promotions/${id}`, { method: "DELETE" });
       setPromotions((prev) => prev.filter((p) => p.id !== id));
     } catch (e) {
-      alert("Failed to delete: " + (e.message || "Unknown error"));
+      notify.error("Failed to delete: " + (e.message || "Unknown error"));
     }
   };
 

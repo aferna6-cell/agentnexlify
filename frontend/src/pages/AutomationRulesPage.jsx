@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { BASE } from "../utils/api/_client";
 import SkeletonLoader from "../components/SkeletonLoader";
+import { notify } from "../utils/notify";
 
 const cardStyle = {
   background: "var(--bg-secondary, var(--card-bg))",
@@ -693,7 +694,7 @@ export default function AutomationRulesPage() {
         ),
       );
     } catch (e) {
-      alert("Failed to toggle rule: " + (e.message || "Unknown error"));
+      notify.error("Failed to toggle rule: " + (e.message || "Unknown error"));
     }
   };
 
@@ -705,7 +706,7 @@ export default function AutomationRulesPage() {
       });
       setRules((prev) => prev.filter((r) => r.id !== ruleId));
     } catch (e) {
-      alert("Failed to delete: " + (e.message || "Unknown error"));
+      notify.error("Failed to delete: " + (e.message || "Unknown error"));
     }
   };
 

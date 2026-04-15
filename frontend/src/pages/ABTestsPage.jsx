@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { BASE } from "../utils/api/_client";
 import SkeletonLoader from "../components/SkeletonLoader";
+import { notify } from "../utils/notify";
 import {
   BarChart,
   Bar,
@@ -803,7 +804,7 @@ export default function ABTestsPage() {
       });
       loadTests();
     } catch (e) {
-      alert("Failed to start: " + (e.message || "Unknown error"));
+      notify.error("Failed to start: " + (e.message || "Unknown error"));
     }
   };
 
@@ -817,7 +818,7 @@ export default function ABTestsPage() {
       );
       const variants = testRes.variants || [];
       if (variants.length === 0) {
-        alert("No variants found for this test");
+        notify.error("No variants found for this test");
         return;
       }
       // Show variant selection prompt
@@ -825,7 +826,7 @@ export default function ABTestsPage() {
       const choice = prompt(`Select winner:\n${options}\n\nEnter number:`);
       const idx = parseInt(choice) - 1;
       if (isNaN(idx) || idx < 0 || idx >= variants.length) {
-        alert("Invalid selection");
+        notify.error("Invalid selection");
         return;
       }
       const winnerVariantId = variants[idx].id;
@@ -838,7 +839,7 @@ export default function ABTestsPage() {
         setSelectedTest((prev) => ({ ...prev, status: "completed" }));
       }
     } catch (e) {
-      alert("Failed to complete: " + (e.message || "Unknown error"));
+      notify.error("Failed to complete: " + (e.message || "Unknown error"));
     }
   };
 
@@ -851,7 +852,7 @@ export default function ABTestsPage() {
       setTests((prev) => prev.filter((t) => t.id !== testId));
       if (selectedTest?.id === testId) setSelectedTest(null);
     } catch (e) {
-      alert("Failed to delete: " + (e.message || "Unknown error"));
+      notify.error("Failed to delete: " + (e.message || "Unknown error"));
     }
   };
 

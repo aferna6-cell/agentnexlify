@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, changePlan, cancelSubscription } from "../utils/api/dashboard";
 import SkeletonLoader from "../components/SkeletonLoader";
+import { notify } from "../utils/notify";
 
 const PLANS = [
   { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
@@ -106,7 +107,7 @@ export default function BillingPage() {
       }
     } catch (err) {
       console.error("Failed to start checkout", err);
-      alert(err.message || "Failed to start checkout");
+      notify.error(err.message || "Failed to start checkout");
     } finally {
       setUpgrading(null);
     }
@@ -121,7 +122,7 @@ export default function BillingPage() {
       }
     } catch (err) {
       console.error("Failed to open billing portal", err);
-      alert(err.message || "Failed to open billing portal");
+      notify.error(err.message || "Failed to open billing portal");
     } finally {
       setPortalLoading(false);
     }
@@ -134,7 +135,7 @@ export default function BillingPage() {
       await changePlan(token, planKey);
       await load();
     } catch (err) {
-      alert(err.body?.detail || err.message || "Failed to change plan");
+      notify.error(err.body?.detail || err.message || "Failed to change plan");
     } finally {
       setChangingPlan(null);
     }
@@ -152,7 +153,7 @@ export default function BillingPage() {
       setCancelStatus("scheduled");
     } catch (err) {
       setCancelStatus(null);
-      alert(err.body?.detail || err.message || "Failed to cancel");
+      notify.error(err.body?.detail || err.message || "Failed to cancel");
     }
   };
 

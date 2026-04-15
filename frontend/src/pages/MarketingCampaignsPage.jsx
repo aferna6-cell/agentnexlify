@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { notify } from "../utils/notify";
 import {
   fetchMarketingCampaigns,
   createMarketingCampaign,
@@ -196,7 +197,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
         openDetail({ ...selectedCampaign, status: "sending" });
       }
     } catch (e) {
-      alert("Failed to send: " + (e.message || "Unknown error"));
+      notify.error("Failed to send: " + (e.message || "Unknown error"));
     }
   };
 

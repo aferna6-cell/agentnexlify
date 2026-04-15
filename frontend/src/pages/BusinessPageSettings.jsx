@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchBusinessPageSettings, updateBusinessPageSettings } from "../utils/api/business-page";
 import SkeletonLoader from "../components/SkeletonLoader";
+import { notify } from "../utils/notify";
 
 const SITE_URL = "https://agentnexlify.com";
 
@@ -169,7 +170,7 @@ export default function BusinessPageSettings() {
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error("Failed to save business page settings", err);
-      alert(err.message || "Failed to save. Please try again.");
+      notify.error(err.message || "Failed to save. Please try again.");
     } finally {
       setSaving(false);
     }
