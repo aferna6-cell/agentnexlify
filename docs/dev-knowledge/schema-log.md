@@ -714,3 +714,15 @@ Adds opt-in boolean to `widget_configs` controlling whether widget chat escalate
 See `backend/routers/widget_chat.py:Step 9a` and `docs/managed-agents.md` for the full flow description.
 
 **Applied:** Pending — created 2026-04-10. Apply via Supabase MCP.
+
+### 103 — Structured Lead Parser Flag
+**Date:** 2026-04-15
+Adds opt-in boolean to `widget_configs` controlling whether widget chat runs the `structured_extractor` managed agent as a **background enrichment pass** on each user message. Fills `name/email/phone/interest/timeline/budget` fields the regex parser missed.
+
+- `widget_configs.enable_structured_lead_parser` BOOLEAN NOT NULL DEFAULT false — rollout opt-in per tenant
+- Cost ceiling: ~$0.002/call (Haiku); MTOptions ~$1.41/mo at 704 msgs
+- Latency on chat happy path: 0ms (background task — fires after response sent)
+- Phase 1 of 5 in `/plans/lead-parser-replacement_plan.md`
+- Source spec: `/specs/lead-parser-replacement_spec.md`
+
+**Applied:** Pending — created 2026-04-15. Apply via Supabase MCP / Dashboard SQL editor.

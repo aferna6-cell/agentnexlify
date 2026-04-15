@@ -53,15 +53,15 @@ This keeps happy-path latency unchanged (regex is synchronous, managed agent is 
 
 ## Schema
 
-### New flag: `widget_configs.enable_structured_lead_parser`
+### New flag: `widget_configs.enable_structured_lead_parser` ✅ SHIPPED migration 103
 
 ```sql
--- Migration 102 (proposed)
+-- Migration 103 — applied 2026-04-15 (102 was taken by marketing_addon)
 ALTER TABLE widget_configs
     ADD COLUMN IF NOT EXISTS enable_structured_lead_parser boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN widget_configs.enable_structured_lead_parser IS
-'When true, widget chat runs the structured_extractor managed agent as a background enrichment pass on each user message to fill in name/email/phone/interest/timeline/budget fields the regex parser missed. Added 2026-04-XX (migration 102).';
+'When true, widget chat runs the structured_extractor managed agent as a background enrichment pass on each user message to fill in name/email/phone/interest/timeline/budget fields the regex parser missed. Added 2026-04-15 (migration 103).';
 ```
 
 ### Optional new column: `leads.enrichment_source`

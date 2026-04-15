@@ -5,9 +5,9 @@
 **Estimated phases:** 5
 **Reversibility:** every phase commits behind `widget_configs.enable_structured_lead_parser` flag (default false)
 
-## Phase 1 — Tracer Bullet (DB + flag, off by default)
+## Phase 1 — Tracer Bullet (DB + flag, off by default) ✅ SHIPPED 2026-04-15
 **Goal:** ship the migration + flag, no behavior change yet
-**DB:** `migrations/102_widget_configs_enable_structured_lead_parser.sql`
+**DB:** `migrations/103_widget_configs_enable_structured_lead_parser.sql` (102 was taken)
 - ALTER TABLE widget_configs ADD COLUMN enable_structured_lead_parser bool DEFAULT false NOT NULL
 - COMMENT ON COLUMN explains purpose + date
 **API:** none new — flag defaults false, current pipeline unchanged
@@ -99,7 +99,7 @@ Per spec "Cost + latency budget":
 - **Risk 4:** "interest" key name mismatch with `areas_of_interest` column — Phase 2 task to verify and fix mapping.
 
 ## Status
-- [ ] Phase 1 — Migration + flag
+- [x] Phase 1 — Migration + flag (2026-04-15, commit pending)
 - [ ] Phase 2 — Background helper
 - [ ] Phase 3 — Tests
 - [ ] Phase 4 — UI toggle
