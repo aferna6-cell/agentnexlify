@@ -93,22 +93,27 @@ async def _enrich_lead_from_message(
     Non-blocking: errors are logged but never raised. Must not crash the
     widget pipeline.
     """
-    from backend.services.structured_extractor import extract_structured, ExtractorError
+    # NOTE 2026-04-15: spec originally referenced ExtractorError but
+    # backend/services/structured_extractor.py raises ValueError directly.
+    # Helper catches ValueError (parse failure) + Exception (anthropic
+    # outage, ManagedAgentNotConfigured, etc.). See actual implementation
+    # in backend/routers/widget_helpers.py::_enrich_lead_from_message.
+    from backend.services.structured_extractor import extract_structured
     try:
         result = extract_structured(
             tenant_id=tenant_id,
             raw_text=raw_text,
             target_schema="lead",
         )
-    except ExtractorError as exc:
+    except ValueError as exc:
         logger.warning(
-            "lead_enrichment: structured_extractor failed for session=%s: %s",
+            "lead_enrichment: structured_extractor parse failed for session=%s: %s",
             session_id, exc,
         )
         return
     except Exception:
         logger.exception(
-            "lead_enrichment: unexpected error for session=%s",
+            "lead_enrichment: unexpected extractor error for session=%s",
             session_id,
         )
         return
@@ -124,11 +129,16 @@ async def _enrich_lead_from_message(
     if merged == regex_extracted:
         return  # No new info, nothing to do
 
-    # Update the lead row via tenant_scope helper
+    # Update the lead row via tenant_scope helper.
+    # NOTE 2026-04-15: spec originally said dedup by session_id but the
+    # leads table has no such column. Real implementation dedups by
+    # email + client_id (matching _capture_leads_from_session at line
+    # 1102 of widget_helpers.py). If neither regex nor extractor produced
+    # an email or phone, the helper skips because there's no safe key.
     db = get_service_supabase()
     db.table("leads").update(
         _lead_fields_for_update(merged),
-    ).eq("client_id", tenant_id).eq("session_id", session_id).execute()
+    ).eq("client_id", tenant_id).eq("email", merged["email"]).execute()
 
     log_activity(
         tenant_id=tenant_id,
@@ -183,7 +193,7 @@ Mock `structured_extractor.extract_structured` — no live API calls.
 
 ## Rollout
 
-1. Ship migration 102 + code behind flag, default off. Zero impact on existing tenants.
+1. Ship migration 103 + code behind flag, default off. Zero impact on existing tenants.
 2. Enable for MTOptions (top driver). Monitor `activity_log WHERE activity_type = 'lead_enriched'` for 24 hours.
 3. Compare before/after lead-field completion rate. Target: ≥95% of leads have all of name/email/phone within first 3 messages.
 4. Roll to the other 4 testers if MTOptions shows improvement.
@@ -219,7 +229,7 @@ Mock `structured_extractor.extract_structured` — no live API calls.
 # 1. Unit tests
 python3 -m pytest backend/tests/test_lead_enrichment.py -v
 
-# 2. Apply migration 102
+# 2. Apply migration 103
 # via Supabase MCP or Management API
 
 # 3. Enable flag for test tenant

@@ -4,6 +4,26 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Spec referenced ExtractorError but real code raises ValueError
+**Date:** 2026-04-15
+**Symptom:** While shipping Phase 2 of the lead-parser-replacement feature, the spec at `specs/lead-parser-replacement_spec.md` line 96/103 told the implementer to `from backend.services.structured_extractor import extract_structured, ExtractorError` and `except ExtractorError as exc:`. The symbol `ExtractorError` does not exist in `backend/services/structured_extractor.py` — that module raises `ValueError` directly on parse failure (line 207 + 214 of structured_extractor.py).
+**Root Cause:** Spec was authored before the extractor was implemented (or after a refactor that removed the custom exception class). Spec drift was never detected because nobody ran the spec's Python sample through a linter/import check.
+**Files Changed:** `backend/routers/widget_helpers.py` (helper catches ValueError + Exception), `backend/tests/test_lead_enrichment.py` (test names + side_effect use ValueError), `specs/lead-parser-replacement_spec.md` (corrected import + exception class), `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Per Rule 10 (don't change tests/code to match assumed intent — code is right until proven wrong), helper catches `ValueError` for parse failures and bare `Exception` for everything else (anthropic outage, ManagedAgentNotConfigured, network timeout). Spec updated to reflect reality with a NOTE comment explaining the deviation.
+**Prevention:** When a spec ships before the dependency it imports, the spec author MUST run `python -c "from <module> import <symbol>"` to verify imports. Future implementer should always grep the dependency for actual exception classes BEFORE coding the catch block. Discovered by reading `backend/services/structured_extractor.py` rather than trusting the spec.
+
+---
+
+### Spec dedup said session_id but leads table has no such column
+**Date:** 2026-04-15
+**Symptom:** Same Phase 2 work — spec at `specs/lead-parser-replacement_spec.md` line 131 told implementer to dedup leads by `.eq("session_id", session_id)`. Verified against migrations 001-103: leads table has `id, client_id, name, email, phone, conversation_id, ...` but NEVER had a `session_id` column. The chain is `leads.conversation_id → conversations.session_id` per `backend/services/automation_engine.py:487`.
+**Root Cause:** Spec author assumed leads table tracked session_id directly because all the OTHER widget tables do (chat_messages, conversations). Cross-table reality is more nuanced — leads link via conversation_id.
+**Files Changed:** `backend/routers/widget_helpers.py` (`_enrich_lead_from_message` dedups by email > phone fallback), `specs/lead-parser-replacement_spec.md` (NOTE explaining real dedup path)
+**Fix:** Helper looks up lead by email + client_id (matching `_capture_leads_from_session` line 1141-1152 of widget_helpers.py). If no email, falls back to phone. If neither, skips with `logger.info` — eventually a future user message will have contact info and retry naturally. Race with `_capture_leads_from_session` handled by the "lead not found → skip" branch (covered by `test_lead_not_found_skips_update`).
+**Prevention:** Before writing a `.eq("col", val)` in any new helper, grep migrations OR query Supabase to confirm the column exists. CLAUDE.md Rule 1-3 already enforces this for `client_id`/`status`/`areas_of_interest` — extend the same discipline to `session_id` on tables other than `chat_messages`/`conversations`.
+
+---
+
 ### Lead scoring queried dropped conversations.messages JSONB column
 **Date:** 2026-04-13
 **Symptom:** Railway logs showed `WARNING backend.services.lead_scoring: Background scoring failed for lead <id>` with `postgrest.exceptions.APIError: {'message': 'column conversations.messages does not exist', 'code': '42703'}` on every new widget lead.
