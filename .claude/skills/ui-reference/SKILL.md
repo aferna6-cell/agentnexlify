@@ -55,7 +55,34 @@ Pull these categories (mirror our `design.md` structure):
 
 | Category | What to extract | How |
 |---|---|---|
-| **Colors** | Unique background, text, accent, border colors (top 8-12 by frequency) | RGB → hex, dedupe near-duplicates (<5% delta) |
+| **Colors** | Unique background, text, accent, border colors (top 8-12 by frequency) | RGB → hex, dedupe via Euclidean distance (see snippet below) |
+
+**Color dedupe snippet** (paste into `playwright.browser_evaluate` after page load):
+```js
+() => {
+  const props = ['color', 'background-color', 'border-color'];
+  const freq = new Map();
+  document.querySelectorAll('*').forEach(el => {
+    const cs = getComputedStyle(el);
+    props.forEach(p => {
+      const v = cs.getPropertyValue(p);
+      if (v && v !== 'rgba(0, 0, 0, 0)' && v !== 'transparent') {
+        freq.set(v, (freq.get(v) || 0) + 1);
+      }
+    });
+  });
+  const parse = (s) => { const m = s.match(/\d+/g); return m ? m.slice(0,3).map(Number) : null; };
+  const dist = (a, b) => Math.sqrt(a.reduce((s, x, i) => s + (x - b[i]) ** 2, 0));
+  const entries = [...freq.entries()].map(([c, n]) => ({ c, n, rgb: parse(c) })).filter(e => e.rgb).sort((a, b) => b.n - a.n);
+  const kept = [];
+  for (const e of entries) {
+    if (!kept.some(k => dist(e.rgb, k.rgb) < 12)) kept.push(e);  // ~5% of sqrt(3*255^2)
+    if (kept.length >= 12) break;
+  }
+  return kept.map(k => ({ rgb: k.rgb, hex: '#' + k.rgb.map(x => x.toString(16).padStart(2, '0')).join(''), count: k.n }));
+}
+```
+Threshold 12 = ~5% of max RGB distance (sqrt(3·255²) ≈ 441). Tune if output too noisy/sparse.
 | **Typography** | Font families, weights, sizes (h1/h2/h3/body/small), line-heights | computed `font-family`, `font-size`, `font-weight`, `line-height` on headings + body |
 | **Spacing** | Padding + margin scale (4/8/12/16/24/32/…) | computed `padding`, `margin` on cards/sections/buttons |
 | **Border radius** | Corner scale (0/4/8/12/16/full) | computed `border-radius` |
