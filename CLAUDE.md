@@ -142,6 +142,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 | Widget or knowledge base | `/widget` | `CONTEXT.md` |
 | Deploy, monitor, docs | `/ops` | `CONTEXT.md` |
 | Complex decision | `/skills/llm-council` | `SKILL.md` |
+| Sell managed agents to clients | `/planning/managed-agents` | `README.md` |
 
 ### Naming conventions
 - Specs: `/planning/specs/feature-name_spec.md`
