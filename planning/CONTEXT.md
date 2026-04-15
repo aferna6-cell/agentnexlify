@@ -12,7 +12,9 @@ Product thinking, feature specs, architecture decisions, and phase tracking for 
 
 ## Process
 
-- **Before writing code:** write a spec in `/planning/specs/`
+- **Before writing code:** write a spec in `/specs/` (root — see `STRUCTURE.md`)
+- **Phase the work:** plan in `/plans/` (root)
+- **Verify completion:** record audits in `/audits/` (root)
 - **Before a significant architecture choice:** document it in `/planning/decisions/`
 - **When milestones are hit:** update phase tracking status
 
@@ -35,9 +37,12 @@ Product thinking, feature specs, architecture decisions, and phase tracking for 
 
 ## Folders
 
-- `/planning/specs` — Feature specs and PRDs
-- `/planning/architecture` — System design docs, data models, integration diagrams
+- `/specs` (ROOT) — Feature specs and PRDs (the LAW). Migrated 2026-04-15. See `/STRUCTURE.md`.
+- `/plans` (ROOT) — Phased implementation plans (INTENT). See `/STRUCTURE.md`.
+- `/audits` (ROOT) — Verification reports (PROOF). See `/STRUCTURE.md`.
+- `/planning/architecture` — System design docs, data models, integration diagrams (workflow context)
 - `/planning/decisions` — Architecture Decision Records (ADRs)
+- `/planning/managed-agents` — Managed agent product line specs
 
 ## Current Priorities (2026-03-31)
 

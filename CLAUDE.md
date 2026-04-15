@@ -145,7 +145,9 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 | Sell managed agents to clients | `/planning/managed-agents` | `README.md` |
 
 ### Naming conventions
-- Specs: `/planning/specs/feature-name_spec.md`
+- Specs: `/specs/feature-name_spec.md` (root, see `STRUCTURE.md`)
+- Plans: `/plans/feature-name_plan.md` (root, see `STRUCTURE.md`)
+- Audits: `/audits/audit-<topic>-YYYY-MM-DD.md` (root, see `STRUCTURE.md`)
 - Decisions: `/planning/decisions/YYYY-MM-DD-title.md`
 - Tenant KBs: `/widget/knowledge-bases/tenant-name_kb.md`
 - Migrations: `migrations/NNN_name.sql` (zero-padded, sequential)

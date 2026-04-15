@@ -17,7 +17,7 @@ triggers:
 Forces decision-tree resolution BEFORE code. One question at a time. Maps to `claude-usage-patterns.md` Pattern 2 (Interview First).
 
 ## When to Use
-- New feature spec (any file in `planning/specs/`)
+- New feature spec (any file in `specs/`)
 - Refactor touching 3+ files
 - Schema change (any `migrations/NNN_*.sql`)
 - New tenant onboarding pattern

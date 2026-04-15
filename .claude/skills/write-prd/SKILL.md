@@ -1,6 +1,6 @@
 ---
 name: write-prd
-description: Generate a Product Requirements Document via interactive interview, codebase exploration, and module design. Output saved to planning/specs/<feature>_spec.md. Load when user says "write a PRD", "draft a spec", "spec this feature", "PRD for X".
+description: Generate a Product Requirements Document via interactive interview, codebase exploration, and module design. Output saved to specs/<feature>_spec.md. Load when user says "write a PRD", "draft a spec", "spec this feature", "PRD for X".
 origin: https://github.com/mattpocock/skills/tree/main/write-a-prd
 version: 1.0.0
 triggers:
@@ -14,7 +14,7 @@ triggers:
 
 # Write PRD — Spec Authoring
 
-Interview → explore → design → file. Output: `planning/specs/<feature-name>_spec.md`.
+Interview → explore → design → file. Output: `specs/<feature-name>_spec.md`.
 
 ## When to Use
 - New feature requested without spec
@@ -29,11 +29,11 @@ Interview → explore → design → file. Output: `planning/specs/<feature-name
 - User wants direct execution
 
 ## Process
-1. **Read context** — `CLAUDE.md`, `planning/CONTEXT.md`, existing specs in `planning/specs/`
+1. **Read context** — `CLAUDE.md`, `planning/CONTEXT.md`, existing specs in `specs/`
 2. **Run grill-me skill** if scope unclear — get resolved decisions
 3. **Explore codebase** — find related routers/pages/migrations to reference
 4. **Draft PRD** using template below
-5. **Write to** `planning/specs/<kebab-feature>_spec.md`
+5. **Write to** `specs/<kebab-feature>_spec.md`
 6. **Hand off** to `prd-to-plan` for phased plan or `prd-to-issues` for GH backlog
 
 ## PRD Template
@@ -104,8 +104,8 @@ Interview → explore → design → file. Output: `planning/specs/<feature-name
 ```
 
 ## Naming
-- File: `planning/specs/<kebab-name>_spec.md`
-- Example: `planning/specs/lead-scoring-v2_spec.md`
+- File: `specs/<kebab-name>_spec.md`
+- Example: `specs/lead-scoring-v2_spec.md`
 
 ## Cross-refs
 - Companion skills: `grill-me` (run first), `prd-to-plan`, `prd-to-issues`

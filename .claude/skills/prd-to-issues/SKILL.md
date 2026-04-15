@@ -29,7 +29,7 @@ Difference vs `prd-to-plan`: issues are **independent**, plan is **ordered**. Us
 - Issues already exist for the feature
 
 ## Process
-1. **Read PRD** at `planning/specs/<feature>_spec.md`
+1. **Read PRD** at `specs/<feature>_spec.md`
 2. **Decompose** into vertical slices (DB + API + UI per slice)
 3. **State blockers** explicitly — Issue B blocks on Issue A
 4. **Group by epic** — meta-issue tracks all children
@@ -43,7 +43,7 @@ Difference vs `prd-to-plan`: issues are **independent**, plan is **ordered**. Us
 [<epic>] <slice description, imperative>
 
 ## Context
-Source spec: planning/specs/<feature>_spec.md (link to specific section)
+Source spec: specs/<feature>_spec.md (link to specific section)
 
 ## Acceptance Criteria
 - [ ] DB: migration NNN_name.sql created + applied

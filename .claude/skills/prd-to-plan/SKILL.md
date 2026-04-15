@@ -35,19 +35,19 @@ Build the thinnest possible end-to-end slice first. Each phase ships a working v
 **Good:** ship 1 happy-path flow end-to-end → add edge cases → add admin view → add metrics
 
 ## Process
-1. **Read PRD** at `planning/specs/<feature>_spec.md`
+1. **Read PRD** at `specs/<feature>_spec.md`
 2. **Identify the smallest user-visible win** — that's Phase 1
 3. **Walk back from win** — what minimum DB + API + UI is required?
 4. **Define phases** — each phase ships a working slice end-to-end
 5. **Define gates** — what test/metric proves each phase done?
-6. **Output plan** to `planning/plans/<feature>_plan.md`
+6. **Output plan** to `plans/<feature>_plan.md`
 7. **Hand off** to `compound-engineering` skill or `feature-build` skill per phase
 
 ## Plan Template
 ```markdown
 # [Feature Name] — Implementation Plan
 
-**Source spec:** planning/specs/<feature>_spec.md
+**Source spec:** specs/<feature>_spec.md
 **Estimated phases:** N
 **Reversibility:** each phase commits behind feature flag (default off)
 
@@ -94,8 +94,8 @@ Build the thinnest possible end-to-end slice first. Each phase ships a working v
 - If a phase would touch >10 files → split
 
 ## Output naming
-- File: `planning/plans/<kebab-feature>_plan.md`
-- Example: `planning/plans/lead-scoring-v2_plan.md`
+- File: `plans/<kebab-feature>_plan.md`
+- Example: `plans/lead-scoring-v2_plan.md`
 
 ## Cross-refs
 - Companion: `write-prd`, `prd-to-issues`, `compound-engineering`, `feature-build`
