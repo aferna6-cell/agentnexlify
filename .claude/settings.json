@@ -281,6 +281,12 @@
             "type": "command",
             "command": "bash scripts/claude-hooks/kb-first-check.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/message-counter.sh",
+            "timeout": 5,
+            "statusMessage": "Checking message count..."
           }
         ]
       }
