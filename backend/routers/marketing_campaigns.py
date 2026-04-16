@@ -15,9 +15,7 @@ from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant
 from backend.services.addon_gate import require_marketing_addon
 from backend.services.campaign_service import _send_campaign_background
-from backend.services.email_sender import build_unsubscribe_url, send_email
 from backend.services.llm_runtime import call_claude_messages
-from backend.services.twilio_service import send_sms
 
 logger = logging.getLogger(__name__)
 
