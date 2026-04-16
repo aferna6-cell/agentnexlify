@@ -123,7 +123,7 @@ def _remap_sequence_trigger(
 def _seed_forms(
     db: Any, tenant_id: str, pack: IndustryPack, result: SeedResult, *, dry_run: bool,
 ) -> None:
-    """Seed forms. Reuses forms.py _FORM_PRESETS when preset.preset_key is set."""
+    """Seed forms. Reuses form_defaults._FORM_PRESETS when preset.preset_key is set."""
     from backend.services.form_defaults import _FORM_PRESETS
 
     for preset in pack.form_presets:
