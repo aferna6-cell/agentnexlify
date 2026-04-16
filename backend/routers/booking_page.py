@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.services.booking import generate_available_slots, link_appointment_to_lead
+from backend.services.booking import build_reschedule_url, generate_available_slots, link_appointment_to_lead
 from backend.services.email_sender import send_email
 from backend.services.tenant_scope import tenant_table
 from backend.services.webhook_dispatcher import fire_event_background
@@ -754,18 +754,7 @@ async def booking_submit(
 
 
 # ── Public Appointment Reschedule ──────────────────────────────
-
-
-def _generate_reschedule_token(appointment_id: str) -> str:
-    """Generate an expiring HMAC token for appointment reschedule links."""
-    issued_at = int(datetime.now(timezone.utc).timestamp())
-    payload = f"reschedule:{appointment_id}:{issued_at}"
-    signature = hmac.new(
-        settings.api_secret_key.encode(),
-        payload.encode(),
-        hashlib.sha256,
-    ).hexdigest()
-    return f"{issued_at}.{signature}"
+# build_reschedule_url + _generate_reschedule_token live in booking service.
 
 
 def _verify_reschedule_token(appointment_id: str, token: str) -> bool:
@@ -797,13 +786,6 @@ def _verify_reschedule_token(appointment_id: str, token: str) -> bool:
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(expected, signature)
-
-
-def build_reschedule_url(appointment_id: str, business_slug: str) -> str:
-    """Build a public reschedule URL with signed token."""
-    token = _generate_reschedule_token(appointment_id)
-    base_url = settings.api_url
-    return f"{base_url}/api/v1/book/reschedule/{appointment_id}?token={token}"
 
 
 @router.get("/reschedule/{appointment_id}", response_class=HTMLResponse)

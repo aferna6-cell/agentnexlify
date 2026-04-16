@@ -3940,7 +3940,7 @@ async def _send_campaign_for_rule(
     if not lead_data:
         return
     try:
-        from backend.routers.marketing_campaigns import _send_campaign_background
+        from backend.services.campaign_service import _send_campaign_background
 
         db = get_service_supabase()
         campaign_result = (

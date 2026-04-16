@@ -127,7 +127,7 @@ async def process_noshow_recovery() -> int:
         # Use business slug for booking page link
         rebook_url = f"{base_url}/api/v1/book/reschedule/{appt_id}?token=noshow"
         try:
-            from backend.routers.booking_page import build_reschedule_url
+            from backend.services.booking import build_reschedule_url
             rebook_url = build_reschedule_url(appt_id)
         except Exception:
             logger.debug("noshow_recovery: could not build signed reschedule URL", exc_info=True)

@@ -14,7 +14,7 @@ import logging
 from fastapi import Depends, HTTPException
 
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.services.auth_service import get_current_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def _tenant_has_addon(tenant_id: str) -> bool:
 
 
 async def require_marketing_addon(
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(get_current_tenant),
 ) -> dict:
     """Dependency: 402 if tenant lacks the Marketing Suite add-on."""
     tenant_id = claims.get("tenant_id")

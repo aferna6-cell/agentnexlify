@@ -2,13 +2,18 @@
 
 
 import asyncio
+import hashlib
+import hmac
 import html as html_mod
 import logging
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.services.tenant_scope import tenant_table
+
+_RESCHEDULE_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60
 
 logger = logging.getLogger(__name__)
 
@@ -304,8 +309,7 @@ def create_appointment(
 def _reschedule_link_html(appointment: dict) -> str:
     """Generate a reschedule link for the confirmation email."""
     try:
-        from backend.routers.booking_page import build_reschedule_url
-        url = build_reschedule_url(appointment["id"], "")
+        url = build_reschedule_url(appointment["id"])
         return f'<a href="{url}" style="color: #2563eb; text-decoration: underline;">click here to reschedule</a>'
     except Exception:
         return "please contact us"
@@ -594,3 +598,25 @@ def cancel_appointment(tenant_id: str, appointment_id: str) -> dict:
             logger.warning("Failed to delete Google Calendar event for appointment %s", appointment_id, exc_info=True)
 
     return result
+
+
+# ── Reschedule link helpers ──────────────────────────────────────────────────
+
+
+def _generate_reschedule_token(appointment_id: str) -> str:
+    """Generate an expiring HMAC token for appointment reschedule links."""
+    issued_at = int(datetime.now(timezone.utc).timestamp())
+    payload = f"reschedule:{appointment_id}:{issued_at}"
+    signature = hmac.new(
+        settings.api_secret_key.encode(),
+        payload.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{issued_at}.{signature}"
+
+
+def build_reschedule_url(appointment_id: str, business_slug: str = "") -> str:
+    """Build a public reschedule URL with a signed HMAC token."""
+    token = _generate_reschedule_token(appointment_id)
+    base_url = settings.api_url
+    return f"{base_url}/api/v1/book/reschedule/{appointment_id}?token={token}"

@@ -10,12 +10,12 @@
   - `backend/requirements.txt:4` pins `anthropic==0.42.0`; runtime is `0.95.0`. Silent compatibility drift.
   - Fix: Update to `anthropic>=0.95.0,<1`.
 
-- [ ] **Services Importing Router Functions** | Pass 2 | Effort: M
-  - `backend/services/addon_gate.py:17` → imports `_get_current_tenant` from `backend.routers.auth`
-  - `backend/services/booking.py:307` → imports from `backend.routers.booking_page`
-  - `backend/services/noshow_recovery.py:130` → imports from `backend.routers.booking_page`
-  - `backend/services/automation_engine.py:3943` → imports from `backend.routers.marketing_campaigns`
-  - Services must not depend on routers. Fix: Extract shared functions to service layer (e.g., `url_builders.py`, `auth_service.py`).
+- [x] **Services Importing Router Functions** | Pass 2 | Effort: M — FIXED 2026-04-16
+  - Created `backend/services/auth_service.py` — `_jwt_secret`, `_decode_token`, `get_current_tenant`
+  - Created `backend/services/campaign_service.py` — `_send_campaign_background`
+  - Moved `_generate_reschedule_token` + `build_reschedule_url` into `backend/services/booking.py`
+  - All 4 call sites updated; `_get_current_tenant` in `auth.py` kept as alias for backward compat
+  - Residual: `backend/services/industry_packs/seed.py:127` imports `_FORM_PRESETS` from forms router (not in original 4)
 
 ---
 

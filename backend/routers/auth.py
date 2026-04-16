@@ -31,6 +31,7 @@ from backend.models.schemas import (
     WidgetConfigDetail,
     WidgetConfigUpdateRequest,
 )
+from backend.services.auth_service import _decode_token, _jwt_secret, get_current_tenant
 from backend.services.stripe_service import PLAN_PRICES, get_or_create_customer
 from backend.services.email_sender import send_email
 from backend.services.business_profiles import (
@@ -60,12 +61,9 @@ def get_service_supabase():
     return get_supabase()
 
 
-def _jwt_secret() -> str:
-    jwt_secret = getattr(settings, "jwt_secret_key", "")
-    if isinstance(jwt_secret, str) and jwt_secret:
-        return jwt_secret
-    api_secret = getattr(settings, "api_secret_key", "")
-    return api_secret if isinstance(api_secret, str) else ""
+# _jwt_secret, _decode_token, and get_current_tenant live in auth_service to
+# avoid service→router import violations. Imported above; defined here only
+# as aliases so existing call sites in this file continue to work unchanged.
 
 
 # ── Helpers ──────────────────────────────────────────────────
@@ -111,18 +109,8 @@ def _create_token(
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-def _decode_token(token: str) -> dict:
-    try:
-        return jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
-    except JWTError as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
-
-
-async def _get_current_tenant(authorization: str = Header(...)) -> dict:
-    """FastAPI dependency: extract tenant claims from Bearer token."""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    return _decode_token(authorization.removeprefix("Bearer ").strip())
+# Backward-compat alias — all routers that do `Depends(_get_current_tenant)` continue to work.
+_get_current_tenant = get_current_tenant
 
 
 def _normalize_paid_plan(plan: str | None) -> str | None:
