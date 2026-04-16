@@ -11,10 +11,17 @@ paths:
 |-------|-----|---------|
 | **Haiku** | `claude-haiku-4-5-20251001` | grammar, formatting, lookups, bullet lists, renames, translations, quick classification, hook scanners |
 | **Sonnet** | `claude-sonnet-4-6` | code, debug, API calls, multi-file edits, most Agent executions, default implementation |
-| **Opus** | `claude-opus-4-6` | planning, architecture, security design, critical review, ambiguous decomposition |
+| **Opus 4.7** | `claude-opus-4-7` | **NEW DEFAULT** — planning, architecture, security design, critical review, ambiguous decomposition. Self-verifies outputs. Default effort: `xhigh` in Claude Code. See `rules/opus-4-7.md`. |
+| **Opus 4.6** | `claude-opus-4-6` | Legacy — only when prompts require pre-4.7 behavior parity |
+
+## Opus 4.7 feature invoke-regularly rules
+- **Self-verification** required on every task completion (`rules/self-verification.md`)
+- **/ultrareview** required before merging >20 LOC changes (`rules/ultrareview.md`)
+- **Task budgets** required on any long-running/cron agent (`rules/task-budgets.md`)
+- **3x vision** for screenshot/diagram/design inputs (`rules/vision-3x.md`)
 
 ## Pattern for non-trivial tasks
-**Opus plans → Sonnet executes → Haiku cleans up.**
+**Opus 4.7 plans + self-verifies → Sonnet executes → Haiku cleans up.**
 
 ## Advisor-Executor Pattern (dev-time)
 

@@ -39,8 +39,11 @@
   - JWT validation + branding logic co-located. Security layer doing business logic.
   - Fix: Move branding to `branding_service.py`. Keep auth.py pure: JWT, tenant isolation, OAuth.
 
-- [x] **Twilio SDK Stale (9.4.0 → 10.x available)** | Pass 5 | Effort: S — FIXED 2026-04-16 (commit 344df51)
-  - Upgraded to `twilio>=10.0.0,<11`. Safe: `twilio_service.py` uses raw httpx, no SDK imports.
+- [!] **Twilio SDK Stale (9.4.0 → 10.x available)** | Pass 5 | Effort: S — REVERTED 2026-04-16 (broke Railway)
+  - Audit recommendation was WRONG: twilio 10.x does NOT exist on PyPI (latest is 9.10.5).
+  - Commit 344df51 applied the bad pin → Railway build failed with "No matching distribution found for twilio<11,>=10.0.0".
+  - Fix: REMOVED twilio from requirements.txt entirely. `twilio_service.py` uses raw httpx, zero SDK imports in backend/.
+  - Lesson: audit claims about dependency versions MUST be verified against PyPI before commit. See `rules/fill-instructions-before-guessing.md`.
 
 ---
 

@@ -45,7 +45,12 @@
   - `TestEnrichmentNeverCrashes::test_extractor_unexpected_exception_does_not_crash`
   - `TestEnrichmentNeverCrashes::test_handles_fenced_json_via_extractor_contract`
 - Mock `structured_extractor.extract_structured` — no live API
-**Gate:** all pass when CI runs (local pytest blocked: pyiceberg→C++ build tools)
+**Gate:** all pass when CI runs.
+**Local pytest status (2026-04-16 investigation):**
+- pyiceberg IS a blocker, but via transitive chain: `supabase==2.28.3 → storage3==2.28.3 → pyiceberg>=0.10.0`. Not a direct dep.
+- Windows + Python 3.14: pyiceberg 0.11.1 has no prebuilt wheel; source build needs C++ toolchain.
+- Fixes (pick one when local pytest is needed): (a) install Visual C++ Build Tools, (b) use WSL/Docker for testing, (c) pin Python to 3.12 where wheels exist, (d) pin supabase to a version whose storage3 didn't require pyiceberg.
+- Railway/CI unaffected — python:3.11-slim Linux image has pyiceberg wheels.
 **Rollback:** delete test file (no prod impact)
 **Files touched:** 1
 **Effort:** ~1h

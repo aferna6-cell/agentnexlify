@@ -11,7 +11,10 @@ httpx==0.28.1
 python-multipart==0.0.22
 slowapi==0.1.9
 stripe>=11.0.0,<12
-twilio>=10.0.0,<11
+# twilio SDK removed 2026-04-16 (audit item was wrong).
+# Commit 344df51 upgraded to twilio>=10.0.0,<11 but that version does NOT exist on PyPI (max is 9.10.5).
+# Broke Railway build. backend/services/twilio_service.py uses raw httpx, zero SDK imports anywhere.
+# Dead dep. Re-add only if SDK becomes required; pin to <10 and check PyPI first.
 python-jose[cryptography]>=3.3.0
 bcrypt>=4.0.0
 sentry-sdk[fastapi]==2.20.0

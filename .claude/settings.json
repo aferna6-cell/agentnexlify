@@ -132,8 +132,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Use agent-browser via Bash instead\",\"additionalContext\":\"BLOCKED: Use agent-browser CLI via Bash instead of WebFetch/WebSearch. agent-browser gives real browser rendering, JS execution, redirect handling. Commands: agent-browser open <url> | agent-browser text | agent-browser screenshot | agent-browser links | agent-browser click <sel> | agent-browser fill <sel> <text>\"}}'",
-            "statusMessage": "Routing to agent-browser..."
+            "command": "bash scripts/claude-hooks/route-to-agent-browser.sh",
+            "statusMessage": "Routing to agent-browser (fallback: native fetch)..."
           }
         ]
       }
@@ -287,6 +287,12 @@
             "command": "bash scripts/claude-hooks/message-counter.sh",
             "timeout": 5,
             "statusMessage": "Checking message count..."
+          },
+          {
+            "type": "command",
+            "command": "bash scripts/claude-hooks/invoke-opus-47-features.sh",
+            "timeout": 5,
+            "statusMessage": "Reminding Opus 4.7 features..."
           }
         ]
       }
