@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -59,6 +60,18 @@ def _check_status(name: str, url: str, expected: set[int] | None = None) -> Smok
     if status not in expected:
         return SmokeResult(name, False, f"{url} returned {status}: {body[:160]!r}")
     return SmokeResult(name, True, f"{url} returned {status}")
+
+
+def _redact_widget_config_url(url: str) -> str:
+    return re.sub(r"(/api/v1/widget/config/)[^/?#]+", r"\1<redacted>", url)
+
+
+def _check_widget_config(name: str, url: str) -> SmokeResult:
+    display_url = _redact_widget_config_url(url)
+    status, _, body = _request(url)
+    if status != 200:
+        return SmokeResult(name, False, f"{display_url} returned {status}: {body[:160]!r}")
+    return SmokeResult(name, True, f"{display_url} returned 200")
 
 
 def _check_json_status(name: str, url: str, expected_status: str) -> SmokeResult:
@@ -228,7 +241,7 @@ def run(
     ]
     if widget_api_key:
         checks.append(
-            _check_status(
+            _check_widget_config(
                 "widget config loads",
                 _url(api_base_url, f"/api/v1/widget/config/{widget_api_key}"),
             )
