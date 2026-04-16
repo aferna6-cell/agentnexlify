@@ -113,7 +113,7 @@ jobs:
                   f.write("\n".join(alert_reasons))
           PYEOF
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lead-funnel-digest
@@ -217,7 +217,7 @@ jobs:
               f.write(str(len(churn_risks)))
           PYEOF
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: churn-report
@@ -331,7 +331,7 @@ jobs:
                   f.write("\n".join(alerts))
           PYEOF
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: cost-report

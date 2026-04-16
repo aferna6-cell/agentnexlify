@@ -36,7 +36,7 @@ jobs:
             --task-description "Scheduled daily autonomous improvement run"
 
       - name: Upload report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ai-auto-improve-report
           path: docs/ai-auto-improve-report.md

@@ -117,7 +117,7 @@ jobs:
 
           cat health-report.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: health-report
           path: health-report.md
