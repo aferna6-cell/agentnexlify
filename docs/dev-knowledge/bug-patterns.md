@@ -1784,3 +1784,17 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** agent-service/tsconfig.json,backend/routers/widget_chat.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(deps): unpin anthropic SDK — 0.42.0 → >=0.95.0,<1
+
+requirements.txt pinned 0.42.0 but runtime was already on 0.95.0.
+Closes CRITICAL item from audit-architecture-2026-04-16.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+**Date:** 2026-04-16
+**Commit:** 422c203
+**Author:** aferna6-cell
+**Files Changed:** backend/requirements.txt
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
