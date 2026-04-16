@@ -1469,7 +1469,7 @@ _ENRICHMENT_FIELD_MAP: dict[str, str] = {
 }
 
 
-async def _enrich_lead_from_message(
+def _enrich_lead_from_message(
     tenant_id: str,
     session_id: str,
     raw_text: str,
