@@ -1601,6 +1601,9 @@ async def _enrich_lead_from_message(
         # Existing lead already has these fields populated from another path.
         return
 
+    # Tag the lead as AI-enriched — surfaces the source in the dashboard.
+    update_payload["enrichment_source"] = "ai"
+
     try:
         tenant_update(db, "leads", tenant_id, update_payload).eq("id", lead_id).execute()
     except Exception:

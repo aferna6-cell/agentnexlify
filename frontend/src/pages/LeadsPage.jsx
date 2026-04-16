@@ -122,7 +122,26 @@ function LeadTable({
                 />
               </td>
               <td>
-                <div>{lead.name || "Unknown"}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {lead.name || "Unknown"}
+                  {lead.enrichment_source === "ai" && (
+                    <span
+                      title="Fields filled by AI enrichment"
+                      style={{
+                        fontSize: "0.65rem",
+                        padding: "1px 5px",
+                        borderRadius: 8,
+                        background: "rgba(0,191,255,0.15)",
+                        color: "#00BFFF",
+                        fontWeight: 700,
+                        letterSpacing: "0.02em",
+                        flexShrink: 0,
+                      }}
+                    >
+                      AI
+                    </span>
+                  )}
+                </div>
                 {lead.conversation_summary && (
                   <div
                     style={{
@@ -604,6 +623,11 @@ export default function LeadsPage() {
     page,
   ]);
 
+  const withAllFields = leads.filter((l) => l.name && l.email && l.phone).length;
+  const completionPct =
+    leads.length > 0 ? Math.round((withAllFields / leads.length) * 100) : null;
+  const aiEnrichedCount = leads.filter((l) => l.enrichment_source === "ai").length;
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -612,6 +636,46 @@ export default function LeadsPage() {
           {totalLeads} total lead{totalLeads !== 1 ? "s" : ""}
         </p>
       </div>
+
+      {/* Lead quality stat bar */}
+      {completionPct !== null && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 12,
+            padding: "8px 14px",
+            borderRadius: 8,
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            fontSize: 13,
+            color: "var(--text-secondary)",
+          }}
+        >
+          <span>
+            <span
+              style={{
+                fontWeight: 700,
+                color:
+                  completionPct >= 95
+                    ? "#22c55e"
+                    : completionPct >= 70
+                      ? "#f5a623"
+                      : "#ef4444",
+              }}
+            >
+              {completionPct}%
+            </span>{" "}
+            leads have name + email + phone
+          </span>
+          {aiEnrichedCount > 0 && (
+            <span style={{ color: "var(--accent, #00BFFF)" }}>
+              · {aiEnrichedCount} AI-enriched
+            </span>
+          )}
+        </div>
+      )}
 
       {/* AI Lead Update Suggestions */}
       {suggestions.length > 0 && (
