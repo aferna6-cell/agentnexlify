@@ -45,7 +45,7 @@ jobs:
       - name: Check agent system guardrails
         run: python scripts/check_agent_system.py
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
 
