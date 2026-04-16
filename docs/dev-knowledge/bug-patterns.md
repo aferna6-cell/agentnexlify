@@ -1848,3 +1848,21 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** audits/audit-architecture-2026-04-16.md,backend/requirements.txt,backend/services/automation_engine.py,scripts/sync-widget.sh
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(briefing): replace %-I strftime with cross-platform hour format
+
+%-I is Unix-only. Windows strftime raises ValueError, the exception
+handler swallows it, and time_str stays empty — appointment rows render
+as "  • Name" (no time, no em-dash) instead of "  • 1:30 PM — Name".
+
+Test regression was pre-existing on Windows; now passes on both
+platforms. All 175 backend tests pass.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-16
+**Commit:** 8449c0a
+**Author:** aferna6-cell
+**Files Changed:** backend/services/daily_briefing.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
