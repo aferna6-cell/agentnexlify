@@ -1,0 +1,163 @@
+name: Dead Code Sweep
+
+# Weekly sweep for unused code across frontend and backend.
+#
+# Frontend: knip — finds unused files, exports, dependencies in React/Vite project
+# Backend:  flake8 F401 — unused imports (low false-positive rate for FastAPI)
+#
+# Creates a GH issue when findings exceed thresholds.
+# Both jobs run in parallel; issue is created in a dependent job.
+
+on:
+  schedule:
+    - cron: "0 10 * * 0"   # Sunday 10 AM UTC
+  workflow_dispatch: {}
+
+jobs:
+  frontend-knip:
+    name: Frontend — knip
+    runs-on: ubuntu-latest
+    outputs:
+      count: ${{ steps.knip.outputs.count }}
+      report: ${{ steps.knip.outputs.report }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: cd frontend && npm ci --prefer-offline --silent
+
+      - name: Run knip
+        id: knip
+        run: |
+          cd frontend
+          set +e
+          # --reporter compact: one finding per line
+          REPORT=$(npx knip --reporter compact 2>&1)
+          set -e
+
+          echo "$REPORT" | head -50
+
+          # Count non-empty, non-header lines as findings
+          COUNT=$(echo "$REPORT" | grep -cvE '^\s*$|^Checking|^Done|^Found' || echo 0)
+
+          echo "Findings: $COUNT"
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+          # Trim report to avoid GH output size limits
+          TRIMMED=$(echo "$REPORT" | head -100)
+          echo "report<<DELIM" >> $GITHUB_OUTPUT
+          echo "$TRIMMED" >> $GITHUB_OUTPUT
+          echo "DELIM" >> $GITHUB_OUTPUT
+
+  backend-flake8:
+    name: Backend — flake8 F401 (unused imports)
+    runs-on: ubuntu-latest
+    outputs:
+      count: ${{ steps.flake.outputs.count }}
+      report: ${{ steps.flake.outputs.report }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run flake8 F401
+        id: flake
+        run: |
+          pip install flake8 --quiet
+          set +e
+          # F401: module imported but unused
+          # Exclude migrations, __init__ files, and test files (common false positives)
+          REPORT=$(flake8 backend/ \
+            --select=F401 \
+            --max-line-length=200 \
+            --exclude=backend/migrations/,backend/__pycache__/ \
+            2>&1)
+          set -e
+
+          echo "$REPORT" | head -50
+
+          COUNT=$(echo "$REPORT" | grep -c "F401" || echo 0)
+          echo "Unused imports: $COUNT"
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+          TRIMMED=$(echo "$REPORT" | head -100)
+          echo "report<<DELIM" >> $GITHUB_OUTPUT
+          echo "$TRIMMED" >> $GITHUB_OUTPUT
+          echo "DELIM" >> $GITHUB_OUTPUT
+
+  create-issue:
+    name: Report Findings
+    needs: [frontend-knip, backend-flake8]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const knipCount  = parseInt('${{ needs.frontend-knip.outputs.count }}')  || 0;
+            const flakeCount = parseInt('${{ needs.backend-flake8.outputs.count }}') || 0;
+            const total = knipCount + flakeCount;
+
+            // Only open issue if above threshold
+            // knip is intentionally noisy; use higher threshold
+            const KNIP_THRESHOLD  = 5;
+            const FLAKE_THRESHOLD = 3;
+
+            if (knipCount < KNIP_THRESHOLD && flakeCount < FLAKE_THRESHOLD) {
+              console.log(`Dead code sweep clean: knip=${knipCount}, flake8=${flakeCount}`);
+              return;
+            }
+
+            const knipReport  = `${{ needs.frontend-knip.outputs.report }}`;
+            const flakeReport = `${{ needs.backend-flake8.outputs.report }}`;
+
+            const body = [
+              `## Dead Code Report — ${new Date().toISOString().split('T')[0]}`,
+              '',
+              `| Tool | Scope | Findings |`,
+              `|------|-------|----------|`,
+              `| knip | frontend/ | ${knipCount} |`,
+              `| flake8 F401 | backend/ | ${flakeCount} |`,
+              '',
+              `### Frontend — knip (${knipCount} findings)`,
+              '```',
+              knipReport.slice(0, 2500) || 'No output',
+              '```',
+              knipCount > 100 ? '_Output truncated — run `cd frontend && npx knip` locally for full list._' : '',
+              '',
+              `### Backend — unused imports / flake8 F401 (${flakeCount} findings)`,
+              '```',
+              flakeReport.slice(0, 2500) || 'No output',
+              '```',
+              flakeCount > 100 ? '_Output truncated — run `flake8 backend/ --select=F401` locally._' : '',
+              '',
+              '---',
+              '**To fix:**',
+              '- knip: remove unused exports, delete unreferenced files, prune `dependencies` in package.json',
+              '- F401: delete unused import lines (safe — no behaviour change)',
+              '',
+              '> Per Rule 12 (CLAUDE.md): small files, no dead code. Each finding is a candidate for removal.',
+            ].join('\n');
+
+            for (const label of ['automated', 'dead-code', 'maintenance']) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  name: label, color: '6b7280'
+                });
+              } catch {}
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Dead Code Sweep: ${total} findings — ${new Date().toISOString().split('T')[0]}`,
+              body,
+              labels: ['automated', 'dead-code', 'maintenance']
+            });

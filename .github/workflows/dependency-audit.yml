@@ -1,0 +1,176 @@
+name: Dependency Security Audit
+
+# Runs every Monday morning. Opens a GH issue if HIGH or CRITICAL
+# vulnerabilities are found in Python (pip-audit) or Node (npm audit).
+#
+# No secrets required — reads from local requirements.txt + package-lock.json.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"   # Monday 9 AM UTC
+  workflow_dispatch: {}
+
+jobs:
+  pip-audit:
+    name: Python — pip-audit
+    runs-on: ubuntu-latest
+    outputs:
+      has_vulns: ${{ steps.audit.outputs.has_vulns }}
+      summary: ${{ steps.audit.outputs.summary }}
+      report: ${{ steps.audit.outputs.report }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run pip-audit
+        id: audit
+        run: |
+          pip install pip-audit --quiet
+          set +e
+          REPORT=$(pip-audit -r backend/requirements.txt --format markdown 2>&1)
+          EXIT=$?
+          set -e
+
+          echo "$REPORT"
+
+          # Save full report
+          echo "report<<DELIM" >> $GITHUB_OUTPUT
+          echo "$REPORT" >> $GITHUB_OUTPUT
+          echo "DELIM" >> $GITHUB_OUTPUT
+
+          # High/Critical check
+          if echo "$REPORT" | grep -qiE "\bhigh\b|\bcritical\b"; then
+            HV=true
+            SUMMARY=$(echo "$REPORT" | grep -iE "\bhigh\b|\bcritical\b" | head -5)
+          else
+            HV=false
+            SUMMARY="No HIGH or CRITICAL vulnerabilities found."
+          fi
+
+          echo "has_vulns=$HV" >> $GITHUB_OUTPUT
+          echo "summary<<DELIM" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "DELIM" >> $GITHUB_OUTPUT
+
+  npm-audit:
+    name: Node — npm audit
+    runs-on: ubuntu-latest
+    outputs:
+      has_vulns: ${{ steps.audit.outputs.has_vulns }}
+      summary: ${{ steps.audit.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install frontend deps
+        run: cd frontend && npm ci --prefer-offline --silent
+
+      - name: Run npm audit
+        id: audit
+        run: |
+          cd frontend
+          set +e
+          REPORT_JSON=$(npm audit --json 2>/dev/null)
+          set -e
+
+          # Parse vulnerability counts
+          HIGH=$(echo "$REPORT_JSON" | python3 -c "
+          import sys, json
+          try:
+              d = json.load(sys.stdin)
+              m = d.get('metadata', {}).get('vulnerabilities', {})
+              print(m.get('high', 0))
+          except:
+              print(0)
+          ")
+          CRITICAL=$(echo "$REPORT_JSON" | python3 -c "
+          import sys, json
+          try:
+              d = json.load(sys.stdin)
+              m = d.get('metadata', {}).get('vulnerabilities', {})
+              print(m.get('critical', 0))
+          except:
+              print(0)
+          ")
+          TOTAL=$(echo "$REPORT_JSON" | python3 -c "
+          import sys, json
+          try:
+              d = json.load(sys.stdin)
+              m = d.get('metadata', {}).get('vulnerabilities', {})
+              print(sum(m.values()))
+          except:
+              print(0)
+          ")
+
+          echo "High: $HIGH, Critical: $CRITICAL, Total: $TOTAL"
+
+          if [ "$HIGH" -gt "0" ] || [ "$CRITICAL" -gt "0" ]; then
+            HV=true
+            SUMMARY="High: $HIGH, Critical: $CRITICAL, Total: $TOTAL vulnerabilities"
+          else
+            HV=false
+            SUMMARY="No HIGH or CRITICAL vulnerabilities. Total: $TOTAL."
+          fi
+
+          echo "has_vulns=$HV" >> $GITHUB_OUTPUT
+          echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
+
+  create-issue:
+    name: Open Issue on Findings
+    needs: [pip-audit, npm-audit]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pipVulns = '${{ needs.pip-audit.outputs.has_vulns }}' === 'true';
+            const npmVulns = '${{ needs.npm-audit.outputs.has_vulns }}' === 'true';
+            if (!pipVulns && !npmVulns) {
+              console.log('No vulnerabilities found — no issue created.');
+              return;
+            }
+
+            const pipSummary = `${{ needs.pip-audit.outputs.summary }}`;
+            const pipReport  = `${{ needs.pip-audit.outputs.report }}`;
+            const npmSummary = `${{ needs.npm-audit.outputs.summary }}`;
+
+            const body = [
+              `## Dependency Vulnerabilities Found — ${new Date().toISOString().split('T')[0]}`,
+              '',
+              '### Python (pip-audit)',
+              pipVulns ? `⚠️ ${pipSummary}` : '✅ Clean',
+              '',
+              pipVulns ? '```\n' + pipReport.slice(0, 3000) + '\n```' : '',
+              '',
+              '### Node (npm audit)',
+              npmVulns ? `⚠️ ${npmSummary}` : '✅ Clean',
+              '',
+              '---',
+              '**Remediation:**',
+              '- Python: `pip-audit -r backend/requirements.txt --fix` (review before applying)',
+              '- Node: `cd frontend && npm audit fix` (or `npm audit fix --force` for breaking changes)',
+            ].join('\n');
+
+            for (const label of ['automated', 'security', 'dependencies']) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  name: label, color: 'dc2626'
+                });
+              } catch {}
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Dependency Audit: Vulnerabilities Found — ${new Date().toISOString().split('T')[0]}`,
+              body,
+              labels: ['automated', 'security', 'dependencies']
+            });

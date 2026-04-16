@@ -27,7 +27,6 @@ names where they're USED, not where they're defined. e.g. the helper's
 `backend.routers.widget_helpers.get_service_supabase`.
 """
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -49,10 +48,6 @@ def tenant_id():
 def session_id():
     return "sess-enrich-test"
 
-
-def _run(coro):
-    """Run an async coroutine to completion for a sync test body."""
-    return asyncio.run(coro)
 
 
 def _fake_db_with_lead(lead: dict | None):
@@ -104,7 +99,7 @@ class TestHelperExists:
         """If this fails, Phase 2 implementation hasn't shipped yet."""
         assert hasattr(widget_helpers, "_enrich_lead_from_message"), (
             "Phase 2 incomplete: backend/routers/widget_helpers.py is "
-            "missing the `_enrich_lead_from_message` async helper."
+            "missing the `_enrich_lead_from_message` background helper."
         )
 
 
@@ -138,12 +133,12 @@ class TestEnrichmentSkipPaths:
             patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
             patch("backend.routers.widget_helpers.log_activity") as mock_log,
         ):
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="Hi I'm Sara at sara@example.com call 555-1234",
                 regex_extracted=regex,
-            ))
+            )
 
         # No update — fields all match
         leads_tbl = db.table("leads")
@@ -165,12 +160,12 @@ class TestEnrichmentSkipPaths:
             patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
             patch("backend.routers.widget_helpers.log_activity") as mock_log,
         ):
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="Looking for a haircut next week",
                 regex_extracted=regex,
-            ))
+            )
 
         # No lookup, no update, no log
         db.table.assert_not_called()
@@ -191,12 +186,12 @@ class TestEnrichmentSkipPaths:
             patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
             patch("backend.routers.widget_helpers.log_activity") as mock_log,
         ):
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="I'm Ghost looking for consultation",
                 regex_extracted=regex,
-            ))
+            )
 
         leads_tbl = db.table("leads")
         leads_tbl.update.assert_not_called()
@@ -239,13 +234,13 @@ class TestEnrichmentPersist:
             patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
             patch("backend.routers.widget_helpers.log_activity"),
         ):
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text=("Hi its Sara Kim, sara@example.com or (555) 867-5309, "
                           "looking for the autopilot plan by June"),
                 regex_extracted=regex,
-            ))
+            )
 
         leads_tbl = db.table("leads")
         # update was called
@@ -288,12 +283,12 @@ class TestEnrichmentPersist:
             patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
             patch("backend.routers.widget_helpers.log_activity"),
         ):
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="Hi Bob here at bob@example.com, also 555-1212",
                 regex_extracted=regex,
-            ))
+            )
 
         leads_tbl = db.table("leads")
         update_payload = leads_tbl.update.call_args.args[0]
@@ -329,12 +324,12 @@ class TestEnrichmentPersist:
             patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
             patch("backend.routers.widget_helpers.log_activity") as mock_log,
         ):
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="Im Sara, sara@example.com, want autopilot",
                 regex_extracted=regex,
-            ))
+            )
 
         assert mock_log.called, "expected log_activity() to be called when fields were added"
         log_kwargs = mock_log.call_args.kwargs
@@ -373,12 +368,12 @@ class TestEnrichmentNeverCrashes:
             patch("backend.routers.widget_helpers.log_activity") as mock_log,
         ):
             # Must not raise.
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="garbage",
                 regex_extracted=regex,
-            ))
+            )
 
         # Defensive: no leads update, no activity_log
         leads_tbl = db.table("leads")
@@ -399,12 +394,12 @@ class TestEnrichmentNeverCrashes:
             patch("backend.routers.widget_helpers.log_activity") as mock_log,
         ):
             # Must not raise.
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="anything",
                 regex_extracted=regex,
-            ))
+            )
 
         leads_tbl = db.table("leads")
         leads_tbl.update.assert_not_called()
@@ -442,12 +437,12 @@ class TestEnrichmentNeverCrashes:
             patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
             patch("backend.routers.widget_helpers.log_activity"),
         ):
-            _run(widget_helpers._enrich_lead_from_message(
+            widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="anything",
                 regex_extracted=regex,
-            ))
+            )
 
         # Update happened with the cleaned-up name
         leads_tbl = db.table("leads")
