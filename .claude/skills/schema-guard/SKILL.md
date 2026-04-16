@@ -1,7 +1,7 @@
 ---
 name: schema-guard
 description: "Load BEFORE writing queries against Supabase leads/conversations tables in backend/routers/ or authoring migrations/NNN_*.sql. Catches client_id/status/areas_of_interest schema mismatches."
-version: 1.0.0
+version: 1.1.0
 origin: claude
 dependencies: python>=3.11
 triggers: ["schema guard", "check schema", "database query", "pydantic model", "schema mismatch", "RLS policy", "leads table"]
@@ -44,8 +44,16 @@ Schema-mismatch pitfalls that have already caused production bugs:
 | password_hash (assumed) | May not be migrated | Auth breaks |
 | owner_name (assumed) | May not be migrated | Registration fails |
 | FK → old table | Table renamed | Insert fails with FK violation |
+| enable_ai_fallback (in Pydantic model) | Exists in widget_configs (migration 101) | Existed in DB but was missing from WidgetConfigUpdateRequest + WidgetConfigDetail — dashboard toggle silently dropped value on save for months |
+| enable_structured_lead_parser (in Pydantic model) | Exists in widget_configs (migration 103) | Same class of bug — add new bool DB columns to BOTH update model AND response model |
 
 **IMPORTANT:** The leads table uses `client_id` (NOT `tenant_id`) and `status` (NOT `lead_stage`). Most other tables use `tenant_id`.
+
+**IMPORTANT — Pydantic boolean field sync:** When a new boolean column is added to a table via migration, it must be added to ALL relevant Pydantic models:
+1. The response model (`WidgetConfigDetail`, etc.) — so the frontend loads the correct value
+2. The update request model (`WidgetConfigUpdateRequest`, etc.) — so the frontend can save it
+
+Missing from either = silent failure. If only missing from (2), the column is readable but can never be written via the API. If missing from both, the column exists in DB but the dashboard has no access to it.
 
 ### Step 3.5: Verify RLS Policies
 

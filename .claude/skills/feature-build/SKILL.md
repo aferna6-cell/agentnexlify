@@ -1,7 +1,7 @@
 ---
 name: feature-build
 description: "Load when adding new API endpoint in backend/routers/, dashboard page in frontend/src/pages/, or external integration. Enforces schema-guard + widget sync + route+sidebar registration."
-version: 1.0.0
+version: 1.1.0
 origin: claude
 allowed-tools: []
 triggers: ["new feature", "new API endpoint", "new dashboard page", "new integration", "build feature", "feature build"]
@@ -56,6 +56,8 @@ effort: high
 - **`tenant_id` vs `client_id`.** Leads and conversations tables use `client_id`. Everything else uses `tenant_id`. Always route through `backend/services/tenant_scope.py` helpers.
 - **In-memory state is per-process only.** Production runs 4 Uvicorn workers. A cache hit in one worker is a miss in another. Use Supabase for anything that needs to survive a worker restart.
 - **Pydantic response model mismatch → 500.** If the function returns extra keys and `response_model` is set, FastAPI raises. Always validate the response shape matches the model.
+- **Boolean feature flags need `bool | None = None` in update models.** Use `bool | None = None` (not `bool`) so a frontend `false` value passes the `if v is not None` filter and reaches the DB. With `bool = False` as default, you can't distinguish "user didn't send this field" from "user set it to False."
+- **New boolean DB column → update TWO Pydantic models.** When a migration adds a boolean column, add it to BOTH the response model (so frontend loads it correctly) AND the update request model (so frontend can save it). Missing either = silent failure. Example: `enable_ai_fallback` existed in DB from migration 101 but was missing from `WidgetConfigDetail` + `WidgetConfigUpdateRequest` for months — the dashboard toggle was a no-op. See schema-guard skill.
 - **Dark theme only.** New frontend pages must match the existing dashboard dark theme. See `design.md`.
 - **Display data from stale JWT.** Never render plan/email from `user` — fetch live from `/api/v1/dashboard`. JWT claims don't refresh on plan change.
 - **Migration file created but never applied.** See `migration-workflow` skill — file existing ≠ column existing in prod. Use Supabase MCP or Management API after creating.

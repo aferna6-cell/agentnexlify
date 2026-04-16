@@ -1,7 +1,7 @@
 ---
 name: widget-test
 description: Test, debug, or verify the chat widget covering load, conversation, data capture, cross-origin behavior, and file sync. Use when user says 'widget test', 'test widget', 'widget debugging', 'widget checklist', 'chat widget test', or asks about widget test.
-version: 1.0.0
+version: 1.1.0
 origin: claude
 triggers:
 - widget test
@@ -40,6 +40,17 @@ effort: low
 - [ ] Conversation saved to chat_messages table (canonical store)
 - [ ] Name/email/phone creates a lead with correct client_id
 - [ ] Lead appears in dashboard
+
+### Lead Enrichment (if `enable_structured_lead_parser = true`)
+- [ ] After message containing contact info, `activity_log` has a `lead_enriched` row within ~2s
+- [ ] `metadata.fields_added` lists the fields the extractor filled that regex missed
+- [ ] Lead row has populated `name`, `email`, `phone`, `areas_of_interest` where applicable
+```sql
+SELECT metadata->>'fields_added', lead_id, created_at
+FROM activity_log
+WHERE activity_type = 'lead_enriched' AND tenant_id = '<tenant_id>'
+ORDER BY created_at DESC LIMIT 5;
+```
 
 ### Cross-Origin (CRITICAL)
 - [ ] Works on different domain — no CORS errors

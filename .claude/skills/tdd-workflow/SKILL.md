@@ -1,7 +1,7 @@
 ---
 name: tdd-workflow
 description: Enforce test-driven development with 80%+ coverage for new features, bug fixes, and refactoring in backend/tests/ or frontend/src/. Load when user says 'tdd', 'test-driven', 'write tests first', 'unit test', 'integration test', or 'test coverage'.
-version: 1.0.0
+version: 1.1.0
 origin: agentnexlify
 user-invocable: true
 triggers:
@@ -102,6 +102,8 @@ cd frontend && npm run build
 - Backend sits at ~45% coverage — aspirational, not a blocker. Block on test PASS/FAIL, not coverage number.
 - `console.log` in widget is intentional for cross-origin debugging — don't strip.
 - No bare `except:` in tests — always catch specific exceptions.
+- **conftest.py dependency chain blocks tests on constrained environments.** `conftest.py` imports `backend.main` → all routers → `youtube_transcript_api`, `pyiceberg` (needs C++ build tools), etc. If local pytest is blocked, write a standalone smoke runner that imports ONLY the module under test, not `backend.main`. Pattern: `TESTING=1 python backend/tests/_smoke_feature.py`. See `backend/tests/_smoke_lead_enrichment.py` for the template. CI runs the full pytest suite; the smoke runner is for local confidence only.
+- **Mocking conftest autouse fixtures.** `conftest.py` has `_skip_background_tasks` (patches `BackgroundTasks.add_task`) and `_stub_supabase_singletons` autouse fixtures. Tests that exercise `_enrich_lead_from_message` directly (not via the HTTP endpoint) must patch `get_service_supabase` and `log_activity` themselves — the conftest stubs don't reach module-level helpers called outside BackgroundTasks.
 
 ## Success Criteria
 

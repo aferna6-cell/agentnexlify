@@ -1,7 +1,7 @@
 ---
 name: ai-feature-pattern
 description: "Use this skill when building any feature that calls the Claude API for AI-powered functionality (text generation, categorization, extraction, analysis). Ensures consistent prompt engineering, JSON parsing, and error handling."
-version: 1.0.0
+version: 1.1.0
 origin: claude
 allowed-tools: []
 triggers: ["AI-powered feature", "Claude API", "text generation", "categorization", "extraction", "AI job writer", "content repurposer", "review response"]
@@ -74,6 +74,39 @@ background_tasks.add_task(_categorize_thing, tenant_id, data)
 ```
 - Background AI tasks should fail silently (log warning, don't raise)
 - Rate-limit background calls to avoid cost explosion (e.g., every 5th message)
+
+### 6. Managed Agent / Structured Extraction Pattern
+For field-extraction tasks (leads, contacts, entities from free text), prefer the `structured_extractor` managed agent over custom prompt chains:
+
+```python
+# backend/services/structured_extractor.py
+from backend.services.structured_extractor import extract_structured
+
+try:
+    result = extract_structured(
+        tenant_id=tenant_id,
+        raw_text=raw_text,
+        target_schema="lead",   # "lead" | "appointment" | etc.
+    )
+    # result is a dict — keys depend on schema, values may be None
+    name  = result.get("name")
+    email = result.get("email")
+    phone = result.get("phone")
+    interest = result.get("interest")   # maps to areas_of_interest in DB
+except ValueError as exc:
+    # structured_extractor raises ValueError on parse failure (not a custom exception class)
+    # Do NOT catch ExtractorError — it does not exist
+    logger.warning("extractor parse failed: %s", exc)
+except Exception:
+    logger.exception("unexpected extractor error")
+```
+
+Key rules:
+- Raises `ValueError` on JSON parse failure — catch specifically, not generically
+- No custom exception class — `ExtractorError` does NOT exist; grepping the file before coding a catch block prevents spec drift
+- `target_schema="lead"` returns `{name, email, phone, interest, timeline, budget, source}`
+- `interest` key maps to `areas_of_interest` DB column — apply field mapping explicitly
+- Always run as background task (after response sent) to avoid latency impact on happy path
 
 ## Checklist
 - [ ] Model ID is `claude-sonnet-4-6` (verify against CLAUDE.md)

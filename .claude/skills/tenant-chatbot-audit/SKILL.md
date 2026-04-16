@@ -1,7 +1,7 @@
 ---
 name: tenant-chatbot-audit
 description: Audit a specific tenant chatbot for data gaps, RLS failures, FAQ quality, orphaned sessions, and knowledge base issues. Use when user says 'tenant chatbot audit', 'chatbot audit', 'bot audit', 'tenant bot not working', 'leads not capturing', 'chatbot diagnosis', or asks about tenant chatbot audit.
-version: 1.0.0
+version: 1.1.0
 origin: claude
 user-invocable: true
 triggers:
@@ -141,6 +141,43 @@ WHERE tenant_id = '<tenant_id>' AND role = 'user'
 AND (LENGTH(content) < 3 OR content ~ '^(.)\1+$')
 ORDER BY created_at DESC LIMIT 20;
 ```
+
+### 8. Check Lead Enrichment (if `enable_structured_lead_parser` enabled)
+
+```sql
+-- Is enrichment enabled for this tenant?
+SELECT enable_structured_lead_parser, enable_ai_fallback
+FROM widget_configs WHERE tenant_id = '<tenant_id>';
+
+-- If enabled: check for activity
+SELECT
+    metadata->>'fields_added' AS fields_added,
+    lead_id,
+    created_at
+FROM activity_log
+WHERE activity_type = 'lead_enriched'
+  AND tenant_id = '<tenant_id>'
+ORDER BY created_at DESC
+LIMIT 10;
+```
+
+Red flags:
+- Flag enabled but zero `lead_enriched` events = enrichment not firing (check backend logs for `lead_enrichment:` warnings)
+- `fields_added` always empty = extractor returning nothing useful (check KB / prompt quality)
+- Flag disabled but leads have poor field completion = candidate to enable
+
+Check lead-field completion rate:
+```sql
+SELECT
+    COUNT(*) AS total,
+    COUNT(*) FILTER (WHERE name IS NOT NULL)  AS has_name,
+    COUNT(*) FILTER (WHERE email IS NOT NULL) AS has_email,
+    COUNT(*) FILTER (WHERE phone IS NOT NULL) AS has_phone
+FROM leads WHERE client_id = '<tenant_id>'
+  AND created_at > now() - interval '7 days';
+```
+
+Target: ≥95% `has_name + has_email + has_phone` within first 3 messages.
 
 ## Report
 
