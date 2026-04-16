@@ -122,6 +122,7 @@ async def _run_support_fallback(
         ManagedAgentNotConfigured,
     )
     from backend.services import support_agent as _support_agent_mod
+    from backend.services import agent_sdk_client as _agent_sdk
 
     fallback_start = perf_counter()
     fallback_confidence: str | None = None
@@ -134,16 +135,62 @@ async def _run_support_fallback(
         "faster.\nHANDOFF_REQUESTED"
     )
 
-    try:
-        fallback_result = await asyncio.wait_for(
-            run_in_threadpool(
-                _support_agent_mod.run_support_query,
-                tenant_id,
-                customer_message,
+    # --- agent-service path (preferred when AGENT_SERVICE_URL is set) ---
+    # Build the support prompt once (Supabase context load) then try the
+    # SDK-backed widget-support agent. Falls through to managed-agents on
+    # any failure so existing behavior is fully preserved.
+    _sdk_result = None
+    if _agent_sdk.is_configured():
+        try:
+            _sdk_prompt = await asyncio.wait_for(
+                run_in_threadpool(
+                    _support_agent_mod.build_support_prompt,
+                    tenant_id,
+                    customer_message,
+                    session_id,
+                ),
+                timeout=FALLBACK_TIMEOUT_SECONDS,
+            )
+            _sdk_raw = await asyncio.wait_for(
+                run_in_threadpool(
+                    _agent_sdk.run_agent_sync,
+                    "widget-support",
+                    _sdk_prompt,
+                    FALLBACK_TIMEOUT_SECONDS - 1.0,
+                ),
+                timeout=FALLBACK_TIMEOUT_SECONDS,
+            )
+            if _sdk_raw and not _sdk_raw.get("is_error"):
+                _sdk_result = _support_agent_mod.parse_support_reply(
+                    _sdk_raw.get("result") or ""
+                )
+                logger.info(
+                    "widget_chat: agent_sdk_fallback session=%s turns=%s cost_usd=%.4f",
+                    session_id,
+                    _sdk_raw.get("turns"),
+                    _sdk_raw.get("cost_usd", 0),
+                )
+        except Exception:
+            logger.warning(
+                "widget_chat: agent_sdk_fallback failed session=%s — "
+                "falling back to managed agents",
                 session_id,
-            ),
-            timeout=FALLBACK_TIMEOUT_SECONDS,
-        )
+                exc_info=True,
+            )
+
+    try:
+        if _sdk_result is not None:
+            fallback_result = _sdk_result
+        else:
+            fallback_result = await asyncio.wait_for(
+                run_in_threadpool(
+                    _support_agent_mod.run_support_query,
+                    tenant_id,
+                    customer_message,
+                    session_id,
+                ),
+                timeout=FALLBACK_TIMEOUT_SECONDS,
+            )
         fallback_confidence = fallback_result.get("confidence", "low")
         fallback_escalate_reason = fallback_result.get("escalate_reason")
         fallback_answer = fallback_result.get("answer")

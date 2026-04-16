@@ -357,6 +357,31 @@ def _parse_support_reply(reply_text: str) -> dict[str, Any]:
     }
 
 
+def build_support_prompt(
+    tenant_id: str,
+    customer_question: str,
+    conversation_id: str | None = None,
+) -> str:
+    """Build the structured prompt for a support query without running an agent.
+
+    Used by widget_chat._run_support_fallback to pre-build context for the
+    agent-service path before falling through to managed-agents if needed.
+    """
+    tenant, widget, faq_entries, hours_row = _load_tenant_context(tenant_id)
+    history = _load_conversation_history(tenant_id, conversation_id)
+    return _build_prompt(tenant, widget, faq_entries, hours_row, history, customer_question)
+
+
+def parse_support_reply(reply_text: str) -> dict[str, Any]:
+    """Parse a support agent reply (JSON or plain text) into a normalized dict.
+
+    Public alias for the internal _parse_support_reply. Used by
+    widget_chat._run_support_fallback to parse agent-service results with
+    the same logic applied to managed-agents results.
+    """
+    return _parse_support_reply(reply_text)
+
+
 def run_support_query(
     tenant_id: str,
     customer_question: str,
