@@ -1750,3 +1750,21 @@ fix demo tooling audit issues
 **Author:** Codex
 **Files Changed:** landing-page-v2/vercel.json,landing-page-v2/widget/agentnexlify-widget.js,landing-page-v2/widget/preview.html
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(workflows): ASCII-clean new workflows + fix auto-log-bug HEAD~1
+
+- Replace all non-ASCII chars (em-dashes, box-drawing, emoji) in
+  daily-business-digest, dependency-audit, schema-sync-check,
+  dead-code-sweep with ASCII equivalents
+- Fix auto-log-bug.yml: commit message used HEAD~1 (parent hash)
+  instead of HEAD (the actual bug-fix commit that triggered the push)
+- All 16 workflow files now parse cleanly with UTF-8 YAML validation
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+**Date:** 2026-04-16
+**Commit:** c194930
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/auto-log-bug.yml,.github/workflows/daily-business-digest.yml,.github/workflows/dead-code-sweep.yml,.github/workflows/dependency-audit.yml,.github/workflows/schema-sync-check.yml
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
