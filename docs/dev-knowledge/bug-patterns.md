@@ -1798,3 +1798,24 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/requirements.txt
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### refactor(arch): extract _FORM_PRESETS to backend/services/form_defaults.py
+
+Fixes service→router import violation in seed.py:127.
+_FORM_PRESETS was defined in backend/routers/forms.py and imported
+by backend/services/industry_packs/seed.py, violating layer boundaries.
+
+- New: backend/services/form_defaults.py — pure data, no backend deps
+- backend/routers/forms.py — removes dict, imports from form_defaults
+- backend/services/industry_packs/seed.py — imports from form_defaults
+
+No circular imports. Data content byte-identical.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+**Date:** 2026-04-16
+**Commit:** ff4d57c
+**Author:** aferna6-cell
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
