@@ -7,7 +7,7 @@
  * 3. AI responds
  * 4. Lead is captured when user provides contact info
  *
- * Run with: npx playwright test e2e/widget-smoke.spec.js
+ * Run with: npm run test:e2e -- e2e/widget-smoke.spec.js
  * Or via Playwright MCP for browser automation.
  *
  * Prerequisites:
@@ -19,7 +19,43 @@ const { test, expect } = require("@playwright/test");
 
 // Test config — set via env or use defaults
 const BACKEND_URL = process.env.TEST_BACKEND_URL || "http://localhost:8000";
+const PUBLIC_URL = process.env.TEST_PUBLIC_URL || "http://localhost:3001";
+const WIDGET_ORIGIN = process.env.TEST_WIDGET_ORIGIN || PUBLIC_URL;
 const TEST_API_KEY = process.env.TEST_WIDGET_API_KEY || "";
+const INCLUDE_UPLOAD = /^(1|true|yes|on)$/i.test(
+  process.env.TEST_WIDGET_UPLOAD || "",
+);
+
+async function loadWidgetPage(page) {
+  const pageErrors = [];
+  const consoleErrors = [];
+  page.on("pageerror", (err) => pageErrors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error") consoleErrors.push(msg.text());
+  });
+
+  await page.setContent(
+    `<!doctype html>
+    <html>
+      <head><title>AgentNexLiFy Smoke Embed</title></head>
+      <body>
+        <main>
+          <h1>Smoke Test Host Page</h1>
+          <p>The widget should mount as a third-party embed.</p>
+        </main>
+        <script
+          src="${PUBLIC_URL.replace(/\/$/, "")}/widget/agentnexlify-widget.js"
+          data-api-key="${TEST_API_KEY}"
+          data-api-base="${BACKEND_URL.replace(/\/$/, "")}"
+        ></script>
+      </body>
+    </html>`,
+    { waitUntil: "domcontentloaded" },
+  );
+
+  await expect(page.locator("#anx-bubble")).toBeVisible({ timeout: 15000 });
+  return { pageErrors, consoleErrors };
+}
 
 test.describe("Widget Smoke Tests", () => {
   test.skip(!TEST_API_KEY, "TEST_WIDGET_API_KEY not set — skipping widget E2E");
@@ -48,6 +84,68 @@ test.describe("Widget Smoke Tests", () => {
     expect(data).toHaveProperty("response");
     expect(data).toHaveProperty("session_id");
     expect(data.response.length).toBeGreaterThan(0);
+  });
+
+  test("browser embed opens widget and sends a chat", async ({ page }) => {
+    const { pageErrors, consoleErrors } = await loadWidgetPage(page);
+
+    await page.locator("#anx-bubble").click();
+    await expect(page.locator("#anx-window")).toHaveClass(/open/);
+
+    const assistantMessages = page.locator(".anx-msg.assistant");
+    const before = await assistantMessages.count();
+    await page.locator("#anx-input").fill("Hello from the browser smoke test");
+    await page.locator("#anx-send").click();
+
+    await expect
+      .poll(async () => assistantMessages.count(), { timeout: 45000 })
+      .toBeGreaterThan(before);
+    await expect(assistantMessages.last()).toContainText(/\S/);
+    expect(pageErrors).toEqual([]);
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("booking intent opens booking flow when enabled", async ({
+    page,
+    request,
+  }) => {
+    const configResp = await request.get(
+      `${BACKEND_URL}/api/v1/widget/config/${TEST_API_KEY}`,
+    );
+    const config = await configResp.json();
+    test.skip(!config.booking_enabled || !config.tenant_id, "booking not enabled for smoke tenant");
+
+    await loadWidgetPage(page);
+    await page.locator("#anx-bubble").click();
+    await page.locator("#anx-input").fill("I want to book an appointment");
+    await page.locator("#anx-send").click();
+    await expect(page.locator("#anx-booking")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("widget upload endpoint accepts current form-data contract", async ({
+    request,
+  }) => {
+    test.skip(!INCLUDE_UPLOAD, "TEST_WIDGET_UPLOAD not enabled");
+
+    const resp = await request.post(`${BACKEND_URL}/api/v1/widget/upload`, {
+      headers: { Origin: WIDGET_ORIGIN },
+      multipart: {
+        api_key: TEST_API_KEY,
+        session_id: `e2e-upload-${Date.now()}`,
+        file: {
+          name: "smoke.png",
+          mimeType: "image/png",
+          buffer: Buffer.concat([
+            Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+            Buffer.alloc(16),
+          ]),
+        },
+      },
+    });
+    expect(resp.status()).toBe(200);
+    const data = await resp.json();
+    expect(data.filename).toBe("smoke.png");
+    expect(data.url).toContain("/chat-attachments/");
   });
 
   test("widget chat captures lead when contact info provided", async ({

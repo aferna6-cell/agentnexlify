@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from dataclasses import dataclass
 from typing import Mapping
 from urllib.error import HTTPError, URLError
@@ -35,9 +36,10 @@ def _request(
     *,
     method: str = "GET",
     headers: Mapping[str, str] | None = None,
+    data: bytes | None = None,
     timeout: float = 15.0,
 ) -> tuple[int, Mapping[str, str], bytes]:
-    request = Request(url, method=method, headers=dict(headers or {}))
+    request = Request(url, method=method, headers=dict(headers or {}), data=data)
     try:
         with urlopen(request, timeout=timeout) as response:  # noqa: S310 - smoke script hits operator-provided URLs.
             return response.status, response.headers, response.read()
@@ -113,7 +115,109 @@ def _check_cors_preflight(name: str, url: str) -> SmokeResult:
     return SmokeResult(name, True, f"{url} preflight returned {status}")
 
 
-def run(public_base_url: str, api_base_url: str, widget_api_key: str | None) -> list[SmokeResult]:
+def _check_widget_chat(name: str, url: str, widget_api_key: str) -> SmokeResult:
+    session_id = f"public-smoke-{int(time.time())}"
+    body = json.dumps(
+        {
+            "api_key": widget_api_key,
+            "session_id": session_id,
+            "message": "Public smoke test. Please reply with a short hello.",
+        }
+    ).encode("utf-8")
+    status, _, response_body = _request(
+        url,
+        method="POST",
+        headers={"content-type": "application/json"},
+        data=body,
+        timeout=45.0,
+    )
+    if status != 200:
+        return SmokeResult(name, False, f"{url} returned {status}: {response_body[:160]!r}")
+    try:
+        payload = _json_body(response_body)
+    except Exception as exc:
+        return SmokeResult(name, False, f"{url} returned invalid JSON: {exc}")
+    if not payload.get("response") or payload.get("session_id") != session_id:
+        return SmokeResult(name, False, f"{url} returned unexpected payload: {payload!r}")
+    return SmokeResult(name, True, f"{url} returned widget chat response")
+
+
+def _multipart_upload_body(
+    *,
+    api_key: str,
+    session_id: str,
+    boundary: str,
+) -> bytes:
+    png = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 16)
+    parts = [
+        (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="api_key"\r\n\r\n'
+            f"{api_key}\r\n"
+        ).encode("utf-8"),
+        (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="session_id"\r\n\r\n'
+            f"{session_id}\r\n"
+        ).encode("utf-8"),
+        (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="file"; filename="smoke.png"\r\n'
+            "Content-Type: image/png\r\n\r\n"
+        ).encode("utf-8"),
+        png,
+        f"\r\n--{boundary}--\r\n".encode("utf-8"),
+    ]
+    return b"".join(parts)
+
+
+def _check_widget_upload(
+    name: str,
+    url: str,
+    *,
+    widget_api_key: str,
+    origin: str,
+) -> SmokeResult:
+    session_id = f"public-smoke-upload-{int(time.time())}"
+    boundary = f"agentnexlify-smoke-{int(time.time())}"
+    body = _multipart_upload_body(
+        api_key=widget_api_key,
+        session_id=session_id,
+        boundary=boundary,
+    )
+    status, _, response_body = _request(
+        url,
+        method="POST",
+        headers={
+            "content-type": f"multipart/form-data; boundary={boundary}",
+            "origin": origin,
+        },
+        data=body,
+        timeout=45.0,
+    )
+    if status != 200:
+        return SmokeResult(name, False, f"{url} returned {status}: {response_body[:160]!r}")
+    try:
+        payload = _json_body(response_body)
+    except Exception as exc:
+        return SmokeResult(name, False, f"{url} returned invalid JSON: {exc}")
+    if not payload.get("url") or payload.get("filename") != "smoke.png":
+        return SmokeResult(name, False, f"{url} returned unexpected payload: {payload!r}")
+    return SmokeResult(name, True, f"{url} accepted widget upload form-data")
+
+
+def _enabled(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def run(
+    public_base_url: str,
+    api_base_url: str,
+    widget_api_key: str | None,
+    *,
+    include_upload: bool = False,
+    upload_origin: str | None = None,
+) -> list[SmokeResult]:
     checks = [
         _check_status("frontend loads", _url(public_base_url, "/")),
         _check_json_status("frontend /api/v1 rewrite healthz", _url(public_base_url, "/api/v1/healthz"), "ok"),
@@ -129,6 +233,22 @@ def run(public_base_url: str, api_base_url: str, widget_api_key: str | None) -> 
                 _url(api_base_url, f"/api/v1/widget/config/{widget_api_key}"),
             )
         )
+        checks.append(
+            _check_widget_chat(
+                "widget chat accepts message",
+                _url(api_base_url, "/api/v1/widget/chat"),
+                widget_api_key,
+            )
+        )
+        if include_upload:
+            checks.append(
+                _check_widget_upload(
+                    "widget upload accepts form-data",
+                    _url(api_base_url, "/api/v1/widget/upload"),
+                    widget_api_key=widget_api_key,
+                    origin=(upload_origin or public_base_url).rstrip("/"),
+                )
+            )
     return checks
 
 
@@ -137,18 +257,35 @@ def main() -> int:
     parser.add_argument("--public-base-url", default=os.environ.get("PUBLIC_BASE_URL"))
     parser.add_argument("--api-base-url", default=os.environ.get("API_BASE_URL"))
     parser.add_argument("--widget-api-key", default=os.environ.get("PUBLIC_WIDGET_API_KEY"))
+    parser.add_argument(
+        "--include-upload",
+        action="store_true",
+        default=_enabled(os.environ.get("PUBLIC_SMOKE_UPLOAD")),
+        help="Also upload a tiny PNG through the widget upload endpoint.",
+    )
+    parser.add_argument("--upload-origin", default=os.environ.get("PUBLIC_SMOKE_UPLOAD_ORIGIN"))
     args = parser.parse_args()
 
     public_base_url = _base_url(args.public_base_url)
     api_base_url = _base_url(args.api_base_url or args.public_base_url)
 
-    results = run(public_base_url, api_base_url, args.widget_api_key)
+    results = run(
+        public_base_url,
+        api_base_url,
+        args.widget_api_key,
+        include_upload=args.include_upload,
+        upload_origin=args.upload_origin,
+    )
     for result in results:
         prefix = "PASS" if result.ok else "FAIL"
         print(f"{prefix}: {result.name} - {result.detail}")
 
     if not args.widget_api_key:
         print("SKIP: widget config loads - PUBLIC_WIDGET_API_KEY is not set")
+        print("SKIP: widget chat accepts message - PUBLIC_WIDGET_API_KEY is not set")
+        print("SKIP: widget upload accepts form-data - PUBLIC_WIDGET_API_KEY is not set")
+    elif not args.include_upload:
+        print("SKIP: widget upload accepts form-data - pass --include-upload for storage smoke")
 
     return 0 if all(result.ok for result in results) else 1
 

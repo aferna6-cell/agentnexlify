@@ -11,7 +11,7 @@ import logging
 import re
 import uuid
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -232,15 +232,24 @@ async def toggle_online_status(
 @limiter.limit("10/minute")
 async def upload_file(
     request: Request,
-    file: UploadFile,
-    api_key: str = Query(...),
-    session_id: str = Query(...),
+    file: UploadFile = File(...),
+    api_key_form: str | None = Form(None, alias="api_key"),
+    session_id_form: str | None = Form(None, alias="session_id"),
+    api_key_query: str | None = Query(None, alias="api_key"),
+    session_id_query: str | None = Query(None, alias="session_id"),
 ):
     """Upload a file from the chat widget. Returns a public URL.
 
     Files are stored in Supabase Storage under chat-attachments/{tenant_id}/{session_id}/.
     Max 5 MB. Allowed: images, PDF, Word docs.
     """
+    api_key = api_key_form or api_key_query
+    session_id = session_id_form or session_id_query
+    if not api_key:
+        raise HTTPException(status_code=422, detail="api_key is required")
+    if not session_id:
+        raise HTTPException(status_code=422, detail="session_id is required")
+
     # Validate API key
     db = get_service_supabase()
     wc = (

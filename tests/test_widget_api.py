@@ -262,6 +262,101 @@ class TestWidgetChat:
         assert response.json()["response"] == widget_config["greeting_message"]
         mock_call_claude.assert_not_awaited()
 
+    @patch("backend.routers.widget_chat.call_claude_messages", new_callable=AsyncMock)
+    def test_chat_respects_explicit_content_mode_flag(self, mock_call_claude, test_client):
+        client, db_mock = test_client
+
+        widget_config = _make_widget_config()
+        tenant = _make_tenant()
+        tenant["plan"] = "free"
+
+        _setup_table_mock(db_mock, {
+            "widget_configs": [widget_config],
+            "tenants": [tenant],
+            "chat_messages": [],
+            "conversations": [],
+            "faq_entries": [],
+            "chat_flows": [],
+            "website_content": [],
+            "menu_items": [],
+        })
+
+        response = client.post("/api/v1/widget/chat", json={
+            "api_key": VALID_API_KEY,
+            "session_id": "sess-content-mode",
+            "message": "Please help with this short note.",
+            "content_mode": True,
+        })
+
+        assert response.status_code == 200
+        assert "Content repurposing" in response.json()["response"]
+        mock_call_claude.assert_not_awaited()
+
+
+class TestWidgetUpload:
+    """Test widget file upload contract."""
+
+    def _setup_upload_storage(self, db_mock):
+        bucket = MagicMock()
+        db_mock.storage.from_.return_value = bucket
+        bucket.upload.return_value = None
+        return bucket
+
+    def test_upload_accepts_form_fields_from_widget(self, test_client):
+        client, db_mock = test_client
+        bucket = self._setup_upload_storage(db_mock)
+
+        _setup_table_mock(db_mock, {
+            "widget_configs": [{
+                "tenant_id": TENANT_ID,
+                "allowed_domains": ["https://example.com"],
+            }],
+        })
+
+        response = client.post(
+            "/api/v1/widget/upload",
+            data={"api_key": VALID_API_KEY, "session_id": "sess-upload-1"},
+            files={
+                "file": (
+                    "tiny.png",
+                    b"\x89PNG\r\n\x1a\n" + b"\x00" * 16,
+                    "image/png",
+                )
+            },
+            headers={"Origin": "https://example.com"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["filename"] == "tiny.png"
+        bucket.upload.assert_called_once()
+
+    def test_upload_still_accepts_query_params_for_older_widgets(self, test_client):
+        client, db_mock = test_client
+        bucket = self._setup_upload_storage(db_mock)
+
+        _setup_table_mock(db_mock, {
+            "widget_configs": [{
+                "tenant_id": TENANT_ID,
+                "allowed_domains": ["https://example.com"],
+            }],
+        })
+
+        response = client.post(
+            f"/api/v1/widget/upload?api_key={VALID_API_KEY}&session_id=sess-upload-2",
+            files={
+                "file": (
+                    "tiny.pdf",
+                    b"%PDF-1.4\n% smoke\n",
+                    "application/pdf",
+                )
+            },
+            headers={"Origin": "https://example.com"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["filename"] == "tiny.pdf"
+        bucket.upload.assert_called_once()
+
 
 class TestWidgetHealth:
     """Test widget health endpoint."""

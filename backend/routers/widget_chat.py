@@ -418,7 +418,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     _content_mode_keywords = ["repurpose", "content mode", "turn this into", "create content from"]
     _yt_pattern = re.compile(r"(?:youtube\.com/watch|youtu\.be/)")
     _msg_lower = req.message.lower()
-    _content_mode = getattr(req, "content_mode", False)
+    _content_mode = req.content_mode
     if not _content_mode:
         for _kw in _content_mode_keywords:
             if _kw in _msg_lower:

@@ -80,6 +80,21 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized for this tenant")
 
 
+def _managed_agents_unavailable(exc: ManagedAgentNotConfigured) -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail={
+            "error": "managed_agents_unavailable",
+            "message": (
+                "Managed Agent workflows are planned for a future update and "
+                "are not enabled in this environment yet."
+            ),
+            "planned_update": True,
+            "missing_config": exc.env_var,
+        },
+    )
+
+
 def _qualify_lead_blocking(
     client: ManagedAgentsClient,
     *,
@@ -192,7 +207,7 @@ async def qualify_lead(
     try:
         handle = lead_qualifier()
     except ManagedAgentNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise _managed_agents_unavailable(exc)
 
     prompt = _build_lead_qualify_prompt(body)
     client = ManagedAgentsClient()
@@ -233,8 +248,15 @@ async def managed_agents_health(
     to call from dashboards.
     """
     _verify_tenant(claims, tenant_id)
+    any_configured = is_any_configured()
     return {
-        "any_configured": is_any_configured(),
+        "status": "configured" if any_configured else "planned",
+        "message": (
+            "Managed Agent workflows are configured."
+            if any_configured
+            else "Managed Agent workflows are planned for a future update."
+        ),
+        "any_configured": any_configured,
         "environment": bool(settings.managed_agents_environment_id),
         "lead_qualifier": bool(settings.lead_qualifier_agent_id),
         "document_drafter": bool(settings.document_drafter_agent_id),
@@ -338,7 +360,7 @@ async def draft_document_endpoint(
         logger.warning("draft_document failed for tenant %s: %s", tenant_id, exc)
         raise HTTPException(status_code=400, detail=str(exc))
     except ManagedAgentNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise _managed_agents_unavailable(exc)
 
     doc_id = persisted.get("id")
     metadata = persisted.get("draft_metadata") or {}
@@ -372,7 +394,7 @@ async def support_query_endpoint(
             body.conversation_id,
         )
     except ManagedAgentNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise _managed_agents_unavailable(exc)
     except ManagedAgentsError as exc:
         logger.exception("support_query failed for tenant %s", tenant_id)
         status = exc.status or 502
@@ -405,7 +427,7 @@ async def extract_endpoint(
             body.target_schema,
         )
     except ManagedAgentNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise _managed_agents_unavailable(exc)
     except ManagedAgentsError as exc:
         logger.exception("extract failed for tenant %s", tenant_id)
         status = exc.status or 502

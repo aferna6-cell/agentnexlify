@@ -225,6 +225,20 @@ async def _build_briefing(
     return briefing
 
 
+def _format_appointment_time(start_time: str | None) -> str:
+    """Return a portable appointment time like 1:30 PM, or empty on parse fail."""
+    if not start_time:
+        return ""
+    try:
+        parsed = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+    except Exception:
+        logger.debug(
+            "Failed to parse appointment start_time %r", start_time, exc_info=True
+        )
+        return ""
+    return parsed.strftime("%I:%M %p").lstrip("0")
+
+
 def _format_briefing_sms(business_name: str, b: dict) -> str:
     """Format briefing data into a concise SMS message."""
     lines = [f"Good morning! Here's your {business_name} daily briefing:"]
@@ -243,15 +257,7 @@ def _format_briefing_sms(business_name: str, b: dict) -> str:
         # Show first 3
         for appt in b.get("appointments", [])[:3]:
             name = appt.get("customer_name") or "Customer"
-            time_str = ""
-            try:
-                t = datetime.fromisoformat(appt["start_time"].replace("Z", "+00:00"))
-                hour_12 = t.hour % 12 or 12
-                time_str = f"{hour_12}:{t.strftime('%M %p')}"
-            except Exception:
-                logger.debug(
-                    "Failed to parse appointment start_time %r", appt.get("start_time"), exc_info=True
-                )
+            time_str = _format_appointment_time(appt.get("start_time"))
             lines.append(f"  • {time_str} — {name}" if time_str else f"  • {name}")
         if ac > 3:
             lines.append(f"  + {ac - 3} more")

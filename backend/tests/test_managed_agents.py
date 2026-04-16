@@ -1085,7 +1085,9 @@ class TestSupportQueryEndpoint:
             )
 
         assert resp.status_code == 503
-        assert "SUPPORT_AGENT_ID" in resp.json()["detail"]
+        detail = resp.json()["detail"]
+        assert detail["error"] == "managed_agents_unavailable"
+        assert detail["missing_config"] == "SUPPORT_AGENT_ID"
 
     def test_upstream_error_maps_to_502(self, client, auth_headers):
         from backend.routers import managed_agent_runs as mod

@@ -5,12 +5,16 @@
     "agent-system:check": "python scripts/check_agent_system.py",
     "claude:2.1.98": "npx -y @anthropic-ai/claude-code@2.1.98",
     "claude:noflicker": "cross-env CLAUDE_CODE_NO_FLICKER=1 npx -y @anthropic-ai/claude-code@2.1.98",
+    "marketing-addon:check": "python scripts/check_marketing_addon_rollout.py",
+    "smoke:public": "python scripts/public_smoke.py",
+    "test:e2e": "playwright test",
     "check:test-local-refs": "python3 scripts/check_test_local_refs.py",
     "lint:test-quality": "eslint --no-error-on-unmatched-pattern --config eslint.test-quality.config.cjs \"**/*.test.{js,jsx,ts,tsx}\" \"**/*.spec.{js,jsx,ts,tsx}\" \"**/__tests__/**/*.{js,jsx,ts,tsx}\"",
     "lint:test-quality:staged": "node scripts/lint-test-quality-staged.cjs",
     "coverage:changed-lines": "python3 scripts/check_changed_lines_coverage.py --compare-branch origin/main --python-report coverage-python.xml --js-report frontend/coverage/lcov.info --js-report demo-platform/coverage/lcov.info --js-report coverage/lcov.info"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@typescript-eslint/parser": "^8.46.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.37.0"
