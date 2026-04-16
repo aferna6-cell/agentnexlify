@@ -1229,10 +1229,14 @@ async def _capture_leads_from_session(
         service_interest = _extract_service_interest(messages)
 
         # Create new lead — live schema: client_id, status (not tenant_id, lead_stage)
+        # enrichment_source='regex' tags regex-origin leads so dashboard can
+        # count regex vs AI captures. AI enrichment helper overwrites to 'ai'
+        # when _enrich_lead_from_message adds new fields (widget_helpers.py:~1605).
         lead_fields: dict[str, Any] = {
             "client_id": tenant_id,
             "status": "new",
             "source": "widget",
+            "enrichment_source": "regex",
         }
         for key in ("name", "email", "phone"):
             if combined.get(key):
