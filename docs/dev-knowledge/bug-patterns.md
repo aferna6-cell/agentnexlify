@@ -1819,3 +1819,32 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(perf): fix CRITICAL N+1 + Twilio upgrade + widget sync
+
+N+1 query fix (CRITICAL — automation_engine.py):
+- process_pending_steps() was selecting only "id" then execute_step()
+  re-fetched each row individually: 51 DB calls for 50 executions.
+- Now selects "*" in batch, builds execution_data_by_id dict, passes
+  pre-loaded data into execute_step(execution_id, execution_data=data).
+- execute_step() gains optional execution_data: dict | None = None param —
+  backward-compatible, direct callers unaffected.
+- Result: 51 DB calls → 1 per batch.
+
+Twilio SDK upgrade (HIGH — requirements.txt):
+- twilio==9.4.0 → twilio>=10.0.0,<11
+- No code changes needed: twilio_service.py uses raw httpx (no SDK imports).
+
+Widget JS sync (HIGH — scripts/sync-widget.sh):
+- Files were already byte-identical (pre-push hook verified).
+- Added scripts/sync-widget.sh: copies canonical frontend/public/widget/
+  → widget/ on demand. Run after any widget edit.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+**Date:** 2026-04-16
+**Commit:** 344df51
+**Author:** aferna6-cell
+**Files Changed:** audits/audit-architecture-2026-04-16.md,backend/requirements.txt,backend/services/automation_engine.py,scripts/sync-widget.sh
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
