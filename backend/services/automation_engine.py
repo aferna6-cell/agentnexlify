@@ -133,42 +133,55 @@ async def process_pending_steps() -> int:
     db = get_service_supabase()
     now = datetime.now(timezone.utc).isoformat()
 
-    # Find executions that are due
+    # Batch-fetch all pending execution rows in a single query (select * to avoid re-fetch)
     result = (
         db.table("automation_executions")
-        .select("id")
+        .select("*")
         .eq("status", "in_progress")
         .lte("next_run_at", now)
         .limit(BATCH_LIMIT)
         .execute()
     )
 
+    # Build dict keyed by execution ID so execute_step can skip the DB re-fetch
+    execution_data_by_id: dict = {row["id"]: row for row in (result.data or [])}
+
     processed = 0
-    for exec_row in result.data or []:
+    for execution_id, execution_data in execution_data_by_id.items():
         try:
-            await execute_step(exec_row["id"])
+            await execute_step(execution_id, execution_data=execution_data)
             processed += 1
         except Exception:
-            logger.exception("Failed to execute step for execution %s", exec_row["id"])
+            logger.exception("Failed to execute step for execution %s", execution_id)
 
     return processed
 
 
-async def execute_step(execution_id: str) -> None:
-    """Execute the current step of an automation execution."""
+async def execute_step(execution_id: str, execution_data: dict | None = None) -> None:
+    """Execute the current step of an automation execution.
+
+    Args:
+        execution_id: Primary key of the automation_executions row.
+        execution_data: Pre-loaded execution row dict. When provided (batch callers),
+            the DB re-fetch is skipped. When None (direct callers), the row is fetched
+            from the database as before.
+    """
     db = get_service_supabase()
 
-    # Load execution
-    exec_result = (
-        db.table("automation_executions")
-        .select("*")
-        .eq("id", execution_id)
-        .limit(1)
-        .execute()
-    )
-    if not exec_result.data:
-        return
-    execution = exec_result.data[0]
+    # Use pre-loaded data if available; otherwise fetch from DB (single-call path)
+    if execution_data is not None:
+        execution = execution_data
+    else:
+        exec_result = (
+            db.table("automation_executions")
+            .select("*")
+            .eq("id", execution_id)
+            .limit(1)
+            .execute()
+        )
+        if not exec_result.data:
+            return
+        execution = exec_result.data[0]
 
     # Load the current step
     steps_result = (

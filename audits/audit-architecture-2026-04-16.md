@@ -25,12 +25,11 @@
   - Handles: sequence triggering/execution, email/SMS delivery, appointment/review/billing workflows, rule evaluation.
   - Fix: Split into `sequence_executor.py`, `email_campaign_dispatcher.py`, `workflow_scheduler.py`, `rule_evaluator.py`. Coordination in `automation_orchestrator.py`.
 
-- [ ] **Widget JS duplicated × 3** | Pass 1 | Effort: M
-  - Identical copies at:
-    - `widget/agentnexlify-widget.js`
-    - `frontend/public/widget/agentnexlify-widget.js`
-    - `landing-page-v2/widget/agentnexlify-widget.js`
-  - Fix: Canonical source = `frontend/public/widget/`. Others → symlinks or build step. (Note: CLAUDE.md already requires byte-identical — the issue is 3 manual copies, not a policy gap.)
+- [x] **Widget JS duplicated × 3** | Pass 1 | Effort: M — FIXED 2026-04-16
+  - Canonical = `frontend/public/widget/agentnexlify-widget.js`. `widget/agentnexlify-widget.js` verified byte-identical.
+  - `landing-page-v2/widget/agentnexlify-widget.js` is legacy — left untouched per policy.
+  - Created `scripts/sync-widget.sh`: copies canonical → `widget/` on demand (Windows-safe, no symlinks).
+  - Pre-push hook CHECK 7 (`scripts/hooks/pre-push:164-174`) already diffs the two non-legacy files and warns on drift — continues to work unchanged.
 
 - [ ] **Analytics Router (2,023 lines) — Mixed Concerns** | Pass 1 | Effort: M
   - 60+ endpoints covering dashboard metrics, agent control center, tenant stats, recovery analytics, wizard tracking.
