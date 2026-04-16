@@ -1,12 +1,9 @@
 """Automation engine — triggers, processes, and executes email sequences."""
 
-import asyncio
-
 from backend.services.task_utils import safe_create_task
 import html
 import logging
 from datetime import datetime, timedelta, timezone
-from functools import partial
 from typing import Any
 
 from backend.models.database import get_service_supabase
@@ -121,9 +118,17 @@ async def trigger_sequence(
             # UNIQUE constraint = already enrolled (expected). Other errors = real problems.
             err_str = str(_enroll_exc).lower()
             if "unique" in err_str or "duplicate" in err_str:
-                logger.debug("Lead %s already enrolled in sequence %s", lead_id, seq["id"])
+                logger.debug(
+                    "Lead %s already enrolled in sequence %s", lead_id, seq["id"]
+                )
             else:
-                logger.warning("Failed to enroll lead %s in sequence %s: %s", lead_id, seq["id"], _enroll_exc, exc_info=True)
+                logger.warning(
+                    "Failed to enroll lead %s in sequence %s: %s",
+                    lead_id,
+                    seq["id"],
+                    _enroll_exc,
+                    exc_info=True,
+                )
 
     return enrolled
 
@@ -1431,7 +1436,11 @@ async def send_pending_review_requests() -> int:
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                logger.debug("Failed to check unsubscribe status for lead %s, proceeding (fail-open)", lead_id, exc_info=True)
+                logger.debug(
+                    "Failed to check unsubscribe status for lead %s, proceeding (fail-open)",
+                    lead_id,
+                    exc_info=True,
+                )
 
         # Send email review request
         if method in ("email", "both") and appt.get("customer_email"):
@@ -1619,7 +1628,11 @@ async def _send_review_followups(
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                logger.debug("Failed to check unsubscribe status for lead %s, proceeding (fail-open)", lead_id, exc_info=True)
+                logger.debug(
+                    "Failed to check unsubscribe status for lead %s, proceeding (fail-open)",
+                    lead_id,
+                    exc_info=True,
+                )
 
         followup_sent = False
 
@@ -2052,7 +2065,9 @@ async def send_portal_links() -> int:
             if existing.count and existing.count > 0:
                 continue
         except Exception:
-            logger.warning("Dedup check failed in review request trigger", exc_info=True)
+            logger.warning(
+                "Dedup check failed in review request trigger", exc_info=True
+            )
             continue
 
         # Check if portal token exists
@@ -2179,7 +2194,9 @@ async def send_csat_surveys() -> int:
             if existing.count and existing.count > 0:
                 continue
         except Exception:
-            logger.warning("Dedup check failed in follow-up review trigger", exc_info=True)
+            logger.warning(
+                "Dedup check failed in follow-up review trigger", exc_info=True
+            )
             continue
 
         # Get business name
@@ -2903,9 +2920,9 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
                 f"{insights_html}"
             )
         body_html += (
-            f"<p style='margin-top:24px;color:#374151;'>View your full dashboard at "
-            f"<a href='https://app.agentnexlify.com' style='color:#3b82f6;'>app.agentnexlify.com</a></p>"
-            f"<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p></div>"
+            "<p style='margin-top:24px;color:#374151;'>View your full dashboard at "
+            "<a href='https://app.agentnexlify.com' style='color:#3b82f6;'>app.agentnexlify.com</a></p>"
+            "<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p></div>"
         )
 
         try:
@@ -3446,7 +3463,11 @@ async def evaluate_trigger(
     if lead_id:
         try:
             lead_result = (
-                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id)
+                .select("*")
+                .eq("id", lead_id)
+                .limit(1)
+                .execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -3915,7 +3936,10 @@ async def _execute_action(
         campaign_id = action_config.get("campaign_id")
         if not campaign_id:
             return {"status": "failed", "reason": "no_campaign_id"}
-        safe_create_task(_send_campaign_for_rule(campaign_id, tenant_id, lead_data), name="campaign_for_rule")
+        safe_create_task(
+            _send_campaign_for_rule(campaign_id, tenant_id, lead_data),
+            name="campaign_for_rule",
+        )
         return {"status": "dispatched", "campaign_id": campaign_id}
 
     elif action_type == "update_lead_score":
@@ -3964,6 +3988,8 @@ async def check_lead_captured_triggers(lead_id: str) -> int:
     triggered = 0
 
     try:
+        # Fetch unscoped by design: this background function receives only lead_id.
+        # We extract client_id from the result and use it to scope all subsequent queries.
         lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
         if not lead_result.data:
             return 0
@@ -4021,7 +4047,13 @@ async def check_tag_triggers(
     trigger_type = "tag_added" if added else "tag_removed"
 
     try:
-        lead_result = tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+        lead_result = (
+            tenant_table(db, "leads", tenant_id)
+            .select("*")
+            .eq("id", lead_id)
+            .limit(1)
+            .execute()
+        )
         lead_data = lead_result.data[0] if lead_result.data else None
     except Exception:
         logger.exception("check_tag_triggers: failed to load lead %s", lead_id)
@@ -4097,7 +4129,11 @@ async def check_form_submission_triggers(
     if lead_id:
         try:
             lead_result = (
-                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id)
+                .select("*")
+                .eq("id", lead_id)
+                .limit(1)
+                .execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -4179,7 +4215,11 @@ async def check_appointment_triggers(
     if lead_id:
         try:
             lead_result = (
-                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id)
+                .select("*")
+                .eq("id", lead_id)
+                .limit(1)
+                .execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:

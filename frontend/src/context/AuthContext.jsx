@@ -80,13 +80,18 @@ export function AuthProvider({ children }) {
                 plan: me.plan || prev.plan,
                 marketing_addon_active: Boolean(me.marketing_addon_active),
                 marketing_addon_grandfathered: Boolean(
-                  me.marketing_addon_grandfathered
+                  me.marketing_addon_grandfathered,
                 ),
               }
-            : prev
+            : prev,
         );
       })
-      .catch(() => {});
+      .catch((e) => {
+        console.warn(
+          "AuthContext: failed to fetch /me for addon flags",
+          e?.message,
+        );
+      });
 
     // Proactive expiry check — logs out before next API call can 401
     const intervalId = setInterval(() => {
