@@ -1,16 +1,15 @@
 name: Daily Business Digest
 
 # Three parallel jobs each day:
-#   1. lead-funnel  — new/stale/enrichment breakdown, alert on anomalies
-#   2. churn-scan   — paid tenants with no activity in 7–14d
-#   3. cost-alert   — AI message volume per tenant, flag spikes
+#   1. lead-funnel  - new/stale/enrichment breakdown, alert on anomalies
+#   2. churn-scan   - paid tenants with no activity in 7-14d
+#   3. cost-alert   - AI message volume per tenant, flag spikes
 #
-# Required secrets (add once in repo Settings → Secrets → Actions):
-#   SUPABASE_URL          — from Supabase project settings
-#   SUPABASE_SERVICE_KEY  — service_role key (bypasses RLS)
+# Required secrets (add in repo Settings -> Secrets -> Actions):
+#   SUPABASE_URL          - from Supabase project settings
+#   SUPABASE_SERVICE_KEY  - service_role key (bypasses RLS)
 #
-# Workflows exit 0 silently when secrets are missing, so they won't
-# fail-spam before you've wired up credentials.
+# Workflows exit 0 silently when secrets are missing.
 
 on:
   schedule:
@@ -18,9 +17,6 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────
-  # JOB 1: Lead Funnel Digest
-  # ─────────────────────────────────────────────────────────────────
   lead-funnel:
     name: Lead Funnel Digest
     runs-on: ubuntu-latest
@@ -39,69 +35,66 @@ jobs:
           url = os.environ.get("SUPABASE_URL", "")
           key = os.environ.get("SUPABASE_SERVICE_KEY", "")
           if not url or not key:
-              print("::warning::SUPABASE_URL or SUPABASE_SERVICE_KEY not set — skipping lead funnel digest")
+              print("::warning::SUPABASE_URL or SUPABASE_SERVICE_KEY not set -- skipping lead funnel digest")
               sys.exit(0)
 
-          hdrs = {"apikey": key, "Authorization": f"Bearer {key}"}
+          hdrs = {"apikey": key, "Authorization": "Bearer " + key}
 
           def get(table, params):
               req = urllib.request.Request(
-                  f"{url}/rest/v1/{table}?{params}", headers=hdrs
+                  url + "/rest/v1/" + table + "?" + params, headers=hdrs
               )
               with urllib.request.urlopen(req) as r:
                   return json.loads(r.read())
 
           now = datetime.now(timezone.utc)
-          today_cutoff  = (now - timedelta(hours=24)).isoformat()
-          week_cutoff   = (now - timedelta(days=7)).isoformat()
-          stale_cutoff  = (now - timedelta(days=7)).isoformat()
+          today_cutoff = (now - timedelta(hours=24)).isoformat()
+          week_cutoff  = (now - timedelta(days=7)).isoformat()
+          stale_cutoff = (now - timedelta(days=7)).isoformat()
 
-          leads_today = get("leads", f"select=id,status,enrichment_source,lead_temperature&created_at=gte.{today_cutoff}&limit=1000")
-          leads_week  = get("leads", f"select=id,status,enrichment_source,lead_temperature&created_at=gte.{week_cutoff}&limit=1000")
-          stale_new   = get("leads", f"select=id&status=eq.new&created_at=lte.{stale_cutoff}&limit=1000")
+          leads_today = get("leads", "select=id,status,enrichment_source,lead_temperature&created_at=gte." + today_cutoff + "&limit=1000")
+          leads_week  = get("leads", "select=id,status,enrichment_source,lead_temperature&created_at=gte." + week_cutoff  + "&limit=1000")
+          stale_new   = get("leads", "select=id&status=eq.new&created_at=lte." + stale_cutoff + "&limit=1000")
 
-          # Status breakdown
           status_counts = {}
           for l in leads_week:
               s = l.get("status") or "unknown"
               status_counts[s] = status_counts.get(s, 0) + 1
 
-          # Temperature breakdown
           temp_counts = {}
           for l in leads_week:
               t = l.get("lead_temperature") or "unknown"
               temp_counts[t] = temp_counts.get(t, 0) + 1
 
-          # Enrichment breakdown
-          ai_ct     = sum(1 for l in leads_week if l.get("enrichment_source") == "ai")
-          regex_ct  = sum(1 for l in leads_week if l.get("enrichment_source") == "regex")
-          none_ct   = sum(1 for l in leads_week if not l.get("enrichment_source"))
+          ai_ct    = sum(1 for l in leads_week if l.get("enrichment_source") == "ai")
+          regex_ct = sum(1 for l in leads_week if l.get("enrichment_source") == "regex")
+          none_ct  = sum(1 for l in leads_week if not l.get("enrichment_source"))
 
           lines = [
-              f"## Lead Funnel Digest — {now.strftime('%Y-%m-%d')}",
+              "## Lead Funnel Digest -- " + now.strftime("%Y-%m-%d"),
               "",
-              f"| Metric | Count |",
-              f"|--------|-------|",
-              f"| New leads today | {len(leads_today)} |",
-              f"| New leads this week | {len(leads_week)} |",
-              f"| Stale uncontacted (new >7d) | {len(stale_new)} |",
+              "| Metric | Count |",
+              "|--------|-------|",
+              "| New leads today | " + str(len(leads_today)) + " |",
+              "| New leads this week | " + str(len(leads_week)) + " |",
+              "| Stale uncontacted (new >7d) | " + str(len(stale_new)) + " |",
               "",
               "### Status (this week)",
           ]
           for s, c in sorted(status_counts.items(), key=lambda x: -x[1]):
-              lines.append(f"- {s}: {c}")
+              lines.append("- " + s + ": " + str(c))
 
           lines += [
               "",
               "### Enrichment (this week)",
-              f"- AI enriched: {ai_ct}",
-              f"- Regex enriched: {regex_ct}",
-              f"- Unenriched: {none_ct}",
+              "- AI enriched: " + str(ai_ct),
+              "- Regex enriched: " + str(regex_ct),
+              "- Unenriched: " + str(none_ct),
               "",
               "### Temperature (this week)",
           ]
           for t, c in sorted(temp_counts.items(), key=lambda x: -x[1]):
-              lines.append(f"- {t}: {c}")
+              lines.append("- " + t + ": " + str(c))
 
           digest = "\n".join(lines)
           print(digest)
@@ -109,12 +102,11 @@ jobs:
           with open("lead-funnel-digest.md", "w") as f:
               f.write(digest)
 
-          # Anomaly: <3 new leads today OR >20 stale uncontacted
           alert_reasons = []
           if len(leads_today) < 3:
-              alert_reasons.append(f"Only {len(leads_today)} new leads today (threshold: 3)")
+              alert_reasons.append("Only " + str(len(leads_today)) + " new leads today (threshold: 3)")
           if len(stale_new) > 20:
-              alert_reasons.append(f"{len(stale_new)} stale uncontacted new leads (threshold: 20)")
+              alert_reasons.append(str(len(stale_new)) + " stale uncontacted new leads (threshold: 20)")
 
           if alert_reasons:
               with open("lead-funnel-alert.txt", "w") as f:
@@ -145,14 +137,11 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Lead Funnel Alert — ${new Date().toISOString().split('T')[0]}`,
-              body: `## Alert\n${alert}\n\n${digest}`,
+              title: 'Lead Funnel Alert -- ' + new Date().toISOString().split('T')[0],
+              body: '## Alert\n' + alert + '\n\n' + digest,
               labels: ['automated', 'lead-funnel']
             });
 
-  # ─────────────────────────────────────────────────────────────────
-  # JOB 2: Churn Signal Scanner
-  # ─────────────────────────────────────────────────────────────────
   churn-scan:
     name: Churn Signal Scanner
     runs-on: ubuntu-latest
@@ -171,14 +160,14 @@ jobs:
           url = os.environ.get("SUPABASE_URL", "")
           key = os.environ.get("SUPABASE_SERVICE_KEY", "")
           if not url or not key:
-              print("::warning::SUPABASE_URL or SUPABASE_SERVICE_KEY not set — skipping churn scan")
+              print("::warning::SUPABASE_URL or SUPABASE_SERVICE_KEY not set -- skipping churn scan")
               sys.exit(0)
 
-          hdrs = {"apikey": key, "Authorization": f"Bearer {key}"}
+          hdrs = {"apikey": key, "Authorization": "Bearer " + key}
 
           def get(table, params):
               req = urllib.request.Request(
-                  f"{url}/rest/v1/{table}?{params}", headers=hdrs
+                  url + "/rest/v1/" + table + "?" + params, headers=hdrs
               )
               with urllib.request.urlopen(req) as r:
                   return json.loads(r.read())
@@ -187,16 +176,13 @@ jobs:
           lead_cutoff = (now - timedelta(days=7)).isoformat()
           conv_cutoff = (now - timedelta(days=14)).isoformat()
 
-          # Fetch paid tenants
           tenants = get("tenants", "select=id,business_name,plan,created_at&plan=neq.free&limit=500")
 
-          # Efficient: 2 queries instead of 2N
-          # Leads active in last 7d
-          recent_leads = get("leads", f"select=client_id&created_at=gte.{lead_cutoff}&limit=5000")
+          # 2 queries instead of 2N -- efficient for any tenant count
+          recent_leads = get("leads", "select=client_id&created_at=gte." + lead_cutoff + "&limit=5000")
           active_lead_tids = {l["client_id"] for l in recent_leads if l.get("client_id")}
 
-          # Conversations active in last 14d
-          recent_convs = get("conversations", f"select=client_id&created_at=gte.{conv_cutoff}&limit=5000")
+          recent_convs = get("conversations", "select=client_id&created_at=gte." + conv_cutoff + "&limit=5000")
           active_conv_tids = {c["client_id"] for c in recent_convs if c.get("client_id")}
 
           active = active_lead_tids | active_conv_tids
@@ -207,19 +193,19 @@ jobs:
               sys.exit(0)
 
           lines = [
-              f"## Churn Risk Report — {now.strftime('%Y-%m-%d')}",
+              "## Churn Risk Report -- " + now.strftime("%Y-%m-%d"),
               "",
-              f"**{len(churn_risks)} paid tenant(s)** with no leads in 7d and no conversations in 14d:",
+              str(len(churn_risks)) + " paid tenant(s) with no leads in 7d and no conversations in 14d:",
               "",
           ]
           for t in churn_risks:
               name = t.get("business_name") or t["id"][:8]
-              created = t.get("created_at", "")[:10]
-              lines.append(f"- **{name}** (plan: {t['plan']}, customer since: {created})")
+              created = (t.get("created_at") or "")[:10]
+              lines.append("- **" + name + "** (plan: " + t["plan"] + ", customer since: " + created + ")")
 
           lines += [
               "",
-              "> Criteria: paid plan + no new `leads.created_at` in 7d + no `conversations.created_at` in 14d.",
+              "> Criteria: paid plan + no new leads.created_at in 7d + no conversations.created_at in 14d.",
               "> Consider reaching out or checking if widget is still embedded.",
           ]
 
@@ -255,14 +241,11 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Churn Risk: ${count} tenant(s) inactive — ${new Date().toISOString().split('T')[0]}`,
+              title: 'Churn Risk: ' + count + ' tenant(s) inactive -- ' + new Date().toISOString().split('T')[0],
               body: report,
               labels: ['automated', 'churn-risk']
             });
 
-  # ─────────────────────────────────────────────────────────────────
-  # JOB 3: Claude Cost-Per-Tenant Alert
-  # ─────────────────────────────────────────────────────────────────
   cost-alert:
     name: Claude Cost-Per-Tenant
     runs-on: ubuntu-latest
@@ -282,14 +265,14 @@ jobs:
           url = os.environ.get("SUPABASE_URL", "")
           key = os.environ.get("SUPABASE_SERVICE_KEY", "")
           if not url or not key:
-              print("::warning::SUPABASE_URL or SUPABASE_SERVICE_KEY not set — skipping cost alert")
+              print("::warning::SUPABASE_URL or SUPABASE_SERVICE_KEY not set -- skipping cost alert")
               sys.exit(0)
 
-          hdrs = {"apikey": key, "Authorization": f"Bearer {key}"}
+          hdrs = {"apikey": key, "Authorization": "Bearer " + key}
 
           def get(table, params):
               req = urllib.request.Request(
-                  f"{url}/rest/v1/{table}?{params}", headers=hdrs
+                  url + "/rest/v1/" + table + "?" + params, headers=hdrs
               )
               with urllib.request.urlopen(req) as r:
                   return json.loads(r.read())
@@ -297,8 +280,8 @@ jobs:
           now = datetime.now(timezone.utc)
           since = (now - timedelta(hours=24)).isoformat()
 
-          # chat_messages uses tenant_id (migration 006)
-          msgs = get("chat_messages", f"select=tenant_id,role&created_at=gte.{since}&role=eq.assistant&limit=10000")
+          # chat_messages uses tenant_id directly (migration 006)
+          msgs = get("chat_messages", "select=tenant_id,role&created_at=gte." + since + "&role=eq.assistant&limit=10000")
 
           if not msgs:
               print("No assistant messages in last 24h.")
@@ -306,23 +289,22 @@ jobs:
 
           counts = Counter(m["tenant_id"] for m in msgs if m.get("tenant_id"))
 
-          # Estimate: ~$0.002/message (Haiku baseline — actual varies by model)
+          # ~$0.002/message (Haiku baseline -- actual varies by model)
           COST_PER_MSG = 0.002
           THRESHOLD = 100  # assistant messages/day before alerting (~$0.20)
 
-          # Fetch tenant names for display
           tenant_ids = list(counts.keys())
-          tenants_raw = get("tenants", f"select=id,business_name,plan&limit=500") if tenant_ids else []
+          tenants_raw = get("tenants", "select=id,business_name,plan&limit=500") if tenant_ids else []
           tenant_map = {t["id"]: t for t in tenants_raw}
 
           total_msgs = sum(counts.values())
           total_cost = total_msgs * COST_PER_MSG
 
           lines = [
-              f"## AI Usage Report — {now.strftime('%Y-%m-%d')} (last 24h)",
+              "## AI Usage Report -- " + now.strftime("%Y-%m-%d") + " (last 24h)",
               "",
-              f"**Total assistant messages:** {total_msgs}  ",
-              f"**Estimated cost:** ${total_cost:.3f}",
+              "Total assistant messages: " + str(total_msgs),
+              "Estimated cost: $" + format(total_cost, ".3f"),
               "",
               "| Tenant | Plan | Messages | Est. Cost | Status |",
               "|--------|------|----------|-----------|--------|",
@@ -334,10 +316,10 @@ jobs:
               name = t.get("business_name") or tid[:12]
               plan = t.get("plan") or "unknown"
               cost = count * COST_PER_MSG
-              flag = "⚠️ HIGH" if count > THRESHOLD else "OK"
-              lines.append(f"| {name} | {plan} | {count} | ${cost:.3f} | {flag} |")
+              flag = "HIGH [!]" if count > THRESHOLD else "OK"
+              lines.append("| " + name + " | " + plan + " | " + str(count) + " | $" + format(cost, ".3f") + " | " + flag + " |")
               if count > THRESHOLD:
-                  alerts.append(f"**{name}** ({plan}): {count} messages (~${cost:.2f}/day)")
+                  alerts.append(name + " (" + plan + "): " + str(count) + " messages (~$" + format(cost, ".2f") + "/day)")
 
           report = "\n".join(lines)
           print(report)
@@ -373,7 +355,7 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `AI Cost Spike — ${new Date().toISOString().split('T')[0]}`,
-              body: `## High Usage Detected\n\n${alert}\n\n---\n\n${report}\n\n> Threshold: ${100} assistant messages/day/tenant (~$0.20). Cost is estimated at $0.002/message (Haiku baseline).`,
+              title: 'AI Cost Spike -- ' + new Date().toISOString().split('T')[0],
+              body: '## High Usage Detected\n\n' + alert + '\n\n---\n\n' + report + '\n\n> Threshold: 100 assistant messages/day/tenant (~$0.20). Cost estimated at $0.002/message (Haiku baseline).',
               labels: ['automated', 'cost-alert']
             });

@@ -42,7 +42,7 @@ jobs:
 
           # Create file if it doesn't exist
           if [ ! -f "docs/dev-knowledge/bug-patterns.md" ]; then
-            echo "# Bug Patterns — AgentNexLiFy" > docs/dev-knowledge/bug-patterns.md
+            echo "# Bug Patterns - AgentNexLiFy" > docs/dev-knowledge/bug-patterns.md
             echo "" >> docs/dev-knowledge/bug-patterns.md
           fi
 
@@ -67,5 +67,5 @@ jobs:
           git config user.name "AgentNexLiFy Bot"
           git config user.email "bot@agentnexlify.com"
           git add docs/dev-knowledge/bug-patterns.md
-          git diff --cached --quiet || git commit -m "docs: auto-log bug fix from $(git log -1 --pretty=%h HEAD~1)"
+          git diff --cached --quiet || git commit -m "docs: auto-log bug fix from $(git log -1 --pretty=%h HEAD)"
           git push

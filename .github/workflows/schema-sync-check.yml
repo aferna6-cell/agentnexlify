@@ -1,12 +1,11 @@
 name: Schema Sync Check
 
 # Counts unapplied migrations in schema-log.md vs migrations/*.sql files.
-# Flags CRITICAL pending migrations (ones where the log entry mentions
-# "Critical:" near "Applied: Pending") — these block features in prod.
+# Flags CRITICAL pending migrations (those with "Critical:" near "Applied: Pending").
 #
 # Triggers:
-#   - Push to main touching migrations/ or schema-log.md (immediate check)
-#   - Daily at 7 AM UTC (catch drift over time)
+#   - Push to main touching migrations/ or schema-log.md
+#   - Daily at 7 AM UTC
 #
 # Opens a GH issue when:
 #   - Any CRITICAL pending migration exists, OR
@@ -32,22 +31,16 @@ jobs:
       - name: Count pending migrations
         id: count
         run: |
-          # Total SQL files
           TOTAL_SQL=$(ls migrations/*.sql 2>/dev/null | wc -l | tr -d ' ')
           echo "Total migration files: $TOTAL_SQL"
 
-          # Pending entries: lines containing "**Applied:** Pending"
           PENDING=$(grep -c '\*\*Applied:\*\* Pending' docs/dev-knowledge/schema-log.md 2>/dev/null || echo 0)
           echo "Pending (unapplied): $PENDING"
 
-          # Critical: "Critical" keyword appears near a pending block
-          # Look for lines that match both patterns in a 10-line window
           CRITICAL=$(python3 - <<'PYEOF'
           import re, sys
           try:
               text = open("docs/dev-knowledge/schema-log.md").read()
-              # Find each "Applied: Pending" block and check if "Critical" appears
-              # within the surrounding 300 chars
               blocks = [m.start() for m in re.finditer(r'\*\*Applied:\*\* Pending', text)]
               count = 0
               for pos in blocks:
@@ -55,17 +48,15 @@ jobs:
                   if re.search(r'\bCritical\b', window, re.IGNORECASE):
                       count += 1
               print(count)
-          except Exception as e:
+          except Exception:
               print(0)
           PYEOF
           )
           echo "Critical pending: $CRITICAL"
 
-          # Extract pending migration names
           python3 - <<'PYEOF' > pending-list.txt 2>/dev/null || true
           import re
           text = open("docs/dev-knowledge/schema-log.md").read()
-          # Split on migration headings, find ones with "Applied: Pending"
           sections = re.split(r'\n(?=### )', text)
           names = []
           for section in sections:
@@ -103,7 +94,7 @@ jobs:
             const totalSql = parseInt('${{ steps.count.outputs.total_sql }}') || 0;
 
             if (critical === 0 && pending <= 10) {
-              console.log(`Schema sync OK: ${pending} pending, 0 critical.`);
+              console.log('Schema sync OK: ' + pending + ' pending, 0 critical.');
               return;
             }
 
@@ -112,40 +103,43 @@ jobs:
               ? fs.readFileSync('pending-list.txt', 'utf8').trim() : '';
 
             const severity = critical > 0 ? 'CRITICAL' : 'WARNING';
+            const labelColor = critical > 0 ? 'dc2626' : 'f59e0b';
             const labels = critical > 0
               ? ['automated', 'schema', 'critical']
               : ['automated', 'schema', 'maintenance'];
 
+            const criticalNote = critical > 0
+              ? '\n> [!] CRITICAL migrations block features in production. Apply immediately.'
+              : '';
+
             const body = [
-              `## Schema Sync Alert — ${new Date().toISOString().split('T')[0]}`,
+              '## Schema Sync Alert -- ' + new Date().toISOString().split('T')[0],
               '',
-              `| Metric | Count |`,
-              `|--------|-------|`,
-              `| Total migration files | ${totalSql} |`,
-              `| Pending (unapplied) | ${pending} |`,
-              `| Critical pending | ${critical} |`,
+              '| Metric | Count |',
+              '|--------|-------|',
+              '| Total migration files | ' + totalSql + ' |',
+              '| Pending (unapplied) | ' + pending + ' |',
+              '| Critical pending | ' + critical + ' |',
               '',
               '### Pending migrations',
-              list ? list.split('\n').map(l => `- ${l}`).join('\n') : '_none extracted_',
+              list ? list.split('\n').map(l => '- ' + l).join('\n') : '_none extracted_',
               '',
               '---',
               '**To apply:**',
               '```',
               'mcp__supabase__apply_migration  (preferred)',
-              '# OR: Supabase Dashboard → SQL Editor',
+              '# OR: Supabase Dashboard -> SQL Editor',
               '```',
               '',
-              `> See \`docs/dev-knowledge/schema-log.md\` for full migration details.`,
-              critical > 0
-                ? `\n> ⚠️ **CRITICAL migrations block features in production. Apply immediately.**`
-                : '',
+              '> See `docs/dev-knowledge/schema-log.md` for full details.',
+              criticalNote,
             ].join('\n');
 
             for (const label of labels) {
               try {
                 await github.rest.issues.createLabel({
                   owner: context.repo.owner, repo: context.repo.repo,
-                  name: label, color: critical > 0 ? 'dc2626' : 'f59e0b'
+                  name: label, color: labelColor
                 });
               } catch {}
             }
@@ -153,7 +147,7 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Schema Sync [${severity}]: ${pending} pending migrations — ${new Date().toISOString().split('T')[0]}`,
+              title: 'Schema Sync [' + severity + ']: ' + pending + ' pending migrations -- ' + new Date().toISOString().split('T')[0],
               body,
               labels
             });

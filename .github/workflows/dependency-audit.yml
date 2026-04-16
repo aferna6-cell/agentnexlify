@@ -2,8 +2,7 @@ name: Dependency Security Audit
 
 # Runs every Monday morning. Opens a GH issue if HIGH or CRITICAL
 # vulnerabilities are found in Python (pip-audit) or Node (npm audit).
-#
-# No secrets required — reads from local requirements.txt + package-lock.json.
+# No secrets required.
 
 on:
   schedule:
@@ -12,7 +11,7 @@ on:
 
 jobs:
   pip-audit:
-    name: Python — pip-audit
+    name: Python -- pip-audit
     runs-on: ubuntu-latest
     outputs:
       has_vulns: ${{ steps.audit.outputs.has_vulns }}
@@ -31,17 +30,14 @@ jobs:
           pip install pip-audit --quiet
           set +e
           REPORT=$(pip-audit -r backend/requirements.txt --format markdown 2>&1)
-          EXIT=$?
           set -e
 
           echo "$REPORT"
 
-          # Save full report
           echo "report<<DELIM" >> $GITHUB_OUTPUT
           echo "$REPORT" >> $GITHUB_OUTPUT
           echo "DELIM" >> $GITHUB_OUTPUT
 
-          # High/Critical check
           if echo "$REPORT" | grep -qiE "\bhigh\b|\bcritical\b"; then
             HV=true
             SUMMARY=$(echo "$REPORT" | grep -iE "\bhigh\b|\bcritical\b" | head -5)
@@ -56,7 +52,7 @@ jobs:
           echo "DELIM" >> $GITHUB_OUTPUT
 
   npm-audit:
-    name: Node — npm audit
+    name: Node -- npm audit
     runs-on: ubuntu-latest
     outputs:
       has_vulns: ${{ steps.audit.outputs.has_vulns }}
@@ -79,7 +75,6 @@ jobs:
           REPORT_JSON=$(npm audit --json 2>/dev/null)
           set -e
 
-          # Parse vulnerability counts
           HIGH=$(echo "$REPORT_JSON" | python3 -c "
           import sys, json
           try:
@@ -133,7 +128,7 @@ jobs:
             const pipVulns = '${{ needs.pip-audit.outputs.has_vulns }}' === 'true';
             const npmVulns = '${{ needs.npm-audit.outputs.has_vulns }}' === 'true';
             if (!pipVulns && !npmVulns) {
-              console.log('No vulnerabilities found — no issue created.');
+              console.log('No vulnerabilities found -- no issue created.');
               return;
             }
 
@@ -142,20 +137,20 @@ jobs:
             const npmSummary = `${{ needs.npm-audit.outputs.summary }}`;
 
             const body = [
-              `## Dependency Vulnerabilities Found — ${new Date().toISOString().split('T')[0]}`,
+              '## Dependency Vulnerabilities Found -- ' + new Date().toISOString().split('T')[0],
               '',
               '### Python (pip-audit)',
-              pipVulns ? `⚠️ ${pipSummary}` : '✅ Clean',
+              pipVulns ? '[!] ' + pipSummary : 'OK - Clean',
               '',
               pipVulns ? '```\n' + pipReport.slice(0, 3000) + '\n```' : '',
               '',
               '### Node (npm audit)',
-              npmVulns ? `⚠️ ${npmSummary}` : '✅ Clean',
+              npmVulns ? '[!] ' + npmSummary : 'OK - Clean',
               '',
               '---',
               '**Remediation:**',
               '- Python: `pip-audit -r backend/requirements.txt --fix` (review before applying)',
-              '- Node: `cd frontend && npm audit fix` (or `npm audit fix --force` for breaking changes)',
+              '- Node: `cd frontend && npm audit fix`',
             ].join('\n');
 
             for (const label of ['automated', 'security', 'dependencies']) {
@@ -170,7 +165,7 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Dependency Audit: Vulnerabilities Found — ${new Date().toISOString().split('T')[0]}`,
+              title: 'Dependency Audit: Vulnerabilities Found -- ' + new Date().toISOString().split('T')[0],
               body,
               labels: ['automated', 'security', 'dependencies']
             });
