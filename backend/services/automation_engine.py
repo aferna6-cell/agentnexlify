@@ -768,7 +768,9 @@ async def check_no_response_leads() -> int:
                 exc_info=True,
             )
 
-    # Now evaluate each lead entirely in Python (no more DB calls in this loop)
+    # Evaluate each lead in Python and collect (tenant_id, lead_id) pairs to trigger.
+    # No DB calls here — all guard data was fetched in Q1-Q4 above.
+    leads_to_trigger: list[tuple[str, str]] = []
     for lead in leads:
         lead_id = lead["id"]
         tenant_id = lead["client_id"]
@@ -789,19 +791,137 @@ async def check_no_response_leads() -> int:
         if last_message_at is not None and last_message_at > cutoff:
             continue  # Recent activity — skip
 
+        leads_to_trigger.append((tenant_id, lead_id))
+
+    if not leads_to_trigger:
+        return 0
+
+    # Batch-trigger phase: group leads by tenant so we make ONE sequences query
+    # and ONE steps query per tenant, then ONE bulk insert per tenant.
+    # Before this change: O(3 * leads) DB round-trips.
+    # After this change: O(3 * tenants) DB round-trips (tenants << leads in practice).
+    from collections import defaultdict
+
+    leads_by_tenant: dict[str, list[str]] = defaultdict(list)
+    for tenant_id, lead_id in leads_to_trigger:
+        leads_by_tenant[tenant_id].append(lead_id)
+
+    for tenant_id, lead_ids in leads_by_tenant.items():
+        # Fetch active no_response_24h sequences for this tenant (1 query)
         try:
-            count = await trigger_sequence(tenant_id, lead_id, "no_response_24h")
-            if count:
-                triggered += count
-                logger.info(
-                    "check_no_response_leads: triggered sequence for lead %s (tenant %s)",
-                    lead_id,
-                    tenant_id,
-                )
+            seq_result = (
+                tenant_table(db, "automation_sequences", tenant_id)
+                .select("id, trigger_config")
+                .eq("trigger_event", "no_response_24h")
+                .eq("is_active", True)
+                .execute()
+            )
         except Exception:
             logger.exception(
-                "check_no_response_leads: trigger_sequence failed for lead %s", lead_id
+                "check_no_response_leads: sequences query failed for tenant %s", tenant_id
             )
+            continue
+
+        sequences = seq_result.data or []
+        if not sequences:
+            continue
+
+        # Fetch first active step for each sequence (1 query per tenant)
+        seq_ids = [s["id"] for s in sequences]
+        try:
+            steps_result = (
+                db.table("automation_steps")
+                .select("sequence_id, step_order, delay_minutes")
+                .in_("sequence_id", seq_ids)
+                .eq("is_active", True)
+                .order("step_order")
+                .limit(len(seq_ids) * 20)
+                .execute()
+            )
+        except Exception:
+            logger.exception(
+                "check_no_response_leads: steps query failed for tenant %s", tenant_id
+            )
+            continue
+
+        first_step_by_seq: dict[str, dict] = {}
+        for step in steps_result.data or []:
+            sid = step["sequence_id"]
+            if sid not in first_step_by_seq:
+                first_step_by_seq[sid] = step
+
+        # Build bulk enrollment records for all leads x all eligible sequences
+        now_utc = datetime.now(timezone.utc)
+        enrollment_records: list[dict] = []
+        for seq in sequences:
+            first_step = first_step_by_seq.get(seq["id"])
+            if not first_step:
+                continue
+            next_run = now_utc + timedelta(minutes=first_step["delay_minutes"])
+            for lead_id in lead_ids:
+                enrollment_records.append(
+                    {
+                        "sequence_id": seq["id"],
+                        "lead_id": lead_id,
+                        "tenant_id": tenant_id,
+                        "current_step": 1,
+                        "status": "in_progress",
+                        "next_run_at": next_run.isoformat(),
+                    }
+                )
+
+        if not enrollment_records:
+            continue
+
+        # Single bulk insert for all (lead, sequence) pairs in this tenant
+        try:
+            tenant_table(db, "automation_executions", tenant_id).insert(
+                enrollment_records
+            ).execute()
+            triggered += len(enrollment_records)
+            logger.info(
+                "check_no_response_leads: bulk enrolled %d executions for tenant %s "
+                "(leads: %s)",
+                len(enrollment_records),
+                tenant_id,
+                lead_ids,
+            )
+        except Exception as _bulk_exc:
+            err_str = str(_bulk_exc).lower()
+            if "unique" in err_str or "duplicate" in err_str:
+                # Some leads already enrolled — fall back to per-record inserts
+                logger.debug(
+                    "check_no_response_leads: bulk insert hit unique constraint for tenant %s, "
+                    "falling back to per-record inserts",
+                    tenant_id,
+                )
+                for record in enrollment_records:
+                    try:
+                        tenant_table(db, "automation_executions", tenant_id).insert(
+                            record
+                        ).execute()
+                        triggered += 1
+                    except Exception as _rec_exc:
+                        rec_err = str(_rec_exc).lower()
+                        if "unique" in rec_err or "duplicate" in rec_err:
+                            logger.debug(
+                                "Lead %s already enrolled in sequence %s",
+                                record["lead_id"],
+                                record["sequence_id"],
+                            )
+                        else:
+                            logger.warning(
+                                "check_no_response_leads: failed to enroll lead %s in "
+                                "sequence %s: %s",
+                                record["lead_id"],
+                                record["sequence_id"],
+                                _rec_exc,
+                                exc_info=True,
+                            )
+            else:
+                logger.exception(
+                    "check_no_response_leads: bulk insert failed for tenant %s", tenant_id
+                )
 
     return triggered
 
