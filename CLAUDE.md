@@ -64,8 +64,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 6. **No `localStorage` in React artifacts** — storage isn't available in claude.ai artifact sandbox.
 7. **Secrets never in commits or logs** — `.env*` gitignored; pre-commit hook scans; CI audits.
 8. **Schema changes only via numbered migration files** in `migrations/` — no ad-hoc SQL. Apply via Supabase MCP or UI.
-9. **Never use WebFetch / WebSearch tools** — use `agent-browser` via Bash. Blocked by `.claude/settings.json` hook.
-10. **Never research code before reading it** — CLAUDE.md Rule 7 from user-rules.md. Read source before editing.
+9. **Never research code before reading it** — CLAUDE.md Rule 7 from user-rules.md. Read source before editing.
 
 ### Design principles
 - **Multi-tenant from day one** — every request carries a tenant/client ID. Never write un-scoped queries.
