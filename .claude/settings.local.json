@@ -16,7 +16,12 @@
       "Bash(python3 -c \" import sys, re html = sys.stdin.read\\(\\) html = re.sub\\(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL\\) html = re.sub\\(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL\\) text = re.sub\\(r'<[^>]+>', ' ', html\\) text = re.sub\\(r'&amp;', '&', text\\); text = re.sub\\(r'&lt;', '<', text\\); text = re.sub\\(r'&gt;', '>', text\\) text = re.sub\\(r'\\\\s+', ' ', text\\) print\\(text[:4000]\\) \" echo \"=== END CREATE SKILLS ===\")",
       "Bash(mkdir -p .claude/artifacts/design-references)",
       "Bash(echo '# Design References:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(gh auth:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ]
   }
 }
