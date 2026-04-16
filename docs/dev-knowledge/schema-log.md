@@ -725,4 +725,26 @@ Adds opt-in boolean to `widget_configs` controlling whether widget chat runs the
 - Phase 1 of 5 in `/plans/lead-parser-replacement_plan.md`
 - Source spec: `/specs/lead-parser-replacement_spec.md`
 
-**Applied:** Pending — created 2026-04-15. Apply via Supabase MCP / Dashboard SQL editor.
+**Applied:** 2026-04-15 via Supabase Dashboard SQL editor.
+
+### 104 — Structured Lead Parser Default True (planned)
+**Date:** Planned ~2026-04-22
+Changes `widget_configs.enable_structured_lead_parser` DEFAULT from `false` to `true` so new tenants get enrichment automatically.
+
+**Gate:** Apply ONLY after ≥95% lead-field completion rate holds for 7 days across all Phase 5 testers. See `audits/audit-lead-enrichment-2026-04-15.md`.
+
+- `widget_configs.enable_structured_lead_parser` DEFAULT changed from false → true
+- Existing rows unchanged (ALTER COLUMN SET DEFAULT only affects new inserts)
+
+**Applied:** NOT YET — pre-written, awaiting gate criteria. Apply ~2026-04-22.
+
+### 105 — Leads Enrichment Source
+**Date:** 2026-04-15
+Adds `enrichment_source` column to `leads` to track how lead fields were populated.
+
+- `leads.enrichment_source` TEXT NULL — values: `'regex'` (basic parser), `'ai'` (structured_extractor), `NULL` (legacy/manual)
+- Set to `'ai'` by `_enrich_lead_from_message` in `backend/routers/widget_helpers.py` when AI enrichment writes fields
+- Returned by `GET /api/v1/leads/:tenant_id` and displayed as "AI" badge in LeadsPage
+- Drives lead quality stat bar (% with name + email + phone) in LeadsPage dashboard
+
+**Applied:** 2026-04-15 via Supabase Dashboard SQL editor.
