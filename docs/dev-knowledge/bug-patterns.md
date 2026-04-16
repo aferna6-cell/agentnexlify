@@ -1768,3 +1768,19 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/auto-log-bug.yml,.github/workflows/daily-business-digest.yml,.github/workflows/dead-code-sweep.yml,.github/workflows/dependency-audit.yml,.github/workflows/schema-sync-check.yml
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(agent-sdk): allowImportingTsExtensions + keyword-only timeout arg
+
+- tsconfig.json: add allowImportingTsExtensions:true so tsc accepts
+  .ts extension imports required by Node 22 --experimental-strip-types
+- widget_chat.py: pass timeout= as keyword arg to run_agent_sync since
+  the parameter is keyword-only (positional would raise TypeError)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+**Date:** 2026-04-16
+**Commit:** d16cc19
+**Author:** aferna6-cell
+**Files Changed:** agent-service/tsconfig.json,backend/routers/widget_chat.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
