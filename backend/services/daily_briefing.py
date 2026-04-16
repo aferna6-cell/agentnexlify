@@ -246,7 +246,8 @@ def _format_briefing_sms(business_name: str, b: dict) -> str:
             time_str = ""
             try:
                 t = datetime.fromisoformat(appt["start_time"].replace("Z", "+00:00"))
-                time_str = t.strftime("%-I:%M %p")
+                hour_12 = t.hour % 12 or 12
+                time_str = f"{hour_12}:{t.strftime('%M %p')}"
             except Exception:
                 logger.debug(
                     "Failed to parse appointment start_time %r", appt.get("start_time"), exc_info=True
