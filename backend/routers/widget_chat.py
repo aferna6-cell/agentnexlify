@@ -156,7 +156,7 @@ async def _run_support_fallback(
                     _agent_sdk.run_agent_sync,
                     "widget-support",
                     _sdk_prompt,
-                    FALLBACK_TIMEOUT_SECONDS - 1.0,
+                    timeout=FALLBACK_TIMEOUT_SECONDS - 1.0,
                 ),
                 timeout=FALLBACK_TIMEOUT_SECONDS,
             )
