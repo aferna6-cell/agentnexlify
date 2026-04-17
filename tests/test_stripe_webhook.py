@@ -400,7 +400,7 @@ class TestInvoiceStripePayments:
         db = MagicMock()
         db.table.return_value = table
 
-        _handle_invoice_payment(
+        result = _handle_invoice_payment(
             db,
             {
                 "metadata": {"invoice_id": "invoice-1", "tenant_id": "tenant-1"},
@@ -409,5 +409,11 @@ class TestInvoiceStripePayments:
             },
         )
 
+        # Idempotency contract: returns None without mutating state
+        assert result is None
+        # No DB write attempted after detecting already-paid status
+        assert not any(
+            call[0] == "update" for call in table.method_calls
+        ), "Expected no update() on already-paid invoice"
         table.update.assert_not_called()
         mock_fire_event.assert_not_called()
