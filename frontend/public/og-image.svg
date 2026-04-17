@@ -1,35 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
-    <radialGradient id="glow" cx="50%" cy="45%" r="50%">
-      <stop offset="0%" stop-color="#00bfff" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#0a0a0f" stop-opacity="0"/>
+    <radialGradient id="glow" cx="50%" cy="36%" r="48%">
+      <stop offset="0%" stop-color="#00bfff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#08090f" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="brand" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#c7e9ff"/>
-    </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="#0a0a0f"/>
+  <rect width="1200" height="630" fill="#08090f"/>
   <rect width="1200" height="630" fill="url(#glow)"/>
-
-  <!-- Tier 1: Brand name -->
-  <text x="600" y="215" text-anchor="middle"
-        font-family="Inter, Arial, Helvetica, sans-serif"
-        font-size="108" font-weight="800"
-        fill="url(#brand)" letter-spacing="-2">AgentNexLiFy</text>
-
-  <!-- Tier 2: Tagline -->
-  <text x="600" y="315" text-anchor="middle"
-        font-family="Inter, Arial, Helvetica, sans-serif"
-        font-size="56" font-weight="600"
-        fill="#00bfff" letter-spacing="-0.5">AI that helps run your business</text>
-
-  <!-- Tier 3: Website headline -->
-  <text text-anchor="middle"
-        font-family="Inter, Arial, Helvetica, sans-serif"
-        font-size="32" font-weight="500"
-        fill="#8a8f98">
-    <tspan x="600" y="420">Run smarter marketing. Capture more customers.</tspan>
-    <tspan x="600" y="470">Book more appointments — automatically.</tspan>
-  </text>
+  <image href="/logo.png" x="275" y="92" width="650" height="410" preserveAspectRatio="xMidYMid meet"/>
+  <text x="72" y="542" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#f5f8ff">AI that helps run your business</text>
+  <text x="76" y="589" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#00bfff">agentnexlify.com</text>
 </svg>
