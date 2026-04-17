@@ -77,3 +77,16 @@ URLs discovered (saved to known-urls.json for dedup):
 - https://www.techzine.eu/news/devops/137985/mongodb-launches-voyage-4-embedding-models-for-ai-apps/
 - https://www.techtarget.com/patientengagement/feature/Epics-Ask-Emmie-offers-EHR-backed-AI-chatbot-option-for-patients
 - https://mexicobusiness.news/tech/news/henkel-azurally-push-geo-strategy-ai-search-visibility
+
+## 2026-04-17 cron ingest
+
+- [2026-04-17] ai-llm/anthropic-claude-opus-4-7.md — Introducing Claude Opus 4.7 \ Anthropic — https://www.anthropic.com/news/claude-opus-4-7
+- [2026-04-17] ai-llm/anthropic-claude-code-best-practices.md — Best Practices for Claude Code - Claude Code Docs — https://www.anthropic.com/engineering/claude-code-best-practices
+- [2026-04-17] competitors/gohighlevel-stop-losing-leads.md — How to stop losing leads you already paid for (without hiring anyone) — https://www.gohighlevel.com/post/how-to-stop-losing-leads-you-already-paid-for-without-hiring-anyone
+- [2026-04-17] competitors/intercom-monitors-ai-black-box.md — Announcing Monitors: Opening the AI black box - The Intercom Blog — https://www.intercom.com/blog/announcing-monitors-opening-the-ai-black-box/
+- [2026-04-17] technical/vercel-zdr-on-ai-gateway.md — Zero Data Retention on AI Gateway - Vercel — https://vercel.com/blog/zdr-on-ai-gateway
+- [2026-04-17] technical/supabase-postgres-best-practices-for-ai-agents.md — Introducing: Postgres Best Practices — https://supabase.com/blog/postgres-best-practices-for-ai-agents
+- [2026-04-17] small-biz-saas/saastr-10-key-learnings-launching-saastr-ai.md — The Top 10 Learnings from Launching SaaStr’s Own AI: What Every B2B Founder Needs to Know | SaaStr — https://www.saastr.com/10-key-learnings-from-launching-saastr-ai-what-every-b2b-founder-needs-to-know/
+- [2026-04-17] small-biz-saas/saastr-10-things-deploy-first-ai-sdr.md — 10 Things to Know Before You Deploy Your First AI SDR: The Very Latest with SaaStr’s Jason and Amelia | SaaStr — https://www.saastr.com/10-things-to-know-before-you-deploy-your-first-ai-sdr-the-very-latest-with-saastrs-jason-and-amelia/
+- [2026-04-17] growth/sej-framework-prioritizing-seo-vs-ai-search.md — Don't Go Chasing AI Yet: An SEO vs. AI Search Priority Framework — https://www.searchenginejournal.com/dont-go-chasing-ai-yet-a-framework-for-prioritizing-seo-vs-ai-search/571603/
+- [2026-04-17] growth/sej-how-ai-agents-see-your-website.md — How AI Agents See Your Website (And How To Build For Them) — https://www.searchenginejournal.com/how-ai-agents-see-your-website-and-how-to-build-for-them/570443/

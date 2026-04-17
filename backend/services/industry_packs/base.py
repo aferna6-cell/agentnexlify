@@ -108,6 +108,40 @@ class KBSeedArticle:
     tags: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class IndustryAIPersona:
+    """Industry-specific AI persona for the widget chat system prompt.
+
+    Injected into `_build_system_prompt` via `load_pack(business_type).ai_persona`.
+    Keeps hardcoded compliance/tone blocks out of widget code — each industry
+    pack owns its own persona.
+
+    All fields default to empty so packs can opt in to only what they need.
+    """
+
+    # Appended after "You are a friendly AI assistant for {business}."
+    # Example: "You specialize in answering questions about dental care and booking appointments."
+    identity_addendum: str = ""
+
+    # Bullet-point tone/style cues. Rendered as "- {line}" under TONE header.
+    # Example: ["Warm and reassuring — patients are often anxious", "Never diagnose"]
+    tone_instructions: list[str] = field(default_factory=list)
+
+    # Topics the AI is encouraged to engage with. Used as hints, not hard limits.
+    allowed_topics: list[str] = field(default_factory=list)
+
+    # Topics the AI should explicitly avoid or deflect.
+    disallowed_topics: list[str] = field(default_factory=list)
+
+    # Free-form compliance text block (healthcare privacy, legal disclaimers, etc).
+    # Rendered verbatim after tone block. Leave empty when no compliance text needed.
+    compliance_block: str = ""
+
+    # Visitor patterns that should trigger HANDOFF_REQUESTED marker.
+    # Example: ["medical emergency", "complaint about staff", "refund request"]
+    escalation_triggers: list[str] = field(default_factory=list)
+
+
 # ----------------------------------------------------------------------
 # IndustryPack — the full bundle
 # ----------------------------------------------------------------------
@@ -134,6 +168,7 @@ class IndustryPack:
     smart_list_templates: list[SmartListTemplate] = field(default_factory=list)
     automation_rules: list[AutomationRuleTemplate] = field(default_factory=list)
     kb_seed_articles: list[KBSeedArticle] = field(default_factory=list)
+    ai_persona: IndustryAIPersona | None = None
 
     @property
     def source_tag(self) -> str:

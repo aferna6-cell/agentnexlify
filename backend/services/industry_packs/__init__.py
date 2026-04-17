@@ -15,6 +15,7 @@ is passed, so the API surface stays forgiving.
 from backend.services.industry_packs.base import (
     AutomationRuleTemplate,
     FormPreset,
+    IndustryAIPersona,
     IndustryPack,
     KBSeedArticle,
     SeedResult,
@@ -83,6 +84,7 @@ def list_available_packs() -> list[dict[str, object]]:
 __all__ = [
     "AutomationRuleTemplate",
     "FormPreset",
+    "IndustryAIPersona",
     "IndustryPack",
     "KBSeedArticle",
     "SeedResult",

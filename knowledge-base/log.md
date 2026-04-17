@@ -171,3 +171,5 @@ Processed 4 of 17 pending entries (4-entry cap). Remaining: 13 entries (3 regula
 - **Cross-references**: all 4 articles cite ≥1 existing wiki page; HIPAA articles cross-link each other + hipaa-overview-cdc + hipaa-titles; growth articles cross-link each other + post-launch-growth-strategy
 
 ## [2026-04-14 18:26] discover+compile | cron 18:00 | commits=16 raw=10 wiki=4
+
+## [2026-04-17 18:04] discover | categories=5 | ingested=10 | rejected=2 (jdsupra empty body) | skipped=2 (verticals, regulations — no passing URLs)
