@@ -1886,3 +1886,12 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/analytics/__init__.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(stripe): guard marketing addon readiness
+**Date:** 2026-04-17
+**Commit:** 0278eb0
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/billing.py,backend/services/stripe_service.py,tests/test_stripe_readiness.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
