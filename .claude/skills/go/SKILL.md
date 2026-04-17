@@ -1,7 +1,7 @@
 ---
 name: go
-description: Auto-invoke at the END of any implementation/bug-fix/refactor task — runs end-to-end verification, simplifies changed code, opens a PR to main, and enables auto-merge on green CI. Trigger when user suffixes a prompt with "/go", says "ship it", "verify and PR", "open a PR when done", "verify end-to-end", or when Claude has just finished writing code and no verification has run yet. Do NOT invoke for pure research, docs, or read-only exploration.
-version: 1.0.0
+description: Auto-invoke at the END of any implementation/bug-fix/refactor task — runs end-to-end verification, simplifies changed code, and pushes direct to main. Trigger when user suffixes a prompt with "/go", says "ship it", "verify and push", "push when done", "verify end-to-end", or when Claude has just finished writing code and no verification has run yet. Do NOT invoke for pure research, docs, or read-only exploration.
+version: 1.1.0
 origin: aidan
 triggers:
 - /go
@@ -14,9 +14,9 @@ triggers:
 effort: xhigh
 ---
 
-# /go — Verify → Simplify → PR → Auto-Merge
+# /go — Verify → Simplify → Push to main
 
-Claude-facing skill. Fires at task completion to guarantee working code lands cleanly on `main`.
+Claude-facing skill. Fires at task completion to guarantee working code lands cleanly on `main`. Solo-dev flow — direct push, no PR step.
 
 ## When to invoke
 - User ends a coding prompt with `/go`
@@ -97,26 +97,25 @@ Skill("verification-loop")
 ```
 Runs build + types + lint + fast tests + secret scan. Must be green.
 
-### Step 6 — Commit (if dirty), push, PR
+### Step 6 — Commit + push direct to main
 ```bash
-# commit anything outstanding
-git add <explicit files>
+# commit any outstanding work from this task
+git add <explicit files>            # never -A / -.
 git commit -m "<conventional msg>"
-git push origin HEAD:<branch>
 
-# open PR to main
-gh pr create --base main --head <branch> --title "<title>" --body "<summary + test plan + verification evidence>"
+# push direct to origin/main (solo-dev flow)
+git push origin HEAD:main
+```
+
+If push rejected (remote advanced), rebase onto latest origin/main and retry:
+```bash
+git fetch origin main
+git rebase origin/main
+git push origin HEAD:main
 ```
 
 **Never** bypass pre-push hooks (`--no-verify`) unless user explicitly authorizes.
 **Never** force-push to main.
-
-### Step 7 — Auto-merge on green
-```bash
-PR=$(gh pr view --json number -q .number)
-gh pr merge "$PR" --auto --squash --delete-branch
-```
-GitHub auto-merges when all required checks pass. If repo has no branch protection, fail loudly with fix suggestion instead of direct-merging.
 
 ### Step 8 — Report
 Output to user:

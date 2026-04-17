@@ -1,5 +1,5 @@
 ---
-description: Verify → simplify → PR to main → auto-merge on green CI. Runs at end of any implementation task.
+description: Verify → simplify → push direct to main. Solo-dev flow at end of any implementation task.
 argument-hint: [optional: scope description]
 model: sonnet
 ---
@@ -12,14 +12,13 @@ Steps (delegate to skill):
 3. E2E verify — Playwright MCP + chrome-devtools-mcp + autonomous-webapp-test (all three for frontend)
 4. Run `/simplify` on diff
 5. Run `verification-loop` full gate
-6. Commit outstanding → push → open PR against `main`
-7. `gh pr merge <num> --auto --squash --delete-branch`
-8. Report PR URL + verification matrix
+6. Commit outstanding → `git push origin HEAD:main`
+7. If rejected: `git fetch origin main && git rebase origin/main && git push`
+8. Report commit SHA + verification matrix
 
 Halt rules:
-- Any verification fails → halt before PR, surface blocker
+- Any verification fails → halt before push, surface blocker
 - Pre-push hook blocks on unrelated issue → ask user
-- No branch protection on main → skip auto-merge, warn
 
 Never `--no-verify`. Never force-push main.
 
