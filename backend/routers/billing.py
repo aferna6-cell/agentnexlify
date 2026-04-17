@@ -470,13 +470,13 @@ async def marketing_addon_checkout(claims: dict = Depends(_get_current_tenant)):
     ):
         raise HTTPException(status_code=409, detail="Add-on already active")
 
-    customer = get_or_create_customer(
-        email=tenant.get("owner_email") or "",
-        tenant_id=tenant_id,
-        business_name=tenant.get("business_name"),
-    )
-
     try:
+        ensure_stripe_configured()
+        customer = get_or_create_customer(
+            email=tenant.get("owner_email") or "",
+            tenant_id=tenant_id,
+            business_name=tenant.get("business_name"),
+        )
         session = create_marketing_addon_checkout_session(
             tenant_id=tenant_id,
             customer_id=customer.id,
@@ -520,7 +520,12 @@ async def marketing_addon_cancel(claims: dict = Depends(_get_current_tenant)):
     if not sub_id:
         raise HTTPException(status_code=404, detail="No active add-on subscription")
 
-    cancel_marketing_addon_subscription(sub_id)
+    try:
+        ensure_stripe_configured()
+        cancel_marketing_addon_subscription(sub_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     logger.info("Marketing addon cancel-at-period-end for tenant %s sub %s",
                 tenant_id, sub_id)
     return {"status": "scheduled_cancel"}

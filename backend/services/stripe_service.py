@@ -120,7 +120,7 @@ def create_marketing_addon_checkout_session(
     Creates a SEPARATE subscription from the primary plan (answer #4 = A).
     Subscription metadata[addon]=marketing so webhook can distinguish it.
     """
-    _ensure_initialized()
+    ensure_stripe_configured()
     price_id = get_marketing_addon_price_id()
     if price_id in _PLACEHOLDER_PRICE_IDS:
         raise RuntimeError(
@@ -152,7 +152,7 @@ def create_marketing_addon_checkout_session(
 
 def cancel_marketing_addon_subscription(subscription_id: str) -> stripe.Subscription:
     """Cancel the add-on subscription at period end (no immediate revocation)."""
-    _ensure_initialized()
+    ensure_stripe_configured()
     return stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
 
 
@@ -160,7 +160,7 @@ def get_or_create_customer(
     email: str, tenant_id: str, business_name: str | None = None
 ) -> stripe.Customer:
     """Find existing Stripe customer by tenant metadata, or create one."""
-    _ensure_initialized()
+    ensure_stripe_configured()
 
     # Search for existing customer with this tenant_id
     existing = stripe.Customer.search(
