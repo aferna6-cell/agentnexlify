@@ -7,7 +7,11 @@
   </defs>
   <rect width="1200" height="630" fill="#0a0a0f"/>
   <rect width="1200" height="630" fill="url(#glow)"/>
-  <text x="600" y="260" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">AgentNexLiFy</text>
-  <text x="600" y="340" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" fill="#00bfff">AI That Helps Run Your Business</text>
-  <text x="600" y="400" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#888888">Capture leads, book appointments, and follow up with customers — automatically.</text>
+  <text x="600" y="200" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="68" font-weight="bold" fill="#ffffff">AgentNexLiFy</text>
+  <text text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="700" fill="#ffffff">
+    <tspan x="600" y="300">Run smarter marketing, capture more</tspan>
+    <tspan x="600" y="352">customers, and book more appointments</tspan>
+    <tspan x="600" y="404">automatically.</tspan>
+  </text>
+  <text x="600" y="480" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#00bfff">AgentNexLiFy turns conversations into booked work.</text>
 </svg>
