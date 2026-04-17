@@ -185,3 +185,5 @@ Compiled from PENDING 2026-04-17 cron ingest batch (cap=4):
 INDEX.md total: 26 → 30. 6 entries remain in PENDING for next run.
 
 Embeddings skipped: Supabase MCP returned Unauthorized (SUPABASE_ACCESS_TOKEN missing). Per spec fallback, markdown compile completed without embeddings. embedding_errors=4.
+
+## [2026-04-17 18:12] discover+compile | cron 18:00 | commits=4 raw=10 wiki=4
