@@ -1,35 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AgentNexLiFy | Run smarter marketing, capture more customers, and book more appointments automatically.</title>
-    <meta name="description" content="Run smarter marketing, capture more customers, and book more appointments automatically." />
+    <title>
+      AgentNexLiFy | Run smarter marketing. Capture more customers. Book more
+      appointments — automatically.
+    </title>
+    <meta
+      name="description"
+      content="Run smarter marketing. Capture more customers. Book more appointments — automatically."
+    />
     <!-- Open Graph -->
-    <meta property="og:title" content="Run smarter marketing, capture more customers, and book more appointments automatically." />
-    <meta property="og:description" content="Run smarter marketing, capture more customers, and book more appointments automatically." />
-    <meta property="og:image" content="https://app.agentnexlify.com/og-image.png?v=20260417" />
+    <meta
+      property="og:title"
+      content="Run smarter marketing. Capture more customers. Book more appointments — automatically."
+    />
+    <meta
+      property="og:description"
+      content="Run smarter marketing. Capture more customers. Book more appointments — automatically."
+    />
+    <meta
+      property="og:image"
+      content="https://app.agentnexlify.com/og-image.png?v=20260417"
+    />
     <meta property="og:url" content="https://www.agentnexlify.com" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AgentNexLiFy" />
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Run smarter marketing, capture more customers, and book more appointments automatically." />
-    <meta name="twitter:description" content="Run smarter marketing, capture more customers, and book more appointments automatically." />
-    <meta name="twitter:image" content="https://app.agentnexlify.com/og-image.png?v=20260417" />
+    <meta
+      name="twitter:title"
+      content="Run smarter marketing. Capture more customers. Book more appointments — automatically."
+    />
+    <meta
+      name="twitter:description"
+      content="Run smarter marketing. Capture more customers. Book more appointments — automatically."
+    />
+    <meta
+      name="twitter:image"
+      content="https://app.agentnexlify.com/og-image.png?v=20260417"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <!-- Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4T4PJTGKNH"></script>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-4T4PJTGKNH"
+    ></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-4T4PJTGKNH');
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-4T4PJTGKNH");
     </script>
   </head>
   <body>
@@ -40,12 +72,30 @@
       (function () {
         if (!window.matchMedia("(min-width: 768px)").matches) return;
         var p = window.location.pathname;
-        var skipPaths = ["/dashboard", "/signup", "/login", "/onboarding", "/forgot-password", "/reset-password"];
-        if (skipPaths.some(function(s) { return p.startsWith(s); })) return;
+        var skipPaths = [
+          "/dashboard",
+          "/signup",
+          "/login",
+          "/onboarding",
+          "/forgot-password",
+          "/reset-password",
+        ];
+        if (
+          skipPaths.some(function (s) {
+            return p.startsWith(s);
+          })
+        )
+          return;
         var s = document.createElement("script");
         s.async = true;
-        s.setAttribute("data-api-key", "anx_4-H8_i11vOOhbLHWQj1fxQutc3XbafG_WlMczCDm-zs");
-        s.setAttribute("data-api-base", "https://agentnexlify-production.up.railway.app");
+        s.setAttribute(
+          "data-api-key",
+          "anx_4-H8_i11vOOhbLHWQj1fxQutc3XbafG_WlMczCDm-zs",
+        );
+        s.setAttribute(
+          "data-api-base",
+          "https://agentnexlify-production.up.railway.app",
+        );
         s.src = "https://app.agentnexlify.com/widget/agentnexlify-widget.js";
         document.body.appendChild(s);
       })();
