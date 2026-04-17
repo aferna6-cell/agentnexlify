@@ -1866,3 +1866,23 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/services/daily_briefing.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(analytics): re-export _period_to_days from package root
+
+Commit 1f69417 split analytics.py into backend/routers/analytics/*
+and moved _period_to_days into _common.py, but dropped the symbol
+from the package __init__. tests/test_backend_regressions.py:16
+imports from the package root and aborted collection → entire
+pytest suite blocked.
+
+1-line re-export restores test collection.
+Post-fix: 495 tests collect (was: collection error).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-17
+**Commit:** 9febf89
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/analytics/__init__.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
