@@ -17,7 +17,7 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [x] What is the true 12-month CAC and churn profile of SMB AI widget products under $500/mo? (depth:standard)
 - [x] Why do most AI chat widget companies plateau or fail in months 6-18? (depth:standard)
 - [x] What happens to AgentNexLiFy unit economics if Anthropic raises prices 3x in 12 months? (depth:standard)
-- [ ] Should AgentNexLiFy vertical-specialize (contractors only) or stay horizontal across SMBs? (depth:deep)
+- [x] Should AgentNexLiFy vertical-specialize (contractors only) or stay horizontal across SMBs? (depth:deep)
 - [ ] How have historical document-automation waves (fax, email, workflow SaaS) priced and distributed to SMBs, and what applies now? (depth:standard)
 - [ ] What is the real defensibility of a widget-first AI product once foundation models become commodity? (depth:deep)
 - [ ] Which SMB verticals have the highest willingness to pay for AI appointment booking and why? (depth:standard)
@@ -70,3 +70,4 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [ ] How does the EU AI Act compliance overhead translate into specific CAC increases for EU-market SMB AI widget vendors in 2026?
 - [ ] Is there a measurable LTV/CAC difference between "widget-only" companies and "widget-as-wedge" companies at the same ARR level, and at what ARR does the divergence become statistically significant?
 - [ ] What is AgentNexLiFy's actual current Anthropic API cost as a percentage of monthly revenue? (This single number determines severity of impact; without it, all models have wide error bars)
+- [ ] What is the actual number of US SMB contractors (NAICS 238xxx) who are currently paying for any SaaS tool above $100/month? This determines whether the contractor SAM supports venture-scale growth or a profitable-but-capped business.

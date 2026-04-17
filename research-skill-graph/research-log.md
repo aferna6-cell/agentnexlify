@@ -122,3 +122,17 @@ The short answer: a 3× Anthropic price increase is an existential stress test, 
 **The math is brutal.** Prior research established AgentNexLiFy's gross margin at
 
 ---
+
+## 2026-04-17 — should-agentnexlify-vertical-specialize-contractor
+
+**Question:** Should AgentNexLiFy vertical-specialize (contractors only) or stay horizontal across SMBs?
+**Depth:** deep
+**Folder:** [[projects/should-agentnexlify-vertical-specialize-contractor]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**The question:** Should AgentNexLiFy vertically specialize in contractors only, or stay horizontal across SMBs?
+**The answer:** Vertical-specialize into contractors now — with a deliberate re-evaluation gate at $1.5M ARR.
+Six research lenses converge on this conclusion with meaningful tension at only one point (the contrarian lens raises a legitimate risk about contractor market ceiling). Here is
+
+---

@@ -127,3 +127,26 @@ Example:
 - Historical frequency of 3× LLM API price increase within 12 months | 0 observed cases 2020–2026 (direction has been deflationary) | Review of OpenAI, Anthropic, Google pricing history | 2026 | projects/agentnexlify-anthropic-price-shock
 - LLM frontier model price reduction 2023→2024 | ~80–95% real-terms reduction across major providers | Multiple provider pricing histories | 2024 | projects/agentnexlify-anthropic-price-shock
 - Estimated probability of 3× Anthropic price increase in any 12-month period | 10–20% (tail risk estimate, not base case) | Derived from historical LLM pricing behavior + competitive dynamics analysis | 2026 | projects/agentnexlify-anthropic-price-shock
+
+<!-- from projects/should-agentnexlify-vertical-specialize-contractor on 2026-04-17 -->
+- Horizontal SMB AI widget monthly churn rate | 4.5–5.0% | ChartMogul SaaS Churn Report 2024 (cross-reference) | 2024 | projects/vertical-vs-horizontal
+- Vertical SMB SaaS monthly churn rate | 2.0–3.0% | SaaS Capital Vertical SaaS Benchmarks 2023 | 2023 | projects/vertical-vs-horizontal
+- Contractor-native AI widget pricing range (Hatch, Signpost, Podium contractor tier) | $299–$599/month | Published pricing pages April 2026 | 2026-04 | projects/vertical-vs-horizontal
+- Horizontal AI widget pricing range (GHL white-label, BotPenguin, Tidio SMB) | $79–$297/month | Published pricing pages April 2026 | 2026-04 | projects/vertical-vs-horizontal
+- Vertical SaaS revenue multiple premium vs. horizontal (2019–2021 market) | 2–3× | SaaS Capital / Bessemer Cloud Index | 2021 | projects/vertical-vs-horizontal
+- Contractor CAC via trade association / concentrated vertical channels | $150–$400 per account | SaaS channel economics research; trade association partner program disclosures | 2024 | projects/vertical-vs-horizontal
+- Jobber contractor user base | 200,000+ contractors | Jobber Series D investor materials | 2022 | projects/vertical-vs-horizontal
+- ServiceTitan contractor customer base | ~8,000 commercial/residential contractors | ServiceTitan marketplace documentation | 2024 | projects/vertical-vs-horizontal
+- ACCA membership (HVAC contractors) | 60,000 contractors | ACCA membership data | 2025 | projects/vertical-vs-horizontal
+- PHCC membership (plumbing/heating/cooling) | 3,500+ firms | PHCC membership data | 2025 | projects/vertical-vs-horizontal
+- US active specialty trade contractor businesses (NAICS 238xxx) | 800,000–1,200,000 | US Census Bureau NAICS data | 2023 | projects/vertical-vs-horizontal
+- Estimated digitally-addressable SMB contractors (30–40% of total) | 240,000–480,000 | Derived from Census data + digital adoption estimates | 2026 | projects/vertical-vs-horizontal
+- Contractor-vertical LTV/CAC ratio (modeled) | 2.5–4.5× | Derived model (vertical churn + pricing + CAC estimates) | 2026 | projects/vertical-vs-horizontal
+- Horizontal SMB AI widget LTV/CAC ratio (modeled) | 0.7–1.4× | Derived model (horizontal churn + pricing + CAC estimates) | 2026 | projects/vertical-vs-horizontal
+- Lead response time benchmark for contractors (conversion impact) | <5 minutes = 8× conversion lift | Hatch / Signpost benchmark reports 2023 | 2023 | projects/vertical-vs-horizontal
+- Contractor estimate-to-close rate benchmark (residential) | 35–55% | Hatch / Signpost field-service benchmark data 2022–2024 | 2024 | projects/vertical-vs-horizontal
+- Review solicitation response rate via automated SMS (contractor) | 15–30% | Podium contractor benchmark reports 2024 | 2024 | projects/vertical-vs-horizontal
+- GHL agency reseller network size (estimated) | 10,000+ agency resellers | GHL partner program disclosures / community data | 2025 | projects/vertical-vs-horizontal
+- Vertical-to-horizontal SaaS time-to-$1M ARR advantage | 2–3× faster | SaaS Capital vertical SaaS research 2018–2022 | 2022 | projects/vertical-vs-horizontal (confirmed from research log)
+- Contractor vertical competitive field (native AI widget competitors) | 3–5 credible competitors (Hatch, Signpost, Siro, partial Podium/Birdeye) | G2 category data April 2026 | 2026-04 | projects/vertical-vs-horizontal
+- Horizontal SMB AI widget competitive field | 15+ credible competitors at sub-$500/month | G2 category data April 2026 | 2026-04 | projects/vertical-vs-horizontal
