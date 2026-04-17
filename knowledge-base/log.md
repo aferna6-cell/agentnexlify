@@ -173,3 +173,15 @@ Processed 4 of 17 pending entries (4-entry cap). Remaining: 13 entries (3 regula
 ## [2026-04-14 18:26] discover+compile | cron 18:00 | commits=16 raw=10 wiki=4
 
 ## [2026-04-17 18:04] discover | categories=5 | ingested=10 | rejected=2 (jdsupra empty body) | skipped=2 (verticals, regulations — no passing URLs)
+
+## [2026-04-17 18:10] compile | 4 articles (cron headless) | pending=6 embeddings=0
+
+Compiled from PENDING 2026-04-17 cron ingest batch (cap=4):
+- `wiki/ai-llm/claude-opus-4-7-release.md` (1093 words)
+- `wiki/ai-llm/claude-code-best-practices.md` (1527 words)
+- `wiki/competitors/ghl-lead-recovery-system.md` (1228 words)
+- `wiki/competitors/intercom-fin-monitors-observability.md` (1262 words)
+
+INDEX.md total: 26 → 30. 6 entries remain in PENDING for next run.
+
+Embeddings skipped: Supabase MCP returned Unauthorized (SUPABASE_ACCESS_TOKEN missing). Per spec fallback, markdown compile completed without embeddings. embedding_errors=4.
