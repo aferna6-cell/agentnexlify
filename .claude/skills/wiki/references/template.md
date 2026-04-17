@@ -109,7 +109,7 @@ summary: "Anthropic's prompt caching reduces repeated-prefix costs by 90% and la
 
 Prompt caching allows reuse of previously processed prompt prefixes, avoiding
 redundant computation on tokens that don't change between requests. Anthropic's
-implementation (available on claude-sonnet-4-6 and claude-opus-4-6) caches the
+implementation (available on claude-sonnet-4-6 and claude-opus-4-7) caches the
 first N tokens of a prompt and charges 1/10th the normal input price for cached
 tokens on subsequent requests. For AgentNexLiFy's chat widget, where every message
 in a conversation resends the full system prompt + conversation history, this
