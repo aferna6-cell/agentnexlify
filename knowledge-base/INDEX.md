@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 26 (plus 1 in `_outputs/`)
+- Total articles: 30 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-14
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -17,6 +17,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [GoHighLevel Email Infrastructure — March 2026 Performance Benchmarks](wiki/competitors/ghl-email-marketing-march-2026.md) — 1.37B emails in March 2026; 97.47% delivery, 40.80% open, 5.46% CTR on dedicated domains. Tags: gohighlevel, email-deliverability, open-rate, ctr
 - [GoHighLevel Subscription Billing — Recurring Revenue Automation](wiki/competitors/ghl-subscription-billing-automation.md) — Native recurring billing extends GHL's all-in-one positioning into payments infrastructure. Tags: gohighlevel, subscription-billing, recurring-revenue, payments
 - [Intercom Fin Apex — Custom Vertical Model for Customer Service](wiki/competitors/intercom-fin-apex-vertical-models.md) — Custom-trained model beats GPT-5.4 and Opus 4.5 at service; ~2M issues/week, ~$100M ARR, signals vertical AI companies building own models. Tags: intercom, fin-apex, vertical-models, customer-service-ai
+- [GoHighLevel Lead Recovery Positioning — Strategy vs. System](wiki/competitors/ghl-lead-recovery-system.md) — GHL's lead-retention frame: $900 of every $3,000 ad spend burned; "one platform, not stitched tools" + white-label agency resale as distribution moat. Tags: gohighlevel, lead-response-time, speed-to-lead, multi-channel-inbox, ai-automation, small-business
+- [Intercom Fin Monitors — Custom Scorecard QA for AI Agents](wiki/competitors/intercom-fin-monitors-observability.md) — Structured AI conversation QA via Custom Scorecards; 8,000 customers, 67% resolution rate, 2M queries/week; observability as competitive moat. Tags: intercom, fin, ai-observability, custom-scorecards, qa-automation, ai-support-agents
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -26,6 +28,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Claude Sonnet 4.6 — Opus-Class Performance at Sonnet Pricing](wiki/ai-llm/claude-sonnet-4-6-capabilities.md) — Sonnet 4.6 approaches Opus at $3/$15; 70% preferred over Sonnet 4.5 in Claude Code, state-of-the-art computer use. Tags: claude, sonnet-4-6, computer-use, cost-efficiency, osworld
 - [Managed Agents Architecture — Decoupling Brain from Hands](wiki/ai-llm/anthropic-managed-agents-architecture.md) — Anthropic's Managed Agents decouple harness, session, and sandbox into independent interfaces; p50 TTFT down 60%, credential isolation via vault proxy. Tags: managed-agents, anthropic, agent-architecture, session-durability, sandbox-isolation
 - [Building Effective AI Agents — Anthropic's Pattern Catalog](wiki/ai-llm/anthropic-building-effective-agents.md) — Five composable workflow patterns (chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) plus autonomous agents; simplicity over frameworks. Tags: agent-patterns, workflows, orchestration, tool-use, anthropic
+- [Claude Opus 4.7 — Self-Verifying Agentic Intelligence](wiki/ai-llm/claude-opus-4-7-release.md) — CursorBench 58%→70%, Rakuten-SWE-Bench 3x production-task lift, self-verification + task budgets + xhigh effort at Opus 4.6 pricing. Tags: claude, opus-4-7, self-verification, xhigh-effort, task-budgets, agentic-coding
+- [Claude Code Best Practices — Anthropic's Official Playbook](wiki/ai-llm/claude-code-best-practices.md) — Context window is the root constraint; five levers are verification criteria, Plan Mode, prompt specificity, CLAUDE.md hygiene, and permission discipline. Tags: claude-code, agentic-coding, plan-mode, claude-md, context-management, verification-criteria
 
 ### Small Business SaaS
 _No articles yet._
