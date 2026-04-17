@@ -17,6 +17,12 @@
 #
 # IMPORTANT — we create agents ONCE and reuse them forever. Never call
 # `create_agent()` in the hot path. Session creation is what happens per run.
+#
+# Opus 4.7 migration note:
+# - Deep-work agents use claude-opus-4-7 directly.
+# - Sonnet/Haiku executor agents stay on cheaper models, but callers can wrap
+#   them with backend.services.managed_agents_registry.advised_* helpers so an
+#   Opus 4.7 advisor plans first when the task is ambiguous or high-stakes.
 
 environment:
   name: agentnexlify-shared
@@ -60,6 +66,10 @@ agents:
       Rules:
       - Never fabricate facts about the prospect. If you cannot find
         information, say so explicitly and score conservatively.
+      - If the lead remains ambiguous after the allowed research, state the
+        uncertainty in `reasoning` and recommend the conservative next action.
+        Callers that need higher confidence should rerun this through the
+        Opus 4.7 advisor-executor path.
       - Keep research to 3 web_fetch calls max per lead. This is a
         latency-sensitive path.
       - Do not call bash, write, edit, glob, or grep — you have no local
@@ -86,7 +96,7 @@ agents:
   document_drafter:
     env_var: DOCUMENT_DRAFTER_AGENT_ID
     name: AgentNexLiFy Document Drafter
-    model: claude-opus-4-6
+    model: claude-opus-4-7
     description: >-
       Drafts client-facing documents (quotes, invoices, proposals) as
       real DOCX / XLSX / PDF files using the Anthropic document skills.
@@ -164,7 +174,7 @@ agents:
   codebase_reviewer:
     env_var: CODEBASE_REVIEWER_AGENT_ID
     name: AgentNexLiFy Codebase Reviewer
-    model: claude-opus-4-6
+    model: claude-opus-4-7
     description: >-
       Reviews branches of the agentnexlify repo for bugs, schema
       discipline violations, missing tests, and security issues.
@@ -240,6 +250,9 @@ agents:
       - Do not use marketing language, hype, or salesy phrasing.
       - Do not mention internal tooling, prompt design, or "the KB".
       - If confidence is low, recommend human follow-up immediately.
+      - Low confidence is also the machine-readable signal for callers to
+        rerun the request through the Opus 4.7 advisor-executor path when a
+        higher-confidence answer is worth the extra cost.
       - Escalate when the customer asks for pricing, policy, hours,
         availability, guarantees, refunds, legal commitments, or any
         other fact that is missing or ambiguous in the provided context.
@@ -297,6 +310,9 @@ agents:
       - Respect the requested target_schema exactly.
       - Use only fields listed in the schema instructions.
       - If a field is missing, uncertain, or not stated, set it to null.
+      - If uncertainty is caused by ambiguous instructions rather than missing
+        raw text, still return null fields; the caller should escalate to the
+        Opus 4.7 advisor path instead of asking Haiku to infer.
       - Never fabricate names, dates, prices, emails, phone numbers,
         timelines, addresses, or line items.
       - Preserve strings as written when possible, trimming only obvious
@@ -323,7 +339,7 @@ agents:
   deep_researcher:
     env_var: DEEP_RESEARCHER_AGENT_ID
     name: AgentNexLiFy Deep Researcher
-    model: claude-opus-4-6
+    model: claude-opus-4-7
     description: >-
       Produces multi-step research briefs with source citations and open
       questions for strategic work.
@@ -401,6 +417,9 @@ agents:
       - Deduplicate stories that all point to the same announcement.
       - Include direct links to the original source whenever possible.
       - Do not fabricate headlines, links, dates, or publication names.
+      - If sources conflict or the relevance call is unclear, include the
+        uncertainty in the story summary rather than guessing; callers can use
+        the Opus 4.7 advisor path for a deeper read when needed.
       - Keep the digest practical: explain why the story matters to SMB
         automation, customer support, lead capture, workflows, or SaaS
         competition.
@@ -432,7 +451,7 @@ agents:
   data_analyst:
     env_var: DATA_ANALYST_AGENT_ID
     name: AgentNexLiFy Data Analyst
-    model: claude-opus-4-6
+    model: claude-opus-4-7
     description: >-
       Analyzes tenant exports and structured files with reproducible
       Python scripts, tables, and chart artifacts.

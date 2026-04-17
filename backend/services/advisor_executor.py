@@ -2,7 +2,9 @@
 
 Claude Platform launched the advisor pattern (2026-04-10): pair Opus as an
 advisor with Sonnet or Haiku as an executor. Near-Opus quality at ~1.3x pure
-Sonnet cost instead of 5x pure Opus.
+Sonnet cost instead of 5x pure Opus. AgentNexLiFy uses Opus 4.7 for the
+advisor pass and keeps Sonnet/Haiku executor agents on cheaper models unless
+they need the advisor boost.
 
 This module implements the pattern for product-runtime tenant agents. The
 dev-time equivalent lives in `.claude/agents/opus-advisor.md` and
@@ -56,11 +58,12 @@ from backend.services.managed_agents_registry import ManagedAgentHandle
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_ADVISOR_MODEL = "claude-opus-4-6"
+DEFAULT_ADVISOR_MODEL = "claude-opus-4-7"
 DEFAULT_ADVISOR_MAX_TOKENS = 800
-DEFAULT_ADVISOR_TEMPERATURE = 0.0
+DEFAULT_ADVISOR_TEMPERATURE: float | None = None
+DEFAULT_ADVISOR_OUTPUT_CONFIG = {"effort": "xhigh"}
 
-_ADVISOR_SYSTEM_PROMPT = """You are a Planning Advisor in the Advisor-Executor pattern.
+_ADVISOR_SYSTEM_PROMPT = """You are an Opus 4.7 Planning Advisor in the Advisor-Executor pattern.
 
 You do NOT execute the task. You produce a short written brief that a Sonnet
 or Haiku executor agent will follow.
@@ -72,7 +75,8 @@ Output STRICT JSON matching this shape (no prose outside the JSON):
   "constraints": ["<hard rule 1>", "<hard rule 2>"],
   "risks": ["<what could go wrong>"],
   "success_criteria": ["<observable signal the task succeeded>"],
-  "output_shape": "<what the executor's final response should contain>"
+  "output_shape": "<what the executor's final response should contain>",
+  "advisor_escalation_rule": "<when the executor must stop and ask for another advisor pass>"
 }
 
 Rules:
@@ -81,6 +85,8 @@ Rules:
 - List the 2-5 most important gotchas in `constraints`.
 - If the task is ambiguous, pick the most likely interpretation and flag
   the ambiguity in `risks` with the assumption you made.
+- If Sonnet or Haiku would need to guess, tell it to stop and request another
+  Opus 4.7 advisor pass instead of improvising.
 - Never return code. Describe changes, don't write them. The executor will.
 - Valid JSON only. No markdown fences. No commentary.
 """
@@ -95,6 +101,7 @@ class AdvisorBrief:
     risks: list[str] = field(default_factory=list)
     success_criteria: list[str] = field(default_factory=list)
     output_shape: str = ""
+    advisor_escalation_rule: str = ""
     raw_text: str = ""
     input_tokens: int | None = None
     output_tokens: int | None = None
@@ -123,6 +130,10 @@ class AdvisorBrief:
             lines.append("")
             lines.append("Required output shape:")
             lines.append(self.output_shape.strip())
+        if self.advisor_escalation_rule:
+            lines.append("")
+            lines.append("Advisor escalation rule:")
+            lines.append(self.advisor_escalation_rule.strip())
         lines.append("")
         lines.append("[END ADVISOR BRIEF]")
         return "\n".join(lines)
@@ -158,7 +169,8 @@ class AdvisorExecutorRunner:
         *,
         advisor_model: str = DEFAULT_ADVISOR_MODEL,
         advisor_max_tokens: int = DEFAULT_ADVISOR_MAX_TOKENS,
-        advisor_temperature: float = DEFAULT_ADVISOR_TEMPERATURE,
+        advisor_temperature: float | None = DEFAULT_ADVISOR_TEMPERATURE,
+        advisor_output_config: dict[str, Any] | None = None,
         managed_agents_client: ManagedAgentsClient | None = None,
         enable_advisor: bool = True,
     ):
@@ -166,6 +178,9 @@ class AdvisorExecutorRunner:
         self.advisor_model = advisor_model
         self.advisor_max_tokens = advisor_max_tokens
         self.advisor_temperature = advisor_temperature
+        self.advisor_output_config = dict(
+            advisor_output_config or DEFAULT_ADVISOR_OUTPUT_CONFIG
+        )
         self._client = managed_agents_client or get_default_client()
         self.enable_advisor = enable_advisor
 
@@ -188,6 +203,7 @@ class AdvisorExecutorRunner:
             model=self.advisor_model,
             max_tokens=self.advisor_max_tokens,
             temperature=self.advisor_temperature,
+            output_config=self.advisor_output_config,
             system=_ADVISOR_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_content}],
             metadata={
@@ -226,6 +242,7 @@ class AdvisorExecutorRunner:
             risks=[str(x) for x in (data.get("risks") or [])],
             success_criteria=[str(x) for x in (data.get("success_criteria") or [])],
             output_shape=str(data.get("output_shape", "")).strip(),
+            advisor_escalation_rule=str(data.get("advisor_escalation_rule", "")).strip(),
             raw_text=raw,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,

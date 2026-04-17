@@ -58,6 +58,7 @@ Use this file as a **thin adapter for Codex and general coding agents**.
 - **Codex:** primary execution engine for implementation, debugging, refactors, tests
 - **Anthropic:** canonical repo brain and production customer-facing runtime AI authority
 - **MiniMax:** cheap triage, summarization, and lightweight helper/subagent work
+- **Sonnet/Haiku uncertainty:** when confidence is below 80%, evidence conflicts, or the task is high-stakes, consult Opus 4.7 as an advisor before execution instead of guessing
 
 ## Default Delegation Pattern
 For non-trivial coding work:

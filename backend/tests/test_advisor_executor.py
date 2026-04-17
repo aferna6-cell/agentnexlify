@@ -59,7 +59,8 @@ _VALID_ADVISOR_JSON = """{
   "constraints": ["Use client_id not tenant_id", "Return valid JSON"],
   "risks": ["Low signal on phone-only leads"],
   "success_criteria": ["intent_score 1-10 present", "recommendation in allowed enum"],
-  "output_shape": "JSON with intent_score, fit_score, recommendation, reasoning"
+  "output_shape": "JSON with intent_score, fit_score, recommendation, reasoning",
+  "advisor_escalation_rule": "If source evidence conflicts or required fields remain ambiguous, stop and request another Opus 4.7 advisor pass."
 }"""
 
 
@@ -72,14 +73,19 @@ class TestAdvise:
         with patch(
             "backend.services.advisor_executor.call_claude_messages_sync",
             return_value=_mock_claude_result(_VALID_ADVISOR_JSON),
-        ):
+        ) as mock_call:
             brief = runner.advise("Qualify this lead.")
 
         assert "Read the lead record" in brief.plan
         assert "Use client_id not tenant_id" in brief.constraints
         assert brief.risks == ["Low signal on phone-only leads"]
+        assert "Opus 4.7 advisor pass" in brief.advisor_escalation_rule
         assert brief.input_tokens == 200
         assert brief.output_tokens == 120
+        call_kwargs = mock_call.call_args.kwargs
+        assert call_kwargs["model"] == "claude-opus-4-7"
+        assert call_kwargs["temperature"] is None
+        assert call_kwargs["output_config"] == {"effort": "xhigh"}
 
     def test_strips_markdown_fences(self):
         fenced = f"```json\n{_VALID_ADVISOR_JSON}\n```"
@@ -139,6 +145,7 @@ class TestKickoffPrefix:
             risks=["flaky webhook"],
             success_criteria=["200 OK"],
             output_shape="JSON response",
+            advisor_escalation_rule="Ask Opus again before guessing.",
         )
         text = brief.to_kickoff_prefix()
         assert "[ADVISOR BRIEF" in text
@@ -149,6 +156,8 @@ class TestKickoffPrefix:
         assert "Risks to avoid:" in text
         assert "Success criteria:" in text
         assert "Required output shape:" in text
+        assert "Advisor escalation rule:" in text
+        assert "Ask Opus again before guessing." in text
         assert "[END ADVISOR BRIEF]" in text
 
     def test_omits_empty_sections(self):

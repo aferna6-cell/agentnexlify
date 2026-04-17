@@ -11,8 +11,7 @@ paths:
 |-------|-----|---------|
 | **Haiku** | `claude-haiku-4-5-20251001` | grammar, formatting, lookups, bullet lists, renames, translations, quick classification, hook scanners |
 | **Sonnet** | `claude-sonnet-4-6` | code, debug, API calls, multi-file edits, most Agent executions, default implementation |
-| **Opus 4.7** | `claude-opus-4-7` | **NEW DEFAULT** — planning, architecture, security design, critical review, ambiguous decomposition. Self-verifies outputs. Default effort: `xhigh` in Claude Code. See `rules/opus-4-7.md`. |
-| **Opus 4.6** | `claude-opus-4-6` | Legacy — only when prompts require pre-4.7 behavior parity |
+| **Opus 4.7** | `claude-opus-4-7` | **NEW DEFAULT FOR OPUS** - planning, architecture, security design, critical review, ambiguous decomposition, advisor passes. Self-verifies outputs. Default effort: `xhigh` in Claude Code. See `rules/opus-4-7.md`. |
 
 ## Opus 4.7 feature invoke-regularly rules
 - **Self-verification** required on every task completion (`rules/self-verification.md`)
@@ -22,6 +21,15 @@ paths:
 
 ## Pattern for non-trivial tasks
 **Opus 4.7 plans + self-verifies → Sonnet executes → Haiku cleans up.**
+
+## Advisor-on-uncertainty rule
+
+When a Sonnet or Haiku executor is unsure, it must not spend retries guessing.
+If confidence is below 80%, evidence conflicts, the contract is ambiguous, two
+implementations look similarly plausible, or the path touches security/data
+integrity/cost, route through Opus 4.7 as an advisor first. Keep costs near
+Sonnet levels by asking Opus for a compact plan/risks/test-gates brief, then
+let the Sonnet or Haiku executor perform the work.
 
 ## Advisor-Executor Pattern (dev-time)
 
@@ -58,17 +66,17 @@ Claude Platform launched the advisor pattern: pair Opus as an advisor with Sonne
 - Opus-only baseline: ~$2.00-5.00 per task
 - Savings: 65-80% vs pure Opus on complex tasks
 
-**Product-runtime mirror:** Same pattern ships for tenant-facing agents in `backend/services/advisor_executor.py` (A2). Opt-in per call site via `advised_lead_qualifier()` etc. in `managed_agents_registry.py`.
+**Product-runtime mirror:** Same pattern ships for tenant-facing agents in `backend/services/advisor_executor.py` (A2). Opt-in per call site via `advised_*()` helpers in `managed_agents_registry.py`.
 
 ## Never
 - Never Opus for mechanical work (rename, format, lookup)
 - Never Haiku for architecture or security design
-- Never default to Opus when Sonnet fits — Opus is expensive
+- Never default to Opus execution when Sonnet fits - use Opus 4.7 as the advisor boost for uncertainty
 
 ## Hook agent model delegation
 - Security scanner on auth/payment file edit → Haiku
 - Pre-push code review → Haiku
-- Plan/architecture review → Opus
+- Plan/architecture review → Opus 4.7
 - Bulk refactor execution → Sonnet
 
 ## Cost awareness

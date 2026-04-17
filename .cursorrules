@@ -13,7 +13,7 @@ AI-powered business automation platform. Chat widget captures leads, books appoi
 - Production runs with 4 Uvicorn workers — in-memory state is per-process only
 - Current plan names: free, growth, professional, autopilot, enterprise
 - All tenant-specific queries MUST use RLS or explicit tenant_id/client_id filtering
-- Valid Claude API model IDs: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001
+- Valid Claude API model IDs: claude-sonnet-4-6, claude-opus-4-7, claude-haiku-4-5-20251001
 
 ## Tech Stack
 

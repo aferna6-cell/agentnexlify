@@ -27,7 +27,8 @@ effort: medium
 - Include business context (tenant name, type, city) when available
 - Be explicit about output format: "Return ONLY valid JSON with these fields..."
 - Include "Output ONLY the JSON object, no markdown fences" to reduce parsing issues
-- Set `temperature=0` for deterministic tasks (categorization, extraction)
+- Set `temperature=0` for deterministic Sonnet/Haiku tasks (categorization, extraction)
+- Omit sampling params entirely for `claude-opus-4-7`; use `output_config={"effort": "high"}` or `"xhigh"` for intelligence-sensitive work
 - Use default temperature for creative tasks (writing, drafting)
 
 ### 2. API Call Template
@@ -37,7 +38,7 @@ from backend.config import settings
 
 client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 response = client.messages.create(
-    model="claude-sonnet-4-6",  # Always use this exact model ID
+    model="claude-sonnet-4-6",  # Default for production AI features
     max_tokens=1000,            # Right-size for the task
     messages=[{"role": "user", "content": prompt}],
 )
@@ -109,18 +110,21 @@ Key rules:
 - Always run as background task (after response sent) to avoid latency impact on happy path
 
 ## Checklist
-- [ ] Model ID is `claude-sonnet-4-6` (verify against CLAUDE.md)
+- [ ] Model ID is one of the approved Claude IDs in CLAUDE.md
 - [ ] API key comes from `settings.anthropic_api_key` (never hardcoded)
 - [ ] JSON parsing handles markdown code blocks
 - [ ] Both `json.JSONDecodeError` and `anthropic.APIError` are caught
 - [ ] Prompt includes output format instructions
 - [ ] max_tokens is right-sized (not wastefully large)
+- [ ] Opus 4.7 calls omit `temperature`, `top_p`, and `top_k`
+- [ ] Sonnet/Haiku uncertainty has an Opus 4.7 advisor escalation path
 - [ ] Background tasks have rate limiting if called per-message
 
 ## Gotchas
 - **Haiku wraps JSON in ` ```json ` fences ~50% of the time** even when told not to. Strict `json.loads` will crash. Always use fence-tolerant parsing. See `backend/services/structured_extractor.py::_extract_json_from_reply` for the canonical helper.
-- **Model ID drift.** Only `claude-sonnet-4-6`, `claude-opus-4-6`, or `claude-haiku-4-5-20251001`. Any other ID → 404 from Anthropic. These change over time — verify against CLAUDE.md.
-- **Streaming responses + thinking mode.** Set `thinking.display: "omitted"` or the extended-thinking tokens get interleaved with user-visible text.
+- **Model ID drift.** Only `claude-sonnet-4-6`, `claude-opus-4-7`, or `claude-haiku-4-5-20251001`. Any other ID → 404 from Anthropic. These change over time — verify against CLAUDE.md.
+- **Opus 4.7 sampling params.** Non-default `temperature`, `top_p`, or `top_k` return 400. Omit them instead of setting zero.
+- **Streaming responses + thinking mode.** Set `thinking.display: "omitted"` unless the product explicitly renders summarized thinking.
 - **max_tokens too small silently truncates mid-JSON.** A 512-token cap on a "return a JSON object" prompt will produce unparseable output in ~5% of calls. Right-size for the expected output, not the input.
 - **`temperature=0` is not deterministic.** Claude still varies slightly. Don't write regression tests that assert exact text output — assert on shape/fields.
 - **Background task + error swallowing.** `background_tasks.add_task` runs after response is returned — exceptions don't reach the client. Must log with `logger.exception(...)` or errors disappear.

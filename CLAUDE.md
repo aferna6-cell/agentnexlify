@@ -18,7 +18,7 @@ Claude merges CLAUDE.md files in this order (last wins on conflict):
 - Backend: FastAPI, Python 3.11, Pydantic, Supabase Python client
 - Frontend: React 18, Vite 6, Tailwind-style CSS, Recharts
 - Database: Supabase Postgres with RLS
-- AI: Anthropic Claude (`claude-sonnet-4-6`, `claude-opus-4-6`, `claude-haiku-4-5-20251001`)
+- AI: Anthropic Claude (`claude-sonnet-4-6`, `claude-opus-4-7`, `claude-haiku-4-5-20251001`)
 - Email: Resend · SMS/voice: Twilio · Payments: Stripe
 - Hosting: Railway (backend) · Vercel (frontend)
 

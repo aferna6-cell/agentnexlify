@@ -10,6 +10,7 @@ import pytest
 
 from backend.services.llm_runtime import (
     _message_role_counts,
+    _requires_sampling_omission,
     _safe_metadata,
     _should_retry,
     call_claude_messages_sync,
@@ -96,6 +97,42 @@ def test_call_claude_messages_sync_logs_and_returns_result():
         assert "message_body" not in str(start_args)
         assert "message_body" not in str(finish_args)
         assert "tenant-123" in str(start_args)
+
+
+def test_opus_4_7_omits_sampling_params_and_sends_effort_config():
+    fake_response = SimpleNamespace(
+        content=[SimpleNamespace(text="Advisor brief")],
+        usage=SimpleNamespace(
+            input_tokens=10,
+            output_tokens=5,
+            cache_creation_input_tokens=0,
+            cache_read_input_tokens=0,
+        ),
+        stop_reason="end_turn",
+    )
+
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.return_value = fake_response
+
+        result = call_claude_messages_sync(
+            operation="unit.opus47",
+            model="claude-opus-4-7",
+            max_tokens=1024,
+            temperature=0.0,
+            output_config={"effort": "xhigh"},
+            messages=[{"role": "user", "content": "plan this"}],
+        )
+
+    assert result.text == "Advisor brief"
+    assert _requires_sampling_omission("claude-opus-4-7") is True
+    assert _requires_sampling_omission("claude-sonnet-4-6") is False
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert "temperature" not in kwargs
+    assert "top_p" not in kwargs
+    assert "top_k" not in kwargs
+    assert kwargs["extra_body"] == {"output_config": {"effort": "xhigh"}}
 
 
 def test_should_retry_matches_transient_error_types():

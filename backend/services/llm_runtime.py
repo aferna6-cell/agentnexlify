@@ -94,26 +94,34 @@ def _message_role_counts(messages: list[dict[str, str]]) -> dict[str, int]:
     return counts
 
 
+def _requires_sampling_omission(model: str) -> bool:
+    """Claude Opus 4.7 rejects non-default sampling params; omit them entirely."""
+    return model == "claude-opus-4-7"
+
+
 def _log_start(
     call_id: str,
     operation: str,
     model: str,
     max_tokens: int,
-    temperature: float,
+    temperature: float | None,
+    output_config: dict[str, Any] | None,
     system: str | None,
     messages: list[dict[str, str]],
     metadata: dict[str, Any] | None,
 ) -> None:
     system_chars = len(system or "")
     message_chars = sum(len(msg.get("content") or "") for msg in messages)
+    temperature_label = "omitted" if temperature is None else f"{temperature:.2f}"
     logger.info(
-        "llm.call.start id=%s op=%s model=%s max_tokens=%d temperature=%.2f "
-        "message_count=%d role_counts=%s system_chars=%d message_chars=%d metadata=%s",
+        "llm.call.start id=%s op=%s model=%s max_tokens=%d temperature=%s "
+        "output_config=%s message_count=%d role_counts=%s system_chars=%d message_chars=%d metadata=%s",
         call_id,
         operation,
         model,
         max_tokens,
-        temperature,
+        temperature_label,
+        _safe_metadata(output_config),
         len(messages),
         _message_role_counts(messages),
         system_chars,
@@ -186,7 +194,8 @@ def call_claude_messages_sync(
     model: str,
     max_tokens: int,
     messages: list[dict[str, str]],
-    temperature: float = 0.0,
+    temperature: float | None = 0.0,
+    output_config: dict[str, Any] | None = None,
     system: str | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
@@ -195,7 +204,18 @@ def call_claude_messages_sync(
 ) -> ClaudeCallResult:
     """Run a Claude messages.create call with timing and structured logs."""
     call_id = uuid.uuid4().hex[:12]
-    _log_start(call_id, operation, model, max_tokens, temperature, system, messages, metadata)
+    request_temperature = None if _requires_sampling_omission(model) else temperature
+    _log_start(
+        call_id,
+        operation,
+        model,
+        max_tokens,
+        request_temperature,
+        output_config,
+        system,
+        messages,
+        metadata,
+    )
     started = time.perf_counter()
     attempts = 0
 
@@ -206,9 +226,12 @@ def call_claude_messages_sync(
             request_kwargs: dict[str, Any] = {
                 "model": model,
                 "max_tokens": max_tokens,
-                "temperature": temperature,
                 "messages": messages,
             }
+            if request_temperature is not None:
+                request_kwargs["temperature"] = request_temperature
+            if output_config:
+                request_kwargs["extra_body"] = {"output_config": output_config}
             if system is not None:
                 request_kwargs["system"] = system
 
@@ -256,7 +279,8 @@ async def call_claude_messages(
     model: str,
     max_tokens: int,
     messages: list[dict[str, str]],
-    temperature: float = 0.0,
+    temperature: float | None = 0.0,
+    output_config: dict[str, Any] | None = None,
     system: str | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
@@ -272,6 +296,7 @@ async def call_claude_messages(
             max_tokens=max_tokens,
             messages=messages,
             temperature=temperature,
+            output_config=output_config,
             system=system,
             timeout=timeout,
             metadata=metadata,

@@ -88,10 +88,10 @@ class TestCreateAgentBody:
         )
 
         with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
-            client.create_agent(name="Bot", model="claude-opus-4-6")
+            client.create_agent(name="Bot", model="claude-opus-4-7")
 
         body = mock_http.request.call_args.kwargs["json"]
-        assert body == {"name": "Bot", "model": "claude-opus-4-6"}
+        assert body == {"name": "Bot", "model": "claude-opus-4-7"}
         # Optional fields must be omitted, not sent as None/empty
         assert "system" not in body
         assert "tools" not in body
@@ -110,7 +110,7 @@ class TestCreateAgentBody:
         with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
             client.create_agent(
                 name="Bot",
-                model="claude-opus-4-6",
+                model="claude-opus-4-7",
                 system="You are a bot.",
                 tools=tools,
                 skills=skills,
@@ -185,7 +185,7 @@ class TestErrorMapping:
 
         with patch("backend.services.managed_agents.httpx.Client", return_value=mock_http):
             with pytest.raises(ManagedAgentsError) as exc_info:
-                client.create_agent(name="Bot", model="claude-opus-4-6")
+                client.create_agent(name="Bot", model="claude-opus-4-7")
 
         err = exc_info.value
         assert err.status == 400
@@ -212,7 +212,7 @@ class TestErrorMapping:
             patch("backend.services.managed_agents.time.sleep"),
         ):
             with pytest.raises(ManagedAgentsError) as exc_info:
-                client.create_agent(name="Bot", model="claude-opus-4-6")
+                client.create_agent(name="Bot", model="claude-opus-4-7")
 
         # retries=2 default → 3 total attempts
         assert mock_http.request.call_count == 3

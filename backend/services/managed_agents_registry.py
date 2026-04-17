@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 from backend.config import settings
 
+DEFAULT_OPUS_ADVISOR_MODEL = "claude-opus-4-7"
+
 
 class ManagedAgentNotConfigured(RuntimeError):
     """Raised when a backend call tries to use an agent that hasn't been
@@ -119,44 +121,108 @@ def is_any_configured() -> bool:
 # ----------------------------------------------------------------------
 
 
-def advised_lead_qualifier(
-    *, advisor_model: str = "claude-opus-4-6", enable_advisor: bool = True,
+def _advised_runner(
+    executor_handle: ManagedAgentHandle,
+    *,
+    advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL,
+    enable_advisor: bool = True,
 ):
-    """Return an AdvisorExecutorRunner bound to the lead_qualifier agent.
+    from backend.services.advisor_executor import AdvisorExecutorRunner
+
+    return AdvisorExecutorRunner(
+        executor_handle=executor_handle,
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
+
+
+def advised_lead_qualifier(
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
+):
+    """Return an Opus-advised runner bound to the lead_qualifier agent.
 
     Imported lazily to keep the registry module free of heavy imports
     for callers that only need plain handles.
     """
-    from backend.services.advisor_executor import AdvisorExecutorRunner
-
-    return AdvisorExecutorRunner(
-        executor_handle=lead_qualifier(),
+    return _advised_runner(
+        lead_qualifier(),
         advisor_model=advisor_model,
         enable_advisor=enable_advisor,
     )
 
 
 def advised_document_drafter(
-    *, advisor_model: str = "claude-opus-4-6", enable_advisor: bool = True,
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
 ):
-    """Return an AdvisorExecutorRunner bound to the document_drafter agent."""
-    from backend.services.advisor_executor import AdvisorExecutorRunner
-
-    return AdvisorExecutorRunner(
-        executor_handle=document_drafter(),
+    """Return an Opus-advised runner bound to the document_drafter agent."""
+    return _advised_runner(
+        document_drafter(),
         advisor_model=advisor_model,
         enable_advisor=enable_advisor,
     )
 
 
 def advised_codebase_reviewer(
-    *, advisor_model: str = "claude-opus-4-6", enable_advisor: bool = True,
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
 ):
-    """Return an AdvisorExecutorRunner bound to the codebase_reviewer agent."""
-    from backend.services.advisor_executor import AdvisorExecutorRunner
+    """Return an Opus-advised runner bound to the codebase_reviewer agent."""
+    return _advised_runner(
+        codebase_reviewer(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
 
-    return AdvisorExecutorRunner(
-        executor_handle=codebase_reviewer(),
+
+def advised_support_agent(
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
+):
+    """Return an Opus-advised runner bound to the support_agent executor."""
+    return _advised_runner(
+        support_agent(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
+
+
+def advised_structured_extractor(
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
+):
+    """Return an Opus-advised runner bound to the structured_extractor executor."""
+    return _advised_runner(
+        structured_extractor(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
+
+
+def advised_deep_researcher(
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
+):
+    """Return an Opus-advised runner bound to the deep_researcher agent."""
+    return _advised_runner(
+        deep_researcher(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
+
+
+def advised_field_monitor(
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
+):
+    """Return an Opus-advised runner bound to the field_monitor executor."""
+    return _advised_runner(
+        field_monitor(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
+
+
+def advised_data_analyst(
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
+):
+    """Return an Opus-advised runner bound to the data_analyst agent."""
+    return _advised_runner(
+        data_analyst(),
         advisor_model=advisor_model,
         enable_advisor=enable_advisor,
     )

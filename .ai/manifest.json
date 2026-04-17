@@ -84,7 +84,9 @@
   "model_routing": {
     "codex": "Primary implementation/execution engine for code exploration, edits, debugging, refactors, and tests.",
     "anthropic": "Canonical repo brain, prompt/system-design authority, and production customer-facing runtime AI authority.",
-    "minimax": "Lightweight triage, summarization, and cheap helper/subagent orchestration where throughput matters more than exactness."
+    "minimax": "Lightweight triage, summarization, and cheap helper/subagent orchestration where throughput matters more than exactness.",
+    "approved_claude_models": ["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5-20251001"],
+    "advisor_uncertainty_rule": "When Sonnet or Haiku confidence drops below 80%, evidence conflicts, or the path is high-stakes, request an Opus 4.7 advisor brief before execution instead of guessing."
   },
   "agents": {
     "location": ".claude/agents/",
