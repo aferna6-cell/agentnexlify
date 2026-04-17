@@ -8,11 +8,11 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.config import settings
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
+from backend.services.stripe_service import ensure_stripe_configured
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
@@ -126,11 +126,13 @@ async def _get_next_invoice_number(db, tenant_id: str, attempt: int = 0) -> str:
 
 async def _get_or_create_stripe_payment_link(invoice_id: str, tenant_id: str, invoice_number: str, total: float) -> str | None:
     """Create a Stripe Payment Link for the invoice total. Returns the URL or None on failure."""
-    if not settings.stripe_secret_key:
+    try:
+        ensure_stripe_configured()
+    except RuntimeError:
         logger.warning("Stripe not configured — cannot create payment link for invoice %s", invoice_id)
         return None
 
-    stripe.api_key = settings.stripe_secret_key
+    metadata = {"invoice_id": invoice_id, "tenant_id": tenant_id}
     try:
         price = stripe.Price.create(
             unit_amount=int(round(total * 100)),  # cents
@@ -139,7 +141,10 @@ async def _get_or_create_stripe_payment_link(invoice_id: str, tenant_id: str, in
         )
         payment_link = stripe.PaymentLink.create(
             line_items=[{"price": price.id, "quantity": 1}],
-            metadata={"invoice_id": invoice_id, "tenant_id": tenant_id},
+            metadata=metadata,
+            payment_intent_data={"metadata": metadata},
+            restrictions={"completed_sessions": {"limit": 1}},
+            inactive_message="This invoice has already been paid. Contact the business if you need help.",
         )
         return payment_link.url
     except stripe.StripeError as e:

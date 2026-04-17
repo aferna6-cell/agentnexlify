@@ -87,6 +87,16 @@ def run(*, require_live_env: bool = False) -> tuple[list[str], list[str]]:
         ),
         failures,
     )
+    _check_contains(
+        "backend/routers/stripe_webhooks.py",
+        (
+            "_handle_addon_checkout_completed",
+            "_handle_addon_subscription_updated",
+            "_handle_addon_subscription_deleted",
+            "_is_marketing_addon_subscription",
+        ),
+        failures,
+    )
 
     for router_path, prefix in GATED_ROUTERS.items():
         text = _read(router_path)

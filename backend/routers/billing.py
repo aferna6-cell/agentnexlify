@@ -17,6 +17,8 @@ from backend.services.stripe_service import (
     STRIPE_ADDON_METADATA_KEY,
     cancel_marketing_addon_subscription,
     create_marketing_addon_checkout_session,
+    ensure_plan_prices_configured,
+    ensure_stripe_configured,
     get_or_create_customer,
 )
 
@@ -48,6 +50,11 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
             status_code=400,
             detail=f"Invalid plan '{req.plan}'. Must be one of: {', '.join(PLAN_PRICES)}",
         )
+    try:
+        prices = ensure_plan_prices_configured(req.plan)
+        ensure_stripe_configured()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     db = get_service_supabase()
     result = db.table("tenants").select("id, owner_email, business_name").eq("id", req.tenant_id).limit(1).execute()
@@ -62,7 +69,6 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
     )
 
     # Build line items — plans may have setup fee + monthly
-    prices = PLAN_PRICES[req.plan]
     line_items = []
     if "setup" in prices:
         line_items.append({"price": prices["setup"], "quantity": 1})
@@ -125,7 +131,12 @@ async def stripe_webhook(request: Request):
 
     try:
         if event_type == "checkout.session.completed":
-            if _is_marketing_addon_subscription(data):
+            metadata = data.get("metadata") or {}
+            if metadata.get("invoice_id") and metadata.get("tenant_id"):
+                from backend.routers.stripe_webhooks import _handle_invoice_payment
+
+                _handle_invoice_payment(db, data)
+            elif _is_marketing_addon_subscription(data):
                 _handle_addon_checkout_completed(db, data)
             else:
                 _handle_checkout_completed(db, data)
@@ -154,6 +165,7 @@ async def stripe_webhook(request: Request):
 AMOUNT_TO_PLAN: dict[int, str] = {
     # Monthly only (current pricing)
     24900: "growth",
+    29900: "autopilot",
     49900: "professional",
     89900: "enterprise",
     # Legacy monthly pricing (keep for existing subscribers)
@@ -173,6 +185,7 @@ AMOUNT_TO_PLAN: dict[int, str] = {
 # Keywords to match in product/price descriptions
 PLAN_KEYWORDS: dict[str, str] = {
     "growth": "growth",
+    "autopilot": "autopilot",
     "professional": "professional",
     "enterprise": "enterprise",
 }
@@ -183,7 +196,7 @@ def _resolve_plan(session: dict) -> str | None:
     metadata = session.get("metadata", {})
     plan = metadata.get("plan")
     logger.info("_resolve_plan: metadata.plan=%s", plan)
-    if plan and plan in {"free", "growth", "professional", "enterprise"}:
+    if plan and plan in {"free", "growth", "professional", "autopilot", "enterprise"}:
         return plan
 
     # Try amount_total (in cents)
@@ -410,6 +423,11 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_ten
     customer_id = result.data[0].get("stripe_customer_id")
     if not customer_id:
         raise HTTPException(status_code=400, detail="Tenant has no Stripe customer")
+
+    try:
+        ensure_stripe_configured()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     session = stripe.billing_portal.Session.create(
         customer=customer_id,

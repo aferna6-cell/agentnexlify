@@ -6,6 +6,7 @@
     "claude:2.1.98": "npx -y @anthropic-ai/claude-code@2.1.98",
     "claude:noflicker": "cross-env CLAUDE_CODE_NO_FLICKER=1 npx -y @anthropic-ai/claude-code@2.1.98",
     "marketing-addon:check": "python scripts/check_marketing_addon_rollout.py",
+    "stripe-pricing:check": "python scripts/check_stripe_pricing_config.py",
     "smoke:public": "python scripts/public_smoke.py",
     "test:e2e": "playwright test",
     "check:test-local-refs": "python3 scripts/check_test_local_refs.py",

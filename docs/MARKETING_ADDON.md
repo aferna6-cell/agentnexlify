@@ -57,7 +57,9 @@ Ensure webhook endpoint `POST /api/v1/billing/webhook` subscribes to:
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
 
-Webhook handler distinguishes add-on events via `metadata[addon]=marketing`.
+The dedicated `POST /api/v1/webhooks/stripe` endpoint uses the same add-on
+routing, so either configured Stripe webhook URL keeps add-on state in sync.
+Webhook handlers distinguish add-on events via `metadata[addon]=marketing`.
 
 ### 6. Announce carve-out to grandfathered customers
 Existing paid customers (growth/professional/autopilot/enterprise) were auto-grandfathered. Send notice (30-day window recommended) before running deactivation script.

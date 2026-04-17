@@ -14,10 +14,14 @@ from fastapi import APIRouter, HTTPException, Request
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.routers.billing import (
+    _handle_addon_checkout_completed,
+    _handle_addon_subscription_deleted,
+    _handle_addon_subscription_updated,
     _handle_checkout_completed,
     _handle_payment_failed,
     _handle_subscription_deleted,
     _handle_subscription_updated,
+    _is_marketing_addon_subscription,
 )
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -54,12 +58,20 @@ async def stripe_webhook(request: Request):
             metadata = data.get("metadata") or {}
             if metadata.get("invoice_id") and metadata.get("tenant_id"):
                 _handle_invoice_payment(db, data)
+            elif _is_marketing_addon_subscription(data):
+                _handle_addon_checkout_completed(db, data)
             else:
                 _handle_checkout_completed(db, data)
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
-            _handle_subscription_updated(db, data)
+            if _is_marketing_addon_subscription(data):
+                _handle_addon_subscription_updated(db, data)
+            else:
+                _handle_subscription_updated(db, data)
         elif event_type == "customer.subscription.deleted":
-            _handle_subscription_deleted(db, data)
+            if _is_marketing_addon_subscription(data):
+                _handle_addon_subscription_deleted(db, data)
+            else:
+                _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_failed":
             await _handle_payment_failed(db, data)
         else:
@@ -89,6 +101,29 @@ def _handle_invoice_payment(db, session: dict) -> None:
 
     logger.info("Invoice payment received: invoice_id=%s, tenant_id=%s, amount=%s",
                 invoice_id, tenant_id, amount_total)
+
+    try:
+        existing = db.table("invoices").select(
+            "status, stripe_payment_id"
+        ).eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
+    except Exception:
+        logger.exception("Failed to load invoice %s before payment update", invoice_id)
+        return
+
+    if not existing.data:
+        logger.warning("Invoice %s not found for tenant %s", invoice_id, tenant_id)
+        return
+
+    current_invoice = existing.data[0]
+    if current_invoice.get("status") == "paid":
+        logger.info(
+            "Invoice %s already marked paid; ignoring duplicate Stripe webhook "
+            "(existing_payment=%s, incoming_payment=%s)",
+            invoice_id,
+            current_invoice.get("stripe_payment_id"),
+            payment_intent,
+        )
+        return
 
     # Update the invoice to 'paid'
     now_iso = datetime.now(timezone.utc).isoformat()

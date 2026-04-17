@@ -52,6 +52,38 @@ def get_marketing_addon_price_id() -> str:
         settings.stripe_price_marketing_addon_monthly, "price_marketing_addon_monthly"
     )
 
+
+def ensure_plan_prices_configured(plan: str) -> dict[str, str]:
+    """Return Stripe price IDs for a plan, or raise if placeholders remain."""
+    prices = PLAN_PRICES[plan]
+    placeholder_kinds = [
+        kind for kind, price in prices.items() if price in _PLACEHOLDER_PRICE_IDS
+    ]
+    if placeholder_kinds:
+        raise RuntimeError(
+            f"Stripe price IDs for {plan} are not configured: "
+            + ", ".join(placeholder_kinds)
+        )
+
+    malformed_kinds = [
+        kind for kind, price in prices.items() if not price.startswith("price_")
+    ]
+    if malformed_kinds:
+        raise RuntimeError(
+            f"Stripe price IDs for {plan} should look like price_...: "
+            + ", ".join(malformed_kinds)
+        )
+
+    return prices
+
+
+def ensure_stripe_configured() -> None:
+    """Initialize Stripe or raise a deploy-time actionable error."""
+    if not settings.stripe_secret_key:
+        raise RuntimeError("STRIPE_SECRET_KEY is not configured.")
+    _ensure_initialized()
+
+
 def _ensure_initialized() -> None:
     global _initialized, _warned_placeholder_prices
     if not _initialized:
@@ -93,6 +125,10 @@ def create_marketing_addon_checkout_session(
     if price_id in _PLACEHOLDER_PRICE_IDS:
         raise RuntimeError(
             "STRIPE_PRICE_MARKETING_ADDON_MONTHLY is not configured."
+        )
+    if not price_id.startswith("price_"):
+        raise RuntimeError(
+            "STRIPE_PRICE_MARKETING_ADDON_MONTHLY should look like price_..."
         )
 
     return stripe.checkout.Session.create(

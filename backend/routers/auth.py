@@ -32,7 +32,12 @@ from backend.models.schemas import (
     WidgetConfigUpdateRequest,
 )
 from backend.services.auth_service import _decode_token, _jwt_secret, get_current_tenant
-from backend.services.stripe_service import PLAN_PRICES, get_or_create_customer
+from backend.services.stripe_service import (
+    PLAN_PRICES,
+    ensure_plan_prices_configured,
+    ensure_stripe_configured,
+    get_or_create_customer,
+)
 from backend.services.email_sender import send_email
 from backend.services.business_profiles import (
     get_dashboard_business_profile,
@@ -1491,6 +1496,11 @@ async def billing_checkout(
 
     if not plan or plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
+    try:
+        prices = ensure_plan_prices_configured(plan)
+        ensure_stripe_configured()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     db = get_service_supabase()
     result = db.table("tenants").select("id, owner_email, business_name").eq("id", tenant_id).limit(1).execute()
@@ -1504,7 +1514,6 @@ async def billing_checkout(
         business_name=tenant.get("business_name"),
     )
 
-    prices = PLAN_PRICES[plan]
     line_items = []
     if "setup" in prices:
         line_items.append({"price": prices["setup"], "quantity": 1})
@@ -1555,6 +1564,11 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(require_role("ow
     if not customer_id:
         raise HTTPException(status_code=400, detail="No billing account. Upgrade to a paid plan first.")
 
+    try:
+        ensure_stripe_configured()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     session = stripe.billing_portal.Session.create(
         customer=customer_id,
         return_url=f"{settings.frontend_url}/billing",
@@ -1574,6 +1588,11 @@ async def billing_change_plan(
 
     if not new_plan or new_plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
+    try:
+        new_price_id = ensure_plan_prices_configured(new_plan)["monthly"]
+        ensure_stripe_configured()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     db = get_service_supabase()
     result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
@@ -1596,8 +1615,6 @@ async def billing_change_plan(
 
     subscription = subs.data[0]
     sub_item_id = subscription["items"]["data"][0]["id"]
-    new_price_id = PLAN_PRICES[new_plan]["monthly"]
-
     # Modify subscription with proration
     updated = stripe.Subscription.modify(
         subscription.id,
@@ -1632,6 +1649,11 @@ async def billing_cancel(
 
     if tenant.get("plan") == "free":
         raise HTTPException(status_code=400, detail="Already on free plan")
+
+    try:
+        ensure_stripe_configured()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     subs = stripe.Subscription.list(customer=customer_id, status="active", limit=1)
     if not subs.data:
