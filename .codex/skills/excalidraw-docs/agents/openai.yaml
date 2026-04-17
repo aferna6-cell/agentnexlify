@@ -1,0 +1,4 @@
+interface:
+  display_name: "Excalidraw Docs"
+  short_description: "Render editable Excalidraw diagrams for docs"
+  default_prompt: "Use $excalidraw-docs to add an editable diagram to this documentation."
