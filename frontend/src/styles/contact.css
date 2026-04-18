@@ -65,7 +65,7 @@
 .contact-submit {
   align-self: flex-start;
   background: var(--accent);
-  color: #fff;
+  color: #fff !important;
   border: none;
   border-radius: var(--radius);
   padding: 12px 28px;

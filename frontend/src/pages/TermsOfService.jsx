@@ -273,7 +273,9 @@ export default function TermsOfService() {
           <ul className="legal-contact">
             <li>
               <strong>Email:</strong>{" "}
-              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>
+              <a href="mailto:support@agentnexlify.com">
+                support@agentnexlify.com
+              </a>
             </li>
             <li>
               <strong>Website:</strong>{" "}
