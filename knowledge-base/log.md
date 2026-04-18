@@ -207,3 +207,9 @@ Embeddings skipped: Supabase MCP returned Unauthorized (SUPABASE_ACCESS_TOKEN mi
 ## 2026-04-18T10:05Z discover | processed=2 | ingested=4 (2 competitors + 2 ai-llm) | rejected_filtered_pre_fetch | curl fallback (no agent-browser)
 
 ## [2026-04-18 06:13] discover+compile | cron 06:00 | commits=3 raw=4 wiki=4
+
+## kb-autopopulate 2026-04-18T22:03:01.633150+00:00
+categories_processed=7  urls_fetched=2  new_raw_files=2  deduped=1  errors=0
+- [competitors] gohighlevel-its-time-to-take-your-agency-to-the-next-level.md ← https://duckduckgo.com/y.js?ad_domain=gohighlevel.com&ad_provider=bingv7aa&ad_type=txad&click_metadata=7UAy0tWnY7sQXZIpzrbGe6cL2Jm3LusD%2DQexyL85ykMdiXJ4%2DHkY3vLJDqbvQ8SbMSuBnbXyFRetcDz6gYSXLZw%2DzhWC8GL4UqrVqVChP5VxdSZC8YwsUZ0LMPpNfL9Owl%2DTAuVjwKZwDMsPWjcbeoFQHLv6IRu4oVSJc_aWELc.rGa_AsTFqbWvhe8QuRuFag&rut=0b39de54c5158090f4943d0b32fb0f1ba69289f1d66215bea4edff80d83a60b3&u3=https%3A%2F%2Fwww.bing.com%2Faclick%3Fld%3De8Nm_Kbou0xnNw88ukkeqaQDVUCUxh%2DForOX71LX4pDOePwY%2DgIMvv3tdxujZByz2tXQ9DRALrz4f_qhDn3cHRXz2c7hiC3mqhBUrjxMzg%2D06iJLAZ7PQ5K5uk40WzzFB21kGng8Y5iQhChr10c%2D%2DXn1QMN%2DTHv5eWm5L9nzQn1B5WIZ1er24COLLM0u_b2iwmEtTJgrFJQV72R3alVNGhz2RvTf8%26u%3DaHR0cHMlM2ElMmYlMmZnb2hpZ2hsZXZlbC5jb20lM2YlMmYlM2ZmcF9yZWYlM2RnZXQtdHJpYWwlMjZtc2Nsa2lkJTNkN2I1MWFlYzlmYTA0MTM4MWYwMTNjNzJhMDU3MjE4ZWY%26rlid%3D7b51aec9fa041381f013c72a057218ef&vqd=4-185777231272257785694152835621178639069&iurl=%7B1%7DIG%3D3202F98D8F7544D49555BE24BDFD83B8%26CID%3D28783CF19BB1618317152BCE9A3A600F%26ID%3DDevEx%2C5046.1
+- [competitors] gohighlevel-updates-2026-gohighlevelai.md ← https://www.gohighlevel.ai/blog/gohighlevel-updates-2026
+- removed DDG ad redirect URL file (gohighlevel-its-time-to-take-your-agency-to-the-next-level.md, homepage spam) → kept 1 valid article (gohighlevel-updates-2026-gohighlevelai.md)

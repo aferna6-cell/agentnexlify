@@ -101,3 +101,7 @@ _All compiled 2026-04-18 cron run._
 ## Compiled 2026-04-18 manual
 
 - ~~[competitors] Competitor landscape snapshot (GHL, Drillbit, Phonely, Birdeye, Podium)~~ → compiled 5 entity profiles: `wiki/competitors/{gohighlevel,drillbit,phonely,birdeye,podium}.md`
+
+## Auto-ingest 2026-04-18T22:03:01.632738+00:00
+
+- [2026-04-18] competitors/gohighlevel-updates-2026-gohighlevelai.md — gohighlevel updates 2026 - GoHighLevel.ai — https://www.gohighlevel.ai/blog/gohighlevel-updates-2026
