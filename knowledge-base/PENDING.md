@@ -41,8 +41,8 @@ _All compiled._
 
 ## Ingested 2026-04-14T06:00:00Z — cron autopop
 
-- [verticals] Study: AI chatbots provide less-accurate information to vulnerable users — https://news.mit.edu/2026/study-ai-chatbots-provide-less-accurate-information-vulnerable-users-0219 → `raw/verticals/mit-ai-chatbot-vulnerable-users-2026.md`
-- [technical] You probably don't need a vector database — pgvector Guide — https://encore.dev/blog/you-probably-dont-need-a-vector-database → `raw/technical/encore-pgvector-guide-2026.md`
+- ~~[verticals] Study: AI chatbots provide less-accurate information to vulnerable users~~ → compiled `wiki/verticals/mit-ai-chatbot-vulnerable-users-2026.md`
+- ~~[technical] You probably don't need a vector database — pgvector Guide~~ → compiled `wiki/technical/encore-pgvector-guide-2026.md`
 - [regulations] FTC Warns 97 Auto Dealership Groups About Deceptive Pricing — https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-warns-97-auto-dealership-groups-about-deceptive-pricing → `raw/regulations/ftc-warns-auto-dealers-deceptive-pricing-2026.md`
 
 Skipped categories: competitors (all GHL URLs known/homepages), ai_llm (Anthropic pages JS-rendered), small_biz_saas (all noise — P.LEAGUE, stackexchange), growth (all noise — Microsoft answers, generic AI). agent-browser needed for JS-rendered sites (Anthropic, GHL help center, HIPAA Journal).

@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 39 (plus 1 in `_outputs/`)
+- Total articles: 41 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-18
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -47,12 +47,14 @@ _No articles yet._
 
 ### Vertical Industries
 - [Customer Gaps by Industry](wiki/verticals/customer-gaps-by-industry.md) — Product-market fit across 7 industries; Salon 9/10, Plumber 8/10, Dental 8/10. Tags: salon, plumber, dental, restaurant, fitness, lawyer, real-estate
+- [MIT Study — AI Chatbots Underperform for Vulnerable Users](wiki/verticals/mit-ai-chatbot-vulnerable-users-2026.md) — Claude 3 Opus refuses 11% for less-educated non-native speakers vs 3.6% control; 43.7% of refusals use condescending language. Tags: llm-bias, fairness, vulnerable-users, non-native-english, mit-ccc, chatbot-reliability
 
 ### Technical Patterns
 - [pgvector — Native Vector Search in Postgres](wiki/technical/pgvector-postgres-vector-search.md) — Open-source Postgres extension powering AgentNexLiFy's KB search; six distance metrics, HNSW/IVFFlat indexes, hybrid queries. Tags: pgvector, postgres, embeddings, semantic-search, hnsw, ivfflat
 - [pgvector Implementation Guide — Build, Enable, Query](wiki/technical/pgvector-implementation-guide.md) — Hands-on install, first query, and Python psycopg2 pattern for pgvector on self-managed Postgres. Tags: pgvector, postgres, installation, psycopg2, hybrid-search, tutorial
 - [Advanced Tool Use — Search, Programmatic Calling, and Examples](wiki/technical/anthropic-advanced-tool-use.md) — Three Claude API features: Tool Search Tool (85% token reduction), Programmatic Tool Calling (37% savings), Tool Use Examples (72%→90% accuracy). Tags: tool-use, tool-search, programmatic-calling, tool-examples, claude-api
 - [Contextual Retrieval — Reducing RAG Failure Rates by 67%](wiki/technical/anthropic-contextual-retrieval.md) — Prepend chunk-specific context before embedding/BM25 indexing; 49% fewer retrieval failures (67% with reranking) at $1.02/M tokens. Tags: contextual-retrieval, rag, embeddings, bm25, reranking, prompt-caching
+- [You Probably Don't Need a Vector Database — pgvector at Realistic Scale](wiki/technical/encore-pgvector-guide-2026.md) — HNSW at 1M vectors returns <20ms with >95% recall; vector-DB latency is invisible behind 500ms-3s LLM generation; transactional consistency is the real win. Tags: pgvector, postgres, rag, hnsw, ivf, infrastructure-consolidation, latency-budget
 
 ### Regulations & Compliance
 - [HIPAA — Privacy Rule, Security Rule, and Covered Entities](wiki/regulations/hipaa-overview-cdc.md) — HIPAA Privacy/Security Rules bind any business associate handling PHI; defines AgentNexLiFy's exposure for dental/medical tenants. Tags: hipaa, phi, ephi, privacy-rule, security-rule, healthcare-compliance
