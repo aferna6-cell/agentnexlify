@@ -20,7 +20,6 @@ RESULTS=""
 # Tenant API keys to test (add more as tenants go live)
 declare -A TENANTS=(
   ["MTOptions"]="anx_zc2Gfxz5n1oZgrYbM1biHWRI1oV1rMSIBFuIDtaCK3k"
-  ["MTOptions-growth"]="anx_dtQSMJCrXH_7yyOrSqs7m9Ndgrm-VtFWmi9A0Y0mTiA"
 )
 
 check() {
