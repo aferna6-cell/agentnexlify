@@ -7,6 +7,48 @@
 **Skill:** `.claude/skills/tenant-chatbot-audit/SKILL.md` v1.1.0
 **Access mode:** READ-ONLY — no fixes, no migrations, no code changes.
 
+---
+
+## UPDATE 2026-04-18 (post-cleanup, live DB verified)
+
+Supabase MCP restored later in session. Live queries + dup tenant cleanup invalidate multiple `[persistent]` and `[unverified]` findings below. Current state:
+
+### Status: 🟢 HEALTHY
+
+### Live metrics (canon tenant `6d76f24b-dd71-470c-9b86-03ee35b7e887`, enterprise plan)
+
+| Metric | Audit (stale) | Live 2026-04-18 | Delta |
+|---|---|---|---|
+| Messages | 704 | **722** | +18 since 2026-04-09 |
+| Real leads | 0 | **1** | 🎉 first real capture |
+| Total leads | 2 (test only) | 5 | +3 |
+| Conversations | 26 | **223** | +197 (pipeline restored) |
+| FAQs | 13 → 16 expected | **15** | 13 original + 2 trial seed |
+| Orphan sessions | 120 | **0** | 🎉 fully resolved on canon |
+| Duplicate tenant | 2 (split) | **1** | dup deleted |
+| `enable_structured_lead_parser` | unconfirmed | **true** | flipped |
+
+### Findings status after live verification
+
+- **C1 (duplicate tenant) — ✅ RESOLVED.** `69411b59-5b0a-4eb2-88a6-525eee47133d` (support@mtoptions.com, growth) was accidental self-signup receiving only nightly e2e-smoke noise. Deleted via CASCADE (commits `ce36df7`, `auth.users` cleanup same session). 27-table scan confirms zero stale references (public schema + auth.* schemas).
+- **C2 (`knowledge_base` NULL) — [still open].** Live widget_configs for canon: `knowledge_base` still needs verification. FAQ entries exist (15).
+- **C3 (0 real leads) — 🟢 IMPROVED.** 1 real lead captured. Lead parser flag flipped (see H4). Re-measure 7-day window to confirm trend.
+- **H1 (120 orphan sessions) — ✅ RESOLVED on canon.** Canon tenant has 0 orphans. All 15 residual orphans lived on the deleted dup tenant and were wiped with it. No backfill migration needed.
+- **H4 (parser flag unconfirmed) — ✅ CONFIRMED flipped.** `enable_structured_lead_parser=true` on canon widget_configs.
+- **H2, H3, M1-M4, L1-L3:** not re-verified this session — remain open per original severity.
+
+### Cleanup commits (this session)
+- `ca5a44a` — initial audits committed
+- `ce36df7` — removed MTOptions-growth from `scripts/daily/e2e-smoke.sh`
+- (in-session) — DB: `DELETE FROM tenants WHERE id='69411b59...'` (CASCADE) + `DELETE FROM auth.users WHERE id='b4b6b0c3...'`
+
+### Next actions
+1. Re-measure 7-day real lead capture rate after parser flag ran for a week (C3 closure)
+2. Populate or wire `widget_configs.knowledge_base` (C2)
+3. Revisit H2 (proactive greeting buttons) + M1 (identity leak)
+
+---
+
 ## Execution note (IMPORTANT)
 
 Supabase MCP returned `Unauthorized: no access token` when `mcp__supabase__execute_sql` was invoked in this session. Live queries from the skill's Steps 1–8 could not be executed. This report therefore fuses:
