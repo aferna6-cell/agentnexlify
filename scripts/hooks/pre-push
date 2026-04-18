@@ -159,6 +159,31 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
+# CHECK 8: Semgrep security scan on changed code files (best-effort; skips gracefully if uvx missing)
+echo -n "Running semgrep security scan... "
+if ! command -v uvx >/dev/null 2>&1; then
+    echo -e "${YELLOW}SKIPPED (uvx not found; install 'uv' to enable)${NC}"
+else
+    UPSTREAM_RANGE="HEAD"
+    if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+        UPSTREAM_RANGE='@{u}..HEAD'
+    fi
+    CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$UPSTREAM_RANGE" 2>/dev/null | grep -E '\.(py|js|jsx|ts|tsx)$' || true)
+    if [ -z "$CHANGED_FILES" ]; then
+        echo -e "${GREEN}OK (no code files changed)${NC}"
+    else
+        # shellcheck disable=SC2086
+        if uvx --quiet semgrep scan --config=p/security-audit --severity=ERROR --error --quiet $CHANGED_FILES >/tmp/semgrep-pre-push.log 2>&1; then
+            echo -e "${GREEN}OK${NC}"
+        else
+            echo -e "${RED}FAILED${NC}"
+            echo "  Semgrep ERROR-severity findings on changed files:"
+            cat /tmp/semgrep-pre-push.log
+            ERRORS=$((ERRORS + 1))
+        fi
+    fi
+fi
+
 # CHECK 7: Widget file sync (warning only)
 echo -n "Checking widget file sync... "
 if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then
