@@ -22,17 +22,48 @@ from backend.services.industry_packs._shared import (
 )
 from backend.services.industry_packs.base import (
     FormPreset,
+    IndustryAIPersona,
     IndustryPack,
     KBSeedArticle,
 )
 
 _BUSINESS_LABEL = "{{business_name}}"
 
+_AI_PERSONA = IndustryAIPersona(
+    identity_addendum=(
+        "You help drivers describe vehicle issues, request quotes, and schedule "
+        "service while collecting the details the shop needs."
+    ),
+    tone_instructions=[
+        "Clear, practical, and reassuring",
+        "Capture year, make, model, mileage, symptoms, urgency, and contact info",
+        "Summarize the vehicle issue before asking the team to follow up",
+    ],
+    allowed_topics=[
+        "repair estimates",
+        "maintenance intervals",
+        "diagnostics",
+        "service appointments",
+        "warranties",
+        "loaner or shuttle options",
+    ],
+    disallowed_topics=[
+        "guaranteed diagnosis without inspection",
+        "unsafe driving advice",
+        "promising exact repair prices before shop review",
+    ],
+    escalation_triggers=[
+        "brake failure, engine smoke, fuel smell, unsafe-to-drive concern",
+        "customer stranded or needs towing",
+        "complaint about prior repair or invoice dispute",
+    ],
+)
+
 
 AUTO_SHOP_PACK = IndustryPack(
     key="auto_shop",
     label="Auto Repair Shop",
-    version=1,
+    version=2,
     form_presets=[
         FormPreset(
             key="auto_repair_quote",
@@ -130,4 +161,5 @@ AUTO_SHOP_PACK = IndustryPack(
             tags=["maintenance", "oil_change", "faq"],
         ),
     ],
+    ai_persona=_AI_PERSONA,
 )

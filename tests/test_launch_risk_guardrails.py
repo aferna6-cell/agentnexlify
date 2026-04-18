@@ -30,6 +30,11 @@ class Chain:
         return MagicMock(data=self.data)
 
 
+class FailingChain(Chain):
+    def execute(self):
+        raise RuntimeError("db write failed")
+
+
 def test_ai_usage_policy_uses_plan_baseline():
     from backend.services.ai_usage_guard import resolve_ai_usage_policy
 
@@ -116,9 +121,10 @@ async def test_admin_refund_creates_stripe_refund_and_audit_row(
     from backend.routers.billing import AdminRefundRequest, admin_create_refund
 
     tenant_select = Chain(data=[{"id": "tenant-1", "owner_email": "owner@example.com"}])
+    existing_refund_select = Chain(data=[])
     refund_insert = Chain(data=[{"id": "refund-row"}])
     db = MagicMock()
-    db.table.side_effect = [tenant_select, refund_insert]
+    db.table.side_effect = [tenant_select, existing_refund_select, refund_insert]
     mock_db_factory.return_value = db
     mock_refund_create.return_value = {
         "id": "re_123",
@@ -132,6 +138,7 @@ async def test_admin_refund_creates_stripe_refund_and_audit_row(
     result = await admin_create_refund(
         AdminRefundRequest(
             tenant_id="tenant-1",
+            refund_request_id="refund-req-123",
             payment_intent="pi_123",
             amount_cents=24900,
             stripe_reason="requested_by_customer",
@@ -142,10 +149,125 @@ async def test_admin_refund_creates_stripe_refund_and_audit_row(
     )
 
     mock_refund_create.assert_called_once()
+    assert mock_refund_create.call_args.kwargs["idempotency_key"] == (
+        "agentnexlify-refund:tenant-1:refund-req-123"
+    )
+    assert mock_refund_create.call_args.kwargs["metadata"]["refund_request_id"] == "refund-req-123"
+    assert refund_insert.inserted["refund_request_id"] == "refund-req-123"
     assert refund_insert.inserted["stripe_refund_id"] == "re_123"
     assert refund_insert.inserted["tenant_id"] == "tenant-1"
     assert result["status"] == "refunded"
+    assert result["idempotent_replay"] is False
     mock_log_activity.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("backend.routers.billing.log_activity")
+@patch("backend.routers.billing.stripe.Refund.create")
+@patch("backend.routers.billing.ensure_stripe_configured")
+@patch("backend.routers.billing._verify_admin_secret")
+@patch("backend.routers.billing.get_service_supabase")
+async def test_admin_refund_replay_returns_existing_audit_without_creating_refund(
+    mock_db_factory,
+    _mock_verify,
+    _mock_ensure,
+    mock_refund_create,
+    mock_log_activity,
+):
+    from backend.routers.billing import AdminRefundRequest, admin_create_refund
+
+    tenant_select = Chain(data=[{"id": "tenant-1", "owner_email": "owner@example.com"}])
+    existing_refund_select = Chain(data=[{
+        "stripe_refund_id": "re_existing",
+        "amount_cents": 24900,
+        "currency": "usd",
+        "status": "succeeded",
+        "refund_request_id": "refund-req-123",
+    }])
+    db = MagicMock()
+    db.table.side_effect = [tenant_select, existing_refund_select]
+    mock_db_factory.return_value = db
+
+    result = await admin_create_refund(
+        AdminRefundRequest(
+            tenant_id="tenant-1",
+            refund_request_id="refund-req-123",
+            payment_intent="pi_123",
+            amount_cents=24900,
+            stripe_reason="requested_by_customer",
+            internal_reason="Customer requested refund before filing dispute.",
+            requested_by="aidan",
+        ),
+        x_api_secret="secret",
+    )
+
+    mock_refund_create.assert_not_called()
+    mock_log_activity.assert_not_called()
+    assert result["status"] == "refunded"
+    assert result["stripe_refund_id"] == "re_existing"
+    assert result["idempotent_replay"] is True
+
+
+@pytest.mark.asyncio
+@patch("backend.routers.billing.log_activity")
+@patch("backend.routers.billing.stripe.Refund.create")
+@patch("backend.routers.billing.ensure_stripe_configured")
+@patch("backend.routers.billing._verify_admin_secret")
+@patch("backend.routers.billing.get_service_supabase")
+async def test_admin_refund_audit_insert_failure_returns_existing_refund_audit(
+    mock_db_factory,
+    _mock_verify,
+    _mock_ensure,
+    mock_refund_create,
+    mock_log_activity,
+):
+    from backend.routers.billing import AdminRefundRequest, admin_create_refund
+
+    tenant_select = Chain(data=[{"id": "tenant-1", "owner_email": "owner@example.com"}])
+    no_existing_request = Chain(data=[])
+    failing_insert = FailingChain()
+    existing_refund_select = Chain(data=[{
+        "stripe_refund_id": "re_123",
+        "amount_cents": 24900,
+        "currency": "usd",
+        "status": "succeeded",
+        "refund_request_id": "refund-req-123",
+    }])
+    db = MagicMock()
+    db.table.side_effect = [
+        tenant_select,
+        no_existing_request,
+        failing_insert,
+        existing_refund_select,
+    ]
+    mock_db_factory.return_value = db
+    mock_refund_create.return_value = {
+        "id": "re_123",
+        "amount": 24900,
+        "currency": "usd",
+        "status": "succeeded",
+        "payment_intent": "pi_123",
+        "reason": "requested_by_customer",
+    }
+
+    result = await admin_create_refund(
+        AdminRefundRequest(
+            tenant_id="tenant-1",
+            refund_request_id="refund-req-123",
+            payment_intent="pi_123",
+            amount_cents=24900,
+            stripe_reason="requested_by_customer",
+            internal_reason="Customer requested refund before filing dispute.",
+            requested_by="aidan",
+        ),
+        x_api_secret="secret",
+    )
+
+    mock_refund_create.assert_called_once()
+    mock_log_activity.assert_not_called()
+    assert result["status"] == "refunded"
+    assert result["stripe_refund_id"] == "re_123"
+    assert result["idempotent_replay"] is True
 
 
 @pytest.mark.asyncio

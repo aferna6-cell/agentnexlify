@@ -67,7 +67,7 @@ export default function OnboardingWizardPage() {
       knowledge_base: null,
       // Widget customization step
       widget_bot_name: "",
-      widget_primary_color: "#6366f1",
+      widget_primary_color: "#00BFFF",
       widget_greeting_message: "",
       widget_position: "bottom-right",
     }

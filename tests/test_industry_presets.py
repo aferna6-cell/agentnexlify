@@ -148,3 +148,38 @@ class TestBusinessProfiles:
 
         assert resolve_business_profile_key("real_estate") == "real_estate"
         assert resolve_business_profile_key("realestate") == "real_estate"
+
+    def test_business_type_aliases_keep_general_until_specific_selection(self):
+        from backend.services.business_profiles import resolve_business_profile_key
+
+        assert resolve_business_profile_key("other") == "default"
+        assert resolve_business_profile_key("") == "default"
+        assert resolve_business_profile_key("beauty") == "salon"
+        assert resolve_business_profile_key("automotive") == "auto_shop"
+        assert resolve_business_profile_key("health_wellness") == "medical"
+        assert resolve_business_profile_key("moving") == "home_services"
+
+    def test_contractor_profile_exposes_proof_metric(self):
+        from backend.services.business_profiles import get_dashboard_business_profile
+
+        profile = get_dashboard_business_profile("plumbing", "Acme Plumbing")
+
+        assert profile["key"] == "home_services"
+        assert profile["proof_metric_label"] == "Quote-ready jobs captured"
+        assert "estimate" in profile["proof_metric_empty_hint"].lower()
+
+    def test_widget_prompt_personalizes_after_business_type_selection(self):
+        from backend.routers.widget_helpers import _build_system_prompt
+
+        general_prompt = _build_system_prompt(
+            {"business_name": "Acme", "business_type": "other"},
+            [],
+        )
+        contractor_prompt = _build_system_prompt(
+            {"business_name": "Acme", "business_type": "plumbing"},
+            [],
+        )
+
+        assert "INDUSTRY PERSONALIZATION" not in general_prompt
+        assert "INDUSTRY PERSONALIZATION (Home Services" in contractor_prompt
+        assert "Quote" in contractor_prompt or "estimate" in contractor_prompt

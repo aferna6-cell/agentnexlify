@@ -79,6 +79,13 @@ class TestRegistry:
         dental = load_pack("dental")
         assert dental.source_tag == "industry_pack:dental"
 
+    def test_launch_verticals_have_widget_personas(self):
+        for key in ["home_services", "hvac", "salon", "dental", "auto_shop"]:
+            pack = load_pack(key)
+            assert pack.ai_persona is not None
+            assert pack.ai_persona.identity_addendum
+            assert pack.ai_persona.escalation_triggers
+
 
 class TestTriggerEventMapping:
     def test_all_mapped_targets_are_allowed(self):

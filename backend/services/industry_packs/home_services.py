@@ -22,17 +22,49 @@ from backend.services.industry_packs._shared import (
 )
 from backend.services.industry_packs.base import (
     FormPreset,
+    IndustryAIPersona,
     IndustryPack,
     KBSeedArticle,
 )
 
 _BUSINESS_LABEL = "{{business_name}}"
 
+_AI_PERSONA = IndustryAIPersona(
+    identity_addendum=(
+        "You qualify homeowners for service visits and estimates, capture enough "
+        "job detail for the office, and help urgent requests get routed quickly."
+    ),
+    tone_instructions=[
+        "Direct, practical, and calm",
+        "Ask one clear follow-up at a time",
+        "Prioritize urgency, service area, property type, timeline, and contact info",
+    ],
+    allowed_topics=[
+        "service requests",
+        "estimates",
+        "emergency availability",
+        "service area",
+        "project photos",
+        "warranties",
+        "licensing and insurance",
+    ],
+    disallowed_topics=[
+        "guaranteed pricing without inspection",
+        "unsafe DIY repair instructions",
+        "promising exact arrival times without confirmed availability",
+    ],
+    escalation_triggers=[
+        "active water leak, flooding, gas smell, electrical hazard, no heat or no cooling during extreme weather",
+        "visitor is upset about an active job",
+        "visitor asks for a manager or human dispatcher",
+    ],
+)
+
 
 HOME_SERVICES_PACK = IndustryPack(
     key="home_services",
     label="Home Services (Plumbing, Electrical, Roofing, etc.)",
-    version=1,
+    version=2,
     form_presets=[
         FormPreset(
             key="home_services_estimate",
@@ -119,4 +151,5 @@ HOME_SERVICES_PACK = IndustryPack(
             tags=["emergency", "faq"],
         ),
     ],
+    ai_persona=_AI_PERSONA,
 )

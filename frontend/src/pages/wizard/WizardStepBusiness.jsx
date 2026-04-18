@@ -2,10 +2,11 @@
 import { useState } from "react";
 
 const INDUSTRIES = [
+  "other",
   "plumbing", "hvac", "electrical", "roofing", "landscaping",
   "cleaning", "pest_control", "painting", "flooring", "general_contractor",
   "auto_shop", "salon", "spa", "dental", "medical", "veterinary",
-  "legal", "accounting", "real_estate", "restaurant", "retail", "other",
+  "legal", "accounting", "real_estate", "restaurant", "retail",
 ];
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -25,10 +26,23 @@ function defaultHours() {
   return h;
 }
 
+function industryLabel(value) {
+  if (!value || value === "other") return "General business / I'll choose later";
+  const labels = {
+    auto_shop: "Auto Shop",
+    general_contractor: "General Contractor",
+    hvac: "HVAC",
+    pest_control: "Pest Control",
+    real_estate: "Real Estate",
+    spa: "Spa",
+  };
+  return labels[value] || value.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export default function WizardStepBusiness({ wizardData, onNext }) {
   const [form, setForm] = useState({
     business_name: wizardData.business_name || "",
-    business_type: wizardData.business_type || "plumbing",
+    business_type: wizardData.business_type || "other",
     city: wizardData.city || "",
     phone: wizardData.phone || "",
     website_url: wizardData.website_url || "",
@@ -76,8 +90,11 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
         <label style={labelStyle}>
           Industry *
           <select style={inputStyle} value={form.business_type} onChange={set("business_type")}>
-            {INDUSTRIES.map(i => <option key={i} value={i}>{i.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</option>)}
+            {INDUSTRIES.map(i => <option key={i} value={i}>{industryLabel(i)}</option>)}
           </select>
+          <span style={hintStyle}>
+            Keep this general for now, or choose a type to personalize your assistant and dashboard.
+          </span>
         </label>
 
         <label style={labelStyle}>
@@ -135,6 +152,7 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
 }
 
 const labelStyle = { display: "flex", flexDirection: "column", gap: 6, fontSize: "0.9rem", fontWeight: 500 };
+const hintStyle = { color: "rgba(255,255,255,0.45)", fontSize: "0.78rem", fontWeight: 400, lineHeight: 1.4 };
 const inputStyle = {
   background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
   borderRadius: 8, padding: "10px 14px", color: "#e2e8f0", fontSize: "0.9rem", width: "100%", boxSizing: "border-box",

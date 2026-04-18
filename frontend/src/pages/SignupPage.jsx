@@ -6,6 +6,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-prod
 const PAID_PLANS = new Set(["growth", "autopilot", "professional", "enterprise"]);
 
 const INDUSTRIES = [
+  { value: "other", label: "General Business / Not Sure Yet" },
   { value: "accounting", label: "Accounting" },
   { value: "auto_shop", label: "Auto Shop" },
   { value: "bakery", label: "Bakery" },
@@ -32,7 +33,6 @@ const INDUSTRIES = [
   { value: "salon", label: "Salon" },
   { value: "tutoring", label: "Tutoring" },
   { value: "veterinary", label: "Veterinary" },
-  { value: "other", label: "Other" },
 ];
 
 export default function SignupPage() {

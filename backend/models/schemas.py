@@ -218,6 +218,8 @@ class DashboardBusinessProfile(BaseModel):
     appointment_label: str = "Appointments This Week"
     missed_call_label: str = "Missed Calls This Week"
     missed_call_empty_hint: str = "Enable missed call text-back in Settings"
+    proof_metric_label: str = "Customer opportunities captured"
+    proof_metric_empty_hint: str = "Your proof metric appears once customers start chatting"
     quick_actions: list[DashboardQuickAction] = Field(default_factory=list)
 
 

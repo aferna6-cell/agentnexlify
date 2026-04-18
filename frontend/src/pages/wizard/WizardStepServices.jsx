@@ -2,15 +2,48 @@
 import { useState } from "react";
 
 // Industry-specific service suggestions
+const SUGGESTION_ALIASES = {
+  plumbing: "home_services",
+  electrical: "home_services",
+  roofing: "home_services",
+  landscaping: "home_services",
+  cleaning: "home_services",
+  pest_control: "home_services",
+  painting: "home_services",
+  flooring: "home_services",
+  general_contractor: "home_services",
+  construction: "home_services",
+  spa: "salon",
+  veterinary: "medical",
+  chiropractic: "medical",
+  realestate: "real_estate",
+  accounting: "professional_services",
+  photography: "professional_services",
+  tutoring: "professional_services",
+  automotive: "auto_shop",
+  auto_detailing: "auto_shop",
+};
+
 const SUGGESTIONS = {
-  plumbing: ["Drain Cleaning", "Water Heater Installation", "Leak Repair", "Pipe Replacement", "Sewer Line Repair"],
+  home_services: ["Emergency Repair", "Free Estimate", "Installation", "Maintenance", "Inspection"],
   hvac: ["AC Repair", "Furnace Installation", "Duct Cleaning", "Thermostat Installation", "System Tune-up"],
   auto_shop: ["Oil Change", "Tire Rotation", "Brake Service", "Engine Diagnostics", "Transmission Repair"],
   salon: ["Haircut", "Color & Highlights", "Blowout", "Keratin Treatment", "Extensions"],
   dental: ["Teeth Cleaning", "Teeth Whitening", "Dental Implants", "Invisalign", "Emergency Care"],
+  medical: ["New Patient Visit", "Telehealth", "Annual Physical", "Sick Visit", "Prescription Refill"],
+  legal: ["Consultation", "Document Review", "Estate Planning", "Business Formation", "Contract Drafting"],
+  real_estate: ["Buyer Consultation", "Seller Consultation", "Showing Request", "Home Valuation", "Listing Alerts"],
   restaurant: ["Dine In", "Takeout", "Delivery", "Catering", "Private Events"],
+  professional_services: ["Consultation", "Custom Quote", "Monthly Service", "Project Work", "Audit"],
+  retail: ["Product Questions", "Order Help", "Returns", "Store Hours", "Promotions"],
   default: ["Consultation", "Custom Quote", "Emergency Service", "Maintenance", "Installation"],
 };
+
+function resolveSuggestionKey(businessType) {
+  const raw = (businessType || "").trim().toLowerCase();
+  if (!raw || raw === "other") return "default";
+  return SUGGESTION_ALIASES[raw] || raw;
+}
 
 export default function WizardStepServices({ wizardData, onNext, onBack }) {
   const [services, setServices] = useState(wizardData.services || []);
@@ -19,7 +52,7 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
     wizardData.faqs?.length ? wizardData.faqs : [{ question: "", answer: "" }]
   );
 
-  const suggestions = SUGGESTIONS[wizardData.business_type] || SUGGESTIONS.default;
+  const suggestions = SUGGESTIONS[resolveSuggestionKey(wizardData.business_type)] || SUGGESTIONS.default;
 
   function addService(name) {
     const trimmed = name.trim();

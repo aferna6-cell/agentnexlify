@@ -216,7 +216,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
             alignItems: "start",
             marginBottom: "18px",
             padding: "18px 20px",
-            borderRadius: "16px",
+            borderRadius: "8px",
             border: "1px solid rgba(255,255,255,0.08)",
             background:
               "linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.88))",
@@ -271,7 +271,34 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
               >
                 {item}
               </span>
-            ))}
+              ))}
+          </div>
+          <div
+            style={{
+              textAlign: "right",
+              minWidth: "180px",
+              alignSelf: "end",
+              color: "rgba(255,255,255,0.72)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.78rem",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.52)",
+                marginBottom: "4px",
+              }}
+            >
+              Proof metric
+            </div>
+            <div style={{ color: "#fff", fontSize: "1.6rem", fontWeight: 700 }}>
+              {dashData?.leads_count ?? 0}
+            </div>
+            <div style={{ fontSize: "0.86rem", lineHeight: 1.35 }}>
+              {(dashData?.leads_count ?? 0) > 0
+                ? businessProfile.proof_metric_label
+                : businessProfile.proof_metric_empty_hint}
+            </div>
           </div>
         </div>
       )}

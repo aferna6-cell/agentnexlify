@@ -76,6 +76,8 @@ class OnboardingCompleteResponse(BaseModel):
     ai_content_generated: bool = False
     crawl_started: bool = False
     faqs_created: int = 0
+    industry_pack_applied: bool = False
+    industry_pack_key: str | None = None
     message: str
 
 
@@ -280,6 +282,7 @@ async def complete_onboarding(
         "website_crawl": False,
         "faqs": False,
         "ai_content": False,
+        "industry_pack": False,
     }
 
     # 2. Update tenants table with provided fields
@@ -329,6 +332,31 @@ async def complete_onboarding(
         db.table("widget_configs").update(widget_updates).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.error("Failed to update widget_configs during onboarding for %s", tenant_id, exc_info=True)
+
+    industry_pack_applied = False
+    industry_pack_key = None
+    try:
+        from backend.services.industry_packs import load_pack
+        from backend.services.industry_packs.seed import apply_pack_to_tenant
+
+        pack = load_pack(req.business_type)
+        industry_pack_key = pack.key
+        result = apply_pack_to_tenant(db, tenant_id, pack, dry_run=False)
+        industry_pack_applied = True
+        configured["industry_pack"] = True
+        if result.errors:
+            logger.warning(
+                "Industry pack seeded with warnings for tenant=%s pack=%s errors=%s",
+                tenant_id,
+                pack.key,
+                result.errors,
+            )
+    except Exception:
+        logger.warning(
+            "Failed to apply industry pack during onboarding for tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
 
     # 3. Auto-create business_hours entry from the hours JSONB
     if req.hours:
@@ -551,6 +579,8 @@ async def complete_onboarding(
         ai_content_generated=ai_content_generated,
         crawl_started=crawl_started,
         faqs_created=faqs_created,
+        industry_pack_applied=industry_pack_applied,
+        industry_pack_key=industry_pack_key,
         message="Onboarding complete! Your business is configured and ready.",
     )
 
