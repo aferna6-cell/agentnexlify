@@ -160,3 +160,17 @@ Four of six lenses — Technical, Economic, Historical, and First-Principles —
 Three prior waves of document automation — fax (1984–1995), email/internet (1995–2005), and workflow SaaS (2010–2024) — share a durable pattern: the technology that wins SMBs does so not through direct enterprise-style sales but through **channel embedding, price compression t
 
 ---
+
+## 2026-04-18 — what-is-the-real-defensibility-of-a-widget-first-a
+
+**Question:** What is the real defensibility of a widget-first AI product once foundation models become commodity?
+**Depth:** deep
+**Folder:** [[projects/what-is-the-real-defensibility-of-a-widget-first-a]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+## What Is the Real Defensibility of a Widget-First AI Product Once Foundation Models Become Commodity?
+**The short answer: a widget-first AI product has weak structural defensibility against model commoditization, but the moat is not gone — it has migrated. The question is whether the company has built what survives the migration.**
+Foundation model commoditization is not a future risk — it is al
+
+---

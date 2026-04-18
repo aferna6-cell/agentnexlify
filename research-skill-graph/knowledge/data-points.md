@@ -199,3 +199,19 @@ Example:
 - Notion AI adoption among Notion Business tier users | ~40% | Notion usage reports / press | 2024–2025 | projects/document-automation-waves
 - Copilot for Microsoft 365 organizational adoption | 400,000+ organizations | Microsoft earnings / press | early 2025 | projects/document-automation-waves
 - PandaDoc SMB pricing | $19/month (2014) → $35/month (2024) | PandaDoc public pricing history | 2014–2024 | projects/document-automation-waves
+
+<!-- from projects/what-is-the-real-defensibility-of-a-widget-first-a on 2026-04-18 -->
+- GPT-4 API input price at launch | $0.06/1K tokens | OpenAI pricing history | 2023-03 | projects/widget-defensibility
+- GPT-4o API input price (April 2026) | ~$0.0025/1K tokens | OpenAI pricing page | 2026-04 | projects/widget-defensibility
+- Frontier API price decline over 36 months | ~96% reduction | OpenAI pricing history (derived) | 2023–2026 | projects/widget-defensibility
+- Open-weight model parity with GPT-4 class (MMLU/MT-Bench) | ~95% (Llama 3 405B, Qwen 2.5 72B) | Meta AI / Alibaba Qwen technical reports | 2024–2025 | projects/widget-defensibility
+- Time for open-weight model to reach frontier capability parity | 4–8 quarters | LMSYS Chatbot Arena / Papers With Code benchmark tracking | 2023–2025 | projects/widget-defensibility
+- DeepSeek V3/R1 claimed training cost | $5–6M (vs. $50–100M+ for comparable US models) | DeepSeek technical report / industry analysis | 2024–2025 | projects/widget-defensibility
+- Platform feature absorption rate (standalone SaaS features) | ~70% lose >50% TAM within 24 months of platform entry | a16z "Innovator's Dilemma in SaaS" / CBInsights platform-kill analysis | 2021–2023 | projects/widget-defensibility
+- Standalone feature survival rate post-platform absorption | ~20% survive by vertical deepening or upmarket move; ~10% acquired | a16z / CBInsights | 2021–2023 | projects/widget-defensibility
+- Behavioral switching cost estimate (SMB AI widget, 12+ month user) | 40–80 hours operator re-implementation time | Derived from SMB operational complexity benchmarks | 2025–2026 | projects/widget-defensibility
+- Time lag between technical parity and customer switching | 12–24 months (historical analog: cloud storage, ESP commoditization) | a16z cloud economics research / ESP industry history | 2022–2024 | projects/widget-defensibility
+- Deep vertical integration engineering investment | $200K–$500K equivalent per segment | Derived from integration complexity benchmarks | 2025 | projects/widget-defensibility
+- Capability moat depreciation rate (AI widget layer) | ~80% per year in current environment | Derived from API price decline + open-weight parity timeline | 2026 | projects/widget-defensibility
+- GoHighLevel estimated ARR | $200M+ | Industry reports / SaaS community estimates | 2025 | projects/widget-defensibility
+- Minimum customer volume to activate multi-tenant data flywheel | ~1,000+ active customers in specific vertical | Derived from data science benchmarks on behavioral pattern detection | 2025 | projects/widget-defensibility
