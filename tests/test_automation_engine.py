@@ -330,7 +330,7 @@ class TestSendInvoicePaymentReminders:
         db.table.side_effect = table_side_effect
 
         # Patch log_activity so it does not attempt real DB calls
-        with patch("backend.services.automation_engine.log_activity", create=True):
+        with patch("backend.services.activity.log_activity", create=True):
             from backend.services.automation_engine import send_invoice_payment_reminders
             result = await send_invoice_payment_reminders()
 
@@ -339,9 +339,9 @@ class TestSendInvoicePaymentReminders:
         call_kwargs = mock_send_email.call_args.kwargs
         assert "overdue" in call_kwargs.get("subject", "").lower()
 
-    @patch("backend.services.automation_engine.send_sms", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled.billing_jobs.send_sms", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_due_tomorrow_sends_reminder(
         self, mock_get_db, mock_send_email, mock_send_sms
     ):
@@ -387,7 +387,7 @@ class TestSendInvoicePaymentReminders:
 
         db.table.side_effect = table_side_effect
 
-        with patch("backend.services.automation_engine.log_activity", create=True):
+        with patch("backend.services.activity.log_activity", create=True):
             from backend.services.automation_engine import send_invoice_payment_reminders
             result = await send_invoice_payment_reminders()
 
@@ -396,8 +396,8 @@ class TestSendInvoicePaymentReminders:
         call_kwargs = mock_send_email.call_args.kwargs
         assert "tomorrow" in call_kwargs.get("subject", "").lower()
 
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_already_reminded_today_skips(self, mock_get_db, mock_send_email):
         """activity_log dedup hit for today → email NOT sent → returns 0."""
         db = MagicMock()
@@ -442,8 +442,8 @@ class TestSendInvoicePaymentReminders:
         assert result == 0
         mock_send_email.assert_not_awaited()
 
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_invoice_with_no_lead_id_skips_gracefully(
         self, mock_get_db, mock_send_email
     ):
@@ -500,8 +500,8 @@ class TestSendWeeklyIntelligenceBriefs:
     Setting anthropic_api_key to an empty string skips the AI generation block.
     """
 
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_tuesday_returns_zero_immediately(self, mock_get_db, mock_send_email):
         """Non-Monday weekday → returns 0, no email sent.
 
@@ -513,7 +513,7 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation_engine.datetime") as mock_dt:
+        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt:
             mock_dt.now.return_value = _KNOWN_TUESDAY
             mock_dt.fromisoformat = datetime.fromisoformat
             result = await send_weekly_intelligence_briefs()
@@ -521,8 +521,8 @@ class TestSendWeeklyIntelligenceBriefs:
         assert result == 0
         mock_send_email.assert_not_awaited()
 
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_monday_paid_tenant_sends_brief(self, mock_get_db, mock_send_email):
         """Monday + paid tenant + no dedup hit → email sent → returns 1."""
         db = MagicMock()
@@ -558,7 +558,7 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation_engine.datetime") as mock_dt, \
+        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt, \
              patch("backend.config.settings") as mock_settings, \
              patch("backend.services.activity.log_activity"):
             mock_dt.now.return_value = _KNOWN_MONDAY
@@ -572,8 +572,8 @@ class TestSendWeeklyIntelligenceBriefs:
         call_kwargs = mock_send_email.call_args.kwargs
         assert "My Biz" in call_kwargs.get("subject", "")
 
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_already_sent_this_week_skips(self, mock_get_db, mock_send_email):
         """Monday but dedup hit in activity_log → returns 0, no email sent."""
         db = MagicMock()
@@ -609,7 +609,7 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation_engine.datetime") as mock_dt, \
+        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt, \
              patch("backend.config.settings") as mock_settings:
             mock_dt.now.return_value = _KNOWN_MONDAY
             mock_dt.fromisoformat = datetime.fromisoformat
@@ -619,8 +619,8 @@ class TestSendWeeklyIntelligenceBriefs:
         assert result == 0
         mock_send_email.assert_not_awaited()
 
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_free_plan_tenant_skipped(self, mock_get_db, mock_send_email):
         """Free-plan tenants are excluded by .neq('plan', 'free') at the DB level.
 
@@ -634,7 +634,7 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation_engine.datetime") as mock_dt, \
+        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt, \
              patch("backend.config.settings") as mock_settings:
             mock_dt.now.return_value = _KNOWN_MONDAY
             mock_dt.fromisoformat = datetime.fromisoformat
@@ -718,8 +718,8 @@ class TestProcessRecurringInvoices:
         db.table.side_effect = table_side_effect
         return db, state
 
-    @patch("backend.services.automation_engine.fire_event_background")
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled_jobs_ext.fire_event_background")
+    @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_claim_lost_skips_duplicate_child_invoice(self, mock_get_db, mock_fire_event):
         """If another worker advances the parent first, no duplicate child invoice is created."""
         parent = {
