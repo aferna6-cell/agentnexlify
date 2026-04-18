@@ -160,7 +160,12 @@ def test_high_risk_routes_do_not_bypass_tenant_scope_helpers():
         repo_root / "backend" / "routers" / "conversation_inbox.py",
         repo_root / "backend" / "routers" / "leads.py",
         repo_root / "backend" / "routers" / "widget_helpers.py",
-        repo_root / "backend" / "routers" / "analytics.py",
+        # analytics was split into a package in 1f69417; scan each submodule
+        repo_root / "backend" / "routers" / "analytics" / "dashboard.py",
+        repo_root / "backend" / "routers" / "analytics" / "operations.py",
+        repo_root / "backend" / "routers" / "analytics" / "insights.py",
+        repo_root / "backend" / "routers" / "analytics" / "control_center.py",
+        repo_root / "backend" / "routers" / "analytics" / "recovery.py",
         repo_root / "backend" / "routers" / "invoices.py",
         repo_root / "backend" / "services" / "booking.py",
     ]
