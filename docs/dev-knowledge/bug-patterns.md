@@ -1913,3 +1913,23 @@ https://claude.ai/code/session_017mj9GRVeM9whiQKy7B5PhQ
 **Author:** Claude
 **Files Changed:** frontend/src/pages/Contact.jsx,frontend/src/pages/TermsOfService.jsx,scripts/seed_mtoptions_faq_trial.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: correct ToS banner removal + button color (E2E-verified)
+
+- TermsOfService.jsx: re-remove legal-disclaimer gold banner (formatter
+  had restored it after first edit; confirmed absent via E2E)
+- contact.css: add color:#fff !important to .contact-submit — .legal-content a
+  rule (specificity 0,1,1) was overriding button text color in Vite bundle;
+  !important ensures white text regardless of cascade order
+- e2e/partner-feedback-fixes.spec.ts: 7 smoke tests covering banner removal,
+  button visibility + color, and public page load (all pass)
+- playwright.config.ts: Playwright config targeting built frontend at :4173
+
+https://claude.ai/code/session_017mj9GRVeM9whiQKy7B5PhQ
+**Date:** 2026-04-18
+**Commit:** f8e674e
+**Author:** Claude
+**Files Changed:** e2e/partner-feedback-fixes.spec.ts,frontend/src/pages/TermsOfService.jsx,frontend/src/styles/contact.css,playwright.config.ts
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
