@@ -10,6 +10,7 @@ os.environ["TESTING"] = "1"
 # (wrong target — auth_service reads backend.config.settings directly), causing 401.
 os.environ.setdefault("API_SECRET_KEY", "test-secret-key-for-jwt")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-jwt")
+os.environ.setdefault("ADMIN_API_SECRET_KEY", "test-admin-secret-key-for-jwt")
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
