@@ -89,7 +89,11 @@ URLs discovered (saved to known-urls.json for dedup):
 
 ## Auto-ingest 2026-04-18T10:04:39Z
 
-- [ ] `raw/competitors/touhid-hasan-field-service-management-in-highlevel.md` — Touhid Hasan: Field Service Management in HighLevel (competitors)
-- [ ] `raw/competitors/what-actually-happens-after-a-lead-comes-in-when-your-system-is-set-up-right.md` — What actually happens after a lead comes in (when your system is set up right) (competitors)
-- [ ] `raw/ai-llm/claude-code-auto-mode-a-safer-way-to-skip-permissions-anthropic.md` — Claude Code auto mode: a safer way to skip permissions \ Anthropic (ai-llm)
-- [ ] `raw/ai-llm/effective-harnesses-for-long-running-agents-anthropic.md` — Effective harnesses for long-running agents \ Anthropic (ai-llm)
+_All compiled 2026-04-18 cron run._
+
+## Compiled 2026-04-18 cron run
+
+- ~~[competitors] Touhid Hasan: Field Service Management in HighLevel~~ → compiled `wiki/competitors/ghl-field-service-management.md`
+- ~~[competitors] What actually happens after a lead comes in (when your system is set up right)~~ → compiled `wiki/competitors/ghl-lead-lifecycle-automation.md`
+- ~~[ai-llm] Claude Code auto mode: a safer way to skip permissions~~ → compiled `wiki/ai-llm/claude-code-auto-mode.md`
+- ~~[ai-llm] Effective harnesses for long-running agents~~ → compiled `wiki/ai-llm/effective-harnesses-long-running-agents.md`

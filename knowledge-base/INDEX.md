@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 30 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-14
+- Total articles: 34 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-18
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -19,6 +19,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Intercom Fin Apex — Custom Vertical Model for Customer Service](wiki/competitors/intercom-fin-apex-vertical-models.md) — Custom-trained model beats GPT-5.4 and Opus 4.5 at service; ~2M issues/week, ~$100M ARR, signals vertical AI companies building own models. Tags: intercom, fin-apex, vertical-models, customer-service-ai
 - [GoHighLevel Lead Recovery Positioning — Strategy vs. System](wiki/competitors/ghl-lead-recovery-system.md) — GHL's lead-retention frame: $900 of every $3,000 ad spend burned; "one platform, not stitched tools" + white-label agency resale as distribution moat. Tags: gohighlevel, lead-response-time, speed-to-lead, multi-channel-inbox, ai-automation, small-business
 - [Intercom Fin Monitors — Custom Scorecard QA for AI Agents](wiki/competitors/intercom-fin-monitors-observability.md) — Structured AI conversation QA via Custom Scorecards; 8,000 customers, 67% resolution rate, 2M queries/week; observability as competitive moat. Tags: intercom, fin, ai-observability, custom-scorecards, qa-automation, ai-support-agents
+- [GoHighLevel Field Service Management — FieldTask Integration](wiki/competitors/ghl-field-service-management.md) — FieldTask's native build inside GHL extends the operating-system positioning into dispatch, route optimization, and proof-of-work for service businesses. Tags: gohighlevel, field-service-management, fieldtask, operations-ops, tool-sprawl, retention
+- [GoHighLevel Lead Lifecycle Automation — "System Is The Strategy"](wiki/competitors/ghl-lead-lifecycle-automation.md) — Full post-lead workflow (instant response, AI continuation, dormancy sequences, in-thread booking, review automation) framed as one integrated system. Tags: gohighlevel, lead-lifecycle, speed-to-lead, automation, review-automation, multi-channel-inbox
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -30,6 +32,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Building Effective AI Agents — Anthropic's Pattern Catalog](wiki/ai-llm/anthropic-building-effective-agents.md) — Five composable workflow patterns (chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) plus autonomous agents; simplicity over frameworks. Tags: agent-patterns, workflows, orchestration, tool-use, anthropic
 - [Claude Opus 4.7 — Self-Verifying Agentic Intelligence](wiki/ai-llm/claude-opus-4-7-release.md) — CursorBench 58%→70%, Rakuten-SWE-Bench 3x production-task lift, self-verification + task budgets + xhigh effort at Opus 4.6 pricing. Tags: claude, opus-4-7, self-verification, xhigh-effort, task-budgets, agentic-coding
 - [Claude Code Best Practices — Anthropic's Official Playbook](wiki/ai-llm/claude-code-best-practices.md) — Context window is the root constraint; five levers are verification criteria, Plan Mode, prompt specificity, CLAUDE.md hygiene, and permission discipline. Tags: claude-code, agentic-coding, plan-mode, claude-md, context-management, verification-criteria
+- [Claude Code Auto Mode — Classifier-Gated Permission Bypass](wiki/ai-llm/claude-code-auto-mode.md) — Two-stage Sonnet 4.6 transcript classifier + prompt-injection probe; 0.4% FPR, 17% FNR; middle ground between manual prompts and skip-permissions. Tags: claude-code, auto-mode, permissions, security, transcript-classifier, prompt-injection, sonnet-4-6
+- [Effective Harnesses for Long-Running Agents — Initializer + Coding Agent](wiki/ai-llm/effective-harnesses-long-running-agents.md) — Two-part harness (initializer writes feature-list/init.sh/progress file; coding agent works one feature per session with clean-state invariant) fixes one-shot attempts and premature declare-done failures. Tags: claude-agent-sdk, long-running-agents, context-management, initializer-agent, feature-list, progress-file, multi-context-window
 
 ### Small Business SaaS
 _No articles yet._
