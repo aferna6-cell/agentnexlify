@@ -128,6 +128,7 @@ Example:
 - LLM frontier model price reduction 2023→2024 | ~80–95% real-terms reduction across major providers | Multiple provider pricing histories | 2024 | projects/agentnexlify-anthropic-price-shock
 - Estimated probability of 3× Anthropic price increase in any 12-month period | 10–20% (tail risk estimate, not base case) | Derived from historical LLM pricing behavior + competitive dynamics analysis | 2026 | projects/agentnexlify-anthropic-price-shock
 
+<<<<<<< HEAD
 <!-- from projects/should-agentnexlify-vertical-specialize-contractor on 2026-04-17 -->
 - Horizontal SMB AI widget monthly churn rate | 4.5–5.0% | ChartMogul SaaS Churn Report 2024 (cross-reference) | 2024 | projects/vertical-vs-horizontal
 - Vertical SMB SaaS monthly churn rate | 2.0–3.0% | SaaS Capital Vertical SaaS Benchmarks 2023 | 2023 | projects/vertical-vs-horizontal
@@ -150,3 +151,24 @@ Example:
 - Vertical-to-horizontal SaaS time-to-$1M ARR advantage | 2–3× faster | SaaS Capital vertical SaaS research 2018–2022 | 2022 | projects/vertical-vs-horizontal (confirmed from research log)
 - Contractor vertical competitive field (native AI widget competitors) | 3–5 credible competitors (Hatch, Signpost, Siro, partial Podium/Birdeye) | G2 category data April 2026 | 2026-04 | projects/vertical-vs-horizontal
 - Horizontal SMB AI widget competitive field | 15+ credible competitors at sub-$500/month | G2 category data April 2026 | 2026-04 | projects/vertical-vs-horizontal
+=======
+<!-- from projects/should-agentnexlify-vertical-specialize-contractor on 2026-04-15 -->
+- US licensed contractor businesses (total) | ~10M | IBIS World Contractor Industry Reports | 2024–2025 | projects/agentnexlify-vertical-horizontal
+- US contractor businesses (top 4 trades: HVAC, plumbing, electrical, roofing) | ~3–4M | IBIS World trade segment breakdowns | 2024–2025 | projects/agentnexlify-vertical-horizontal
+- Contractor SAM for AI widget ($149–$249/mo) — businesses >$300K revenue, >2 employees | ~1.5–2M | Derived from IBIS World + SBA small business size data | 2025 | projects/agentnexlify-vertical-horizontal
+- AgentNexLiFy contractor vertical ARR potential at 1% SAM penetration, $199/mo | $29M–$47M ARR | Derived model | 2026 | projects/agentnexlify-vertical-horizontal
+- ServiceTitan valuation | $9.5B | Reported financing round | 2022 | projects/agentnexlify-vertical-horizontal
+- ServiceTitan founding to $9.5B valuation timeline | 10 years (founded 2012) | Public records | 2022 | projects/agentnexlify-vertical-horizontal
+- Jobber pricing range | $69–$349/month | Jobber.com published pricing | 2025 | projects/agentnexlify-vertical-horizontal
+- ServiceTitan pricing range | $250–$600/month per location | Industry reports / operator surveys | 2024 | projects/agentnexlify-vertical-horizontal
+- Housecall Pro pricing range | $49–$199/month | Housecall Pro published pricing | 2025 | projects/agentnexlify-vertical-horizontal
+- Contractor vertical LTV/CAC estimate (agency channel, $199/mo, 2.5% monthly churn) | 9:1 to 17:1 | Derived model using prior research CAC and LTV assumptions | 2026 | projects/agentnexlify-vertical-horizontal
+- Horizontal SMB LTV/CAC estimate (self-serve, $149/mo, 4.7% monthly churn) | 2.7:1 to 7:1 | Derived model using prior research data points | 2026 | projects/agentnexlify-vertical-horizontal
+- Vertical SaaS historical success rate (started vertical, expanded to $10M+ ARR) | >80% of sample companies studied | SaaS Capital / Bessemer Venture Partners vertical SaaS research 2018–2022 | 2022 | projects/agentnexlify-vertical-horizontal
+- US skilled trades unfilled jobs | ~650,000 | Bureau of Labor Statistics | 2024–2025 | projects/agentnexlify-vertical-horizontal
+- Google LSA share of contractor digital leads | ~60–70% | Industry practitioner estimates / Search Engine Land contractor marketing reports | 2024 | projects/agentnexlify-vertical-horizontal
+- 30-year US mortgage rate (2026 context) | ~6.5–7% | Federal Reserve / Freddie Mac PMMS | 2026-Q1 | projects/agentnexlify-vertical-horizontal
+- GoHighLevel ARR (estimated) | $200M+ | Industry reports / founder interviews | 2024–2025 | projects/agentnexlify-vertical-horizontal
+- ServiceTitan acquisition of Hatch (AI sales comms) | confirmed acquisition | Public announcement | 2022 | projects/agentnexlify-vertical-horizontal
+- Typical contractor job value range | $300–$3,000 per service call | Industry trade association data / contractor operator surveys | 2024 | projects/agentnexlify-vertical-horizontal
+>>>>>>> 6662e74 (research: should-agentnexlify-vertical-specialize-contractor)

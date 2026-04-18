@@ -123,7 +123,11 @@ The short answer: a 3× Anthropic price increase is an existential stress test, 
 
 ---
 
+<<<<<<< HEAD
 ## 2026-04-17 — should-agentnexlify-vertical-specialize-contractor
+=======
+## 2026-04-15 — should-agentnexlify-vertical-specialize-contractor
+>>>>>>> 6662e74 (research: should-agentnexlify-vertical-specialize-contractor)
 
 **Question:** Should AgentNexLiFy vertical-specialize (contractors only) or stay horizontal across SMBs?
 **Depth:** deep
@@ -131,8 +135,15 @@ The short answer: a 3× Anthropic price increase is an existential stress test, 
 **Model:** claude-sonnet-4-6
 
 ### Headline
+<<<<<<< HEAD
 **The question:** Should AgentNexLiFy vertically specialize in contractors only, or stay horizontal across SMBs?
 **The answer:** Vertical-specialize into contractors now — with a deliberate re-evaluation gate at $1.5M ARR.
 Six research lenses converge on this conclusion with meaningful tension at only one point (the contrarian lens raises a legitimate risk about contractor market ceiling). Here is
+=======
+**Should AgentNexLiFy vertical-specialize into contractors or stay horizontal across SMBs?**
+The research converges on a clear recommendation with one material qualification: **vertical-specialize into contractors, via the agency channel, with a defined 18-month review gate.**
+**What 6 lenses found:**
+Four of six lenses — Technical, Economic, Historical, and First-Principles — independently point 
+>>>>>>> 6662e74 (research: should-agentnexlify-vertical-specialize-contractor)
 
 ---

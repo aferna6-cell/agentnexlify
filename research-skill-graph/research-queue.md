@@ -70,4 +70,8 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [ ] How does the EU AI Act compliance overhead translate into specific CAC increases for EU-market SMB AI widget vendors in 2026?
 - [ ] Is there a measurable LTV/CAC difference between "widget-only" companies and "widget-as-wedge" companies at the same ARR level, and at what ARR does the divergence become statistically significant?
 - [ ] What is AgentNexLiFy's actual current Anthropic API cost as a percentage of monthly revenue? (This single number determines severity of impact; without it, all models have wide error bars)
+<<<<<<< HEAD
 - [ ] What is the actual number of US SMB contractors (NAICS 238xxx) who are currently paying for any SaaS tool above $100/month? This determines whether the contractor SAM supports venture-scale growth or a profitable-but-capped business.
+=======
+- [ ] Has ServiceTitan publicly disclosed a website chat widget or AI-powered lead capture product on their 2026 roadmap? (Resolves Contrarian Counter 1; highest priority intelligence gap)
+>>>>>>> 6662e74 (research: should-agentnexlify-vertical-specialize-contractor)
