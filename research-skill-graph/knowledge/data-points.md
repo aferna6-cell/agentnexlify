@@ -172,3 +172,30 @@ Example:
 - ServiceTitan acquisition of Hatch (AI sales comms) | confirmed acquisition | Public announcement | 2022 | projects/agentnexlify-vertical-horizontal
 - Typical contractor job value range | $300–$3,000 per service call | Industry trade association data / contractor operator surveys | 2024 | projects/agentnexlify-vertical-horizontal
 >>>>>>> 6662e74 (research: should-agentnexlify-vertical-specialize-contractor)
+
+<!-- from projects/how-have-historical-document-automation-waves-fax- on 2026-04-18 -->
+- US fax machine installed base | ~300K (1984) → 4M (1988) → 22M (1994) → peak ~30M (1997) | FCC Historical Reports / industry data | 1984–1997 | projects/document-automation-waves
+- Fax machine price at mass SMB adoption inflection | <$300 (1991–1992) | Consumer electronics industry data | 1991–1992 | projects/document-automation-waves
+- US business email accounts | ~10M (1995) → 55M (1999) → 130M (2003) | IDC/Radicati Group historical email statistics | 1995–2003 | projects/document-automation-waves
+- SMB email adoption rate | ~60% by 2000, ~90% by 2004 | IDC SMB technology adoption surveys | 2000–2004 | projects/document-automation-waves
+- DocuSign paying customers | ~50K (2008) → 300K (2013) → 1M (2016) → 4M+ (2020) | DocuSign SEC filings / investor reports | 2008–2020 | projects/document-automation-waves
+- SMB e-signature adoption (US) | ~15% (2015) → ~35% (2019) → ~50% (2023) | DocuSign/Adobe market research estimates | 2015–2023 | projects/document-automation-waves
+- DocuSign personal plan price | $30/month (2010) → $15/month (2017) → $10/month (2023) | DocuSign public pricing pages | 2010–2023 | projects/document-automation-waves
+- HelloSign paying customers at Dropbox acquisition | ~80,000 | Dropbox acquisition announcement / press reports | 2019 | projects/document-automation-waves
+- DocuSign SMB customer mix from Salesforce AppExchange | estimated 30–40% of SMB customers via partner channels | Salesforce AppExchange partner reports / DocuSign investor day | 2015–2018 | projects/document-automation-waves
+- GPT-4 inference cost | ~$0.06/1K tokens (2023) | OpenAI pricing page | 2023 | projects/document-automation-waves
+- GPT-4o inference cost | ~$0.005/1K tokens input (2024) | OpenAI pricing page | 2024 | projects/document-automation-waves
+- AI inference cost reduction rate | approximately 10× per 24 months | Epoch AI ML Compute Research | 2024 | projects/document-automation-waves
+- Microsoft 365 US SMB installed base share | ~60% | Salesforce SMB Trends Report / IDC | 2024 | projects/document-automation-waves
+- Google Workspace US SMB installed base share | ~28% | IDC workplace software market share | 2024 | projects/document-automation-waves
+- Shopify global merchant count | ~4.4M | Shopify Q4 2024 earnings report | 2024 | projects/document-automation-waves
+- Intuit/QuickBooks global small business users | ~30M | Intuit fiscal year 2024 earnings | 2024 | projects/document-automation-waves
+- Median US SMB annual software spend (5–50 employees) | $10,000–$15,000 total | Salesforce SMB Trends Report 2023 | 2023 | projects/document-automation-waves
+- SMB per-tool monthly spend ceiling (no-justification-required) | ~$100–$150/month | Salesforce/Gartner SMB purchasing behavior research | 2023–2024 | projects/document-automation-waves
+- Heavy user concentration in B2B AI SaaS | top 10% of customers consume 60–70% of compute | Andreessen Horowitz AI SaaS usage research | 2024 | projects/document-automation-waves
+- Time from fax availability to 50% SMB penetration | ~9 years (1984→1993) | FCC/industry installed base data | historical | projects/document-automation-waves
+- Time from Hotmail launch to 50% SMB email adoption | ~4 years (1996→2000) | IDC historical data | historical | projects/document-automation-waves
+- HubSpot AI tools adoption within HubSpot SMB base | ~35% enabled | HubSpot 2025 State of Marketing Report | 2025 | projects/document-automation-waves
+- Notion AI adoption among Notion Business tier users | ~40% | Notion usage reports / press | 2024–2025 | projects/document-automation-waves
+- Copilot for Microsoft 365 organizational adoption | 400,000+ organizations | Microsoft earnings / press | early 2025 | projects/document-automation-waves
+- PandaDoc SMB pricing | $19/month (2014) → $35/month (2024) | PandaDoc public pricing history | 2014–2024 | projects/document-automation-waves

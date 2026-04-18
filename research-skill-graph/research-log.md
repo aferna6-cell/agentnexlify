@@ -147,3 +147,16 @@ Four of six lenses — Technical, Economic, Historical, and First-Principles —
 >>>>>>> 6662e74 (research: should-agentnexlify-vertical-specialize-contractor)
 
 ---
+
+## 2026-04-18 — how-have-historical-document-automation-waves-fax-
+
+**Question:** How have historical document-automation waves (fax, email, workflow SaaS) priced and distributed to SMBs, and what applies now?
+**Depth:** standard
+**Folder:** [[projects/how-have-historical-document-automation-waves-fax-]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**What historical document-automation waves teach about pricing and distributing AI tools to SMBs — and what applies now**
+Three prior waves of document automation — fax (1984–1995), email/internet (1995–2005), and workflow SaaS (2010–2024) — share a durable pattern: the technology that wins SMBs does so not through direct enterprise-style sales but through **channel embedding, price compression t
+
+---
