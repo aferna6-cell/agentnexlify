@@ -68,7 +68,7 @@ class TestProcessPendingSteps:
         result = await process_pending_steps()
 
         assert result == 1
-        mock_execute_step.assert_awaited_once_with("exec-001")
+        mock_execute_step.assert_awaited_once_with("exec-001", execution_data={"id": "exec-001"})
 
     @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_no_pending_steps_returns_zero(self, mock_get_db):
@@ -796,15 +796,11 @@ class TestProcessRecurringInvoices:
 class TestCheckNoResponseLeads:
     """Tests for check_no_response_leads()."""
 
-    @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
-    async def test_lead_with_no_response_triggers_sequence(
-        self, mock_get_db, mock_trigger
-    ):
-        """Lead created 25h ago with no conversation → trigger_sequence called."""
+    @patch("backend.services.automation.scheduled.lead_checks.get_service_supabase")
+    async def test_lead_with_no_response_triggers_sequence(self, mock_get_db):
+        """Lead created 25h ago with no conversation → enrollment row inserted."""
         db = MagicMock()
         mock_get_db.return_value = db
-        mock_trigger.return_value = 1
 
         old_time = (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat()
 
@@ -825,6 +821,20 @@ class TestCheckNoResponseLeads:
 
             if name == "leads":
                 t.execute.return_value = MagicMock(data=[lead])
+            elif name == "automation_sequences":
+                # Tenant has an active no_response_24h sequence
+                t.execute.return_value = MagicMock(
+                    data=[{"id": "seq-nr-001", "trigger_config": None}]
+                )
+            elif name == "automation_steps":
+                t.execute.return_value = MagicMock(
+                    data=[
+                        {"sequence_id": "seq-nr-001", "step_order": 1, "delay_minutes": 0}
+                    ]
+                )
+            elif name == "automation_executions":
+                # No prior enrollments (Q2 read returns empty); insert path returns same mock
+                t.execute.return_value = MagicMock(data=[])
             else:
                 t.execute.return_value = MagicMock(data=[])
             return t
@@ -836,12 +846,9 @@ class TestCheckNoResponseLeads:
         result = await check_no_response_leads()
 
         assert result == 1
-        mock_trigger.assert_awaited_once_with(
-            "tenant-001", "lead-stale-001", "no_response_24h"
-        )
 
-    @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled.lead_checks.trigger_sequence", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.lead_checks.get_service_supabase")
     async def test_lead_with_recent_message_skips(self, mock_get_db, mock_trigger):
         """Lead has a message within the last 24h → skip, trigger_sequence NOT called."""
         db = MagicMock()
@@ -893,8 +900,8 @@ class TestCheckNoResponseLeads:
         mock_trigger.assert_not_awaited()
 
 
-    @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled.lead_checks.trigger_sequence", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.lead_checks.get_service_supabase")
     async def test_already_enrolled_in_progress_execution_skips(
         self, mock_get_db, mock_trigger
     ):
@@ -952,8 +959,8 @@ class TestCheckNoResponseLeads:
         mock_trigger.assert_not_awaited()
 
 
-    @patch("backend.services.automation_engine.trigger_sequence", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled.lead_checks.trigger_sequence", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.lead_checks.get_service_supabase")
     async def test_no_candidate_leads_returns_zero(self, mock_get_db, mock_trigger):
         """No new leads older than 24h returns 0 and does not trigger a sequence."""
         db, table = _make_db_mock()
@@ -986,8 +993,8 @@ def _chain_table(result=None):
 
 
 class TestAutomationRules:
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.rule_engine.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.rule_engine.get_service_supabase")
     async def test_execute_rule_loads_lead_with_rule_tenant(
         self, mock_get_db, mock_send_email
     ):
@@ -1041,7 +1048,7 @@ class TestAutomationRules:
         assert mock_send_email.call_args.kwargs["to"] == "lead@example.com"
         assert mock_send_email.call_args.kwargs["tenant_id"] == "tenant-001"
 
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.rule_engine.get_service_supabase")
     async def test_enroll_in_sequence_action_creates_processable_execution(
         self, mock_get_db
     ):

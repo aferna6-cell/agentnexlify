@@ -52,6 +52,7 @@ def test_client(mock_settings):
         patch("backend.routers.widget_lead.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_booking.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_helpers.get_service_supabase", return_value=db_mock),
+        patch("backend.services.branding_service._get_service_supabase", return_value=db_mock),
     ]
     for p in patches:
         p.start()
@@ -335,9 +336,13 @@ class TestPasswordReset:
 class TestBillingCheckout:
     """Test Stripe checkout session creation from the auth router."""
 
+    @patch("backend.routers.auth.ensure_plan_prices_configured")
+    @patch("backend.routers.auth.ensure_stripe_configured")
     @patch("backend.routers.auth.stripe.checkout.Session.create")
     @patch("backend.routers.auth.get_or_create_customer")
-    def test_billing_checkout_returns_checkout_url(self, mock_customer, mock_create_session, test_client):
+    def test_billing_checkout_returns_checkout_url(
+        self, mock_customer, mock_create_session, mock_ensure_stripe, mock_ensure_prices, test_client
+    ):
         client, db_mock = test_client
         token = _make_auth_token()
 
@@ -349,6 +354,8 @@ class TestBillingCheckout:
             }],
         })
 
+        mock_ensure_stripe.return_value = None
+        mock_ensure_prices.return_value = {"monthly": "price_growth_monthly"}
         mock_customer.return_value = MagicMock(id="cus_123")
         mock_create_session.return_value = MagicMock(url="https://checkout.stripe.test/session_123")
 
