@@ -129,8 +129,11 @@ export default function Contact() {
             className="contact-submit"
             style={{
               display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               textDecoration: "none",
               width: "auto",
+              color: "#fff",
             }}
           >
             Book a Demo

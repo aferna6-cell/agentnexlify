@@ -29,12 +29,6 @@ export default function TermsOfService() {
         <h1>Terms of Service</h1>
         <p className="legal-updated">Last updated: March 2026</p>
 
-        <p className="legal-disclaimer">
-          <strong>Note:</strong> This document is a starting point. We recommend
-          consulting with a qualified attorney before relying on it for legal
-          compliance.
-        </p>
-
         <section>
           <h2>1. What AgentNexLiFy Is</h2>
           <p>
