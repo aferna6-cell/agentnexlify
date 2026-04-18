@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 42 (plus 1 in `_outputs/`)
+- Total articles: 43 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-18
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -41,6 +41,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Claude Code Best Practices — Anthropic's Official Playbook](wiki/ai-llm/claude-code-best-practices.md) — Context window is the root constraint; five levers are verification criteria, Plan Mode, prompt specificity, CLAUDE.md hygiene, and permission discipline. Tags: claude-code, agentic-coding, plan-mode, claude-md, context-management, verification-criteria
 - [Claude Code Auto Mode — Classifier-Gated Permission Bypass](wiki/ai-llm/claude-code-auto-mode.md) — Two-stage Sonnet 4.6 transcript classifier + prompt-injection probe; 0.4% FPR, 17% FNR; middle ground between manual prompts and skip-permissions. Tags: claude-code, auto-mode, permissions, security, transcript-classifier, prompt-injection, sonnet-4-6
 - [Effective Harnesses for Long-Running Agents — Initializer + Coding Agent](wiki/ai-llm/effective-harnesses-long-running-agents.md) — Two-part harness (initializer writes feature-list/init.sh/progress file; coding agent works one feature per session with clean-state invariant) fixes one-shot attempts and premature declare-done failures. Tags: claude-agent-sdk, long-running-agents, context-management, initializer-agent, feature-list, progress-file, multi-context-window
+- [Memory for AI Agents — Three Architectures and the Ethics of Forgetting](wiki/ai-llm/memory-for-ai-agents-context-engineering.md) — Vector store vs rolling summarization vs temporal knowledge graph; Zep +18.5% long-horizon accuracy, Mem0 +26% memory benchmarks; memory is a governance surface. Tags: agent-memory, context-engineering, vector-store, temporal-knowledge-graph, mem0, zep, letta, context-rot
 
 ### Small Business SaaS
 _No articles yet._
