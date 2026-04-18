@@ -20,7 +20,7 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [x] Should AgentNexLiFy vertical-specialize (contractors only) or stay horizontal across SMBs? (depth:deep)
 - [x] How have historical document-automation waves (fax, email, workflow SaaS) priced and distributed to SMBs, and what applies now? (depth:standard)
 - [x] What is the real defensibility of a widget-first AI product once foundation models become commodity? (depth:deep)
-- [ ] Which SMB verticals have the highest willingness to pay for AI appointment booking and why? (depth:standard)
+- [x] Which SMB verticals have the highest willingness to pay for AI appointment booking and why? (depth:standard)
 - [ ] What regulatory risks (TCPA, state AI laws, CAN-SPAM) most threaten AgentNexLiFy's outbound automation? (depth:standard)
 - [ ] Is white-label reseller distribution (GoHighLevel model) a viable growth lever for AgentNexLiFy? (depth:standard)
 
@@ -76,3 +76,4 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [ ] Has ServiceTitan publicly disclosed a website chat widget or AI-powered lead capture product on their 2026 roadmap? (Resolves Contrarian Counter 1; highest priority intelligence gap)
 >>>>>>> 6662e74 (research: should-agentnexlify-vertical-specialize-contractor)
 - [ ] Has any pure-play widget-first AI company successfully navigated a foundation model commoditization cycle and retained >60% gross margin and >$10M ARR? (The cycle is new enough that no confirmed case study exists. This is the most important unknown.)
+- [ ] What percentage of HVAC/plumbing operators are already receiving AI booking features from ServiceTitan or Jobber — if >30%, the standalone market is partially absorbed and urgency increases

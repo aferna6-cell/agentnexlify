@@ -174,3 +174,16 @@ Three prior waves of document automation — fax (1984–1995), email/internet (
 Foundation model commoditization is not a future risk — it is al
 
 ---
+
+## 2026-04-18 — which-smb-verticals-have-the-highest-willingness-t
+
+**Question:** Which SMB verticals have the highest willingness to pay for AI appointment booking and why?
+**Depth:** standard
+**Folder:** [[projects/which-smb-verticals-have-the-highest-willingness-t]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**Which SMB verticals have the highest willingness to pay for AI appointment booking — and why?**
+After running six research lenses against available market data, practitioner evidence, and structural analysis, three SMB verticals emerge with reliably high willingness to pay (WTP) for AI appointment booking: **home services/field trades** (HVAC, plumbing, electrical, roofing), **healthcare-adjacen
+
+---

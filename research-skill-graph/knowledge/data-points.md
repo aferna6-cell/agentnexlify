@@ -215,3 +215,42 @@ Example:
 - Capability moat depreciation rate (AI widget layer) | ~80% per year in current environment | Derived from API price decline + open-weight parity timeline | 2026 | projects/widget-defensibility
 - GoHighLevel estimated ARR | $200M+ | Industry reports / SaaS community estimates | 2025 | projects/widget-defensibility
 - Minimum customer volume to activate multi-tenant data flywheel | ~1,000+ active customers in specific vertical | Derived from data science benchmarks on behavioral pattern detection | 2025 | projects/widget-defensibility
+
+<!-- from projects/which-smb-verticals-have-the-highest-willingness-t on 2026-04-18 -->
+- Home services inbound call answer rate (solo operator) | 38% | Marchex SMB call analytics 2024 | 2024 | projects/smb-ai-booking-wtp
+- Home services inbound call answer rate (3-5 person shop) | ~65% | Marchex SMB call analytics 2024 | 2024 | projects/smb-ai-booking-wtp
+- After-hours booking request share (home services) | 35–60% | Broadly/ServiceTitan operator data 2024 | 2024 | projects/smb-ai-booking-wtp
+- Missed call to competitor booking rate (home services) | 30–50% within 24 hours | BrightLocal local service research 2023 | 2023 | projects/smb-ai-booking-wtp
+- Dental practice no-show/cancellation rate | 15–25% | American Dental Association 2023 | 2023 | projects/smb-ai-booking-wtp
+- Med-spa no-show/cancellation rate | 20–35% | AmSpa industry data 2023 | 2023 | projects/smb-ai-booking-wtp
+- After-hours booking request share (dental/medical) | 40–55% | Zocdoc + Mindbody platform data aggregates 2024 | 2024 | projects/smb-ai-booking-wtp
+- AI confirmation loop no-show reduction rate | 25–40% | Klara Health / Weave platform data 2023 | 2023 | projects/smb-ai-booking-wtp
+- Dental front-desk wage increase 2021-2024 | 18–22% | ADA + BLS data 2024 | 2024 | projects/smb-ai-booking-wtp
+- Dental front-desk annual turnover rate | 35–45% | Dental Economics 2023 | 2023 | projects/smb-ai-booking-wtp
+- Solo attorney average annual revenue | $200,000–$600,000 | Clio Legal Trends Report 2023 | 2023 | projects/smb-ai-booking-wtp
+- Solo attorney billing rate | $200–$500/hour | Clio Legal Trends Report 2023 | 2023 | projects/smb-ai-booking-wtp
+- US unfilled trade jobs (home services labor shortage) | 650,000+ | Associated Builders and Contractors 2024 | 2024 | projects/smb-ai-booking-wtp
+- US trade labor shortage projected duration | Through 2035 (worsening) | ABC demographic analysis 2024 | 2024 | projects/smb-ai-booking-wtp
+- Clio legal platform user count | 150,000+ legal professionals | Clio company data 2024 | 2024 | projects/smb-ai-booking-wtp
+- LegalTech adoption acceleration | +40% since 2022 | Clio Legal Trends Report 2024 | 2024 | projects/smb-ai-booking-wtp
+- SMB average annual software stack spend 2017 | $1,100/year | Vendr SaaS spending data | 2017 | projects/smb-ai-booking-wtp
+- SMB average annual software stack spend 2024 | $5,200/year | Vendr SaaS spending data | 2024 | projects/smb-ai-booking-wtp
+- Boulevard (salon SaaS) funding raised | $70M | Crunchbase / company announcements | 2023 | projects/smb-ai-booking-wtp
+- Boulevard salon SaaS pricing (multi-chair) | $175/month | Boulevard pricing page 2024 | 2024 | projects/smb-ai-booking-wtp
+- Vagaro salon SaaS pricing range | $30–$130/month | Vagaro pricing page 2024 | 2024 | projects/smb-ai-booking-wtp
+- OpenTable acquisition price (Priceline) | $2.6B | Public record 2014 | 2014 | projects/smb-ai-booking-wtp
+- OpenTable base subscription price | $249/month | OpenTable pricing 2024 | 2024 | projects/smb-ai-booking-wtp
+- Mindbody acquisition price (Vista Equity) | $1.9B | Public record 2019 | 2019 | projects/smb-ai-booking-wtp
+- Weave platform estimated ARR | ~$200M | Public analyst estimates 2024 | 2024 | projects/smb-ai-booking-wtp
+- ServiceTitan estimated ARR | ~$600M | Public analyst estimates 2024 | 2024 | projects/smb-ai-booking-wtp
+- Slang.ai funding raised | $20M | Crunchbase 2023 | 2023 | projects/smb-ai-booking-wtp
+- Jobber estimated ARR | $250M+ | Public analyst estimates 2024 | 2024 | projects/smb-ai-booking-wtp
+- Median home services business annual revenue (solo/2-person) | $300,000–$1.2M | US Census Bureau SUSB 2022 | 2022 | projects/smb-ai-booking-wtp
+- Median dental practice annual revenue | $800,000–$1.2M | ADA Health Policy Institute 2023 | 2023 | projects/smb-ai-booking-wtp
+- Median med-spa annual revenue | $500,000–$1.5M | AmSpa 2023 | 2023 | projects/smb-ai-booking-wtp
+- AI booking WTP range (home services) | $200–$500/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
+- AI booking WTP range (dental) | $400–$700/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
+- AI booking WTP range (med-spa) | $200–$450/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
+- AI booking WTP range (legal solo) | $200–$600/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
+- AI booking WTP range (hair salon multi-chair 4+) | $100–$200/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
+- AI booking WTP range (restaurant casual) | $100–$200/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
