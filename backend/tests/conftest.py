@@ -4,14 +4,15 @@ import asyncio
 import os
 from unittest.mock import MagicMock
 
+# MUST be set before any backend import — backend.config reads env at import time.
+os.environ.setdefault("TESTING", "1")
+
 import httpx
 import pytest
 import starlette.background as starlette_background
 import starlette.concurrency as starlette_concurrency
 
 import backend.models.database as _db_module
-
-os.environ.setdefault("TESTING", "1")
 
 from backend.main import app
 
