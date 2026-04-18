@@ -1,6 +1,5 @@
 """Marketing Campaigns endpoints — email/SMS blast campaigns with AI generation."""
 
-import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -8,7 +7,6 @@ import anthropic
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from backend.config import settings
 from backend.limiter import limiter
 from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_service_supabase

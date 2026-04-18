@@ -11,7 +11,7 @@ the SMS arrives around 8 AM local time.
 """
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from backend.models.database import get_service_supabase

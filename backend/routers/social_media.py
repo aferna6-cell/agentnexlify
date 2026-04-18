@@ -8,7 +8,6 @@ import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.config import settings
 from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages

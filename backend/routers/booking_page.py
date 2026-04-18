@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.services.booking import build_reschedule_url, generate_available_slots, link_appointment_to_lead
+from backend.services.booking import generate_available_slots, link_appointment_to_lead
 from backend.services.email_sender import send_email
 from backend.services.tenant_scope import tenant_table
 from backend.services.webhook_dispatcher import fire_event_background

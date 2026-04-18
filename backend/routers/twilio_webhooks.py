@@ -7,9 +7,8 @@ We auto-text the caller and track the SMS conversation.
 import hashlib
 import hmac
 import logging
-from urllib.parse import urlencode
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from backend.config import settings

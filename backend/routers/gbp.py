@@ -11,9 +11,8 @@ Requires Google Business Profile API credentials configured in settings.
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
 
 from backend.config import settings
 from backend.models.database import get_service_supabase

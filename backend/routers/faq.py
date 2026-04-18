@@ -5,7 +5,6 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.models.schemas import FaqCreateRequest, FaqEntryResponse
-from backend.services.auth_service import get_current_tenant
 from backend.services.auth_service import get_current_tenant as _get_current_tenant
 from backend.services import branding_service as _branding_svc
 from backend.routers.auth import require_role

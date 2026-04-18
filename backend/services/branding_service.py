@@ -10,13 +10,12 @@ INDUSTRY_FAQS and _seed_industry_faqs for backward compat).
 """
 
 import logging
-import secrets
 from typing import Any
 
 from fastapi import HTTPException
 
 from backend.models.database import get_service_supabase as _get_service_supabase
-from backend.services.business_profiles import get_widget_defaults, resolve_business_profile_key
+from backend.services.business_profiles import resolve_business_profile_key
 
 logger = logging.getLogger(__name__)
 

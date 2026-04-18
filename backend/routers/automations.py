@@ -9,13 +9,12 @@ import hashlib
 import hmac
 import logging
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.routers.auth import _get_current_tenant, require_role
-from backend.services.activity import log_activity
 
 
 class AutomationConfigUpdate(BaseModel):

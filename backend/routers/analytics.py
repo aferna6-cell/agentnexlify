@@ -3,11 +3,10 @@
 import logging
 import time
 
-import anthropic
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from backend.dependencies import verify_tenant
 from backend.limiter import limiter
@@ -901,7 +900,6 @@ async def get_ai_insights(
     Returns metrics + Claude-generated analysis with actionable recommendations.
     Cached for 1 hour to avoid excessive API calls.
     """
-    import anthropic
     from backend.config import settings
 
     verify_tenant(claims, tenant_id)

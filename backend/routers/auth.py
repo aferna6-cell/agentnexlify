@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 import bcrypt
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 
@@ -31,7 +31,7 @@ from backend.models.schemas import (
     WidgetConfigDetail,
     WidgetConfigUpdateRequest,
 )
-from backend.services.auth_service import _decode_token, _jwt_secret, get_current_tenant
+from backend.services.auth_service import _jwt_secret, get_current_tenant
 from backend.services import branding_service as _branding_svc
 from backend.services.stripe_service import (
     PLAN_PRICES,
@@ -43,7 +43,6 @@ from backend.services.email_sender import send_email
 from backend.services.business_profiles import (
     get_dashboard_business_profile,
     get_widget_defaults,
-    resolve_business_profile_key,
 )
 
 logger = logging.getLogger(__name__)

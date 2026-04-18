@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 import anthropic
 from fastapi import HTTPException, Request
 
-from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email

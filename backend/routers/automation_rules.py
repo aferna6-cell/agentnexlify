@@ -1,6 +1,5 @@
 """Automation Rules CRUD endpoints with trigger evaluation and execution logs."""
 
-import asyncio
 import logging
 from datetime import datetime, timezone
 

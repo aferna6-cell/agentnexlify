@@ -24,12 +24,10 @@ POST /api/v1/onboarding/{tenant_id}/auto-kb
 
 import logging
 import os
-import re
 from datetime import datetime, timezone
 from typing import Any
 
 import anthropic
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -38,7 +36,7 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.routers.auth import require_role
 from backend.services.business_profiles import get_widget_defaults
-from backend.services.llm_runtime import call_claude_messages, call_claude_messages_sync
+from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
 

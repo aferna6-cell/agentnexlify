@@ -1,7 +1,6 @@
 """Automation sequences API — CRUD for email follow-up sequences and campaigns."""
 
 
-import asyncio
 
 from backend.services.task_utils import safe_create_task
 import logging
