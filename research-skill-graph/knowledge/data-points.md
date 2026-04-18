@@ -254,3 +254,24 @@ Example:
 - AI booking WTP range (legal solo) | $200–$600/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
 - AI booking WTP range (hair salon multi-chair 4+) | $100–$200/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
 - AI booking WTP range (restaurant casual) | $100–$200/month | Derived from competitive pricing + ROI analysis | 2026 | projects/smb-ai-booking-wtp
+
+<!-- from projects/what-regulatory-risks-tcpa-state-ai-laws-can-spam- on 2026-04-18 -->
+- TCPA statutory damages per violation (negligent) | $500 | 47 U.S.C. § 227(b)(3) | 2026-04 | projects/regulatory-risks-agentnexlify
+- TCPA statutory damages per violation (willful) | $1,500 | 47 U.S.C. § 227(b)(3) | 2026-04 | projects/regulatory-risks-agentnexlify
+- TCPA class action settlement range (typical) | $2M–$75M | TCPA World litigation database 2022–2024 | 2024 | projects/regulatory-risks-agentnexlify
+- TCPA defense costs before settlement | $500K–$2M | TCPA practitioner estimates | 2024 | projects/regulatory-risks-agentnexlify
+- Consent management platform cost (TrustedForm/Jornaya) | $500–$2,000/month | vendor published pricing | 2026 | projects/regulatory-risks-agentnexlify
+- In-house consent logging engineering cost (basic) | $10K–$30K one-time build | engineering estimate | 2026 | projects/regulatory-risks-agentnexlify
+- Compliance tech market size | $2B+ growing ~18% annually | Grand View Research 2024 | 2024 | projects/regulatory-risks-agentnexlify
+- FCC one-to-one consent rule projected TCPA litigation reduction | 30–40% | FCC rule-making record 2024 | 2024 | projects/regulatory-risks-agentnexlify
+- FCC one-to-one consent rule effective date | January 27, 2025 (vacated same month by 11th Circuit) | Insurance Marketing Coalition v. FCC, 11th Cir. 2025 | 2025 | projects/regulatory-risks-agentnexlify
+- BIPA violation statutory damages | $1,000 (negligent) to $5,000 (intentional) per violation | 740 ILCS 14/20 | 2026-04 | projects/regulatory-risks-agentnexlify
+- CAN-SPAM opt-out honor window | 10 business days | 15 U.S.C. § 7704(a)(3) | 2026-04 | projects/regulatory-risks-agentnexlify
+- GDPR maximum fine | 4% of global annual revenue or €20M, whichever higher | GDPR Art. 83 | 2026-04 | projects/regulatory-risks-agentnexlify
+- TCPA class action plaintiff bar concentration | ~200–300 serial plaintiffs filed >90% of individual suits (certain periods) | TCPA World database 2022–2024 | 2024 | projects/regulatory-risks-agentnexlify
+- Typical TCPA specialized insurance annual cost (meaningful limits) | $15K–$50K/year | insurance market data | 2024 | projects/regulatory-risks-agentnexlify
+- Colorado AI Act effective date | ~2026 (phased) | SB 21-169 and 2024 amendments | 2026-04 | projects/regulatory-risks-agentnexlify
+- Texas TDPSA effective date | July 1, 2024 | Texas Data Privacy and Security Act | 2024 | projects/regulatory-risks-agentnexlify
+- NYC Local Law 144 (AI bias audit, employment) effective date | January 1, 2023 | NYC Admin. Code § 20-871 | 2023 | projects/regulatory-risks-agentnexlify
+- FCC AI voice declaratory ruling (synthetic = artificial) | 2024 | FCC Declaratory Ruling, Feb 2024 | 2024 | projects/regulatory-risks-agentnexlify
+- Historical regulatory-to-enforcement lag (prior TCPA/CAN-SPAM waves) | 18–36 months | historical analysis of SMS/fax/email regulatory cycles | 2026-04 | projects/regulatory-risks-agentnexlify

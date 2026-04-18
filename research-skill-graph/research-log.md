@@ -187,3 +187,17 @@ Foundation model commoditization is not a future risk — it is al
 After running six research lenses against available market data, practitioner evidence, and structural analysis, three SMB verticals emerge with reliably high willingness to pay (WTP) for AI appointment booking: **home services/field trades** (HVAC, plumbing, electrical, roofing), **healthcare-adjacen
 
 ---
+
+## 2026-04-18 — what-regulatory-risks-tcpa-state-ai-laws-can-spam-
+
+**Question:** What regulatory risks (TCPA, state AI laws, CAN-SPAM) most threaten AgentNexLiFy's outbound automation?
+**Depth:** standard
+**Folder:** [[projects/what-regulatory-risks-tcpa-state-ai-laws-can-spam-]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**What We Learned**
+AgentNexLiFy's outbound automation faces three distinct but converging regulatory threat vectors — TCPA, a patchwork of state AI/privacy laws, and CAN-SPAM — that collectively create existential liability exposure if not structurally addressed in the next 6–12 months.
+**The TCPA is the dominant near-term threat.** The 2024–2025 FCC rule changes (effective January 27, 2025) elim
+
+---
