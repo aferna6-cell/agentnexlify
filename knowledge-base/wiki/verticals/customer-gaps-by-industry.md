@@ -5,6 +5,7 @@ tags: ["salon", "plumber", "dental", "restaurant", "fitness", "lawyer", "real-es
 sources: ["raw/verticals/customer-gaps-consolidated.md"]
 created: 2026-04-04
 updated: 2026-04-04
+summary: "Product-market fit scores across 7 verticals (Salon 9/10 to Real Estate 6/10) with 15 resolved gaps and prioritized cross-industry open gaps."
 ---
 
 > ⚠️ Some sources are over 60 days old. Run /kb-health to check for updates.
@@ -71,6 +72,19 @@ These affect ALL verticals and should be prioritized:
 
 All resolved via the autonomous build loop (Cycles 107-132):
 Emergency/urgency detection, business hours in onboarding, service type booking, dental-aware reminders, rebook automation (42-180 day), patient intake form preset, HIPAA-aware AI, insurance fields on leads, industry pipeline presets, webhook schema, lead source tracking, AI conversation summary, birthday automation, legal intake form preset, FAQ consistency (≥5 per type).
+
+## Key Concepts
+
+- **Product-market fit score** — 10-point heuristic weighing feature coverage vs vertical's core workflow; 8+ = ready to sell, <7 = needs work.
+- **Cross-industry gap** — missing capability that affects ≥3 verticals; prioritized over industry-specific gaps.
+- **Resolved gap** — previously-open capability closed through the autonomous build loop (Cycles 107-132).
+- **Strongest vertical** — Salon/Spa (9/10) and Plumber/HVAC (8/10) are primary GTM targets.
+
+## Related Articles
+
+- [[competitive-landscape-march-2026]] — competitor-driven feature priorities.
+- [[post-launch-growth-strategy]] — 10 growth features that sit atop these gaps.
+- [[gohighlevel]] — horizontal competitor reviewed missing QuickBooks sync + vertical depth.
 
 ## Relevance to AgentNexLiFy
 

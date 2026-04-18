@@ -5,6 +5,7 @@ tags: ["intercom", "drift", "tidio", "livechat", "crisp", "freshchat", "hubspot"
 sources: ["raw/competitors/competitive-research-march-2026.md"]
 created: 2026-04-04
 updated: 2026-04-04
+summary: "8-competitor feature-gap analysis (Intercom/Drift/Tidio/LiveChat/Crisp/Freshchat/HubSpot/GoHighLevel) identifying stickiness — not breadth — as AgentNexLiFy's next moat."
 ---
 
 > ⚠️ Some sources are over 60 days old. Run /kb-health to check for updates.
@@ -55,6 +56,21 @@ AgentNexLiFy is **feature-complete for small business operations** as of March 2
 6. Pre-Chat Forms (adds to flow builder)
 7. Public Knowledge Base (SEO value)
 8. Email Inbox Integration (largest effort, highest impact)
+
+## Key Concepts
+
+- **Stickiness vs breadth** — feature-complete is table stakes; retention comes from workflows that lock the business in.
+- **High-impact gap** — feature present in 3+ competitors, missing in AgentNexLiFy, high perceived value (custom fields, pre-chat forms).
+- **Unified operating system** — chat + CRM + automations + phone + reviews in one platform; no single competitor covers all.
+- **SMB tier** ($20-80/mo) vs **enterprise tier** ($300+/mo) — pricing band dictates feature depth expectations.
+
+## Related Articles
+
+- [[gohighlevel]] — closest direct competitor at $97-497/mo.
+- [[birdeye]] — reviews-first incumbent with per-location pricing.
+- [[podium]] — widget-strong peer with transparent pricing.
+- [[drillbit]] — YC vertical play for contractors.
+- [[phonely]] — AI receptionist competitor.
 
 ## Relevance to AgentNexLiFy
 

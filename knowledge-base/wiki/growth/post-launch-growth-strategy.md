@@ -5,6 +5,7 @@ tags: ["activation", "retention", "viral-growth", "pricing", "lock-in", "onboard
 sources: ["raw/growth/post-launch-growth-features.md"]
 created: 2026-04-04
 updated: 2026-04-04
+summary: "Top-10 post-launch feature roadmap prioritized across activation (P0), viral growth (P1), lock-in (P2), and enterprise lift (P3) with target conversion metrics."
 ---
 
 > ⚠️ Some sources are over 60 days old. Run /kb-health to check for updates.
@@ -95,6 +96,22 @@ Research-backed feature recommendations for driving signup activation, viral gro
 | Average customer lifetime | ~4 months | 8+ months |
 | Google reviews per business/month | 0 | 8-12 |
 | No-show recovery rate | 0% | 30% |
+
+## Key Concepts
+
+- **Day-1 activation** — widget live on customer's site within first session; 40% target rate.
+- **Pavlovian habit loop** — AI daily SMS briefing creates wake-up → dashboard reflex.
+- **Sentiment gating** — happy customers routed to public Google review link, unhappy to private feedback.
+- **B2B viral loop** — "Powered by AgentNexLiFy" footer on embedded widgets seeds inbound signups (Calendly model).
+- **Bookkeeper veto** — if invoices don't sync to QuickBooks/Xero, the business's bookkeeper kills adoption.
+- **Data lock-in** — unified customer timeline means switching platforms loses full conversation + appointment history.
+
+## Related Articles
+
+- [[competitive-landscape-march-2026]] — feature-gap view across 8 competitors.
+- [[customer-gaps-by-industry]] — industry-specific priorities per vertical.
+- [[gohighlevel]] — onboarding-heavy competitor where AgentNexLiFy's "Live in 5" is the differentiator.
+- [[podium]] — review-request incumbent whose SMS loop is table-stakes.
 
 ## Relevance to AgentNexLiFy
 
