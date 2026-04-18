@@ -5,7 +5,7 @@ tags: ["birdeye", "reviews", "reputation", "hidden-pricing", "multi-location", "
 sources: ["raw/competitors/competitor-landscape-2026-04-18.md"]
 created: 2026-04-18
 updated: 2026-04-18
-summary: "Birdeye publishes three named tiers — Starter, Growth, Dominate — with no dollar amounts. Visitors must fill a Pricing Configurator form. Chatbot AI is gated to the top tier."
+summary: "Birdeye lists three tiers (Starter, Growth, Dominate) without dollar amounts behind a Pricing Configurator form, and gates Chatbot AI to the top tier only."
 ---
 
 # Birdeye — Reviews-First Platform with Hidden Pricing (2026-04)
