@@ -8,6 +8,8 @@ dist/
 build/
 .DS_Store
 node_modules/
+test-results/
+playwright-report/
 *.log
 mutants/
 coverage/
