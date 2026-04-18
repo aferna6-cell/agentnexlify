@@ -131,7 +131,7 @@ Report structure:
 ```
 You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to review.
 
-1. cd /c/Users/aidan/Downloads/agentnexlify-main
+1. cd /home/aidan/agentnexlify
 2. git pull origin main --rebase
 3. Run: git log --since="1 day ago" --oneline --no-merges
 4. If zero commits: write empty report, exit.
