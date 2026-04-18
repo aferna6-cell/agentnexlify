@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 34 (plus 1 in `_outputs/`)
+- Total articles: 39 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-18
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -21,6 +21,11 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Intercom Fin Monitors — Custom Scorecard QA for AI Agents](wiki/competitors/intercom-fin-monitors-observability.md) — Structured AI conversation QA via Custom Scorecards; 8,000 customers, 67% resolution rate, 2M queries/week; observability as competitive moat. Tags: intercom, fin, ai-observability, custom-scorecards, qa-automation, ai-support-agents
 - [GoHighLevel Field Service Management — FieldTask Integration](wiki/competitors/ghl-field-service-management.md) — FieldTask's native build inside GHL extends the operating-system positioning into dispatch, route optimization, and proof-of-work for service businesses. Tags: gohighlevel, field-service-management, fieldtask, operations-ops, tool-sprawl, retention
 - [GoHighLevel Lead Lifecycle Automation — "System Is The Strategy"](wiki/competitors/ghl-lead-lifecycle-automation.md) — Full post-lead workflow (instant response, AI continuation, dormancy sequences, in-thread booking, review automation) framed as one integrated system. Tags: gohighlevel, lead-lifecycle, speed-to-lead, automation, review-automation, multi-channel-inbox
+- [GoHighLevel — Public Pricing and Widget Positioning (2026-04)](wiki/competitors/gohighlevel.md) — Four tiers (Starter $97, Unlimited $297, Agency Pro $497, Enterprise contact-sales); widget is one of twelve capture tools. Tags: gohighlevel, crm, ai-employee, agency, white-label, saas-mode
+- [Drillbit — YC-Backed AI Employee for Trades Contractors](wiki/competitors/drillbit.md) — Single-SKU $500/mo per location + usage; "Mason" AI employee; not widget-first; trades/franchise focus. Tags: drillbit, ai-employee, contractors, home-services, ycombinator
+- [Phonely — Voice-First AI with Webchat Bolt-On (2026-04)](wiki/competitors/phonely.md) — Free/$33/$99/Enterprise minute-based ladder; webchat as secondary; $16M Series A. Tags: phonely, voice-ai, webchat, series-a, ycombinator
+- [Birdeye — Reviews-First Platform with Hidden Pricing (2026-04)](wiki/competitors/birdeye.md) — Starter/Growth/Dominate tiers with no public dollar amounts; Chatbot AI gated to top tier. Tags: birdeye, reviews, reputation, hidden-pricing, multi-location, chatbot-ai
+- [Podium — Widget-Strong Lead Conversion Platform (2026-04)](wiki/competitors/podium.md) — Core $399, Pro $599, Signature custom; website chat widget listed as core on every tier; 1,500+ webchat leads/mo cited. Tags: podium, website-chat, lead-conversion, ai-employee, multi-vertical
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge

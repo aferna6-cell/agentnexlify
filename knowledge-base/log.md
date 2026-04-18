@@ -12,6 +12,23 @@ Tail with: `grep "^## \[" log.md | tail -20`
 
 ---
 
+## [2026-04-18 12:00] compile | competitor-landscape-2026-04-18 | 1 source → 5 wiki articles
+
+Source: `raw/competitors/competitor-landscape-2026-04-18.md` (direct scrape of GHL, Drillbit, Phonely, Birdeye, Podium pricing pages on 2026-04-18 via agent-browser).
+
+Created 5 entity profiles under `wiki/competitors/`:
+- `gohighlevel.md` (482w)
+- `drillbit.md` (434w)
+- `phonely.md` (466w)
+- `birdeye.md` (403w)
+- `podium.md` (483w)
+
+Embeddings: 5 Voyage AI voyage-3-lite 512-dim vectors generated, upserted into Supabase `kb_articles` via REST (`on_conflict=slug`, 201 Created). Hit Voyage free-tier 3 RPM rate limit once; batched into single call with 30s retry backoff.
+
+Updated: `INDEX.md` (+5 competitor links, total 39 articles), `PENDING.md` (added compiled entry).
+
+Existing `wiki/competitors/gohighlevel-agency-platform.md` preserved and cross-linked from new `gohighlevel.md` via `[[gohighlevel-agency-platform]]` backlink.
+
 ## [2026-04-12 14:30] migrate | added log.md + CLAUDE.md schema | aligned to Karpathy LLM Wiki pattern
 
 Created `knowledge-base/CLAUDE.md` (schema file defining 3-layer architecture + ops + page conventions + categories).

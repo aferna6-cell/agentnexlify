@@ -97,3 +97,7 @@ _All compiled 2026-04-18 cron run._
 - ~~[competitors] What actually happens after a lead comes in (when your system is set up right)~~ → compiled `wiki/competitors/ghl-lead-lifecycle-automation.md`
 - ~~[ai-llm] Claude Code auto mode: a safer way to skip permissions~~ → compiled `wiki/ai-llm/claude-code-auto-mode.md`
 - ~~[ai-llm] Effective harnesses for long-running agents~~ → compiled `wiki/ai-llm/effective-harnesses-long-running-agents.md`
+
+## Compiled 2026-04-18 manual
+
+- ~~[competitors] Competitor landscape snapshot (GHL, Drillbit, Phonely, Birdeye, Podium)~~ → compiled 5 entity profiles: `wiki/competitors/{gohighlevel,drillbit,phonely,birdeye,podium}.md`
