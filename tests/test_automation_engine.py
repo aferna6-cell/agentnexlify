@@ -750,8 +750,8 @@ class TestProcessRecurringInvoices:
         assert [kind for kind, _ in state["operations"]] == ["select", "count_select", "update"]
         mock_fire_event.assert_not_called()
 
-    @patch("backend.services.automation_engine.fire_event_background")
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled_jobs_ext.fire_event_background")
+    @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_insert_failure_rolls_back_parent_claim(self, mock_get_db, mock_fire_event):
         """If child invoice creation fails after the claim, next_invoice_date is restored."""
         parent = {
