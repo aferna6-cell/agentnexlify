@@ -281,9 +281,9 @@ class TestTriggerSequence:
 class TestSendInvoicePaymentReminders:
     """Tests for send_invoice_payment_reminders()."""
 
-    @patch("backend.services.automation_engine.send_sms", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.send_email", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.scheduled.billing_jobs.send_sms", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_overdue_invoice_marked_overdue_and_email_sent(
         self, mock_get_db, mock_send_email, mock_send_sms
     ):
