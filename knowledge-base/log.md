@@ -187,3 +187,4 @@ INDEX.md total: 26 → 30. 6 entries remain in PENDING for next run.
 Embeddings skipped: Supabase MCP returned Unauthorized (SUPABASE_ACCESS_TOKEN missing). Per spec fallback, markdown compile completed without embeddings. embedding_errors=4.
 
 ## [2026-04-17 18:12] discover+compile | cron 18:00 | commits=4 raw=10 wiki=4
+## 2026-04-18T10:05Z discover | processed=2 | ingested=4 (2 competitors + 2 ai-llm) | rejected_filtered_pre_fetch | curl fallback (no agent-browser)

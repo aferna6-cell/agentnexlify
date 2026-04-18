@@ -86,3 +86,10 @@ URLs discovered (saved to known-urls.json for dedup):
 - [2026-04-17] small-biz-saas/saastr-10-things-deploy-first-ai-sdr.md — 10 Things to Know Before You Deploy Your First AI SDR: The Very Latest with SaaStr’s Jason and Amelia | SaaStr — https://www.saastr.com/10-things-to-know-before-you-deploy-your-first-ai-sdr-the-very-latest-with-saastrs-jason-and-amelia/
 - [2026-04-17] growth/sej-framework-prioritizing-seo-vs-ai-search.md — Don't Go Chasing AI Yet: An SEO vs. AI Search Priority Framework — https://www.searchenginejournal.com/dont-go-chasing-ai-yet-a-framework-for-prioritizing-seo-vs-ai-search/571603/
 - [2026-04-17] growth/sej-how-ai-agents-see-your-website.md — How AI Agents See Your Website (And How To Build For Them) — https://www.searchenginejournal.com/how-ai-agents-see-your-website-and-how-to-build-for-them/570443/
+
+## Auto-ingest 2026-04-18T10:04:39Z
+
+- [ ] `raw/competitors/touhid-hasan-field-service-management-in-highlevel.md` — Touhid Hasan: Field Service Management in HighLevel (competitors)
+- [ ] `raw/competitors/what-actually-happens-after-a-lead-comes-in-when-your-system-is-set-up-right.md` — What actually happens after a lead comes in (when your system is set up right) (competitors)
+- [ ] `raw/ai-llm/claude-code-auto-mode-a-safer-way-to-skip-permissions-anthropic.md` — Claude Code auto mode: a safer way to skip permissions \ Anthropic (ai-llm)
+- [ ] `raw/ai-llm/effective-harnesses-for-long-running-agents-anthropic.md` — Effective harnesses for long-running agents \ Anthropic (ai-llm)
