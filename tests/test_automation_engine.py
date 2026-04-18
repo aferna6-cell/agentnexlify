@@ -55,8 +55,8 @@ _KNOWN_TUESDAY = datetime(2026, 3, 17, 12, 0, tzinfo=timezone.utc)  # weekday() 
 class TestProcessPendingSteps:
     """Tests for process_pending_steps()."""
 
-    @patch("backend.services.automation_engine.execute_step", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock)
+    @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_happy_path_one_due_execution(self, mock_get_db, mock_execute_step):
         """One due execution → execute_step called once → returns 1."""
         db, table = _make_db_mock()
@@ -70,7 +70,7 @@ class TestProcessPendingSteps:
         assert result == 1
         mock_execute_step.assert_awaited_once_with("exec-001")
 
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_no_pending_steps_returns_zero(self, mock_get_db):
         """Empty result from DB → returns 0 without calling execute_step."""
         db, table = _make_db_mock()
@@ -82,8 +82,8 @@ class TestProcessPendingSteps:
         result = await process_pending_steps()
         assert result == 0
 
-    @patch("backend.services.automation_engine.execute_step", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock)
+    @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_multiple_executions_all_processed(self, mock_get_db, mock_execute_step):
         """Three due executions → execute_step called three times → returns 3."""
         db, table = _make_db_mock()
@@ -99,8 +99,8 @@ class TestProcessPendingSteps:
         assert result == 3
         assert mock_execute_step.await_count == 3
 
-    @patch("backend.services.automation_engine.execute_step", new_callable=AsyncMock)
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock)
+    @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_failed_execute_step_does_not_block_others(
         self, mock_get_db, mock_execute_step
     ):
@@ -129,7 +129,7 @@ class TestProcessPendingSteps:
 class TestTriggerSequence:
     """Tests for trigger_sequence()."""
 
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.trigger.get_service_supabase")
     async def test_matching_stage_creates_execution(self, mock_get_db):
         """Matching sequence + first step → creates execution row → returns 1."""
         db = MagicMock()
@@ -166,7 +166,7 @@ class TestTriggerSequence:
         result = await trigger_sequence("tenant-001", "lead-001", "new_lead")
         assert result == 1
 
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.trigger.get_service_supabase")
     async def test_non_matching_stage_skips_enrollment(self, mock_get_db):
         """Sequence targets 'closed' but new_stage='contacted' → no enrollment → 0."""
         db = MagicMock()
@@ -205,7 +205,7 @@ class TestTriggerSequence:
         )
         assert result == 0
 
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.trigger.get_service_supabase")
     async def test_no_active_sequences_returns_zero(self, mock_get_db):
         """No sequences for this tenant+trigger → returns 0 immediately."""
         db = MagicMock()
@@ -228,7 +228,7 @@ class TestTriggerSequence:
         result = await trigger_sequence("tenant-001", "lead-001", "no_response_24h")
         assert result == 0
 
-    @patch("backend.services.automation_engine.get_service_supabase")
+    @patch("backend.services.automation.trigger.get_service_supabase")
     async def test_already_enrolled_insert_exception_skips(self, mock_get_db):
         """DB insert raises (UNIQUE constraint) → caught, enrollment count stays 0.
 
