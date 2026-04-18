@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 41 (plus 1 in `_outputs/`)
+- Total articles: 42 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-18
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -61,6 +61,7 @@ _No articles yet._
 - [HIPAA Five Titles and the 2024 Security Rule NPRM](wiki/regulations/hipaa-titles-and-security-rule-2024-nprm.md) — Title II drives SaaS compliance; 2024 NPRM mandates encryption, MFA, annual audits, 72-hour recovery for ePHI platforms. Tags: hipaa, hitech, security-rule, nprm-2024, encryption, mfa
 - [HIPAA-Compliant AI Chatbots — Requirements for Healthcare Deployment in 2026](wiki/regulations/hipaa-ai-chatbot-compliance-2026.md) — BAA-covered vendors, end-to-end encryption, audit logging, and data minimization required for any chatbot handling PHI. Tags: hipaa, chatbot, phi, baa, healthcare-compliance, encryption, ai-chatbot
 - [HIPAA-Compliant AI Tools — BAA Availability and Vendor Verification in 2026](wiki/regulations/hipaa-compliant-ai-tools-baa-guide.md) — Only ChatGPT Enterprise/Team, Claude Enterprise API, BastionGPT, GoHighLevel Healthcare, and Hathr.AI offer BAAs; consumer AI tools are HIPAA violations. Tags: hipaa, baa, ai-tools, chatgpt-enterprise, claude-enterprise, gohighlevel, vendor-compliance
+- [FTC Warning to 97 Auto Dealer Groups — Price Transparency Enforcement 2026](wiki/regulations/ftc-auto-dealers-deceptive-pricing-2026.md) — March 2026 warning letters cite six illegal pricing patterns; cross-market campaign (auto, housing, ticketing, grocery) signals SaaS is next. Tags: ftc, price-transparency, deceptive-advertising, auto-dealers, junk-fees, saas-compliance
 
 ### Growth & Distribution
 - [Post-Launch Growth Strategy](wiki/growth/post-launch-growth-strategy.md) — Top 10 features for activation, viral growth, daily engagement, and lock-in. Tags: activation, retention, viral-growth, onboarding, quickbooks, reviews
