@@ -1895,3 +1895,21 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/billing.py,backend/services/stripe_service.py,tests/test_stripe_readiness.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: remove ToS gold banner, fix demo button visibility, add MTOptions trial FAQ seed
+
+- TermsOfService.jsx: remove legal-disclaimer gold banner (partner feedback)
+- Contact.jsx: add alignItems/justifyContent/color to Book a Demo link so
+  text renders correctly when display:inline-flex is applied
+- scripts/seed_mtoptions_faq_trial.py: idempotent seed script that adds 3
+  FAQ entries to MTOptions tenant covering 10-day trial, promo extensions
+  (30/60 day), and how to enter a promo code at registration
+
+https://claude.ai/code/session_017mj9GRVeM9whiQKy7B5PhQ
+**Date:** 2026-04-18
+**Commit:** 266dbef
+**Author:** Claude
+**Files Changed:** frontend/src/pages/Contact.jsx,frontend/src/pages/TermsOfService.jsx,scripts/seed_mtoptions_faq_trial.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
