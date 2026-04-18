@@ -45,6 +45,11 @@ graphify-out/graph.json
 graphify-out/manifest.json
 supabase/.temp/
 
+# kb-compile ephemeral scratch — embedding temp scripts + voyage response dumps.
+# Safe to ignore; regenerated per compile run.
+knowledge-base/_embed_tmp.py
+knowledge-base/_embeddings_*.json
+
 # Obsidian sync state (contains local vault path, machine-specific)
 knowledge-base/.obsidian-sync-state.json
 CLAUDE.local.md

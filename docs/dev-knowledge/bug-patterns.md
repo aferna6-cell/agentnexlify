@@ -1949,3 +1949,25 @@ Note: test still returns 401 (unrelated auth-fixture issue, pre-existing).
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/analytics/__init__.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### 132 pytest tests returned 401 because JWT secret env vars never loaded in test env
+**Date:** 2026-04-18
+**Symptom:** `pytest tests/ -q` reported 132 failures / 376 passes. Every failing test returned `assert 401 == 200`. Affected every router test encoding a JWT with `_TEST_SECRET = "test-secret-key-for-jwt"` and hitting endpoints via `client.get(..., headers=_auth())`.
+**Root Cause:** Two-layer mismatch. (1) `backend/services/auth_service.py:_jwt_secret()` reads `backend.config.settings` directly at import time. Tests patched `backend.routers.auth.settings` — wrong target, auth_service has its own `settings` ref. MagicMock attr returned non-str, `_jwt_secret()` fell through to `""`. (2) `conftest.py` set `TESTING=1` but not `API_SECRET_KEY` / `JWT_SECRET_KEY` before `backend.config` loaded. Every test JWT signed with real test secret failed to decode against `""` → 401.
+**Files Changed:** `tests/conftest.py` (+3 env setdefaults), `backend/services/automation_engine.py` (+1 re-export), `backend/routers/analytics/__init__.py` (+2 re-exports), `backend/services/embeddings.py` (restored from git).
+**Fix:** (a) Set env vars in conftest.py BEFORE any backend import. (b) Re-export on shim modules only the symbols tests patch AS the shim path. Note: Python mock binding still binds to the import site, so patching the shim does NOT affect real callers in submodules — 23 stale tests still need patch-target updates (issue #35).
+**Prevention:**
+1. `@patch("<module>.<symbol>")` must target the module where the symbol is USED, not where it is defined. Python mocks bind to the consuming module's namespace.
+2. Test-env secrets go in `conftest.py` via `os.environ.setdefault` BEFORE any `backend.config` import. `mock_settings` fixtures arrive too late — pydantic-settings already loaded.
+Session: 2026-04-18 / commits 8ba8649, 30fe386, dac8626.
+
+---
+
+### Dead-code sweep deleted backend/services/embeddings.py — actively used by kb-compile
+**Date:** 2026-04-18
+**Symptom:** kb-compile agent reported `"backend/services/embeddings.py" source missing (only .pyc)` during a Voyage embedding run.
+**Root Cause:** Commit `954a951` deleted `embeddings.py` (72 lines) because static grep found no importers. But `kb-compile` invokes it via an inline Python snippet at runtime — invisible to grep across language boundaries.
+**Fix:** `git show 954a951~1:backend/services/embeddings.py > backend/services/embeddings.py`.
+**Prevention:** Before dead-code sweeps that cross language boundaries (shell scripts, skill workflows, cron), grep for the symbol in `.sh`, `.md`, and skill files — not just `.py`. Update `.claude/skills/dead-code-sweep/SKILL.md` false-positive verification step to list "skill workflows + daily scripts".
