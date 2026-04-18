@@ -1933,3 +1933,19 @@ https://claude.ai/code/session_017mj9GRVeM9whiQKy7B5PhQ
 **Author:** Claude
 **Files Changed:** e2e/partner-feedback-fixes.spec.ts,frontend/src/pages/TermsOfService.jsx,frontend/src/styles/contact.css,playwright.config.ts
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(analytics): re-export get_service_supabase + _cache from package root
+
+Both were broken since the analytics.py god-class split in 1f69417.
+tests/test_agent_control_center.py patches backend.routers.analytics.get_service_supabase — resolves AttributeError on fixture start.
+
+Pattern matches prior 9febf89 which re-exported _period_to_days.
+
+Note: test still returns 401 (unrelated auth-fixture issue, pre-existing).
+**Date:** 2026-04-18
+**Commit:** 30fe386
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/analytics/__init__.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
