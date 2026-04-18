@@ -1,4 +1,5 @@
 """Backward-compatibility shim. See backend/services/automation/ for the real code."""
+from backend.models.database import get_service_supabase  # re-export for tests + back-compat
 from backend.services.automation.templates import (
     _AFTERCARE_TEMPLATES, _REBOOK_INTERVALS, _REMINDER_EXTRAS, _ONBOARDING_STEPS,
 )

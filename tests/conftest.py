@@ -4,6 +4,12 @@ import os
 import sys
 
 os.environ["TESTING"] = "1"
+# JWT secret used by all test modules (`_TEST_SECRET = "test-secret-key-for-jwt"`).
+# Set before backend.config imports so pydantic-settings picks it up at load time.
+# Without this, _jwt_secret() returns "" when tests patch backend.routers.auth.settings
+# (wrong target — auth_service reads backend.config.settings directly), causing 401.
+os.environ.setdefault("API_SECRET_KEY", "test-secret-key-for-jwt")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-jwt")
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
