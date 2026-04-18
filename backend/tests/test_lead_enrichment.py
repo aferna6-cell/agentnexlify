@@ -1,6 +1,6 @@
 """Tests for `_enrich_lead_from_message` background helper.
 
-The helper lives in backend.routers.widget_helpers. It is a non-blocking
+The helper lives in backend.routers.widget_lead_helpers. It is a non-blocking
 background task that runs the structured_extractor managed agent on a
 single user message, merges any new fields into the existing lead row,
 and logs an activity entry. It must NEVER raise — FastAPI's
@@ -24,7 +24,7 @@ Implementation notes verified against the real codebase (NOT spec):
 Patching strategy mirrors test_widget_chat_fallback.py: patch the imported
 names where they're USED, not where they're defined. e.g. the helper's
 `get_service_supabase` is imported into widget_helpers, so we patch
-`backend.routers.widget_helpers.get_service_supabase`.
+`backend.routers.widget_lead_helpers.get_service_supabase`.
 """
 
 from unittest.mock import MagicMock, patch
@@ -130,16 +130,17 @@ class TestEnrichmentSkipPaths:
                               "phone": "555-1234", "interest": None,
                               "timeline": None, "budget": None, "source": None},
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity") as mock_log,
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
         ):
-            widget_helpers._enrich_lead_from_message(
+            result = widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="Hi I'm Sara at sara@example.com call 555-1234",
                 regex_extracted=regex,
             )
 
+        assert result is None
         # No update — fields all match
         leads_tbl = db.table("leads")
         leads_tbl.update.assert_not_called()
@@ -157,16 +158,17 @@ class TestEnrichmentSkipPaths:
                               "budget": None, "name": None, "email": None,
                               "phone": None, "source": None},
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity") as mock_log,
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
         ):
-            widget_helpers._enrich_lead_from_message(
+            result = widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="Looking for a haircut next week",
                 regex_extracted=regex,
             )
 
+        assert result is None
         # No lookup, no update, no log
         db.table.assert_not_called()
         mock_log.assert_not_called()
@@ -183,15 +185,17 @@ class TestEnrichmentSkipPaths:
                               "email": None, "phone": None, "timeline": None,
                               "budget": None, "source": None},
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity") as mock_log,
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
         ):
-            widget_helpers._enrich_lead_from_message(
+            result = widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="I'm Ghost looking for consultation",
                 regex_extracted=regex,
             )
+
+        assert result is None
 
         leads_tbl = db.table("leads")
         leads_tbl.update.assert_not_called()
@@ -231,8 +235,8 @@ class TestEnrichmentPersist:
                     "source": None,
                 },
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity"),
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity"),
         ):
             widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
@@ -280,8 +284,8 @@ class TestEnrichmentPersist:
                     "source": None,
                 },
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity"),
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity"),
         ):
             widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
@@ -321,8 +325,8 @@ class TestEnrichmentPersist:
                     "source": None,
                 },
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity") as mock_log,
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
         ):
             widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
@@ -364,17 +368,18 @@ class TestEnrichmentNeverCrashes:
                 "backend.services.structured_extractor.extract_structured",
                 side_effect=ValueError("structured_extractor returned invalid JSON"),
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity") as mock_log,
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
         ):
             # Must not raise.
-            widget_helpers._enrich_lead_from_message(
+            result = widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="garbage",
                 regex_extracted=regex,
             )
 
+        assert result is None
         # Defensive: no leads update, no activity_log
         leads_tbl = db.table("leads")
         leads_tbl.update.assert_not_called()
@@ -390,17 +395,18 @@ class TestEnrichmentNeverCrashes:
                 "backend.services.structured_extractor.extract_structured",
                 side_effect=RuntimeError("anthropic upstream timeout"),
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity") as mock_log,
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
         ):
             # Must not raise.
-            widget_helpers._enrich_lead_from_message(
+            result = widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 raw_text="anything",
                 regex_extracted=regex,
             )
 
+        assert result is None
         leads_tbl = db.table("leads")
         leads_tbl.update.assert_not_called()
         mock_log.assert_not_called()
@@ -434,8 +440,8 @@ class TestEnrichmentNeverCrashes:
                     "source": None,
                 },
             ),
-            patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-            patch("backend.routers.widget_helpers.log_activity"),
+            patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+            patch("backend.routers.widget_lead_helpers.log_activity"),
         ):
             widget_helpers._enrich_lead_from_message(
                 tenant_id=tenant_id,

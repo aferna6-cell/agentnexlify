@@ -56,27 +56,27 @@ def test_regex_captured_lead_tagged_enrichment_source_regex():
         return None
 
     with (
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=MagicMock()),
-        patch("backend.routers.widget_helpers.tenant_insert", side_effect=insert_spy),
-        patch("backend.routers.widget_helpers.tenant_select", return_value=select_result),
-        patch("backend.routers.widget_helpers.tenant_update"),
-        patch("backend.routers.widget_helpers._load_chat_history", return_value=fake_messages),
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=MagicMock()),
+        patch("backend.routers.widget_lead_helpers.tenant_insert", side_effect=insert_spy),
+        patch("backend.routers.widget_lead_helpers.tenant_select", return_value=select_result),
+        patch("backend.routers.widget_lead_helpers.tenant_update"),
+        patch("backend.routers.widget_chat_helpers._load_chat_history", return_value=fake_messages),
         patch(
-            "backend.routers.widget_helpers._extract_lead_info",
+            "backend.routers.widget_lead_helpers._extract_lead_info",
             return_value={"name": "Sara", "email": "sara@example.com"},
         ),
-        patch("backend.routers.widget_helpers._extract_service_interest", return_value=None),
-        patch("backend.routers.widget_helpers._build_conversation_summary", return_value=""),
-        patch("backend.routers.widget_helpers._extract_tags_from_conversation", return_value=[]),
-        patch("backend.routers.widget_helpers.log_activity"),
-        patch("backend.routers.widget_helpers.fire_event_background"),
+        patch("backend.routers.widget_lead_helpers._extract_service_interest", return_value=None),
+        patch("backend.routers.widget_lead_helpers._build_conversation_summary", return_value=""),
+        patch("backend.routers.widget_lead_helpers._extract_tags_from_conversation", return_value=[]),
+        patch("backend.routers.widget_lead_helpers.log_activity"),
+        patch("backend.routers.widget_lead_helpers.fire_event_background"),
         patch("backend.services.automation_engine.trigger_sequence", new=_noop_async),
         patch("backend.routers.email_sequences.enroll_lead_in_sequences", new=_noop_async),
         # score_lead_background is imported at module top in widget_helpers (line 24)
         # so we patch where it's USED, not where it's defined.
-        patch("backend.routers.widget_helpers.score_lead_background", new=_noop_sync),
-        patch("backend.routers.widget_helpers._send_new_lead_sms_notification", new=_noop_async),
-        patch("backend.routers.widget_helpers._send_new_lead_email_notification", new=_noop_async),
+        patch("backend.routers.widget_lead_helpers.score_lead_background", new=_noop_sync),
+        patch("backend.routers.widget_lead_helpers._send_new_lead_sms_notification", new=_noop_async),
+        patch("backend.routers.widget_lead_helpers._send_new_lead_email_notification", new=_noop_async),
     ):
         asyncio.run(widget_helpers._capture_leads_from_session(
             tenant_id="11111111-1111-1111-1111-111111111111",

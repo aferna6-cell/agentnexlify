@@ -86,8 +86,8 @@ def test_extractor_returns_nothing_new():
               return_value={"name": "Sara", "email": "sara@example.com",
                             "phone": "555-1234", "interest": None,
                             "timeline": None, "budget": None, "source": None}),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity") as mock_log,
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -106,8 +106,8 @@ def test_no_email_or_phone_skips_with_no_db_call():
               return_value={"interest": "haircut", "timeline": "next week",
                             "budget": None, "name": None, "email": None,
                             "phone": None, "source": None}),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity") as mock_log,
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -125,8 +125,8 @@ def test_lead_not_found_skips_update():
               return_value={"name": "Ghost", "interest": "consultation",
                             "email": None, "phone": None, "timeline": None,
                             "budget": None, "source": None}),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity") as mock_log,
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -151,8 +151,8 @@ def test_fills_missing_fields():
                             "interest": "autopilot plan",
                             "timeline": "by June",
                             "budget": None, "source": None}),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity"),
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity"),
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -177,8 +177,8 @@ def test_respects_regex_wins_policy():
               return_value={"name": "Robert Smith", "email": "bob@example.com",
                             "phone": "555-1212", "interest": None,
                             "timeline": None, "budget": None, "source": None}),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity"),
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity"),
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -200,8 +200,8 @@ def test_activity_log_written_with_fields_added():
               return_value={"name": "Sara Kim", "email": "sara@example.com",
                             "phone": None, "interest": "autopilot",
                             "timeline": None, "budget": None, "source": None}),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity") as mock_log,
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -224,8 +224,8 @@ def test_extractor_value_error_does_not_crash():
     with (
         patch("backend.services.structured_extractor.extract_structured",
               side_effect=ValueError("invalid JSON")),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity") as mock_log,
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -242,8 +242,8 @@ def test_extractor_unexpected_exception_does_not_crash():
     with (
         patch("backend.services.structured_extractor.extract_structured",
               side_effect=RuntimeError("anthropic timeout")),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity") as mock_log,
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity") as mock_log,
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
@@ -264,8 +264,8 @@ def test_handles_clean_dict_from_extractor():
               return_value={"name": "Sara", "email": "sara@example.com",
                             "phone": None, "interest": None,
                             "timeline": None, "budget": None, "source": None}),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db),
-        patch("backend.routers.widget_helpers.log_activity"),
+        patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db),
+        patch("backend.routers.widget_lead_helpers.log_activity"),
     ):
         _run(widget_helpers._enrich_lead_from_message(
             tenant_id=TENANT, session_id=SESSION,
