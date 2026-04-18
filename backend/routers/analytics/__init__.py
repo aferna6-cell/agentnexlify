@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter
 
-from backend.routers.analytics._common import _period_to_days  # re-export for tests + back-compat
+from backend.models.database import get_service_supabase  # re-export for tests + back-compat
+from backend.routers.analytics._common import _cache, _period_to_days  # re-export for tests + back-compat
 from backend.routers.analytics.dashboard import router as dashboard_router
 from backend.routers.analytics.operations import router as operations_router
 from backend.routers.analytics.insights import router as insights_router
