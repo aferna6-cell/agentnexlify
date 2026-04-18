@@ -259,7 +259,8 @@ def _get_tenant(tenant_id: str) -> dict[str, Any]:
         result = db.table("tenants").select(
             "id, business_name, business_type, city, plan, plan_status, "
             "free_trial_started_at, conversations_used_this_month, "
-            "sms_notifications_enabled, notification_phone, owner_email"
+            "sms_notifications_enabled, notification_phone, owner_email, "
+            "ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
         ).eq("id", tenant_id).limit(1).execute()
     except Exception:
         logger.warning("Database unreachable in _get_tenant", exc_info=True)

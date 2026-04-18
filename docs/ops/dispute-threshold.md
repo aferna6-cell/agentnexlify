@@ -52,7 +52,7 @@ At low volume, one dispute can blow past the threshold mathematically:
 - [ ] **Monitoring:** nightly cron hits Stripe API, calculates 30d dispute rate, writes to `ops_metrics` table + Slack `#ops` if >0.30%
 - [ ] **Kill switch:** env var `STRIPE_NEW_SIGNUPS_PAUSED=true` that makes `/api/v1/auth/billing/checkout` return 503 with user-facing waitlist CTA
 - [ ] **Partner access:** partner lead has Railway login + permission to set env vars
-- [ ] **Runbook:** this doc linked from `docs/ops/partner-runbook.md` (still to write — stress-test item #4)
+- [x] **Runbook:** linked from `docs/ops/partner-runbook.md` (created 2026-04-18)
 
 ## When to re-negotiate the threshold
 

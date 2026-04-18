@@ -17,6 +17,12 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.models.schemas import WidgetChatRequest, WidgetChatResponse
 from backend.services.activity import log_activity
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import (
     call_claude_messages,
     resolve_int_setting,
@@ -817,11 +823,42 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 7. Append user message to the compact LLM history
     llm_messages = history_for_model + [{"role": "user", "content": req.message}]
 
-    # 8. Call Anthropic through the shared runtime so the event loop is not blocked.
+    # 8. Reserve this turn against the tenant AI usage guard before calling Claude.
     api_key_present = bool(settings.anthropic_api_key)
     api_key_status = "CONFIGURED" if api_key_present else "MISSING"
     widget_model = resolve_string_setting("widget_chat_model", MODEL)
     widget_max_tokens = resolve_int_setting("widget_chat_max_tokens", MAX_TOKENS)
+    usage_reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt=system_prompt,
+            messages=llm_messages,
+            max_tokens=widget_max_tokens,
+        ),
+        operation="widget_chat.reply",
+        session_id=req.session_id,
+    )
+    if not usage_reservation.allowed:
+        usage_limited_text = (
+            "Thanks for reaching out. This assistant is temporarily paused "
+            "because monthly AI usage is unusually high. The team has been "
+            "notified and can follow up directly."
+        )
+        _save_chat_messages(tenant["id"], req.session_id, req.message, usage_limited_text)
+        fire_event_background(tenant["id"], "ai_usage.blocked", {
+            "session_id": req.session_id,
+            "conversation_id": conversation_id,
+            "reason": usage_reservation.reason,
+        })
+        return WidgetChatResponse(
+            response=usage_limited_text,
+            session_id=req.session_id,
+            lead_captured=False,
+            show_watermark=_watermark,
+            handoff=True,
+        )
+
+    # 8b. Call Anthropic through the shared runtime so the event loop is not blocked.
     logger.info(
         "widget_chat: calling Anthropic model=%s api_key=%s msg_count=%d system_chars=%d context_ms=%d prompt_profile=%s",
         widget_model,
@@ -857,25 +894,42 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             llm_result.input_tokens,
             llm_result.output_tokens,
         )
+        usage_record = record_ai_usage(
+            reservation=usage_reservation,
+            result=llm_result,
+            operation="widget_chat.reply",
+            session_id=req.session_id,
+            model=widget_model,
+        )
+        if usage_record and usage_record.alert_triggered:
+            logger.warning(
+                "widget_chat: tenant=%s crossed AI usage alert threshold total_tokens=%s",
+                tenant["id"],
+                usage_record.total_tokens,
+            )
     except anthropic.AuthenticationError as e:
+        release_ai_token_reservation(usage_reservation)
         logger.error("widget_chat: Anthropic AUTH error - API key invalid: %s", e)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
     except anthropic.RateLimitError as e:
+        release_ai_token_reservation(usage_reservation)
         logger.error("widget_chat: Anthropic RATE LIMIT: %s", e)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
     except anthropic.APIError as e:
+        release_ai_token_reservation(usage_reservation)
         logger.error("widget_chat: Anthropic API error status=%s: %s", getattr(e, 'status_code', '?'), e)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
     except Exception as e:
+        release_ai_token_reservation(usage_reservation)
         logger.exception("widget_chat: unexpected error calling Anthropic: %s", e)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "

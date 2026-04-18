@@ -3,14 +3,18 @@
 
 import html as html_mod
 import logging
+from datetime import datetime, timezone
+from typing import Any
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
 from backend.routers.auth import _get_current_tenant
+from backend.services.activity import log_activity
 from backend.services.stripe_service import (
     PLAN_PRICES,
     STRIPE_ADDON_MARKETING_VALUE,
@@ -27,6 +31,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 
 
+class AdminRefundRequest(BaseModel):
+    tenant_id: str = Field(..., min_length=1)
+    payment_intent: str | None = None
+    charge: str | None = None
+    amount_cents: int | None = Field(default=None, gt=0)
+    stripe_reason: str | None = None
+    internal_reason: str = Field(..., min_length=3, max_length=500)
+    requested_by: str = Field(..., min_length=2, max_length=200)
+
+
 # ---------------------------------------------------------------------------
 # Auth dependency (same pattern as clients.py)
 # ---------------------------------------------------------------------------
@@ -36,6 +50,33 @@ def _verify_secret(x_api_secret: str = Header(...)):
     secret = settings.billing_secret or settings.api_secret_key
     if not secret or not _hmac.compare_digest(x_api_secret, secret):
         raise HTTPException(status_code=403, detail="Invalid API secret")
+
+
+def _admin_secret() -> str:
+    admin_secret = getattr(settings, "admin_api_secret_key", "")
+    if isinstance(admin_secret, str) and admin_secret:
+        return admin_secret
+    api_secret = getattr(settings, "api_secret_key", "")
+    return api_secret if isinstance(api_secret, str) else ""
+
+
+def _verify_admin_secret(x_api_secret: str | None) -> None:
+    import hmac as _hmac
+    secret = _admin_secret()
+    if not secret or not x_api_secret or not _hmac.compare_digest(x_api_secret, secret):
+        raise HTTPException(status_code=401, detail="Invalid admin secret")
+
+
+def _stripe_obj_to_dict(value: Any) -> dict[str, Any]:
+    if hasattr(value, "to_dict_recursive"):
+        return value.to_dict_recursive()
+    if isinstance(value, dict):
+        return dict(value)
+    result: dict[str, Any] = {}
+    for key in ("id", "amount", "currency", "status", "payment_intent", "charge", "reason"):
+        if hasattr(value, key):
+            result[key] = getattr(value, key)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +403,27 @@ def _handle_subscription_deleted(db, subscription: dict) -> None:
     logger.info("Tenant %s subscription cancelled, reverted to free", tenant_id)
 
 
+def _unix_to_iso(value: Any) -> str | None:
+    if not isinstance(value, (int, float)) or value <= 0:
+        return None
+    return datetime.fromtimestamp(value, tz=timezone.utc).isoformat()
+
+
+def _safe_invoice_snapshot(invoice: dict) -> dict[str, Any]:
+    return {
+        "id": invoice.get("id"),
+        "customer": invoice.get("customer"),
+        "subscription": invoice.get("subscription"),
+        "amount_due": invoice.get("amount_due"),
+        "currency": invoice.get("currency"),
+        "attempt_count": invoice.get("attempt_count"),
+        "next_payment_attempt": invoice.get("next_payment_attempt"),
+        "hosted_invoice_url": invoice.get("hosted_invoice_url"),
+        "invoice_pdf": invoice.get("invoice_pdf"),
+        "status": invoice.get("status"),
+    }
+
+
 async def _handle_payment_failed(db, invoice: dict) -> None:
     customer_id = invoice.get("customer")
     if not customer_id:
@@ -380,30 +442,190 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
 
     tenant = result.data[0]
     tenant_id = tenant["id"]
-    db.table("tenants").update({"plan_status": "paused"}).eq("id", tenant_id).execute()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    attempt_count = int(invoice.get("attempt_count") or 0)
+    next_payment_attempt_iso = _unix_to_iso(invoice.get("next_payment_attempt"))
+    hosted_invoice_url = invoice.get("hosted_invoice_url")
+    invoice_pdf = invoice.get("invoice_pdf")
+    amount_due = invoice.get("amount_due")
+    currency = (invoice.get("currency") or "usd").lower()
+    subscription_id = invoice.get("subscription")
+
+    db.table("tenants").update({
+        "plan_status": "paused",
+        "billing_dunning_last_sent_at": now_iso,
+        "billing_dunning_attempt_count": attempt_count,
+    }).eq("id", tenant_id).execute()
 
     logger.info("Tenant %s payment failed, plan paused", tenant_id)
 
     # Send payment failure notification email
     owner_email = tenant.get("owner_email")
+    email_result: dict[str, Any] = {"success": False, "detail": "owner_email_missing"}
     if owner_email:
         try:
             from backend.services.email_sender import send_email
             business_name = html_mod.escape(tenant.get("business_name") or "your business")
-            await send_email(
+            invoice_link = ""
+            if hosted_invoice_url:
+                safe_invoice_url = html_mod.escape(str(hosted_invoice_url))
+                invoice_link = (
+                    f"<p><a href=\"{safe_invoice_url}\">Review and pay the open invoice</a>.</p>"
+                )
+            next_retry = ""
+            if next_payment_attempt_iso:
+                next_retry = (
+                    f"<p>Stripe has a retry scheduled around "
+                    f"{html_mod.escape(next_payment_attempt_iso)}.</p>"
+                )
+            email_result = await send_email(
                 to=owner_email,
                 subject="Payment failed — your AgentNexLiFy subscription is paused",
                 body_html=(
                     f"<h2>Hi,</h2>"
                     f"<p>We were unable to process the payment for <strong>{business_name}</strong>'s subscription.</p>"
                     f"<p>Your account has been temporarily paused. To restore service, please update your payment method in the billing portal.</p>"
+                    f"{invoice_link}"
+                    f"{next_retry}"
+                    f"<p>Billing portal: <a href=\"{html_mod.escape(settings.frontend_url.rstrip('/'))}/billing\">open billing settings</a></p>"
                     f"<p>If you need help, reply to this email.</p>"
                     f"<p>— The AgentNexLiFy Team</p>"
                 ),
                 tenant_id=tenant_id,
             )
         except Exception:
+            email_result = {"success": False, "detail": "send_failed"}
             logger.warning("Failed to send payment failure email to %s", owner_email, exc_info=True)
+
+    try:
+        db.table("billing_dunning_events").insert({
+            "tenant_id": tenant_id,
+            "stripe_invoice_id": invoice.get("id") or "",
+            "stripe_subscription_id": subscription_id,
+            "stripe_customer_id": customer_id,
+            "attempt_count": attempt_count,
+            "next_payment_attempt": next_payment_attempt_iso,
+            "amount_due_cents": amount_due,
+            "currency": currency,
+            "hosted_invoice_url": hosted_invoice_url,
+            "invoice_pdf": invoice_pdf,
+            "email_sent": bool(email_result.get("success")),
+            "email_detail": str(email_result.get("detail") or "")[:500],
+            "raw_invoice": _safe_invoice_snapshot(invoice),
+        }).execute()
+    except Exception:
+        logger.warning(
+            "Failed to insert dunning event for tenant %s invoice %s",
+            tenant_id,
+            invoice.get("id"),
+            exc_info=True,
+        )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/billing/admin/refund
+# ---------------------------------------------------------------------------
+
+@router.post("/admin/refund")
+async def admin_create_refund(
+    req: AdminRefundRequest,
+    x_api_secret: str | None = Header(None),
+):
+    """Issue a Stripe refund and persist an internal audit record."""
+    _verify_admin_secret(x_api_secret)
+    if not req.payment_intent and not req.charge:
+        raise HTTPException(status_code=400, detail="payment_intent or charge is required")
+    if req.payment_intent and req.charge:
+        raise HTTPException(status_code=400, detail="Provide only one of payment_intent or charge")
+
+    allowed_reasons = {"duplicate", "fraudulent", "requested_by_customer"}
+    if req.stripe_reason and req.stripe_reason not in allowed_reasons:
+        raise HTTPException(
+            status_code=400,
+            detail=f"stripe_reason must be one of: {', '.join(sorted(allowed_reasons))}",
+        )
+
+    try:
+        ensure_stripe_configured()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+    db = get_service_supabase()
+    tenant_result = (
+        db.table("tenants")
+        .select("id, business_name, owner_email, stripe_customer_id")
+        .eq("id", req.tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not tenant_result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    refund_params: dict[str, Any] = {}
+    if req.payment_intent:
+        refund_params["payment_intent"] = req.payment_intent
+    if req.charge:
+        refund_params["charge"] = req.charge
+    if req.amount_cents:
+        refund_params["amount"] = req.amount_cents
+    if req.stripe_reason:
+        refund_params["reason"] = req.stripe_reason
+    refund_params["metadata"] = {
+        "tenant_id": req.tenant_id,
+        "requested_by": req.requested_by,
+        "internal_reason": req.internal_reason[:200],
+    }
+
+    try:
+        refund = stripe.Refund.create(**refund_params)
+    except Exception as exc:
+        logger.exception("Stripe refund failed for tenant %s", req.tenant_id)
+        raise HTTPException(status_code=502, detail="Stripe refund failed") from exc
+
+    refund_data = _stripe_obj_to_dict(refund)
+    refund_id = refund_data.get("id")
+    if not refund_id:
+        raise HTTPException(status_code=502, detail="Stripe refund response missing id")
+
+    audit_row = {
+        "tenant_id": req.tenant_id,
+        "stripe_refund_id": refund_id,
+        "stripe_payment_intent_id": refund_data.get("payment_intent") or req.payment_intent,
+        "stripe_charge_id": refund_data.get("charge") or req.charge,
+        "amount_cents": refund_data.get("amount") or req.amount_cents,
+        "currency": refund_data.get("currency") or "usd",
+        "stripe_reason": refund_data.get("reason") or req.stripe_reason,
+        "internal_reason": req.internal_reason,
+        "requested_by": req.requested_by,
+        "status": refund_data.get("status") or "pending",
+        "raw_refund": refund_data,
+    }
+    try:
+        db.table("billing_refunds").insert(audit_row).execute()
+    except Exception:
+        logger.exception("Refund audit insert failed for refund %s", refund_id)
+        raise HTTPException(status_code=500, detail="Refund created but audit log failed")
+
+    log_activity(
+        tenant_id=req.tenant_id,
+        activity_type="billing_refund_created",
+        description="Admin refund issued",
+        metadata={
+            "stripe_refund_id": refund_id,
+            "amount_cents": audit_row["amount_cents"],
+            "currency": audit_row["currency"],
+            "requested_by": req.requested_by,
+            "stripe_reason": audit_row["stripe_reason"],
+        },
+    )
+    logger.info("Admin refund %s created for tenant %s", refund_id, req.tenant_id)
+    return {
+        "status": "refunded",
+        "stripe_refund_id": refund_id,
+        "amount_cents": audit_row["amount_cents"],
+        "currency": audit_row["currency"],
+        "refund_status": audit_row["status"],
+    }
 
 
 # ---------------------------------------------------------------------------

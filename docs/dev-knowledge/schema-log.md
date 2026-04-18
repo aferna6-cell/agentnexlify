@@ -727,6 +727,22 @@ Adds opt-in boolean to `widget_configs` controlling whether widget chat runs the
 
 **Applied:** 2026-04-15 via Supabase Dashboard SQL editor.
 
+### 106 - Launch Risk Guardrails
+**Date:** 2026-04-18
+Adds launch-readiness safety tables and tenant columns for the paid-launch risk sprint.
+
+- `tenants.ai_monthly_token_alert_threshold` / `ai_monthly_token_hard_limit` optional per-tenant overrides for widget AI cost caps
+- `tenant_ai_usage_monthly` monthly token ledger with reserved tokens, actual usage, blocked count, and threshold timestamps
+- RPCs `reserve_ai_token_budget`, `record_ai_token_usage`, and `release_ai_token_reservation` for multi-worker-safe AI usage enforcement
+- `billing_refunds` admin refund audit trail keyed by Stripe refund ID
+- `tenant_cancellation_events` cancellation reason history
+- `billing_dunning_events` failed-payment/dunning event log for `invoice.payment_failed`
+- `tenants.cancellation_*` and `tenants.billing_dunning_*` latest-state columns
+
+All new tables use service-role RLS policies. Required by `backend/services/ai_usage_guard.py`, `backend/routers/billing.py`, and `backend/routers/auth.py`.
+
+**Applied:** Pending - created 2026-04-18. Apply before deploying the matching backend.
+
 ### 104 — Structured Lead Parser Default True (planned)
 **Date:** Planned ~2026-04-22
 Changes `widget_configs.enable_structured_lead_parser` DEFAULT from `false` to `true` so new tenants get enrichment automatically.

@@ -65,6 +65,16 @@ const FEATURE_MATRIX = [
   },
 ];
 
+const CANCEL_REASONS = [
+  { value: "too_expensive", label: "Too expensive" },
+  { value: "missing_feature", label: "Missing something I need" },
+  { value: "not_enough_leads", label: "Not enough leads" },
+  { value: "switching_tools", label: "Switching tools" },
+  { value: "setup_too_hard", label: "Setup was too hard" },
+  { value: "temporary_pause", label: "Pausing for now" },
+  { value: "other", label: "Other" },
+];
+
 export default function BillingPage() {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -74,6 +84,8 @@ export default function BillingPage() {
   const [trialData, setTrialData] = useState(null);
   const [changingPlan, setChangingPlan] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelDetail, setCancelDetail] = useState("");
   const [cancelStatus, setCancelStatus] = useState(null);
   const [loadError, setLoadError] = useState(null);
 
@@ -146,11 +158,20 @@ export default function BillingPage() {
       setConfirmCancel(true);
       return;
     }
+    if (!cancelReason) {
+      notify.error("Choose a cancellation reason first");
+      return;
+    }
     setConfirmCancel(false);
     setCancelStatus("cancelling");
     try {
-      const res = await cancelSubscription(token);
+      const res = await cancelSubscription(token, {
+        reason: cancelReason,
+        reason_detail: cancelDetail,
+      });
       setCancelStatus("scheduled");
+      setCancelReason("");
+      setCancelDetail("");
     } catch (err) {
       setCancelStatus(null);
       notify.error(err.body?.detail || err.message || "Failed to cancel");
@@ -255,6 +276,53 @@ export default function BillingPage() {
               >
                 {confirmCancel ? "Confirm Cancel" : cancelStatus === "scheduled" ? "Cancellation Scheduled" : "Cancel Subscription"}
               </button>
+            </div>
+          )}
+          {confirmCancel && currentPlan !== "free" && (
+            <div style={{
+              marginTop: 12,
+              padding: 12,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.03)",
+            }}>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 6 }}>
+                Why are you cancelling?
+              </label>
+              <select
+                value={cancelReason}
+                onChange={(event) => setCancelReason(event.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-primary)",
+                  color: "var(--text-primary)",
+                  marginBottom: 8,
+                }}
+              >
+                <option value="">Choose a reason</option>
+                {CANCEL_REASONS.map((reason) => (
+                  <option key={reason.value} value={reason.value}>{reason.label}</option>
+                ))}
+              </select>
+              <textarea
+                value={cancelDetail}
+                onChange={(event) => setCancelDetail(event.target.value)}
+                placeholder="Anything we should know?"
+                rows={3}
+                maxLength={1000}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-primary)",
+                  color: "var(--text-primary)",
+                  resize: "vertical",
+                }}
+              />
             </div>
           )}
           {cancelStatus === "scheduled" && (

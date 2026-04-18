@@ -41,8 +41,12 @@ export function changePlan(token, plan) {
   return request("/api/v1/auth/billing/change-plan", { method: "POST", token, body: { plan } });
 }
 
-export function cancelSubscription(token) {
-  return request("/api/v1/auth/billing/cancel", { method: "POST", token });
+export function cancelSubscription(token, { reason, reason_detail, feedback } = {}) {
+  return request("/api/v1/auth/billing/cancel", {
+    method: "POST",
+    token,
+    body: { reason, reason_detail, feedback },
+  });
 }
 
 // --- Onboarding ---

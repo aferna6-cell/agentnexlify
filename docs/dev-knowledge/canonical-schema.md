@@ -1,7 +1,7 @@
 # Canonical Database Schema Reference
 
-**Last updated:** 2026-04-07  
-**Migration number:** 096
+**Last updated:** 2026-04-18
+**Migration number:** 106
 **Status:** Authoritative — this file reflects PRODUCTION reality, not historical migration intent.
 
 ---
@@ -44,6 +44,13 @@ Multi-tenant accounts (business owners).
 | referred_by | UUID | FK → tenants.id | |
 | notification_phone | TEXT | | SMS notification number |
 | sms_notifications_enabled | BOOLEAN | DEFAULT false | |
+| ai_monthly_token_alert_threshold | INTEGER | | Optional per-tenant AI usage alert override |
+| ai_monthly_token_hard_limit | INTEGER | | Optional per-tenant AI usage hard-stop override |
+| cancellation_requested_at | TIMESTAMPTZ | | Latest requested subscription cancellation |
+| cancellation_reason | TEXT | | Latest customer-selected cancellation reason |
+| cancellation_reason_detail | TEXT | | Latest free-text cancellation detail |
+| billing_dunning_last_sent_at | TIMESTAMPTZ | | Latest failed-payment notice timestamp |
+| billing_dunning_attempt_count | INTEGER | DEFAULT 0 | Latest Stripe invoice attempt count |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | |
 
@@ -160,6 +167,80 @@ Team member accounts for a tenant.
 | last_login | TIMESTAMPTZ | | |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | |
 
+### `tenant_ai_usage_monthly`
+Monthly DB-backed AI usage ledger used before widget Claude calls.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| tenant_id | UUID | FK -> tenants.id, PK | |
+| period_month | DATE | PK | First day of UTC month |
+| input_tokens | INTEGER | DEFAULT 0 | |
+| output_tokens | INTEGER | DEFAULT 0 | |
+| cache_creation_input_tokens | INTEGER | DEFAULT 0 | |
+| cache_read_input_tokens | INTEGER | DEFAULT 0 | |
+| reserved_tokens | INTEGER | DEFAULT 0 | Pre-call reservations for multi-worker safety |
+| call_count | INTEGER | DEFAULT 0 | |
+| blocked_count | INTEGER | DEFAULT 0 | |
+| alert_sent_at | TIMESTAMPTZ | | |
+| hard_blocked_at | TIMESTAMPTZ | | |
+| created_at | TIMESTAMPTZ | DEFAULT NOW() | |
+| updated_at | TIMESTAMPTZ | DEFAULT NOW() | |
+
+### `billing_refunds`
+Admin audit trail for Stripe refunds.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | UUID | PK | |
+| tenant_id | UUID | FK -> tenants.id | |
+| stripe_refund_id | TEXT | UNIQUE, NOT NULL | |
+| stripe_payment_intent_id | TEXT | | |
+| stripe_charge_id | TEXT | | |
+| amount_cents | INTEGER | | |
+| currency | TEXT | DEFAULT 'usd' | |
+| stripe_reason | TEXT | | Stripe refund reason |
+| internal_reason | TEXT | NOT NULL | |
+| requested_by | TEXT | NOT NULL | |
+| status | TEXT | DEFAULT 'pending' | |
+| raw_refund | JSONB | DEFAULT '{}' | Sanitized Stripe response |
+| created_at | TIMESTAMPTZ | DEFAULT NOW() | |
+
+### `tenant_cancellation_events`
+Historical cancellation reason records.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | UUID | PK | |
+| tenant_id | UUID | FK -> tenants.id | |
+| stripe_subscription_id | TEXT | | |
+| plan | TEXT | | |
+| reason | TEXT | NOT NULL | |
+| reason_detail | TEXT | | |
+| feedback | TEXT | | |
+| current_period_end | TIMESTAMPTZ | | |
+| created_at | TIMESTAMPTZ | DEFAULT NOW() | |
+
+### `billing_dunning_events`
+Failed-payment notices generated from Stripe `invoice.payment_failed`.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | UUID | PK | |
+| tenant_id | UUID | FK -> tenants.id | |
+| stripe_invoice_id | TEXT | NOT NULL | |
+| stripe_subscription_id | TEXT | | |
+| stripe_customer_id | TEXT | | |
+| attempt_count | INTEGER | DEFAULT 0 | |
+| next_payment_attempt | TIMESTAMPTZ | | |
+| amount_due_cents | INTEGER | | |
+| currency | TEXT | DEFAULT 'usd' | |
+| hosted_invoice_url | TEXT | | |
+| invoice_pdf | TEXT | | |
+| email_sent | BOOLEAN | DEFAULT false | |
+| email_detail | TEXT | | |
+| raw_invoice | JSONB | DEFAULT '{}' | Sanitized Stripe invoice snapshot |
+| created_at | TIMESTAMPTZ | DEFAULT NOW() | |
+
 ---
 
 ## Key Naming Conventions
@@ -180,6 +261,7 @@ Team member accounts for a tenant.
 - **076:** Fixed `conversations.client_id` FK to point to `tenants.id` instead of `clients.id`.
 - **094:** Reconciled 8 ad-hoc columns on `leads` that existed in production but had no migration.
 - **096:** Makes `client_id` reconciliation fresh-deploy safe and adds DB-backed automation/email quota locks.
+- **106:** Adds AI usage caps, refund audit trail, cancel reasons, and dunning logs.
 
 ---
 

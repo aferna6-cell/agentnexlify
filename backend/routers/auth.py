@@ -40,6 +40,7 @@ from backend.services.stripe_service import (
     get_or_create_customer,
 )
 from backend.services.email_sender import send_email
+from backend.services.activity import log_activity
 from backend.services.business_profiles import (
     get_dashboard_business_profile,
     get_widget_defaults,
@@ -1309,10 +1310,29 @@ async def billing_change_plan(
 
 @router.post("/billing/cancel")
 async def billing_cancel(
+    request: Request,
     claims: dict = Depends(require_role("owner")),
 ):
     """Cancel subscription at end of billing period."""
     tenant_id = claims["tenant_id"]
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    allowed_reasons = {
+        "too_expensive",
+        "missing_feature",
+        "not_enough_leads",
+        "switching_tools",
+        "setup_too_hard",
+        "temporary_pause",
+        "other",
+    }
+    reason = str(body.get("reason") or "").strip()
+    if reason not in allowed_reasons:
+        raise HTTPException(status_code=400, detail="Cancellation reason is required")
+    reason_detail = str(body.get("reason_detail") or body.get("detail") or "").strip()[:1000]
+    feedback = str(body.get("feedback") or "").strip()[:1000]
 
     db = get_service_supabase()
     result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
@@ -1337,10 +1357,61 @@ async def billing_cancel(
         raise HTTPException(status_code=400, detail="No active subscription")
 
     # Cancel at period end (don't immediately revoke access)
-    stripe.Subscription.modify(subs.data[0].id, cancel_at_period_end=True)
+    subscription = subs.data[0]
+    subscription_id = getattr(subscription, "id", None)
+    if subscription_id is None and isinstance(subscription, dict):
+        subscription_id = subscription.get("id")
+    stripe.Subscription.modify(
+        subscription_id,
+        cancel_at_period_end=True,
+        metadata={
+            "tenant_id": tenant_id,
+            "cancellation_reason": reason,
+        },
+    )
+
+    current_period_end = getattr(subscription, "current_period_end", None)
+    if current_period_end is None and isinstance(subscription, dict):
+        current_period_end = subscription.get("current_period_end")
+    current_period_end_iso = None
+    if isinstance(current_period_end, (int, float)):
+        current_period_end_iso = datetime.fromtimestamp(
+            current_period_end,
+            tz=timezone.utc,
+        ).isoformat()
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        db.table("tenants").update({
+            "cancellation_requested_at": now_iso,
+            "cancellation_reason": reason,
+            "cancellation_reason_detail": reason_detail or None,
+        }).eq("id", tenant_id).execute()
+        db.table("tenant_cancellation_events").insert({
+            "tenant_id": tenant_id,
+            "stripe_subscription_id": subscription_id,
+            "plan": tenant.get("plan"),
+            "reason": reason,
+            "reason_detail": reason_detail or None,
+            "feedback": feedback or None,
+            "current_period_end": current_period_end_iso,
+        }).execute()
+    except Exception:
+        logger.warning("Failed to persist cancellation reason for tenant %s", tenant_id, exc_info=True)
+
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="subscription_cancellation_scheduled",
+        description="Subscription cancellation scheduled at period end",
+        metadata={
+            "reason": reason,
+            "has_reason_detail": bool(reason_detail),
+            "current_period_end": current_period_end_iso,
+        },
+    )
 
     logger.info("Subscription cancellation scheduled for tenant %s", tenant_id)
-    return {"status": "cancellation_scheduled", "current_period_end": subs.data[0].current_period_end}
+    return {"status": "cancellation_scheduled", "current_period_end": current_period_end}
 
 
 # ── Free Trial ────────────────────────────────────────────────
