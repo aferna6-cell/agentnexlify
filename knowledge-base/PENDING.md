@@ -105,3 +105,18 @@ _All compiled 2026-04-18 cron run._
 ## Auto-ingest 2026-04-18T22:03:01.632738+00:00
 
 - [2026-04-18] competitors/gohighlevel-updates-2026-gohighlevelai.md — gohighlevel updates 2026 - GoHighLevel.ai — https://www.gohighlevel.ai/blog/gohighlevel-updates-2026
+
+## Auto-populated 2026-04-19
+
+- [ ] `raw/competitors/introducing-the-fin-api-platform.md` — competitors — https://www.intercom.com/blog/introducing-the-fin-api-platform/
+- [ ] `raw/competitors/why-birdeye-is-the-leading-agentic-marketing-platform.md` — competitors — https://birdeye.com/blog/why-birdeye-is-the-leading-agentic-marketing-platform/
+- [ ] `raw/ai-llm/effective-context-engineering-for-ai-agents.md` — ai-llm — https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+- [ ] `raw/ai-llm/equipping-agents-for-the-real-world-with-agent-skills.md` — ai-llm — https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills
+- [ ] `raw/small-biz-saas/saas-churn-rate-benchmarks.md` — small-biz-saas — https://userjot.com/blog/saas-churn-rate-benchmarks
+- [ ] `raw/verticals/the-10-best-ai-receptionist-platforms-compared.md` — verticals — https://parallellabs.app/the-10-best-ai-receptionist-platforms-compared/
+- [ ] `raw/technical/going-to-prod.md` — technical — https://supabase.com/docs/guides/ai/going-to-prod
+- [ ] `raw/technical/fastapi-best-practices.md` — technical — https://github.com/zhanymkanov/fastapi-best-practices
+- [ ] `raw/regulations/best-hipaa-compliant-healthcare-chatbots.md` — regulations — https://www.comm100.com/blog/best-hipaa-compliant-healthcare-chatbots/
+- [ ] `raw/regulations/us-chatbot-legislation-compliance-guide-2026.md` — regulations — https://www.aigovhub.io/guides/us-chatbot-legislation-compliance-guide-2026
+- [ ] `raw/growth/mastering-generative-engine-optimization-in-2026-full-guide-469142.md` — growth — https://searchengineland.com/mastering-generative-engine-optimization-in-2026-full-guide-469142
+- [ ] `raw/growth/generative-engine-optimization.md` — growth — https://foundationinc.co/lab/generative-engine-optimization
