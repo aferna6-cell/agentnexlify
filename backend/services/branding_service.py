@@ -158,7 +158,7 @@ def update_widget_config_service(
     req: Any,  # WidgetConfigUpdateRequest — avoid circular import
 ) -> dict:
     """Update widget_configs row and return the updated row dict."""
-    from backend.routers.widget_helpers import _filter_branding_for_plan, _sanitize_css
+    from backend.services.branding_helpers import _filter_branding_for_plan, _sanitize_css
 
     db = _get_db()
 

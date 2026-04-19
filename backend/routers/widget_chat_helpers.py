@@ -39,51 +39,18 @@ _WIDGET_CACHE_TTL = 300  # 5 minutes for config data
 _CHAT_CACHE_TTL = 300    # 5 minutes for FAQ/hours/corrections
 
 # ---------------------------------------------------------------------------
-# Branding plan restrictions
+# Branding plan restrictions — definitions live in services/branding_helpers.py
+# Re-exported here so existing callers of widget_chat_helpers keep working.
 # ---------------------------------------------------------------------------
 
-_BRANDING_PLAN_FIELDS: dict[str, set[str]] = {
-    "free": {"primary_color"},
-    "growth": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url"},
-    "professional": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family"},
-    "enterprise": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family", "custom_css"},
-}
-
-_DANGEROUS_CSS_RE = re.compile(
-    r"<script|javascript:|@import|expression\s*\(", re.IGNORECASE
+from backend.services.branding_helpers import (  # noqa: E402
+    _BRANDING_PLAN_FIELDS,
+    _DANGEROUS_CSS_RE,
+    _CSS_URL_RE,
+    _FONT_URL_RE,
+    _sanitize_css,
+    _filter_branding_for_plan,
 )
-_CSS_URL_RE = re.compile(r"url\s*\(", re.IGNORECASE)
-_FONT_URL_RE = re.compile(r"(src\s*:\s*url\s*\(|font-face)", re.IGNORECASE)
-
-
-def _sanitize_css(css: str | None) -> str | None:
-    """Strip dangerous patterns from custom CSS."""
-    if not css:
-        return css
-    css = _DANGEROUS_CSS_RE.sub("", css)
-    lines = css.split("\n")
-    cleaned = []
-    in_font_face = False
-    for line in lines:
-        if "@font-face" in line.lower():
-            in_font_face = True
-        if in_font_face and "}" in line:
-            in_font_face = False
-        if not in_font_face and _CSS_URL_RE.search(line) and not _FONT_URL_RE.search(line):
-            line = _CSS_URL_RE.sub("/* sanitized */", line)
-        cleaned.append(line)
-    return "\n".join(cleaned)
-
-
-def _filter_branding_for_plan(branding: dict | None, plan: str) -> dict:
-    """Return only branding fields allowed for the given plan."""
-    if not branding:
-        return {}
-    allowed = _BRANDING_PLAN_FIELDS.get(plan, _BRANDING_PLAN_FIELDS["free"])
-    filtered = {k: v for k, v in branding.items() if k in allowed and v is not None}
-    if plan in ("free", "growth"):
-        filtered.pop("hide_powered_by", None)
-    return filtered
 
 
 # ---------------------------------------------------------------------------
