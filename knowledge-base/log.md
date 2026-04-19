@@ -215,3 +215,10 @@ categories_processed=7  urls_fetched=2  new_raw_files=2  deduped=1  errors=0
 - removed DDG ad redirect URL file (gohighlevel-its-time-to-take-your-agency-to-the-next-level.md, homepage spam) → kept 1 valid article (gohighlevel-updates-2026-gohighlevelai.md)
 
 ## [2026-04-18 18:11] discover+compile | cron 18:00 | commits=10 raw=1 wiki=4
+
+## [2026-04-19 22:06] discover | cron kb-autopopulate | categories=7 fetched=14 new_raw=12 deduped=0 errors=2
+
+- Fallback: agent-browser unavailable → curl + DDG HTML POST search
+- New raw files: 12 across 7 categories (competitors, ai-llm, small-biz-saas, verticals, technical, regulations, growth)
+- Errors: thin_body on saaspricelab.com + captahq.com (SPA-rendered, curl got shell HTML)
+- Dedup source: known-urls.json (139 → 153)
