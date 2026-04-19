@@ -7,7 +7,6 @@ Import from here instead of defining locally in each router.
 import logging
 
 from fastapi import HTTPException
-from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ from backend.services.email_sender import (
     build_unsubscribe_url,
     send_email,
 )
-from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
+from backend.services.sms_rate_limiter import increment_sms_count
 from backend.services.task_utils import safe_create_task
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms

@@ -10,7 +10,6 @@ Covers:
 - enable_advisor=False skips advisor entirely
 """
 
-from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest

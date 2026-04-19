@@ -13,7 +13,6 @@ from datetime import datetime, timedelta, timezone
 
 from mcp.server.fastmcp import FastMCP
 
-from backend.config import settings
 from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
