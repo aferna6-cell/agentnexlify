@@ -14,10 +14,24 @@ effort: low
 
 # obsidian-sync
 
-Copy wiki articles from `knowledge-base/wiki/` to an Obsidian vault in Obsidian-compatible
-format: YAML frontmatter with `aliases` and `cssclass`, `[[Title]]` wikilinks instead of
-`[[slug]]`, category subfolders, and a generated Map of Content (MOC). One-way sync only —
-the wiki is canonical, Obsidian is a read-friendly copy.
+Two modes:
+
+1. **Direct Vault Mode** (recommended for editing skills/rules/memory). Point Obsidian at
+   the repo root directly — `File → Open folder as vault → /home/aidan/agentnexlify`.
+   Obsidian reads `.md` files natively; no sync script needed. Edits hit git-tracked files.
+   Use for `.claude/skills/**`, `.claude/rules/**`, `memory/**`, `plans/**`, `specs/**`,
+   `audits/**`, `docs/**`, `knowledge-base/raw/**`. Add `.obsidian/` to `.gitignore` if not
+   already there.
+
+2. **Wiki Sync Mode** (this skill's automation). Copy wiki articles from
+   `knowledge-base/wiki/` to a separate Obsidian vault with Obsidian-specific transforms:
+   YAML frontmatter with `aliases` and `cssclass`, `[[Title]]` wikilinks instead of
+   `[[slug]]`, category subfolders, and a generated Map of Content (MOC). One-way sync —
+   wiki is canonical, Obsidian copy is read-friendly. Use for sharing wiki with a reader
+   who isn't on this machine, or keeping a standalone knowledge vault.
+
+Most engineering workflows want Mode 1 (zero setup, edits live-sync via filesystem).
+Mode 2 below is for the wiki-sharing case.
 
 ## Usage
 

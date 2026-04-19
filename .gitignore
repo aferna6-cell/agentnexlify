@@ -68,3 +68,6 @@ CLAUDE.local.md
 .kiro/
 .openclaw-migration/openclaw.env
 .openclaw-migration/morpheus/morpheus-sync-.env.example
+
+# Obsidian local vault config (when repo opened as Obsidian vault)
+.obsidian/
