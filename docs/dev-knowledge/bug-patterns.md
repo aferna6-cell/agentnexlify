@@ -1996,3 +1996,40 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/widget_helpers.py,tests/test_widget_api.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### chore(skills): Phase 2+3 — bundled scripts, shell injection, YAML fix
+
+Phase 2 (deterministic bundled scripts per Anthropic canonical pattern):
+- source-validation/scripts/score.py — 3-axis credibility scorer
+  (reliability 0.5, bias 0.3, relevance 0.2), JSON output with action
+  threshold. No LLM calls, regex + pathlib.
+- improve-architecture/scripts/audit.py — god-class detector (>600
+  lines), layer violation scan, dead-import signal, migration gap
+  check. Markdown output.
+- kb-compile/scripts/list_pending.py — filesystem diff between
+  knowledge-base/raw and INDEX.md compiled titles. JSON array output.
+
+Phase 3 (shell injection prefetch):
+- commands/morning.md — git status, recent commits, active plans
+- commands/deploy-check.md — git status, unpushed commits, TODO count,
+  recent migrations
+- commands/health-check.md — largest 10 source files, migration count,
+  test file count
+- skills/tenant-chatbot-audit/SKILL.md — recent 7d widget commits
+
+Bug fix during audit:
+- improve-architecture/SKILL.md description had unquoted ":" breaking
+  YAML parse (Output: ranked...). Quoted the description string. All
+  73/73 skill frontmatter files now parse clean.
+
+Verified: AST-parse PASS on all 3 scripts, yaml.safe_load PASS on
+73/73 skill SKILL.md files, git status shows expected changes only.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-19
+**Commit:** 080098b
+**Author:** aferna6-cell
+**Files Changed:** .claude/commands/deploy-check.md,.claude/commands/health-check.md,.claude/commands/morning.md,.claude/skills/improve-architecture/SKILL.md,.claude/skills/improve-architecture/scripts/audit.py,.claude/skills/kb-compile/SKILL.md,.claude/skills/kb-compile/scripts/list_pending.py,.claude/skills/source-validation/SKILL.md,.claude/skills/source-validation/scripts/score.py,.claude/skills/tenant-chatbot-audit/SKILL.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
