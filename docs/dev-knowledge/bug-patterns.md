@@ -1971,3 +1971,28 @@ Session: 2026-04-18 / commits 8ba8649, 30fe386, dac8626.
 **Root Cause:** Commit `954a951` deleted `embeddings.py` (72 lines) because static grep found no importers. But `kb-compile` invokes it via an inline Python snippet at runtime — invisible to grep across language boundaries.
 **Fix:** `git show 954a951~1:backend/services/embeddings.py > backend/services/embeddings.py`.
 **Prevention:** Before dead-code sweeps that cross language boundaries (shell scripts, skill workflows, cron), grep for the symbol in `.sh`, `.md`, and skill files — not just `.py`. Update `.claude/skills/dead-code-sweep/SKILL.md` false-positive verification step to list "skill workflows + daily scripts".
+
+---
+
+### fix(tests): restore widget_helpers patch targets after god-class split
+
+Refactor commit 8b089c4 split widget_helpers.py into widget_chat_helpers,
+widget_lead_helpers, widget_booking_helpers. The re-export barrel did not
+forward get_service_supabase, and tests were still patching the old path.
+
+Two surgical fixes:
+1. widget_helpers.py re-exports get_service_supabase from
+   backend.models.database so legacy patch() targets resolve.
+2. tests/test_widget_api.py now also patches widget_chat_helpers and
+   widget_lead_helpers — the actual USE sites per the
+   "patch where USED not DEFINED" rule in feedback_test_patch_targets.md.
+
+Verified: pytest tests/test_widget_api.py — 11 passed
+Verified: pre-push fast suite (64 tests) — all green
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-19
+**Commit:** c0aef59
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/widget_helpers.py,tests/test_widget_api.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
