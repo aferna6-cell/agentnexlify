@@ -275,3 +275,23 @@ Example:
 - NYC Local Law 144 (AI bias audit, employment) effective date | January 1, 2023 | NYC Admin. Code § 20-871 | 2023 | projects/regulatory-risks-agentnexlify
 - FCC AI voice declaratory ruling (synthetic = artificial) | 2024 | FCC Declaratory Ruling, Feb 2024 | 2024 | projects/regulatory-risks-agentnexlify
 - Historical regulatory-to-enforcement lag (prior TCPA/CAN-SPAM waves) | 18–36 months | historical analysis of SMS/fax/email regulatory cycles | 2026-04 | projects/regulatory-risks-agentnexlify
+
+<!-- from projects/is-white-label-reseller-distribution-gohighlevel-m on 2026-04-19 -->
+- GHL Agency Pro plan price (white-label enabled) | $297/mo | GoHighLevel public pricing | 2025 | projects/white-label-reseller-viability
+- GHL estimated reseller partner count | 60,000+ | Multiple industry sources / GHL public statements | 2024-2025 | projects/white-label-reseller-viability
+- GHL estimated ARR | $200M+ | SaaS industry reporting | 2024 | projects/white-label-reseller-viability
+- GHL founding to reseller model launch | ~18 months (founded 2018, reseller growth 2019-2020) | GHL company history | 2026 | projects/white-label-reseller-viability
+- Vendasta reseller partner count | 60,000+ | Vendasta public statements | 2024 | projects/white-label-reseller-viability
+- Vendasta Series B raise | $200M | Crunchbase / public reporting | 2021 | projects/white-label-reseller-viability
+- Vendasta partner 12-month retention: partners with active clients | ~70% | Vendasta partner program documentation / industry reporting | 2024 | projects/white-label-reseller-viability
+- Vendasta partner 12-month retention: partners without active clients in 90 days | ~20% | Vendasta partner program documentation / industry reporting | 2024 | projects/white-label-reseller-viability
+- Vendasta Pareto partner revenue distribution | top 20% of partners generate ~80% of revenue | B2B2SMB platform benchmark research | 2023 | projects/white-label-reseller-viability
+- US digital marketing agencies (total estimated) | 150,000+ | Agency Spotter 2024 estimate | 2024 | projects/white-label-reseller-viability
+- US contractor/home-services focused marketing agencies (estimated) | 8,000–15,000 | Derived estimate from Agency Spotter vertical segmentation | 2024 | projects/white-label-reseller-viability
+- Typical productive partner CAC (including failed partner acquisition cost) | $10,000–$15,000 per productive partner (5:1 conversion on raw partner CAC of $2,000–$3,000) | Derived from Pareto dynamics and B2B2SMB benchmarks | 2026 | projects/white-label-reseller-viability
+- Minimum viable white-label infrastructure build time (small engineering team) | 3–6 months | Technical estimation based on feature requirements | 2026 | projects/white-label-reseller-viability
+- White-label infrastructure components build estimate: partner admin panel | 8–12 weeks | Technical estimation | 2026 | projects/white-label-reseller-viability
+- White-label infrastructure components build estimate: billing isolation (Stripe Connect) | 4–6 weeks | Technical estimation | 2026 | projects/white-label-reseller-viability
+- White-label infrastructure components build estimate: branded dashboards / custom domains | 3–4 weeks | Technical estimation | 2026 | projects/white-label-reseller-viability
+- GHL SaaS Mode percentage of revenue from reseller channel | ~70% | Industry analyst estimates | 2024 | projects/white-label-reseller-viability
+- ServiceTitan agency partner program launch | 2023 | ServiceTitan public announcements | 2023 | projects/white-label-reseller-viability

@@ -201,3 +201,17 @@ AgentNexLiFy's outbound automation faces three distinct but converging regulator
 **The TCPA is the dominant near-term threat.** The 2024–2025 FCC rule changes (effective January 27, 2025) elim
 
 ---
+
+## 2026-04-19 — is-white-label-reseller-distribution-gohighlevel-m
+
+**Question:** Is white-label reseller distribution (GoHighLevel model) a viable growth lever for AgentNexLiFy?
+**Depth:** standard
+**Folder:** [[projects/is-white-label-reseller-distribution-gohighlevel-m]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**Is white-label reseller distribution (GoHighLevel model) a viable growth lever for AgentNexLiFy?**
+**The short answer: viable in architecture, premature in execution — with a conditional path to readiness in 6–9 months.**
+The GoHighLevel reseller model is one of the most capital-efficient distribution mechanisms in SMB SaaS history. GHL grew from zero to $200M+ ARR in roughly six years with near
+
+---

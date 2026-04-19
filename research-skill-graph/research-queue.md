@@ -22,7 +22,7 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [x] What is the real defensibility of a widget-first AI product once foundation models become commodity? (depth:deep)
 - [x] Which SMB verticals have the highest willingness to pay for AI appointment booking and why? (depth:standard)
 - [x] What regulatory risks (TCPA, state AI laws, CAN-SPAM) most threaten AgentNexLiFy's outbound automation? (depth:standard)
-- [ ] Is white-label reseller distribution (GoHighLevel model) a viable growth lever for AgentNexLiFy? (depth:standard)
+- [x] Is white-label reseller distribution (GoHighLevel model) a viable growth lever for AgentNexLiFy? (depth:standard)
 
 ## Auto-iterated questions (appended by script)
 
@@ -78,3 +78,4 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [ ] Has any pure-play widget-first AI company successfully navigated a foundation model commoditization cycle and retained >60% gross margin and >$10M ARR? (The cycle is new enough that no confirmed case study exists. This is the most important unknown.)
 - [ ] What percentage of HVAC/plumbing operators are already receiving AI booking features from ServiceTitan or Jobber — if >30%, the standalone market is partially absorbed and urgency increases
 - [ ] What is AgentNexLiFy's current Terms of Service language regarding TCPA compliance, and has it been reviewed by TCPA-specialized counsel? The platform's contractual liability exposure is unknown without this review.
+- [ ] What is the actual size of the contractor-focused digital marketing agency market in the US, and what percentage are actively looking to add AI widget products to their service stack? (GHL's 150,000+ general agency market may not translate to AgentNexLiFy's narrower contractor vertical)
