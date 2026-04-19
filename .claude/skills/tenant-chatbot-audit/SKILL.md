@@ -17,6 +17,13 @@ argument-hint: "[tenant-name-or-id]"
 
 # Tenant Chatbot Audit
 
+## Recent widget activity context
+
+Recent widget-related commits (last 7 days):
+!`git log --since='7 days ago' --oneline backend/routers/widget_* backend/services/widget_* | head -10`
+
+---
+
 Deep diagnostic for a specific tenant's chatbot. Use when: bot isn't working, leads aren't capturing, client complaints about response quality.
 
 ## Usage

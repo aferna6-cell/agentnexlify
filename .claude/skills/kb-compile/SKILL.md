@@ -203,6 +203,17 @@ _No pending sources._
 - Total wiki words: ~85,000
 ```
 
+## Bundled Script
+
+`scripts/list_pending.py` — deterministic filesystem diff, no API calls.
+
+```bash
+python .claude/skills/kb-compile/scripts/list_pending.py
+# → [{"path": "raw/competitors/foo.md", "title": "Foo", "size_bytes": 1234}, ...]
+```
+
+Run before Step 1 to get the pending list without touching Supabase.
+
 ### Step 10: Commit
 
 ```bash

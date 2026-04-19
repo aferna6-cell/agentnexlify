@@ -1,6 +1,6 @@
 ---
 name: improve-architecture
-description: Full structural review of the AgentNexLiFy codebase — file bloat, god classes, layer violations, dead code, dependency rot, schema drift, and performance hotspots. Output: ranked fix list with severity + effort scores. Load when user says "improve architecture", "architecture review", "structural review", "codebase health", "refactor plan", "/improve", or asks to audit the codebase structure.
+description: "Full structural review of the AgentNexLiFy codebase — file bloat, god classes, layer violations, dead code, dependency rot, schema drift, performance hotspots. Output is a ranked fix list with severity + effort scores. Load when user says 'improve architecture', 'architecture review', 'structural review', 'codebase health', 'refactor plan', '/improve', or asks to audit the codebase structure."
 version: 1.0.0
 origin: agentnexlify
 user-invocable: true
@@ -180,6 +180,15 @@ Hand critical/high items to:
 - Performance → targeted Sonnet execution with the specific query
 
 Do NOT fix everything in one pass. Prioritize CRITICAL first.
+
+## Bundled Script
+
+`scripts/audit.py` — deterministic structural scan, no LLM calls.
+
+```bash
+python .claude/skills/improve-architecture/scripts/audit.py
+# → markdown table: god classes, layer violations, dead imports, migration gap
+```
 
 ## Cross-refs
 - `.claude/rules/user-rules.md` Rule 9 — God class threshold (600 lines)

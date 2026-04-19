@@ -1,6 +1,23 @@
 ---
 description: Pre-deploy gate. Use BEFORE pushing to main — checks secrets, tests, build, schema.
 model: sonnet
+allowed-tools: [Bash]
+---
+
+## Prefetched context
+
+Current git status:
+!`git status --short`
+
+Unpushed commits (origin/main..HEAD):
+!`git log origin/main..HEAD --oneline`
+
+Outstanding TODO count (backend):
+!`grep -r 'TODO:' backend/ | wc -l`
+
+Recent migrations:
+!`ls migrations/ | tail -3`
+
 ---
 
 Run a pre-deploy check before pushing to production.

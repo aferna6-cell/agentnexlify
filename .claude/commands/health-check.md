@@ -1,6 +1,20 @@
 ---
 description: Codebase audit. Use when user says health check, audit the code, or before a major release.
 model: sonnet
+allowed-tools: [Bash]
+---
+
+## Prefetched context
+
+Top 10 largest source files:
+!`find backend frontend/src widget -type f \( -name '*.py' -o -name '*.jsx' -o -name '*.js' \) -exec wc -l {} + | sort -rn | head -10`
+
+Migration count:
+!`ls migrations/*.sql | wc -l`
+
+Test file count:
+!`find . -path ./node_modules -prune -o -name 'test_*.py' -print | wc -l`
+
 ---
 
 Perform a health check on the AgentNexLiFy codebase. Check for:

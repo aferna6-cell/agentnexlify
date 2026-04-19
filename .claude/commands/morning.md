@@ -1,6 +1,23 @@
 ---
 description: Interactive morning routine. Use when user starts the day or says morning, what is on.
 model: sonnet
+allowed-tools: [Bash]
+---
+
+## Prefetched context
+
+Current git status:
+!`git status --short`
+
+Recent commits:
+!`git log --oneline -10`
+
+Commits in last 24h:
+!`git log --since='24 hours ago' --oneline | wc -l`
+
+Active plan files:
+!`ls plans/*.md 2>/dev/null | head -5`
+
 ---
 
 This command runs the INTERACTIVE morning routine. For the automated version, the system runs scripts/daily/morning-auto.sh via Task Scheduler (8 AM weekdays).

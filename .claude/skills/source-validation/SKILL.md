@@ -117,6 +117,15 @@ Validated: {title} → trust {score}/10 ({action}).
 - Never score relevance in isolation — context of AgentNexLiFy verticals matters
 - Never skip validation on competitor content (highest bias risk)
 
+## Bundled Script
+
+`scripts/score.py` — deterministic scorer, no LLM calls.
+
+```bash
+python .claude/skills/source-validation/scripts/score.py knowledge-base/raw/competitors/some-source.md
+# → {"score": 7.2, "reliability": 8, "bias": 7, "relevance": 6, "action": "caveat", "reasons": [...]}
+```
+
 ## Cross-refs
 - `.claude/skills/kb-ingest/SKILL.md` — upstream
 - `.claude/skills/kb-compile/SKILL.md` — downstream consumer
