@@ -20,6 +20,8 @@ BackgroundTasks get treated as query params, causing 422 errors.
 
 # ruff: noqa: F401  (re-exports — all names are intentionally imported)
 
+from backend.models.database import get_service_supabase
+
 from backend.routers.widget_chat_helpers import (
     # AI model constants
     MODEL,
