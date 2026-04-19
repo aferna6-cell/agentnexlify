@@ -17,6 +17,8 @@ effort: high
 
 # Compound Engineering — 5-Agent Quality Pipeline
 
+**ultrathink** — this pipeline demands extended thinking at every stage. Brainstorm and Plan agents MUST reason deeply before any file touches.
+
 5-agent sequential pipeline. Each agent is focused on exactly one job. Output quality is higher because no single agent tries to think about everything at once.
 
 ## When to Use

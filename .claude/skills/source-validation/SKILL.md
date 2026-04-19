@@ -11,6 +11,7 @@ triggers:
 - score source
 - trust score
 effort: low
+paths: knowledge-base/raw/**,knowledge-base/wiki/**
 ---
 
 # Source Validation — Credibility Gate for KB Pipeline

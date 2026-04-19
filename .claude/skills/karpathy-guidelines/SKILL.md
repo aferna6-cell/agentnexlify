@@ -5,6 +5,8 @@ version: 1.0.0
 origin: forrestchang/andrej-karpathy-skills
 license: MIT
 triggers: ["think before coding", "simplicity first", "surgical changes", "goal-driven", "avoid overcomplication", "karpathy guidelines", "reduce llm mistakes"]
+paths: backend/**.py,frontend/src/**.jsx,frontend/src/**.js,frontend/src/**.tsx,widget/**.js
+user-invocable: false
 ---
 
 # Karpathy Guidelines

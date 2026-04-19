@@ -11,6 +11,7 @@ triggers:
 - write executive summary
 - frame this proposal
 effort: low
+paths: specs/**,planning/decisions/**,planning/managed-agents/**
 ---
 
 # SCQA Writing — Consulting Narrative Framework

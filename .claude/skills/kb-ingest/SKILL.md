@@ -11,6 +11,8 @@ triggers:
 - add source
 - save article to kb
 effort: medium
+argument-hint: "[url-or-path]"
+allowed-tools: [Read, Write, Bash, WebFetch]
 ---
 
 # KB Ingest — Manual Source Addition

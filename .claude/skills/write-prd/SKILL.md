@@ -10,9 +10,12 @@ triggers:
   - spec this feature
   - PRD for
   - product requirements
+argument-hint: "[feature-description]"
 ---
 
 # Write PRD — Spec Authoring
+
+**ultrathink** — PRD authoring requires extended reasoning across goals, non-goals, edge cases, failure modes, and success metrics. Shallow PRDs produce shallow features.
 
 Interview → explore → design → file. Output: `specs/<feature-name>_spec.md`.
 

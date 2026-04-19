@@ -4,6 +4,8 @@ description: Universal coding standards, best practices, and patterns for TypeSc
 version: 1.0.0
 origin: claude
 allowed-tools: []
+paths: backend/**.py,frontend/src/**.jsx,frontend/src/**.js,frontend/src/**.tsx,widget/**.js
+user-invocable: false
 triggers:
 - coding standards
 - code style

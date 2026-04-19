@@ -10,6 +10,8 @@ triggers:
   - index strategy
   - query performance
   - supabase best practices
+paths: migrations/**.sql,backend/routers/**.py,backend/services/tenant_scope.py
+user-invocable: false
 ---
 
 # Supabase Postgres Best Practices

@@ -8,6 +8,8 @@ triggers:
   - cancel flow
   - retention offers
   - pause subscription
+paths: frontend/src/pages/Billing*.jsx,backend/services/stripe_service.py,backend/routers/billing*.py
+user-invocable: false
   - downgrade instead of cancel
   - win-back
 ---

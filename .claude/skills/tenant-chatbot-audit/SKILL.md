@@ -12,6 +12,7 @@ triggers:
 - leads not capturing
 - chatbot diagnosis
 effort: high
+argument-hint: "[tenant-name-or-id]"
 ---
 
 # Tenant Chatbot Audit

@@ -20,6 +20,8 @@ effort: high
 
 # Improve Architecture — Full Structural Review
 
+**ultrathink** — architectural review requires deep reasoning across file bloat, layer violations, schema drift, and second-order effects. Do not short-circuit.
+
 Systematic codebase audit. Output is a ranked, actionable fix list. No changes made during this skill — diagnosis only. Hand the output to compound-engineering or individual agents to execute fixes.
 
 ## When to Use

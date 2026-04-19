@@ -9,6 +9,8 @@ triggers:
 - widget debugging
 - widget checklist
 - chat widget test
+paths: widget/**,frontend/public/widget/**,backend/routers/widget_*.py,backend/routers/widget_*_helpers.py
+when_to_use: After editing widget JS, widget routers, or chat API. After changing lead capture or conversation storage. When a tenant reports the widget isn't working cross-origin.
 effort: low
 ---
 

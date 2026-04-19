@@ -12,6 +12,7 @@ triggers:
 - recompile wiki
 - compile embeddings
 effort: medium
+allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
 # KB Compile — Wiki Compilation

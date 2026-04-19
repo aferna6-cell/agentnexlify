@@ -10,6 +10,8 @@ triggers:
   - root cause this
   - diagnose this
   - find the bug
+argument-hint: "[issue-number-or-url]"
+allowed-tools: [Bash, Grep, Glob, Read]
 ---
 
 # Triage Issue — Detective Work + TDD Fix Plan

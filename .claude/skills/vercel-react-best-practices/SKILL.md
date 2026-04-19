@@ -10,6 +10,8 @@ triggers:
   - waterfall fetch
   - memo component
   - bundle size
+paths: frontend/src/**.jsx,frontend/src/**.tsx,frontend/src/utils/api/**
+user-invocable: false
 ---
 
 # Vercel React Best Practices

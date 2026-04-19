@@ -5,6 +5,8 @@ version: 1.1.0
 origin: claude
 dependencies: python>=3.11
 triggers: ["schema guard", "check schema", "database query", "pydantic model", "schema mismatch", "RLS policy", "leads table"]
+paths: backend/routers/**,backend/services/tenant_scope.py,migrations/**
+when_to_use: Writing any Supabase query. Creating a Pydantic model that maps to a DB table. Authoring a migration in migrations/NNN_*.sql. Debugging 422 errors or silent data-write failures.
 effort: high
 ---
 
