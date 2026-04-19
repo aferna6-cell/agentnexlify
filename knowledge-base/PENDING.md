@@ -108,10 +108,10 @@ _All compiled 2026-04-18 cron run._
 
 ## Auto-populated 2026-04-19
 
-- [ ] `raw/competitors/introducing-the-fin-api-platform.md` — competitors — https://www.intercom.com/blog/introducing-the-fin-api-platform/
-- [ ] `raw/competitors/why-birdeye-is-the-leading-agentic-marketing-platform.md` — competitors — https://birdeye.com/blog/why-birdeye-is-the-leading-agentic-marketing-platform/
-- [ ] `raw/ai-llm/effective-context-engineering-for-ai-agents.md` — ai-llm — https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
-- [ ] `raw/ai-llm/equipping-agents-for-the-real-world-with-agent-skills.md` — ai-llm — https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills
+- ~~[competitors] Fin API platform~~ → compiled `wiki/competitors/intercom-fin-api-platform.md` (2026-04-19 cron)
+- ~~[competitors] Why Birdeye is the #1 Agentic Marketing Platform~~ → compiled `wiki/competitors/birdeye-agentic-marketing-platform.md` (2026-04-19 cron)
+- ~~[ai-llm] Effective context engineering for AI agents~~ → compiled `wiki/ai-llm/effective-context-engineering.md` (2026-04-19 cron)
+- ~~[ai-llm] Equipping agents for the real world with Agent Skills~~ → compiled `wiki/ai-llm/agent-skills-anthropic.md` (2026-04-19 cron)
 - [ ] `raw/small-biz-saas/saas-churn-rate-benchmarks.md` — small-biz-saas — https://userjot.com/blog/saas-churn-rate-benchmarks
 - [ ] `raw/verticals/the-10-best-ai-receptionist-platforms-compared.md` — verticals — https://parallellabs.app/the-10-best-ai-receptionist-platforms-compared/
 - [ ] `raw/technical/going-to-prod.md` — technical — https://supabase.com/docs/guides/ai/going-to-prod

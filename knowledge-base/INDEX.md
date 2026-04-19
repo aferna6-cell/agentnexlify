@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 43 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-18
+- Total articles: 47 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-19
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -26,6 +26,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Phonely — Voice-First AI with Webchat Bolt-On (2026-04)](wiki/competitors/phonely.md) — Free/$33/$99/Enterprise minute-based ladder; webchat as secondary; $16M Series A. Tags: phonely, voice-ai, webchat, series-a, ycombinator
 - [Birdeye — Reviews-First Platform with Hidden Pricing (2026-04)](wiki/competitors/birdeye.md) — Starter/Growth/Dominate tiers with no public dollar amounts; Chatbot AI gated to top tier. Tags: birdeye, reviews, reputation, hidden-pricing, multi-location, chatbot-ai
 - [Podium — Widget-Strong Lead Conversion Platform (2026-04)](wiki/competitors/podium.md) — Core $399, Pro $599, Signature custom; website chat widget listed as core on every tier; 1,500+ webchat leads/mo cited. Tags: podium, website-chat, lead-conversion, ai-employee, multi-vertical
+- [Intercom Fin API Platform — Model-Layer Licensing for Customer Service Agents](wiki/competitors/intercom-fin-api-platform.md) — $250k/yr floor exposes Apex + subcategory models direct; Intercom wholesales its moat to signal value is migrating to the model layer. Tags: intercom, fin-apex, api-platform, model-licensing, customer-service-ai, vertical-agents
+- [Birdeye Agentic Marketing — Execution Layer for Multi-Location Brands](wiki/competitors/birdeye-agentic-marketing-platform.md) — Five-test CMO framework + three-layer governance (autonomous / supervised / human accountability); 100-10,000+ location positioning ties agent execution to AI search visibility. Tags: birdeye, agentic-marketing, multi-location, reputation, ai-search, location-level-execution
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -42,6 +44,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Claude Code Auto Mode — Classifier-Gated Permission Bypass](wiki/ai-llm/claude-code-auto-mode.md) — Two-stage Sonnet 4.6 transcript classifier + prompt-injection probe; 0.4% FPR, 17% FNR; middle ground between manual prompts and skip-permissions. Tags: claude-code, auto-mode, permissions, security, transcript-classifier, prompt-injection, sonnet-4-6
 - [Effective Harnesses for Long-Running Agents — Initializer + Coding Agent](wiki/ai-llm/effective-harnesses-long-running-agents.md) — Two-part harness (initializer writes feature-list/init.sh/progress file; coding agent works one feature per session with clean-state invariant) fixes one-shot attempts and premature declare-done failures. Tags: claude-agent-sdk, long-running-agents, context-management, initializer-agent, feature-list, progress-file, multi-context-window
 - [Memory for AI Agents — Three Architectures and the Ethics of Forgetting](wiki/ai-llm/memory-for-ai-agents-context-engineering.md) — Vector store vs rolling summarization vs temporal knowledge graph; Zep +18.5% long-horizon accuracy, Mem0 +26% memory benchmarks; memory is a governance surface. Tags: agent-memory, context-engineering, vector-store, temporal-knowledge-graph, mem0, zep, letta, context-rot
+- [Effective Context Engineering for AI Agents — Anthropic's Framework](wiki/ai-llm/effective-context-engineering.md) — Finite attention budget + context rot motivate just-in-time retrieval, compaction, structured note-taking, and sub-agent architectures for long-horizon reliability. Tags: context-engineering, prompt-engineering, attention-budget, context-rot, compaction, just-in-time-retrieval, sub-agents
+- [Agent Skills — Anthropic's Progressive-Disclosure Capability Format](wiki/ai-llm/agent-skills-anthropic.md) — SKILL.md folder + optional bundled files/scripts; three-tier progressive disclosure keeps unbounded context out of the main prompt; open standard at agentskills.io. Tags: agent-skills, progressive-disclosure, claude-code, skill-md, composable-agents, open-standard
 
 ### Small Business SaaS
 _No articles yet._
