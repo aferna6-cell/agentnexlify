@@ -39,21 +39,6 @@ _WIDGET_CACHE_TTL = 300  # 5 minutes for config data
 _CHAT_CACHE_TTL = 300    # 5 minutes for FAQ/hours/corrections
 
 # ---------------------------------------------------------------------------
-# Branding plan restrictions — definitions live in services/branding_helpers.py
-# Re-exported here so existing callers of widget_chat_helpers keep working.
-# ---------------------------------------------------------------------------
-
-from backend.services.branding_helpers import (  # noqa: E402
-    _BRANDING_PLAN_FIELDS,
-    _DANGEROUS_CSS_RE,
-    _CSS_URL_RE,
-    _FONT_URL_RE,
-    _sanitize_css,
-    _filter_branding_for_plan,
-)
-
-
-# ---------------------------------------------------------------------------
 # Intent window heuristics
 # ---------------------------------------------------------------------------
 

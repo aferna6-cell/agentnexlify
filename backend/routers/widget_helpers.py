@@ -22,6 +22,15 @@ BackgroundTasks get treated as query params, causing 422 errors.
 
 from backend.models.database import get_service_supabase
 
+from backend.services.branding_helpers import (
+    _BRANDING_PLAN_FIELDS,
+    _DANGEROUS_CSS_RE,
+    _CSS_URL_RE,
+    _FONT_URL_RE,
+    _sanitize_css,
+    _filter_branding_for_plan,
+)
+
 from backend.routers.widget_chat_helpers import (
     # AI model constants
     MODEL,
@@ -34,13 +43,6 @@ from backend.routers.widget_chat_helpers import (
     _get_cached,
     _set_cache,
     _invalidate_cache,
-    # Branding
-    _BRANDING_PLAN_FIELDS,
-    _DANGEROUS_CSS_RE,
-    _CSS_URL_RE,
-    _FONT_URL_RE,
-    _sanitize_css,
-    _filter_branding_for_plan,
     # Intent heuristics
     _JOB_CONTEXT_KEYWORDS,
     _BID_CONTEXT_KEYWORDS,
