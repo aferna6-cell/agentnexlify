@@ -741,7 +741,18 @@ Adds launch-readiness safety tables and tenant columns for the paid-launch risk 
 
 All new tables use service-role RLS policies. Required by `backend/services/ai_usage_guard.py`, `backend/routers/billing.py`, and `backend/routers/auth.py`.
 
-**Applied:** Pending - created 2026-04-18. Apply before deploying the matching backend.
+**Applied:** STATUS: STAGED, NOT YET APPLIED — created 2026-04-18. `mcp__supabase__list_migrations` (2026-04-19) returned entries only through migration 093; 106 not present in applied list. Apply before deploying matching backend.
+
+### 107 — Admin Refund Request Idempotency
+**Date:** 2026-04-18
+Adds operator-supplied idempotency key to `billing_refunds` so retries after transient Stripe/audit-log failures cannot create duplicate refunds.
+
+- `billing_refunds.refund_request_id` TEXT NULL — operator-supplied idempotency key
+- Partial UNIQUE INDEX `idx_billing_refunds_tenant_request` on `(tenant_id, refund_request_id) WHERE refund_request_id IS NOT NULL`
+
+Depends on migration 106 (`billing_refunds` table). Required by admin refund endpoint in `backend/routers/billing.py`.
+
+**Applied:** STATUS: STAGED, NOT YET APPLIED — created 2026-04-18. `mcp__supabase__list_migrations` (2026-04-19) returned entries only through migration 093; 107 not present in applied list. Apply after 106.
 
 ### 104 — Structured Lead Parser Default True (planned)
 **Date:** Planned ~2026-04-22
