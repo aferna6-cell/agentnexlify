@@ -14,7 +14,9 @@ triggers:
 
 # Grill Me — Socratic Pre-Build Interview
 
-Forces decision-tree resolution BEFORE code. One question at a time. Maps to `claude-usage-patterns.md` Pattern 2 (Interview First).
+Forces decision-tree resolution BEFORE code. Batch 5-8 questions per branch in ONE message. Maps to `claude-usage-patterns.md` Pattern 2 (Interview First).
+
+Opus 4.7 follows instructions literally and each turn layers interpretations from prior turns. Drip-feed questioning compounds drift. Batch mode keeps context flat. See `rules/opus-4-7-prompting.md` section 1.
 
 ## When to Use
 - New feature spec (any file in `specs/`)
@@ -31,14 +33,17 @@ Forces decision-tree resolution BEFORE code. One question at a time. Maps to `cl
 - User already wrote PRD (use `write-prd` to extend, not interview from scratch)
 - User explicitly says "just do it"
 
-## Loop
-1. Read the user's request
-2. Identify ambiguities by category (data model, edge cases, failure modes, existing systems, scope, success criteria)
-3. Ask ONE question at a time — never batch
-4. Wait for answer
-5. Update mental model
-6. Repeat until every branch resolved
-7. Output: structured summary of resolved decisions → ready for `write-prd` or `compound-engineering`
+## Loop (batch mode)
+1. Read user request
+2. Identify ambiguities by branch (data model, edges, failures, existing, scope, success)
+3. Batch 5-8 numbered questions for ONE branch in ONE message
+4. Wait for ALL answers
+5. Update mental model from aggregated answers, branch next bucket based on what changed
+6. Batch next 5-8 questions for next branch
+7. Repeat until every branch resolved. Target 40+ total questions across branches.
+8. Output: structured summary of resolved decisions → hand off to `write-prd` or `compound-engineering`
+
+Never drip one question at a time. Never mix branches in one batch — one branch per message keeps answers aligned.
 
 ## AgentNexLiFy question buckets
 
@@ -97,6 +102,7 @@ NEXT
 ```
 
 ## Cross-refs
+- `.claude/rules/opus-4-7-prompting.md` §1 — batch-mode clarification
 - `.claude/rules/no-assumptions.md` — confidence <80% → ask
 - `.claude/rules/user-rules.md` Rule 2 — ask when unsure
 - `.claude/rules/claude-usage-patterns.md` Pattern 2 — Interview First

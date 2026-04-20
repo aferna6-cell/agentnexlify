@@ -44,7 +44,7 @@ Invoke `.claude/skills/grill-me/SKILL.md` at the start of EVERY non-trivial impl
 - User has already provided a full spec/PRD
 - Continuing work on a task already grilled this session
 
-**Pattern: Ask one question at a time. Wait for answer. Branch based on answer. Minimum 40 questions total before declaring "zero ambiguity".**
+**Pattern: Batch 5-8 questions per branch in ONE message. Wait for ALL answers. Branch next bucket based on aggregated answers. Batch next 5-8. Minimum 40 questions total across branches before declaring "zero ambiguity". Never drip one question per turn — Opus 4.7 layers literal interpretations from prior turns and drift compounds. See `.claude/rules/opus-4-7-prompting.md` §1.**
 
 ---
 
@@ -183,3 +183,4 @@ Monday: IMPROVE-ARCHITECTURE (health check)
 - `.claude/rules/user-rules.md` (Rule 1: Plan first, Rule 10: never change tests)
 - `.claude/rules/ultrathink.md` (plan mode gate)
 - `.claude/rules/no-assumptions.md` (80% confidence threshold)
+- `.claude/rules/opus-4-7-prompting.md` (§1: batch-mode clarification)
