@@ -116,12 +116,12 @@ _All compiled 2026-04-18 cron run._
 - ~~[verticals] the-10-best-ai-receptionist-platforms-compared~~ → compiled `wiki/verticals/ai-receptionist-platforms-2026.md` (2026-04-20 cron)
 - ~~[technical] going-to-prod~~ → compiled `wiki/technical/supabase-ai-production-checklist.md` (2026-04-20 cron)
 - ~~[technical] fastapi-best-practices~~ → compiled `wiki/technical/fastapi-best-practices-zhanymkanov.md` (2026-04-20 cron)
-- [ ] `raw/regulations/best-hipaa-compliant-healthcare-chatbots.md` — regulations — https://www.comm100.com/blog/best-hipaa-compliant-healthcare-chatbots/
-- [ ] `raw/regulations/us-chatbot-legislation-compliance-guide-2026.md` — regulations — https://www.aigovhub.io/guides/us-chatbot-legislation-compliance-guide-2026
-- [ ] `raw/growth/mastering-generative-engine-optimization-in-2026-full-guide-469142.md` — growth — https://searchengineland.com/mastering-generative-engine-optimization-in-2026-full-guide-469142
-- [ ] `raw/growth/generative-engine-optimization.md` — growth — https://foundationinc.co/lab/generative-engine-optimization
+- ~~[regulations] `raw/regulations/best-hipaa-compliant-healthcare-chatbots.md`~~ → compiled `wiki/regulations/hipaa-compliant-chatbot-vendors-2026.md` (2026-04-20 cron)
+- ~~[regulations] `raw/regulations/us-chatbot-legislation-compliance-guide-2026.md`~~ → compiled `wiki/regulations/us-chatbot-legislation-2026.md` (2026-04-20 cron)
+- [FAILED] `raw/growth/mastering-generative-engine-optimization-in-2026-full-guide-469142.md` — Cloudflare-blocked content (searchengineland.com); raw file contains only the "Attention Required" block page. Skip until refetched via agent-browser.
+- ~~[growth] `raw/growth/generative-engine-optimization.md`~~ → compiled `wiki/growth/generative-engine-optimization-foundation-2026.md` (2026-04-20 cron)
 
-- [competitors] `raw/competitors/ai-powered-ui-aka-return-of-the-chat-the-intercom-blog.md` — AI-powered UI (aka "Return of the Chat") - The Intercom Blog — https://www.intercom.com/blog/ai-chatbot
+- ~~[competitors] `raw/competitors/ai-powered-ui-aka-return-of-the-chat-the-intercom-blog.md`~~ → compiled `wiki/competitors/intercom-return-of-the-chat.md` (2026-04-20 cron)
 
 - [ai_llm] `raw/ai-llm/eval-awareness-in-claude-opus-4-6-s-browsecomp-performance.md` — Eval awareness in Claude Opus 4.6’s BrowseComp performance — https://www.anthropic.com/engineering/eval-awareness-browsecomp
 

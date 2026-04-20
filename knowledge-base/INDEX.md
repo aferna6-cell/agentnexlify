@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 51 (plus 1 in `_outputs/`)
+- Total articles: 55 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-20
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -28,6 +28,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Podium — Widget-Strong Lead Conversion Platform (2026-04)](wiki/competitors/podium.md) — Core $399, Pro $599, Signature custom; website chat widget listed as core on every tier; 1,500+ webchat leads/mo cited. Tags: podium, website-chat, lead-conversion, ai-employee, multi-vertical
 - [Intercom Fin API Platform — Model-Layer Licensing for Customer Service Agents](wiki/competitors/intercom-fin-api-platform.md) — $250k/yr floor exposes Apex + subcategory models direct; Intercom wholesales its moat to signal value is migrating to the model layer. Tags: intercom, fin-apex, api-platform, model-licensing, customer-service-ai, vertical-agents
 - [Birdeye Agentic Marketing — Execution Layer for Multi-Location Brands](wiki/competitors/birdeye-agentic-marketing-platform.md) — Five-test CMO framework + three-layer governance (autonomous / supervised / human accountability); 100-10,000+ location positioning ties agent execution to AI search visibility. Tags: birdeye, agentic-marketing, multi-location, reputation, ai-search, location-level-execution
+- [Intercom — Return of the Chat as Universal UI](wiki/competitors/intercom-return-of-the-chat.md) — Chat UI replaces GUI complexity as default interface; novices become power users when they can "type and say" rather than click through menus. Tags: intercom, chat-ui, natural-language-interface, conversational-ui, fin, enterprise-software
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -70,11 +71,14 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [HIPAA-Compliant AI Chatbots — Requirements for Healthcare Deployment in 2026](wiki/regulations/hipaa-ai-chatbot-compliance-2026.md) — BAA-covered vendors, end-to-end encryption, audit logging, and data minimization required for any chatbot handling PHI. Tags: hipaa, chatbot, phi, baa, healthcare-compliance, encryption, ai-chatbot
 - [HIPAA-Compliant AI Tools — BAA Availability and Vendor Verification in 2026](wiki/regulations/hipaa-compliant-ai-tools-baa-guide.md) — Only ChatGPT Enterprise/Team, Claude Enterprise API, BastionGPT, GoHighLevel Healthcare, and Hathr.AI offer BAAs; consumer AI tools are HIPAA violations. Tags: hipaa, baa, ai-tools, chatgpt-enterprise, claude-enterprise, gohighlevel, vendor-compliance
 - [FTC Warning to 97 Auto Dealer Groups — Price Transparency Enforcement 2026](wiki/regulations/ftc-auto-dealers-deceptive-pricing-2026.md) — March 2026 warning letters cite six illegal pricing patterns; cross-market campaign (auto, housing, ticketing, grocery) signals SaaS is next. Tags: ftc, price-transparency, deceptive-advertising, auto-dealers, junk-fees, saas-compliance
+- [HIPAA-Compliant Chatbot Vendors — 2026 Buyer Landscape](wiki/regulations/hipaa-compliant-chatbot-vendors-2026.md) — Five HIPAA-covered vendors (Comm100, Ada, Fini, Kore.ai, Intercom Fin) cluster on BAA scope, zero-retention LLM posture, and EHR integration depth; Intercom gates HIPAA behind Expert tier. Tags: hipaa, chatbot, phi, baa, comm100, ada, kore-ai, fin, healthcare-compliance
+- [U.S. Chatbot Legislation 2026 — 98 State Bills and the Definitional Patchwork](wiki/regulations/us-chatbot-legislation-2026.md) — 98 chatbot-specific bills across 34 states (53% D / 46% R); three definitional models (capability, behavior, intent) determine scope; Colorado AI Act effective 1 Feb 2026. Tags: chatbot-law, ai-governance, state-regulation, colorado-ai-act, nist-ai-rmf, bias-audit, transparency-disclosure
 
 ### Growth & Distribution
 - [Post-Launch Growth Strategy](wiki/growth/post-launch-growth-strategy.md) — Top 10 features for activation, viral growth, daily engagement, and lock-in. Tags: activation, retention, viral-growth, onboarding, quickbooks, reviews
 - [Answer Engine Optimization (AEO) — Visibility in AI-Generated Search Results](wiki/growth/answer-engine-optimization-aeo-2026.md) — AEO structures content for AI-generated answers; 9x higher conversion rates; distinct from SEO/GEO. Tags: aeo, seo, geo, ai-search, zero-click, structured-data, schema-markup
 - [Community-Driven Brand Discovery — How Forums Shape AI Search Results](wiki/growth/community-forums-ai-brand-discovery.md) — AI Overviews summarize Reddit/forum threads as primary answer layer; brands absent from community conversations lose narrative control. Tags: forums, reddit, ai-overviews, brand-discovery, local-search, social-proof, zero-click
+- [Generative Engine Optimization — 85% of Brand Mentions Come from Third-Party Sources](wiki/growth/generative-engine-optimization-foundation-2026.md) — Foundation's four-pillar GEO framework; 85% of AI citations are off-domain; leaders hit 32-57% Share of Model vs 10-17% average; nofollow=dofollow for LLMs. Tags: geo, ai-search, citation-share, share-of-model, reddit, youtube, listicles, off-site-authority
 
 ## Cross-Reference Map
 - [[competitive-landscape-march-2026]] ← referenced by: [[customer-gaps-by-industry]], [[post-launch-growth-strategy]], [[llm-wiki-karpathy-pattern]]
