@@ -17,7 +17,7 @@ stripe>=11.0.0,<12
 # Dead dep. Re-add only if SDK becomes required; pin to <10 and check PyPI first.
 python-jose[cryptography]>=3.3.0
 bcrypt>=4.0.0
-sentry-sdk[fastapi]==2.20.0
+sentry-sdk[fastapi]==2.58.0
 python-json-logger==3.3.0
 resend>=2.0.0,<3
 google-auth>=2.0.0
