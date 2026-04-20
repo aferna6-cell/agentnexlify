@@ -588,6 +588,33 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     needs_bid_context = _needs_bid_context(intent_window)
     history_for_model = _compact_messages_for_llm(messages)
 
+    # Memory tier: for long conversations (≥20 messages loaded), replace the
+    # compact recency window with semantically retrieved older messages.
+    # Sends last 10 verbatim + top-5 retrieved by hybrid score
+    # (0.4·cosine + 0.3·recency + 0.3·confidence) instead of compact-8.
+    # Falls back to compact history silently on any error.
+    if len(messages) >= 20:
+        from backend.services.conversation_memory import retrieve_relevant
+        from backend.services.embeddings import embed_query
+        try:
+            query_emb = await embed_query(req.message)
+            retrieved_msgs = await retrieve_relevant(
+                session_id=req.session_id,
+                tenant_id=tenant["id"],
+                query_embedding=query_emb,
+            )
+            if retrieved_msgs:
+                history_for_model = retrieved_msgs + messages[-10:]
+                logger.info(
+                    "memory_tier: session=%s retrieved=%d recent=10",
+                    req.session_id, len(retrieved_msgs),
+                )
+        except Exception:
+            logger.warning(
+                "memory_tier failed session=%s, using compact history",
+                req.session_id, exc_info=True,
+            )
+
     faq_data = _get_cached(f"faq:{tid}", _CHAT_CACHE_TTL)
     if faq_data is None:
         try:
