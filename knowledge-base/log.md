@@ -260,3 +260,5 @@ URLs kept in known-urls.json to prevent retry.
 - skipped: small-biz-saas, verticals, technical, regulations, growth (no blog URLs in sources.yaml, no search tool available)
 
 ## [2026-04-20T22:03:57Z] discover-rejects | blacklisted 17 non-article/off-topic URLs
+
+## [2026-04-20 18:11] discover+compile | cron 18:00 | commits=10 raw=4 wiki=4
