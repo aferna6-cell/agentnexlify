@@ -1,0 +1,43 @@
+{
+  "date": "2026-04-20",
+  "run": 6,
+  "evidence_sources_checked": [
+    "git log (3 days)",
+    "git log --grep=fix (7 days)",
+    "audits/audit-architecture-2026-04-18.md",
+    "docs/dev-knowledge/bug-patterns.md",
+    "docs/dev-knowledge/customer-gaps.md",
+    "docs/daily-logs/current-tasks.md",
+    "knowledge-base/INDEX.md",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl",
+    "subconscious/runs/2026-04-11-pm/winning-concept.md"
+  ],
+  "evidence_summary": "Architecture audit 2026-04-18: 5 god classes (HIGH), migration numbering collisions 005+007 (HIGH), no CRITICALs. Bug-patterns: 7 entries total, two spec-drift bugs same day (Apr 15). current-tasks: P0 compromised API key (day 13), P1 QA backlog for service-layer extraction + scheduled_jobs split. widget_helpers.py at 1635L (3 consecutive audit HIGHs). 4 prior subconscious recommendations pending approval.",
+  "ideas_count": 5,
+  "top_3_debated": [
+    "Migration Duplicate Number Pre-commit Guard",
+    "widget_helpers.py Phase 1 Extract",
+    "Spec-to-Implementation Symbol Validation"
+  ],
+  "winner": "Migration Duplicate Number Pre-commit Guard",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "debate_verdicts": {
+    "Migration Duplicate Number Pre-commit Guard": "SURVIVES",
+    "widget_helpers.py Phase 1 Extract": "WEAKENED",
+    "Spec Symbol Validation": "WEAKENED"
+  },
+  "parking_lot_additions": [
+    "widget_helpers.py Phase 1 Extract (widget sprint dependency)",
+    "Spec Symbol Validation (needs hook enforcement not just doc)",
+    "Small Business SaaS KB Category Seed"
+  ],
+  "rejected": [],
+  "questions_for_next_run": [
+    "Implementation lag check: any of 4 pending winners approved+implemented?",
+    "Playwright installed in CI?",
+    "Admin API key rotated (P0 day 13)?",
+    "scheduled_jobs split QA status?"
+  ]
+}
