@@ -790,3 +790,21 @@ Adds `enrichment_source` column to `leads` to track how lead fields were populat
 - Drives lead quality stat bar (% with name + email + phone) in LeadsPage dashboard
 
 **Applied:** 2026-04-15 via Supabase Dashboard SQL editor.
+
+### 108 — Photo-Quote Widget Tables
+**Date:** 2026-04-20
+Creates 3 tables supporting photo-upload quote feature (spec: `specs/photo-quote_spec.md`, epic: #47, migration issue: #36).
+
+**Tables:**
+- `tenant_pricing_rules` — per-tenant per-vertical pricing rules (tiered severity jsonb), optional disclaimer + confidence threshold overrides. UNIQUE (client_id, industry). Industry enum: plumbing, roofing, hvac, auto_body, landscaping, pest.
+- `quote_requests` — one row per customer photo submission. Full image purged at 30d (`full_image_purged_at`), thumbnail + metadata retained permanently. Severity enum: minor, major, needs_human. Indexed for client+created_at and for retention-job scanning.
+- `tenant_quote_usage` — monthly counter per tenant, PK (client_id, period_start). Drives Stripe metered billing (500/mo included, $0.15 overage).
+
+**Function:**
+- `purge_photo_quote_images_30d() → int` — SECURITY DEFINER. Called daily by backend scheduler (issue #40). Sets `image_url=null` + `full_image_purged_at=now()` for rows >30d.
+
+**RLS:** service_role only on all 3 tables. Tenant access via backend API — no direct PostgREST.
+
+**Conventions:** `client_id` (not `tenant_id`) per CLAUDE.md Rule 1. All FKs cascade on tenant delete.
+
+**Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified via `mcp__supabase__list_tables` — all 3 tables present with RLS enabled.
