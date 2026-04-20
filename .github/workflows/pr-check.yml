@@ -54,6 +54,9 @@ jobs:
           npm ci
           npm audit --audit-level=high
 
+      - name: Run root quick check
+        run: npm run check:quick
+
       - name: Audit demo JS dependencies
         run: |
           cd demo-platform

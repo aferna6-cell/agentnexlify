@@ -114,6 +114,11 @@ def main() -> int:
         "Karpathy guidelines skill exists",
         failures,
     )
+    check(
+        file_exists(".codex/skills/agentnexlify-task-loader/SKILL.md"),
+        "AgentNexLiFy task loader skill exists",
+        failures,
+    )
 
     agent_dir = ROOT / ".claude" / "agents"
     agent_count = len(list(agent_dir.glob("*.md")))
@@ -142,6 +147,37 @@ def main() -> int:
     package = read_json("package.json")
     scripts = package.get("scripts", {})
     check(
+        scripts.get("check") == "npm run check:quick",
+        "package check script points to quick checks",
+        failures,
+    )
+    check(
+        scripts.get("check:quick")
+        == "npm run agent-system:check && npm run check:project && npm run sync-widget:check",
+        "package quick check script wires the expected checks",
+        failures,
+    )
+    check(
+        scripts.get("check:full") == "npm run check:quick && npm run build && npm run test",
+        "package full check script builds on quick checks",
+        failures,
+    )
+    check(
+        scripts.get("check:project") == "python scripts/check_project_invariants.py",
+        "package project check script points at project invariants",
+        failures,
+    )
+    check(
+        scripts.get("sync-widget:check") == "python scripts/sync_widget_assets.py --check",
+        "package widget sync check script points at widget asset verification",
+        failures,
+    )
+    check(
+        scripts.get("build") == "npm run build:frontend",
+        "package build script points to the frontend build",
+        failures,
+    )
+    check(
         CLAUDE_CODE_PIN in scripts.get("claude:2.1.98", ""),
         "Claude Code 2.1.98 npm script is pinned",
         failures,
@@ -149,6 +185,14 @@ def main() -> int:
     check(
         scripts.get("agent-system:check") == "python scripts/check_agent_system.py",
         "agent-system check script is registered",
+        failures,
+    )
+
+    manifest = read_json(".ai/manifest.json")
+    codex_skills = manifest.get("skills", {}).get("codex", {}).get("skills", [])
+    check(
+        "agentnexlify-task-loader" in codex_skills,
+        ".ai manifest lists the task loader codex skill",
         failures,
     )
 

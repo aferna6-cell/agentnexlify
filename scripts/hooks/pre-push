@@ -78,7 +78,21 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
-# CHECK 2: Python test quality lint
+# CHECK 2: Root quick check
+echo -n "Running root quick check... "
+if [ -z "$NPM_BIN" ]; then
+    echo -e "${RED}FAILED${NC}"
+    echo "  npm is required for the root quick check."
+    ERRORS=$((ERRORS + 1))
+elif "$NPM_BIN" run -s check:quick; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAILED${NC}"
+    echo "  Root quick check failed."
+    ERRORS=$((ERRORS + 1))
+fi
+
+# CHECK 3: Python test quality lint
 echo -n "Linting Python test quality... "
 if [ -z "$PY_BIN" ]; then
     echo -e "${RED}FAILED${NC}"
@@ -92,7 +106,7 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
-# CHECK 3: Fast critical pytest subset
+# CHECK 4: Fast critical pytest subset
 echo -n "Running fast critical backend tests... "
 DEFAULT_FAST_TESTS=(
     tests/test_admin_analytics.py
@@ -120,7 +134,7 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
-# CHECK 4: Frontend build
+# CHECK 5: Frontend build
 echo -n "Checking frontend build... "
 if [ -d "frontend" ]; then
     if [ -z "$NPM_BIN" ]; then
@@ -138,7 +152,7 @@ else
     echo -e "${YELLOW}SKIPPED (no frontend dir found)${NC}"
 fi
 
-# CHECK 5: Scan for dangerous __future__ imports in routers
+# CHECK 6: Scan for dangerous __future__ imports in routers
 echo -n "Scanning for __future__ annotations in routers... "
 if grep -rn "from __future__ import annotations" backend/routers/ 2>/dev/null | grep -v "^.*:#" | grep -q .; then
     echo -e "${RED}FAILED${NC}"
@@ -149,7 +163,7 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
-# CHECK 6: .env in .gitignore
+# CHECK 7: .env in .gitignore
 echo -n "Checking .gitignore includes .env... "
 if grep -q "\.env" .gitignore 2>/dev/null; then
     echo -e "${GREEN}OK${NC}"
@@ -184,7 +198,7 @@ else
     fi
 fi
 
-# CHECK 7: Widget file sync (warning only)
+# CHECK 9: Widget file sync (warning only)
 echo -n "Checking widget file sync... "
 if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then
     if diff -q "widget/agentnexlify-widget.js" "frontend/public/widget/agentnexlify-widget.js" > /dev/null 2>&1; then
