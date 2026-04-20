@@ -715,6 +715,21 @@ See `backend/routers/widget_chat.py:Step 9a` and `docs/managed-agents.md` for th
 
 **Applied:** Pending — created 2026-04-10. Apply via Supabase MCP.
 
+### 102 — Marketing Suite Add-on (backfill)
+**Date:** 2026-04-12 (file mtime) — backfilled 2026-04-20
+Adds `$49.99/mo` Marketing Suite add-on subscription columns to `tenants`. Carve-out policy: strip marketing features from plans, force add-on. Existing paid tenants grandfathered so live customers keep access.
+
+- `tenants.marketing_addon_active` BOOLEAN NOT NULL DEFAULT false
+- `tenants.marketing_addon_stripe_sub_id` TEXT
+- `tenants.marketing_addon_started_at` TIMESTAMPTZ
+- `tenants.marketing_addon_grandfathered` BOOLEAN NOT NULL DEFAULT false
+- Index `idx_tenants_marketing_addon_sub` on `marketing_addon_stripe_sub_id`
+- One-time UPDATE grandfathers existing active paid tenants (growth/professional/autopilot/enterprise)
+
+Gates: SEO Audit Hub, Social Media, Marketing Campaigns, Marketing Dashboard, A/B Tests, Automation Rules, Trigger Logs. Deactivation script: `scripts/migrations/deactivate_grandfathered_marketing.sh` (run when notice window expires).
+
+**Applied:** Status unknown — backfill log entry only. Verify via Supabase MCP before next billing event.
+
 ### 103 — Structured Lead Parser Flag
 **Date:** 2026-04-15
 Adds opt-in boolean to `widget_configs` controlling whether widget chat runs the `structured_extractor` managed agent as a **background enrichment pass** on each user message. Fills `name/email/phone/interest/timeline/budget` fields the regex parser missed.
