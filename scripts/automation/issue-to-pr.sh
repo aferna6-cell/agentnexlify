@@ -78,7 +78,18 @@ Ready = goal concrete, files identifiable, success criteria inferable, no archit
 EOF
 )
 
-classification="$(echo "$CLASSIFY_PROMPT" | run_claude -p --model claude-haiku-4-5-20251001 --output-format text 2>/dev/null || echo '{"ready":false,"reason":"classifier failed","clarifying_questions":["rerun manually"]}')"
+raw_classification="$(echo "$CLASSIFY_PROMPT" | run_claude -p --model claude-haiku-4-5-20251001 --output-format text 2>/dev/null)"
+# Haiku wraps JSON in prose/markdown; extract first {...} block with "ready" key
+classification="$(echo "$raw_classification" | python3 -c '
+import sys, re
+t = sys.stdin.read()
+for m in re.finditer(r"\{(?:[^{}]|(?:\{[^{}]*\}))*\}", t, re.DOTALL):
+    if "\"ready\"" in m.group(0):
+        print(m.group(0))
+        sys.exit(0)
+print("{\"ready\":false,\"reason\":\"no JSON in classifier output\",\"clarifying_questions\":[\"rerun manually\"]}")
+' 2>/dev/null)"
+[ -z "$classification" ] && classification='{"ready":false,"reason":"classifier failed","clarifying_questions":["rerun manually"]}'
 
 ready="$(echo "$classification" | jq -r .ready 2>/dev/null || echo false)"
 
