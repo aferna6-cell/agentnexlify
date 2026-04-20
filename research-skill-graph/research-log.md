@@ -215,3 +215,16 @@ AgentNexLiFy's outbound automation faces three distinct but converging regulator
 The GoHighLevel reseller model is one of the most capital-efficient distribution mechanisms in SMB SaaS history. GHL grew from zero to $200M+ ARR in roughly six years with near
 
 ---
+
+## 2026-04-20 — what-is-agentnexlify-s-current-telemetry-coverage-
+
+**Question:** What is AgentNexLiFy's current telemetry coverage? Are agent task completions, session data, and workflow activations already logged at the tenant level — or does a Health Score Dashboard require backend instrumentation work first?
+**Depth:** standard
+**Folder:** [[projects/what-is-agentnexlify-s-current-telemetry-coverage-]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+## What Did We Learn?
+The prior research log establishes that AgentNexLiFy is an early-stage agentic SaaS platform targeting SMB tenants, with known churn problems driven by low value visibility — and a previously recommended Health Score Dashboard as the highest-leverage churn intervention. This research attempts to answer whether that dashboard can be built from existing telemetry or requires ne
+
+---

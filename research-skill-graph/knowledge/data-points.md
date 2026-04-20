@@ -295,3 +295,15 @@ Example:
 - White-label infrastructure components build estimate: branded dashboards / custom domains | 3–4 weeks | Technical estimation | 2026 | projects/white-label-reseller-viability
 - GHL SaaS Mode percentage of revenue from reseller channel | ~70% | Industry analyst estimates | 2024 | projects/white-label-reseller-viability
 - ServiceTitan agency partner program launch | 2023 | ServiceTitan public announcements | 2023 | projects/white-label-reseller-viability
+
+<!-- from projects/what-is-agentnexlify-s-current-telemetry-coverage- on 2026-04-20 -->
+- Telemetry instrumentation sprint cost (early-stage SaaS, 1-2 engineers) | $16,000–$60,000 | Derived from market-rate engineering labor estimates | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Analytics event store infrastructure cost (Segment/PostHog/Mixpanel, early-stage volume) | $500–$3,000/month | Vendor pricing pages for PostHog, Segment, Mixpanel | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Health Score Dashboard build time (telemetry exists, frontend-only) | 2–4 weeks | Industry benchmark for BI dashboard builds with existing data layer | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Health Score Dashboard build time (no telemetry, full instrumentation required) | 6–12 weeks | Derived from instrumentation sprint + data pipeline + frontend estimates | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Cost overrun multiplier (dashboard scoped without telemetry audit) | 2–3× | Derived from historical SaaS analytics project patterns | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Telemetry audit duration (engineering spike to enumerate existing coverage) | 1–2 days | Industry standard for pre-scoping spikes | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Telemetry audit cost | $1,000–$3,000 | Derived from 1-2 engineer-days at early-stage rates | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Database-query analytics: viable tenant ceiling (without performance degradation) | ~500 active tenants | Engineering rule of thumb for OLTP-vs-OLAP boundary | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Prior probability that agent task completion events are absent from queryable telemetry (early-stage agentic SaaS) | 60–75% | Derived from historical pattern analysis of agentic platform instrumentation gaps | 2026-04 | projects/agentnexlify-telemetry-coverage
+- Probability that sufficient v1 Health Score data exists in application database records | 30–40% | Contrarian lens estimate based on standard database schema patterns | 2026-04 | projects/agentnexlify-telemetry-coverage

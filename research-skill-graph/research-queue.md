@@ -27,7 +27,7 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 ## Auto-iterated questions (appended by script)
 
 <!-- open-questions from completed projects land below this line -->
-- [ ] What is AgentNexLiFy's current telemetry coverage? Are agent task completions, session data, and workflow activations already logged at the tenant level — or does a Health Score Dashboard require backend instrumentation work first?
+- [x] What is AgentNexLiFy's current telemetry coverage? Are agent task completions, session data, and workflow activations already logged at the tenant level — or does a Health Score Dashboard require backend instrumentation work first?
 - [ ] Is the SMB segment primarily self-serve (no sales/CS touch) or sales-assisted? This determines whether the intervention channel should be in-product, automated email, or CSM alert.
 - [ ] What does the actual AgentNexLiFy churn data show — is the dominant churn signal engagement decay (supporting the dashboard recommendation) or stated product-fit complaints (supporting a different roadmap priority)?
 - [ ] What is the median time-to-first-value for a new AgentNexLiFy SMB tenant today? If TTFV >7 days, onboarding activation gates may be higher leverage than ongoing health scores.
@@ -79,3 +79,4 @@ Optional metadata after the question: `(depth:standard)` or `(depth:quick)` or `
 - [ ] What percentage of HVAC/plumbing operators are already receiving AI booking features from ServiceTitan or Jobber — if >30%, the standalone market is partially absorbed and urgency increases
 - [ ] What is AgentNexLiFy's current Terms of Service language regarding TCPA compliance, and has it been reviewed by TCPA-specialized counsel? The platform's contractual liability exposure is unknown without this review.
 - [ ] What is the actual size of the contractor-focused digital marketing agency market in the US, and what percentage are actively looking to add AI widget products to their service stack? (GHL's 150,000+ general agency market may not translate to AgentNexLiFy's narrower contractor vertical)
+- [ ] Does AgentNexLiFy's application database contain tenant-tagged records for agent task completions (e.g., a table with tenant_id, completed_at, status columns)? This single question determines whether a v1 Health Score Dashboard can be built without new instrumentation.
