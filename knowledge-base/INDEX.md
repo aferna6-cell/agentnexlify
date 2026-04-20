@@ -3,11 +3,17 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 51 (plus 1 in `_outputs/`)
+- Total articles: 55 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-20
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
+
+### Integrations
+- [Zapier Integration — AgentNexLiFy Lead Export for SMB CRMs](wiki/integrations/zapier.md) — Polling `new_lead` trigger, API-key auth, tier gating, schema-pinned v1 endpoint, and Redis-cached dedup for Growth+ tenants. Tags: zapier, crm, api-key, lead-export, home-services
+- [Send AgentNexLiFy Leads to Jobber via Zapier](wiki/integrations/zapier-jobber.md) — Step-by-step Zap setup from API key generation through field mapping and activation for Jobber field service clients. Tags: zapier, jobber, crm, home-services, tutorial
+- [Send AgentNexLiFy Leads to ServiceTitan via Zapier](wiki/integrations/zapier-servicetitan.md) — Setup guide covering ServiceTitan's Customer/Location/Job hierarchy, Create Lead action, business unit mapping, and campaign attribution. Tags: zapier, servicetitan, crm, enterprise, tutorial
+- [Send AgentNexLiFy Leads to Housecall Pro via Zapier](wiki/integrations/zapier-housecall-pro.md) — Housecall Pro Create Customer setup guide with lead source attribution and duplicate-prevention pattern for residential trades tenants. Tags: zapier, housecall-pro, crm, residential, tutorial
 
 ### Competitors
 - [Competitive Landscape — March 2026](wiki/competitors/competitive-landscape-march-2026.md) — Analysis of 8 major competitors; AgentNexLiFy is feature-complete, gap is engagement/stickiness. Tags: intercom, drift, tidio, livechat, crisp, freshchat, hubspot, gohighlevel
@@ -81,3 +87,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [[customer-gaps-by-industry]] ← referenced by: [[post-launch-growth-strategy]]
 - [[post-launch-growth-strategy]] ← referenced by: [[customer-gaps-by-industry]], [[llm-wiki-karpathy-pattern]]
 - [[llm-wiki-karpathy-pattern]] ← referenced by: (new — no backlinks yet)
+- [[zapier]] ← referenced by: [[zapier-jobber]], [[zapier-servicetitan]], [[zapier-housecall-pro]]
+- [[zapier-jobber]] ← referenced by: [[zapier]], [[zapier-servicetitan]], [[zapier-housecall-pro]]
+- [[zapier-servicetitan]] ← referenced by: [[zapier]], [[zapier-jobber]], [[zapier-housecall-pro]]
+- [[zapier-housecall-pro]] ← referenced by: [[zapier]], [[zapier-jobber]], [[zapier-servicetitan]]
