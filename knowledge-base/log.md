@@ -249,3 +249,5 @@ categories_processed=7  urls_fetched=2  new_raw_files=2  deduped=1  errors=0
 - verticals: drug-dealer-s-new-teeth-brag-leads-to-jail.md (crime news, not vertical relevance)
 - verticals: convicted-dentist-arrested-for-practicing-without-a-license.md (crime news)
 URLs kept in known-urls.json to prevent retry.
+
+## [2026-04-20 06:12] discover+compile | cron 06:00 | commits=3 raw=10 wiki=4
