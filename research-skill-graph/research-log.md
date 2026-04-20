@@ -243,3 +243,16 @@ The SMB label covers two structurally different buyer types that behave like dif
 1. **"Small" SMB (1–20 employees, sub-$200/month ACV):** A
 
 ---
+
+## 2026-04-20 — what-does-the-actual-agentnexlify-churn-data-show-
+
+**Question:** What does the actual AgentNexLiFy churn data show — is the dominant churn signal engagement decay (supporting the dashboard recommendation) or stated product-fit complaints (supporting a different roadmap priority)?
+**Depth:** standard
+**Folder:** [[projects/what-does-the-actual-agentnexlify-churn-data-show-]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**The question cannot be definitively answered with external data alone — but the weight of evidence strongly favors engagement decay as the dominant churn signal, while product-fit complaints likely function as a rationalization layer rather than a root cause.**
+**What the prior research log establishes (compound mode):** Two prior projects are directly load-bearing here. The 2026-04-13 highest-l
+
+---

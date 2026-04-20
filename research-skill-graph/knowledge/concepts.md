@@ -193,3 +193,13 @@ Accumulated definitions, terms, and mental models that span multiple research pr
 - Acquisition-Retention Conflation :: The category error of assuming that because a customer acquired through self-serve channels prefers automated interactions, they also prefer automated retention interactions; empirically false — NPS data shows 67% of sub-$200/month SMB customers rate access to a real person as important even post-acquisition (Zendesk CX Benchmark 2024)
 
 ---
+
+<!-- from projects/what-does-the-actual-agentnexlify-churn-data-show- on 2026-04-20 -->
+- Rationalization Premium :: The systematic overcount of feature-gap and product-fit explanations in self-reported churn surveys relative to behavioral evidence; estimated at 2–3× across SaaS cohorts; caused by face-saving social dynamics in exit conversations
+- Engagement Signal Validity Problem :: The risk that engagement metrics in agentic SaaS products measure the wrong proxy (login frequency) rather than outcome-relevant proxies (agent invocations, workflow completions), causing successful set-and-forget customers to appear at-risk
+- Causal Sequentiality :: The principle that engagement decay and product-fit complaints are not parallel alternative hypotheses but causally ordered — disengagement precedes exit-survey complaint language, making complaints a lagging indicator even when both are present
+- Cohort Clustering Test :: A diagnostic method for distinguishing genuine product-fit churn from engagement-decay churn; if churn rate varies significantly (3×+) across customer segments/use-cases, product-fit is a plausible driver for the high-churn segment; if churn is uniform, engagement decay dominates
+- Agentic Engagement Signature :: The distinct behavioral pattern of customers using agentic (background-running) SaaS products, characterized by low login frequency combined with high agent invocation rates when working correctly; differs from traditional SaaS engagement signatures and requires different health scoring methodology
+- Exit Survey Timing Bias :: The systematic unreliability introduced when churn reasons are collected at the moment of cancellation rather than longitudinally; customers at cancellation have already decided to leave and are in post-hoc rationalization mode, making cancellation-moment surveys systematically less accurate than in-product sentiment collection during active subscription
+
+---

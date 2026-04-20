@@ -323,3 +323,13 @@ Example:
 - Minimum account count for SMB CSM model viability | 250–400 accounts per CSM | Gainsight / industry CS benchmarks | 2024 | projects/smb-intervention-channel
 - SMB voluntary vs. involuntary churn split | ~70–80% voluntary / 20–30% involuntary | ProfitWell/Paddle retention research (prior research log) | 2023 | projects/smb-intervention-channel
 - Self-serve acquired PLG cohorts: 90-day churn difference with vs. without automated success motion | 30–40% higher churn without automated success motion | Derived from Atlassian/Slack/Dropbox PLG retrospective analyses 2020–2022 | 2022 | projects/smb-intervention-channel
+
+<!-- from projects/what-does-the-actual-agentnexlify-churn-data-show- on 2026-04-20 -->
+- stated "missing features" as churn reason in exit surveys | ~40% of SMB SaaS exit surveys | Baremetrics/FirstOfficer operator studies | 2022–2023 | projects/churn-signal-analysis
+- behavioral confirmation rate for feature-gap churn claims | ~15% of cases where "missing features" cited show actual low feature adoption | Baremetrics/FirstOfficer operator studies | 2022–2023 | projects/churn-signal-analysis
+- rationalization premium (stated vs. behavioral churn reason divergence) | 2–3× across 40+ SaaS company portfolio | Point Nine Capital / Christoph Janz portfolio analysis | 2022 | projects/churn-signal-analysis
+- pre-churn engagement decay lead time | 30–45 days before cancellation in 60–70% of SMB SaaS cases | Mixpanel/Amplitude benchmark reports | 2022–2025 | projects/churn-signal-analysis
+- login inactivity churn odds multiplier (>14 days inactive) | ~3.2× baseline churn odds | OpenView SaaS Benchmarks | 2024 | projects/churn-signal-analysis
+- month-1 workflow completion churn threshold | <40% completion → 2.5× higher 90-day churn | Amplitude Product Intelligence Report | 2023 | projects/churn-signal-analysis
+- involuntary churn share of total SMB SaaS churn | 20–30% | ProfitWell/Paddle retention research | 2023 | projects/churn-signal-analysis
+- AI vendor fatigue cycle onset | 2025–2026 | Prior research synthesis (projects/why-do-most-ai-chat-widget-companies-plateau-or-fa) | 2026-04 | projects/churn-signal-analysis
