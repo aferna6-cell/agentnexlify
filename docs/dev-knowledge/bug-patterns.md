@@ -2033,3 +2033,18 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .claude/commands/deploy-check.md,.claude/commands/health-check.md,.claude/commands/morning.md,.claude/skills/improve-architecture/SKILL.md,.claude/skills/improve-architecture/scripts/audit.py,.claude/skills/kb-compile/SKILL.md,.claude/skills/kb-compile/scripts/list_pending.py,.claude/skills/source-validation/SKILL.md,.claude/skills/source-validation/scripts/score.py,.claude/skills/tenant-chatbot-audit/SKILL.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(automation): source .env in issue-to-pr + pr-feedback scripts for cron
+
+Cron env is minimal — missing ANTHROPIC_API_KEY + GH_TOKEN would cause silent failure on first fire. Both scripts now source \$REPO_ROOT/.env early if present.
+
+Found while installing 15min issue-to-pr cron for photo-quote/drive-kb/zapier epics (19 ai-ready issues assigned).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-20
+**Commit:** be135eb
+**Author:** aferna6-cell
+**Files Changed:** scripts/automation/issue-to-pr.sh,scripts/automation/pr-feedback.sh
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
