@@ -2048,3 +2048,18 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** scripts/automation/issue-to-pr.sh,scripts/automation/pr-feedback.sh
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(automation): use any() not inside() for label filter
+
+`inside` tests array subset; issue with [ai-ready, needs-info] was NOT
+subset of blocker list so it passed the filter. Loop re-picked #62 every
+15min. `any()` does the correct intersect test.
+
+Verified: dry-run pick advances from #62 → #60 (correct skip past needs-info).
+**Date:** 2026-04-20
+**Commit:** 4d2b4be
+**Author:** aferna6-cell
+**Files Changed:** scripts/automation/issue-to-pr.sh
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
