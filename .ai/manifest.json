@@ -2,7 +2,7 @@
   "schema_version": 2,
   "project": "AgentNexLiFy",
   "description": "AI-powered business automation platform for small businesses. Includes customer-facing AI, automations, an embeddable widget, MCP access, and a multi-agent development system.",
-  "updated_at": "2026-04-15",
+  "updated_at": "2026-04-20",
   "documentation": {
     "primary": "CLAUDE.md",
     "codex_adapter": "AGENTS.md",
@@ -247,6 +247,7 @@
     "codex": {
       "location": ".codex/skills/",
       "skills": [
+        "agentnexlify-task-loader",
         "agentnexlify-runtime-constraints",
         "agentnexlify-schema-guard",
         "agentnexlify-surface-selector",
