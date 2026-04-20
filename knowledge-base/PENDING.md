@@ -112,10 +112,10 @@ _All compiled 2026-04-18 cron run._
 - ~~[competitors] Why Birdeye is the #1 Agentic Marketing Platform~~ → compiled `wiki/competitors/birdeye-agentic-marketing-platform.md` (2026-04-19 cron)
 - ~~[ai-llm] Effective context engineering for AI agents~~ → compiled `wiki/ai-llm/effective-context-engineering.md` (2026-04-19 cron)
 - ~~[ai-llm] Equipping agents for the real world with Agent Skills~~ → compiled `wiki/ai-llm/agent-skills-anthropic.md` (2026-04-19 cron)
-- [ ] `raw/small-biz-saas/saas-churn-rate-benchmarks.md` — small-biz-saas — https://userjot.com/blog/saas-churn-rate-benchmarks
-- [ ] `raw/verticals/the-10-best-ai-receptionist-platforms-compared.md` — verticals — https://parallellabs.app/the-10-best-ai-receptionist-platforms-compared/
-- [ ] `raw/technical/going-to-prod.md` — technical — https://supabase.com/docs/guides/ai/going-to-prod
-- [ ] `raw/technical/fastapi-best-practices.md` — technical — https://github.com/zhanymkanov/fastapi-best-practices
+- ~~[small-biz-saas] saas-churn-rate-benchmarks~~ → compiled `wiki/small-biz-saas/saas-churn-benchmarks-2026.md` (2026-04-20 cron)
+- ~~[verticals] the-10-best-ai-receptionist-platforms-compared~~ → compiled `wiki/verticals/ai-receptionist-platforms-2026.md` (2026-04-20 cron)
+- ~~[technical] going-to-prod~~ → compiled `wiki/technical/supabase-ai-production-checklist.md` (2026-04-20 cron)
+- ~~[technical] fastapi-best-practices~~ → compiled `wiki/technical/fastapi-best-practices-zhanymkanov.md` (2026-04-20 cron)
 - [ ] `raw/regulations/best-hipaa-compliant-healthcare-chatbots.md` — regulations — https://www.comm100.com/blog/best-hipaa-compliant-healthcare-chatbots/
 - [ ] `raw/regulations/us-chatbot-legislation-compliance-guide-2026.md` — regulations — https://www.aigovhub.io/guides/us-chatbot-legislation-compliance-guide-2026
 - [ ] `raw/growth/mastering-generative-engine-optimization-in-2026-full-guide-469142.md` — growth — https://searchengineland.com/mastering-generative-engine-optimization-in-2026-full-guide-469142

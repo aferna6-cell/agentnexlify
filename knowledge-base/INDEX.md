@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 47 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-19
+- Total articles: 51 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-20
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -48,11 +48,12 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Agent Skills — Anthropic's Progressive-Disclosure Capability Format](wiki/ai-llm/agent-skills-anthropic.md) — SKILL.md folder + optional bundled files/scripts; three-tier progressive disclosure keeps unbounded context out of the main prompt; open standard at agentskills.io. Tags: agent-skills, progressive-disclosure, claude-code, skill-md, composable-agents, open-standard
 
 ### Small Business SaaS
-_No articles yet._
+- [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
 
 ### Vertical Industries
 - [Customer Gaps by Industry](wiki/verticals/customer-gaps-by-industry.md) — Product-market fit across 7 industries; Salon 9/10, Plumber 8/10, Dental 8/10. Tags: salon, plumber, dental, restaurant, fitness, lawyer, real-estate
 - [MIT Study — AI Chatbots Underperform for Vulnerable Users](wiki/verticals/mit-ai-chatbot-vulnerable-users-2026.md) — Claude 3 Opus refuses 11% for less-educated non-native speakers vs 3.6% control; 43.7% of refusals use condescending language. Tags: llm-bias, fairness, vulnerable-users, non-native-english, mit-ccc, chatbot-reliability
+- [AI Receptionist Platforms — 2026 Competitive Landscape](wiki/verticals/ai-receptionist-platforms-2026.md) — Voice-AI category bifurcated into phone-only niche tools vs omni-channel platforms; pricing $199/mo flat to $9.50/call; channel breadth is primary buyer decision. Tags: ai-receptionist, voice-ai, competitive-landscape, smith-ai, synthflow, vapi, bland-ai, nextphone, parallel-ai
 
 ### Technical Patterns
 - [pgvector — Native Vector Search in Postgres](wiki/technical/pgvector-postgres-vector-search.md) — Open-source Postgres extension powering AgentNexLiFy's KB search; six distance metrics, HNSW/IVFFlat indexes, hybrid queries. Tags: pgvector, postgres, embeddings, semantic-search, hnsw, ivfflat
@@ -60,6 +61,8 @@ _No articles yet._
 - [Advanced Tool Use — Search, Programmatic Calling, and Examples](wiki/technical/anthropic-advanced-tool-use.md) — Three Claude API features: Tool Search Tool (85% token reduction), Programmatic Tool Calling (37% savings), Tool Use Examples (72%→90% accuracy). Tags: tool-use, tool-search, programmatic-calling, tool-examples, claude-api
 - [Contextual Retrieval — Reducing RAG Failure Rates by 67%](wiki/technical/anthropic-contextual-retrieval.md) — Prepend chunk-specific context before embedding/BM25 indexing; 49% fewer retrieval failures (67% with reranking) at $1.02/M tokens. Tags: contextual-retrieval, rag, embeddings, bm25, reranking, prompt-caching
 - [You Probably Don't Need a Vector Database — pgvector at Realistic Scale](wiki/technical/encore-pgvector-guide-2026.md) — HNSW at 1M vectors returns <20ms with >95% recall; vector-DB latency is invisible behind 500ms-3s LLM generation; transactional consistency is the real win. Tags: pgvector, postgres, rag, hnsw, ivf, infrastructure-consolidation, latency-budget
+- [Supabase AI Production Checklist — pgvector Indexing, HNSW Tuning](wiki/technical/supabase-ai-production-checklist.md) — HNSW preferred over IVFFlat; ef_construction ≥ 2×m; pre-warm via pg_prewarm + 10k warm-up queries before prod cutover. Tags: supabase, pgvector, hnsw, ivfflat, production-readiness, vector-search, ann
+- [FastAPI Best Practices — Domain-Module Structure and Async Discipline](wiki/technical/fastapi-best-practices-zhanymkanov.md) — Netflix-Dispatch-inspired domain layout, strict async/threadpool discipline, Pydantic-everywhere validation, dependency-injection-for-validation patterns. Tags: fastapi, python, pydantic, async, dependency-injection, project-structure, sqlalchemy
 
 ### Regulations & Compliance
 - [HIPAA — Privacy Rule, Security Rule, and Covered Entities](wiki/regulations/hipaa-overview-cdc.md) — HIPAA Privacy/Security Rules bind any business associate handling PHI; defines AgentNexLiFy's exposure for dental/medical tenants. Tags: hipaa, phi, ephi, privacy-rule, security-rule, healthcare-compliance
