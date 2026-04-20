@@ -71,6 +71,9 @@ from backend.routers.widget_chat_helpers import (
     _build_flow_instructions,
     # Metrics
     _record_response_metric,
+    # KB article provenance
+    _query_kb_articles,
+    _increment_kb_citation_counts,
 )
 
 from backend.routers.widget_lead_helpers import (

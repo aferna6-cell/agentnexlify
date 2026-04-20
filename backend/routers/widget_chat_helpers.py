@@ -11,12 +11,14 @@ BackgroundTasks get treated as query params, causing 422 errors.
 import logging
 import re
 import time as _time
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request
 
 from backend.models.database import get_service_supabase
+from backend.services.embeddings import embed_query
 from backend.services.industry_packs import load_pack
 from backend.services.llm_runtime import resolve_int_setting
 from backend.services.tenant_scope import tenant_insert, tenant_select, tenant_upsert
@@ -50,6 +52,62 @@ _BID_CONTEXT_KEYWORDS = (
     "quote", "estimate", "bid", "pricing", "price", "cost", "budget",
     "proposal", "how much", "remodel", "install", "project",
 )
+
+# ---------------------------------------------------------------------------
+# KB article provenance constants
+# ---------------------------------------------------------------------------
+
+# Articles not re-validated within this many days are flagged as potentially stale.
+_STALE_KB_DAYS = 60
+
+
+# ---------------------------------------------------------------------------
+# KB article retrieval (pgvector semantic search with provenance)
+# ---------------------------------------------------------------------------
+
+
+async def _query_kb_articles(
+    message: str,
+    *,
+    limit: int = 3,
+    min_similarity: float = 0.70,
+) -> list[dict]:
+    """Query kb_articles by semantic similarity to the user message.
+
+    Returns up to `limit` articles sorted by cosine similarity, each dict
+    containing: id, slug, title, summary, source_url, last_validated,
+    citation_count, similarity.
+
+    Returns empty list on any error (non-blocking — must never stall widget chat).
+    """
+    try:
+        vec = await embed_query(message)
+        db = get_service_supabase()
+        result = db.rpc("match_kb_articles", {
+            "query_embedding": vec,
+            "match_threshold": min_similarity,
+            "match_count": limit,
+        }).execute()
+        return result.data or []
+    except Exception:
+        logger.warning("_query_kb_articles failed for message=%r", message[:80], exc_info=True)
+        return []
+
+
+def _increment_kb_citation_counts(article_ids: list[str]) -> None:
+    """Atomically increment citation_count for each cited KB article.
+
+    Designed to run as a FastAPI BackgroundTask — sync, fire-and-forget.
+    """
+    if not article_ids:
+        return
+    try:
+        db = get_service_supabase()
+        db.rpc("increment_kb_citations", {"article_ids": article_ids}).execute()
+    except Exception:
+        logger.warning(
+            "_increment_kb_citation_counts failed ids=%s", article_ids, exc_info=True
+        )
 
 
 def _build_intent_window(current_message: str, history: list[dict[str, str]], max_user_messages: int = 2) -> str:
@@ -453,6 +511,7 @@ def _build_system_prompt(
     custom_field_defs: list[dict] | None = None,
     custom_instructions: str | None = None,
     knowledge_base: str | None = None,
+    kb_article_refs: list[dict] | None = None,
 ) -> str:
     business_name = tenant.get("business_name") or "our company"
     business_type = tenant.get("business_type") or ""
@@ -501,6 +560,48 @@ def _build_system_prompt(
         if len(knowledge_base) > knowledge_chars:
             kb_content += "\n[Content truncated]"
         knowledge_block = _format_reference_block("BUSINESS_KNOWLEDGE_BASE", kb_content, knowledge_chars)
+
+    kb_articles_block = ""
+    if kb_article_refs:
+        now = datetime.now(timezone.utc)
+        stale_cutoff = now - timedelta(days=_STALE_KB_DAYS)
+        lines = []
+        for art in kb_article_refs:
+            title = _sanitize_reference_text(art.get("title") or "")
+            summary = _sanitize_reference_text(art.get("summary") or "")
+            src = (art.get("source_url") or "").strip()
+            validated_raw = art.get("last_validated")
+
+            validated_date = ""
+            is_stale = False
+            if validated_raw:
+                try:
+                    if isinstance(validated_raw, str):
+                        validated_dt = datetime.fromisoformat(validated_raw)
+                    else:
+                        validated_dt = validated_raw
+                    if validated_dt.tzinfo is None:
+                        validated_dt = validated_dt.replace(tzinfo=timezone.utc)
+                    is_stale = validated_dt < stale_cutoff
+                    validated_date = validated_dt.strftime("%Y-%m-%d")
+                except (ValueError, TypeError):
+                    pass
+
+            footer_parts = []
+            if src:
+                footer_parts.append(f"Source: {src}")
+            if validated_date:
+                footer_parts.append(f"last verified {validated_date}")
+            footer = f" [{', '.join(footer_parts)}]" if footer_parts else ""
+            stale_note = " ⚠ KB article may be outdated" if is_stale else ""
+
+            lines.append(f"{title}: {summary}{footer}{stale_note}")
+
+        kb_articles_block = _format_reference_block(
+            "KB_ARTICLES",
+            "\n".join(lines),
+            resolve_int_setting("widget_prompt_kb_articles_chars", 2000),
+        )
 
     menu_block = ""
     if menu_items:
@@ -646,6 +747,7 @@ def _build_system_prompt(
         f"{faq_block}"
         f"{website_block}"
         f"{knowledge_block}"
+        f"{kb_articles_block}"
         f"{custom_fields_block}"
         f"{menu_block}"
         f"{jobs_block}"

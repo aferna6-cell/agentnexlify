@@ -48,9 +48,11 @@ from backend.routers.widget_helpers import (
     _get_or_create_conversation,
     _get_tenant,
     _get_widget_config,
+    _increment_kb_citation_counts,
     _load_chat_history,
     _needs_bid_context,
     _needs_job_context,
+    _query_kb_articles,
     _record_response_metric,
     _save_chat_messages,
     _set_cache,
@@ -739,12 +741,23 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     except Exception:
         logger.warning("chat_flows query failed for tenant %s", tenant["id"], exc_info=True)
 
+    # KB article semantic retrieval — only attempted when the feature flag is on.
+    # Disabled by default (0) to avoid adding Voyage AI latency to every request.
+    kb_article_refs: list[dict] = []
+    if resolve_int_setting("widget_kb_articles_enabled", 0):
+        kb_article_refs = await _query_kb_articles(req.message)
+        if kb_article_refs:
+            cited_ids = [str(a["id"]) for a in kb_article_refs if a.get("id")]
+            if cited_ids:
+                background_tasks.add_task(_increment_kb_citation_counts, cited_ids)
+
     system_prompt = _build_system_prompt(
         tenant, faq_data, bh_data, corrections, website_content,
         menu_items, job_listings, bid_templates=bid_templates or None,
         custom_field_defs=custom_field_defs or None,
         custom_instructions=widget.get("custom_instructions") or None,
         knowledge_base=widget.get("knowledge_base") or None,
+        kb_article_refs=kb_article_refs or None,
     )
 
     # Inject active flow instructions into system prompt
