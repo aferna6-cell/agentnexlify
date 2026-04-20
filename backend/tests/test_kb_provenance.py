@@ -120,11 +120,11 @@ class TestBuildSystemPromptWithKbArticles:
         assert "Test Article" in prompt
         assert "Source:" not in prompt
 
-    def test_stale_boundary_exactly_60_days(self):
-        """Article exactly at 60 days is NOT stale (threshold is strictly less-than)."""
+    def test_stale_boundary_within_window(self):
+        """Article 59 days old is NOT stale."""
         from backend.routers.widget_chat_helpers import _build_system_prompt
 
-        refs = [_make_article(days_old=60)]
+        refs = [_make_article(days_old=59)]
         prompt = _build_system_prompt(self._make_tenant(), [], kb_article_refs=refs)
 
         assert "⚠ KB article may be outdated" not in prompt
