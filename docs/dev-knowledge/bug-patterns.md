@@ -2063,3 +2063,23 @@ Verified: dry-run pick advances from #62 → #60 (correct skip past needs-info).
 **Author:** aferna6-cell
 **Files Changed:** scripts/automation/issue-to-pr.sh
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(automation): soften classifier prompt — trust spec refs, not body duplication
+
+Haiku was requiring issue body to duplicate spec content; rejected well-scoped
+issues (#37, #49, #62) for "missing schema clarification" that was already in
+referenced migration/spec files.
+
+New prompt tells classifier: implementer WILL read referenced files; manual
+prereqs (bucket creation, OAuth setup) are NOT blockers; only reject on
+genuine ambiguity, new arch decisions, or unmerged dep chains.
+
+Verified 4 issues: #37, #49, #60, #62 all flip to ready=true. #62 (docs-only)
+now correctly accepted. Sonnet executor fires on next cron.
+**Date:** 2026-04-20
+**Commit:** 0632799
+**Author:** aferna6-cell
+**Files Changed:** scripts/automation/classify_issue.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
