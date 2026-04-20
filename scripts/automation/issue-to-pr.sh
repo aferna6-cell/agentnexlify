@@ -44,7 +44,7 @@ issue_json="$(gh issue list \
 
 pick="$(echo "$issue_json" | jq -r '
   [.[] | select(
-    ([.labels[].name] | inside(["wip-auto","auto-pr","auto-failed","needs-info"]) | not)
+    ([.labels[].name] | any(. == "wip-auto" or . == "auto-pr" or . == "auto-failed" or . == "needs-info") | not)
   )][0]
 ')"
 
