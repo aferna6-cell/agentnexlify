@@ -34,16 +34,25 @@ def main() -> int:
         print(FALLBACK)
         return 1
 
-    prompt = f"""Triage this GitHub issue. Is it ready for an AI subagent to implement end-to-end with no human input?
+    prompt = f"""Triage this GitHub issue. Is it ready for an AI subagent to implement?
+
+Assume the implementer WILL read any referenced spec file (e.g. `specs/*.md`), existing code files mentioned, and migrations already applied to the DB. The issue body does NOT need to duplicate that content.
+
+Only return ready=false if ONE of:
+- Goal is genuinely ambiguous (multiple valid interpretations)
+- New architectural decision required (new service boundary, new tech choice)
+- New external secret / credential / API key must be obtained
+- No referenced spec exists AND acceptance criteria are vague
+- Unresolved dependency on UNMERGED work (not "review existing spec")
+
+Manual prereqs that have obvious workarounds (e.g. creating a Supabase Storage bucket, publishing a Zapier app) are NOT blockers — note them as prereqs but return ready=true.
 
 Issue #{payload.get('number')}: {payload.get('title', '')}
 
 {payload.get('body', '')}
 
-Return ONLY this JSON, nothing else:
-{{"ready": true|false, "reason": "one short sentence", "clarifying_questions": ["..."]}}
-
-Ready criteria: goal concrete, files identifiable, success criteria inferable, no architecture decisions needed, no new secrets required."""
+Return ONLY this JSON:
+{{"ready": true|false, "reason": "one short sentence", "clarifying_questions": ["..."]}}"""
 
     client = Anthropic(api_key=api_key)
     try:
