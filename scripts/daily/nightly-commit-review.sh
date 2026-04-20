@@ -25,6 +25,15 @@ if [[ "${CLAUDE_NIGHTLY_REVIEW:-1}" == "0" ]]; then
   exit 0
 fi
 
+# Migrated to Claude Routine trig_014nVaJAnhKSaXEDDsYuddJ9 (nightly-commit-review, 37 6 * * * UTC = 2:37 AM EDT).
+# Local script disabled to avoid duplicate runs. Manage remote trigger at https://claude.ai/code/scheduled.
+# To re-enable local run (for manual catch-up), comment out the block below.
+if [[ "${CLAUDE_NIGHTLY_REVIEW_LOCAL:-0}" != "1" ]]; then
+  echo "Local nightly review disabled — runs remotely via Claude Routine trig_014nVaJAnhKSaXEDDsYuddJ9"
+  echo "Override with CLAUDE_NIGHTLY_REVIEW_LOCAL=1 for manual catch-up."
+  exit 0
+fi
+
 cd "$REPO_ROOT"
 
 echo "=== Nightly commit review — last ${HOURS}h ==="
