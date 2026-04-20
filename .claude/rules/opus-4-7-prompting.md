@@ -104,6 +104,8 @@ Source: Suryansh Tiwari migration post (2026-04-17). Four moves not already cove
 
 **Not available in:** VS Code Claude extension (CLI only).
 
+**Reference:** `.claude/commands/ultraplan.md` — full invocation guide, AgentNexLiFy integration notes (compound-engineering, write-prd pipeline, worktree-orchestrator), and limitations.
+
 ---
 
 ## Audit checklist (do this once)
