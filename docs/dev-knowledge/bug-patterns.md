@@ -2083,3 +2083,21 @@ now correctly accepted. Sonnet executor fires on next cron.
 **Author:** aferna6-cell
 **Files Changed:** scripts/automation/classify_issue.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(hooks): skip frontend build on pre-push when no frontend files changed
+
+Autonomous loop worktrees don't install node_modules → vite missing →
+pre-push blocks docs-only PRs from issue-to-pr loop.
+
+Fix: check git diff for frontend/ or widget/ changes in push range. If none,
+skip the build. If changed but node_modules missing, WARNING not ERROR so
+worktrees can still push after CI fills the gap.
+
+Verified: auto/issue-62 docs-only branch now pushes clean; PR #71 opened.
+**Date:** 2026-04-20
+**Commit:** 611c052
+**Author:** aferna6-cell
+**Files Changed:** scripts/hooks/pre-push
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
