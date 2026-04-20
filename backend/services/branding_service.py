@@ -47,6 +47,14 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
         {"question": "What areas do you serve?", "answer": "We serve the local area. Contact us to confirm we can service your location.", "category": "About"},
         {"question": "Do you give free estimates?", "answer": "Yes, we provide free estimates for most plumbing jobs. Contact us to schedule an estimate.", "category": "Pricing"},
     ],
+    "home_services": [
+        {"question": "What services do you offer?", "answer": "We help with repairs, replacements, installations, inspections, and estimate requests for your home or property. If you're not sure what category your project fits into, send us a quick message and we'll point you in the right direction.", "category": "Services"},
+        {"question": "Do you provide free estimates?", "answer": "Yes, we offer free estimates for most projects. For larger jobs, we may schedule an in-person visit so we can give you the most accurate quote possible.", "category": "Pricing"},
+        {"question": "Are you licensed and insured?", "answer": "Yes, we are licensed and insured. If you need license or insurance details for a permit, HOA, or property manager, we can provide them on request.", "category": "About"},
+        {"question": "How soon can you get here?", "answer": "It depends on the job and our current schedule, but we always try to handle urgent repairs as quickly as possible. If it's an emergency, tell us what is happening and we'll do our best to prioritize it.", "category": "Services"},
+        {"question": "What should I send before the estimate?", "answer": "Photos of the issue or project area, your address, a short description of the work, and your ideal timeline are the most helpful details. The more we know up front, the faster we can quote it.", "category": "Pricing"},
+        {"question": "Do you stand behind your work?", "answer": "Yes. We want every customer to feel confident in the work we do, and we can explain warranty coverage for labor and parts before the job starts.", "category": "Policy"},
+    ],
     "dental": [
         {"question": "What services do you offer?", "answer": "We offer comprehensive dental care including cleanings, exams, fillings, crowns, root canals, teeth whitening, Invisalign, dental implants, and emergency dental care.", "category": "Services"},
         {"question": "Do you accept dental insurance?", "answer": "Yes, we accept most major dental insurance plans. Contact us with your insurance information and we'll verify your coverage.", "category": "Insurance"},
@@ -117,11 +125,17 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
 
 def seed_industry_faqs(tenant_id: str, industry: str, business_name: str, city: str) -> None:
     """Insert starter FAQ entries for a new tenant based on their industry."""
+    raw_industry = (industry or "").strip().lower()
     normalized = resolve_business_profile_key(industry)
     faq_key = {
-        "home_services": "plumbing",
+        "home_services": "home_services",
+        "contractor": "home_services",
+        "contractors": "home_services",
+        "general_contractor": "home_services",
+        "plumbing": "plumbing",
+        "hvac": "hvac",
         "real_estate": "realestate",
-    }.get(normalized, normalized)
+    }.get(raw_industry, normalized)
     faqs = INDUSTRY_FAQS.get(faq_key, [])
     if not faqs:
         return

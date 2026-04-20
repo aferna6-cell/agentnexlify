@@ -38,6 +38,7 @@ def test_client(mock_settings):
         patch("backend.routers.widget_lead.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_booking.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_helpers.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_chat_helpers.get_service_supabase", return_value=db_mock),
         # Services that widget modules touch at import or call time
         patch("backend.services.activity.get_service_supabase", return_value=db_mock),
         patch("backend.services.webhook_dispatcher.get_service_supabase", return_value=db_mock),
@@ -56,6 +57,8 @@ def test_client(mock_settings):
     try:
         from backend.routers.widget_helpers import _cache
         _cache.clear()
+        from backend.routers.widget_chat_helpers import _cache as chat_cache
+        chat_cache.clear()
     except Exception:
         pass
 

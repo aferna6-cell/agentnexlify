@@ -10,7 +10,7 @@
 
 **Go threshold:** ≥ 210 / 262 AND zero criterion scoring 0 in a HIGH-severity dimension (2, 3, 10).
 
-**Last scored:** 2026-04-17 (engineer solo first pass — partner dims flagged `[partner-verify]`).
+**Last scored:** 2026-04-20 (evidence-based rescore; repo evidence includes a passing `npm run check`, launch-risk guardrail tests, and schema-log updates for migrations 106/107).
 
 ---
 
@@ -41,10 +41,10 @@
 | 2.4 | All secrets in env vars, zero in git history | 2 | Pre-commit hook scans; `.env*` gitignored; no leaks in recent audits |
 | 2.5 | Auth rate-limited on /login, /signup, /reset | 2 | `backend/routers/auth.py:450,479,695,734,803` — `@limiter.limit("5/minute")` |
 | 2.6 | JWT rotation + refresh flow tested | 1 | JWT auth exists (auth.py) but refresh rotation test coverage unknown |
-| 2.7 | Pen test OR automated security scan run (semgrep, snyk) | 0 | No semgrep/snyk/bandit in CI workflows. Trail-of-Bits skills installed but not auto-run |
-| 2.8 | Incident response playbook written | 0 | No IR playbook in `docs/` |
+| 2.7 | Pen test OR automated security scan run (semgrep, snyk) | 1 | `.github/workflows/pr-check.yml` now installs Semgrep and runs `semgrep scan --config auto`. Local 2026-04-20 scan completed under Python 3.12 with UTF-8 enabled and surfaced 50 existing findings that still need triage. |
+| 2.8 | Incident response playbook written | 2 | `docs/incident-response-playbook.md` defines severity, roles, first-15-minute containment, recovery, comms cadence, security rules, and post-incident aftercare. |
 
-**Subtotal:** 11 / 16 × 3 = **33 / 48** — ⚠️ **2 HIGH-severity zeros (2.7, 2.8)**
+**Subtotal:** 14 / 16 × 3 = **42 / 48** — no HIGH-severity zeros in this dimension
 
 ---
 
@@ -53,15 +53,15 @@
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
 | 3.1 | Stripe webhook idempotency tested (replay same event twice) | 2 | ✓ 2026-04-17 (commit `8b9dc7b`) — `tests/test_stripe_webhook.py:388` observable-state assertion |
-| 3.2 | Failed-payment dunning flow tested end-to-end | 0 | No dunning scheduler / reminder email flow found |
+| 3.2 | Failed-payment dunning flow tested end-to-end | 1 | `tests/test_launch_risk_guardrails.py:75-105` covers `invoice.payment_failed`, persists `billing_dunning_attempt_count`, records the dunning event, and sends email. Still not a full webhook/scheduler integration path. |
 | 3.3 | Proration on upgrade / downgrade tested | 1 | Stripe handles via API; no regression test |
 | 3.4 | Cancellation preserves access until period end | 1 | `billing.py:341` allows `canceled` status; period-end preservation untested |
 | 3.5 | Usage metering matches Stripe meter events ±1% | 1 | `monthly_conversation_limit` tracked; reconciliation not automated |
-| 3.6 | Refund flow tested (partial + full) | 0 | No refund endpoint / admin flow found |
+| 3.6 | Refund flow tested (partial + full) | 1 | `tests/test_launch_risk_guardrails.py:114-270` covers refund creation, idempotent replay, and audit-insert fallback. Partial/full refund matrix is still not explicitly exercised. |
 | 3.7 | Trial → paid transition tested across all plans | 1 | `free_trial_started_at` tracked (auth.py:898); transition test coverage partial |
 | 3.8 | Invoice generation reconciles against Stripe dashboard | 1 | `invoices` table + `generate_invoice`; reconciliation cron missing |
 
-**Subtotal:** 7 / 16 × 3 = **21 / 48** — ⚠️ **2 HIGH-severity zeros (3.2, 3.6)**
+**Subtotal:** 9 / 16 × 3 = **27 / 48** — no HIGH-severity zeros in this dimension
 
 ---
 
@@ -99,7 +99,7 @@
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
 | 6.1 | Daily automated backup verified restorable | 1 | Supabase daily backups; restore drill not performed |
-| 6.2 | Schema migrations numbered + forward-only | 2 | ✓ 105 applied, zero advisors |
+| 6.2 | Schema migrations numbered + forward-only | 2 | ✓ `docs/dev-knowledge/schema-log.md:730-753` documents migrations 106/107 applied on 2026-04-19, keeping the guardrail schema log current. |
 | 6.3 | Pre-commit blocks dropped-column queries | 2 | ✓ CHECK 8 enforced (pre-commit hook) |
 | 6.4 | Integration tests cover critical tables | 2 | ✓ `test_backend_regressions.py` — 12 passing (post-fix today) |
 | 6.5 | PII minimization — no unnecessary customer data stored | 1 | `data_minimization: true` policy flag in support skill; no audit done |
@@ -156,68 +156,61 @@
 |---|-----------|-------|-------|
 | 10.1 | Refund policy documented + honored | 0 | No refund policy doc in `docs/` or ToS explicitly |
 | 10.2 | Fraud rules: velocity limits, disposable-email block, CC mismatch | 0 | No fraud detection middleware found |
-| 10.3 | Churn reason captured on cancel | 0 | No `cancel_reason` column or cancel survey |
+| 10.3 | Churn reason captured on cancel | 2 | `tests/test_launch_risk_guardrails.py:279-316` persists `cancellation_reason`, and `docs/dev-knowledge/schema-log.md:738-739` documents `tenant_cancellation_events` in migration 106. |
 | 10.4 | Bus-factor: more than one person can deploy | 0 | Solo engineer per CLAUDE.md; partners non-engineer |
 | 10.5 | Dead-man switch: if founder disappears, customers keep service for 30d | 0 | No documented continuity plan |
 | 10.6 | Insurance (E&O / cyber) quoted | ? | `[partner-verify]` — assumed 0 |
 
-**Subtotal:** 0 / 12 × 2 = **0 / 24** — ⚠️ **6 HIGH-severity zeros (10.1–10.6)**
+**Subtotal:** 2 / 12 × 2 = **4 / 24** — ⚠️ **5 HIGH-severity zeros (10.1, 10.2, 10.4, 10.5, 10.6)**
 
 ---
 
-## Scorecard — 2026-04-17
+## Scorecard — 2026-04-20
 
 | Dimension | Raw | Weighted | Max | HIGH zeros |
 |-----------|-----|----------|-----|------------|
 | 1. Legal | 5 / 16 | 15 | 48 | — |
-| 2. Security | 11 / 16 | 33 | 48 | **2.7, 2.8** |
-| 3. Billing | 7 / 16 | 21 | 48 | **3.2, 3.6** |
+| 2. Security | 14 / 16 | 42 | 48 | — |
+| 3. Billing | 9 / 16 | 27 | 48 | — |
 | 4. Observability | 5 / 12 | 10 | 24 | — |
 | 5. Load | 2 / 10 | 4 | 20 | — |
 | 6. Data integrity | 8 / 10 | 16 | 20 | — |
 | 7. Support | 4 / 10 | 4 | 10 | — |
 | 8. Brand | 6 / 10 | 6 | 10 | — |
 | 9. Sales | 5 / 10 | 5 | 10 | — |
-| 10. Risk | 0 / 12 | 0 | 24 | **10.1, 10.2, 10.3, 10.4, 10.5, 10.6** |
-| **TOTAL** | — | **114** | **262** | **10 HIGH zeros** |
+| 10. Risk | 2 / 12 | 4 | 24 | **10.1, 10.2, 10.4, 10.5, 10.6** |
+| **TOTAL** | — | **133** | **262** | **5 HIGH zeros** |
 
-**Score:** 114 / 262 = **43.5%**
+**Score:** 133 / 262 = **50.8%**
 
-## Verdict — 2026-04-17
+## Verdict — 2026-04-20
 
 🔴 **NO-GO for paid launch.** Stay in design-partner mode.
 
-- Below 160/262 soft-launch threshold (114)
-- Below 210/262 go threshold (114)
-- **10 HIGH-severity zeros** — any single one blocks ship
+- Below 160/262 soft-launch threshold (133)
+- Below 210/262 go threshold (133)
+- **5 HIGH-severity zeros** remain in Dimension 10 — any single one still blocks ship
 
 ## Highest-leverage next moves (ordered by leverage per hour)
 
 Per Q4 of the rubric's meeting questions:
 
-1. **Dim 10 (Risk) — 0/24 weighted.** Six zeros. Fastest wins: (a) document refund policy (30 min), (b) add `cancel_reason` column + survey modal (2h), (c) add disposable-email block via `email-validator` (1h). Each lifts 1 HIGH zero. ROI: 12 weighted points total.
-2. **Dim 3 (Billing) — 21/48 weighted.** Dunning flow + refund endpoint each worth 6 weighted points. Dunning: Stripe sends `invoice.payment_failed`; wire to auto-email. Refund: admin UI + POST /admin/refund → Stripe API. ~1 day each.
-3. **Dim 2 (Security) — 33/48 weighted.** Add Semgrep to `pr-check.yml` (1h) → +6 weighted. IR playbook (1 page markdown: who pages whom, recovery steps per category) → +6 weighted.
-4. **Dim 1 (Legal)** — GDPR deletion endpoint (1h backend + row-level cascading delete). AI disclosure: change widget default greeting → +3 weighted each.
+1. **Dim 10 (Risk) — 4/24 weighted.** Five zeros remain. Fastest wins: (a) document refund policy, (b) add fraud rules, (c) write a continuity plan, (d) train a second deployer, (e) get insurance quoted. The cancel-reason gap is now closed by `tests/test_launch_risk_guardrails.py` plus `schema-log.md`.
+2. **Dim 3 (Billing) — 27/48 weighted.** Dunning and refund replay/fallback are now covered in `tests/test_launch_risk_guardrails.py`, but partial/full refund coverage and access-until-period-end remain open.
+3. **Dim 2 (Security) — 42/48 weighted.** Semgrep CI and the IR playbook are now in place. Next security lift is triaging the 50 existing Semgrep findings and deciding which rules should block releases.
+4. **Dim 1 (Legal)** — GDPR deletion endpoint (1h backend + row-level cascading delete). AI disclosure still needs a widget greeting update.
 5. **Dim 5 (Load)** — simple k6 or Locust load test at 10× expected (~2h). Dim 5 jumps 0→1 or 1→2.
 
 ## Fastest path to "soft launch" (160/262 threshold)
 
-Need **+46 weighted**. Attainable via ~16 engineer-hours:
+Need **+27 weighted**. Attainable via ~12 engineer-hours:
 
-- Dim 10 refund doc (0.5h) = +2
-- Dim 10 cancel reason capture (2h) = +2
-- Dim 10 disposable-email block (1h) = +2
-- Dim 10 continuity doc (1h) = +2
-- Dim 10 bus-factor — train ONE partner to deploy (2h) = +2
-- Dim 2 Semgrep CI (1h) = +6
-- Dim 2 IR playbook (1h) = +6
-- Dim 3 dunning flow (4h) = +6
-- Dim 3 refund endpoint (3h) = +6
-- Dim 1 widget AI disclosure (15 min) = +6
-- Dim 1 GDPR endpoint (1h) = +6
+- Dim 10 refund policy, fraud rules, continuity plan, second deployer, and insurance quote
+- Dim 2 Semgrep findings triage and blocking-policy decision
+- Dim 3 partial/full refund regression coverage and period-end access regression
+- Dim 1 widget AI disclosure and GDPR endpoint
 
-Total: **+46 weighted** → 160. Soft launch unlocked (invite-only).
+Total: **+27 weighted** → 160. Soft launch unlocked (invite-only).
 
 Still NO-GO for full paid launch until 210/262 AND zero HIGH zeros.
 

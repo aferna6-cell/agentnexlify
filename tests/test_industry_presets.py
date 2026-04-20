@@ -181,5 +181,5 @@ class TestBusinessProfiles:
         )
 
         assert "INDUSTRY PERSONALIZATION" not in general_prompt
-        assert "INDUSTRY PERSONALIZATION (Home Services" in contractor_prompt
+        assert "INDUSTRY PERSONALIZATION (Contractors / Home Services" in contractor_prompt
         assert "Quote" in contractor_prompt or "estimate" in contractor_prompt
