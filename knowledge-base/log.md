@@ -258,3 +258,5 @@ URLs kept in known-urls.json to prevent retry.
 - [ai-llm] anthropic-harness-design-long-running-apps <- https://www.anthropic.com/engineering/harness-design-long-running-apps
 - [ai-llm] anthropic-claude-code-sandboxing <- https://www.anthropic.com/engineering/claude-code-sandboxing
 - skipped: small-biz-saas, verticals, technical, regulations, growth (no blog URLs in sources.yaml, no search tool available)
+
+## [2026-04-20T22:03:57Z] discover-rejects | blacklisted 17 non-article/off-topic URLs
