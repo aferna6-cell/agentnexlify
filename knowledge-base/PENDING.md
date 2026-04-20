@@ -140,3 +140,9 @@ _All compiled 2026-04-18 cron run._
 - [growth] `raw/growth/chatgpt-for-seo-boost-rankings-automate-workflows.md` — ChatGPT for SEO: Boost rankings & automate workflows — https://searchengineland.com/guide/chatgpt-for-seo
 
 - [growth] `raw/growth/44-best-chatgpt-prompts-for-seo.md` — 44 Best ChatGPT Prompts for SEO — https://searchengineland.com/guide/seo-prompts-for-chatgpt
+
+## Ingested 2026-04-20T22:03:18Z — auto-populate (blogs-only fallback; no search engine)
+- [competitors] tidio-best-agentic-customer-service-software ← https://www.tidio.com/blog/best-agentic-customer-service-software/
+- [competitors] intercom-fin-product-updates-feb-2026 ← https://www.intercom.com/blog/fin-product-updates-february-recap/
+- [ai-llm] anthropic-harness-design-long-running-apps ← https://www.anthropic.com/engineering/harness-design-long-running-apps
+- [ai-llm] anthropic-claude-code-sandboxing ← https://www.anthropic.com/engineering/claude-code-sandboxing

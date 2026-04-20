@@ -251,3 +251,10 @@ categories_processed=7  urls_fetched=2  new_raw_files=2  deduped=1  errors=0
 URLs kept in known-urls.json to prevent retry.
 
 ## [2026-04-20 06:12] discover+compile | cron 06:00 | commits=3 raw=10 wiki=4
+
+## [2026-04-20T22:03:18Z] discover | blogs-only fallback | ingested 4 / candidates 4
+- [competitors] tidio-best-agentic-customer-service-software <- https://www.tidio.com/blog/best-agentic-customer-service-software/
+- [competitors] intercom-fin-product-updates-feb-2026 <- https://www.intercom.com/blog/fin-product-updates-february-recap/
+- [ai-llm] anthropic-harness-design-long-running-apps <- https://www.anthropic.com/engineering/harness-design-long-running-apps
+- [ai-llm] anthropic-claude-code-sandboxing <- https://www.anthropic.com/engineering/claude-code-sandboxing
+- skipped: small-biz-saas, verticals, technical, regulations, growth (no blog URLs in sources.yaml, no search tool available)
