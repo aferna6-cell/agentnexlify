@@ -808,3 +808,32 @@ Creates 3 tables supporting photo-upload quote feature (spec: `specs/photo-quote
 **Conventions:** `client_id` (not `tenant_id`) per CLAUDE.md Rule 1. All FKs cascade on tenant delete.
 
 **Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified via `mcp__supabase__list_tables` — all 3 tables present with RLS enabled.
+
+### 109 — Drive KB Onboarding Tables
+**Date:** 2026-04-20
+Creates 3 tables for multi-provider KB sync (spec: `specs/drive-kb-onboarding_spec.md`, epic: #56, migration issue: #48). v1 ships Drive only; Dropbox/OneDrive/Box plug in via same schema later.
+
+**Tables:**
+- `tenant_integrations` — per-tenant per-provider OAuth integration. UNIQUE (client_id, provider). Provider enum: drive, dropbox, onedrive, box. Encrypted tokens via pgcrypto (`oauth_token_enc`, `oauth_refresh_token_enc` bytea).
+- `integration_sync_log` — per-sync summary row. Counters for files_added/updated/skipped/pii_flagged + sections_reembedded/skipped (drives diff-based embedding cost savings per Q8 B).
+- `kb_section_hashes` — SHA256 per section per tenant, PK (client_id, section_id). Drives re-embed decision: skip unchanged sections, re-embed only diffs.
+
+**RLS:** service_role only on all 3 tables.
+**Conventions:** `client_id` not `tenant_id`. All FKs cascade.
+**Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified.
+
+### 110 — Tenant API Keys (Zapier)
+**Date:** 2026-04-20
+Single-table migration for Zapier app authentication (spec: `specs/zapier-crm-export_spec.md`, epic: #64, migration issue: #57).
+
+**Table:**
+- `tenant_api_keys` — bcrypt hash + 8-char display prefix + soft-delete via `revoked_at`. Partial index on `key_prefix` where not revoked — auth middleware does prefix lookup before bcrypt verify for performance.
+
+**Security:**
+- Plaintext keys NEVER stored — only bcrypt hash (cost 12).
+- Prefix shown in dashboard for identification.
+- Audit trail preserved via soft-delete (keeps `created_at`, `revoked_at`).
+
+**RLS:** service_role only. Tenant access via backend CRUD endpoints.
+**Conventions:** `client_id` not `tenant_id`.
+**Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified.
