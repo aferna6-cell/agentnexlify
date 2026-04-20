@@ -120,3 +120,23 @@ _All compiled 2026-04-18 cron run._
 - [ ] `raw/regulations/us-chatbot-legislation-compliance-guide-2026.md` — regulations — https://www.aigovhub.io/guides/us-chatbot-legislation-compliance-guide-2026
 - [ ] `raw/growth/mastering-generative-engine-optimization-in-2026-full-guide-469142.md` — growth — https://searchengineland.com/mastering-generative-engine-optimization-in-2026-full-guide-469142
 - [ ] `raw/growth/generative-engine-optimization.md` — growth — https://foundationinc.co/lab/generative-engine-optimization
+
+- [competitors] `raw/competitors/ai-powered-ui-aka-return-of-the-chat-the-intercom-blog.md` — AI-powered UI (aka "Return of the Chat") - The Intercom Blog — https://www.intercom.com/blog/ai-chatbot
+
+- [ai_llm] `raw/ai-llm/eval-awareness-in-claude-opus-4-6-s-browsecomp-performance.md` — Eval awareness in Claude Opus 4.6’s BrowseComp performance — https://www.anthropic.com/engineering/eval-awareness-browsecomp
+
+- [ai_llm] `raw/ai-llm/code-execution-with-mcp-building-more-efficient-agents.md` — Code execution with MCP: Building more efficient agents — https://www.anthropic.com/engineering/code-execution-with-mcp
+
+- [small_biz_saas] `raw/small-biz-saas/how-to-reduce-saas-churn-9-tactics-that-actually-work-userjo.md` — How to Reduce SaaS Churn: 9 Tactics That Actually Work - UserJot — https://userjot.com/blog/how-to-reduce-saas-churn
+
+- [small_biz_saas] `raw/small-biz-saas/top-saas-metrics-every-saas-founder-should-track-and-why-use.md` — Top SaaS Metrics Every SaaS Founder Should Track (and Why) - UserJot — https://userjot.com/blog/top-saas-metrics-for-founders
+
+- [technical] `raw/technical/serhant-s-playbook-for-rapid-ai-iteration.md` — SERHANT.'s playbook for rapid AI iteration — https://vercel.com/blog/serhants-playbook-for-rapid-ai-iteration
+
+- [regulations] `raw/regulations/mandatory-medical-privacy-regulations-in-california-you-must.md` — Mandatory Medical Privacy Regulations in California You Must Comply With — https://www.hipaajournal.com/medical-privacy-regulations-california
+
+- [regulations] `raw/regulations/mandatory-medical-privacy-regulations-in-texas-you-must-enfo.md` — Mandatory Medical Privacy Regulations in Texas You Must Enforce Across Your Organization — https://www.hipaajournal.com/medical-privacy-regulations-in-texas
+
+- [growth] `raw/growth/chatgpt-for-seo-boost-rankings-automate-workflows.md` — ChatGPT for SEO: Boost rankings & automate workflows — https://searchengineland.com/guide/chatgpt-for-seo
+
+- [growth] `raw/growth/44-best-chatgpt-prompts-for-seo.md` — 44 Best ChatGPT Prompts for SEO — https://searchengineland.com/guide/seo-prompts-for-chatgpt

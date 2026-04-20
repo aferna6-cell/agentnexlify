@@ -741,7 +741,7 @@ Adds launch-readiness safety tables and tenant columns for the paid-launch risk 
 
 All new tables use service-role RLS policies. Required by `backend/services/ai_usage_guard.py`, `backend/routers/billing.py`, and `backend/routers/auth.py`.
 
-**Applied:** STATUS: STAGED, NOT YET APPLIED — created 2026-04-18. `mcp__supabase__list_migrations` (2026-04-19) returned entries only through migration 093; 106 not present in applied list. Apply before deploying matching backend.
+**Applied:** 2026-04-19 via `mcp__supabase__apply_migration` (version `20260420023659`). Verified via `mcp__supabase__list_migrations`.
 
 ### 107 — Admin Refund Request Idempotency
 **Date:** 2026-04-18
@@ -752,7 +752,7 @@ Adds operator-supplied idempotency key to `billing_refunds` so retries after tra
 
 Depends on migration 106 (`billing_refunds` table). Required by admin refund endpoint in `backend/routers/billing.py`.
 
-**Applied:** STATUS: STAGED, NOT YET APPLIED — created 2026-04-18. `mcp__supabase__list_migrations` (2026-04-19) returned entries only through migration 093; 107 not present in applied list. Apply after 106.
+**Applied:** 2026-04-19 via `mcp__supabase__apply_migration` (version `20260420023706`). Verified via `mcp__supabase__list_migrations`.
 
 ### 104 — Structured Lead Parser Default True (planned)
 **Date:** Planned ~2026-04-22

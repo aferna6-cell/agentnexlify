@@ -224,3 +224,28 @@ categories_processed=7  urls_fetched=2  new_raw_files=2  deduped=1  errors=0
 - Dedup source: known-urls.json (139 → 153)
 
 ## [2026-04-19 18:14] discover+compile | cron 18:00 | commits=6 raw=12 wiki=4
+
+## [2026-04-20 10:02] discover | cats=7 fetched=0 new=0 rejected=0 errors=23
+- competitors: new=0 fetched=0 rejected=0 errors=5
+- ai_llm: new=0 fetched=0 rejected=0 errors=3
+- small_biz_saas: new=0 fetched=0 rejected=0 errors=3
+- verticals: new=0 fetched=0 rejected=0 errors=3
+- technical: new=0 fetched=0 rejected=0 errors=3
+- regulations: new=0 fetched=0 rejected=0 errors=3
+- growth: new=0 fetched=0 rejected=0 errors=3
+
+## [2026-04-20 10:03] discover | cats=7 fetched=23 new=14 rejected=9 errors=6
+- competitors: new=2 fetched=2 rejected=0 errors=0
+- ai_llm: new=2 fetched=2 rejected=0 errors=0
+- small_biz_saas: new=2 fetched=2 rejected=0 errors=1
+- verticals: new=2 fetched=3 rejected=1 errors=4
+- technical: new=2 fetched=9 rejected=7 errors=0
+- regulations: new=2 fetched=2 rejected=0 errors=1
+- growth: new=2 fetched=3 rejected=1 errors=0
+
+## [2026-04-20 10:05] post-run filter | removed 4 low-quality
+- competitors: the-only-helpdesk-designed-for-the-ai-agent-era.md (vendor landing)
+- technical: the-ai-gateway-for-developers.md (product page, no article)
+- verticals: drug-dealer-s-new-teeth-brag-leads-to-jail.md (crime news, not vertical relevance)
+- verticals: convicted-dentist-arrested-for-practicing-without-a-license.md (crime news)
+URLs kept in known-urls.json to prevent retry.
