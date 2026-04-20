@@ -228,3 +228,18 @@ The GoHighLevel reseller model is one of the most capital-efficient distribution
 The prior research log establishes that AgentNexLiFy is an early-stage agentic SaaS platform targeting SMB tenants, with known churn problems driven by low value visibility — and a previously recommended Health Score Dashboard as the highest-leverage churn intervention. This research attempts to answer whether that dashboard can be built from existing telemetry or requires ne
 
 ---
+
+## 2026-04-20 — is-the-smb-segment-primarily-self-serve-no-sales-c
+
+**Question:** Is the SMB segment primarily self-serve (no sales/CS touch) or sales-assisted? This determines whether the intervention channel should be in-product, automated email, or CSM alert.
+**Depth:** standard
+**Folder:** [[projects/is-the-smb-segment-primarily-self-serve-no-sales-c]]
+**Model:** claude-sonnet-4-6
+
+### Headline
+**The SMB segment is not primarily self-serve OR sales-assisted — it is a bimodal distribution that most companies misread as a single segment, and that misreading is the root cause of mis-channeled interventions.**
+**What the research shows:**
+The SMB label covers two structurally different buyer types that behave like different segments:
+1. **"Small" SMB (1–20 employees, sub-$200/month ACV):** A
+
+---

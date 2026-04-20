@@ -1,0 +1,14 @@
+# Is the SMB segment primarily self-serve (no sales/CS touch) or sales-assisted? This determines whether the intervention channel should be in-product, automated email, or CSM alert.
+
+**Depth:** standard  |  **Model:** claude-sonnet-4-6  |  **Date:** 2026-04-20
+
+- [ ] What is AgentNexLiFy's actual ACV distribution within the SMB segment? (The single most important unknown — without the ACV histogram, the CSM alert ROI calculation cannot be completed. Is >40% of SMB revenue above $200/month ACV?)
+- [ ] What is the current SMB account count, and what is the projected 12-month growth to 300+ accounts? (CSM alert model requires minimum 250–400 accounts per CSM to break even; below this threshold, all alerts are economically irrational)
+- [ ] Has AgentNexLiFy measured its Value Visibility Coefficient — the gap between agent output delivered and agent output perceived by the customer? (This is the key variable that determines whether automated interventions can do the job or whether human touchpoints are necessary regardless of ACV)
+- [ ] What is the actual acquisition motion breakdown for current SMB customers — what percentage were acquired via self-serve vs. agency channel vs. inside sales touch? (Prior research log suggests agency channel is material; this affects which customers have an existing human relationship that could be leveraged for CS alerts)
+- [ ] Is there a controlled experiment separating automated-only vs. automated + CSM-alert cohorts? (Without this, the CSM alert ROI claim is theoretical; the contrarian lens identifies this as the key empirical gap)
+- [ ] What are the SMB customer's preferred communication channels? (Email vs. in-product vs. phone/video; the intervention channel that is technically optimal may not match the channel the customer actually engages with — this varies by vertical, and the contractor segment may have lower email engagement than general SMB benchmarks)
+- [ ] Does AgentNexLiFy currently have the behavioral event instrumentation required to trigger in-product and email interventions? (A prior condition: if login events, feature usage, and agent output metrics are not tracked at the session level, no intervention channel — including CSM alerts — can be reliably triggered)
+- [ ] What is the actual churn rate breakdown between involuntary (payment failure) and voluntary (deliberate cancellation) for current SMB cohorts? (Involuntary churn at 20–30% of total churn requires a dunning flow, not a CSM alert or in-product nudge — if this is unaddressed, it represents the highest-ROI intervention regardless of channel architecture)
+
+---

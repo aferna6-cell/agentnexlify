@@ -307,3 +307,19 @@ Example:
 - Database-query analytics: viable tenant ceiling (without performance degradation) | ~500 active tenants | Engineering rule of thumb for OLTP-vs-OLAP boundary | 2026-04 | projects/agentnexlify-telemetry-coverage
 - Prior probability that agent task completion events are absent from queryable telemetry (early-stage agentic SaaS) | 60–75% | Derived from historical pattern analysis of agentic platform instrumentation gaps | 2026-04 | projects/agentnexlify-telemetry-coverage
 - Probability that sufficient v1 Health Score data exists in application database records | 30–40% | Contrarian lens estimate based on standard database schema patterns | 2026-04 | projects/agentnexlify-telemetry-coverage
+
+<!-- from projects/is-the-smb-segment-primarily-self-serve-no-sales-c on 2026-04-20 -->
+- CSM coverage ratio, low-touch SMB model | 1 CSM per 200–400 accounts | Gainsight CS Benchmark Report 2024 | 2024 | projects/smb-intervention-channel
+- CSM fully-loaded annual cost | $120,000–$180,000 | Industry compensation benchmarks 2024 | 2024 | projects/smb-intervention-channel
+- CSM cost per account per year (300 account ratio, $150K loaded) | $500/account/year | Derived calculation | 2026 | projects/smb-intervention-channel
+- In-product nudge re-engagement rate (behavioral trigger) | 18–32% | Pendo/Appcues benchmark data 2023–2024 | 2024 | projects/smb-intervention-channel
+- Automated email re-engagement rate (behavioral trigger) | 12–22% | Intercom/Customer.io benchmark data 2023–2024 | 2024 | projects/smb-intervention-channel
+- Combined in-product + email re-engagement rate | 35–45% (additive, not substitutive) | Intercom/Pendo combined studies 2023 | 2023 | projects/smb-intervention-channel
+- CSM personalized outreach response rate lift vs. automated email for >$150/month ACV | 1.8–2.4× | Gainsight CS Benchmark Report 2024 | 2024 | projects/smb-intervention-channel
+- SMB customer preference for human access (sub-$200/month tools) | 67% rate "access to a real person" as important | Zendesk CX Trends Benchmark 2024 | 2024 | projects/smb-intervention-channel
+- HubSpot SMB CS cost ratio (high-touch experiment 2015–2018) | >25% of SMB segment revenue | HubSpot public filings / industry analysis | 2018 | projects/smb-intervention-channel
+- Automated email cost per send (SendGrid/Customer.io pricing) | $0.002–$0.01 per email | Vendor pricing pages 2024 | 2024 | projects/smb-intervention-channel
+- ACV threshold for CSM alert ROI break-even | ≥$200/month ($2,400/year) | Derived from CSM cost + churn reduction models | 2026 | projects/smb-intervention-channel
+- Minimum account count for SMB CSM model viability | 250–400 accounts per CSM | Gainsight / industry CS benchmarks | 2024 | projects/smb-intervention-channel
+- SMB voluntary vs. involuntary churn split | ~70–80% voluntary / 20–30% involuntary | ProfitWell/Paddle retention research (prior research log) | 2023 | projects/smb-intervention-channel
+- Self-serve acquired PLG cohorts: 90-day churn difference with vs. without automated success motion | 30–40% higher churn without automated success motion | Derived from Atlassian/Slack/Dropbox PLG retrospective analyses 2020–2022 | 2022 | projects/smb-intervention-channel
