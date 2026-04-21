@@ -2148,3 +2148,12 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/widget_chat.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: add managed agents health probe
+**Date:** 2026-04-21
+**Commit:** 3b0ce34
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/managed_agent_runs.py,backend/tests/test_managed_agents.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
