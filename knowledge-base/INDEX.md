@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 59 (plus 1 in `_outputs/`)
+- Total articles: 63 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-21
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -30,6 +30,10 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Birdeye Agentic Marketing — Execution Layer for Multi-Location Brands](wiki/competitors/birdeye-agentic-marketing-platform.md) — Five-test CMO framework + three-layer governance (autonomous / supervised / human accountability); 100-10,000+ location positioning ties agent execution to AI search visibility. Tags: birdeye, agentic-marketing, multi-location, reputation, ai-search, location-level-execution
 - [Intercom — Return of the Chat as Universal UI](wiki/competitors/intercom-return-of-the-chat.md) — Chat UI replaces GUI complexity as default interface; novices become power users when they can "type and say" rather than click through menus. Tags: intercom, chat-ui, natural-language-interface, conversational-ui, fin, enterprise-software
 - [Birdeye State of AI Search 2026 — Citation Share as the New SEO](wiki/competitors/birdeye-state-of-ai-search-2026.md) — 80% of brands cited at least once, only 15% secure top position with own domain, 20% absent entirely; four-layer AI trust stack frames owned content as primary. Tags: birdeye, ai-search, aeo, geo, citation-share, multi-location, llm-visibility, owned-content
+- [GoHighLevel AI Employee — Reselling Mechanics and $97/Sub Unlimited Tier](wiki/competitors/ghl-ai-employee-platform-reselling.md) — AI Employee bundle (Voice/Conversation/Reviews/Content/Funnel AI) at $97/mo per sub-account with 2-2.5x agency rebilling markup; the reseller billing rail is GHL's real distribution moat. Tags: gohighlevel, ai-employee, reselling, rebilling, agency, ai-pricing
+- [GoHighLevel April 2026 Product Updates — Workflow AI Builder, Image Recognition, Booking v2](wiki/competitors/ghl-april-2026-product-updates.md) — Natural-language workflow scaffolding, AI image recognition in Conversation AI, book-now-pay-later in Booking v2, Ask AI campaign copilot, Gift Cards GA. Tags: gohighlevel, workflow-ai-builder, conversation-ai, image-recognition, booking-v2, product-updates, april-2026
+- [GoHighLevel Pricing Teardown 2026 — Base Plans, Usage Fees, and Real Agency Math](wiki/competitors/ghl-pricing-teardown-2026.md) — $97/$297/$497 headlines land at $107/$412/$1,591 realistic monthly cost across three scenarios once AI Employee, LC Phone/Email, Workflow Pro, and A2P 10DLC are stacked. Tags: gohighlevel, pricing, saas-mode, ai-pricing, usage-fees, a2p-10dlc, agency-economics, 2026
+- [GoHighLevel Carrier Pricing Update — April 2026 SMS, Voice, and Number Rate Hikes](wiki/competitors/ghl-carrier-pricing-april-2026.md) — April 10/16 2026 pass-through rate increases across 50+ countries on SMS (worst case Sierra Leone +101%) and voice (Greece mobile +354%); compresses agency margin alongside the feature release. Tags: gohighlevel, lc-phone, carrier-fees, sms-pricing, voice-pricing, a2p-10dlc, at-t, verizon, april-2026
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge

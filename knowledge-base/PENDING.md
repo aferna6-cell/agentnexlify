@@ -160,13 +160,13 @@ _All compiled 2026-04-18 cron run._
 
 ## 2026-04-21T22:01:40+00:00 auto-populate
 
-- [ ] **competitors**: AI Employee in HighLevel: Automate Calls, Chats & Workflows : HighLevel Support Portal — `raw/competitors/help-gohighlevel-com-support-solutions-articles-155000003906-ai-employ.md` — <https://help.gohighlevel.com/support/solutions/articles/155000003906-ai-employee-overview>
-- [ ] **competitors**: GoHighLevel April 2026 Updates: What's New This Month — `raw/competitors/www-highlevel-ai-blog-gohighlevel-april-2026-updates.md` — <https://www.highlevel.ai/blog/gohighlevel-april-2026-updates>
+- ~~[competitors] AI Employee in HighLevel~~ → compiled `wiki/competitors/ghl-ai-employee-platform-reselling.md` (2026-04-21 cron)
+- ~~[competitors] GoHighLevel April 2026 Updates~~ → compiled `wiki/competitors/ghl-april-2026-product-updates.md` (2026-04-21 cron)
 
 ## 2026-04-21T22:04:07+00:00 auto-populate
 
-- [ ] **competitors**: GoHighLevel Pricing Plans 2026: $97 vs $297 vs $497 - Full Cost Breakdown — `raw/competitors/netpartners-marketing-gohighlevel-pricing-plans-explained-features-val.md` — <https://netpartners.marketing/gohighlevel-pricing-plans-explained-features-value-cost-comparison-2026/>
-- [ ] **competitors**: Pricing Update – Effective April 2026 | HighLevel Changelog — `raw/competitors/ideas-gohighlevel-com-changelog-pricing-update-effective-april-2026.md` — <https://ideas.gohighlevel.com/changelog/pricing-update-effective-april-2026>
+- ~~[competitors] GoHighLevel Pricing Plans 2026~~ → compiled `wiki/competitors/ghl-pricing-teardown-2026.md` (2026-04-21 cron)
+- ~~[competitors] Pricing Update – Effective April 2026 | HighLevel Changelog~~ → compiled `wiki/competitors/ghl-carrier-pricing-april-2026.md` (2026-04-21 cron)
 - [ ] **ai-llm**: Anthropic Just Launched Managed Agents. Let's Talk About How We're Going to Pay for This — `raw/ai-llm/www-finout-io-blog-anthropic-just-launched-managed-agents-lets-talk-ab.md` — <https://www.finout.io/blog/anthropic-just-launched-managed-agents.-lets-talk-about-how-were-going-to-pay-for-this>
 - [ ] **ai-llm**: Anthropic, OpenAI, Google, and Microsoft agree that the harness is the product. They disagree on the price. - The New Stack — `raw/ai-llm/thenewstack-io-ai-agent-harness-pricing-split.md` — <https://thenewstack.io/ai-agent-harness-pricing-split/>
 - [ ] **small-biz-saas**: B2B SaaS Benchmarks: A Complete Guide 2026 — `raw/small-biz-saas/churnfree-com-blog-b2b-saas-churn-rate-benchmarks.md` — <https://churnfree.com/blog/b2b-saas-churn-rate-benchmarks/>
