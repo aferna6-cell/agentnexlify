@@ -2127,3 +2127,24 @@ https://claude.ai/code/session_01Q1QrSU8Vy2ZDhJBa9ZmwEo
 **Author:** aferna6-cell
 **Files Changed:** scripts/check_test_local_refs.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): widen null-state guard to include FAQs + business_type
+
+Bot was replying "Our chat assistant is still being set up" to tenants
+that had FAQs configured but an empty knowledge_base column. Guard only
+checked widget.knowledge_base + widget.custom_instructions, missed FAQs
+and business_type as grounding sources.
+
+Widens check: KB || CI || business_type \!= 'other' || FAQ count > 0.
+Falls back to setup message only when all four are empty. FAQ probe
+uses _CHAT_CACHE_TTL (same cache as downstream FAQ fetch) so no extra
+per-request DB cost after first miss.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+**Date:** 2026-04-21
+**Commit:** 8d026e6
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/widget_chat.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
