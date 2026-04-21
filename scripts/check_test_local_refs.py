@@ -50,7 +50,42 @@ def _module_file(root: Path, dotted: str) -> Path | None:
     package_init = path / "__init__.py"
     if package_init.is_file():
         return package_init
+    if path.is_dir():
+        return path
     return None
+
+
+def _is_package_path(path: Path) -> bool:
+    return path.is_dir() or path.name == "__init__.py"
+
+
+def _module_exports_name(module_path: Path, name: str) -> bool:
+    if module_path.is_dir():
+        return False
+
+    try:
+        tree = ast.parse(module_path.read_text(encoding="utf-8"), filename=str(module_path))
+    except SyntaxError:
+        return False
+
+    for node in tree.body:
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            and node.name == name
+        ):
+            return True
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                exported = alias.asname or alias.name
+                if exported == name:
+                    return True
+        if isinstance(node, ast.Assign):
+            if any(target == name for target in iter_assigned_names(node)):
+                return True
+        if isinstance(node, ast.AnnAssign):
+            if name in iter_assigned_names(node.target):
+                return True
+    return False
 
 
 def _longest_existing_module(root: Path, dotted: str) -> tuple[str | None, Path | None, int]:
@@ -91,7 +126,7 @@ def _collect_references(path: Path, root: Path) -> list[tuple[str, int, str]]:
             # If this is importing from a package, also validate any obvious
             # submodule imports (`from backend.services import foo`).
             module_file = _module_file(root, node.module)
-            if module_file and module_file.name == "__init__.py":
+            if module_file and _is_package_path(module_file):
                 for alias in node.names:
                     if alias.name == "*":
                         continue
@@ -127,7 +162,11 @@ def _validate_reference(root: Path, dotted: str, context: str) -> str | None:
         return None
 
     parts = dotted.split(".")
-    if module_path.name == "__init__.py" and prefix_len < len(parts):
+    if _is_package_path(module_path) and prefix_len < len(parts):
+        attribute_name = parts[prefix_len]
+        if _module_exports_name(module_path, attribute_name):
+            return None
+
         missing_submodule = ".".join(parts[: prefix_len + 1])
         if _module_file(root, missing_submodule) is None:
             return (
