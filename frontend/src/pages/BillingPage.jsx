@@ -278,6 +278,21 @@ export default function BillingPage() {
               </button>
             </div>
           )}
+          {currentPlan !== "free" && (
+            <div
+              style={{
+                marginTop: 12,
+                fontSize: "0.8rem",
+                lineHeight: 1.5,
+                color: "var(--text-muted)",
+              }}
+            >
+              Need help with a billing mistake or accidental renewal? Email{" "}
+              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+              within 5 business days. Duplicate charges and service-activation
+              billing errors are eligible for manual review.
+            </div>
+          )}
           {confirmCancel && currentPlan !== "free" && (
             <div style={{
               marginTop: 12,

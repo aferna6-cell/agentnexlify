@@ -626,11 +626,11 @@ export default function Home() {
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
               <h1 className="reveal">
-                Run smarter marketing.
+                Capture more quote requests.
                 <br />
-                Capture more customers.
+                Follow up faster.
                 <br />
-                Book more appointments —{" "}
+                Book more jobs -{" "}
                 <span className="accent-gradient">automatically.</span>
               </h1>
               <div className="lp-hero-buttons reveal">
@@ -649,9 +649,9 @@ export default function Home() {
                   maxWidth: 520,
                 }}
               >
-                Whether you want to automate your workflows or grow your
-                marketing and online presence, AgentNexLiFy handles both — from
-                one dashboard.
+                Built first for contractors and home-service teams. AgentNexLiFy
+                turns website visitors into quote-ready leads, fast follow-ups,
+                and booked jobs from one dashboard.
               </p>
             </div>
 
@@ -669,10 +669,12 @@ export default function Home() {
               </div>
               <div className="widget-mockup-body">
                 <div className="wm-msg wm-msg-bot">
-                  Hi! How can I help you today?
+                  Hi! I'm the AI scheduling desk for Apex Plumbing. Are you
+                  looking for a repair, an estimate, or help with an existing
+                  job?
                 </div>
                 <div className="wm-msg wm-msg-user">
-                  Hi, I&apos;d like to book a reservation for this Saturday
+                  I need an estimate for a water heater replacement.
                 </div>
                 <div className="wm-typing" aria-hidden="true">
                   <span></span>
@@ -680,11 +682,14 @@ export default function Home() {
                   <span></span>
                 </div>
                 <div className="wm-msg wm-msg-bot">
-                  I&apos;d love to help! Could I get your name?
+                  Absolutely. Is this urgent, and what ZIP code is the job in?
                 </div>
-                <div className="wm-msg wm-msg-user">Sarah Johnson</div>
+                <div className="wm-msg wm-msg-user">
+                  78704. Not urgent, but this week would be great.
+                </div>
                 <div className="wm-msg wm-msg-bot">
-                  Thanks Sarah! Let me check availability for Saturday...
+                  Perfect. I can log that as a replacement estimate and have
+                  the team text you with the next available times.
                 </div>
               </div>
             </div>
@@ -698,33 +703,32 @@ export default function Home() {
           <div className="lp-how-header">
             <div className="section-label reveal">How It Works</div>
             <h2 className="section-title reveal">
-              Set it up once. Grow every day.
+              Set it up once. Keep every estimate moving.
             </h2>
           </div>
           <div className="lp-how-steps">
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">1</div>
-              <h3>Connect Your Business</h3>
+              <h3>Tell us your trade</h3>
               <p>
-                Sign up, tell us about your business, and configure your AI
-                assistant with your FAQs, services, and greeting message.
+                Add your service area, top services, hours, and common job
+                questions so the assistant sounds like your front desk.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">2</div>
-              <h3>Launch Your Marketing + AI</h3>
+              <h3>Launch your AI intake desk</h3>
               <p>
-                Embed the widget, run SEO audits, schedule social posts, and
-                send email and SMS campaigns — all from one dashboard.
+                Put the widget on your site so it can answer service questions,
+                capture estimate requests, and route the best leads fast.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
-              <h3>You Grow Your Business</h3>
+              <h3>Turn requests into booked jobs</h3>
               <p>
-                Customers flow into your dashboard scored and organized.
-                Friendly follow-ups keep them engaged while you focus on what
-                you love.
+                Quote requests land in your dashboard organized by urgency, and
+                follow-ups keep each job moving while your crew stays focused.
               </p>
             </div>
           </div>
@@ -741,8 +745,8 @@ export default function Home() {
           <div className="lp-features-header">
             <div className="section-label reveal">Features</div>
             <h2 className="section-title reveal">
-              Automate your workflows or grow your marketing — one platform
-              handles both.
+              AI lead capture for contractors that turns website visitors into
+              quote requests.
             </h2>
           </div>
           <div className="lp-features-grid">
@@ -764,10 +768,10 @@ export default function Home() {
                   <line x1="8" y1="11" x2="14" y2="11" />
                 </svg>
               </div>
-              <h3>SEO Audit and Optimization</h3>
+              <h3>Quote-Ready Lead Capture</h3>
               <p>
-                Identify what&apos;s holding your site back and get clear steps
-                to improve your rankings.
+                Capture the service needed, job location, urgency, and contact
+                details before your team replies.
               </p>
             </div>
             <div className="lp-feature-card reveal">
@@ -786,9 +790,10 @@ export default function Home() {
                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                 </svg>
               </div>
-              <h3>AI Content Writer</h3>
+              <h3>AI Estimate Follow-Ups</h3>
               <p>
-                Create blogs, social posts, and marketing content in minutes.
+                Keep new inquiries warm with fast, on-brand follow-up messages
+                while the crew is out in the field.
               </p>
             </div>
             <div className="lp-feature-card reveal">
@@ -808,10 +813,10 @@ export default function Home() {
                   <line x1="12" y1="2" x2="12" y2="15" />
                 </svg>
               </div>
-              <h3>Social Media Marketing</h3>
+              <h3>Missed-Call Text Back</h3>
               <p>
-                Plan, schedule, and manage your social presence across
-                platforms.
+                Respond quickly when the phone rings at the wrong time so fewer
+                jobs slip through the cracks.
               </p>
             </div>
             <div className="lp-feature-card reveal">
@@ -830,10 +835,10 @@ export default function Home() {
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
               </div>
-              <h3>Email and SMS Campaigns</h3>
+              <h3>Reminder and Reactivation Sequences</h3>
               <p>
-                Reach the right people at the right time with targeted
-                campaigns.
+                Nudge estimates, remind site visits, and re-engage past
+                customers without manual chase work.
               </p>
             </div>
             <div className="lp-feature-card reveal">
@@ -851,10 +856,10 @@ export default function Home() {
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
-              <h3>Customer Capture</h3>
+              <h3>24/7 Website Intake</h3>
               <p>
-                Never miss a lead. Your website engages visitors and captures
-                interest 24/7.
+                Your website keeps answering questions and capturing new jobs
+                after hours and on weekends.
               </p>
             </div>
             <div className="lp-feature-card reveal">
@@ -875,8 +880,11 @@ export default function Home() {
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
               </div>
-              <h3>Appointment Booking</h3>
-              <p>Let customers book instantly without the back and forth.</p>
+              <h3>Site Visit Booking</h3>
+              <p>
+                Let customers request an estimate or book a visit without the
+                back and forth.
+              </p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
@@ -896,10 +904,10 @@ export default function Home() {
                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </div>
-              <h3>Customer Pipeline</h3>
+              <h3>Job Pipeline</h3>
               <p>
-                All your leads in one place, scored and organized so you know
-                who to focus on.
+                All your leads in one place, scored and organized so your team
+                knows which jobs need attention first.
               </p>
             </div>
             <div className="lp-feature-card reveal">
@@ -919,8 +927,11 @@ export default function Home() {
                   <line x1="6" y1="20" x2="6" y2="14" />
                 </svg>
               </div>
-              <h3>Analytics and Reporting</h3>
-              <p>Track leads, conversions, and performance in real time.</p>
+              <h3>Lead Source Reporting</h3>
+              <p>
+                Track quote requests, response times, and conversion trends in
+                real time.
+              </p>
             </div>
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
@@ -940,7 +951,10 @@ export default function Home() {
                 </svg>
               </div>
               <h3>Hosted Business Page</h3>
-              <p>Launch a professional online presence in minutes.</p>
+              <p>
+                Launch a clean service page that gives visitors one fast path
+                to request work.
+              </p>
             </div>
           </div>
         </div>
@@ -952,11 +966,11 @@ export default function Home() {
           <div className="lp-pricing-header">
             <div className="section-label reveal">Pricing</div>
             <h2 className="section-title reveal">
-              One platform. Every tool your business needs.
+              Start with AI quote capture. Add more automation as you grow.
             </h2>
             <p className="section-subtitle reveal">
-              CRM, marketing, SEO, social media, and AI automation - all
-              included. Hands-on setup and ongoing support with every plan.
+              Built for contractors and home-service teams that want faster
+              follow-up without adding more admin work.
             </p>
           </div>
           <div className="lp-pricing-grid">
@@ -964,7 +978,7 @@ export default function Home() {
             <div className="lp-pricing-card start-here reveal">
               <div className="lp-pricing-plan-name">Free</div>
               <div className="lp-pricing-tagline">
-                See what AI can do for your business
+                See how AI handles estimate requests for your shop
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$0</span>
@@ -994,7 +1008,7 @@ export default function Home() {
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Growth</div>
               <div className="lp-pricing-tagline">
-                Capture, convert, and start marketing smarter
+                Capture, qualify, and follow up on new quote requests
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$249</span>
@@ -1030,7 +1044,7 @@ export default function Home() {
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">Professional</div>
               <div className="lp-pricing-tagline">
-                The complete toolkit to run, grow, and market your business
+                Run the full follow-up engine for your service team
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$499</span>
@@ -1069,7 +1083,7 @@ export default function Home() {
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Enterprise</div>
               <div className="lp-pricing-tagline">
-                White-glove service with full marketing automation
+                White-glove automation for larger teams and multi-location ops
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$899</span>
@@ -1113,7 +1127,7 @@ export default function Home() {
       {/* ============ FINAL CTA ============ */}
       <section className="lp-cta-section" id="cta">
         <div className="container lp-cta-content">
-          <h2 className="section-title reveal">Ready to grow your business?</h2>
+          <h2 className="section-title reveal">Ready to book more jobs?</h2>
           <div className="lp-cta-buttons reveal">
             <Link to="/signup" className="btn-primary">
               Get Started {"\u2192"}

@@ -2028,9 +2028,14 @@
   function triggerGreeting() {
     const msgs = document.getElementById("anx-messages");
     if (!msgs || msgs.children.length > 0) return;
+    const rawGreeting =
+      greetingMessage || "How can I help you today?";
+    const greetingWithDisclosure = /\bAI\b/i.test(rawGreeting)
+      ? rawGreeting
+      : `Hi! I'm the AI assistant for this business. ${rawGreeting}`;
     addMessage(
       "assistant",
-      greetingMessage || "Hey there! How can I help you today?",
+      greetingWithDisclosure,
     );
   }
 

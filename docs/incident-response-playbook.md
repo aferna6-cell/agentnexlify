@@ -11,6 +11,12 @@ It covers:
 - broken deploys, degraded service, or data-risk incidents
 - any issue that needs fast containment before root cause work
 
+Related docs:
+
+- `docs/ops/partner-runbook.md`
+- `docs/ops/refund-runbook.md`
+- `docs/ops/service-continuity-plan.md`
+
 ## Roles
 
 - Incident lead: owns severity, decisions, and timeline

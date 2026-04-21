@@ -25,7 +25,7 @@ const SUGGESTION_ALIASES = {
 };
 
 const SUGGESTIONS = {
-  home_services: ["Emergency Repair", "Free Estimate", "Installation", "Maintenance", "Inspection"],
+  home_services: ["Repair", "Free Estimate", "Installation", "Maintenance", "Inspection"],
   hvac: ["AC Repair", "Furnace Installation", "Duct Cleaning", "Thermostat Installation", "System Tune-up"],
   auto_shop: ["Oil Change", "Tire Rotation", "Brake Service", "Engine Diagnostics", "Transmission Repair"],
   salon: ["Haircut", "Color & Highlights", "Blowout", "Keratin Treatment", "Extensions"],
@@ -87,12 +87,12 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
     <div>
       <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Services & FAQs</h2>
       <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32, fontSize: "0.9rem" }}>
-        Tell your AI assistant what you offer and how to answer common questions.
+        Tell your AI desk what jobs you take and how to answer common estimate questions.
       </p>
 
       {/* Services */}
       <div style={{ marginBottom: 32 }}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>What services do you offer?</div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>What services or job types do you offer?</div>
 
         {/* Chips */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
@@ -110,7 +110,7 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
             value={serviceInput}
             onChange={e => setServiceInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addService(serviceInput))}
-            placeholder="Type a service and press Enter"
+            placeholder="Type a service or job type and press Enter"
             style={inputStyle}
           />
           <button onClick={() => addService(serviceInput)} style={{ ...btnSmall, flexShrink: 0 }}>Add</button>

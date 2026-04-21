@@ -27,7 +27,7 @@ export default function TermsOfService() {
 
       <article className="legal-content">
         <h1>Terms of Service</h1>
-        <p className="legal-updated">Last updated: March 2026</p>
+        <p className="legal-updated">Last updated: April 2026</p>
 
         <section>
           <h2>1. What AgentNexLiFy Is</h2>
@@ -118,7 +118,20 @@ export default function TermsOfService() {
             <li>
               <strong>Cancellation:</strong> You can cancel anytime from your
               dashboard. Your access continues through the end of the current
-              billing period. No refunds for partial months.
+              billing period.
+            </li>
+            <li>
+              <strong>Refund policy:</strong> We do not offer prorated refunds
+              for unused partial months. If we charge you twice, fail to
+              activate service after payment, or approve a refund to resolve a
+              billing error, we send the refund back to the original payment
+              method.
+            </li>
+            <li>
+              <strong>Refund requests:</strong> Contact{" "}
+              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+              within 5 business days of the billing event so we can review it
+              before it turns into a dispute.
             </li>
             <li>
               <strong>Price changes:</strong> We&rsquo;ll notify you at least 30
@@ -233,7 +246,8 @@ export default function TermsOfService() {
           <ul>
             <li>
               <strong>By you:</strong> Cancel anytime from your dashboard or by
-              emailing us.
+              emailing{" "}
+              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>.
             </li>
             <li>
               <strong>By us:</strong> We may suspend or terminate your account
@@ -273,8 +287,8 @@ export default function TermsOfService() {
           <ul className="legal-contact">
             <li>
               <strong>Email:</strong>{" "}
-              <a href="mailto:support@agentnexlify.com">
-                support@agentnexlify.com
+              <a href="mailto:help@agentnexlify.com">
+                help@agentnexlify.com
               </a>
             </li>
             <li>

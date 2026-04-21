@@ -3,6 +3,11 @@
 **Owner:** Aidan + partner lead  
 **Use when:** something breaks, a customer is angry, billing is at risk, or Aidan is unavailable.
 
+Related docs:
+- `docs/ops/refund-runbook.md`
+- `docs/ops/service-continuity-plan.md`
+- `docs/ops/dispute-threshold.md`
+
 ## First Move
 
 1. Post in the partner ops chat: what happened, customer name, time noticed, and whether money/data/customer replies are affected.

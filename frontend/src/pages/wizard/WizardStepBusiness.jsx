@@ -76,7 +76,7 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
     <form onSubmit={handleSubmit}>
       <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Tell us about your business</h2>
       <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32, fontSize: "0.9rem" }}>
-        This information helps your AI assistant answer customer questions accurately.
+        This helps your AI assistant answer service-area, estimate, and scheduling questions accurately.
       </p>
 
       {error && <div style={{ background: "#dc2626", color: "#fff", padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: "0.9rem" }}>{error}</div>}
@@ -84,7 +84,7 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <label style={labelStyle}>
           Business Name *
-          <input style={inputStyle} value={form.business_name} onChange={set("business_name")} placeholder="Acme Plumbing" required />
+          <input style={inputStyle} value={form.business_name} onChange={set("business_name")} placeholder="Acme Plumbing & Heating" required />
         </label>
 
         <label style={labelStyle}>
@@ -93,12 +93,12 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
             {INDUSTRIES.map(i => <option key={i} value={i}>{industryLabel(i)}</option>)}
           </select>
           <span style={hintStyle}>
-            Keep this general for now, or choose a type to personalize your assistant and dashboard.
+            Choose your trade so we can seed a better greeting, service suggestions, and dashboard defaults.
           </span>
         </label>
 
         <label style={labelStyle}>
-          City / Service Area *
+          City / Service Area or ZIP Codes *
           <input style={inputStyle} value={form.city} onChange={set("city")} placeholder="Austin, TX" required />
         </label>
 

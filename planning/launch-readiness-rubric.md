@@ -10,7 +10,7 @@
 
 **Go threshold:** ≥ 210 / 262 AND zero criterion scoring 0 in a HIGH-severity dimension (2, 3, 10).
 
-**Last scored:** 2026-04-20 (evidence-based rescore; repo evidence includes a passing `npm run check`, launch-risk guardrail tests, and schema-log updates for migrations 106/107).
+**Last scored:** 2026-04-21 (evidence refresh after contractor-wedge copy pass, MTOptions live measurement, public health burst load sample, refund-policy docs, and widget AI-disclosure update).
 
 ---
 
@@ -24,10 +24,10 @@
 | 1.4 | Cookie/consent banner present where required | 0 | No cookie banner component in `frontend/src/` |
 | 1.5 | Business entity registered (LLC / C-corp) + bank + EIN | ? | `[partner-verify]` |
 | 1.6 | Merchant agreement signed (Stripe Connect or direct) | 1 | Stripe live keys active per webhook code. Signed agreement `[partner-verify]` |
-| 1.7 | Written AI-disclosure in widget greeting ("powered by AI") | 0 | `widget/agentnexlify-widget.js:2033` default greeting: "Hey there! How can I help you today?" — no AI disclosure |
+| 1.7 | Written AI-disclosure in widget greeting ("powered by AI") | 2 | `widget/agentnexlify-widget.js` now prepends AI disclosure at runtime when the saved greeting lacks it; `frontend/src/utils/businessPresets.js` seed copy also now identifies the assistant as AI. |
 | 1.8 | DPAs available for customers who ask | 0 | No DPA template in `docs/` |
 
-**Subtotal:** 5 / 16 × 3 = **15 / 48** (1.5 + 1.6 unknown → scored conservative)
+**Subtotal:** 7 / 16 × 3 = **21 / 48** (1.5 + 1.6 unknown → scored conservative)
 
 ---
 
@@ -84,13 +84,13 @@
 
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
-| 5.1 | Load test run at 10× expected concurrent (p95 < 1s) | 0 | No load test artifact in `tests/` or `docs/` |
+| 5.1 | Load test run at 10× expected concurrent (p95 < 1s) | 1 | `ops/evals/run_public_health_load.py` + `ops/evals/public-health-load-2026-04-21.md` establish a reproducible external burst check (100 requests, concurrency 10, p95 291.2 ms). Still not a widget/chat-specific load test. |
 | 5.2 | Database connection pool sized + tested | 1 | Supabase pool default; not tuned or tested |
 | 5.3 | Claude API rate limits understood + surfaced to user | 1 | SDK handles 429; no tenant-facing surface |
 | 5.4 | Widget render verified on slow 3G (Lighthouse PWA test) | 0 | Chrome install pending |
-| 5.5 | Runaway-cost kill switch (per-tenant usage cap) | 0 | No per-tenant token/cost cap found |
+| 5.5 | Runaway-cost kill switch (per-tenant usage cap) | 2 | `backend/services/ai_usage_guard.py` enforces alert and hard-limit thresholds by tenant, `tests/test_launch_risk_guardrails.py` covers the plan baselines, and `docs/dev-knowledge/schema-log.md` documents the live support tables. |
 
-**Subtotal:** 2 / 10 × 2 = **4 / 20**
+**Subtotal:** 5 / 10 × 2 = **10 / 20**
 
 ---
 
@@ -154,14 +154,14 @@
 
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
-| 10.1 | Refund policy documented + honored | 0 | No refund policy doc in `docs/` or ToS explicitly |
+| 10.1 | Refund policy documented + honored | 2 | `frontend/src/pages/TermsOfService.jsx` now documents refund handling and request timing, `frontend/src/pages/BillingPage.jsx` surfaces the support path, and `docs/ops/refund-runbook.md` documents the operational refund flow. |
 | 10.2 | Fraud rules: velocity limits, disposable-email block, CC mismatch | 0 | No fraud detection middleware found |
 | 10.3 | Churn reason captured on cancel | 2 | `tests/test_launch_risk_guardrails.py:279-316` persists `cancellation_reason`, and `docs/dev-knowledge/schema-log.md:738-739` documents `tenant_cancellation_events` in migration 106. |
 | 10.4 | Bus-factor: more than one person can deploy | 0 | Solo engineer per CLAUDE.md; partners non-engineer |
-| 10.5 | Dead-man switch: if founder disappears, customers keep service for 30d | 0 | No documented continuity plan |
+| 10.5 | Dead-man switch: if founder disappears, customers keep service for 30d | 1 | `docs/ops/service-continuity-plan.md` now documents the minimum access inventory and safe partner actions. Still needs credential distribution and real partner rehearsal. |
 | 10.6 | Insurance (E&O / cyber) quoted | ? | `[partner-verify]` — assumed 0 |
 
-**Subtotal:** 2 / 12 × 2 = **4 / 24** — ⚠️ **5 HIGH-severity zeros (10.1, 10.2, 10.4, 10.5, 10.6)**
+**Subtotal:** 5 / 12 × 2 = **10 / 24** — ⚠️ **3 HIGH-severity zeros (10.2, 10.4, 10.6)**
 
 ---
 
@@ -169,48 +169,49 @@
 
 | Dimension | Raw | Weighted | Max | HIGH zeros |
 |-----------|-----|----------|-----|------------|
-| 1. Legal | 5 / 16 | 15 | 48 | — |
+| 1. Legal | 7 / 16 | 21 | 48 | — |
 | 2. Security | 14 / 16 | 42 | 48 | — |
 | 3. Billing | 9 / 16 | 27 | 48 | — |
 | 4. Observability | 5 / 12 | 10 | 24 | — |
-| 5. Load | 2 / 10 | 4 | 20 | — |
+| 5. Load | 5 / 10 | 10 | 20 | — |
 | 6. Data integrity | 8 / 10 | 16 | 20 | — |
 | 7. Support | 4 / 10 | 4 | 10 | — |
 | 8. Brand | 6 / 10 | 6 | 10 | — |
 | 9. Sales | 5 / 10 | 5 | 10 | — |
-| 10. Risk | 2 / 12 | 4 | 24 | **10.1, 10.2, 10.4, 10.5, 10.6** |
-| **TOTAL** | — | **133** | **262** | **5 HIGH zeros** |
+| 10. Risk | 5 / 12 | 10 | 24 | **10.2, 10.4, 10.6** |
+| **TOTAL** | — | **151** | **262** | **3 HIGH zeros** |
 
-**Score:** 133 / 262 = **50.8%**
+**Score:** 151 / 262 = **57.6%**
 
-## Verdict — 2026-04-20
+## Verdict — 2026-04-21
 
 🔴 **NO-GO for paid launch.** Stay in design-partner mode.
 
-- Below 160/262 soft-launch threshold (133)
-- Below 210/262 go threshold (133)
-- **5 HIGH-severity zeros** remain in Dimension 10 — any single one still blocks ship
+- Below 160/262 soft-launch threshold (151)
+- Below 210/262 go threshold (151)
+- **3 HIGH-severity zeros** remain in Dimension 10 — any single one still blocks ship
 
 ## Highest-leverage next moves (ordered by leverage per hour)
 
 Per Q4 of the rubric's meeting questions:
 
-1. **Dim 10 (Risk) — 4/24 weighted.** Five zeros remain. Fastest wins: (a) document refund policy, (b) add fraud rules, (c) write a continuity plan, (d) train a second deployer, (e) get insurance quoted. The cancel-reason gap is now closed by `tests/test_launch_risk_guardrails.py` plus `schema-log.md`.
-2. **Dim 3 (Billing) — 27/48 weighted.** Dunning and refund replay/fallback are now covered in `tests/test_launch_risk_guardrails.py`, but partial/full refund coverage and access-until-period-end remain open.
-3. **Dim 2 (Security) — 42/48 weighted.** Semgrep CI and the IR playbook are now in place. Next security lift is triaging the 50 existing Semgrep findings and deciding which rules should block releases.
-4. **Dim 1 (Legal)** — GDPR deletion endpoint (1h backend + row-level cascading delete). AI disclosure still needs a widget greeting update.
-5. **Dim 5 (Load)** — simple k6 or Locust load test at 10× expected (~2h). Dim 5 jumps 0→1 or 1→2.
+1. **Dim 10 (Risk) — 10/24 weighted.** The remaining hard blockers are now fraud rules, second-deployer readiness, and an insurance quote. Refund policy and continuity documentation are no longer the fastest wins because they already landed.
+2. **Dim 5 (Load) — 10/20 weighted.** The public health burst check is now in place, but the next real lift is a widget/chat-specific load test with a disposable tenant and log review.
+3. **Dim 1 (Legal) — 21/48 weighted.** GDPR deletion endpoint and cookie/consent remain open. AI disclosure no longer belongs on the blocker list.
+4. **Dim 3 (Billing) — 27/48 weighted.** Refund flow exists, but partial/full refund coverage, proration coverage, and access-until-period-end evidence still need tightening.
+5. **Dim 2 (Security) — 42/48 weighted.** Semgrep triage remains worthwhile, but it is no longer the clearest score-per-hour path compared with the three remaining risk zeros.
 
 ## Fastest path to "soft launch" (160/262 threshold)
 
-Need **+27 weighted**. Attainable via ~12 engineer-hours:
+Need **+9 weighted** and zero remaining HIGH-severity zeros.
 
-- Dim 10 refund policy, fraud rules, continuity plan, second deployer, and insurance quote
-- Dim 2 Semgrep findings triage and blocking-policy decision
-- Dim 3 partial/full refund regression coverage and period-end access regression
-- Dim 1 widget AI disclosure and GDPR endpoint
+Fastest credible path:
 
-Total: **+27 weighted** → 160. Soft launch unlocked (invite-only).
+- Dim 10 fraud rules, second-deployer readiness, and insurance quote
+- Dim 5 widget/chat-specific load test
+- Dim 1 GDPR deletion endpoint or cookie/consent coverage
+
+Total: **+9 weighted** plus the three HIGH-zero closures → soft launch unlocked (invite-only).
 
 Still NO-GO for full paid launch until 210/262 AND zero HIGH zeros.
 
