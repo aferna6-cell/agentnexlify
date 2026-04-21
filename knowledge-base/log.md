@@ -268,3 +268,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-21T10:06:38+00:00] kb-autopopulate-rss | categories=2 fetched=4 new_raw=4 deduped=39 rejected=65 errors=0
 
 ## [2026-04-21T10:08:45+00:00] kb-autopopulate-rss | categories=1 fetched=2 new_raw=2 deduped=0 rejected=0 errors=0
+
+## [2026-04-21 06:17] discover+compile | cron 06:00 | commits=5 raw=3 wiki=4
