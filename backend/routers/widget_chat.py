@@ -558,26 +558,53 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 handoff=False,
             )
 
-    # 5c. Null-state guard — if bot has no knowledge at all, show a graceful fallback
-    _has_kb = bool(widget.get("knowledge_base"))
-    _has_ci = bool(widget.get("custom_instructions"))
-    if not _has_kb and not _has_ci and len(messages) == 0:
-        _biz = tenant.get("business_name") or "our team"
-        _phone = tenant.get("phone") or ""
-        _phone_msg = f" You can also reach us at {_phone}." if _phone else ""
-        _setup_msg = (
-            f"Thanks for reaching out! Our chat assistant is still being set up. "
-            f"In the meantime, please contact {_biz} directly for assistance.{_phone_msg}"
-        )
-        _save_chat_messages(tenant["id"], req.session_id, req.message, _setup_msg)
-        logger.info("widget_chat: null_state_guard session=%s tenant=%s (no KB or CI)", req.session_id, tenant["id"])
-        return WidgetChatResponse(
-            response=_setup_msg,
-            session_id=req.session_id,
-            lead_captured=False,
-            show_watermark=_watermark,
-            handoff=False,
-        )
+    # 5c. Null-state guard — if bot has NO grounding at all, show a graceful fallback.
+    # Grounding sources: knowledge_base, custom_instructions, FAQs, or business_type
+    # (business_type alone gives the bot enough vertical context to answer generically).
+    _has_kb = bool((widget.get("knowledge_base") or "").strip())
+    _has_ci = bool((widget.get("custom_instructions") or "").strip())
+    _has_bt = bool((tenant.get("business_type") or "").strip()) and (tenant.get("business_type") or "").lower() != "other"
+    if not _has_kb and not _has_ci and not _has_bt and len(messages) == 0:
+        # Final check: FAQs count as grounding too. Probe cheaply.
+        _faq_probe_key = f"faq_count:{tenant['id']}"
+        _faq_count = _get_cached(_faq_probe_key, _CHAT_CACHE_TTL)
+        if _faq_count is None:
+            try:
+                _faq_probe = (
+                    get_service_supabase()
+                    .table("faq_entries")
+                    .select("id", count="exact")
+                    .eq("tenant_id", tenant["id"])
+                    .eq("is_active", True)
+                    .limit(1)
+                    .execute()
+                )
+                _faq_count = int(_faq_probe.count or 0)
+            except Exception:
+                logger.warning("faq count probe failed for tenant %s", tenant["id"], exc_info=True)
+                _faq_count = 0
+            _set_cache(_faq_probe_key, _faq_count)
+
+        if _faq_count == 0:
+            _biz = tenant.get("business_name") or "our team"
+            _phone = tenant.get("phone") or ""
+            _phone_msg = f" You can also reach us at {_phone}." if _phone else ""
+            _setup_msg = (
+                f"Thanks for reaching out! Our chat assistant is still being set up. "
+                f"In the meantime, please contact {_biz} directly for assistance.{_phone_msg}"
+            )
+            _save_chat_messages(tenant["id"], req.session_id, req.message, _setup_msg)
+            logger.info(
+                "widget_chat: null_state_guard session=%s tenant=%s (no KB, CI, business_type, or FAQs)",
+                req.session_id, tenant["id"],
+            )
+            return WidgetChatResponse(
+                response=_setup_msg,
+                session_id=req.session_id,
+                lead_captured=False,
+                show_watermark=_watermark,
+                handoff=False,
+            )
 
     # 6. Build system prompt with compact, intent-aware context.
     tid = tenant["id"]
