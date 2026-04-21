@@ -2118,3 +2118,12 @@ https://claude.ai/code/session_01Q1QrSU8Vy2ZDhJBa9ZmwEo
 **Author:** Claude
 **Files Changed:** ops/routines/logs/nightly-commit-review-2026-04-21.md,scripts/check_project_invariants.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(ci): allow package attributes in local test refs check
+**Date:** 2026-04-21
+**Commit:** 872b273
+**Author:** aferna6-cell
+**Files Changed:** scripts/check_test_local_refs.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
