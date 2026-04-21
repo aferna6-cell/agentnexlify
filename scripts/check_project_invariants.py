@@ -10,7 +10,6 @@ import os
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 CODE_ROOTS = (
@@ -100,7 +99,9 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def check(label: str, ok: bool, failures: list[str], details: list[str] | None = None) -> None:
+def check(
+    label: str, ok: bool, failures: list[str], details: list[str] | None = None
+) -> None:
     if ok:
         print(f"PASS {label}")
         return
@@ -204,9 +205,7 @@ def check_widget_assets(failures: list[str]) -> None:
                 issues.append(f"{rel(mirror)} unreadable ({exc})")
                 continue
             if mirror_bytes != canonical_bytes:
-                issues.append(
-                    f"drift: {rel(canonical)} != {rel(mirror)}"
-                )
+                issues.append(f"drift: {rel(canonical)} != {rel(mirror)}")
 
     check(
         "widget assets are byte-identical across mirrors",
@@ -244,6 +243,9 @@ def check_live_schema_fields(failures: list[str]) -> None:
             if "leads.tenant_id" in line:
                 issues.append(f"{rel(path)}:{lineno}: leads.tenant_id")
                 continue
+            if "conversations.tenant_id" in line:
+                issues.append(f"{rel(path)}:{lineno}: conversations.tenant_id")
+                continue
 
             lowered = line.lower()
             if not any(field in lowered for field in LEAD_FIELD_WORDS):
@@ -279,7 +281,9 @@ def check_retired_plan_names(failures: list[str]) -> None:
         for index, line in enumerate(lines):
             if not plan_context_re.search(line):
                 continue
-            window = " ".join(lines[max(0, index - 1) : min(len(lines), index + 2)]).lower()
+            window = " ".join(
+                lines[max(0, index - 1) : min(len(lines), index + 2)]
+            ).lower()
             if not any(marker in window for marker in PLAN_CONTEXT_MARKERS):
                 continue
             issues.append(f"{rel(path)}:{index + 1}: {line.strip()}")
