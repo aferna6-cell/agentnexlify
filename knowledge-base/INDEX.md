@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 55 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-20
+- Total articles: 59 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-21
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -29,6 +29,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Intercom Fin API Platform — Model-Layer Licensing for Customer Service Agents](wiki/competitors/intercom-fin-api-platform.md) — $250k/yr floor exposes Apex + subcategory models direct; Intercom wholesales its moat to signal value is migrating to the model layer. Tags: intercom, fin-apex, api-platform, model-licensing, customer-service-ai, vertical-agents
 - [Birdeye Agentic Marketing — Execution Layer for Multi-Location Brands](wiki/competitors/birdeye-agentic-marketing-platform.md) — Five-test CMO framework + three-layer governance (autonomous / supervised / human accountability); 100-10,000+ location positioning ties agent execution to AI search visibility. Tags: birdeye, agentic-marketing, multi-location, reputation, ai-search, location-level-execution
 - [Intercom — Return of the Chat as Universal UI](wiki/competitors/intercom-return-of-the-chat.md) — Chat UI replaces GUI complexity as default interface; novices become power users when they can "type and say" rather than click through menus. Tags: intercom, chat-ui, natural-language-interface, conversational-ui, fin, enterprise-software
+- [Birdeye State of AI Search 2026 — Citation Share as the New SEO](wiki/competitors/birdeye-state-of-ai-search-2026.md) — 80% of brands cited at least once, only 15% secure top position with own domain, 20% absent entirely; four-layer AI trust stack frames owned content as primary. Tags: birdeye, ai-search, aeo, geo, citation-share, multi-location, llm-visibility, owned-content
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -47,6 +48,9 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Memory for AI Agents — Three Architectures and the Ethics of Forgetting](wiki/ai-llm/memory-for-ai-agents-context-engineering.md) — Vector store vs rolling summarization vs temporal knowledge graph; Zep +18.5% long-horizon accuracy, Mem0 +26% memory benchmarks; memory is a governance surface. Tags: agent-memory, context-engineering, vector-store, temporal-knowledge-graph, mem0, zep, letta, context-rot
 - [Effective Context Engineering for AI Agents — Anthropic's Framework](wiki/ai-llm/effective-context-engineering.md) — Finite attention budget + context rot motivate just-in-time retrieval, compaction, structured note-taking, and sub-agent architectures for long-horizon reliability. Tags: context-engineering, prompt-engineering, attention-budget, context-rot, compaction, just-in-time-retrieval, sub-agents
 - [Agent Skills — Anthropic's Progressive-Disclosure Capability Format](wiki/ai-llm/agent-skills-anthropic.md) — SKILL.md folder + optional bundled files/scripts; three-tier progressive disclosure keeps unbounded context out of the main prompt; open standard at agentskills.io. Tags: agent-skills, progressive-disclosure, claude-code, skill-md, composable-agents, open-standard
+- [Anthropic's August 2025 Infrastructure Postmortem — Three Overlapping Bugs That Degraded Claude](wiki/ai-llm/anthropic-postmortem-three-issues-2025.md) — Context-window routing + TPU output corruption + XLA top-k miscompilation degraded Sonnet/Opus Aug 5–Sep 16 2025; fix plan adds continuous production evals and user-feedback telemetry. Tags: anthropic, postmortem, infrastructure, claude-api, tpu, xla, reliability
+- [Designing AI-Resistant Technical Evaluations — Anthropic's Performance Engineering Take-Home](wiki/ai-llm/ai-resistant-technical-evaluations.md) — Three iterations of the performance-engineering take-home; novel instruction-set puzzles beat realistic optimization problems once models can delegate real-work. Tags: hiring, evaluations, take-home, anthropic, performance-engineering, ai-resistance, interview-design
+- [GAN-Inspired Three-Agent Harness — Planner, Generator, Evaluator for Long-Running Coding](wiki/ai-llm/harness-design-long-running-apps-gan.md) — Planner/generator/evaluator pattern with file-based sprint contracts; Opus 4.5 solo 20min/$9 vs full harness 6hr/$200 produced dramatically different app quality. Tags: anthropic, harness-design, multi-agent, gan, planner-generator-evaluator, long-running-agents, opus-4-5, opus-4-6
 
 ### Small Business SaaS
 - [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
