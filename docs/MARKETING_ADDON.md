@@ -86,4 +86,6 @@ Existing paid customers (growth/professional/autopilot/enterprise) were auto-gra
 
 ## Gate behavior
 Backend: 402 Payment Required with JSON payload including `upgrade_path`.
-Frontend: sidebar hides entries, `App.jsx` renders `MarketingAddonUpsell` for direct-URL navigation.
+Frontend: the dashboard keeps the suite visible in the sidebar, and `App.jsx`
+renders `MarketingAddonUpsell` when a tenant without add-on access opens a
+gated page.
