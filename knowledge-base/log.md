@@ -262,3 +262,9 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-20T22:03:57Z] discover-rejects | blacklisted 17 non-article/off-topic URLs
 
 ## [2026-04-20 18:11] discover+compile | cron 18:00 | commits=10 raw=4 wiki=4
+
+## [2026-04-21T10:02:45+00:00] kb-autopopulate | categories=7 fetched=0 new_raw=0 deduped=0 rejected=0 errors=0
+
+## [2026-04-21T10:06:38+00:00] kb-autopopulate-rss | categories=2 fetched=4 new_raw=4 deduped=39 rejected=65 errors=0
+
+## [2026-04-21T10:08:45+00:00] kb-autopopulate-rss | categories=1 fetched=2 new_raw=2 deduped=0 rejected=0 errors=0

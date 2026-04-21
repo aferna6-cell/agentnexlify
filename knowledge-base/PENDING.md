@@ -146,3 +146,14 @@ _All compiled 2026-04-18 cron run._
 - [competitors] intercom-fin-product-updates-feb-2026 ← https://www.intercom.com/blog/fin-product-updates-february-recap/
 - [ai-llm] anthropic-harness-design-long-running-apps ← https://www.anthropic.com/engineering/harness-design-long-running-apps
 - [ai-llm] anthropic-claude-code-sandboxing ← https://www.anthropic.com/engineering/claude-code-sandboxing
+
+## Auto-populate run 2026-04-21T10:06:38+00:00 (RSS)
+
+- [ ] `raw/ai-llm/a-postmortem-of-three-recent-issues-anthropic.md` — A postmortem of three recent issues \ Anthropic — <https://www.anthropic.com/engineering/a-postmortem-of-three-recent-issues>
+- [ ] `raw/ai-llm/designing-ai-resistant-technical-evaluations-anthropic.md` — Designing AI resistant technical evaluations \ Anthropic — <https://www.anthropic.com/engineering/AI-resistant-technical-evaluations>
+
+
+## Auto-populate run 2026-04-21T10:08:45+00:00 (RSS)
+
+- [ ] `raw/competitors/state-of-ai-search-2026-how-to-get-cited-not-skipped-birdeye.md` — State of AI Search 2026: How to get cited, not skipped | Birdeye — <https://birdeye.com/blog/state-of-ai-search>
+
