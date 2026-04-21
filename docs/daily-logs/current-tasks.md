@@ -1,12 +1,12 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-20 08:00 EDT (automated morning routine)
+Updated: 2026-04-20 20:00 EDT (automated evening routine)
 
-## Today's Top 3 Priorities
+## Tomorrow's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 16 of exposure. Key committed in `9c87335`, scrubbed in `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **QA migrations 106 + 107 applied 2026-04-19** — `billing_refunds`, `tenant_ai_usage_monthly`, RPCs `reserve_ai_token_budget` + `record_ai_token_usage` + `release_ai_token_reservation`, `refund_request_id` idempotency key. Admin refund endpoint depends on 107. Agent: **schema-guardian** + **qa-tester**.
-3. **QA widget_helpers god-class split (6cf4646)** — 1,673-line file split into chat/lead/booking modules. Patch-target fixes landed in c0aef59. Widget chat + booking + lead flows need production smoke. Agent: **widget-specialist** + **qa-tester**.
+1. **ROTATE compromised admin API key in Railway** — DAY 17 of exposure. Key committed in `9c87335`, scrubbed in `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **QA migrations 108, 109, 110 applied 2026-04-20** — photo-quote widget tables (`tenant_pricing_rules`, `quote_requests`, `tenant_quote_usage`), drive-kb integrations (`tenant_integrations`), zapier api keys (`tenant_api_keys`). Agent: **schema-guardian** + **qa-tester**. (New 2026-04-20 PM)
+3. **Verify issue-to-pr loop stability** — 4 patches landed on `scripts/automation/issue-to-pr.sh` today (611c052, 0632799, 4d2b4be, be135eb). Add smoke test harness + dry-run end-to-end. Agent: **devops** + **qa-tester**. (New 2026-04-20 PM)
 
 ## Active Tasks
 
@@ -100,18 +100,46 @@ Updated: 2026-04-20 08:00 EDT (automated morning routine)
 - [x] **Morning health check** — all green (dangerous_router_imports=CLEAR, bare_except_count=0, silent_frontend_catch_count=0, widget_sync=OK, gitignore_env=YES)
 - [x] **Migration 102 backfill in schema-log.md**
 
-## Overall Progress (2026-04-20 Morning)
+## Completed (Recent) — 2026-04-20 PM
 
-- **Last commit:** `2a08588` (subconscious: migration duplicate number pre-commit guard, 2026-04-20)
-- **Commits since 2026-04-17 20:00:** 49
-- **Codebase status:** Clean (no uncommitted changes). Widget byte-identical. HEAD on main.
-- **Health check:** ALL GREEN.
-- **Bug patterns total:** 2,035 lines (needs split per P4 task)
-- **Migrations documented:** 001-107 (102 backfilled this morning)
-- **Hardcoded API keys scan:** 0 matches in backend/ + frontend/src/ + widget/
-- **TODO/FIXME count:** 0 backend, 0 frontend
-- **SECURITY INCIDENT DAY 16:** admin API key — rotate in Railway **IMMEDIATELY**
-- **Key activity since Apr 17:** Migrations 106+107 applied, branding helpers refactor, widget god-class split, skills canonical rewrite, 7 research runs
+- [x] **Photo-quote spec + migration 108** — `d818462` (tenant_pricing_rules, quote_requests, tenant_quote_usage)
+- [x] **Drive-kb-onboarding + zapier-crm-export specs** — `0e8d065` (grilled)
+- [x] **Migrations 109 + 110** — `488eb63` drive-kb `tenant_integrations`, zapier `tenant_api_keys`
+- [x] **Agent reliability hardening** — `15fc856` + `e6cbd45`
+- [x] **Launch readiness + contractor pack** — `670b1b3`
+- [x] **opus-4-7-prompting migration sweep** — `a955d75` + `8328e03` (batch mode, positive examples)
+- [x] **Advisor_executor negative→positive prompt flip** — `f8ba053`
+- [x] **2026-04-20 health audit** — `1ee1406`
+- [x] **4 automation hot-fixes** — `611c052` pre-push skip, `0632799` classifier prompt, `4d2b4be` label filter, `be135eb` .env sourcing (all auto-logged to bug-patterns)
+- [x] **3 research briefs** — `07a2bca` churn data, `cf0d9ae` SMB self-serve, `de543ae` telemetry coverage
+- [x] **KB auto-populate evening run** — `62c21b7`
+- [x] **Evening health check** — all green, identical to morning snapshot
+- [x] **Schema-log coverage verified** — migrations 001–110 all documented
+
+## New Tasks Surfaced — 2026-04-20 PM
+
+- [ ] **QA migrations 108 + 109 + 110 prod paths** — photo-quote widget, drive-kb integrations, zapier api keys. Agent: **schema-guardian** + **qa-tester**. (New 2026-04-20 PM)
+- [ ] **Add smoke test harness for `scripts/automation/issue-to-pr.sh`** — 4 patches in one day signal missing test coverage. Dry-run classifier + picker on fixture issues. Agent: **devops**. (New 2026-04-20 PM)
+- [ ] **Implement photo-quote widget UX** — spec landed (`d818462`), migration 108 applied, no backend/frontend code yet. Agent: **widget-specialist** + **backend-dev**. (New 2026-04-20 PM)
+- [ ] **Implement drive-kb onboarding flow** — spec + migration 109 ready. Agent: **backend-dev** + **frontend-dev**. (New 2026-04-20 PM)
+- [ ] **Implement zapier CRM export** — spec + migration 110 ready (tenant_api_keys). Agent: **backend-dev**. (New 2026-04-20 PM)
+- [ ] **Verify agent reliability command layer** (`e6cbd45`, `15fc856`) — smoke-test + regression check. Agent: **qa-tester**. (New 2026-04-20 PM)
+- [ ] **Enrich bug patterns for today's 4 auto-logged skeletons** — `611c052`, `0632799`, `4d2b4be`, `be135eb`. Manual. (New 2026-04-20 PM)
+- [ ] **Review 3 new research briefs** — AgentNexLiFy churn data, SMB self-serve segment, telemetry coverage. (New 2026-04-20 PM)
+
+## Overall Progress (2026-04-20 Evening)
+
+- **Last commit:** `62c21b7` (kb(log): append run summary 2026-04-20 18:11)
+- **Commits today (2026-04-20):** 34
+- **Files changed today:** 103 unique paths
+- **Codebase status:** Clean on main. Widget byte-identical. `.worktrees/issue-62` modified (autopilot loop — expected).
+- **Health check (evening):** ALL GREEN — identical to morning snapshot
+- **Bug patterns total:** ~2,103 lines (P4 split task still deferred — approaching 2500 soft cap)
+- **Migrations documented:** 001-110 (108/109/110 landed today, all documented)
+- **Hardcoded API keys scan:** 0 matches in backend/ + frontend/src/ + widget/ (from morning; no code changed affecting this)
+- **TODO/FIXME count:** 0 backend, 0 frontend (morning snapshot)
+- **SECURITY INCIDENT DAY 17:** admin API key — rotate in Railway **IMMEDIATELY**
+- **Key activity today:** 3 migrations (108/109/110), photo-quote + drive-kb + zapier specs, opus-4-7-prompting rules sweep, agent reliability hardening, 4 automation hot-fixes, 3 research runs
 
 ---
 
