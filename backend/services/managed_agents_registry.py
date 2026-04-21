@@ -226,3 +226,26 @@ def advised_data_analyst(
         advisor_model=advisor_model,
         enable_advisor=enable_advisor,
     )
+
+
+def appointment_booker() -> ManagedAgentHandle:
+    """Return the handle for the appointment_booker agent.
+
+    Reads APPOINTMENT_BOOKER_AGENT_ID directly from os.environ because this
+    field is not in Settings (config.py is not modified for this feature).
+    Raises ManagedAgentNotConfigured when the env var is absent.
+    """
+    import os
+    agent_id = os.environ.get("APPOINTMENT_BOOKER_AGENT_ID", "")
+    return _handle(agent_id, "APPOINTMENT_BOOKER_AGENT_ID")
+
+
+def advised_appointment_booker(
+    *, advisor_model: str = DEFAULT_OPUS_ADVISOR_MODEL, enable_advisor: bool = True,
+):
+    """Return an Opus-advised runner bound to the appointment_booker agent."""
+    return _advised_runner(
+        appointment_booker(),
+        advisor_model=advisor_model,
+        enable_advisor=enable_advisor,
+    )
