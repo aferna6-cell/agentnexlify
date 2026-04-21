@@ -270,3 +270,9 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-21T10:08:45+00:00] kb-autopopulate-rss | categories=1 fetched=2 new_raw=2 deduped=0 rejected=0 errors=0
 
 ## [2026-04-21 06:17] discover+compile | cron 06:00 | commits=5 raw=3 wiki=4
+
+## [2026-04-21T22:01:40+00:00] discover | cats=7 fetched=2 written=2 deduped=2 rejected=3 errors=0
+
+## [2026-04-21T22:04:07+00:00] discover | cats=7 fetched=8 written=8 deduped=2 rejected=9 errors=0
+
+## [2026-04-21T22:05:13+00:00] discover (retry) | cats=3 fetched=0 written=0 deduped=0 rejected=0 errors=0

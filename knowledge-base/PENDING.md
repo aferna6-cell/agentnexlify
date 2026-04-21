@@ -157,3 +157,19 @@ _All compiled 2026-04-18 cron run._
 
 - ~~[competitors] `raw/competitors/state-of-ai-search-2026-how-to-get-cited-not-skipped-birdeye.md`~~ → compiled `wiki/competitors/birdeye-state-of-ai-search-2026.md` (2026-04-21 cron)
 
+
+## 2026-04-21T22:01:40+00:00 auto-populate
+
+- [ ] **competitors**: AI Employee in HighLevel: Automate Calls, Chats & Workflows : HighLevel Support Portal — `raw/competitors/help-gohighlevel-com-support-solutions-articles-155000003906-ai-employ.md` — <https://help.gohighlevel.com/support/solutions/articles/155000003906-ai-employee-overview>
+- [ ] **competitors**: GoHighLevel April 2026 Updates: What's New This Month — `raw/competitors/www-highlevel-ai-blog-gohighlevel-april-2026-updates.md` — <https://www.highlevel.ai/blog/gohighlevel-april-2026-updates>
+
+## 2026-04-21T22:04:07+00:00 auto-populate
+
+- [ ] **competitors**: GoHighLevel Pricing Plans 2026: $97 vs $297 vs $497 - Full Cost Breakdown — `raw/competitors/netpartners-marketing-gohighlevel-pricing-plans-explained-features-val.md` — <https://netpartners.marketing/gohighlevel-pricing-plans-explained-features-value-cost-comparison-2026/>
+- [ ] **competitors**: Pricing Update – Effective April 2026 | HighLevel Changelog — `raw/competitors/ideas-gohighlevel-com-changelog-pricing-update-effective-april-2026.md` — <https://ideas.gohighlevel.com/changelog/pricing-update-effective-april-2026>
+- [ ] **ai-llm**: Anthropic Just Launched Managed Agents. Let's Talk About How We're Going to Pay for This — `raw/ai-llm/www-finout-io-blog-anthropic-just-launched-managed-agents-lets-talk-ab.md` — <https://www.finout.io/blog/anthropic-just-launched-managed-agents.-lets-talk-about-how-were-going-to-pay-for-this>
+- [ ] **ai-llm**: Anthropic, OpenAI, Google, and Microsoft agree that the harness is the product. They disagree on the price. - The New Stack — `raw/ai-llm/thenewstack-io-ai-agent-harness-pricing-split.md` — <https://thenewstack.io/ai-agent-harness-pricing-split/>
+- [ ] **small-biz-saas**: B2B SaaS Benchmarks: A Complete Guide 2026 — `raw/small-biz-saas/churnfree-com-blog-b2b-saas-churn-rate-benchmarks.md` — <https://churnfree.com/blog/b2b-saas-churn-rate-benchmarks/>
+- [ ] **small-biz-saas**: Saas Churn Rate: Key Metrics & Benchmarks 2026 | VantaInsights — `raw/small-biz-saas/vantainsights-com-insights-saas-churn-rate.md` — <https://vantainsights.com/insights/saas-churn-rate>
+- [ ] **verticals**: AI Receptionist Software for Plumbers 2026 | 24/7 Answering Service — `raw/verticals/agentzap-ai-industries-plumbing.md` — <https://agentzap.ai/industries/plumbing>
+- [ ] **verticals**: Top 5 AI Receptionist Solutions for Plumbing Businesses in 2026 — `raw/verticals/www-myaifrontdesk-com-blogs-top-5-ai-receptionist-solutions-for-plumbi.md` — <https://www.myaifrontdesk.com/blogs/top-5-ai-receptionist-solutions-for-plumbing-businesses-in-2026>
