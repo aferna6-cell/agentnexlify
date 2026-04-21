@@ -2101,3 +2101,20 @@ Verified: auto/issue-62 docs-only branch now pushes clean; PR #71 opened.
 **Author:** aferna6-cell
 **Files Changed:** scripts/hooks/pre-push
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(invariants): guard conversations.tenant_id alongside leads.tenant_id
+
+CLAUDE.md Rule 1 covers both leads + conversations tables. check_project_invariants.py
+only checked leads.tenant_id (added in e6cbd45). Added matching conversations.tenant_id
+guard so both are caught by automated CI.
+
+ops: nightly-commit-review 2026-04-21
+
+https://claude.ai/code/session_01Q1QrSU8Vy2ZDhJBa9ZmwEo
+**Date:** 2026-04-21
+**Commit:** fac6124
+**Author:** Claude
+**Files Changed:** ops/routines/logs/nightly-commit-review-2026-04-21.md,scripts/check_project_invariants.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
