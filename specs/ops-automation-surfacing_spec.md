@@ -426,53 +426,54 @@ For `mode: "hold"` automations, dashboard shows a toast: "{Automation} pending �
 
 ## 7. Technical Implementation — File by File
 
-### New Files to Create
+**REVISION 2026-04-22 (plan v2 re-audit):** Re-audit found most files in this section already exist. §7 reframed to "extend existing" wherever applicable. Genuine new files tagged `(NEW)`.
 
-**`backend/services/activity_feed_service.py`**
-Central event recorder. Called by every automation.
+### Files to Extend (existing)
+
+**`backend/services/activity.py`** *(exists — 991B, has `log_activity()` writing to `activity_log` table)*
+Add read-side functions:
 ```python
-def record_event(client_id: str, event_type: str, metadata: dict) -> None
-def get_activity_totals(client_id: str, since: datetime) -> dict
-def get_activity_events(client_id: str, since: datetime, type_filter: str, limit: int) -> list[dict]
+def get_activity_totals(tenant_id: str, since: datetime) -> dict
+def get_activity_events(tenant_id: str, since: datetime, type_filter: str, limit: int) -> list[dict]
 ```
-Reads from `activity_feed_events` materialized view. Computes `dollars_this_month` using vertical_defaults.yaml (loaded once at startup via `functools.lru_cache`) and `avg_ticket_override` from `widget_configs`. Computes `hours_this_week` from hours_saved_formula.yaml constants.
+Reads from `activity_feed_events` materialized view (migration 111). Computes `dollars_this_month` via `attribution_service` (NEW). Computes `hours_this_week` from `config/hours_saved_formula.yaml`.
 
-**`backend/services/appointment_service.py`**
-Thin coordination layer between the existing `appointment_booker.py` (Managed Agent path) and the new GCal-first path.
+**`backend/services/booking.py`** *(exists — 22.5K, has `create_appointment`, `generate_available_slots`, `cancel_appointment`, `list_appointments`, `update_appointment`, `get_business_hours`, `upsert_business_hours`, `create_recurring_series`)*
+Add GCal integration:
 ```python
-async def get_available_slots(client_id: str, service: str, days: int) -> list[dict]
-async def book_appointment(client_id: str, slot: dict, contact: dict) -> dict
 async def create_gcal_event(tenant_id: str, appointment: dict) -> str | None
-async def handle_gcal_failure(client_id: str, appointment_id: str) -> None
+async def handle_gcal_failure(tenant_id: str, appointment_id: str) -> None
 ```
-`get_available_slots`: calls `google_calendar.get_free_busy()` (existing at `google_calendar.py`), intersects with existing `appointments` rows for the same client_id, returns free 60-min windows within business hours. Falls back to rule-based 5 free slots if GCal OAuth is expired.
-`book_appointment`: inserts into `appointments` table, calls `create_gcal_event`, sends confirmation SMS via `twilio_service`, queues iCal email via `email_sender`.
-`handle_gcal_failure`: marks appointment `status='pending_sync'`, inserts into `pending_automations` for backfill, sends tenant dashboard notification (toast + daily digest).
+`create_gcal_event`: calls existing `google_calendar.py` (confirmed present, 11.4K). On success writes `gcal_event_id` back to `appointments` row.
+`handle_gcal_failure`: sets `status='pending_sync'`, enqueues `pending_automations` row, emits tenant dashboard toast.
 
-**`backend/services/attribution_service.py`**
+**`backend/routers/automations.py`** *(exists — 6.7K, has Twilio signature verify + `list_automations` + `toggle` + `update_config`, registered at `main.py:749`)*
+Add endpoints:
+```python
+GET  /api/v1/automations/{tenant_id}/activity   # unified feed with totals, type/since/limit query params
+GET  /api/v1/automations/{tenant_id}/pending    # stuck items older than 1h
+```
+Use existing `_get_current_tenant` auth pattern. Config read/write already live via existing `update_config`.
+
+**`backend/routers/appointments.py`** *(exists — 22.4K, has `POST /` book w/ api_key + 10/min, `GET /slots`, `GET /availability`, iCal feed, service-types CRUD, no-show-stats)*
+Extend:
+- `book_appointment` (line 176): call `booking.create_gcal_event` after insert success, write `gcal_event_id` back. On GCal fail → `status='pending_sync'` + `pending_automations` enqueue.
+- Add signed-JWT alt-auth path (5-min expiry, `jti` tracked, rate 5/hr/session). Keep api_key path for legacy widgets.
+- On GiST EXCLUDE 409 at line 198-199: return 3 next-available alternates in response body.
+
+### Files to Create (genuine new)
+
+**`backend/services/attribution_service.py` (NEW)**
 Dollar + hours math. Stateless.
 ```python
-def get_avg_ticket(client_id: str, vertical: str | None) -> float
-def compute_dollars_this_month(client_id: str, events: list[dict]) -> float
+def get_avg_ticket(tenant_id: str, vertical: str | None) -> float
+def compute_dollars_this_month(tenant_id: str, events: list[dict]) -> float
 def compute_hours_this_week(events: list[dict]) -> float
 ```
-Loads `config/vertical_defaults.yaml` on import. Checks `widget_configs.avg_ticket_override` first; falls back to vertical default; falls back to `default: 200`. Hours from `config/hours_saved_formula.yaml` constants.
+Loads `config/vertical_defaults.yaml` on import via `functools.lru_cache`. Checks `tenants.avg_ticket_override` first (ALTER added in mig 111 per §6.2); falls back to vertical default; falls back to `default: 200`.
 
-**`backend/routers/automations.py`** (new router)
-```python
-GET  /api/v1/automations/activity         # unified feed with totals
-GET  /api/v1/automations/config           # read per-automation config
-PATCH /api/v1/automations/config          # update automation_config JSONB
-GET  /api/v1/automations/pending          # stuck items older than 1h
-```
-All gated on `verify_tenant(claims, client_id)`. Register in `backend/main.py` (lines 746-813 per CLAUDE.md).
-
-**`backend/routers/widget_appointments.py`** (new router)
-```python
-GET  /api/v1/widget/appointments/available  # api_key auth, public
-POST /api/v1/widget/appointments/book       # signed JWT, rate 5/hr/session
-```
-`book` endpoint re-checks availability atomically (SELECT FOR UPDATE on the time range, or slot-based uniqueness check). Returns 409 + 3 alternates on conflict.
+**`backend/services/retry_worker.py` (NEW — Phase 4)** *(OR add to existing `backend/services/automation_engine.py` if better fit)*
+Background task draining `pending_automations` with exponential backoff 30s/2min/10min, max 3 attempts. Emits Sentry breadcrumb on each retry.
 
 **`config/vertical_defaults.yaml`**
 ```yaml
@@ -561,7 +562,7 @@ Extend dashboard to render the automation activity card above or alongside the e
 | Booking race condition | Re-check slot availability inside a transaction before INSERT. If taken: return 409 with 3 next-available alternates. Widget shows toast with alternatives. |
 | Tenant on Free plan | `automation_config` check first. `missed_call_text_back.enabled` defaults to `true` but plan gate in `handle_missed_call` blocks execution. Dashboard shows "Automations paused — upgrade to Growth to activate." |
 | Tenant downgrades Growth→Free mid-cycle | Cancel all `pending_automations` rows for that client_id (set `status='failed'`). Pause new triggers (plan gate). Dashboard banner: "Plan changed, automations paused. Upgrade to resume." Existing `missed_call_texts` and `appointments` data preserved. |
-| Spam caller | Check against a simple blocklist: `widget_configs.automation_config.missed_call_text_back.spam_blocklist` (array of E.164 numbers). If caller in blocklist, skip silently. |
+| Spam caller | Check against a simple blocklist: `automations.config.spam_blocklist` (array of E.164 numbers) on the `(tenant_id, type='missed_call_textback')` row. If caller in blocklist, skip silently. |
 | Caller already has open lead | Existing lead upsert logic at twilio_webhooks.py:174 stays. If lead exists, use `lead.name` for personalization. `converted_to_lead_id` set on `missed_call_texts` row. |
 | iCal email fails | Log warning, do not fail the booking. Booking is confirmed regardless. Retry iCal via `pending_automations`. |
 | `pending_automations` stuck > 1 hour | `GET /api/v1/automations/pending` returns them. Admin can manually retry or dismiss. V2: cron job retries automatically. |
@@ -638,9 +639,9 @@ Before touching `widget_chat.py` for tool addition, write characterization tests
 
 ## 11. Rollout Plan
 
-**Feature flag:** `ops_automation_v1` gated by `client_id` in `widget_configs.automation_config`. Global killswitch: env var `OPS_AUTOMATION_V1_ENABLED=false` for instant revert.
+**Feature flag:** Global killswitch via env var `OPS_AUTOMATION_V1_ENABLED=false` for instant revert. Per-tenant enable via `automations.is_enabled` column (migration 001, existing).
 
-**Per-automation disable:** `automation_config` JSONB. Each automation has `enabled: true/false`. Tenant can toggle from Settings page (Phase 3b adds the UI — V1 ships with JSONB editable via API only, no UI toggle yet).
+**Per-automation disable:** `automations.is_enabled` per `(tenant_id, type)` row. Existing `PATCH /automations/{tenant_id}/toggle` endpoint already wired. Config JSONB via existing `PATCH /automations/{tenant_id}/config`. Settings page UI deferred to Phase 3b — V1 ships with API-only toggle.
 
 **Rollout sequence:**
 1. Week 1: Internal test tenant (Aidan's own). Verify both automations fire end-to-end. Fix anything.
