@@ -290,6 +290,12 @@
           },
           {
             "type": "command",
+            "command": "bash scripts/claude-hooks/context-budget.sh",
+            "timeout": 5,
+            "statusMessage": "Checking context budget..."
+          },
+          {
+            "type": "command",
             "command": "bash scripts/claude-hooks/invoke-opus-47-features.sh",
             "timeout": 5,
             "statusMessage": "Reminding Opus 4.7 features..."
