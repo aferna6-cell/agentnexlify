@@ -1,0 +1,78 @@
+{
+  "version": "2026-04-22",
+  "description": "Parallel adoption map for Codex workflow orchestration capabilities in AgentNexLiFy.",
+  "workstreams": [
+    {
+      "id": "review-comments",
+      "name": "Address GitHub review comments",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "PR review follow-up",
+      "verification_command": "npm run check",
+      "notes": "Treat review feedback as a first-class queue and resolve comments before merge handoff."
+    },
+    {
+      "id": "multi-terminal",
+      "name": "Run multiple terminal tabs",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "Local task execution",
+      "verification_command": "npm run check:quick",
+      "notes": "Split execution into implementation, tests, and guardrails running in separate terminal sessions."
+    },
+    {
+      "id": "remote-devbox-ssh",
+      "name": "SSH to remote devboxes",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "Remote runtime checks",
+      "verification_command": "npm run check:agent",
+      "notes": "Route long-running or resource-heavy checks to remote environments when available."
+    },
+    {
+      "id": "rich-preview",
+      "name": "Preview PDFs, spreadsheets, slides, and docs",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "Artifact review",
+      "verification_command": "npm run check:agent",
+      "notes": "Use preview surfaces to review technical docs and product artifacts without leaving workflow context."
+    },
+    {
+      "id": "summary-pane-tracking",
+      "name": "Track plans, sources, and artifacts",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "Task summaries",
+      "verification_command": "npm run check:agent",
+      "notes": "Require every non-trivial task to keep plan, source, and artifact traceability current."
+    },
+    {
+      "id": "thread-reuse",
+      "name": "Reuse existing conversation threads",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "Long-running tasks",
+      "verification_command": "npm run check:agent",
+      "notes": "Resume existing thread context when reopening multi-day initiatives."
+    },
+    {
+      "id": "scheduled-automations",
+      "name": "Schedule future work",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "Deferred execution",
+      "verification_command": "npm run check:quick",
+      "notes": "Schedule follow-up checks and deferred implementation passes for long-running streams."
+    },
+    {
+      "id": "persistent-memory",
+      "name": "Persistent memory for conventions and corrections",
+      "status": "active",
+      "execution_mode": "parallel",
+      "entrypoint": "Cross-task continuity",
+      "verification_command": "npm run check:agent",
+      "notes": "Store durable conventions and prior corrections so future tasks start with accurate context."
+    }
+  ]
+}

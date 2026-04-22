@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "check": "npm run check:quick",
-    "check:quick": "npm run agent-system:check && npm run check:project && npm run sync-widget:check",
+    "check:quick": "npm run agent-system:check && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
     "check:full": "npm run check:quick && npm run build && npm run test",
     "check:agent": "npm run agent-system:check",
     "check:project": "python scripts/check_project_invariants.py",
@@ -27,7 +27,8 @@
     "check:test-local-refs": "python3 scripts/check_test_local_refs.py",
     "lint:test-quality": "eslint --no-error-on-unmatched-pattern --config eslint.test-quality.config.cjs \"**/*.test.{js,jsx,ts,tsx}\" \"**/*.spec.{js,jsx,ts,tsx}\" \"**/__tests__/**/*.{js,jsx,ts,tsx}\"",
     "lint:test-quality:staged": "node scripts/lint-test-quality-staged.cjs",
-    "coverage:changed-lines": "python3 scripts/check_changed_lines_coverage.py --compare-branch origin/main --python-report coverage-python.xml --js-report frontend/coverage/lcov.info --js-report demo-platform/coverage/lcov.info --js-report coverage/lcov.info"
+    "coverage:changed-lines": "python3 scripts/check_changed_lines_coverage.py --compare-branch origin/main --python-report coverage-python.xml --js-report frontend/coverage/lcov.info --js-report demo-platform/coverage/lcov.info --js-report coverage/lcov.info",
+    "check:codex-orchestration": "python scripts/check_codex_orchestration_adoption.py"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
