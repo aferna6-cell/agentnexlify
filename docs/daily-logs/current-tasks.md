@@ -1,12 +1,24 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-21 08:00 EDT (automated morning routine)
+Updated: 2026-04-21 20:19 EDT (automated evening routine)
 
-## Today's Top 3 Priorities
+## Tomorrow's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 18 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **QA migrations 108, 109, 110 applied 2026-04-20** — photo-quote widget tables (`tenant_pricing_rules`, `quote_requests`, `tenant_quote_usage`), drive-kb integrations (`tenant_integrations`, `integration_sync_log`, `kb_section_hashes`), zapier api keys (`tenant_api_keys`). Agent: **schema-guardian** + **qa-tester**.
-3. **Verify issue-to-pr loop stability** — 4 patches on `scripts/automation/issue-to-pr.sh` 2026-04-20 (611c052, 0632799, 4d2b4be, be135eb). Add smoke-test harness + dry-run end-to-end. Agent: **devops** + **qa-tester**.
+1. **ROTATE compromised admin API key in Railway** — DAY 19 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **QA today's fixes before prod rollout** — `8d026e6` widget null-state 4-way guard (KB/CI/business_type/FAQs) + FAQ probe cache; `3b0ce34` managed agents health probe endpoint + test coverage. Agents: **qa-tester** + **widget-specialist**.
+3. **QA migrations 108/109/110** (carried) — photo-quote (`tenant_pricing_rules`, `quote_requests`, `tenant_quote_usage`), drive-kb (`tenant_integrations`, `integration_sync_log`, `kb_section_hashes`), zapier (`tenant_api_keys`). Agents: **schema-guardian** + **qa-tester**.
+
+## Completed (Recent)
+
+### 2026-04-21
+- [x] Scaffold `appointment_booker` managed agent (`e2ac565`)
+- [x] Add managed agents health probe (`3b0ce34`)
+- [x] Widen widget null-state guard → KB/CI/business_type/FAQs (`8d026e6`)
+- [x] Expose marketing suite in dashboard sidebar (`56d7412`)
+- [x] Seed + KB for power-washing prospect demo (`cece29f`)
+- [x] Advance contractor wedge + launch-readiness evidence (`1d95fe6`)
+- [x] Auto-log bug pattern skeletons for `8d026e6` + `3b0ce34`
+- [x] KB ingest + compile: powerwash vertical intel, GHL April 2026 updates, AI harness pricing, Anthropic postmortem, state-of-AI-search 2026
 
 ## Active Tasks
 
@@ -23,6 +35,9 @@ Updated: 2026-04-21 08:00 EDT (automated morning routine)
 ### Priority 1 — Critical / QA
 
 - [ ] **QA migrations 108/109/110 production paths** — photo-quote, drive-kb, zapier api keys. Agent: **schema-guardian** + **qa-tester**. (New 2026-04-21)
+- [ ] **QA widget null-state 4-way guard (`8d026e6`)** — Exercise FAQ probe cache (`_CHAT_CACHE_TTL`); verify fallback triggers only when KB + CI + FAQs all empty and business_type = 'other'. Agent: **widget-specialist**. (New 2026-04-21 evening)
+- [ ] **QA managed agents health probe (`3b0ce34`)** — Endpoint live; test coverage green; verify 503 surfaces on provider outage. Agent: **qa-tester**. (New 2026-04-21 evening)
+- [ ] **QA appointment_booker scaffold (`e2ac565`)** — Registry wiring + fixtures; verify advisor-executor pattern hooks. Agent: **qa-tester**. (New 2026-04-21 evening)
 - [ ] **QA migrations 106 + 107 production paths** — AI usage budget reservation, refund idempotency, dunning event log, cancellation event history. Agent: **schema-guardian** + **qa-tester**. (Carried)
 - [ ] **QA invariants expansion (fac6124)** — conversations.tenant_id guard added to `check_project_invariants.py`. Exercise CI path; confirm auto-hook fails a synthetic bad commit. Agent: **qa-tester**. (New 2026-04-21)
 - [ ] **QA branding_helpers.py extraction (5f7117f)** — Reverse-dep fix. Ensure widget chat helpers still resolve branding correctly. Agent: **widget-specialist**. (Carried)
@@ -79,4 +94,7 @@ Updated: 2026-04-21 08:00 EDT (automated morning routine)
 - [ ] **Fix 16 test isolation failures** — partially addressed.
 - [ ] **Automated routine reliability** — Apr 17 morning log showed `git pull` failed on detached HEAD. Verify auto-reattach.
 - [ ] **Create migration-gate hook** — Block new feature commits when pending migration count > 15.
-- [ ] **Split bug-patterns.md** — now >2,035 lines. Hot file, split by month/category.
+- [ ] **Split bug-patterns.md** — now >2,160 lines. Hot file, split by month/category.
+- [ ] **Codify widget 3-way sync check as skill** — widget/ + frontend/public/widget/ + landing-page-v2/widget/ touched twice today. Bundle CI gate. (New 2026-04-21 evening)
+- [ ] **Monitor `managed_agents_registry.py` for god-class trajectory** — 3 edits today. Split if next extension pushes past 600 LOC. (New 2026-04-21 evening)
+- [ ] **Tighten `auto-commit.sh` debounce** — 3 auto-commit churn commits today. Reduce commit-log noise. (New 2026-04-21 evening)
