@@ -52,14 +52,15 @@ tenant_id = lead.get("client_id") or inp.client_id
 ```
 The DB query correctly uses `client_id` (lines 212, 214), but the local variable name `tenant_id` violates schema-discipline naming and risks future confusion if someone reads session metadata and treats `"tenant_id"` as a DB column name.
 
-**Fix applied:**
+**Fix deferred:** `appointment_booker.py` is on feature branch (commit `e2ac565`), not on `main` (main is at `fb88218`, 2026-04-18). Fix must be applied to the feature branch before merge.
+
+**Recommended fix:**
 ```python
-# AFTER (clear)
+# line 227 — rename variable
 client_id = lead.get("client_id") or inp.client_id
-...
+# line 248 — call site (makes intent explicit)
 tenant_id=client_id,  # client_id passed as session metadata tenant_id
 ```
-**Verification:** `python -m py_compile backend/services/appointment_booker.py` — PASS
 
 ---
 
