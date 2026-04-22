@@ -2,7 +2,7 @@
 
 AI-powered business automation platform. Embeddable chat widget captures leads, books appointments, and automates follow-ups for small businesses. Multi-tenant SaaS from day one.
 
-> This file is your onboarding doc, not a README. Keep it ≤500 lines. Reference rule files — never duplicate their contents.
+> This file is your onboarding doc, not a README. Keep it ≤200 lines per [Anthropic guidance](https://docs.claude.com/en/docs/claude-code/memory#write-effective-instructions) — files >200 lines reduce adherence. Reference rule files — never duplicate their contents.
 
 ## Scope Ladder
 Claude merges CLAUDE.md files in this order (last wins on conflict):
