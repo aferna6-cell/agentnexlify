@@ -122,6 +122,7 @@ const TeamActivityPage = lazy(() => import("../pages/TeamActivityPage"));
 const SupportPage = lazy(() => import("../pages/SupportPage"));
 const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
 const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
+const ActivityPage = lazy(() => import("../pages/ActivityPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -175,6 +176,7 @@ const pages = {
   support: SupportPage,
   admin_analytics: AdminAnalyticsPage,
   admin_promotions: AdminPromotionsPage,
+  activity: ActivityPage,
 };
 
 // --------------------------------------------------------------------------
@@ -231,6 +233,7 @@ const PAGE_TO_PATH = {
   support: "/dashboard/support",
   admin_analytics: "/admin/analytics",
   admin_promotions: "/admin/promotions",
+  activity: "/dashboard/activity",
 };
 
 const PATH_TO_PAGE = Object.fromEntries(
@@ -360,8 +363,7 @@ export default function App() {
   // Marketing Suite add-on gate — block 7 pages when tenant lacks the add-on.
   // Backend enforces via addon_gate dependency; this is the UI half (answer #5 = C).
   const marketingAddonGated =
-    MARKETING_ADDON_GATED_KEYS.has(currentPage) &&
-    !user.marketing_addon_active;
+    MARKETING_ADDON_GATED_KEYS.has(currentPage) && !user.marketing_addon_active;
 
   return (
     <div className="app">

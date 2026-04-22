@@ -76,6 +76,10 @@ export function getActivity({ tenantId, token, limit = 5, type, since }) {
   });
 }
 
+export function getActivityTotals({ tenantId, token }) {
+  return request(`/api/v1/automations/${tenantId}/activity?limit=0`, { token });
+}
+
 export function sendCampaign(
   tenantId,
   token,

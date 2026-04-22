@@ -109,6 +109,7 @@ export default function AutomationActivityCard({
   onNavigate,
 }) {
   const [events, setEvents] = useState([]);
+  const [totals, setTotals] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -117,9 +118,11 @@ export default function AutomationActivityCard({
     getActivity({ tenantId, token, limit: 5 })
       .then((data) => {
         setEvents(data?.events || []);
+        setTotals(data?.totals || null);
       })
       .catch(() => {
         setEvents([]);
+        setTotals(null);
       })
       .finally(() => setLoading(false));
   }, [tenantId, token]);
@@ -171,6 +174,20 @@ export default function AutomationActivityCard({
           </button>
         )}
       </div>
+
+      {/* Totals headline */}
+      {totals && (
+        <div style={{ fontSize: "0.82rem", marginBottom: 12, lineHeight: 1.4 }}>
+          <span style={{ color: "#4caf50", fontWeight: 600 }}>
+            ${(totals.dollars_this_month || 0).toFixed(0)} recovered
+          </span>
+          <span style={{ color: TEXT_MUTED }}> this month · </span>
+          <span style={{ color: ACCENT, fontWeight: 600 }}>
+            {(totals.hours_this_week || 0).toFixed(1)} hrs saved
+          </span>
+          <span style={{ color: TEXT_MUTED }}> this week</span>
+        </div>
+      )}
 
       {/* Body */}
       {loading ? (

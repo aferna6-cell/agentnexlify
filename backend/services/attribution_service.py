@@ -1,189 +1,113 @@
-"""Attribution service — dollar recovery + hours saved calculations.
+"""Attribution service — computes dollar and hour estimates from activity_log.
 
-Phase 2: computes per-tenant dollars recovered this month and hours saved
-this week from automation activity events.
-
-YAML configs loaded once via functools.lru_cache (process-lifetime cache).
-Never raises — all public functions return 0 / 0.0 on error.
+Uses vertical_defaults.yaml for avg_ticket and hours_saved_per_event.
+Tenants may override avg_ticket via avg_ticket_override column on tenants table.
 """
 
+import functools
 import logging
-import os
-from datetime import datetime, timezone, timedelta
-from functools import lru_cache
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import yaml
 
-from backend.models.database import get_service_supabase
-
 logger = logging.getLogger(__name__)
 
-# Path to config YAMLs — resolved relative to project root
-_PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-_VERTICAL_DEFAULTS_PATH = os.path.join(
-    _PROJECT_ROOT, "config", "vertical_defaults.yaml"
-)
-_HOURS_FORMULA_PATH = os.path.join(_PROJECT_ROOT, "config", "hours_saved_formula.yaml")
+
+def get_service_supabase():
+    # Deferred import — keeps module importable without supabase credentials at test time.
+    from backend.models.database import get_service_supabase as _get
+
+    return _get()
 
 
-@lru_cache(maxsize=1)
-def _load_vertical_defaults() -> dict:
-    """Load config/vertical_defaults.yaml once per process."""
-    try:
-        with open(_VERTICAL_DEFAULTS_PATH, "r") as f:
-            data = yaml.safe_load(f)
-        return data.get("avg_ticket", {})
-    except Exception:
-        logger.warning("Failed to load vertical_defaults.yaml", exc_info=True)
-        return {"default": 200}
+_YAML_PATH = Path(__file__).parent.parent.parent / "config" / "vertical_defaults.yaml"
 
 
-@lru_cache(maxsize=1)
-def _load_hours_formula() -> dict:
-    """Load config/hours_saved_formula.yaml once per process."""
-    try:
-        with open(_HOURS_FORMULA_PATH, "r") as f:
-            data = yaml.safe_load(f)
-        return data.get("hours_per_event", {})
-    except Exception:
-        logger.warning("Failed to load hours_saved_formula.yaml", exc_info=True)
-        return {"default": 0.2}
+@functools.lru_cache(maxsize=1)
+def _load_defaults() -> dict:
+    with open(_YAML_PATH) as f:
+        return yaml.safe_load(f)["verticals"]
 
 
-def get_avg_ticket(
-    tenant_id: str,
-    vertical: str | None,
-    override: float | None,
-) -> float:
-    """Return average ticket value for attribution.
-
-    Priority: override column > YAML vertical default > global default $200.
-
-    Args:
-        tenant_id: Tenant UUID (unused directly — passed for logging context).
-        vertical: Value from tenants.business_type column.
-        override: Value from tenants.avg_ticket_override column (None if not set).
-
-    Returns:
-        Dollar amount as float.
-    """
-    if override is not None:
-        return float(override)
-
-    defaults = _load_vertical_defaults()
-    if vertical and vertical in defaults:
-        return float(defaults[vertical])
-
-    return float(defaults.get("default", 200))
+def get_avg_ticket(vertical: str | None) -> float:
+    defaults = _load_defaults()
+    v = (vertical or "").lower().replace(" ", "_")
+    entry = defaults.get(v) or defaults.get("default", {})
+    return float(entry.get("avg_ticket", 200))
 
 
-def _fetch_tenant(tenant_id: str) -> dict | None:
-    """Fetch tenant row with business_type + avg_ticket_override."""
-    try:
-        db = get_service_supabase()
-        result = (
-            db.table("tenants")
-            .select("id, business_type, avg_ticket_override")
-            .eq("id", tenant_id)
-            .execute()
-        )
-        return result.data[0] if result.data else None
-    except Exception:
-        logger.warning(
-            "Failed to fetch tenant %s for attribution", tenant_id, exc_info=True
-        )
-        return None
-
-
-def _count_events_this_month(tenant_id: str) -> int:
-    """Count activity_log events for tenant in the current calendar month."""
-    now = datetime.now(timezone.utc)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    try:
-        db = get_service_supabase()
-        result = (
-            db.table("activity_log")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", month_start.isoformat())
-            .execute()
-        )
-        return result.count if result.count is not None else len(result.data or [])
-    except Exception:
-        logger.warning(
-            "Failed to count events this month tenant=%s", tenant_id, exc_info=True
-        )
-        return 0
-
-
-def _get_events_this_week(tenant_id: str) -> list[dict]:
-    """Return activity_log rows for tenant in the last 7 days."""
-    week_start = datetime.now(timezone.utc) - timedelta(days=7)
-    try:
-        db = get_service_supabase()
-        result = (
-            db.table("activity_log")
-            .select("activity_type")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", week_start.isoformat())
-            .execute()
-        )
-        return result.data or []
-    except Exception:
-        logger.warning(
-            "Failed to get events this week tenant=%s", tenant_id, exc_info=True
-        )
-        return []
+def _hours_saved_per_event(vertical: str | None) -> float:
+    defaults = _load_defaults()
+    v = (vertical or "").lower().replace(" ", "_")
+    entry = defaults.get(v) or defaults.get("default", {})
+    return float(entry.get("hours_saved_per_event", 0.5))
 
 
 def compute_dollars_this_month(tenant_id: str) -> float:
-    """Return estimated dollars recovered this month for a tenant.
-
-    Formula: avg_ticket * count(activity_log rows this calendar month).
-
-    Returns 0.0 on any error.
-    """
+    """Sum avg_ticket * missed_call_textback events this calendar month."""
+    db = get_service_supabase()
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     try:
-        tenant = _fetch_tenant(tenant_id)
-        if not tenant:
-            return 0.0
-
-        avg_ticket = get_avg_ticket(
-            tenant_id=tenant_id,
-            vertical=tenant.get("business_type"),
-            override=tenant.get("avg_ticket_override"),
+        tenant = (
+            db.table("tenants")
+            .select("avg_ticket_override, vertical")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
         )
-        event_count = _count_events_this_month(tenant_id)
-        return float(avg_ticket * event_count)
+        row = tenant.data[0] if tenant.data else {}
+        override = row.get("avg_ticket_override")
+        vertical = row.get("vertical")
+        ticket = float(override) if override else get_avg_ticket(vertical)
+
+        events = (
+            db.table("activity_log")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("action", "missed_call_textback")
+            .gte("created_at", month_start.isoformat())
+            .execute()
+        )
+        count = events.count if events.count is not None else len(events.data or [])
+        return round(ticket * count, 2)
     except Exception:
         logger.warning(
-            "compute_dollars_this_month failed tenant=%s", tenant_id, exc_info=True
+            "attribution: compute_dollars failed tenant=%s", tenant_id, exc_info=True
         )
         return 0.0
 
 
 def compute_hours_this_week(tenant_id: str) -> float:
-    """Return estimated staff hours saved this week for a tenant.
-
-    Formula: sum(hours_per_event[activity_type]) for events in last 7 days.
-    Unknown activity types use the 'default' formula value.
-
-    Returns 0.0 on any error.
-    """
+    """Sum hours_saved_per_event * all automation events this week."""
+    db = get_service_supabase()
+    now = datetime.now(timezone.utc)
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
     try:
-        events = _get_events_this_week(tenant_id)
-        formula = _load_hours_formula()
-        default_hours = formula.get("default", 0.2)
-
-        total = sum(
-            formula.get(event.get("activity_type", ""), default_hours)
-            for event in events
+        tenant = (
+            db.table("tenants")
+            .select("vertical")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
         )
-        return round(float(total), 2)
+        row = tenant.data[0] if tenant.data else {}
+        vertical = row.get("vertical")
+        hrs = _hours_saved_per_event(vertical)
+
+        events = (
+            db.table("activity_log")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .gte("created_at", week_start.isoformat())
+            .execute()
+        )
+        count = events.count if events.count is not None else len(events.data or [])
+        return round(hrs * count, 2)
     except Exception:
         logger.warning(
-            "compute_hours_this_week failed tenant=%s", tenant_id, exc_info=True
+            "attribution: compute_hours failed tenant=%s", tenant_id, exc_info=True
         )
         return 0.0
