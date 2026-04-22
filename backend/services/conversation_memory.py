@@ -89,8 +89,6 @@ async def retrieve_relevant(
 
     # Older candidates: everything except the last RECENT_WINDOW messages
     older = rows[:-RECENT_WINDOW]
-    if not older:
-        return []
 
     def _parse_ts(ts_str: str) -> datetime:
         return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
