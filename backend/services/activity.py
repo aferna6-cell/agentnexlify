@@ -1,9 +1,8 @@
 """Activity logging service — fire-and-forget, never raises."""
 
-
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from backend.models.database import get_service_supabase
@@ -98,7 +97,9 @@ def get_activity_events(
         db = get_service_supabase()
         query = (
             db.table("activity_log")
-            .select("id, tenant_id, activity_type, description, metadata, lead_id, created_at")
+            .select(
+                "id, tenant_id, activity_type, description, metadata, lead_id, created_at"
+            )
             .eq("tenant_id", tenant_id)
         )
         if since is not None:
@@ -130,16 +131,21 @@ def get_activity_totals(
 ) -> dict:
     """Return aggregate totals for a tenant's activity_log.
 
-    Phase 1: returns ``events_count`` only.
-    Phase 2 will add dollar/hours attribution via attribution_service.
+    Phase 2: returns events_count + dollars_this_month + hours_this_week.
 
     Args:
         tenant_id: Tenant UUID string.
-        since: Only count events after this UTC datetime.
+        since: Only count events after this UTC datetime (for events_count).
 
     Returns:
-        Dict with key ``events_count`` (int).
+        Dict with keys: events_count (int), dollars_this_month (float),
+        hours_this_week (float).
     """
+    from backend.services.attribution_service import (
+        compute_dollars_this_month,
+        compute_hours_this_week,
+    )
+
     try:
         db = get_service_supabase()
         query = (
@@ -151,9 +157,17 @@ def get_activity_totals(
             query = query.gte("created_at", since.isoformat())
         result = query.execute()
         count = result.count if result.count is not None else len(result.data or [])
-        return {"events_count": count}
     except Exception:
         logger.warning(
             "Failed to get activity totals tenant=%s", tenant_id, exc_info=True
         )
-        return {"events_count": 0}
+        count = 0
+
+    dollars = compute_dollars_this_month(tenant_id)
+    hours = compute_hours_this_week(tenant_id)
+
+    return {
+        "events_count": count,
+        "dollars_this_month": dollars,
+        "hours_this_week": hours,
+    }

@@ -1,0 +1,9 @@
+# Hours-saved formula configuration.
+# Each automation type contributes an estimated number of staff-hours saved
+# per event. Used by attribution_service.compute_hours_this_week().
+
+hours_per_event:
+  missed_call_textback: 0.25 # ~15 min of receptionist time per handled missed call
+  appointment_booked: 0.5 # ~30 min of scheduling back-and-forth avoided
+  sms_conversation: 0.1 # ~6 min of manual SMS handling avoided
+  default: 0.2 # fallback for unrecognized automation types

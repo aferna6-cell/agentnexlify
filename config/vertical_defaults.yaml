@@ -1,0 +1,20 @@
+# Vertical default average ticket values (USD).
+# Used by attribution_service when tenants.avg_ticket_override is NULL.
+# Keys match tenants.business_type column values.
+# "default" is the global fallback when business_type is unrecognized or NULL.
+
+avg_ticket:
+  plumbing: 325
+  hvac: 380
+  cleaning: 120
+  landscaping: 200
+  dental: 300
+  salon: 85
+  fitness: 65
+  realestate: 2500
+  legal: 400
+  restaurant: 45
+  auto_shop: 280
+  medical: 250
+  other: 200
+  default: 200
