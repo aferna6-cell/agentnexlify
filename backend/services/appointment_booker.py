@@ -126,7 +126,9 @@ def _run_booker_session(
     session_id = session["id"]
     logger.info(
         "appointment_booker: session %s created for lead %s (tenant %s)",
-        session_id, lead_id, tenant_id,
+        session_id,
+        lead_id,
+        tenant_id,
     )
 
     stream = client.stream_events(session_id)
@@ -216,7 +218,8 @@ class AppointmentBooker:
         if not lead_res.data:
             logger.warning(
                 "appointment_booker: lead %s not found for client %s",
-                inp.lead_id, inp.client_id,
+                inp.lead_id,
+                inp.client_id,
             )
             return AppointmentBookerOutput(
                 appointment_id=None,
@@ -224,7 +227,7 @@ class AppointmentBooker:
                 status="error",
             )
         lead = lead_res.data[0]
-        tenant_id = lead.get("client_id") or inp.client_id
+        client_id = lead.get("client_id") or inp.client_id
 
         # Resolve agent handle.
         try:
@@ -245,13 +248,15 @@ class AppointmentBooker:
                 agent_id=handle.agent_id,
                 environment_id=handle.environment_id,
                 prompt=prompt,
-                tenant_id=tenant_id,
+                tenant_id=client_id,  # client_id passed as session metadata tenant_id
                 lead_id=inp.lead_id,
             )
         except ManagedAgentsError as exc:
             logger.warning(
                 "appointment_booker: session failed for lead %s: %s (request_id=%s)",
-                inp.lead_id, exc, exc.request_id,
+                inp.lead_id,
+                exc,
+                exc.request_id,
             )
             return AppointmentBookerOutput(
                 appointment_id=None,
@@ -283,12 +288,14 @@ class AppointmentBooker:
         except Exception:
             logger.warning(
                 "appointment_booker: failed to update lead %s status",
-                inp.lead_id, exc_info=True,
+                inp.lead_id,
+                exc_info=True,
             )
 
         logger.info(
             "appointment_booker: lead %s booked appointment %s",
-            inp.lead_id, appointment_id,
+            inp.lead_id,
+            appointment_id,
         )
         return AppointmentBookerOutput(
             appointment_id=appointment_id,
