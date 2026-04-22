@@ -2157,3 +2157,20 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/managed_agent_runs.py,backend/tests/test_managed_agents.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(appointment_booker): rename misleading tenant_id local var to client_id
+
+Variable at line 227 held the client_id value but was named tenant_id,
+violating schema-discipline naming. Renamed to client_id; call site now
+explicitly shows client_id is passed as the session metadata tenant_id key.
+
+Caught by nightly-commit-review 2026-04-22.
+
+https://claude.ai/code/session_01AMEaRhVMfXypTzmBCpm9r4
+**Date:** 2026-04-22
+**Commit:** 33e0462
+**Author:** Claude
+**Files Changed:** backend/services/appointment_booker.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
