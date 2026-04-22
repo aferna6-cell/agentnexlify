@@ -837,3 +837,17 @@ Single-table migration for Zapier app authentication (spec: `specs/zapier-crm-ex
 **RLS:** service_role only. Tenant access via backend CRUD endpoints.
 **Conventions:** `client_id` not `tenant_id`.
 **Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified.
+
+### 111 — Missed Call Texts + Avg Ticket Override
+**Date:** 2026-04-22
+Phase 1 of missed-call text-back feature. Creates audit table, adds tenant config column, backfills automation rows.
+
+**Tables/Columns:**
+- `missed_call_texts` — one row per text-back attempt. Columns: `tenant_id` (FK→tenants ON DELETE CASCADE), `call_sid`, `sms_sid`, `from_phone`, `to_phone`, `template_id`, `status` (CHECK: sent/failed/skipped), `created_at`, `converted_to_lead_id` (FK→leads). Index on `(tenant_id, created_at DESC)`.
+- `tenants.avg_ticket_override` DECIMAL(10,2) — Phase 2 attribution stub, optional per-tenant override.
+- Backfills one `automations` row per existing tenant (`type='missed_call_textback'`, enabled, hold config) via INSERT … ON CONFLICT DO NOTHING.
+
+**Note:** `tenant_id` (not `client_id`) — this table lives in the automations subtree which uses `tenant_id` consistently. FK pattern matches `appointments`, `chat_messages`.
+**RLS:** Enabled. Policy uses `tenant_id = auth.uid()` (service_role bypasses automatically).
+**Conventions:** `tenant_id` (automations subtree). Status CHECK inline on table definition.
+**Applied:** 2026-04-22 (per migration file header).
