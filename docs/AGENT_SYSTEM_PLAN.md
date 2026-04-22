@@ -1,6 +1,6 @@
 # Agent System Plan
 
-_Last updated: 2026-04-15_
+_Last updated: 2026-04-22_
 
 ## Purpose
 This document defines the intended steady-state for AgentNexLiFy's coding-agent system.
@@ -205,6 +205,26 @@ Default split:
    - `AGENTS.md`
 4. Keep `AGENTS.md` short enough that drift is obvious and easy to fix
 5. After touching `.claude/`, `.github/workflows/autopilot-*`, `package.json`, or this plan, run `npm run agent-system:check`
+
+
+## 2026-04-22 Codex Orchestration Adoption
+
+AgentNexLiFy now tracks all eight Codex workflow-orchestration upgrades in a single machine-readable config:
+- `.codex/orchestration/codex-parallel-adoption.json`
+
+Adopted in parallel (all `status: active`, all `execution_mode: parallel`):
+1. Address GitHub review comments
+2. Run multiple terminal tabs
+3. SSH to remote devboxes
+4. Preview PDFs/spreadsheets/slides/docs
+5. Track plans/sources/artifacts
+6. Reuse existing conversation threads
+7. Schedule future work
+8. Persistent memory for conventions/corrections
+
+Guardrail verification:
+- `npm run check:codex-orchestration` validates IDs, required fields, and parallel-active status across all eight workstreams.
+- `npm run check:quick` now includes the orchestration check so drift fails fast.
 
 ## 2026-04-15 System Hardening
 

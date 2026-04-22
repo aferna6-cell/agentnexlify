@@ -153,7 +153,7 @@ def main() -> int:
     )
     check(
         scripts.get("check:quick")
-        == "npm run agent-system:check && npm run check:project && npm run sync-widget:check",
+        == "npm run agent-system:check && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
         "package quick check script wires the expected checks",
         failures,
     )
@@ -170,6 +170,11 @@ def main() -> int:
     check(
         scripts.get("sync-widget:check") == "python scripts/sync_widget_assets.py --check",
         "package widget sync check script points at widget asset verification",
+        failures,
+    )
+    check(
+        scripts.get("check:codex-orchestration") == "python scripts/check_codex_orchestration_adoption.py",
+        "package codex orchestration check script points at orchestration adoption verification",
         failures,
     )
     check(
