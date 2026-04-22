@@ -153,7 +153,7 @@ def main() -> int:
     )
     check(
         scripts.get("check:quick")
-        == "npm run agent-system:check && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
+        == "npm run agent-system:check && npm run check:skills && npm run sync-skills:check && npm run skills:eval && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
         "package quick check script wires the expected checks",
         failures,
     )
@@ -165,6 +165,26 @@ def main() -> int:
     check(
         scripts.get("check:project") == "python scripts/check_project_invariants.py",
         "package project check script points at project invariants",
+        failures,
+    )
+    check(
+        scripts.get("check:skills") == "python scripts/check_skills.py",
+        "package skill metadata check script is registered",
+        failures,
+    )
+    check(
+        scripts.get("skills:eval") == "python scripts/run_skill_evals.py",
+        "package skill trigger eval script is registered",
+        failures,
+    )
+    check(
+        scripts.get("sync-skills") == "python scripts/sync_skills.py --write",
+        "package canonical skill sync write script is registered",
+        failures,
+    )
+    check(
+        scripts.get("sync-skills:check") == "python scripts/sync_skills.py",
+        "package canonical skill sync dry-run script is registered",
         failures,
     )
     check(

@@ -1,0 +1,13 @@
+{
+  "name": "verify",
+  "positive": [
+    "Run verify before we merge this change.",
+    "Please verify the build and tests.",
+    "Use /verify on the current diff."
+  ],
+  "negative": [
+    "Sketch a pricing page concept.",
+    "Explain how Supabase auth works.",
+    "Draft copy for a partner email."
+  ]
+}

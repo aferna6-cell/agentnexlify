@@ -1,0 +1,13 @@
+{
+  "name": "skillify",
+  "positive": [
+    "Skillify this repeat release checklist.",
+    "Turn this workflow into a reusable skill.",
+    "Create a SKILL.md trigger for our launch audit."
+  ],
+  "negative": [
+    "Run the existing tests.",
+    "Fix the broken widget embed.",
+    "Summarize yesterday's metrics."
+  ]
+}

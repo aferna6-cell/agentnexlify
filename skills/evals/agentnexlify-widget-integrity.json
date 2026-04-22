@@ -1,0 +1,13 @@
+{
+  "name": "agentnexlify-widget-integrity",
+  "positive": [
+    "Check widget integrity before editing the embed script.",
+    "Update the chat widget data-api-key contract.",
+    "Verify the public widget mirror stays identical."
+  ],
+  "negative": [
+    "Audit database migration naming.",
+    "Review billing cancellation copy.",
+    "Create a home services FAQ seed."
+  ]
+}

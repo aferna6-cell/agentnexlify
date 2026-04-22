@@ -3,6 +3,7 @@ name: dependency-auditor
 description: Scan backend/requirements.txt, frontend/package.json, widget package files for outdated, vulnerable, or abandoned packages. Output prioritized fix list. Load when user says "audit dependencies", "check for vulns", "outdated packages", "npm audit", "pip audit", or before a release.
 origin: inspired by ComposioHQ/awesome-claude-skills/dependency-auditor
 version: 1.0.0
+disable-model-invocation: true
 triggers:
   - audit dependencies
   - check for vulns

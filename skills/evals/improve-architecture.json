@@ -1,0 +1,13 @@
+{
+  "name": "improve-architecture",
+  "positive": [
+    "Run improve architecture on the codebase.",
+    "Do an architecture review for layer violations.",
+    "Create a refactor plan for code health."
+  ],
+  "negative": [
+    "Generate a single marketing email.",
+    "Fix one failing assertion in the widget test.",
+    "Add a new contractor onboarding field."
+  ]
+}

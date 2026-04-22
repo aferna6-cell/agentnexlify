@@ -1,6 +1,7 @@
 ---
 name: deploy-to-vercel
 description: Deploy applications and websites to Vercel. Use when the user requests deployment actions like "deploy my app", "deploy and give me the link", "push this live", or "create a preview deployment".
+disable-model-invocation: true
 metadata:
   author: vercel
   version: "3.0.0"

@@ -1,0 +1,13 @@
+{
+  "name": "verification-loop",
+  "positive": [
+    "Run the verification loop after these changes.",
+    "Do a quality gate before the PR.",
+    "Verify build, lint, tests, and security."
+  ],
+  "negative": [
+    "Draft a product requirements doc.",
+    "Find duplicate industry pack names.",
+    "Summarize support tickets from last week."
+  ]
+}

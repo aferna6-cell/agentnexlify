@@ -1,0 +1,13 @@
+{
+  "name": "tech-debt",
+  "positive": [
+    "Run tech-debt on the backend services.",
+    "Audit technical debt before launch.",
+    "Find code health risks and refactor candidates."
+  ],
+  "negative": [
+    "Ship the verified fix to main.",
+    "Generate a pricing table mockup.",
+    "Seed MTOptions FAQs."
+  ]
+}

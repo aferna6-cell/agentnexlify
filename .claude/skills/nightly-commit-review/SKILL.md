@@ -4,6 +4,7 @@ description: Nightly autonomous review of last 24h commits. Haiku triages, Sonne
 version: 1.0.0
 origin: agentnexlify
 user-invocable: true
+disable-model-invocation: true
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 effort: high
 triggers:

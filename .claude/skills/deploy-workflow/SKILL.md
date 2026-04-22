@@ -4,6 +4,7 @@ description: "Use BEFORE pushing to main or triggering a Railway/Vercel deploy. 
 version: 1.0.0
 origin: claude
 user-invocable: true
+disable-model-invocation: true
 triggers: ["deploy", "deploy check", "ship", "push to main", "ready to deploy", "pre-deploy"]
 allowed-tools: ["Bash", "Read", "Grep", "Glob"]
 effort: medium
