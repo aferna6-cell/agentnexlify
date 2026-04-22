@@ -199,16 +199,21 @@ CREATE INDEX idx_pending_automations_client_status
     ON pending_automations(client_id, status, scheduled_for);
 ```
 
-#### New Columns on `widget_configs` (migration 111)
+#### Per-Automation Config — Reuse `automations` Table
+
+**REVISION 2026-04-22 (plan v2 re-audit):** Original spec proposed adding `widget_configs.automation_config` JSONB. Re-audit found pre-existing `automations` table (migration 001) already provides this: `tenant_id` + `type` (CHECK includes `missed_call_textback`) + `is_enabled` + `config` JSONB + `runs_total`. Use that table instead.
+
+Per-automation config lives in `automations.config` JSONB, one row per `(tenant_id, type)`:
+- `missed_call_textback.config = {"mode": "hold", "hold_seconds": 60, "template_id": "default"}`
+- `appointment_booker.config = {"mode": "hold", "hold_seconds": 60, "min_lead_hours": 2, "max_days_ahead": 14}`
+- `auto_follow_up.config = {"mode": "hold", "hold_seconds": 60}`  *(V2 — not V1)*
+- `document_drafter.config = {"mode": "always_ask", "quote_threshold_dollars": 5000}`  *(V2 — not V1)*
+
+Seed one `automations` row per tenant for `missed_call_textback` at tenant creation (add to tenant-provisioning path, OR backfill via migration 111).
+
+`avg_ticket_override` — separate column on `tenants` table (1-line ALTER in migration 111 or 113):
 ```sql
-ALTER TABLE widget_configs
-    ADD COLUMN IF NOT EXISTS automation_config jsonb NOT NULL DEFAULT '{
-        "missed_call_text_back": {"mode": "hold", "hold_seconds": 60, "enabled": true, "template_id": "default"},
-        "appointment_booker": {"mode": "hold", "hold_seconds": 60, "enabled": true, "min_lead_hours": 2, "max_days_ahead": 14},
-        "auto_follow_up": {"mode": "hold", "hold_seconds": 60, "enabled": false},
-        "document_drafter": {"mode": "always_ask", "enabled": false, "quote_threshold_dollars": 5000}
-    }'::jsonb,
-    ADD COLUMN IF NOT EXISTS avg_ticket_override decimal(10,2);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS avg_ticket_override decimal(10,2);
 ```
 
 #### Materialized View (migration 111)
