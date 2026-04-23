@@ -278,3 +278,9 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-21T22:05:13+00:00] discover (retry) | cats=3 fetched=0 written=0 deduped=0 rejected=0 errors=0
 
 ## [2026-04-21 18:12] discover+compile | cron 18:00 | commits=5 raw=10 wiki=4
+
+## [2026-04-23 18:03] discover | categories=7 fetched=4 new_files=4 deduped=4 errors=0 known_added=5
+
+## [2026-04-23 18:05] discover-retry | new_files=0 added_known=0
+
+## [2026-04-23 18:06] discover-startpage | new_files=10

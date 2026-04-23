@@ -173,3 +173,27 @@ _All compiled 2026-04-18 cron run._
 - [ ] **small-biz-saas**: Saas Churn Rate: Key Metrics & Benchmarks 2026 | VantaInsights — `raw/small-biz-saas/vantainsights-com-insights-saas-churn-rate.md` — <https://vantainsights.com/insights/saas-churn-rate>
 - [ ] **verticals**: AI Receptionist Software for Plumbers 2026 | 24/7 Answering Service — `raw/verticals/agentzap-ai-industries-plumbing.md` — <https://agentzap.ai/industries/plumbing>
 - [ ] **verticals**: Top 5 AI Receptionist Solutions for Plumbing Businesses in 2026 — `raw/verticals/www-myaifrontdesk-com-blogs-top-5-ai-receptionist-solutions-for-plumbi.md` — <https://www.myaifrontdesk.com/blogs/top-5-ai-receptionist-solutions-for-plumbing-businesses-in-2026>
+
+
+## 2026-04-23T22:03:04.934701+00:00 auto-populate
+
+- ~~[competitors] GoHighLevel AI Employee Guide 2026~~ → compiled `wiki/competitors/ghl-ai-employee-suite-marketing-playbook.md` (2026-04-23 cron)
+- ~~[competitors] GoHighLevel 2026: Mastering AI Employees and Custom API V2~~ → compiled `wiki/competitors/ghl-api-v2-developer-platform.md` (2026-04-23 cron)
+- ~~[ai-llm] Claude Prompt Caching in 2026: 5-Minute TTL~~ → compiled `wiki/ai-llm/claude-prompt-caching-5min-ttl-2026.md` (2026-04-23 cron)
+- ~~[ai-llm] Claude API Pricing: Complete Breakdown 2026~~ → compiled `wiki/ai-llm/claude-api-pricing-breakdown-2026.md` (2026-04-23 cron)
+
+<!-- retry pass 2026-04-23T22:03:55.856817+00:00 -->
+
+
+<!-- startpage pass 2026-04-23T22:06:07.436839+00:00 -->
+
+- [ ] **small-biz-saas**: Pricing for SaaS: Models, Benchmarks & Strategy (2026) — `raw/small-biz-saas/prospeo-io-s-pricing-for-saas.md` — <https://prospeo.io/s/pricing-for-saas>
+- [ ] **small-biz-saas**: Pricing Information for SaaS Platforms 2026 | InfluenceFlow — `raw/small-biz-saas/influenceflow-io-resources-pricing-information-for-saas-platforms-comp.md` — <https://influenceflow.io/resources/pricing-information-for-saas-platforms-complete-2026-guide>
+- [ ] **verticals**: 5 Best Medical AI Receptionists in 2026: Ranked for Healthcare Operations | Greetmate.ai — `raw/verticals/greetmate-ai-blog-best-medical-ai-receptionist-2026.md` — <https://www.greetmate.ai/blog/best-medical-ai-receptionist-2026>
+- [ ] **verticals**: AI Receptionist for Dental Offices [2026 Guide] — `raw/verticals/getaira-io-blog-ai-receptionist-for-dental-offices.md` — <https://www.getaira.io/blog/ai-receptionist-for-dental-offices>
+- [ ] **technical**: Supabase vs Firebase: 8 Tests, 1 Winner [2026] — `raw/technical/tech-insider-org-supabase-vs-firebase-2026.md` — <https://tech-insider.org/supabase-vs-firebase-2026>
+- [ ] **technical**: Supabase Vector | The Postgres Vector database and AI Toolkit — `raw/technical/supabase-com-modules-vector.md` — <https://supabase.com/modules/vector>
+- [ ] **regulations**: California Companion Chatbot Law Now in Effect | Perkins Coie — `raw/regulations/perkinscoie-com-insights-update-california-companion-chatbot-law-now-e.md` — <https://perkinscoie.com/insights/update/california-companion-chatbot-law-now-effect>
+- [ ] **regulations**: First-in-the-Nation AI Chatbot Safeguards Signed into Law | California State Senator Steve Padilla — `raw/regulations/sd18-senate-ca-gov-news-first-nation-ai-chatbot-safeguards-signed-law.md` — <https://sd18.senate.ca.gov/news/first-nation-ai-chatbot-safeguards-signed-law>
+- [ ] **growth**: Actionable SEO Tips for Small Businesses in 2026: Winning in the Age of AI, Social & Search – Advertising Week — `raw/growth/advertisingweek-com-actionable-seo-tips-for-small-businesses-in-2026-w.md` — <https://advertisingweek.com/actionable-seo-tips-for-small-businesses-in-2026-winning-in-the-age-of-ai-social-search>
+- [ ] **growth**: AI Search, Google SGE & SEO in 2026 for Small Businesses — `raw/growth/knapsackcreative-com-blog-seo-ai-search-google-sge-for-small-business.md` — <https://knapsackcreative.com/blog/seo/ai-search-google-sge-for-small-business>

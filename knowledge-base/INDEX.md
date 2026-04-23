@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 63 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-21
+- Total articles: 67 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-23
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -34,6 +34,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [GoHighLevel April 2026 Product Updates — Workflow AI Builder, Image Recognition, Booking v2](wiki/competitors/ghl-april-2026-product-updates.md) — Natural-language workflow scaffolding, AI image recognition in Conversation AI, book-now-pay-later in Booking v2, Ask AI campaign copilot, Gift Cards GA. Tags: gohighlevel, workflow-ai-builder, conversation-ai, image-recognition, booking-v2, product-updates, april-2026
 - [GoHighLevel Pricing Teardown 2026 — Base Plans, Usage Fees, and Real Agency Math](wiki/competitors/ghl-pricing-teardown-2026.md) — $97/$297/$497 headlines land at $107/$412/$1,591 realistic monthly cost across three scenarios once AI Employee, LC Phone/Email, Workflow Pro, and A2P 10DLC are stacked. Tags: gohighlevel, pricing, saas-mode, ai-pricing, usage-fees, a2p-10dlc, agency-economics, 2026
 - [GoHighLevel Carrier Pricing Update — April 2026 SMS, Voice, and Number Rate Hikes](wiki/competitors/ghl-carrier-pricing-april-2026.md) — April 10/16 2026 pass-through rate increases across 50+ countries on SMS (worst case Sierra Leone +101%) and voice (Greece mobile +354%); compresses agency margin alongside the feature release. Tags: gohighlevel, lc-phone, carrier-fees, sms-pricing, voice-pricing, a2p-10dlc, at-t, verizon, april-2026
+- [GoHighLevel AI Employee Suite — Marketing Playbook and Training Workflow](wiki/competitors/ghl-ai-employee-suite-marketing-playbook.md) — "Hire digital staff" framing with 4 named agents (Voice/Conversation/Reviews/Content), pay-per-use vs unlimited pricing, 3-step KB-upload-to-live training workflow sets SMB buyer expectation. Tags: gohighlevel, ai-employee, voice-ai, conversation-ai, reviews-ai, content-ai, smb-pitch
+- [GoHighLevel API V2 — OAuth 2.0, Granular Scopes, and the Marketplace Play](wiki/competitors/ghl-api-v2-developer-platform.md) — Migration from static API keys to OAuth 2.0 with granular scopes, enhanced webhooks, and private-app Marketplace turns GHL into a Shopify-style platform moat. Tags: gohighlevel, api-v2, oauth, marketplace, developer-platform, integrations, seo-ai
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -55,6 +57,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Anthropic's August 2025 Infrastructure Postmortem — Three Overlapping Bugs That Degraded Claude](wiki/ai-llm/anthropic-postmortem-three-issues-2025.md) — Context-window routing + TPU output corruption + XLA top-k miscompilation degraded Sonnet/Opus Aug 5–Sep 16 2025; fix plan adds continuous production evals and user-feedback telemetry. Tags: anthropic, postmortem, infrastructure, claude-api, tpu, xla, reliability
 - [Designing AI-Resistant Technical Evaluations — Anthropic's Performance Engineering Take-Home](wiki/ai-llm/ai-resistant-technical-evaluations.md) — Three iterations of the performance-engineering take-home; novel instruction-set puzzles beat realistic optimization problems once models can delegate real-work. Tags: hiring, evaluations, take-home, anthropic, performance-engineering, ai-resistance, interview-design
 - [GAN-Inspired Three-Agent Harness — Planner, Generator, Evaluator for Long-Running Coding](wiki/ai-llm/harness-design-long-running-apps-gan.md) — Planner/generator/evaluator pattern with file-based sprint contracts; Opus 4.5 solo 20min/$9 vs full harness 6hr/$200 produced dramatically different app quality. Tags: anthropic, harness-design, multi-agent, gan, planner-generator-evaluator, long-running-agents, opus-4-5, opus-4-6
+- [Claude Prompt Caching — 5-Minute TTL and the Architecture Patterns That Survive It](wiki/ai-llm/claude-prompt-caching-5min-ttl-2026.md) — Anthropic cut cache TTL from 60min to 5min in early 2026, raising effective costs 30-60% for cron workloads; keepalive pings, batching, and breakeven math are the surviving patterns. Tags: prompt-caching, claude-api, cost-optimization, ttl, keep-alive, batching, anthropic, sonnet-4-6
+- [Claude API Pricing Breakdown — Haiku 4.5, Sonnet 4.6, Opus 4.7 in 2026](wiki/ai-llm/claude-api-pricing-breakdown-2026.md) — Six active models $1/$5 (Haiku 4.5) through $5/$25 (Opus 4.7); Opus 4.7 tokenizer raises effective code-prompt cost 5-35% despite identical list price, caching is the dominant unused cost lever. Tags: claude-api, pricing, anthropic, haiku-4-5, sonnet-4-6, opus-4-7, tokenizer, cost-optimization
 
 ### Small Business SaaS
 - [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
