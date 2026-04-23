@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### noshow_recovery swallowed CAN-SPAM unsubscribe check failures
+**Date:** 2026-04-23
+**Symptom:** `backend/services/noshow_recovery.py:122` wrapped the `leads.unsubscribed` lookup in `except Exception: logger.debug(...)`. On any transient Supabase failure the loop proceeded to send SMS + email to a customer whose unsubscribe status could not be verified — CAN-SPAM compliance violation. Also line 71 silently dropped appointments with unparseable `updated_at`; lines 191/352 warned on mark-sent failure when the same query would re-match next tick → duplicate SMS charges + customer spam; lines 298/317/343 logged SMS/email/rebook-check failures at debug, obscuring real outages.
+**Root Cause:** Defensive try/except blocks written to keep the 5-min automation loop alive, but severity levels did not reflect business impact. Unsubscribe check and mark-sent updates are load-bearing for compliance + duplicate-send prevention; debug/warning logs hide those breakages from alerting.
+**Files Changed:** `backend/services/noshow_recovery.py`, `backend/tests/test_noshow_and_pipeline_fixes.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Unsubscribe-check exception now `continue`s (default-deny) with warning log. Parse-failure path logs warning before `continue`. Mark-sent failures (initial + follow-up) upgraded to `logger.error` with explicit duplicate-send risk note. Follow-up SMS/email/rebook-check exceptions upgraded from debug to warning for parity with initial send path (lines 150/181). Added regression test `TestNoshowRecoveryUnsubscribeDefaultDeny::test_unsubscribe_check_exception_skips_send` that injects a Supabase failure on `leads.unsubscribed` lookup and asserts no messages are sent.
+**Prevention:** When catching exceptions in tenant-facing automation loops, match log severity to business impact: (a) compliance/legal checks → default-deny + warning, (b) idempotency keys / mark-as-sent updates → error (duplicate-send risk), (c) outbound send failures → warning (parity across initial + follow-up paths), (d) observability-only paths (activity_log insert) → debug. Audit any `except Exception: logger.debug(...)` in send paths before relying on "the audit said it's silent."
+
+---
+
 ### Spec referenced ExtractorError but real code raises ValueError
 **Date:** 2026-04-15
 **Symptom:** While shipping Phase 2 of the lead-parser-replacement feature, the spec at `specs/lead-parser-replacement_spec.md` line 96/103 told the implementer to `from backend.services.structured_extractor import extract_structured, ExtractorError` and `except ExtractorError as exc:`. The symbol `ExtractorError` does not exist in `backend/services/structured_extractor.py` — that module raises `ValueError` directly on parse failure (line 207 + 214 of structured_extractor.py).
