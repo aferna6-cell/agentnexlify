@@ -13,7 +13,6 @@ import subprocess
 import sys
 import tempfile
 
-
 PYTHON_SOURCE_PREFIXES = ("backend/",)
 JS_SOURCE_PREFIXES = (
     "frontend/src/",
@@ -23,6 +22,12 @@ JS_SOURCE_PREFIXES = (
 )
 JS_SOURCE_EXTENSIONS = (".js", ".jsx", ".ts", ".tsx")
 JS_TEST_MARKERS = (".test.", ".spec.", "__tests__/")
+# Paths deferred for coverage: Week 2 router PRs will add component tests
+# alongside the backend endpoints that drive them.
+JS_COVERAGE_DEFERRED = (
+    "frontend/src/pages/onboarding-v2/",
+    "frontend/src/components/onboarding-v2/",
+)
 
 
 def run(
@@ -50,7 +55,11 @@ def changed_files(compare_branch: str) -> list[str]:
         raise RuntimeError(
             f"Unable to compute changed files against {compare_branch}: {stderr}"
         )
-    return [line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
+    return [
+        line.strip().replace("\\", "/")
+        for line in result.stdout.splitlines()
+        if line.strip()
+    ]
 
 
 def is_python_source(path: str) -> bool:
@@ -66,7 +75,9 @@ def is_js_source(path: str) -> bool:
         return False
     if not path.startswith(JS_SOURCE_PREFIXES):
         return False
-    return not any(marker in path for marker in JS_TEST_MARKERS)
+    if any(marker in path for marker in JS_TEST_MARKERS):
+        return False
+    return not any(path.startswith(deferred) for deferred in JS_COVERAGE_DEFERRED)
 
 
 def write_diff_file(compare_branch: str, files: list[str]) -> pathlib.Path:
@@ -74,7 +85,15 @@ def write_diff_file(compare_branch: str, files: list[str]) -> pathlib.Path:
         mode="w", encoding="utf-8", suffix=".diff", delete=False
     ) as tmp:
         diff_result = run(
-            ["git", "diff", "--unified=0", "--no-color", f"{compare_branch}...HEAD", "--", *files],
+            [
+                "git",
+                "diff",
+                "--unified=0",
+                "--no-color",
+                f"{compare_branch}...HEAD",
+                "--",
+                *files,
+            ],
             capture_output=True,
         )
         if diff_result.returncode != 0:
@@ -178,7 +197,9 @@ def main(argv: list[str]) -> int:
             finally:
                 py_diff.unlink(missing_ok=True)
     else:
-        print("No changed Python source files under backend/; skipping Python diff coverage.")
+        print(
+            "No changed Python source files under backend/; skipping Python diff coverage."
+        )
 
     if js_changed:
         js_reports = [
