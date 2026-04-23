@@ -36,7 +36,7 @@ Secondary metrics:
 
 Hours saved per tenant onboarding (anchor metric per `project_value_prop_framework.md`): current 0 (friction-heavy) → target 1-2 hours of owner time recovered per signup, amortized across first-month revenue.
 
-Dollars preserved per converted tenant (post-conversion retention angle): every tenant who completes onboarding and has widget live is worth $249-899/mo. Cutting abandonment from 32% → 10% at $249/mo recovers ~$55/tenant/mo in expected LTV.
+Dollars preserved per converted tenant (post-conversion retention angle): every tenant who completes onboarding and has widget live is worth $99-899/mo. Cutting abandonment from 32% → 10% at $99/mo recovers ~$22/tenant/mo in expected LTV.
 
 ---
 
@@ -590,7 +590,7 @@ None. All prior open questions from `audits/audit-onboarding-2026-04-21.md` §6 
 - Future changes: copy to both paths in same commit; run `diff -q` in pre-commit
 
 **Plan names (CLAUDE.md):**
-- Valid: `free`, `growth` ($249/mo), `professional` ($499/mo), `autopilot` ($299/mo), `enterprise` ($899/mo)
+- Valid: `free`, `growth` ($99/mo Starter), `autopilot` ($150/mo Growth), `professional` ($250/mo Pro), `enterprise` ($899/mo)
 - Legacy (billing-only): `growth $199`, `professional $399`, `enterprise $799`
 - Retired (never use): `foundation`, `operations`
 - This PRD's flag `onboarding_v2` applies regardless of plan

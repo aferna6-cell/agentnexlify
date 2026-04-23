@@ -18,16 +18,59 @@ const data = {
   comparison: {
     label: "Feature Comparison",
     title: "NexLiFy vs. Tidio",
-    subtitle: "A side-by-side look at what matters for local service businesses.",
+    subtitle:
+      "A side-by-side look at what matters for local service businesses.",
     columns: ["Feature", "NexLiFy", "Tidio"],
     rows: [
-      { feature: "Free tier", nexlify: "50 convos/mo", nexlifyClass: "check", competitor: "Yes (limited features)", competitorClass: "muted" },
-      { feature: "Local business focus", nexlify: "Yes \u2014 vertical-specific AI", nexlifyClass: "check", competitor: "No \u2014 generic chatbot", competitorClass: "cross" },
-      { feature: "Missed call text-back", nexlify: "Yes \u2014 built in", nexlifyClass: "check", competitor: "No", competitorClass: "cross" },
-      { feature: "Pricing model", nexlify: "Flat monthly pricing", nexlifyClass: "check", competitor: "Per agent seat", competitorClass: "muted" },
-      { feature: "SMS automation", nexlify: "Yes \u2014 full SMS channel", nexlifyClass: "check", competitor: "Limited", competitorClass: "muted" },
-      { feature: "AI trained for your industry", nexlify: "Yes \u2014 vertical AI models", nexlifyClass: "check", competitor: "No \u2014 one-size-fits-all", competitorClass: "cross" },
-      { feature: "Setup time", nexlify: "< 5 minutes", nexlifyClass: "check", competitor: "15\u201330 minutes", competitorClass: "muted" },
+      {
+        feature: "Free tier",
+        nexlify: "50 convos/mo",
+        nexlifyClass: "check",
+        competitor: "Yes (limited features)",
+        competitorClass: "muted",
+      },
+      {
+        feature: "Local business focus",
+        nexlify: "Yes \u2014 vertical-specific AI",
+        nexlifyClass: "check",
+        competitor: "No \u2014 generic chatbot",
+        competitorClass: "cross",
+      },
+      {
+        feature: "Missed call text-back",
+        nexlify: "Yes \u2014 built in",
+        nexlifyClass: "check",
+        competitor: "No",
+        competitorClass: "cross",
+      },
+      {
+        feature: "Pricing model",
+        nexlify: "Flat monthly pricing",
+        nexlifyClass: "check",
+        competitor: "Per agent seat",
+        competitorClass: "muted",
+      },
+      {
+        feature: "SMS automation",
+        nexlify: "Yes \u2014 full SMS channel",
+        nexlifyClass: "check",
+        competitor: "Limited",
+        competitorClass: "muted",
+      },
+      {
+        feature: "AI trained for your industry",
+        nexlify: "Yes \u2014 vertical AI models",
+        nexlifyClass: "check",
+        competitor: "No \u2014 one-size-fits-all",
+        competitorClass: "cross",
+      },
+      {
+        feature: "Setup time",
+        nexlify: "< 5 minutes",
+        nexlifyClass: "check",
+        competitor: "15\u201330 minutes",
+        competitorClass: "muted",
+      },
     ],
   },
   reasons: {
@@ -47,7 +90,7 @@ const data = {
       {
         icon: "tag",
         heading: "Flat pricing means no surprises",
-        body: "Tidio charges per agent seat, which gets expensive as your team grows. NexLiFy uses flat monthly pricing \u2014 $249, $499, or $899/mo \u2014 regardless of how many people use the dashboard. Plus, you get SEO tools, social media marketing, and AI content generation included.",
+        body: "Tidio charges per agent seat, which gets expensive as your team grows. NexLiFy uses flat monthly pricing \u2014 $99, $150, or $250/mo \u2014 regardless of how many people use the dashboard. Plus, you get SEO tools, social media marketing, and AI content generation included.",
       },
     ],
   },
@@ -72,7 +115,7 @@ const data = {
       {
         question: "Does NexLiFy have a free plan like Tidio?",
         answer:
-          "Yes. NexLiFy\u2019s free tier includes unlimited conversations during a 14-day trial with full AI capabilities, missed call text-back, and SMS. No credit card required to start.",
+          "Yes. NexLiFy\u2019s free tier includes unlimited conversations during a 7-day trial with full AI capabilities, missed call text-back, and SMS. No credit card required to start.",
       },
     ],
   },

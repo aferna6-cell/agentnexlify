@@ -94,7 +94,7 @@ const PROMOTION_TYPES = [
   {
     key: "extended_trial",
     label: "Extended Trial",
-    desc: "Longer than standard 14-day trial",
+    desc: "Longer than standard 7-day trial",
   },
   {
     key: "partner_deal",

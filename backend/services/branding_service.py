@@ -395,7 +395,7 @@ def get_conversation_messages(tenant_id: str, session_id: str) -> dict:
 # Trial status helper (used by dashboard + trial-status endpoint)
 # ---------------------------------------------------------------------------
 
-FREE_TRIAL_DAYS = 14
+FREE_TRIAL_DAYS = 7
 
 
 def compute_trial_status(tenant: dict) -> dict:

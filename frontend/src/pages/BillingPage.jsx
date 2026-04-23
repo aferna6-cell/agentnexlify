@@ -6,10 +6,10 @@ import { notify } from "../utils/notify";
 
 const PLANS = [
   { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
-  { key: "growth",       name: "Growth",       price: "$249", period: "/mo" },
-  { key: "autopilot",   name: "Autopilot",    price: "$299", period: "/mo" },
-  { key: "professional", name: "Professional", price: "$499", period: "/mo", popular: true },
-  { key: "enterprise",  name: "Enterprise",   price: "$899", period: "/mo" },
+  { key: "growth",       name: "Starter",      price: "$99",  period: "/mo" },
+  { key: "autopilot",    name: "Growth",       price: "$150", period: "/mo", popular: true },
+  { key: "professional", name: "Pro",          price: "$250", period: "/mo" },
+  { key: "enterprise",   name: "Enterprise",   price: "$899", period: "/mo" },
 ];
 
 // Data-driven feature comparison matrix
@@ -20,7 +20,7 @@ const FEATURE_MATRIX = [
     free: true, growth: true, professional: true, autopilot: true, enterprise: true,
   },
   {
-    feature: "Leads & CRM",
+    feature: "Leads & Customer Management",
     free: "50 leads", growth: "Unlimited", professional: "Unlimited", autopilot: "Unlimited", enterprise: "Unlimited",
   },
   {

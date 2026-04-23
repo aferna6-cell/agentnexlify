@@ -4,9 +4,9 @@ const PLAN_ORDER = ["free", "growth", "professional", "autopilot", "enterprise"]
 
 const PLAN_DISPLAY = {
   free: { name: "Free", price: "$0" },
-  growth: { name: "Growth", price: "$249/mo" },
-  professional: { name: "Professional", price: "$499/mo" },
-  autopilot: { name: "Autopilot", price: "$299/mo" },
+  growth: { name: "Starter", price: "$99/mo" },
+  autopilot: { name: "Growth", price: "$150/mo" },
+  professional: { name: "Pro", price: "$250/mo" },
   enterprise: { name: "Enterprise", price: "$899/mo" },
 };
 

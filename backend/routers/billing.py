@@ -254,19 +254,21 @@ async def stripe_webhook(request: Request):
 
 AMOUNT_TO_PLAN: dict[int, str] = {
     # Monthly only (current pricing)
+    9900: "growth",          # $99 Starter
+    15000: "autopilot",      # $150 Growth
+    25000: "professional",   # $250 Pro
+    89900: "enterprise",     # $899 Enterprise
+    # Legacy monthly pricing (keep for existing subscribers)
     24900: "growth",
     29900: "autopilot",
     49900: "professional",
-    89900: "enterprise",
-    # Legacy monthly pricing (keep for existing subscribers)
     19900: "growth",
     39900: "professional",
     79900: "enterprise",
-    # Monthly + setup fee (first invoice, setup currently waived)
+    # Monthly + setup fee (legacy, setup now waived)
     54800: "growth",         # $249 + $299 setup
     99800: "professional",   # $499 + $499 setup
     189800: "enterprise",    # $899 + $999 setup
-    # Legacy monthly + setup fee
     49800: "growth",         # $199 + $299 setup
     89800: "professional",   # $399 + $499 setup
     179800: "enterprise",    # $799 + $999 setup
@@ -274,8 +276,10 @@ AMOUNT_TO_PLAN: dict[int, str] = {
 
 # Keywords to match in product/price descriptions
 PLAN_KEYWORDS: dict[str, str] = {
+    "starter": "growth",
     "growth": "growth",
     "autopilot": "autopilot",
+    "pro": "professional",
     "professional": "professional",
     "enterprise": "enterprise",
 }

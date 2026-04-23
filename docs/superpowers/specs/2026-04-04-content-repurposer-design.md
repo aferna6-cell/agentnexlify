@@ -10,7 +10,7 @@
 
 A content repurposing engine that takes any source content (URL, text, YouTube link, podcast transcript) and generates 5 output formats: X/Twitter threads, LinkedIn carousels, email newsletter sequences, TikTok/Reels scripts, and social post variations. Two equal entry points: dashboard page and chat widget (Mode 2). Outputs connect to existing email sequence and social posting systems, plus new X/Twitter and TikTok integrations.
 
-**Plan gate:** Professional ($499) and Enterprise ($899) only.
+**Plan gate:** Pro ($250) and Enterprise ($899) only.
 
 ---
 

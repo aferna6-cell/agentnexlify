@@ -3,12 +3,12 @@ import { useAuth } from "../context/AuthContext";
 
 const planLabels = {
   free: "Free",
-  growth: "Growth",
-  professional: "Professional",
-  autopilot: "Autopilot",
+  growth: "Starter",
+  autopilot: "Growth",
+  professional: "Pro",
   enterprise: "Enterprise",
-  foundation: "Growth",
-  operations: "Professional",
+  foundation: "Starter",
+  operations: "Pro",
 };
 
 const planColors = {

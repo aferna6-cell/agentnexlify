@@ -60,7 +60,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, automation, basic SEO audit, and AI content writer. Professional adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
+      "Every plan builds on the previous tier. Free includes unlimited conversations during a 7-day trial, chat widget, customer capture, and FAQ. Starter ($99/mo) adds booking, SMS, automation, basic SEO audit, and AI content writer. Growth ($150/mo) adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Pro ($250/mo) adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
@@ -78,7 +78,7 @@ const faqData = [
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Absolutely! Start with our free plan or Growth and upgrade as your business scales. You can change your plan anytime from the Billing page.",
+      "Absolutely! Start with our free plan or Starter and upgrade as your business scales. You can change your plan anytime from the Billing page.",
   },
   {
     id: "faq-a6",
@@ -502,7 +502,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "url": "https://agentnexlify.com",
   "logo": "https://agentnexlify.com/logo.png",
-  "description": "AI-powered business automation platform.",
+  "description": "Your 24/7 AI employee that answers customers, captures leads, books appointments, and follows up automatically.",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Clemson",
@@ -527,13 +527,16 @@ export default function Home() {
   "url": "https://agentnexlify.com",
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
-    {
-      "@type": "Offer", "name": "Growth", "price": "249", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "249", "priceCurrency": "USD", "billingDuration": "P1M" }
+    { "@type": "Offer", "name": "Starter", "price": "99", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Professional", "price": "499", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "499", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Growth", "price": "150", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "150", "priceCurrency": "USD", "billingDuration": "P1M" }
+    },
+    {
+      "@type": "Offer", "name": "Pro", "price": "250", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "250", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
       "@type": "Offer", "name": "Enterprise", "price": "899", "priceCurrency": "USD",
@@ -547,11 +550,11 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes unlimited conversations during a 14-day trial, chat widget, customer capture, and FAQ. Growth adds booking, SMS, automation, basic SEO audit, and AI content writer. Professional adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes unlimited conversations during a 7-day trial, chat widget, customer capture, and FAQ. Starter ($99/mo) adds booking, SMS, automation, basic SEO audit, and AI content writer. Growth ($150/mo) adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Pro ($250/mo) adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. We also integrate with Twilio for SMS and Stripe for payments." } },
 
-    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
+    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Starter and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
     { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers - you decide how to follow up." } },
     { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service." } }
@@ -626,9 +629,8 @@ export default function Home() {
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
               <h1 className="reveal">
-                The AI chat widget that{" "}
-                <span className="accent-gradient">actually knows</span> your
-                business.
+                Your hardest working employee. It answers, follows up, and sells
+                — while you <span className="accent-gradient">sleep.</span>
               </h1>
               <p
                 className="reveal"
@@ -639,9 +641,9 @@ export default function Home() {
                   maxWidth: 560,
                 }}
               >
-                Install in 30 seconds. No CRM migration. No agency. Per-tenant
-                knowledge base built on your services, your menu, your pricing.
-                Flat $249/mo — try free.
+                Your 24/7 AI front desk that talks to customers, captures leads,
+                books appointments, and follows up automatically. Install in 30
+                seconds. Start free, then from $99/mo.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
@@ -974,7 +976,7 @@ export default function Home() {
                 <li>AI chat widget</li>
                 <li>Customer capture</li>
                 <li>Unlimited conversations</li>
-                <li>14-day free trial</li>
+                <li>7-day free trial</li>
                 <li>Basic dashboard</li>
                 <li>Email notifications</li>
                 <li>Widget customization</li>
@@ -988,30 +990,23 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Growth */}
+            {/* Starter */}
             <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Growth</div>
-              <div className="lp-pricing-tagline">
-                Capture, convert, and start marketing smarter
-              </div>
+              <div className="lp-pricing-plan-name">Starter</div>
+              <div className="lp-pricing-tagline">Your AI front desk</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$249</span>
+                <span className="lp-pricing-dollar">$99</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
-                <span className="lp-pricing-setup-original">
-                  $299 one-time setup
-                </span>
-                <span className="lp-pricing-waived-badge pulse-glow">
-                  Waived for early customers
-                </span>
+                No setup fee · Cancel anytime
               </div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>AI chat widget</li>
                 <li>Email &amp; form lead capture</li>
                 <li>Auto follow-up email &amp; SMS</li>
-                <li>CRM contact management</li>
+                <li>Customer management</li>
                 <li>Appointment booking</li>
                 <li>2 automation sequences</li>
                 <li>Up to 500 conversations/month</li>
@@ -1024,32 +1019,25 @@ export default function Home() {
               <StripeCta plan="growth">Get Started {"\u2192"}</StripeCta>
             </div>
 
-            {/* Professional — Most Popular */}
+            {/* Growth — Most Popular */}
             <div className="lp-pricing-card popular reveal">
-              <div className="lp-pricing-plan-name">Professional</div>
-              <div className="lp-pricing-tagline">
-                The complete toolkit to run, grow, and market your business
-              </div>
+              <div className="lp-pricing-plan-name">Growth</div>
+              <div className="lp-pricing-tagline">Automate your follow-ups</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$499</span>
+                <span className="lp-pricing-dollar">$150</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
-                <span className="lp-pricing-setup-original">
-                  $499 one-time setup
-                </span>
-                <span className="lp-pricing-waived-badge pulse-glow">
-                  Waived for early customers
-                </span>
+                No setup fee · Cancel anytime
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">
-                Everything in Growth, plus:
+                Everything in Starter, plus:
               </div>
               <ul className="lp-pricing-features">
                 <li>Up to 6 automation sequences</li>
                 <li>Lead nurturing sequences</li>
-                <li>CRM pipeline automation</li>
+                <li>Pipeline automation</li>
                 <li>AI-powered email responses</li>
                 <li>Review request automation</li>
                 <li>Full SEO audit suite &amp; keyword tracking</li>
@@ -1060,30 +1048,23 @@ export default function Home() {
                 <li>Advanced analytics &amp; insights</li>
                 <li>Priority email &amp; chat support</li>
               </ul>
-              <StripeCta plan="professional">Get Started {"\u2192"}</StripeCta>
+              <StripeCta plan="autopilot">Get Started {"\u2192"}</StripeCta>
             </div>
 
-            {/* Enterprise */}
+            {/* Pro */}
             <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Enterprise</div>
-              <div className="lp-pricing-tagline">
-                White-glove service with full marketing automation
-              </div>
+              <div className="lp-pricing-plan-name">Pro</div>
+              <div className="lp-pricing-tagline">Your full AI employee</div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$899</span>
+                <span className="lp-pricing-dollar">$250</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
-                <span className="lp-pricing-setup-original">
-                  $999 one-time setup
-                </span>
-                <span className="lp-pricing-waived-badge pulse-glow">
-                  Waived for early customers
-                </span>
+                No setup fee · Cancel anytime
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">
-                Everything in Professional, plus:
+                Everything in Growth, plus:
               </div>
               <ul className="lp-pricing-features">
                 <li>Unlimited automation sequences</li>
@@ -1098,12 +1079,12 @@ export default function Home() {
                 <li>Full analytics suite</li>
                 <li>Dedicated account manager</li>
               </ul>
-              <StripeCta plan="enterprise">Get Started {"\u2192"}</StripeCta>
+              <StripeCta plan="professional">Get Started {"\u2192"}</StripeCta>
             </div>
           </div>
           <p className="lp-pricing-footer-note reveal">
-            Setup fees waived for our first customers. All plans include
-            hands-on onboarding. Cancel anytime.
+            No setup fees. No contracts. All paid plans include hands-on
+            onboarding and ongoing optimization. Cancel anytime.
           </p>
         </div>
       </section>

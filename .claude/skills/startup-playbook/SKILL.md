@@ -91,9 +91,9 @@ Distilled from `startup@startup-skill` plugin (startup-competitors + startup-pos
 
 ### Current positioning (as of 2026-04-23)
 - **Category:** Vertical AI Chat Widget for Small Business
-- **Primary tagline:** "The widget that knows your business."
+- **Primary tagline:** "Your hardest working employee. It answers, follows up, and sells — while you sleep."
 - **ICP:** 1-3 location SMB in dental, legal, salon, med-spa, real estate, restaurant, auto, medical, tutoring, fitness
-- **Pricing:** $249 growth / $299 autopilot / $499 professional / $899 enterprise (flat)
+- **Pricing:** $99 Starter / $150 Growth / $250 Pro / $899 Enterprise (flat)
 - **Six unique attributes:** per-tenant vertical KB, widget-first identity, transparent pricing, flat pricing, 30-second embed, no CRM migration, self-serve
 
 ### Non-negotiables (never change without explicit decision)

@@ -41,8 +41,8 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - `_archive/`, `landing-page-v2/`, `public/` — **legacy, do not touch**
 
 ### Plan names + prices
-- `free`, `growth` ($249/mo), `professional` ($499/mo), `autopilot` ($299/mo), `enterprise` ($899/mo)
-- Legacy prices (billed on old contracts): growth $199, professional $399, enterprise $799
+- `free`, `growth` ($99/mo Starter), `autopilot` ($150/mo Growth), `professional` ($250/mo Pro), `enterprise` ($899/mo)
+- Legacy prices (billed on old contracts): growth $199/$249, professional $399/$499, enterprise $799/$899
 - Retired names, **never use**: `foundation`, `operations`
 
 ### Agents + skills
