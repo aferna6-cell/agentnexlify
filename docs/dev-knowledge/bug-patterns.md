@@ -2184,3 +2184,21 @@ https://claude.ai/code/session_01AMEaRhVMfXypTzmBCpm9r4
 **Author:** Claude
 **Files Changed:** backend/services/appointment_booker.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(noshow_recovery): CAN-SPAM default-deny on unsubscribe check + escalate mark-sent failure logs
+
+- Unsubscribe check failure now skips send (default-deny) instead of proceeding
+- Mark-sent failures (both initial + follow-up) escalated to error log with
+  duplicate-send risk note
+- Follow-up SMS/email/rebook-check failures upgraded debug -> warning for
+  parity with initial send path
+- Parse-failure on updated_at now logs warning before continue
+- Added regression test TestNoshowRecoveryUnsubscribeDefaultDeny
+- Documented as bug-patterns #72
+**Date:** 2026-04-23
+**Commit:** fd37906
+**Author:** aferna6-cell
+**Files Changed:** docs/dev-knowledge/bug-patterns.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
