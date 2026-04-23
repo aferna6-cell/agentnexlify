@@ -11,7 +11,7 @@
 - Text appears: "That was a $500 job."
 - Cut to screen recording of the AgentNexLiFy widget capturing a lead at 2 AM.
 - Text: "This never sleeps."
-**CTA:** "Link in bio. 14 days free."
+**CTA:** "Link in bio. 7 days free."
 
 ---
 
@@ -53,7 +53,7 @@
 - Text: "They called your competitor instead."
 - Show widget popping up: "Hi! How can I help you today?"
 - Text: "Be the business that answers."
-**CTA:** "14 days free. Link in bio."
+**CTA:** "7 days free. Link in bio."
 
 ---
 

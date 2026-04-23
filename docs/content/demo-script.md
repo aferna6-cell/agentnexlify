@@ -154,7 +154,7 @@
 
 "So to recap: AgentNexLiFy gives you an AI receptionist that works 24/7, captures every lead, books appointments, sends reminders with what to bring, follows up automatically with aftercare and rebook suggestions, sends invoices, gets contracts signed, and requests reviews — all without you lifting a finger."
 
-"Plans start at $249/month. Want to try it free for 14 days?"
+"Plans start at $249/month. Want to try it free for 7 days?"
 
 ---
 

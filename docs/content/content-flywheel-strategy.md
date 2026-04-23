@@ -81,7 +81,7 @@ Why we built this. The real human behind the product.
 
 Every post should make the next step obvious:
 
-1. **Top of funnel:** "Link in bio to try free for 14 days"
+1. **Top of funnel:** "Link in bio to try free for 7 days"
 2. **Mid funnel:** "Comment 'LEADS' and I'll send you our free checklist"
 3. **Bottom funnel:** "DM me 'DEMO' and I'll show you your bot live"
 

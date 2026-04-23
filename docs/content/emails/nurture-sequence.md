@@ -1,3 +1,4 @@
+<!-- TODO: cadence review — trial is now 7 days, this sequence still spans 14 — needs product decision -->
 # Email Nurture Sequence — New Free Signups
 
 5-email sequence for free-tier users who haven't upgraded yet. Sent over 14 days.
