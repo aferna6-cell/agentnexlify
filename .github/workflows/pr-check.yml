@@ -88,8 +88,10 @@ jobs:
             ERRORS=$((ERRORS + 1))
           fi
 
-          # Hardcoded secrets
-          if grep -rn "sk_live_\|sk_test_\|sk-ant-" backend/ frontend/src/ --include="*.py" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null; then
+          # Hardcoded secrets (exclude test dirs to avoid false-positives on fixture keys)
+          if grep -rn "sk_live_\|sk_test_\|sk-ant-" backend/ frontend/src/ \
+            --include="*.py" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+            --exclude-dir=tests --exclude-dir=__tests__ 2>/dev/null; then
             echo "::error::Possible hardcoded secrets detected"
             ERRORS=$((ERRORS + 1))
           fi
