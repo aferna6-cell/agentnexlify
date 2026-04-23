@@ -248,8 +248,8 @@ export default function ContentRepurposePage() {
               marginBottom: 16,
             }}
           >
-            Content Repurposer is available on Pro ($250/mo) and
-            Enterprise ($899/mo) plans.
+            Content Repurposer is available on Professional ($150/mo) and
+            Enterprise ($250/mo) plans.
           </p>
           <button
             className="btn-primary"

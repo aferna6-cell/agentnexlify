@@ -6,10 +6,9 @@ import { notify } from "../utils/notify";
 
 const PLANS = [
   { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
-  { key: "growth",       name: "Starter",      price: "$99",  period: "/mo" },
-  { key: "autopilot",    name: "Growth",       price: "$150", period: "/mo", popular: true },
-  { key: "professional", name: "Pro",          price: "$250", period: "/mo" },
-  { key: "enterprise",   name: "Enterprise",   price: "$899", period: "/mo" },
+  { key: "growth",       name: "Growth",       price: "$99", period: "/mo", trial: "7-day free trial" },
+  { key: "professional", name: "Professional", price: "$150", period: "/mo", popular: true },
+  { key: "enterprise",  name: "Enterprise",   price: "$250", period: "/mo" },
 ];
 
 // Data-driven feature comparison matrix
@@ -427,6 +426,18 @@ export default function BillingPage() {
                     }}>
                       {plan.price}<span style={{ fontSize: "0.7rem" }}>{plan.period}</span>
                     </div>
+                    {plan.trial && (
+                      <div style={{
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        color: "var(--green)",
+                        marginTop: 4,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                      }}>
+                        {plan.trial}
+                      </div>
+                    )}
                     {isCurrent && (
                       <div style={{
                         fontSize: "0.65rem",

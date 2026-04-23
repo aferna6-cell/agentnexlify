@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 
-const PLAN_ORDER = ["free", "growth", "professional", "autopilot", "enterprise"];
+const PLAN_ORDER = ["free", "growth", "autopilot", "professional", "enterprise"];
 
 const PLAN_DISPLAY = {
   free: { name: "Free", price: "$0" },
-  growth: { name: "Starter", price: "$99/mo" },
-  autopilot: { name: "Growth", price: "$150/mo" },
-  professional: { name: "Pro", price: "$250/mo" },
-  enterprise: { name: "Enterprise", price: "$899/mo" },
+  growth: { name: "Growth", price: "$99/mo" },
+  professional: { name: "Professional", price: "$150/mo" },
+  autopilot: { name: "Autopilot", price: "$299/mo" },
+  enterprise: { name: "Enterprise", price: "$250/mo" },
 };
 
 const overlayStyle = {
@@ -181,8 +181,5 @@ export function planBelowRequired(currentPlan, requiredPlan) {
   const current = PLAN_ORDER.indexOf(currentPlan ?? "free");
   const required = PLAN_ORDER.indexOf(requiredPlan);
   if (required === -1) return false;
-  // For autopilot (index 3): treat it as below professional (index 2) when
-  // required is professional, since autopilot costs less and lacks pro features.
-  // Both autopilot and professional are at different positions; just compare indices.
   return current < required;
 }

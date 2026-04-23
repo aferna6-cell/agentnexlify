@@ -175,6 +175,8 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
             "metadata": {"tenant_id": req.tenant_id, "plan": req.plan},
         },
     }
+    if req.plan == "growth":
+        session_params["subscription_data"]["trial_period_days"] = 7
 
     # Attach promo code if provided
     if req.promo_code:
@@ -254,10 +256,9 @@ async def stripe_webhook(request: Request):
 
 AMOUNT_TO_PLAN: dict[int, str] = {
     # Monthly only (current pricing)
-    9900: "growth",          # $99 Starter
-    15000: "autopilot",      # $150 Growth
-    25000: "professional",   # $250 Pro
-    89900: "enterprise",     # $899 Enterprise
+    9900: "growth",
+    15000: "professional",
+    25000: "enterprise",
     # Legacy monthly pricing (keep for existing subscribers)
     24900: "growth",
     29900: "autopilot",

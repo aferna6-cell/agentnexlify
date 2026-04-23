@@ -79,30 +79,30 @@ export default function FreeWidget() {
         price: "0",
         priceCurrency: "USD",
         description:
-          "Unlimited conversations (7-day trial), AI-powered responses, lead capture, appointment booking, email notifications",
+          "Free forever with AI-powered responses, lead capture, appointment booking, and email notifications",
       },
       {
         "@type": "Offer",
         name: "Growth",
-        price: "249",
+        price: "99",
         priceCurrency: "USD",
         priceSpecification: {
           "@type": "UnitPriceSpecification",
-          price: "249",
+          price: "99",
           priceCurrency: "USD",
           billingDuration: "P1M",
         },
         description:
-          "Unlimited conversations, no watermark, basic automations, FAQ training",
+          "7-day free trial, unlimited conversations, no watermark, basic automations, FAQ training",
       },
       {
         "@type": "Offer",
         name: "Professional",
-        price: "499",
+        price: "150",
         priceCurrency: "USD",
         priceSpecification: {
           "@type": "UnitPriceSpecification",
-          price: "499",
+          price: "150",
           priceCurrency: "USD",
           billingDuration: "P1M",
         },
@@ -265,8 +265,8 @@ export default function FreeWidget() {
             </a>
           </div>
           <p className="hero-note reveal" ref={revealRef}>
-            Unlimited conversations with 7-day free trial {"\u2014"} upgrade
-            anytime
+            Free forever, with a 7-day Growth trial when you're ready to
+            upgrade {"\u2014"} no pressure
           </p>
         </div>
       </section>
@@ -364,8 +364,8 @@ export default function FreeWidget() {
               Everything you need to start capturing leads.
             </h2>
             <p className="section-subtitle reveal" ref={revealRef}>
-              No hidden fees. Unlimited access during your 7-day trial. Upgrade
-              anytime to keep going.
+              No hidden fees. Start free now, then unlock Growth with a 7-day
+              trial when you're ready.
             </p>
           </div>
           <div className="included-grid">
@@ -375,9 +375,8 @@ export default function FreeWidget() {
               </div>
               <h3>Unlimited Conversations</h3>
               <p>
-                No conversation limits during your 7-day free trial. Capture
-                every lead that visits your site after hours or during busy
-                periods.
+                No conversation limits on the free plan. Capture every lead that
+                visits your site after hours or during busy periods.
               </p>
             </div>
             <div className="included-card reveal" ref={revealRef}>
@@ -458,10 +457,10 @@ export default function FreeWidget() {
                     Free Plan<span className="price-tag">$0/mo</span>
                   </th>
                   <th>
-                    Starter<span className="price-tag">$99/mo</span>
+                    Growth<span className="price-tag">$99/mo</span>
                   </th>
                   <th>
-                    Growth<span className="price-tag">$150/mo</span>
+                    Professional<span className="price-tag">$150/mo</span>
                   </th>
                 </tr>
               </thead>

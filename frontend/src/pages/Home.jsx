@@ -60,7 +60,7 @@ const faqData = [
     id: "faq-a1",
     question: "What\u2019s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free includes unlimited conversations during a 7-day trial, chat widget, customer capture, and FAQ. Starter ($99/mo) adds booking, SMS, automation, basic SEO audit, and AI content writer. Growth ($150/mo) adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Pro ($250/mo) adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
+      "Every plan builds on the previous tier. Free includes the chat widget, customer capture, and FAQ knowledge base. Growth starts at $99/month and includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional is $150/month with the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise is $250/month with AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
@@ -550,7 +550,7 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes unlimited conversations during a 7-day trial, chat widget, customer capture, and FAQ. Starter ($99/mo) adds booking, SMS, automation, basic SEO audit, and AI content writer. Growth ($150/mo) adds full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Pro ($250/mo) adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes the chat widget, customer capture, and FAQ knowledge base. Growth starts at $99/month and includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional is $150/month with the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise is $250/month with AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. We also integrate with Twilio for SMS and Stripe for payments." } },
 
@@ -976,7 +976,7 @@ export default function Home() {
                 <li>AI chat widget</li>
                 <li>Customer capture</li>
                 <li>Unlimited conversations</li>
-                <li>7-day free trial</li>
+                <li>Free forever</li>
                 <li>Basic dashboard</li>
                 <li>Email notifications</li>
                 <li>Widget customization</li>
@@ -999,7 +999,9 @@ export default function Home() {
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
-                No setup fee · Cancel anytime
+                <span className="lp-pricing-waived-badge pulse-glow">
+                  7-day free trial included
+                </span>
               </div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">

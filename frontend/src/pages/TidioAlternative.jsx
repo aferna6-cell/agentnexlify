@@ -115,7 +115,7 @@ const data = {
       {
         question: "Does NexLiFy have a free plan like Tidio?",
         answer:
-          "Yes. NexLiFy\u2019s free tier includes unlimited conversations during a 7-day trial with full AI capabilities, missed call text-back, and SMS. No credit card required to start.",
+          "Yes. NexLiFy has a free plan, and the $99 Growth plan includes a 7-day free trial with full AI capabilities, missed call text-back, and SMS. No credit card is required to get started.",
       },
     ],
   },

@@ -235,7 +235,6 @@ def _provision_tenant_account(
         "password_hash": password_hash,
         "city": city,
         "plan": "free",
-        "free_trial_started_at": datetime.now(timezone.utc).isoformat(),
     }
     result = db.table("tenants").insert(tenant_data).execute()
     if not result.data:
@@ -1214,6 +1213,8 @@ async def billing_checkout(
         "metadata": {"tenant_id": tenant_id, "plan": plan},
         "subscription_data": {"metadata": {"tenant_id": tenant_id, "plan": plan}},
     }
+    if plan == "growth":
+        session_params["subscription_data"]["trial_period_days"] = 7
 
     promo_code = body.get("promo_code")
     if promo_code:
@@ -1445,7 +1446,7 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
     trial_started = tenant.get("free_trial_started_at")
 
     trial_expires = None
-    if trial_started:
+    if trial_started and trial["trial_days_remaining"] is not None:
         from datetime import datetime, timezone, timedelta
         if isinstance(trial_started, str):
             ts = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))

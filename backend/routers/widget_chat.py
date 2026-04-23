@@ -297,24 +297,6 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 2. Origin check
     _check_origin(request, widget.get("allowed_domains"))
 
-    # 2b. Free trial expiry check
-    if (tenant.get("plan") or "free") == "free" and tenant.get("free_trial_started_at"):
-        from datetime import datetime, timezone
-        trial_started = tenant["free_trial_started_at"]
-        if isinstance(trial_started, str):
-            trial_started = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
-        if trial_started.tzinfo is None:
-            trial_started = trial_started.replace(tzinfo=timezone.utc)
-        elapsed_days = (datetime.now(timezone.utc) - trial_started).days
-        if elapsed_days >= 14:
-            return WidgetChatResponse(
-                response="Your free trial has expired. Upgrade your plan to continue using your AI assistant.",
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=True,
-                trial_expired=True,
-            )
-
     # 3. All plans now have unlimited conversations (limit check removed).
 
     # 4. Get or create conversation

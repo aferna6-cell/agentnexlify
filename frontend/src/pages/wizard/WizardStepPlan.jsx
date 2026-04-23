@@ -14,29 +14,29 @@ const PLANS = [
   },
   {
     key: "growth",
-    name: "Starter",
+    name: "Growth",
     price: "$99/mo",
     color: "#6366f1",
-    features: ["Unlimited conversations", "Lead management", "Email sequences", "Priority support"],
-    cta: "Start Starter",
-    highlight: false,
-  },
-  {
-    key: "autopilot",
-    name: "Growth",
-    price: "$150/mo",
-    color: "#0ea5e9",
-    features: ["Everything in Starter", "Follow-up automations", "FAQ bot", "Quote automation"],
+    features: ["7-day free trial", "Unlimited conversations", "CRM & lead management", "Email sequences"],
     cta: "Start Growth",
     highlight: true,
   },
   {
     key: "professional",
-    name: "Pro",
-    price: "$250/mo",
+    name: "Professional",
+    price: "$150/mo",
     color: "#8b5cf6",
-    features: ["Everything in Growth", "AI booking agent", "Task automation", "Lead scoring"],
-    cta: "Start Pro",
+    features: ["Everything in Growth", "AI answering service", "Marketing campaigns", "White-label options"],
+    cta: "Start Professional",
+    highlight: false,
+  },
+  {
+    key: "enterprise",
+    name: "Enterprise",
+    price: "$250/mo",
+    color: "#0ea5e9",
+    features: ["Everything in Professional", "Team accounts", "Webhook integrations", "White-label options"],
+    cta: "Start Enterprise",
     highlight: false,
   },
 ];
@@ -88,7 +88,7 @@ export default function WizardStepPlan({ wizardData, onNext, onBack, token, tena
     <div>
       <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Choose your plan</h2>
       <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32, fontSize: "0.9rem" }}>
-        Start free. Upgrade anytime as your business grows.
+        Start free, or try Growth free for 7 days before billing starts.
       </p>
 
       {error && <div style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 10, padding: 14, marginBottom: 20, color: "#f87171", fontSize: "0.9rem" }}>{error}</div>}
