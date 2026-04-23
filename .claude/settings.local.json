@@ -23,7 +23,8 @@
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
       "Read(//c/Users/aidan/**)",
-      "Bash(npx --no-install vite build)"
+      "Bash(npx --no-install vite build)",
+      "Write(.mcp.json)"
     ]
   }
 }
