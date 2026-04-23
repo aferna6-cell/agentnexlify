@@ -22,7 +22,8 @@
       "Bash(gh auth:*)",
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
-      "Read(//c/Users/aidan/**)"
+      "Read(//c/Users/aidan/**)",
+      "Bash(npx --no-install vite build)"
     ]
   }
 }
