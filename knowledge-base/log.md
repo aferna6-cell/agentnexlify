@@ -284,3 +284,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-23 18:05] discover-retry | new_files=0 added_known=0
 
 ## [2026-04-23 18:06] discover-startpage | new_files=10
+
+## [2026-04-23 18:15] discover+compile | cron 18:00 | commits=1 raw=14 wiki=4
