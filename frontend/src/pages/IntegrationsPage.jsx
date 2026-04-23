@@ -1,19 +1,39 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
-  fetchWebhooks, createWebhook, updateWebhook, toggleWebhook,
-  deleteWebhook, fetchWebhookLogs, testWebhook,
+  fetchWebhooks,
+  createWebhook,
+  updateWebhook,
+  toggleWebhook,
+  deleteWebhook,
+  fetchWebhookLogs,
+  testWebhook,
 } from "../utils/api/webhooks";
 import {
-  fetchGoogleCalendarStatus, startGoogleCalendarAuth, disconnectGoogleCalendar,
-  fetchFacebookStatus, getFacebookAuthUrl, disconnectFacebook,
+  fetchGoogleCalendarStatus,
+  startGoogleCalendarAuth,
+  disconnectGoogleCalendar,
+  fetchFacebookStatus,
+  getFacebookAuthUrl,
+  disconnectFacebook,
 } from "../utils/api/integrations";
+import {
+  listZapierKeys,
+  generateZapierKey,
+  revokeZapierKey,
+} from "../utils/api/zapier";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 /* ── Inline SVG: Google Calendar logo ── */
 function GoogleCalendarIcon({ size = 40 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <rect x="8" y="8" width="32" height="32" rx="4" fill="#fff" />
       <rect x="8" y="8" width="32" height="8" rx="4" fill="#4285F4" />
       <rect x="8" y="12" width="32" height="4" fill="#4285F4" />
@@ -36,7 +56,13 @@ function GoogleCalendarIcon({ size = 40 }) {
 /* ── Inline SVG: Facebook 'f' logo ── */
 function FacebookIcon({ size = 40 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <rect width="48" height="48" rx="8" fill="#1877F2" />
       <path
         d="M33 24h-6v-4c0-1.1.9-2 2-2h4v-6h-4c-4.4 0-8 3.6-8 8v4h-4v6h4v14h6V30h4l2-6z"
@@ -69,14 +95,17 @@ function FacebookMessengerSection({ token }) {
     }
   }, [user?.tenantId, token]);
 
-  useEffect(() => { loadStatus(); }, [loadStatus]);
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
 
   const handleConnect = async () => {
     setConnecting(true);
     setError(null);
     try {
       const data = await getFacebookAuthUrl(user.tenantId, token);
-      if (data.auth_url) window.open(data.auth_url, "_blank", "noopener,noreferrer");
+      if (data.auth_url)
+        window.open(data.auth_url, "_blank", "noopener,noreferrer");
     } catch (err) {
       setError("Failed to start Facebook authorization.");
     } finally {
@@ -107,19 +136,30 @@ function FacebookMessengerSection({ token }) {
   return (
     <div style={{ ...gcStyles.card, marginTop: "1rem" }}>
       <div style={gcStyles.cardTop}>
-        <div style={gcStyles.iconWrap}><FacebookIcon size={40} /></div>
+        <div style={gcStyles.iconWrap}>
+          <FacebookIcon size={40} />
+        </div>
         <div style={gcStyles.cardInfo}>
           <div style={gcStyles.cardTitle}>
             Facebook Messenger
-            {connected && <span style={gcStyles.connectedBadge}>Connected</span>}
+            {connected && (
+              <span style={gcStyles.connectedBadge}>Connected</span>
+            )}
           </div>
           <div style={gcStyles.cardDesc}>
-            Receive and reply to Facebook Messenger conversations from your shared inbox
+            Receive and reply to Facebook Messenger conversations from your
+            shared inbox
           </div>
         </div>
       </div>
       {loading && (
-        <div style={{ marginTop: "0.75rem", color: "var(--text-muted)", fontSize: "0.8125rem" }}>
+        <div
+          style={{
+            marginTop: "0.75rem",
+            color: "var(--text-muted)",
+            fontSize: "0.8125rem",
+          }}
+        >
           Checking connection status...
         </div>
       )}
@@ -132,14 +172,24 @@ function FacebookMessengerSection({ token }) {
           {status.page_id && (
             <div style={{ ...gcStyles.detailRow, marginTop: "0.375rem" }}>
               <span style={gcStyles.detailLabel}>Page ID</span>
-              <span style={{ ...gcStyles.detailValue, color: "var(--text-muted)", fontSize: "0.75rem" }}>
+              <span
+                style={{
+                  ...gcStyles.detailValue,
+                  color: "var(--text-muted)",
+                  fontSize: "0.75rem",
+                }}
+              >
                 {status.page_id}
               </span>
             </div>
           )}
         </div>
       )}
-      {error && <div className="error-banner" style={{ marginTop: "0.75rem" }}>{error}</div>}
+      {error && (
+        <div className="error-banner" style={{ marginTop: "0.75rem" }}>
+          {error}
+        </div>
+      )}
       <div style={gcStyles.cardActions}>
         {!loading && connected ? (
           <button
@@ -147,7 +197,11 @@ function FacebookMessengerSection({ token }) {
             onClick={handleDisconnect}
             disabled={disconnecting}
           >
-            {disconnecting ? "Disconnecting..." : confirmDisconnect ? "Confirm disconnect?" : "Disconnect"}
+            {disconnecting
+              ? "Disconnecting..."
+              : confirmDisconnect
+                ? "Confirm disconnect?"
+                : "Disconnect"}
           </button>
         ) : (
           !loading && (
@@ -186,20 +240,60 @@ function FacebookMessengerSection({ token }) {
 }
 
 const ALL_EVENTS = [
-  { value: "lead.created", label: "Lead Created", desc: "When a new lead is captured" },
-  { value: "lead.updated", label: "Lead Updated", desc: "When lead stage/score changes" },
-  { value: "appointment.booked", label: "Appointment Booked", desc: "When an appointment is created" },
-  { value: "appointment.cancelled", label: "Appointment Cancelled", desc: "When an appointment is cancelled" },
-  { value: "conversation.started", label: "Conversation Started", desc: "New chat session begins" },
-  { value: "conversation.message", label: "Conversation Message", desc: "Each new chat message" },
-  { value: "automation.email_sent", label: "Automation Email Sent", desc: "When automation sends an email" },
+  {
+    value: "lead.created",
+    label: "Lead Created",
+    desc: "When a new lead is captured",
+  },
+  {
+    value: "lead.updated",
+    label: "Lead Updated",
+    desc: "When lead stage/score changes",
+  },
+  {
+    value: "appointment.booked",
+    label: "Appointment Booked",
+    desc: "When an appointment is created",
+  },
+  {
+    value: "appointment.cancelled",
+    label: "Appointment Cancelled",
+    desc: "When an appointment is cancelled",
+  },
+  {
+    value: "conversation.started",
+    label: "Conversation Started",
+    desc: "New chat session begins",
+  },
+  {
+    value: "conversation.message",
+    label: "Conversation Message",
+    desc: "Each new chat message",
+  },
+  {
+    value: "automation.email_sent",
+    label: "Automation Email Sent",
+    desc: "When automation sends an email",
+  },
 ];
 
 const TEMPLATES = [
-  { title: "Send new leads to Google Sheets", desc: "Automatically add each captured lead as a new row in a Google Sheet." },
-  { title: "Create Slack notification on new lead", desc: "Post a message to a Slack channel when a new lead comes in." },
-  { title: "Add leads to Mailchimp", desc: "Subscribe new leads to your Mailchimp audience automatically." },
-  { title: "Create Trello card for new appointment", desc: "Add a card to your Trello board when a new appointment is booked." },
+  {
+    title: "Send new leads to Google Sheets",
+    desc: "Automatically add each captured lead as a new row in a Google Sheet.",
+  },
+  {
+    title: "Create Slack notification on new lead",
+    desc: "Post a message to a Slack channel when a new lead comes in.",
+  },
+  {
+    title: "Add leads to Mailchimp",
+    desc: "Subscribe new leads to your Mailchimp audience automatically.",
+  },
+  {
+    title: "Create Trello card for new appointment",
+    desc: "Add a card to your Trello board when a new appointment is booked.",
+  },
 ];
 
 function StatusBadge({ active, failureCount }) {
@@ -220,7 +314,11 @@ function truncateUrl(url, max = 50) {
 function formatTime(ts) {
   if (!ts) return "Never";
   const d = new Date(ts);
-  return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return (
+    d.toLocaleDateString() +
+    " " +
+    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
 }
 
 /* ── Google Calendar Section ── */
@@ -241,7 +339,9 @@ function GoogleCalendarSection({ token }) {
     }
   }, [user?.tenantId, token]);
 
-  useEffect(() => { loadStatus(); }, [loadStatus]);
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
 
   const handleConnect = async () => {
     setConnecting(true);
@@ -272,14 +372,19 @@ function GoogleCalendarSection({ token }) {
   return (
     <div style={gcStyles.card}>
       <div style={gcStyles.cardTop}>
-        <div style={gcStyles.iconWrap}><GoogleCalendarIcon size={40} /></div>
+        <div style={gcStyles.iconWrap}>
+          <GoogleCalendarIcon size={40} />
+        </div>
         <div style={gcStyles.cardInfo}>
           <div style={gcStyles.cardTitle}>
             Google Calendar
-            {connected && <span style={gcStyles.connectedBadge}>Connected</span>}
+            {connected && (
+              <span style={gcStyles.connectedBadge}>Connected</span>
+            )}
           </div>
           <div style={gcStyles.cardDesc}>
-            Sync appointments to your Google Calendar and check availability against existing events
+            Sync appointments to your Google Calendar and check availability
+            against existing events
           </div>
         </div>
       </div>
@@ -291,14 +396,26 @@ function GoogleCalendarSection({ token }) {
           </div>
         </div>
       )}
-      {error && <div className="error-banner" style={{ marginTop: "0.75rem" }}>{error}</div>}
+      {error && (
+        <div className="error-banner" style={{ marginTop: "0.75rem" }}>
+          {error}
+        </div>
+      )}
       <div style={gcStyles.cardActions}>
         {connected ? (
-          <button className="btn-danger" onClick={handleDisconnect} disabled={disconnecting}>
+          <button
+            className="btn-danger"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+          >
             {disconnecting ? "Disconnecting..." : "Disconnect"}
           </button>
         ) : (
-          <button className="btn-primary" onClick={handleConnect} disabled={connecting}>
+          <button
+            className="btn-primary"
+            onClick={handleConnect}
+            disabled={connecting}
+          >
             {connecting ? "Connecting..." : "Connect"}
           </button>
         )}
@@ -319,10 +436,22 @@ export default function IntegrationsPage({ onNavigate }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [selectedLog, setSelectedLog] = useState(null);
   const [activeTab, setActiveTab] = useState("services");
-  const [form, setForm] = useState({ name: "", url: "", events: [], secret: "" });
+  const [form, setForm] = useState({
+    name: "",
+    url: "",
+    events: [],
+    secret: "",
+  });
   const [toast, setToast] = useState(null);
   const [testingId, setTestingId] = useState(null);
   const [testResult, setTestResult] = useState(null);
+  const [zapierKeys, setZapierKeys] = useState([]);
+  const [zapierLoading, setZapierLoading] = useState(false);
+  const [zapierKeyModal, setZapierKeyModal] = useState(false);
+  const [zapierKeyName, setZapierKeyName] = useState("");
+  const [zapierGenerating, setZapierGenerating] = useState(false);
+  const [zapierNewKey, setZapierNewKey] = useState(null);
+  const [zapierRevokingId, setZapierRevokingId] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -353,7 +482,58 @@ export default function IntegrationsPage({ onNavigate }) {
     }
   }, [user?.tenantId, token]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const loadZapierKeys = useCallback(async () => {
+    setZapierLoading(true);
+    try {
+      const data = await listZapierKeys(token);
+      setZapierKeys(data?.keys || []);
+    } catch (err) {
+      console.error("Failed to load Zapier keys", err);
+    } finally {
+      setZapierLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (activeTab === "zapier") loadZapierKeys();
+  }, [activeTab, loadZapierKeys]);
+
+  const handleGenerateZapierKey = async () => {
+    if (!zapierKeyName.trim()) return;
+    setZapierGenerating(true);
+    try {
+      const data = await generateZapierKey(zapierKeyName.trim(), token);
+      setZapierNewKey(data.key);
+      setZapierKeyName("");
+      loadZapierKeys();
+    } catch (err) {
+      console.error("Failed to generate key", err);
+    } finally {
+      setZapierGenerating(false);
+    }
+  };
+
+  const handleRevokeZapierKey = async (keyId) => {
+    if (
+      !window.confirm(
+        "Revoke this API key? Any Zaps using it will stop working.",
+      )
+    )
+      return;
+    setZapierRevokingId(keyId);
+    try {
+      await revokeZapierKey(keyId, token);
+      loadZapierKeys();
+    } catch (err) {
+      console.error("Failed to revoke key", err);
+    } finally {
+      setZapierRevokingId(null);
+    }
+  };
 
   const handleToggleEvent = (eventValue) => {
     setForm((f) => ({
@@ -365,7 +545,8 @@ export default function IntegrationsPage({ onNavigate }) {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.url.trim() || form.events.length === 0) return;
+    if (!form.name.trim() || !form.url.trim() || form.events.length === 0)
+      return;
     setSaving(true);
     try {
       if (editId) {
@@ -399,7 +580,15 @@ export default function IntegrationsPage({ onNavigate }) {
     try {
       const result = await toggleWebhook(user.tenantId, token, id);
       setWebhooks((prev) =>
-        prev.map((w) => (w.id === id ? { ...w, is_active: result.is_active, failure_count: result.is_active ? 0 : w.failure_count } : w))
+        prev.map((w) =>
+          w.id === id
+            ? {
+                ...w,
+                is_active: result.is_active,
+                failure_count: result.is_active ? 0 : w.failure_count,
+              }
+            : w,
+        ),
       );
     } catch (err) {
       console.error("Failed to toggle webhook", err);
@@ -431,9 +620,19 @@ export default function IntegrationsPage({ onNavigate }) {
     setTestResult(null);
     try {
       const res = await testWebhook(user.tenantId, token, webhookId);
-      setTestResult({ webhookId, success: res.success, statusCode: res.status_code, event: res.event });
+      setTestResult({
+        webhookId,
+        success: res.success,
+        statusCode: res.status_code,
+        event: res.event,
+      });
     } catch (err) {
-      setTestResult({ webhookId, success: false, statusCode: null, event: null });
+      setTestResult({
+        webhookId,
+        success: false,
+        statusCode: null,
+        event: null,
+      });
     } finally {
       setTestingId(null);
     }
@@ -447,7 +646,13 @@ export default function IntegrationsPage({ onNavigate }) {
         <div style={gcStyles.toast}>
           <span style={gcStyles.toastIcon}>&#10003;</span>
           {toast}
-          <button onClick={() => setToast(null)} style={gcStyles.toastClose} aria-label="Dismiss">&times;</button>
+          <button
+            onClick={() => setToast(null)}
+            style={gcStyles.toastClose}
+            aria-label="Dismiss"
+          >
+            &times;
+          </button>
         </div>
       )}
 
@@ -458,17 +663,35 @@ export default function IntegrationsPage({ onNavigate }) {
 
       {/* Tabs */}
       <div className="wh-tabs">
-        <button className={`wh-tab${activeTab === "services" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("services")}>
+        <button
+          className={`wh-tab${activeTab === "services" ? " wh-tab-active" : ""}`}
+          onClick={() => setActiveTab("services")}
+        >
           Connected Services
         </button>
-        <button className={`wh-tab${activeTab === "webhooks" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("webhooks")}>
+        <button
+          className={`wh-tab${activeTab === "webhooks" ? " wh-tab-active" : ""}`}
+          onClick={() => setActiveTab("webhooks")}
+        >
           Webhooks
         </button>
-        <button className={`wh-tab${activeTab === "logs" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("logs")}>
+        <button
+          className={`wh-tab${activeTab === "logs" ? " wh-tab-active" : ""}`}
+          onClick={() => setActiveTab("logs")}
+        >
           Recent Deliveries
         </button>
-        <button className={`wh-tab${activeTab === "templates" ? " wh-tab-active" : ""}`} onClick={() => setActiveTab("templates")}>
+        <button
+          className={`wh-tab${activeTab === "templates" ? " wh-tab-active" : ""}`}
+          onClick={() => setActiveTab("templates")}
+        >
           Integration Guides
+        </button>
+        <button
+          className={`wh-tab${activeTab === "zapier" ? " wh-tab-active" : ""}`}
+          onClick={() => setActiveTab("zapier")}
+        >
+          ⚡ Zapier API Keys
         </button>
       </div>
 
@@ -484,7 +707,10 @@ export default function IntegrationsPage({ onNavigate }) {
       {activeTab === "webhooks" && (
         <>
           <div style={{ marginBottom: "1rem" }}>
-            <button className="btn-primary" onClick={() => showForm ? resetForm() : setShowForm(true)}>
+            <button
+              className="btn-primary"
+              onClick={() => (showForm ? resetForm() : setShowForm(true))}
+            >
               {showForm ? "Cancel" : "+ Add Webhook"}
             </button>
           </div>
@@ -496,7 +722,9 @@ export default function IntegrationsPage({ onNavigate }) {
                 <label>Name</label>
                 <input
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   placeholder="My Zapier Integration"
                 />
               </div>
@@ -504,7 +732,9 @@ export default function IntegrationsPage({ onNavigate }) {
                 <label>Webhook URL</label>
                 <input
                   value={form.url}
-                  onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, url: e.target.value }))
+                  }
                   placeholder="https://hooks.zapier.com/hooks/catch/..."
                 />
               </div>
@@ -530,27 +760,48 @@ export default function IntegrationsPage({ onNavigate }) {
                 <label>Secret (optional)</label>
                 <input
                   value={form.secret}
-                  onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, secret: e.target.value }))
+                  }
                   placeholder="Auto-generated if left blank"
                   type="password"
                 />
-                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-                  Used to sign payloads with HMAC-SHA256 (X-Webhook-Signature header)
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  Used to sign payloads with HMAC-SHA256 (X-Webhook-Signature
+                  header)
                 </p>
               </div>
               <button
                 className="btn-primary"
                 onClick={handleSave}
-                disabled={saving || !form.name.trim() || !form.url.trim() || form.events.length === 0}
+                disabled={
+                  saving ||
+                  !form.name.trim() ||
+                  !form.url.trim() ||
+                  form.events.length === 0
+                }
               >
-                {saving ? "Saving..." : editId ? "Update Webhook" : "Create Webhook"}
+                {saving
+                  ? "Saving..."
+                  : editId
+                    ? "Update Webhook"
+                    : "Create Webhook"}
               </button>
             </div>
           )}
 
           {webhooks.length === 0 && !showForm ? (
             <div className="empty-card">
-              <p>No webhooks configured yet. Add a webhook to send data to Zapier, Make, or n8n when events happen.</p>
+              <p>
+                No webhooks configured yet. Add a webhook to send data to
+                Zapier, Make, or n8n when events happen.
+              </p>
             </div>
           ) : (
             <div className="wh-list">
@@ -559,7 +810,10 @@ export default function IntegrationsPage({ onNavigate }) {
                   <div className="wh-item-header">
                     <div className="wh-item-title">
                       <strong>{wh.name}</strong>
-                      <StatusBadge active={wh.is_active} failureCount={wh.failure_count} />
+                      <StatusBadge
+                        active={wh.is_active}
+                        failureCount={wh.failure_count}
+                      />
                     </div>
                     <div className="wh-item-actions">
                       <button
@@ -567,18 +821,61 @@ export default function IntegrationsPage({ onNavigate }) {
                         onClick={() => handleTest(wh.id)}
                         disabled={testingId === wh.id}
                         title="Send test event"
-                        style={{ fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.3px", padding: "0.3rem 0.5rem" }}
+                        style={{
+                          fontSize: "0.7rem",
+                          fontWeight: 600,
+                          letterSpacing: "0.3px",
+                          padding: "0.3rem 0.5rem",
+                        }}
                       >
                         {testingId === wh.id ? "..." : "Test"}
                       </button>
-                      <button className="wh-btn-sm" onClick={() => handleEdit(wh)} title="Edit">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      <button
+                        className="wh-btn-sm"
+                        onClick={() => handleEdit(wh)}
+                        title="Edit"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
                       </button>
-                      <button className="wh-btn-sm" onClick={() => handleToggle(wh.id)} title={wh.is_active ? "Disable" : "Enable"}>
+                      <button
+                        className="wh-btn-sm"
+                        onClick={() => handleToggle(wh.id)}
+                        title={wh.is_active ? "Disable" : "Enable"}
+                      >
                         {wh.is_active ? (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                          </svg>
                         ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="var(--green)"
+                            strokeWidth="2"
+                          >
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                          </svg>
                         )}
                       </button>
                       <button
@@ -586,8 +883,20 @@ export default function IntegrationsPage({ onNavigate }) {
                         onClick={() => handleDelete(wh.id)}
                         title="Delete"
                       >
-                        {deleteConfirm === wh.id ? "OK?" : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6m5 0V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/></svg>
+                        {deleteConfirm === wh.id ? (
+                          "OK?"
+                        ) : (
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-2 14H7L5 6m5 0V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2" />
+                          </svg>
                         )}
                       </button>
                     </div>
@@ -596,35 +905,45 @@ export default function IntegrationsPage({ onNavigate }) {
                   <div className="wh-item-meta">
                     <div className="wh-item-events">
                       {(wh.events || []).map((e) => (
-                        <span key={e} className="wh-event-tag">{e}</span>
+                        <span key={e} className="wh-event-tag">
+                          {e}
+                        </span>
                       ))}
                     </div>
                     <div className="wh-item-triggered">
                       Last triggered: {formatTime(wh.last_triggered_at)}
                       {wh.failure_count > 0 && (
-                        <span className="wh-failure-count"> ({wh.failure_count} failures)</span>
+                        <span className="wh-failure-count">
+                          {" "}
+                          ({wh.failure_count} failures)
+                        </span>
                       )}
                     </div>
                   </div>
                   {testResult && testResult.webhookId === wh.id && (
-                    <div style={{
-                      marginTop: "0.5rem",
-                      padding: "0.5rem 0.75rem",
-                      borderRadius: "var(--radius-sm)",
-                      fontSize: "0.8rem",
-                      fontWeight: 500,
-                      background: testResult.success ? "var(--green-dim)" : "var(--red-dim)",
-                      color: testResult.success ? "var(--green)" : "var(--red)",
-                      border: `1px solid ${testResult.success ? "var(--green)" : "var(--red)"}`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}>
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        padding: "0.5rem 0.75rem",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "0.8rem",
+                        fontWeight: 500,
+                        background: testResult.success
+                          ? "var(--green-dim)"
+                          : "var(--red-dim)",
+                        color: testResult.success
+                          ? "var(--green)"
+                          : "var(--red)",
+                        border: `1px solid ${testResult.success ? "var(--green)" : "var(--red)"}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <span>
                         {testResult.success
                           ? `Delivered${testResult.statusCode ? ` (${testResult.statusCode})` : ""}${testResult.event ? ` - ${testResult.event}` : ""}`
-                          : `Failed${testResult.statusCode ? ` (HTTP ${testResult.statusCode})` : " - could not reach URL"}`
-                        }
+                          : `Failed${testResult.statusCode ? ` (HTTP ${testResult.statusCode})` : " - could not reach URL"}`}
                       </span>
                       <button
                         onClick={() => setTestResult(null)}
@@ -639,7 +958,9 @@ export default function IntegrationsPage({ onNavigate }) {
                           opacity: 0.7,
                         }}
                         aria-label="Dismiss"
-                      >&times;</button>
+                      >
+                        &times;
+                      </button>
                     </div>
                   )}
                 </div>
@@ -653,11 +974,16 @@ export default function IntegrationsPage({ onNavigate }) {
       {activeTab === "logs" && (
         <>
           <div style={{ marginBottom: "1rem" }}>
-            <button className="btn-primary" onClick={load}>Refresh</button>
+            <button className="btn-primary" onClick={load}>
+              Refresh
+            </button>
           </div>
           {logs.length === 0 ? (
             <div className="empty-card">
-              <p>No webhook deliveries yet. Events will appear here once webhooks are triggered.</p>
+              <p>
+                No webhook deliveries yet. Events will appear here once webhooks
+                are triggered.
+              </p>
             </div>
           ) : (
             <div className="wh-logs-list">
@@ -665,15 +991,21 @@ export default function IntegrationsPage({ onNavigate }) {
                 <div
                   key={log.id}
                   className={`wh-log-item${selectedLog === log.id ? " wh-log-expanded" : ""}`}
-                  onClick={() => setSelectedLog(selectedLog === log.id ? null : log.id)}
+                  onClick={() =>
+                    setSelectedLog(selectedLog === log.id ? null : log.id)
+                  }
                   style={{ cursor: "pointer" }}
                 >
                   <div className="wh-log-header">
-                    <span className={`wh-log-status ${log.success ? "wh-log-ok" : "wh-log-fail"}`}>
+                    <span
+                      className={`wh-log-status ${log.success ? "wh-log-ok" : "wh-log-fail"}`}
+                    >
                       {log.response_status || "ERR"}
                     </span>
                     <span className="wh-event-tag">{log.event}</span>
-                    <span className="wh-log-time">{formatTime(log.created_at)}</span>
+                    <span className="wh-log-time">
+                      {formatTime(log.created_at)}
+                    </span>
                   </div>
                   {selectedLog === log.id && (
                     <div className="wh-log-detail">
@@ -682,7 +1014,9 @@ export default function IntegrationsPage({ onNavigate }) {
                         <pre>{JSON.stringify(log.payload, null, 2)}</pre>
                       </div>
                       <div className="wh-log-section">
-                        <strong>Response ({log.response_status || "N/A"})</strong>
+                        <strong>
+                          Response ({log.response_status || "N/A"})
+                        </strong>
                         <pre>{log.response_body || "No response"}</pre>
                       </div>
                     </div>
@@ -699,20 +1033,57 @@ export default function IntegrationsPage({ onNavigate }) {
         <>
           {/* Zapier Instructions */}
           <div className="settings-card" style={{ marginBottom: "1.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                marginBottom: "1rem",
+              }}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
               <h3 style={{ margin: 0 }}>Connect with Zapier / Make / n8n</h3>
             </div>
-            <ol style={{ color: "var(--text-secondary)", lineHeight: 1.8, paddingLeft: "1.25rem" }}>
-              <li>In your automation tool, create a new workflow and choose <strong>"Webhooks"</strong> as the trigger</li>
-              <li>Select <strong>"Catch Hook"</strong> (Zapier) or <strong>"Custom Webhook"</strong> (Make/n8n)</li>
+            <ol
+              style={{
+                color: "var(--text-secondary)",
+                lineHeight: 1.8,
+                paddingLeft: "1.25rem",
+              }}
+            >
+              <li>
+                In your automation tool, create a new workflow and choose{" "}
+                <strong>"Webhooks"</strong> as the trigger
+              </li>
+              <li>
+                Select <strong>"Catch Hook"</strong> (Zapier) or{" "}
+                <strong>"Custom Webhook"</strong> (Make/n8n)
+              </li>
               <li>Copy the webhook URL provided by the tool</li>
-              <li>Come back here, go to the <strong>Webhooks</strong> tab, click <strong>"+ Add Webhook"</strong></li>
+              <li>
+                Come back here, go to the <strong>Webhooks</strong> tab, click{" "}
+                <strong>"+ Add Webhook"</strong>
+              </li>
               <li>Paste the URL and select which events to send</li>
-              <li>Go back to your automation tool and test the trigger - it should receive a sample payload</li>
-              <li>Add your action step (Google Sheets, Slack, Mailchimp, CRM, etc.)</li>
+              <li>
+                Go back to your automation tool and test the trigger - it should
+                receive a sample payload
+              </li>
+              <li>
+                Add your action step (Google Sheets, Slack, Mailchimp, CRM,
+                etc.)
+              </li>
             </ol>
           </div>
 
@@ -730,7 +1101,13 @@ export default function IntegrationsPage({ onNavigate }) {
           {/* Payload Reference */}
           <div className="settings-card" style={{ marginTop: "1.5rem" }}>
             <h3>Webhook Payload Format</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                fontSize: "0.85rem",
+                marginBottom: "0.75rem",
+              }}
+            >
               Every webhook delivery sends a JSON POST with this structure:
             </p>
             <pre className="wh-code-block">{`{
@@ -744,10 +1121,290 @@ export default function IntegrationsPage({ onNavigate }) {
     "source": "widget"
   }
 }`}</pre>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.75rem" }}>
-              Payloads are signed with HMAC-SHA256 using your webhook secret. Verify the
-              <code style={{ color: "var(--accent)" }}> X-Webhook-Signature</code> header to authenticate deliveries.
+            <p
+              style={{
+                color: "var(--text-muted)",
+                fontSize: "0.8rem",
+                marginTop: "0.75rem",
+              }}
+            >
+              Payloads are signed with HMAC-SHA256 using your webhook secret.
+              Verify the
+              <code style={{ color: "var(--accent)" }}>
+                {" "}
+                X-Webhook-Signature
+              </code>{" "}
+              header to authenticate deliveries.
             </p>
+          </div>
+        </>
+      )}
+
+      {/* Zapier API Keys Tab */}
+      {activeTab === "zapier" && (
+        <>
+          <div className="settings-card" style={{ marginBottom: "1.5rem" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "1rem",
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0 }}>⚡ Zapier API Keys</h3>
+                <p
+                  style={{
+                    color: "var(--text-secondary)",
+                    fontSize: "0.85rem",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  Export new leads to HubSpot, Jobber, ServiceTitan, and 5,000+
+                  apps. Growth plan and above.
+                </p>
+              </div>
+              <a
+                href="https://zapier.com/apps/agentnexlify/integrations"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary"
+                style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}
+              >
+                Connect to Zapier →
+              </a>
+            </div>
+
+            {/* New key generated — show once */}
+            {zapierNewKey && (
+              <div
+                style={{
+                  background: "var(--green-dim)",
+                  border: "1px solid var(--green)",
+                  borderRadius: "var(--radius)",
+                  padding: "1rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                <p
+                  style={{
+                    color: "var(--green)",
+                    fontWeight: 600,
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  ✓ API key generated — copy it now. It will not be shown again.
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center",
+                  }}
+                >
+                  <code
+                    style={{
+                      flex: 1,
+                      background: "var(--bg-secondary)",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "4px",
+                      fontSize: "0.8rem",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {zapierNewKey}
+                  </code>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: "0.8rem" }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(zapierNewKey);
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <button
+                  onClick={() => setZapierNewKey(null)}
+                  style={{
+                    marginTop: "0.5rem",
+                    background: "none",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {/* Generate new key */}
+            {zapierKeyModal ? (
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.5rem",
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                }}
+              >
+                <input
+                  value={zapierKeyName}
+                  onChange={(e) => setZapierKeyName(e.target.value)}
+                  placeholder="Key name (e.g. Jobber Integration)"
+                  style={{ flex: 1 }}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleGenerateZapierKey()
+                  }
+                />
+                <button
+                  className="btn-primary"
+                  style={{ fontSize: "0.85rem" }}
+                  onClick={handleGenerateZapierKey}
+                  disabled={zapierGenerating || !zapierKeyName.trim()}
+                >
+                  {zapierGenerating ? "Generating…" : "Generate"}
+                </button>
+                <button
+                  className="btn-secondary"
+                  style={{ fontSize: "0.85rem" }}
+                  onClick={() => {
+                    setZapierKeyModal(false);
+                    setZapierKeyName("");
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn-primary"
+                style={{ fontSize: "0.85rem", marginBottom: "1rem" }}
+                onClick={() => setZapierKeyModal(true)}
+              >
+                + Generate API Key
+              </button>
+            )}
+
+            {/* Key list */}
+            {zapierLoading ? (
+              <SkeletonLoader rows={2} />
+            ) : zapierKeys.length === 0 ? (
+              <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
+                No API keys yet. Generate one to connect Zapier.
+              </p>
+            ) : (
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "0.85rem",
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      Key
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      Name
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      Last used
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      Status
+                    </th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {zapierKeys.map((k) => (
+                    <tr
+                      key={k.id}
+                      style={{
+                        borderBottom: "1px solid var(--border-subtle)",
+                        opacity: k.revoked_at ? 0.5 : 1,
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding: "0.5rem 0.25rem",
+                          fontFamily: "monospace",
+                        }}
+                      >
+                        {k.key_prefix}…
+                      </td>
+                      <td style={{ padding: "0.5rem 0.25rem" }}>{k.name}</td>
+                      <td
+                        style={{
+                          padding: "0.5rem 0.25rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {k.last_used_at
+                          ? new Date(k.last_used_at).toLocaleDateString()
+                          : "Never"}
+                      </td>
+                      <td style={{ padding: "0.5rem 0.25rem" }}>
+                        <span
+                          style={{
+                            color: k.revoked_at ? "var(--red)" : "var(--green)",
+                            fontSize: "0.8rem",
+                          }}
+                        >
+                          {k.revoked_at ? "Revoked" : "Active"}
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.5rem 0.25rem",
+                          textAlign: "right",
+                        }}
+                      >
+                        {!k.revoked_at && (
+                          <button
+                            className="wh-btn-sm"
+                            style={{ color: "var(--red)" }}
+                            disabled={zapierRevokingId === k.id}
+                            onClick={() => handleRevokeZapierKey(k.id)}
+                          >
+                            {zapierRevokingId === k.id ? "Revoking…" : "Revoke"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </>
       )}

@@ -1,0 +1,13 @@
+{
+  "name": "agentnexlify",
+  "version": "1.0.0",
+  "description": "AgentNexLiFy Zapier integration — export leads to your CRM",
+  "main": "index.js",
+  "scripts": {
+    "test": "zapier test"
+  },
+  "dependencies": {
+    "zapier-platform-core": "15.4.0"
+  },
+  "private": true
+}
