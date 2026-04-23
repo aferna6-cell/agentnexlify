@@ -626,33 +626,31 @@ export default function Home() {
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
               <h1 className="reveal">
-                Capture more quote requests.
-                <br />
-                Follow up faster.
-                <br />
-                Book more jobs -{" "}
-                <span className="accent-gradient">automatically.</span>
+                The AI chat widget that{" "}
+                <span className="accent-gradient">actually knows</span> your
+                business.
               </h1>
-              <div className="lp-hero-buttons reveal">
-                <Link to="/signup" className="btn-primary">
-                  Get Started {"\u2192"}
-                </Link>
-                <Link to="/demo" className="btn-secondary">
-                  Book a Demo
-                </Link>
-              </div>
               <p
                 className="reveal"
                 style={{
                   marginTop: "1rem",
+                  marginBottom: "1.5rem",
                   color: "var(--text-secondary)",
-                  maxWidth: 520,
+                  maxWidth: 560,
                 }}
               >
-                Whether you want to automate your workflows or grow your
-                marketing and online presence, AgentNexLiFy handles both — from
-                one dashboard.
+                Install in 30 seconds. No CRM migration. No agency. Per-tenant
+                knowledge base built on your services, your menu, your pricing.
+                Flat $249/mo — try free.
               </p>
+              <div className="lp-hero-buttons reveal">
+                <Link to="/signup" className="btn-primary">
+                  Embed widget free {"\u2192"}
+                </Link>
+                <a href="#how-it-works" className="btn-secondary">
+                  See how it works
+                </a>
+              </div>
             </div>
 
             {/* Animated Widget Mockup */}
