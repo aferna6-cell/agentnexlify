@@ -197,3 +197,17 @@ _All compiled 2026-04-18 cron run._
 - [ ] **regulations**: First-in-the-Nation AI Chatbot Safeguards Signed into Law | California State Senator Steve Padilla — `raw/regulations/sd18-senate-ca-gov-news-first-nation-ai-chatbot-safeguards-signed-law.md` — <https://sd18.senate.ca.gov/news/first-nation-ai-chatbot-safeguards-signed-law>
 - [ ] **growth**: Actionable SEO Tips for Small Businesses in 2026: Winning in the Age of AI, Social & Search – Advertising Week — `raw/growth/advertisingweek-com-actionable-seo-tips-for-small-businesses-in-2026-w.md` — <https://advertisingweek.com/actionable-seo-tips-for-small-businesses-in-2026-winning-in-the-age-of-ai-social-search>
 - [ ] **growth**: AI Search, Google SGE & SEO in 2026 for Small Businesses — `raw/growth/knapsackcreative-com-blog-seo-ai-search-google-sge-for-small-business.md` — <https://knapsackcreative.com/blog/seo/ai-search-google-sge-for-small-business>
+
+## 2026-04-24T10:06:38Z auto-populate
+
+- [competitors] What Is a GoHighLevel AI Employee (2026 Ultimate Guide) — `raw/competitors/what-is-a-gohighlevel-ai-employee-2026-ultimate-guide.md` — https://getautomized.com/what-is-a-gohighlevel-ai-employee
+- [competitors] HighLevel Unlimited AI Pricing 2026 — $97/mo Breakdown — `raw/competitors/highlevel-unlimited-ai-pricing-2026-97-mo-breakdown.md` — https://compareemailmarketingservices.com/highlevel-unlimited-ai-pricing
+- [ai-llm] Claude Opus 4.7 Pricing — The Real Cost Story — `raw/ai-llm/claude-opus-4-7-pricing-the-real-cost-story.md` — https://www.finout.io/blog/claude-opus-4.7-pricing-the-real-cost-story-behind-the-unchanged-price-tag
+- [verticals] Top 5 Best AI Phone Answering Systems for Home Services 2026 — `raw/verticals/top-5-best-ai-phone-answering-systems-for-home-services-2026.md` — https://www.gosameday.com/post/top-best-ai-phone-answering-systems-for-home-services
+- [verticals] Best AI Medical Receptionist in 2026 — `raw/verticals/best-ai-medical-receptionist-in-2026.md` — https://www.deepcura.com/resources/best-ai-medical-receptionist
+- [technical] Practical Guide to Safely Implementing Webhook Receiver APIs in FastAPI — `raw/technical/practical-guide-to-safely-implementing-webhook-receiver-apis-in-fastapi.md` — https://blog.greeden.me/en/2026/04/07/a-practical-guide-to-safely-implementing-webhook-receiver-apis-in-fastapi-from-signature-verification-and-retry-handling-to-idempotency-and-asynchronous-processing/
+- [technical] Stripe Webhook Security Guide — Signature Verification — `raw/technical/stripe-webhook-security-guide-signature-verification.md` — https://www.hooklistener.com/learn/stripe-webhook-security-guide
+- [regulations] Proposed State AI Law Update — April 20, 2026 — `raw/regulations/proposed-state-ai-law-update-april-20-2026.md` — https://www.troutmanprivacy.com/2026/04/proposed-state-ai-law-update-april-20-2026/
+- [regulations] Best AI Chatbots for Healthcare in 2026 — `raw/regulations/best-ai-chatbots-for-healthcare-in-2026.md` — https://hyperleap.ai/comparison/best-ai-chatbots-healthcare-2026
+- [growth] Generative Engine Optimization (GEO) — 2026 Guide — `raw/growth/generative-engine-optimization-geo-2026-guide.md` — https://www.coseom.com/generative-engine-optimization-guide
+- [growth] How to Track AI Citations Across ChatGPT, Perplexity, Google — `raw/growth/how-to-track-ai-citations-across-chatgpt-perplexity-google.md` — https://topify.ai/blog/track-ai-citations-chatgpt-perplexity-google
