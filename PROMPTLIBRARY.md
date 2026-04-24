@@ -152,6 +152,42 @@ Each prompt follows this structure:
 
 ---
 
+### RESEARCH Evaluate External Content for Applicability (v1.0.0)
+
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a senior technical advisor evaluating whether an external article, post, framework, or concept has actionable value for the platform.
+
+**Task:** Assess an external source (article, post, framework) against AgentNexLiFy's current stack. Determine what is already implemented, what is a genuine gap, and what is not relevant. Produce a verdict and concrete next steps.
+1. Read the source completely. Extract the core claims and recommendations.
+2. For each claim, check current AgentNexLiFy state: `CLAUDE.md`, `knowledge-base/wiki/`, `backend/services/`, `specs/`, migrations.
+3. Classify each claim as: **Already done** / **Real gap** / **Not relevant**.
+4. For each "Real gap": state why it matters, what the failure mode is without it, and the minimum viable implementation.
+5. Produce a KB article in `knowledge-base/wiki/<category>/<slug>.md` for the framework concepts worth retaining.
+6. If a gap warrants a feature: create `specs/<feature-name>_spec.md`.
+7. If a prompt pattern is new: add to PROMPTLIBRARY (this file).
+
+**Context:** Start with `PROMPTLIBRARY.md`, `CLAUDE.md`. Check `knowledge-base/wiki/` for existing coverage before claiming something is new. Guardrails: don't recommend implementing something already in the codebase; don't flag theoretical gaps that have no concrete failure mode; don't create specs for V2+ ideas without a V1 gap first.
+
+**Routing:** Sonnet for most external content evaluation. Opus 4.7 `xhigh` when the source is architectural or security-critical and the gap assessment drives a major feature decision.
+
+**Effort/Budget:** No task budget for read-only analysis. Use advisor-executor pattern when the gap leads directly to implementation work.
+
+**Constraints:** Only create specs for gaps with a real failure mode backed by evidence (a concrete failure scenario, not a theoretical improvement). Do not create KB articles that duplicate existing `wiki/` coverage — extend or cross-reference instead.
+
+**Format:**
+- Layer-by-layer breakdown: Already done / Real gap / Not relevant
+- For each gap: failure mode + minimum viable implementation
+- Artifacts created: KB article paths, spec paths, PROMPTLIBRARY additions
+
+**Verification:** For each "Already done" claim, cite the file:line or article that proves it. For each "Real gap," confirm no existing file covers it before creating new artifacts.
+
+**Review Gate:** None for docs/spec-only output. Code-reviewer + schema-guardian if the evaluation leads to immediate implementation.
+
+**Tone:** Caveman mode.
+
+**Last improved:** 2026-04-24 - Created from eval-ai-engineering-stack session. Covers 3-layer AI stack analysis pattern.
+
+---
+
 ## Summarization
 
 ### SUMMARIZE Code Change Summary (v1.1.0)
@@ -639,6 +675,7 @@ Each prompt follows this structure:
 | Category | Prompt | Version | Last Updated |
 |---|---|---:|---|
 | Research | Codebase Investigation | 1.2.0 | 2026-04-17 |
+| Research | Evaluate External Content for Applicability | 1.0.0 | 2026-04-24 |
 | Summarize | Code Change Summary | 1.1.0 | 2026-04-17 |
 | Debug | Bug Investigation | 1.3.0 | 2026-04-17 |
 | Debug | Production Error Analysis | 1.1.0 | 2026-04-17 |
