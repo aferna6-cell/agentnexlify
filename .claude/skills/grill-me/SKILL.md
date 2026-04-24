@@ -2,7 +2,7 @@
 name: grill-me
 description: Socratic clarifying questions before any new feature, refactor, or risky migration. Load when user says "grill me", "interview me", "clarify this feature", "what am I missing", or proposes new work touching 2+ files in backend/, frontend/, widget/, or migrations/.
 origin: https://github.com/mattpocock/skills/tree/main/grill-me
-version: 1.0.0
+version: 1.1.0
 triggers:
   - grill me
   - interview me on
@@ -32,6 +32,16 @@ Opus 4.7 follows instructions literally and each turn layers interpretations fro
 - Typo/rename
 - User already wrote PRD (use `write-prd` to extend, not interview from scratch)
 - User explicitly says "just do it"
+
+## Step 0 — Reference artifact extraction (if provided)
+If user supplied sample PRD, past feature, existing email, or "make it like X" reference:
+1. Read the artifact fully
+2. Extract 3-5 explicit rules from it (tone, structure, constraints, naming, limits)
+3. Echo rules back to user: "Extracted these rules from your sample: [list]. Confirm before I use them as constraints."
+4. Wait for user confirmation or correction
+5. Then start Loop step 1
+
+Reason: vague "something like this" burns cycles. Extracted rules become hard constraints for every subsequent answer.
 
 ## Loop (batch mode)
 1. Read user request
