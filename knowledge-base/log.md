@@ -288,3 +288,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-23 18:15] discover+compile | cron 18:00 | commits=1 raw=14 wiki=4
 
 ## [2026-04-24 10:06] discover | cron 06:00 | categories=6 urls_fetched=14 new_raw_files=11 deduped=0 errors=3
+
+## [2026-04-24 06:10] compile | cron 06:00 headless | pending=16 compiled=4 wiki=4 index_touched=1 embeddings_skipped=4 errors=0

@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 67 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-23
+- Total articles: 71 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-24
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -36,6 +36,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [GoHighLevel Carrier Pricing Update — April 2026 SMS, Voice, and Number Rate Hikes](wiki/competitors/ghl-carrier-pricing-april-2026.md) — April 10/16 2026 pass-through rate increases across 50+ countries on SMS (worst case Sierra Leone +101%) and voice (Greece mobile +354%); compresses agency margin alongside the feature release. Tags: gohighlevel, lc-phone, carrier-fees, sms-pricing, voice-pricing, a2p-10dlc, at-t, verizon, april-2026
 - [GoHighLevel AI Employee Suite — Marketing Playbook and Training Workflow](wiki/competitors/ghl-ai-employee-suite-marketing-playbook.md) — "Hire digital staff" framing with 4 named agents (Voice/Conversation/Reviews/Content), pay-per-use vs unlimited pricing, 3-step KB-upload-to-live training workflow sets SMB buyer expectation. Tags: gohighlevel, ai-employee, voice-ai, conversation-ai, reviews-ai, content-ai, smb-pitch
 - [GoHighLevel API V2 — OAuth 2.0, Granular Scopes, and the Marketplace Play](wiki/competitors/ghl-api-v2-developer-platform.md) — Migration from static API keys to OAuth 2.0 with granular scopes, enhanced webhooks, and private-app Marketplace turns GHL into a Shopify-style platform moat. Tags: gohighlevel, api-v2, oauth, marketplace, developer-platform, integrations, seo-ai
+- [GoHighLevel Unlimited AI — $97/mo Sub-Account Economics and Reseller Math (2026)](wiki/competitors/ghl-unlimited-ai-97-mo-breakdown-2026.md) — $97/sub bundles 6 AI tools; break-even at 4,850 messages or 750-970 voice minutes; agency rebill margin 65-80% on $197-497 prices; reseller rail is the moat. Tags: gohighlevel, ai-employee, unlimited-ai, agency-pricing, rebilling, saas-mode, fair-use, small-business
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -59,6 +60,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [GAN-Inspired Three-Agent Harness — Planner, Generator, Evaluator for Long-Running Coding](wiki/ai-llm/harness-design-long-running-apps-gan.md) — Planner/generator/evaluator pattern with file-based sprint contracts; Opus 4.5 solo 20min/$9 vs full harness 6hr/$200 produced dramatically different app quality. Tags: anthropic, harness-design, multi-agent, gan, planner-generator-evaluator, long-running-agents, opus-4-5, opus-4-6
 - [Claude Prompt Caching — 5-Minute TTL and the Architecture Patterns That Survive It](wiki/ai-llm/claude-prompt-caching-5min-ttl-2026.md) — Anthropic cut cache TTL from 60min to 5min in early 2026, raising effective costs 30-60% for cron workloads; keepalive pings, batching, and breakeven math are the surviving patterns. Tags: prompt-caching, claude-api, cost-optimization, ttl, keep-alive, batching, anthropic, sonnet-4-6
 - [Claude API Pricing Breakdown — Haiku 4.5, Sonnet 4.6, Opus 4.7 in 2026](wiki/ai-llm/claude-api-pricing-breakdown-2026.md) — Six active models $1/$5 (Haiku 4.5) through $5/$25 (Opus 4.7); Opus 4.7 tokenizer raises effective code-prompt cost 5-35% despite identical list price, caching is the dominant unused cost lever. Tags: claude-api, pricing, anthropic, haiku-4-5, sonnet-4-6, opus-4-7, tokenizer, cost-optimization
+- [Claude Opus 4.7 Tokenizer Cost Reality — Unchanged Rate Card, Higher Effective Bill](wiki/ai-llm/claude-opus-4-7-tokenizer-cost-reality-2026.md) — New tokenizer produces up to 1.35x more tokens for identical text; $5/$25 rate card unchanged but per-request cost rises 0-35%; caching + Batch + honest model selection are the recovery levers. Tags: claude, opus-4-7, tokenizer, pricing, cost-optimization, prompt-caching, batch-api, finops
 
 ### Small Business SaaS
 - [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
@@ -76,6 +78,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [You Probably Don't Need a Vector Database — pgvector at Realistic Scale](wiki/technical/encore-pgvector-guide-2026.md) — HNSW at 1M vectors returns <20ms with >95% recall; vector-DB latency is invisible behind 500ms-3s LLM generation; transactional consistency is the real win. Tags: pgvector, postgres, rag, hnsw, ivf, infrastructure-consolidation, latency-budget
 - [Supabase AI Production Checklist — pgvector Indexing, HNSW Tuning](wiki/technical/supabase-ai-production-checklist.md) — HNSW preferred over IVFFlat; ef_construction ≥ 2×m; pre-warm via pg_prewarm + 10k warm-up queries before prod cutover. Tags: supabase, pgvector, hnsw, ivfflat, production-readiness, vector-search, ann
 - [FastAPI Best Practices — Domain-Module Structure and Async Discipline](wiki/technical/fastapi-best-practices-zhanymkanov.md) — Netflix-Dispatch-inspired domain layout, strict async/threadpool discipline, Pydantic-everywhere validation, dependency-injection-for-validation patterns. Tags: fastapi, python, pydantic, async, dependency-injection, project-structure, sqlalchemy
+- [Stripe Webhook Signature Verification — HMAC-SHA256, Replay Defense, and Layered Security](wiki/technical/stripe-webhook-signature-verification-security.md) — HMAC-SHA256 over raw bytes, ≤5-min timestamp tolerance, constant-time comparison, idempotency on event.id, and secret rotation with overlap close the four Stripe webhook attack classes. Tags: stripe, webhooks, signature-verification, hmac, payments-security, replay-attacks, idempotency, secret-rotation
 
 ### Regulations & Compliance
 - [HIPAA — Privacy Rule, Security Rule, and Covered Entities](wiki/regulations/hipaa-overview-cdc.md) — HIPAA Privacy/Security Rules bind any business associate handling PHI; defines AgentNexLiFy's exposure for dental/medical tenants. Tags: hipaa, phi, ephi, privacy-rule, security-rule, healthcare-compliance
@@ -91,6 +94,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Answer Engine Optimization (AEO) — Visibility in AI-Generated Search Results](wiki/growth/answer-engine-optimization-aeo-2026.md) — AEO structures content for AI-generated answers; 9x higher conversion rates; distinct from SEO/GEO. Tags: aeo, seo, geo, ai-search, zero-click, structured-data, schema-markup
 - [Community-Driven Brand Discovery — How Forums Shape AI Search Results](wiki/growth/community-forums-ai-brand-discovery.md) — AI Overviews summarize Reddit/forum threads as primary answer layer; brands absent from community conversations lose narrative control. Tags: forums, reddit, ai-overviews, brand-discovery, local-search, social-proof, zero-click
 - [Generative Engine Optimization — 85% of Brand Mentions Come from Third-Party Sources](wiki/growth/generative-engine-optimization-foundation-2026.md) — Foundation's four-pillar GEO framework; 85% of AI citations are off-domain; leaders hit 32-57% Share of Model vs 10-17% average; nofollow=dofollow for LLMs. Tags: geo, ai-search, citation-share, share-of-model, reddit, youtube, listicles, off-site-authority
+- [AI Citation Tracking — ChatGPT, Perplexity, Google AI Overviews in 2026](wiki/growth/ai-citation-tracking-chatgpt-perplexity-google-2026.md) — Zero-click at 69%, top-result CTR -58-61% on AIO; BLUF + schema + extractability are the shared levers; aristocratic domains (Wikipedia/Reddit/journals) drive 43% of all AI citations. Tags: geo, aeo, ai-search, citation-tracking, chatgpt, perplexity, google-ai-overviews, zero-click, schema-markup, bluf
 
 ## Cross-Reference Map
 - [[competitive-landscape-march-2026]] ← referenced by: [[customer-gaps-by-industry]], [[post-launch-growth-strategy]], [[llm-wiki-karpathy-pattern]]
