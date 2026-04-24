@@ -7,7 +7,6 @@ Tests:
 - list_verticals() → returns list of all 6 vertical names
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
@@ -84,7 +83,6 @@ def _make_supabase_list_chain(data: list):
 
 
 class TestGetVerticalPreset:
-    @pytest.mark.asyncio
     async def test_returns_dict_from_db(self):
         """Happy path: DB returns a row, we get it back."""
         client_mock = _make_supabase_chain([_DB_PLUMBING_ROW])
@@ -101,7 +99,6 @@ class TestGetVerticalPreset:
         assert result["vertical"] == "plumbing"
         assert "Drain Cleaning" in result["default_services"]
 
-    @pytest.mark.asyncio
     async def test_unknown_vertical_returns_none(self):
         """Unrecognised vertical slug → None without hitting DB."""
         with patch(
@@ -114,7 +111,6 @@ class TestGetVerticalPreset:
         assert result is None
         mock_get.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_yaml_fallback_on_db_exception(self):
         """DB raises → YAML fallback still returns data."""
         with patch(
@@ -130,7 +126,6 @@ class TestGetVerticalPreset:
         assert isinstance(result["default_services"], list)
         assert len(result["default_services"]) > 0
 
-    @pytest.mark.asyncio
     async def test_yaml_fallback_on_db_miss(self):
         """DB returns empty data → falls back to YAML."""
         client_mock = _make_supabase_chain([])
@@ -146,7 +141,6 @@ class TestGetVerticalPreset:
         assert result is not None
         assert result["vertical"] == "hvac"
 
-    @pytest.mark.asyncio
     async def test_all_valid_verticals_resolve(self):
         """Every vertical slug in the enum resolves to a non-None result via YAML."""
         with patch(
@@ -167,7 +161,6 @@ class TestGetVerticalPreset:
 
 
 class TestListVerticals:
-    @pytest.mark.asyncio
     async def test_returns_list_from_db(self):
         """DB returns rows — list_verticals passes them through."""
         db_rows = [
@@ -193,7 +186,6 @@ class TestListVerticals:
         verticals_returned = {row["vertical"] for row in result}
         assert verticals_returned == set(_ALL_VERTICALS)
 
-    @pytest.mark.asyncio
     async def test_returns_all_6_from_yaml_on_db_error(self):
         """DB fails → YAML fallback returns all 6 verticals."""
         with patch(
@@ -208,7 +200,6 @@ class TestListVerticals:
         names = {row["vertical"] for row in result}
         assert names == set(_ALL_VERTICALS)
 
-    @pytest.mark.asyncio
     async def test_each_entry_has_display_name(self):
         """Every entry returned must have a display_name field."""
         with patch(

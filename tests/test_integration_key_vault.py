@@ -110,12 +110,8 @@ class TestDecryptKey:
 
         ciphertext = vault.encrypt_key("secret-value")
 
-        # Decrypt with key2 — should fail
+        # Switch to key2 — _get_fernet() reads env at call time, no reload needed
         monkeypatch.setenv("INTEGRATIONS_ENC_KEY", key2)
-        # Reload to clear any module-level caching (there is none, but be safe)
-        import importlib
-
-        importlib.reload(vault)
 
         with pytest.raises(InvalidToken):
             vault.decrypt_key(ciphertext)
