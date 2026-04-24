@@ -1,14 +1,30 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-21 20:19 EDT (automated evening routine)
+Updated: 2026-04-23 20:00 EDT (automated evening routine)
 
 ## Tomorrow's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 19 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **QA today's fixes before prod rollout** — `8d026e6` widget null-state 4-way guard (KB/CI/business_type/FAQs) + FAQ probe cache; `3b0ce34` managed agents health probe endpoint + test coverage. Agents: **qa-tester** + **widget-specialist**.
-3. **QA migrations 108/109/110** (carried) — photo-quote (`tenant_pricing_rules`, `quote_requests`, `tenant_quote_usage`), drive-kb (`tenant_integrations`, `integration_sync_log`, `kb_section_hashes`), zapier (`tenant_api_keys`). Agents: **schema-guardian** + **qa-tester**.
+1. **ROTATE compromised admin API key in Railway** — DAY 21 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **QA 2026-04-22 missed-call-text-back automation (`6020a43`, migration 111)** — newest shipped feature; no QA pass yet. Agents: **qa-tester** + **widget-specialist**.
+3. **QA migrations 108/109/110 production paths** (carried) — photo-quote (`tenant_pricing_rules`, `quote_requests`, `tenant_quote_usage`), drive-kb (`tenant_integrations`, `integration_sync_log`, `kb_section_hashes`), zapier (`tenant_api_keys`). Agents: **schema-guardian** + **qa-tester**.
 
 ## Completed (Recent)
+
+### 2026-04-23
+- [x] KB autopopulate cycle — 14 raw ingests + 4 wiki promotions (`d540d32`, `f1f88ae`)
+- [x] Automated evening review 2026-04-23 (this file)
+
+### 2026-04-22
+- [x] Ship missed-call-text-back ops automation + migration 111 (`6020a43`)
+- [x] Add validation + distribution tooling for skills (`867919b`)
+- [x] Commit 4 Phase-3 PRDs + schema-reference audit (`429c964`)
+- [x] Verify path-scoped rules + align CLAUDE.md 200-line target (`fb79d3b`)
+- [x] DESIGN.md tenant theming parked as phase-2 of onboarding-v2 (`6065043`)
+- [x] Add plan-review-fanout skill + reference packs + context-budget hook (`9d42d98`)
+- [x] Automated evening review 2026-04-21 (`734145a`)
+- [x] Map Claude Code 35 techniques to AgentNexLiFy workflow (PR #78)
+- [x] Auto-log bug fix from `33e0462` (appointment_booker tenant_id→client_id rename)
+- [x] Adopt parallel Codex orchestration workstreams (PR #76)
 
 ### 2026-04-21
 - [x] Scaffold `appointment_booker` managed agent (`e2ac565`)
@@ -24,8 +40,10 @@ Updated: 2026-04-21 20:19 EDT (automated evening routine)
 
 ### Priority 0 — Security (Immediate Action Required)
 
-- [ ] **ROTATE compromised API key in Railway** — Key still live. DAY 18 of exposure. Agent: **devops** / Human.
+- [ ] **ROTATE compromised API key in Railway** — Key still live. DAY 21 of exposure. Agent: **devops** / Human.
 - [ ] **Reattach HEAD to main + push 2026-04-17 work** — Verify `git branch --show-current == main` and `git status` clean. (Carried)
+- [ ] **Investigate `morning-auto.sh` silent failure on 2026-04-23** — no daily log landed at 08:00; evening routine had to create the file. Agent: **devops**. (New 2026-04-23)
+- [ ] **QA missed-call-text-back automation + migration 111 (`6020a43`)** — newest shipped ops automation; zero QA. Agents: **qa-tester** + **widget-specialist**. (New 2026-04-23)
 
 ### Priority 0 — Schema (Pre-Launch)
 
