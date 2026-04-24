@@ -78,7 +78,7 @@ const faqData = [
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Absolutely! Start with our free plan or Starter and upgrade as your business scales. You can change your plan anytime from the Billing page.",
+      "Absolutely! Start with our free plan or Growth and upgrade as your business scales. You can change your plan anytime from the Billing page.",
   },
   {
     id: "faq-a6",
@@ -527,20 +527,16 @@ export default function Home() {
   "url": "https://agentnexlify.com",
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
-    { "@type": "Offer", "name": "Starter", "price": "99", "priceCurrency": "USD",
+    { "@type": "Offer", "name": "Growth", "price": "99", "priceCurrency": "USD",
       "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Growth", "price": "150", "priceCurrency": "USD",
+      "@type": "Offer", "name": "Professional", "price": "150", "priceCurrency": "USD",
       "priceSpecification": { "@type": "UnitPriceSpecification", "price": "150", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Pro", "price": "250", "priceCurrency": "USD",
+      "@type": "Offer", "name": "Enterprise", "price": "250", "priceCurrency": "USD",
       "priceSpecification": { "@type": "UnitPriceSpecification", "price": "250", "priceCurrency": "USD", "billingDuration": "P1M" }
-    },
-    {
-      "@type": "Offer", "name": "Enterprise", "price": "899", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "899", "priceCurrency": "USD", "billingDuration": "P1M" }
     }
   ]
 }
@@ -554,7 +550,7 @@ export default function Home() {
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. We also integrate with Twilio for SMS and Stripe for payments." } },
 
-    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Starter and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
+    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
     { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers - you decide how to follow up." } },
     { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service." } }
@@ -990,9 +986,9 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Starter */}
+            {/* Growth */}
             <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Starter</div>
+              <div className="lp-pricing-plan-name">Growth</div>
               <div className="lp-pricing-tagline">Your AI front desk</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$99</span>
@@ -1021,20 +1017,20 @@ export default function Home() {
               <StripeCta plan="growth">Get Started {"\u2192"}</StripeCta>
             </div>
 
-            {/* Growth - Most Popular */}
+            {/* Professional - Most Popular */}
             <div className="lp-pricing-card popular reveal">
-              <div className="lp-pricing-plan-name">Growth</div>
+              <div className="lp-pricing-plan-name">Professional</div>
               <div className="lp-pricing-tagline">Automate your follow-ups</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$150</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
-                No setup fee · Cancel anytime
+                No setup fee. Cancel anytime
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">
-                Everything in Starter, plus:
+                Everything in Growth, plus:
               </div>
               <ul className="lp-pricing-features">
                 <li>Up to 6 automation sequences</li>
@@ -1050,23 +1046,23 @@ export default function Home() {
                 <li>Advanced analytics &amp; insights</li>
                 <li>Priority email &amp; chat support</li>
               </ul>
-              <StripeCta plan="autopilot">Get Started {"\u2192"}</StripeCta>
+              <StripeCta plan="professional">Get Started {"\u2192"}</StripeCta>
             </div>
 
-            {/* Pro */}
+            {/* Enterprise */}
             <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Pro</div>
+              <div className="lp-pricing-plan-name">Enterprise</div>
               <div className="lp-pricing-tagline">Your full AI employee</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$250</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
-                No setup fee · Cancel anytime
+                No setup fee. Cancel anytime
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">
-                Everything in Growth, plus:
+                Everything in Professional, plus:
               </div>
               <ul className="lp-pricing-features">
                 <li>Unlimited automation sequences</li>
@@ -1081,7 +1077,7 @@ export default function Home() {
                 <li>Full analytics suite</li>
                 <li>Dedicated account manager</li>
               </ul>
-              <StripeCta plan="professional">Get Started {"\u2192"}</StripeCta>
+              <StripeCta plan="enterprise">Get Started {"\u2192"}</StripeCta>
             </div>
           </div>
           <p className="lp-pricing-footer-note reveal">
