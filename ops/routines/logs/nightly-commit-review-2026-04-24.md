@@ -74,6 +74,11 @@ Notes:
 
 ---
 
+## Push / PR status
+
+- Branch: `nightly-review/2026-04-24` — pushed to origin ✓
+- PR creation: **BLOCKED** by `require-tests-for-pr` hook — no Python venv in this shell environment (httpx missing). Branch is live on GitHub; PR can be opened manually or from an environment with the full venv.
+
 ## Next action
 
 **2 issues need human review:**
