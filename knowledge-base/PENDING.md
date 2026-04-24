@@ -211,3 +211,19 @@ _All compiled 2026-04-18 cron run._
 - [regulations] Best AI Chatbots for Healthcare in 2026 — `raw/regulations/best-ai-chatbots-for-healthcare-in-2026.md` — https://hyperleap.ai/comparison/best-ai-chatbots-healthcare-2026
 - [growth] Generative Engine Optimization (GEO) — 2026 Guide — `raw/growth/generative-engine-optimization-geo-2026-guide.md` — https://www.coseom.com/generative-engine-optimization-guide
 - ~~[growth] How to Track AI Citations Across ChatGPT, Perplexity, Google~~ → compiled `wiki/growth/ai-citation-tracking-chatgpt-perplexity-google-2026.md` (2026-04-24 cron)
+
+- [ai-llm] Claude is a space to think | Anthropic \ Anthropic — https://www.anthropic.com/news/claude-is-a-space-to-think (raw: knowledge-base/raw/ai-llm/claude-is-a-space-to-think-2026-04-24.md)
+
+- [ai-llm] An update on recent Claude Code quality reports \ Anthropic — https://www.anthropic.com/engineering/april-23-postmortem (raw: knowledge-base/raw/ai-llm/april-23-postmortem-2026-04-24.md)
+
+- [competitors] Introducing the Sales Agent Blueprint - The Intercom Blog — https://www.intercom.com/blog/introducing-the-sales-agent-blueprint/ (raw: knowledge-base/raw/competitors/introducing-the-sales-agent-blueprint-2026-04-24.md)
+
+- [competitors] Best AI Marketing Platforms for Multi-Location Brands in 2026 — https://birdeye.com/blog/best-ai-marketing-platforms-for-multi-location-brands-in-2026/ (raw: knowledge-base/raw/competitors/best-ai-marketing-platforms-for-multi-location-brands-in-2026-2026-04-24.md)
+
+- [growth] Is AI Content Bad for SEO? No, and It Never Will Be (7 Reasons) — https://ahrefs.com/blog/ai-content-is-not-bad-for-seo/ (raw: knowledge-base/raw/growth/ai-content-is-not-bad-for-seo-2026-04-24.md)
+
+- [growth] How many keywords can you rank for with one page? (Ahrefs’ study of 3M searches) — https://ahrefs.com/blog/also-rank-for-study/ (raw: knowledge-base/raw/growth/also-rank-for-study-2026-04-24.md)
+
+- [technical] Agent responsibly - Vercel — https://vercel.com/blog/agent-responsibly (raw: knowledge-base/raw/technical/agent-responsibly-2026-04-24.md)
+
+- [technical] Agentic Infrastructure - Vercel — https://vercel.com/blog/agentic-infrastructure (raw: knowledge-base/raw/technical/agentic-infrastructure-2026-04-24.md)
