@@ -1,6 +1,5 @@
 """Authentication endpoints — register, login, me."""
 
-
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -126,7 +125,9 @@ def _normalize_paid_plan(plan: str | None) -> str | None:
     return normalized if normalized in PLAN_PRICES else None
 
 
-def _frontend_redirect(path: str, params: dict[str, str | None], *, use_fragment: bool = False) -> str:
+def _frontend_redirect(
+    path: str, params: dict[str, str | None], *, use_fragment: bool = False
+) -> str:
     base = settings.frontend_url.rstrip("/")
     query = urlencode({k: v for k, v in params.items() if v not in (None, "")})
     if not query:
@@ -138,7 +139,9 @@ def _frontend_redirect(path: str, params: dict[str, str | None], *, use_fragment
 def _google_auth_callback_url() -> str:
     base = (settings.api_url or "").rstrip("/")
     if not base:
-        raise HTTPException(status_code=503, detail="API URL is not configured for Google OAuth")
+        raise HTTPException(
+            status_code=503, detail="API URL is not configured for Google OAuth"
+        )
     return f"{base}/api/v1/auth/google/callback"
 
 
@@ -147,7 +150,8 @@ def _encode_google_state(mode: str, plan: str | None = None) -> str:
         "type": "google_oauth_state",
         "mode": mode,
         "plan": _normalize_paid_plan(plan),
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=_GOOGLE_STATE_EXPIRY_MINUTES),
+        "exp": datetime.now(timezone.utc)
+        + timedelta(minutes=_GOOGLE_STATE_EXPIRY_MINUTES),
     }
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
@@ -156,7 +160,9 @@ def _decode_google_state(state: str) -> dict:
     try:
         payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
     except JWTError as exc:
-        raise HTTPException(status_code=400, detail="Invalid or expired Google OAuth state") from exc
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired Google OAuth state"
+        ) from exc
 
     if payload.get("type") != "google_oauth_state":
         raise HTTPException(status_code=400, detail="Invalid Google OAuth state")
@@ -171,7 +177,9 @@ def _decode_google_state(state: str) -> dict:
     }
 
 
-def _encode_google_setup_token(email: str, owner_name: str, plan: str | None = None) -> str:
+def _encode_google_setup_token(
+    email: str, owner_name: str, plan: str | None = None
+) -> str:
     payload = {
         "type": "google_setup",
         "email": email.lower().strip(),
@@ -186,7 +194,9 @@ def _decode_google_setup_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
     except JWTError as exc:
-        raise HTTPException(status_code=400, detail="Invalid or expired Google signup token") from exc
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired Google signup token"
+        ) from exc
 
     if payload.get("type") != "google_setup":
         raise HTTPException(status_code=400, detail="Invalid Google signup token")
@@ -252,25 +262,41 @@ def _provision_tenant_account(
         try:
             db.table("tenants").update(extra_fields).eq("id", tenant_id).execute()
         except Exception:
-            logger.warning("Failed to save signup fields for new tenant %s", tenant_id, exc_info=True)
+            logger.warning(
+                "Failed to save signup fields for new tenant %s",
+                tenant_id,
+                exc_info=True,
+            )
 
     api_key = f"anx_{secrets.token_urlsafe(32)}"
     widget_defaults = get_widget_defaults(industry, business_name)
     try:
-        wc_result = db.table("widget_configs").insert({
-            "tenant_id": tenant_id,
-            "api_key": api_key,
-            "bot_name": widget_defaults["bot_name"],
-            "primary_color": widget_defaults["primary_color"],
-            "greeting_message": widget_defaults["greeting_message"],
-            "position": widget_defaults["position"],
-            "show_watermark": True,
-        }).execute()
+        wc_result = (
+            db.table("widget_configs")
+            .insert(
+                {
+                    "tenant_id": tenant_id,
+                    "api_key": api_key,
+                    "bot_name": widget_defaults["bot_name"],
+                    "primary_color": widget_defaults["primary_color"],
+                    "greeting_message": widget_defaults["greeting_message"],
+                    "position": widget_defaults["position"],
+                    "show_watermark": True,
+                }
+            )
+            .execute()
+        )
         if not wc_result.data:
             raise RuntimeError("widget_configs insert returned no data")
     except Exception:
-        logger.error("Failed to create widget_configs for tenant %s — rolling back", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to initialize widget configuration")
+        logger.error(
+            "Failed to create widget_configs for tenant %s — rolling back",
+            tenant_id,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to initialize widget configuration"
+        )
 
     _seed_industry_faqs(tenant_id, industry, business_name, city)
     return tenant_id, api_key
@@ -308,31 +334,43 @@ async def _run_signup_side_effects(
             tenant_id=tenant_id,
         )
     except Exception:
-        logger.warning("Welcome email failed for new tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Welcome email failed for new tenant %s", tenant_id, exc_info=True
+        )
 
     if website_url:
         try:
             from backend.services.website_crawler import start_crawl
+
             await start_crawl(tenant_id, website_url)
         except Exception:
-            logger.warning("Signup crawl failed for new tenant %s url=%s", tenant_id, website_url, exc_info=True)
+            logger.warning(
+                "Signup crawl failed for new tenant %s url=%s",
+                tenant_id,
+                website_url,
+                exc_info=True,
+            )
 
 
 def require_role(*allowed_roles):
     """FastAPI dependency factory: restrict endpoint to specific roles."""
+
     async def checker(claims: dict = Depends(_get_current_tenant)):
         role = claims.get("role", "owner")
         if role not in allowed_roles:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return claims
+
     return checker
 
 
 # ── Industry FAQ Seeds ───────────────────────────────────────
 # Moved to backend/services/branding_service.py
 # Re-exported here for backward compatibility with any direct imports.
-from backend.services.branding_service import INDUSTRY_FAQS, _seed_industry_faqs  # noqa: F401
-
+from backend.services.branding_service import (
+    INDUSTRY_FAQS,
+    _seed_industry_faqs,
+)  # noqa: F401
 
 # ── Endpoints ────────────────────────────────────────────────
 
@@ -351,7 +389,9 @@ async def register(request: Request, req: RegisterRequest):
         website_url=req.website_url,
     )
 
-    token = _create_token(tenant_id, req.email, "free", req.business_name, business_type=req.industry)
+    token = _create_token(
+        tenant_id, req.email, "free", req.business_name, business_type=req.industry
+    )
 
     await _run_signup_side_effects(
         email=req.email,
@@ -384,7 +424,10 @@ async def login(request: Request, req: LoginRequest):
         tenant = result.data[0]
         if not tenant.get("password_hash"):
             # Use dummy hash to prevent timing attacks
-            _verify_password(req.password, bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode())
+            _verify_password(
+                req.password,
+                bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode(),
+            )
             raise HTTPException(status_code=401, detail="Invalid email or password")
         if not _verify_password(req.password, tenant["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -417,7 +460,10 @@ async def login(request: Request, req: LoginRequest):
         member = tm_result.data[0]
         if not member.get("password_hash"):
             # Use dummy hash to prevent timing attacks
-            _verify_password(req.password, bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode())
+            _verify_password(
+                req.password,
+                bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode(),
+            )
             raise HTTPException(status_code=401, detail="Invalid email or password")
         if not _verify_password(req.password, member["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -458,7 +504,10 @@ async def login(request: Request, req: LoginRequest):
 
     # No user found — perform dummy hash to prevent timing attacks
     # This ensures the response time is similar whether user exists or not
-    _verify_password(req.password, bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode())
+    _verify_password(
+        req.password,
+        bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode(),
+    )
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
@@ -470,16 +519,15 @@ async def google_auth_url(
     if not settings.google_client_id or not settings.google_client_secret:
         raise HTTPException(status_code=503, detail="Google OAuth is not configured")
 
-    auth_url = (
-        "https://accounts.google.com/o/oauth2/v2/auth?"
-        + urlencode({
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(
+        {
             "client_id": settings.google_client_id,
             "redirect_uri": _google_auth_callback_url(),
             "response_type": "code",
             "scope": _GOOGLE_OAUTH_SCOPE,
             "state": _encode_google_state(mode, plan),
             "prompt": "select_account",
-        })
+        }
     )
     return {"auth_url": auth_url}
 
@@ -496,7 +544,9 @@ async def google_auth_callback(
 
     if error:
         target = "/login" if mode == "login" else "/signup"
-        return RedirectResponse(url=_frontend_redirect(target, {"google_error": error, "plan": plan}))
+        return RedirectResponse(
+            url=_frontend_redirect(target, {"google_error": error, "plan": plan})
+        )
 
     if not code:
         raise HTTPException(status_code=400, detail="Missing Google authorization code")
@@ -520,7 +570,9 @@ async def google_auth_callback(
 
             access_token = token_data.get("access_token")
             if not access_token:
-                raise HTTPException(status_code=502, detail="Google did not return an access token")
+                raise HTTPException(
+                    status_code=502, detail="Google did not return an access token"
+                )
 
             userinfo_resp = await client.get(
                 "https://openidconnect.googleapis.com/v1/userinfo",
@@ -532,14 +584,20 @@ async def google_auth_callback(
         raise
     except Exception as exc:
         logger.exception("Google OAuth exchange failed")
-        raise HTTPException(status_code=502, detail="Failed to complete Google sign-in") from exc
+        raise HTTPException(
+            status_code=502, detail="Failed to complete Google sign-in"
+        ) from exc
 
     email = (profile.get("email") or "").lower().strip()
     owner_name = (profile.get("name") or "").strip() or email.split("@")[0]
     if not email:
-        raise HTTPException(status_code=400, detail="Google account did not provide an email address")
+        raise HTTPException(
+            status_code=400, detail="Google account did not provide an email address"
+        )
     if profile.get("email_verified") is False:
-        raise HTTPException(status_code=400, detail="Google account email must be verified")
+        raise HTTPException(
+            status_code=400, detail="Google account email must be verified"
+        )
 
     db = get_service_supabase()
     existing = (
@@ -568,7 +626,9 @@ async def google_auth_callback(
             )
         )
 
-    setup_token = _encode_google_setup_token(email=email, owner_name=owner_name, plan=plan)
+    setup_token = _encode_google_setup_token(
+        email=email, owner_name=owner_name, plan=plan
+    )
     return RedirectResponse(
         url=_frontend_redirect(
             "/signup",
@@ -641,7 +701,9 @@ async def forgot_password(request: Request):
             .execute()
         )
     except Exception:
-        logger.error("DB error during forgot-password lookup for %s", email, exc_info=True)
+        logger.error(
+            "DB error during forgot-password lookup for %s", email, exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Internal server error")
 
     if not result.data:
@@ -657,14 +719,19 @@ async def forgot_password(request: Request):
 
     # Store hashed token in tenant record (compare hashes on redemption)
     import hashlib as _hashlib
+
     hashed_token = _hashlib.sha256(reset_token.encode()).hexdigest()
     try:
-        db.table("tenants").update({
-            "reset_token": hashed_token,
-            "reset_token_expires": expires_at,
-        }).eq("id", tenant_id).execute()
+        db.table("tenants").update(
+            {
+                "reset_token": hashed_token,
+                "reset_token_expires": expires_at,
+            }
+        ).eq("id", tenant_id).execute()
     except Exception:
-        logger.error("Failed to store reset token for tenant %s", tenant_id, exc_info=True)
+        logger.error(
+            "Failed to store reset token for tenant %s", tenant_id, exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Internal server error")
 
     # Send reset email
@@ -701,11 +768,14 @@ async def reset_password(request: Request):
     if not token or not new_password:
         raise HTTPException(status_code=400, detail="Token and password required")
     if len(new_password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 8 characters"
+        )
 
     db = get_service_supabase()
     # Hash the incoming token to match stored hash
     import hashlib as _hashlib
+
     hashed_token = _hashlib.sha256(token.encode()).hexdigest()
     try:
         result = (
@@ -732,13 +802,17 @@ async def reset_password(request: Request):
     # Update password and clear token
     hashed = _hash_password(new_password)
     try:
-        db.table("tenants").update({
-            "password_hash": hashed,
-            "reset_token": None,
-            "reset_token_expires": None,
-        }).eq("id", str(tenant["id"])).execute()
+        db.table("tenants").update(
+            {
+                "password_hash": hashed,
+                "reset_token": None,
+                "reset_token_expires": None,
+            }
+        ).eq("id", str(tenant["id"])).execute()
     except Exception:
-        logger.error("Failed to update password for tenant %s", tenant["id"], exc_info=True)
+        logger.error(
+            "Failed to update password for tenant %s", tenant["id"], exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Internal server error")
 
     logger.info("Password reset completed for tenant %s", tenant["id"])
@@ -786,7 +860,9 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Tenant row
     tenant_result = (
         db.table("tenants")
-        .select("business_name, business_type, plan, plan_status, conversations_used_this_month, monthly_conversation_limit, free_trial_started_at")
+        .select(
+            "business_name, business_type, plan, plan_status, conversations_used_this_month, monthly_conversation_limit, free_trial_started_at"
+        )
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -799,7 +875,9 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     # Widget config — full details for onboarding
     widget_result = (
         db.table("widget_configs")
-        .select("api_key, bot_name, primary_color, greeting_message, position, branding, is_online, offline_message, teaser_message, teaser_delay_seconds, teaser_enabled")
+        .select(
+            "api_key, bot_name, primary_color, greeting_message, position, branding, is_online, offline_message, teaser_message, teaser_delay_seconds, teaser_enabled"
+        )
         .eq("tenant_id", tenant_id)
         .limit(1)
         .execute()
@@ -830,17 +908,21 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     else:
         # Auto-create widget_config if missing
         api_key = f"anx_{secrets.token_urlsafe(32)}"
-        widget_defaults = get_widget_defaults(t.get("business_type"), t.get("business_name"))
+        widget_defaults = get_widget_defaults(
+            t.get("business_type"), t.get("business_name")
+        )
         logger.info("Dashboard auto-creating widget_config for %s", tenant_id)
-        db.table("widget_configs").insert({
-            "tenant_id": tenant_id,
-            "api_key": api_key,
-            "bot_name": widget_defaults["bot_name"],
-            "primary_color": widget_defaults["primary_color"],
-            "greeting_message": widget_defaults["greeting_message"],
-            "position": widget_defaults["position"],
-            "show_watermark": True,
-        }).execute()
+        db.table("widget_configs").insert(
+            {
+                "tenant_id": tenant_id,
+                "api_key": api_key,
+                "bot_name": widget_defaults["bot_name"],
+                "primary_color": widget_defaults["primary_color"],
+                "greeting_message": widget_defaults["greeting_message"],
+                "position": widget_defaults["position"],
+                "show_watermark": True,
+            }
+        ).execute()
         widget_config = WidgetConfigDetail(
             bot_name=widget_defaults["bot_name"],
             primary_color=widget_defaults["primary_color"],
@@ -858,7 +940,9 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         )
         leads_count = leads_result.count or 0
     except Exception:
-        logger.warning("Leads count query failed for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Leads count query failed for tenant %s", tenant_id, exc_info=True
+        )
         leads_count = 0
 
     # Hot leads count (live schema: lead_score is 1-10, hot = 8+)
@@ -872,7 +956,9 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         )
         hot_leads_count = hot_result.count or 0
     except Exception:
-        logger.warning("Hot leads count query failed for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Hot leads count query failed for tenant %s", tenant_id, exc_info=True
+        )
         hot_leads_count = 0
 
     # FAQ count
@@ -906,12 +992,15 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             unique_sessions = len({r["session_id"] for r in chat_sessions.data})
             conversations_used = max(conversations_used, unique_sessions)
     except Exception:
-        logger.warning("chat_messages count failed for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "chat_messages count failed for tenant %s", tenant_id, exc_info=True
+        )
 
     # Missed calls this week
     missed_calls = 0
     try:
         from datetime import datetime, timedelta, timezone as tz
+
         week_ago = (datetime.now(tz.utc) - timedelta(days=7)).isoformat()
         mc_result = (
             db.table("activity_log")
@@ -926,7 +1015,9 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         logger.debug("Missed calls count failed for tenant %s", tenant_id)
 
     trial = _compute_trial_status(t)
-    business_profile = get_dashboard_business_profile(t.get("business_type"), t.get("business_name"))
+    business_profile = get_dashboard_business_profile(
+        t.get("business_type"), t.get("business_name")
+    )
 
     response = DashboardResponse(
         business_name=t.get("business_name") or "",
@@ -979,6 +1070,7 @@ async def update_widget_config(
         teaser_enabled=w.get("teaser_enabled", True),
         enable_ai_fallback=w.get("enable_ai_fallback", False),
         enable_structured_lead_parser=w.get("enable_structured_lead_parser", False),
+        intent_config=w.get("intent_config"),
     )
 
 
@@ -1020,7 +1112,9 @@ async def update_faq(
     """Update an existing FAQ entry."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return _branding_svc.update_faq(tenant_id, faq_id, req.question, req.answer, req.category)
+    return _branding_svc.update_faq(
+        tenant_id, faq_id, req.question, req.answer, req.category
+    )
 
 
 @router.delete("/faq/{tenant_id}/{faq_id}", status_code=204)
@@ -1070,19 +1164,24 @@ async def update_conversation_tags(
     """Update tags on a conversation. Body: {"tags": ["tag1", "tag2"]}"""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return _branding_svc.update_conversation_tags(tenant_id, session_id, req.get("tags", []))
+    return _branding_svc.update_conversation_tags(
+        tenant_id, session_id, req.get("tags", [])
+    )
 
 
 # ── MCP API Keys ──────────────────────────────────────────
 
 
 @router.post("/mcp-key/{tenant_id}")
-async def generate_mcp_key(tenant_id: str, claims: dict = Depends(require_role("owner"))):
+async def generate_mcp_key(
+    tenant_id: str, claims: dict = Depends(require_role("owner"))
+):
     """Generate or regenerate an MCP API key for the tenant."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     import secrets as sec
+
     mcp_key = f"mcp_{sec.token_urlsafe(32)}"
 
     db = get_service_supabase()
@@ -1105,7 +1204,9 @@ async def revoke_mcp_key(tenant_id: str, claims: dict = Depends(require_role("ow
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    db.table("tenants").update({"mcp_api_key": None, "mcp_enabled": False}).eq("id", tenant_id).execute()
+    db.table("tenants").update({"mcp_api_key": None, "mcp_enabled": False}).eq(
+        "id", tenant_id
+    ).execute()
     return {"success": True}
 
 
@@ -1123,7 +1224,23 @@ async def update_settings(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     body = await request.json()
-    allowed = {"business_name", "business_type", "city", "owner_name", "notification_phone", "sms_notifications_enabled", "google_review_link", "review_request_config", "website_url", "textback_enabled", "textback_message", "textback_quiet_start", "textback_quiet_end", "daily_briefing_enabled", "noshow_recovery_enabled"}
+    allowed = {
+        "business_name",
+        "business_type",
+        "city",
+        "owner_name",
+        "notification_phone",
+        "sms_notifications_enabled",
+        "google_review_link",
+        "review_request_config",
+        "website_url",
+        "textback_enabled",
+        "textback_message",
+        "textback_quiet_start",
+        "textback_quiet_end",
+        "daily_briefing_enabled",
+        "noshow_recovery_enabled",
+    }
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
@@ -1148,7 +1265,9 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     db = get_service_supabase()
     result = (
         db.table("tenants")
-        .select("id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled")
+        .select(
+            "id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled"
+        )
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -1172,7 +1291,10 @@ async def billing_checkout(
     plan = body.get("plan")
 
     if not plan or plan not in PLAN_PRICES:
-        raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}",
+        )
     try:
         prices = ensure_plan_prices_configured(plan)
         ensure_stripe_configured()
@@ -1180,7 +1302,13 @@ async def billing_checkout(
         raise HTTPException(status_code=503, detail=str(exc))
 
     db = get_service_supabase()
-    result = db.table("tenants").select("id, owner_email, business_name").eq("id", tenant_id).limit(1).execute()
+    result = (
+        db.table("tenants")
+        .select("id, owner_email, business_name")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     tenant = result.data[0]
@@ -1235,13 +1363,21 @@ async def billing_portal(tenant_id: str, claims: dict = Depends(require_role("ow
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    result = db.table("tenants").select("stripe_customer_id").eq("id", tenant_id).limit(1).execute()
+    result = (
+        db.table("tenants")
+        .select("stripe_customer_id")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     customer_id = result.data[0].get("stripe_customer_id")
     if not customer_id:
-        raise HTTPException(status_code=400, detail="No billing account. Upgrade to a paid plan first.")
+        raise HTTPException(
+            status_code=400, detail="No billing account. Upgrade to a paid plan first."
+        )
 
     try:
         ensure_stripe_configured()
@@ -1266,7 +1402,10 @@ async def billing_change_plan(
     tenant_id = claims["tenant_id"]
 
     if not new_plan or new_plan not in PLAN_PRICES:
-        raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}",
+        )
     try:
         new_price_id = ensure_plan_prices_configured(new_plan)["monthly"]
         ensure_stripe_configured()
@@ -1274,14 +1413,22 @@ async def billing_change_plan(
         raise HTTPException(status_code=503, detail=str(exc))
 
     db = get_service_supabase()
-    result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
+    result = (
+        db.table("tenants")
+        .select("stripe_customer_id, plan")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     tenant = result.data[0]
     customer_id = tenant.get("stripe_customer_id")
     if not customer_id:
-        raise HTTPException(status_code=400, detail="No billing account. Subscribe first.")
+        raise HTTPException(
+            status_code=400, detail="No billing account. Subscribe first."
+        )
 
     current_plan = tenant.get("plan") or "free"
     if current_plan == new_plan:
@@ -1290,7 +1437,10 @@ async def billing_change_plan(
     # Find active subscription
     subs = stripe.Subscription.list(customer=customer_id, status="active", limit=1)
     if not subs.data:
-        raise HTTPException(status_code=400, detail="No active subscription found. Use checkout to subscribe.")
+        raise HTTPException(
+            status_code=400,
+            detail="No active subscription found. Use checkout to subscribe.",
+        )
 
     subscription = subs.data[0]
     sub_item_id = subscription["items"]["data"][0]["id"]
@@ -1305,7 +1455,9 @@ async def billing_change_plan(
     # Update tenant plan immediately (webhook will also fire)
     db.table("tenants").update({"plan": new_plan}).eq("id", tenant_id).execute()
 
-    logger.info("Plan changed for tenant %s: %s -> %s", tenant_id, current_plan, new_plan)
+    logger.info(
+        "Plan changed for tenant %s: %s -> %s", tenant_id, current_plan, new_plan
+    )
     return {"status": "changed", "old_plan": current_plan, "new_plan": new_plan}
 
 
@@ -1332,11 +1484,19 @@ async def billing_cancel(
     reason = str(body.get("reason") or "").strip()
     if reason not in allowed_reasons:
         raise HTTPException(status_code=400, detail="Cancellation reason is required")
-    reason_detail = str(body.get("reason_detail") or body.get("detail") or "").strip()[:1000]
+    reason_detail = str(body.get("reason_detail") or body.get("detail") or "").strip()[
+        :1000
+    ]
     feedback = str(body.get("feedback") or "").strip()[:1000]
 
     db = get_service_supabase()
-    result = db.table("tenants").select("stripe_customer_id, plan").eq("id", tenant_id).limit(1).execute()
+    result = (
+        db.table("tenants")
+        .select("stripe_customer_id, plan")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
@@ -1383,22 +1543,30 @@ async def billing_cancel(
 
     now_iso = datetime.now(timezone.utc).isoformat()
     try:
-        db.table("tenants").update({
-            "cancellation_requested_at": now_iso,
-            "cancellation_reason": reason,
-            "cancellation_reason_detail": reason_detail or None,
-        }).eq("id", tenant_id).execute()
-        db.table("tenant_cancellation_events").insert({
-            "tenant_id": tenant_id,
-            "stripe_subscription_id": subscription_id,
-            "plan": tenant.get("plan"),
-            "reason": reason,
-            "reason_detail": reason_detail or None,
-            "feedback": feedback or None,
-            "current_period_end": current_period_end_iso,
-        }).execute()
+        db.table("tenants").update(
+            {
+                "cancellation_requested_at": now_iso,
+                "cancellation_reason": reason,
+                "cancellation_reason_detail": reason_detail or None,
+            }
+        ).eq("id", tenant_id).execute()
+        db.table("tenant_cancellation_events").insert(
+            {
+                "tenant_id": tenant_id,
+                "stripe_subscription_id": subscription_id,
+                "plan": tenant.get("plan"),
+                "reason": reason,
+                "reason_detail": reason_detail or None,
+                "feedback": feedback or None,
+                "current_period_end": current_period_end_iso,
+            }
+        ).execute()
     except Exception:
-        logger.warning("Failed to persist cancellation reason for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Failed to persist cancellation reason for tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
 
     log_activity(
         tenant_id=tenant_id,
@@ -1412,7 +1580,10 @@ async def billing_cancel(
     )
 
     logger.info("Subscription cancellation scheduled for tenant %s", tenant_id)
-    return {"status": "cancellation_scheduled", "current_period_end": current_period_end}
+    return {
+        "status": "cancellation_scheduled",
+        "current_period_end": current_period_end,
+    }
 
 
 # ── Free Trial ────────────────────────────────────────────────
@@ -1448,6 +1619,7 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
     trial_expires = None
     if trial_started and trial["trial_days_remaining"] is not None:
         from datetime import datetime, timezone, timedelta
+
         if isinstance(trial_started, str):
             ts = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
         else:
@@ -1458,7 +1630,11 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
 
     return TrialStatusResponse(
         plan=tenant.get("plan") or "free",
-        trial_started=trial_started if isinstance(trial_started, str) else (trial_started.isoformat() if trial_started else None),
+        trial_started=(
+            trial_started
+            if isinstance(trial_started, str)
+            else (trial_started.isoformat() if trial_started else None)
+        ),
         trial_expires=trial_expires,
         days_remaining=trial["trial_days_remaining"],
         is_expired=trial["trial_expired"],
@@ -1468,6 +1644,7 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
 # ---------------------------------------------------------------------------
 # Activity feed
 # ---------------------------------------------------------------------------
+
 
 @router.get("/activity/{tenant_id}")
 async def get_activity(tenant_id: str, claims: dict = Depends(_get_current_tenant)):

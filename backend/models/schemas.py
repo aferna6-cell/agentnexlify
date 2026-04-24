@@ -1,9 +1,7 @@
-
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
-
 
 # --- Branding schema ---
 
@@ -21,7 +19,23 @@ class BrandingConfig(BaseModel):
     custom_css: str | None = None
 
 
+# --- Intent config schema ---
+
+
+class IntentConfig(BaseModel):
+    schema_version: str = "1.0"
+    primary_goal: str | None = None
+    secondary_goal: str | None = None
+    success_metric_label: str | None = None
+    tone: str | None = None
+    trade_off_hierarchy: list[str] | None = None
+    constraints: list[str] | None = None
+    escalation_triggers: list[str] | None = None
+    preset: str | None = None
+
+
 # --- Request / Response schemas ---
+
 
 class ContactRequest(BaseModel):
     name: str
@@ -59,6 +73,7 @@ class SignupRequest(BaseModel):
     @classmethod
     def validate_email(cls, v: str) -> str:
         import re
+
         if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
             raise ValueError("Invalid email address")
         return v
@@ -94,6 +109,7 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_register_email(cls, v: str) -> str:
         import re
+
         if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
             raise ValueError("Invalid email address")
         return v.lower().strip()
@@ -120,6 +136,7 @@ class RegisterRequest(BaseModel):
         if not v:
             return None
         import re
+
         if not re.match(r"^https?://", v, re.IGNORECASE):
             v = f"https://{v}"
         if not re.match(r"^https?://[^\s/$.?#].[^\s]*$", v, re.IGNORECASE):
@@ -162,6 +179,7 @@ class GoogleRegisterRequest(BaseModel):
         if not v:
             return None
         import re
+
         if not re.match(r"^https?://", v, re.IGNORECASE):
             v = f"https://{v}"
         if not re.match(r"^https?://[^\s/$.?#].[^\s]*$", v, re.IGNORECASE):
@@ -194,6 +212,7 @@ class WidgetConfigDetail(BaseModel):
     teaser_enabled: bool = True
     enable_ai_fallback: bool = False
     enable_structured_lead_parser: bool = False
+    intent_config: dict | None = None
 
 
 class DashboardQuickAction(BaseModel):
@@ -219,7 +238,9 @@ class DashboardBusinessProfile(BaseModel):
     missed_call_label: str = "Missed Calls This Week"
     missed_call_empty_hint: str = "Enable missed call text-back in Settings"
     proof_metric_label: str = "Customer opportunities captured"
-    proof_metric_empty_hint: str = "Your proof metric appears once customers start chatting"
+    proof_metric_empty_hint: str = (
+        "Your proof metric appears once customers start chatting"
+    )
     quick_actions: list[DashboardQuickAction] = Field(default_factory=list)
 
 
@@ -276,6 +297,7 @@ class WidgetConfigUpdateRequest(BaseModel):
     pre_chat_form: list[dict] | None = None
     enable_ai_fallback: bool | None = None
     enable_structured_lead_parser: bool | None = None
+    intent_config: IntentConfig | None = None
 
 
 class FaqEntryResponse(BaseModel):
@@ -306,6 +328,7 @@ class CreateClientRequest(BaseModel):
 
 
 # --- Database row models ---
+
 
 class ClientRow(BaseModel):
     id: str
@@ -389,6 +412,7 @@ class WidgetConfigResponse(BaseModel):
     teaser_enabled: bool = True
     plan: str = "free"
     pre_chat_form: list[dict] | None = None
+    intent_config: dict | None = None
 
 
 class WidgetLeadRequest(BaseModel):
@@ -422,6 +446,7 @@ class WidgetOfflineContactRequest(BaseModel):
 
 class LeadRow(BaseModel):
     """Matches live Supabase leads table (archive schema)."""
+
     id: str
     client_id: str
     conversation_id: str | None = None
@@ -512,6 +537,7 @@ class ClientUpdateRequest(BaseModel):
     def validate_client_email(cls, v: str | None) -> str | None:
         if v is not None:
             import re
+
             if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
                 raise ValueError("Invalid email address")
         return v
@@ -579,6 +605,7 @@ class BookAppointmentRequest(BaseModel):
     @classmethod
     def validate_booking_email(cls, v: str) -> str:
         import re
+
         if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
             raise ValueError("Invalid email address")
         return v.lower().strip()
@@ -625,8 +652,15 @@ class AppointmentUpdateRequest(BaseModel):
     @field_validator("status")
     @classmethod
     def validate_appt_status(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"confirmed", "cancelled", "completed", "no_show"}:
-            raise ValueError("status must be one of: confirmed, cancelled, completed, no_show")
+        if v is not None and v not in {
+            "confirmed",
+            "cancelled",
+            "completed",
+            "no_show",
+        }:
+            raise ValueError(
+                "status must be one of: confirmed, cancelled, completed, no_show"
+            )
         return v
 
 
@@ -684,7 +718,12 @@ class CrmDashboardWidgets(BaseModel):
 
 # --- Automation Sequence schemas ---
 
-VALID_TRIGGER_EVENTS = {"new_lead", "lead_stage_change", "no_response_24h", "appointment_completed"}
+VALID_TRIGGER_EVENTS = {
+    "new_lead",
+    "lead_stage_change",
+    "no_response_24h",
+    "appointment_completed",
+}
 
 
 class AutomationStepCreate(BaseModel):
@@ -736,7 +775,14 @@ class LeadStageUpdate(BaseModel):
 
 # --- Email Template schemas ---
 
-VALID_TEMPLATE_CATEGORIES = {"welcome", "follow_up", "reminder", "review", "promotion", "custom"}
+VALID_TEMPLATE_CATEGORIES = {
+    "welcome",
+    "follow_up",
+    "reminder",
+    "review",
+    "promotion",
+    "custom",
+}
 
 
 class EmailTemplateCreate(BaseModel):
@@ -814,6 +860,7 @@ class WebhookResponse(BaseModel):
 
 class WebhookListResponse(BaseModel):
     """Webhook response without secret — used for list/get endpoints."""
+
     id: str
     tenant_id: str
     name: str
@@ -855,6 +902,7 @@ class TeamInviteRequest(BaseModel):
     @classmethod
     def validate_invite_email(cls, v: str) -> str:
         import re
+
         if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
             raise ValueError("Invalid email address")
         return v.lower().strip()

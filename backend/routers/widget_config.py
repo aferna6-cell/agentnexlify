@@ -11,7 +11,17 @@ import logging
 import re
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -39,7 +49,10 @@ router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
 
 _MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
 _ALLOWED_TYPES = {
-    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -69,22 +82,66 @@ def _content_matches_type(content_type: str, data: bytes) -> bool:
         return data.startswith(b"%PDF-")
     if content_type == "application/msword":
         return data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")
-    if content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    if (
+        content_type
+        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ):
         return data.startswith(b"PK\x03\x04")
     return False
+
 
 # ---------------------------------------------------------------------------
 # Email tracking pixel
 # ---------------------------------------------------------------------------
 
 # 1x1 transparent GIF
-_TRACKING_PIXEL = bytes([
-    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
-    0x80, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x21,
-    0xF9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00,
-    0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
-    0x01, 0x00, 0x3B,
-])
+_TRACKING_PIXEL = bytes(
+    [
+        0x47,
+        0x49,
+        0x46,
+        0x38,
+        0x39,
+        0x61,
+        0x01,
+        0x00,
+        0x01,
+        0x00,
+        0x80,
+        0x00,
+        0x00,
+        0xFF,
+        0xFF,
+        0xFF,
+        0x00,
+        0x00,
+        0x00,
+        0x21,
+        0xF9,
+        0x04,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x2C,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x02,
+        0x02,
+        0x44,
+        0x01,
+        0x00,
+        0x3B,
+    ]
+)
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +154,7 @@ def _get_jwt_claims(authorization: str = Header(...)) -> dict:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
     from jose import JWTError, jwt as jose_jwt
+
     jwt_secret = getattr(settings, "jwt_secret_key", "")
     if not (isinstance(jwt_secret, str) and jwt_secret):
         api_secret = getattr(settings, "api_secret_key", "")
@@ -122,6 +180,79 @@ class AIFeedbackRequest(BaseModel):
     message_index: int = Field(..., ge=0)
     rating: str = Field(..., max_length=20)  # "thumbs_up" or "thumbs_down"
     correction: str | None = Field(None, max_length=2000)
+
+
+# ---------------------------------------------------------------------------
+# Intent presets (static — must be BEFORE /config/{api_key} to avoid shadowing)
+# ---------------------------------------------------------------------------
+
+_INTENT_PRESETS = {
+    "trades": {
+        "primary_goal": "book_appointment",
+        "tone": "professional_warm",
+        "trade_off_hierarchy": ["speed", "accuracy"],
+        "constraints": [
+            "Never promise pricing without asking for service address and type of work first"
+        ],
+        "escalation_triggers": [
+            "Customer expresses frustration after 3 messages",
+            "Customer requests a human",
+        ],
+    },
+    "medical": {
+        "primary_goal": "answer_question",
+        "tone": "formal",
+        "trade_off_hierarchy": ["accuracy", "safety", "speed"],
+        "constraints": ["Always recommend consulting a doctor", "Never diagnose"],
+        "escalation_triggers": [
+            "Medical emergency keywords detected",
+            "Patient in distress",
+        ],
+    },
+    "legal": {
+        "primary_goal": "capture_lead",
+        "tone": "formal",
+        "trade_off_hierarchy": ["accuracy", "safety"],
+        "constraints": [
+            "Never provide specific legal advice",
+            "Always recommend a consultation",
+        ],
+        "escalation_triggers": [
+            "Explicit legal question requiring professional opinion",
+            "Urgent legal matter",
+        ],
+    },
+    "retail": {
+        "primary_goal": "answer_question",
+        "tone": "casual_friendly",
+        "trade_off_hierarchy": ["accuracy", "speed"],
+        "constraints": ["Always check product availability before confirming"],
+        "escalation_triggers": [
+            "Order dispute or refund request",
+            "Customer requests a human",
+        ],
+    },
+    "ecommerce": {
+        "primary_goal": "generate_quote",
+        "tone": "casual_friendly",
+        "trade_off_hierarchy": ["accuracy", "speed"],
+        "constraints": ["Always confirm shipping costs before finalizing"],
+        "escalation_triggers": ["Payment issue", "Customer requests a human"],
+    },
+    "general": {
+        "primary_goal": "general_support",
+        "tone": "professional_warm",
+        "trade_off_hierarchy": ["accuracy", "speed"],
+        "constraints": [],
+        "escalation_triggers": ["Customer requests a human"],
+    },
+}
+
+
+@router.get("/config/intent-presets")
+async def get_intent_presets():
+    """Return built-in intent config presets for onboarding and widget settings."""
+    return {"presets": _INTENT_PRESETS}
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +322,7 @@ async def get_config(request: Request, api_key: str):
         teaser_enabled=widget.get("teaser_enabled", True),
         plan=tenant_plan,
         pre_chat_form=widget.get("pre_chat_form"),
+        intent_config=widget.get("intent_config"),
     )
 
 
@@ -215,7 +347,8 @@ async def toggle_online_status(
             raise HTTPException(status_code=404, detail="Widget config not found")
         logger.info(
             "toggle_online_status: tenant=%s is_online=%s",
-            tenant_id, body.is_online,
+            tenant_id,
+            body.is_online,
         )
         return {"is_online": body.is_online}
     except HTTPException:
@@ -223,7 +356,9 @@ async def toggle_online_status(
     except Exception as e:
         logger.error(
             "toggle_online_status FAILED: tenant=%s error=%s",
-            tenant_id, e, exc_info=True,
+            tenant_id,
+            e,
+            exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Failed to update online status")
 
@@ -271,7 +406,9 @@ async def upload_file(
     # Validate file type
     content_type = file.content_type or ""
     if content_type not in _ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail=f"File type not allowed: {content_type}")
+        raise HTTPException(
+            status_code=400, detail=f"File type not allowed: {content_type}"
+        )
 
     # Read file with size check
     data = await file.read(_MAX_UPLOAD_SIZE + 1)
@@ -280,7 +417,9 @@ async def upload_file(
     if not data:
         raise HTTPException(status_code=400, detail="File is empty")
     if not _content_matches_type(content_type, data):
-        raise HTTPException(status_code=400, detail="File content does not match declared type")
+        raise HTTPException(
+            status_code=400, detail="File content does not match declared type"
+        )
 
     # Generate unique path
     ext = _CONTENT_TYPE_EXTENSIONS[content_type]
@@ -298,7 +437,9 @@ async def upload_file(
         raise HTTPException(status_code=500, detail="Upload failed")
 
     # Build public URL
-    public_url = f"{settings.supabase_url}/storage/v1/object/public/chat-attachments/{path}"
+    public_url = (
+        f"{settings.supabase_url}/storage/v1/object/public/chat-attachments/{path}"
+    )
 
     return {"url": public_url, "filename": file.filename, "content_type": content_type}
 
@@ -344,9 +485,7 @@ async def unsubscribe_lead(
         allow_legacy = False
 
     valid_legacy = (
-        allow_legacy
-        and not tid
-        and hmac.compare_digest(sig, _make_unsub_sig(lid, ""))
+        allow_legacy and not tid and hmac.compare_digest(sig, _make_unsub_sig(lid, ""))
     )
 
     if not (valid_bound or valid_legacy):
@@ -356,10 +495,12 @@ async def unsubscribe_lead(
         )
 
     if not lead.get("unsubscribed"):
-        db.table("leads").update({
-            "unsubscribed": True,
-            "unsubscribed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", lid).execute()
+        db.table("leads").update(
+            {
+                "unsubscribed": True,
+                "unsubscribed_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ).eq("id", lid).execute()
 
     return HTMLResponse(
         "<html><body style='font-family:Arial,sans-serif;text-align:center;padding:60px;'>"
@@ -380,15 +521,18 @@ async def track_email_open(
     """Log an email open event and return a 1x1 tracking pixel."""
     try:
         db = get_service_supabase()
-        db.table("email_events").insert({
-            "tenant_id": tid,
-            "lead_id": lid or None,
-            "event_type": "open",
-            "execution_id": eid or None,
-        }).execute()
+        db.table("email_events").insert(
+            {
+                "tenant_id": tid,
+                "lead_id": lid or None,
+                "event_type": "open",
+                "execution_id": eid or None,
+            }
+        ).execute()
     except Exception:
         logger.debug("Email open tracking insert failed", exc_info=True)
     from starlette.responses import Response
+
     return Response(content=_TRACKING_PIXEL, media_type="image/gif")
 
 
@@ -397,19 +541,25 @@ async def track_email_open(
 async def submit_ai_feedback(request: Request, req: AIFeedbackRequest):
     """Submit thumbs up/down feedback on an AI response from the widget."""
     if req.rating not in ("thumbs_up", "thumbs_down"):
-        raise HTTPException(status_code=400, detail="Rating must be thumbs_up or thumbs_down")
+        raise HTTPException(
+            status_code=400, detail="Rating must be thumbs_up or thumbs_down"
+        )
 
     widget = _get_widget_config(req.api_key)
     tenant_id = widget["tenant_id"]
 
     db = get_service_supabase()
-    db.table("ai_feedback").insert({
-        "tenant_id": tenant_id,
-        "session_id": req.session_id,
-        "message_index": req.message_index,
-        "rating": req.rating,
-        "correction": req.correction if req.correction and req.correction.strip() else None,
-    }).execute()
+    db.table("ai_feedback").insert(
+        {
+            "tenant_id": tenant_id,
+            "session_id": req.session_id,
+            "message_index": req.message_index,
+            "rating": req.rating,
+            "correction": (
+                req.correction if req.correction and req.correction.strip() else None
+            ),
+        }
+    ).execute()
 
     return {"status": "ok"}
 
@@ -446,7 +596,9 @@ async def delete_ai_feedback(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    db.table("ai_feedback").delete().eq("id", feedback_id).eq("tenant_id", tenant_id).execute()
+    db.table("ai_feedback").delete().eq("id", feedback_id).eq(
+        "tenant_id", tenant_id
+    ).execute()
     return {"status": "deleted"}
 
 
@@ -456,7 +608,9 @@ async def delete_ai_feedback(
 @router.get("/{tenant_id}/qr")
 async def generate_qr_code(
     tenant_id: str,
-    url: str = Query(..., min_length=5, max_length=2000, description="URL to encode in the QR code"),
+    url: str = Query(
+        ..., min_length=5, max_length=2000, description="URL to encode in the QR code"
+    ),
     size: int = Query(300, ge=100, le=1000, description="QR code image size in pixels"),
     claims: dict = Depends(_auth_get_tenant),
 ):
@@ -468,7 +622,12 @@ async def generate_qr_code(
     import qrcode
     from fastapi.responses import StreamingResponse
 
-    qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=2)
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=2,
+    )
     qr.add_data(url)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
@@ -480,7 +639,11 @@ async def generate_qr_code(
     img.save(buf, format="PNG")
     buf.seek(0)
 
-    return StreamingResponse(buf, media_type="image/png", headers={
-        "Content-Disposition": f"inline; filename=qr-code-{size}.png",
-        "Cache-Control": "public, max-age=3600",
-    })
+    return StreamingResponse(
+        buf,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f"inline; filename=qr-code-{size}.png",
+            "Cache-Control": "public, max-age=3600",
+        },
+    )

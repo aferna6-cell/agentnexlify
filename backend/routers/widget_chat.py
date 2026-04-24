@@ -207,7 +207,8 @@ async def _run_support_fallback(
             logger.info(
                 "widget_chat: managed_agent_fallback SUCCESS session=%s "
                 "confidence=%s",
-                session_id, fallback_confidence,
+                session_id,
+                fallback_confidence,
             )
         else:
             # Low confidence — force human handoff. Attach the agent's
@@ -225,7 +226,8 @@ async def _run_support_fallback(
             logger.info(
                 "widget_chat: managed_agent_fallback LOW_CONFIDENCE "
                 "session=%s reason=%s",
-                session_id, fallback_escalate_reason,
+                session_id,
+                fallback_escalate_reason,
             )
     except asyncio.TimeoutError:
         fallback_error = "timeout"
@@ -241,7 +243,8 @@ async def _run_support_fallback(
         logger.warning(
             "widget_chat: managed_agent_fallback NOT_CONFIGURED "
             "session=%s — forcing human handoff (%s)",
-            session_id, exc,
+            session_id,
+            exc,
         )
     except Exception as exc:  # noqa: BLE001
         fallback_error = f"exception: {type(exc).__name__}"
@@ -252,16 +255,12 @@ async def _run_support_fallback(
             session_id,
         )
     finally:
-        fallback_duration_ms = int(
-            (perf_counter() - fallback_start) * 1000
-        )
+        fallback_duration_ms = int((perf_counter() - fallback_start) * 1000)
         try:
             log_activity(
                 tenant_id=tenant_id,
                 activity_type="ai_fallback_fired",
-                description=(
-                    "Widget chat escalated to support_agent managed agent"
-                ),
+                description=("Widget chat escalated to support_agent managed agent"),
                 metadata={
                     "session_id": session_id,
                     "confidence": fallback_confidence,
@@ -284,7 +283,9 @@ async def _run_support_fallback(
 
 @router.post("/chat", response_model=WidgetChatResponse)
 @limiter.limit("60/minute")
-async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks: BackgroundTasks):
+async def widget_chat(
+    request: Request, req: WidgetChatRequest, background_tasks: BackgroundTasks
+):
     """Process a chat message through the multi-tenant widget pipeline."""
     request_started = perf_counter()
     logger.info("widget_chat: received request session=%s", req.session_id)
@@ -292,7 +293,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 1. Look up widget config + tenant
     widget = _get_widget_config(req.api_key)
     tenant = _get_tenant(widget["tenant_id"])
-    logger.info("widget_chat: tenant=%s business=%s", tenant["id"], tenant.get("business_name"))
+    logger.info(
+        "widget_chat: tenant=%s business=%s", tenant["id"], tenant.get("business_name")
+    )
 
     # 2. Origin check
     _check_origin(request, widget.get("allowed_domains"))
@@ -300,15 +303,21 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # 3. All plans now have unlimited conversations (limit check removed).
 
     # 4. Get or create conversation
-    conversation_id, is_new = _get_or_create_conversation(tenant["id"], req.session_id)
+    conversation_id, is_new = _get_or_create_conversation(
+        tenant["id"], req.session_id, intent_config_snapshot=widget.get("intent_config")
+    )
     logger.info("widget_chat: conversation=%s is_new=%s", conversation_id, is_new)
 
     # Fire conversation.started webhook for new sessions
     if is_new:
-        fire_event_background(tenant["id"], "conversation.started", {
-            "session_id": req.session_id,
-            "conversation_id": conversation_id,
-        })
+        fire_event_background(
+            tenant["id"],
+            "conversation.started",
+            {
+                "session_id": req.session_id,
+                "conversation_id": conversation_id,
+            },
+        )
 
     # Get DB handle for conversation operations
     db = get_service_supabase()
@@ -326,7 +335,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                     .execute()
                     .data
                 )
-                old_val = (row[0].get("conversations_used_this_month") or 0) if row else 0
+                old_val = (
+                    (row[0].get("conversations_used_this_month") or 0) if row else 0
+                )
                 # Conditional update: only succeeds if the value hasn't changed
                 query = (
                     db.table("tenants")
@@ -342,9 +353,16 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 if result.data:
                     break  # update succeeded
             else:
-                logger.warning("Usage counter CAS failed for tenant %s after 3 attempts", tenant["id"])
+                logger.warning(
+                    "Usage counter CAS failed for tenant %s after 3 attempts",
+                    tenant["id"],
+                )
         except Exception:
-            logger.warning("Failed to increment usage counter for tenant %s", tenant["id"], exc_info=True)
+            logger.warning(
+                "Failed to increment usage counter for tenant %s",
+                tenant["id"],
+                exc_info=True,
+            )
 
     # 4b. Check if conversation is in handoff mode (team member handling)
     handoff_active = False
@@ -361,7 +379,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             tags = conv_tags.data[0].get("tags") or []
             handoff_active = "handoff" in tags
     except Exception:
-        logger.warning("handoff check failed for session %s", req.session_id, exc_info=True)
+        logger.warning(
+            "handoff check failed for session %s", req.session_id, exc_info=True
+        )
 
     if handoff_active:
         # Save user message, skip Claude, return waiting message
@@ -390,7 +410,11 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                         handoff=True,
                     )
         except Exception:
-            logger.warning("Failed to fetch latest team reply for session %s", req.session_id, exc_info=True)
+            logger.warning(
+                "Failed to fetch latest team reply for session %s",
+                req.session_id,
+                exc_info=True,
+            )
 
         waiting_msg = "A team member is reviewing your conversation and will respond shortly. Thank you for your patience."
         _save_chat_messages(tenant["id"], req.session_id, None, waiting_msg)
@@ -403,7 +427,12 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         )
 
     # 4c. Content mode detection — repurpose content instead of chatting
-    _content_mode_keywords = ["repurpose", "content mode", "turn this into", "create content from"]
+    _content_mode_keywords = [
+        "repurpose",
+        "content mode",
+        "turn this into",
+        "create content from",
+    ]
     _yt_pattern = re.compile(r"(?:youtube\.com/watch|youtu\.be/)")
     _msg_lower = req.message.lower()
     _content_mode = req.content_mode
@@ -418,7 +447,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         _content_mode = True
 
     if _content_mode:
-        plan = (tenant.get("plan") or "free")
+        plan = tenant.get("plan") or "free"
         if plan not in ("professional", "enterprise"):
             _save_chat_messages(tenant["id"], req.session_id, req.message, None)
             return WidgetChatResponse(
@@ -436,7 +465,11 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             _src_type = "text"
         # Create repurpose job
         try:
-            from backend.services.content_repurposer import extract_source, repurpose as do_repurpose
+            from backend.services.content_repurposer import (
+                extract_source,
+                repurpose as do_repurpose,
+            )
+
             source = await extract_source(_src_type, req.message.strip())
             outputs = await do_repurpose(
                 source_content=source["content"],
@@ -444,16 +477,18 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 tenant_id=tenant["id"],
                 tone="professional",
             )
-            db.table("repurpose_jobs").insert({
-                "tenant_id": tenant["id"],
-                "source_type": _src_type,
-                "source_url": source["source_url"],
-                "source_content": source["content"],
-                "source_title": source["title"],
-                "outputs": outputs,
-                "status": "completed",
-                "created_via": "widget",
-            }).execute()
+            db.table("repurpose_jobs").insert(
+                {
+                    "tenant_id": tenant["id"],
+                    "source_type": _src_type,
+                    "source_url": source["source_url"],
+                    "source_content": source["content"],
+                    "source_title": source["title"],
+                    "outputs": outputs,
+                    "status": "completed",
+                    "created_via": "widget",
+                }
+            ).execute()
             resp_text = (
                 f"Done! I've repurposed \"{source['title']}\" into:\n\n"
                 "- X/Twitter thread (7-10 tweets)\n"
@@ -478,7 +513,8 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     messages = _load_chat_history(tenant["id"], req.session_id)
     logger.info(
         "widget_chat: session=%s loaded %d previous messages, first_role=%s",
-        req.session_id, len(messages),
+        req.session_id,
+        len(messages),
         messages[0]["role"] if messages else "NONE",
     )
 
@@ -492,7 +528,11 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     if len(_normalized) <= 1 and len(messages) >= 2:
         _canned_junk = "Could you type out your question? I'm happy to help!"
         _save_chat_messages(tenant["id"], req.session_id, req.message, _canned_junk)
-        logger.info("widget_chat: junk_shortcircuit=True session=%s msg=%r (skipped Claude API)", req.session_id, _stripped)
+        logger.info(
+            "widget_chat: junk_shortcircuit=True session=%s msg=%r (skipped Claude API)",
+            req.session_id,
+            _stripped,
+        )
         return WidgetChatResponse(
             response=_canned_junk,
             session_id=req.session_id,
@@ -510,7 +550,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 f"Hi! Thanks for reaching out to {_biz_name}. How can I help today?"
             )
             _save_chat_messages(tenant["id"], req.session_id, req.message, _opening)
-            logger.info("widget_chat: greeting_shortcircuit=True session=%s first_turn=True (skipped Claude API)", req.session_id)
+            logger.info(
+                "widget_chat: greeting_shortcircuit=True session=%s first_turn=True (skipped Claude API)",
+                req.session_id,
+            )
             return WidgetChatResponse(
                 response=_opening,
                 session_id=req.session_id,
@@ -521,7 +564,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
 
         # Session already has at least one exchange - this is a repeat greeting
         _prior_user_greeted = any(
-            m["role"] == "user" and re.sub(r"[^a-z]", "", m.get("content", "").strip().lower()) in _GREETINGS
+            m["role"] == "user"
+            and re.sub(r"[^a-z]", "", m.get("content", "").strip().lower())
+            in _GREETINGS
             for m in messages
         )
         if _prior_user_greeted:
@@ -531,7 +576,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 f"I can answer questions about {_biz_name} - pricing, services, how to get started, and more."
             )
             _save_chat_messages(tenant["id"], req.session_id, req.message, _canned)
-            logger.info("widget_chat: greeting_shortcircuit=True session=%s (skipped Claude API)", req.session_id)
+            logger.info(
+                "widget_chat: greeting_shortcircuit=True session=%s (skipped Claude API)",
+                req.session_id,
+            )
             return WidgetChatResponse(
                 response=_canned,
                 session_id=req.session_id,
@@ -545,7 +593,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     # (business_type alone gives the bot enough vertical context to answer generically).
     _has_kb = bool((widget.get("knowledge_base") or "").strip())
     _has_ci = bool((widget.get("custom_instructions") or "").strip())
-    _has_bt = bool((tenant.get("business_type") or "").strip()) and (tenant.get("business_type") or "").lower() != "other"
+    _has_bt = (
+        bool((tenant.get("business_type") or "").strip())
+        and (tenant.get("business_type") or "").lower() != "other"
+    )
     if not _has_kb and not _has_ci and not _has_bt and len(messages) == 0:
         # Final check: FAQs count as grounding too. Probe cheaply.
         _faq_probe_key = f"faq_count:{tenant['id']}"
@@ -563,7 +614,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 )
                 _faq_count = int(_faq_probe.count or 0)
             except Exception:
-                logger.warning("faq count probe failed for tenant %s", tenant["id"], exc_info=True)
+                logger.warning(
+                    "faq count probe failed for tenant %s", tenant["id"], exc_info=True
+                )
                 _faq_count = 0
             _set_cache(_faq_probe_key, _faq_count)
 
@@ -578,7 +631,8 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             _save_chat_messages(tenant["id"], req.session_id, req.message, _setup_msg)
             logger.info(
                 "widget_chat: null_state_guard session=%s tenant=%s (no KB, CI, business_type, or FAQs)",
-                req.session_id, tenant["id"],
+                req.session_id,
+                tenant["id"],
             )
             return WidgetChatResponse(
                 response=_setup_msg,
@@ -626,7 +680,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             )
             bh_data = bh_result.data[0] if bh_result.data else False
         except Exception:
-            logger.warning("business_hours query failed for tenant %s", tid, exc_info=True)
+            logger.warning(
+                "business_hours query failed for tenant %s", tid, exc_info=True
+            )
             bh_data = False
         _set_cache(bh_cache_key, bh_data)
     if bh_data is False:
@@ -657,9 +713,12 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         if website_content is None:
             try:
                 from backend.services.website_crawler import get_crawled_content
+
                 website_content = get_crawled_content(tid) or False
             except Exception:
-                logger.warning("website_content load failed for tenant %s", tid, exc_info=True)
+                logger.warning(
+                    "website_content load failed for tenant %s", tid, exc_info=True
+                )
                 website_content = False
             _set_cache(f"wsc:{tid}", website_content)
         if website_content is False:
@@ -679,7 +738,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             if menu_result.data:
                 menu_items = menu_result.data
         except Exception:
-            logger.warning("menu_items query failed for tenant %s", tenant["id"], exc_info=True)
+            logger.warning(
+                "menu_items query failed for tenant %s", tenant["id"], exc_info=True
+            )
 
     job_listings = None
     if needs_job_context:
@@ -695,7 +756,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             if jobs_result.data:
                 job_listings = jobs_result.data
         except Exception:
-            logger.warning("jobs query failed for tenant %s", tenant["id"], exc_info=True)
+            logger.warning(
+                "jobs query failed for tenant %s", tenant["id"], exc_info=True
+            )
 
     bid_templates = None
     if needs_bid_context:
@@ -711,7 +774,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 )
                 bid_templates = bt_result.data if bt_result.data else []
             except Exception:
-                logger.warning("bid_templates query failed for tenant %s", tid, exc_info=True)
+                logger.warning(
+                    "bid_templates query failed for tenant %s", tid, exc_info=True
+                )
                 bid_templates = []
             _set_cache(f"bidtpl:{tid}", bid_templates)
 
@@ -728,7 +793,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             )
             custom_field_defs = cf_result.data if cf_result.data else []
         except Exception:
-            logger.debug("custom field defs query failed for tenant %s", tid, exc_info=True)
+            logger.debug(
+                "custom field defs query failed for tenant %s", tid, exc_info=True
+            )
 
     # Load active chat flow
     active_flow = None
@@ -746,14 +813,23 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             active_flow = flow_result.data[0].get("flow_json")
             active_flow_id = flow_result.data[0].get("id")
     except Exception:
-        logger.warning("chat_flows query failed for tenant %s", tenant["id"], exc_info=True)
+        logger.warning(
+            "chat_flows query failed for tenant %s", tenant["id"], exc_info=True
+        )
 
     system_prompt = _build_system_prompt(
-        tenant, faq_data, bh_data, corrections, website_content,
-        menu_items, job_listings, bid_templates=bid_templates or None,
+        tenant,
+        faq_data,
+        bh_data,
+        corrections,
+        website_content,
+        menu_items,
+        job_listings,
+        bid_templates=bid_templates or None,
         custom_field_defs=custom_field_defs or None,
         custom_instructions=widget.get("custom_instructions") or None,
         knowledge_base=widget.get("knowledge_base") or None,
+        intent_config=widget.get("intent_config") or None,
     )
 
     # Inject active flow instructions into system prompt
@@ -762,7 +838,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         if flow_instructions:
             flow_chars = resolve_int_setting("widget_prompt_flow_chars", 1500)
             if len(flow_instructions) > flow_chars:
-                flow_instructions = flow_instructions[: flow_chars - 18].rstrip() + "\n[Flow truncated]"
+                flow_instructions = (
+                    flow_instructions[: flow_chars - 18].rstrip() + "\n[Flow truncated]"
+                )
             system_prompt += flow_instructions
 
     prompt_profile = {
@@ -786,7 +864,7 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             log_activity(
                 tenant_id=tenant["id"],
                 activity_type="flow_used",
-                description=f"Chat flow used in conversation",
+                description="Chat flow used in conversation",
                 metadata={
                     "flow_id": active_flow_id,
                     "session_id": req.session_id,
@@ -796,7 +874,9 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         except Exception:
             logger.warning(
                 "Failed to log flow_used for tenant %s flow %s",
-                tenant["id"], active_flow_id, exc_info=True,
+                tenant["id"],
+                active_flow_id,
+                exc_info=True,
             )
 
     # Use bot_name from widget config in the system prompt
@@ -853,12 +933,18 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             "because monthly AI usage is unusually high. The team has been "
             "notified and can follow up directly."
         )
-        _save_chat_messages(tenant["id"], req.session_id, req.message, usage_limited_text)
-        fire_event_background(tenant["id"], "ai_usage.blocked", {
-            "session_id": req.session_id,
-            "conversation_id": conversation_id,
-            "reason": usage_reservation.reason,
-        })
+        _save_chat_messages(
+            tenant["id"], req.session_id, req.message, usage_limited_text
+        )
+        fire_event_background(
+            tenant["id"],
+            "ai_usage.blocked",
+            {
+                "session_id": req.session_id,
+                "conversation_id": conversation_id,
+                "reason": usage_reservation.reason,
+            },
+        )
         return WidgetChatResponse(
             response=usage_limited_text,
             session_id=req.session_id,
@@ -932,7 +1018,11 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
         )
     except anthropic.APIError as e:
         release_ai_token_reservation(usage_reservation)
-        logger.error("widget_chat: Anthropic API error status=%s: %s", getattr(e, 'status_code', '?'), e)
+        logger.error(
+            "widget_chat: Anthropic API error status=%s: %s",
+            getattr(e, "status_code", "?"),
+            e,
+        )
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
@@ -950,7 +1040,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     if order_data:
         assistant_text = _strip_order_json_from_response(assistant_text)
         background_tasks.add_task(
-            _process_order_from_chat, tenant["id"], req.session_id, order_data,
+            _process_order_from_chat,
+            tenant["id"],
+            req.session_id,
+            order_data,
         )
 
     # 9b. Extract bid request from AI response (contractor quick-bid flow)
@@ -958,7 +1051,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
     if bid_request_data:
         assistant_text = _strip_bid_request_from_response(assistant_text)
         background_tasks.add_task(
-            _process_bid_request_from_chat, tenant["id"], req.session_id, bid_request_data,
+            _process_bid_request_from_chat,
+            tenant["id"],
+            req.session_id,
+            bid_request_data,
         )
 
     # 9ba. Managed-agent fallback (support_agent) — second-tier retry when
@@ -996,13 +1092,18 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                         "id", conv_result.data[0]["id"]
                     ).execute()
         except Exception:
-            logger.warning("Failed to tag conversation as handoff for session %s", req.session_id, exc_info=True)
+            logger.warning(
+                "Failed to tag conversation as handoff for session %s",
+                req.session_id,
+                exc_info=True,
+            )
 
         # Send notification to team (SMS + email + webhook)
         try:
             owner_phone = tenant.get("notification_phone")
             if owner_phone and tenant.get("sms_notifications_enabled"):
                 from backend.services.twilio_service import send_sms
+
                 await send_sms(
                     owner_phone,
                     f"[{tenant.get('business_name') or 'Business'}] A customer requested to speak with a team member. Check your inbox.",
@@ -1014,33 +1115,42 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             owner_email = tenant.get("owner_email")
             if owner_email:
                 from backend.services.email_sender import send_email
+
                 biz = tenant.get("business_name") or "Your business"
                 await send_email(
                     to=owner_email,
                     subject=f"[{biz}] Customer requesting a human",
                     body_html=(
-                        f"<p>A customer on your website chat is asking to speak with a team member.</p>"
-                        f"<p>Open the <a href='https://app.agentnexlify.com/dashboard/conversations'>Conversations inbox</a> to reply.</p>"
+                        "<p>A customer on your website chat is asking to speak with a team member.</p>"
+                        "<p>Open the <a href='https://app.agentnexlify.com/dashboard/conversations'>Conversations inbox</a> to reply.</p>"
                     ),
                     tenant_id=tenant["id"],
                 )
         except Exception:
             logger.warning("Failed to send handoff email notification", exc_info=True)
 
-        fire_event_background(tenant["id"], "conversation.handoff", {
-            "session_id": req.session_id,
-            "conversation_id": conversation_id,
-        })
+        fire_event_background(
+            tenant["id"],
+            "conversation.handoff",
+            {
+                "session_id": req.session_id,
+                "conversation_id": conversation_id,
+            },
+        )
 
     # 10. Save user + assistant messages to chat_messages table
     _save_chat_messages(tenant["id"], req.session_id, req.message, assistant_text)
 
     # Fire conversation.message webhook
-    fire_event_background(tenant["id"], "conversation.message", {
-        "session_id": req.session_id,
-        "user_message": req.message,
-        "assistant_message": assistant_text[:500],
-    })
+    fire_event_background(
+        tenant["id"],
+        "conversation.message",
+        {
+            "session_id": req.session_id,
+            "user_message": req.message,
+            "assistant_message": assistant_text[:500],
+        },
+    )
 
     # 11. Lead capture — runs in background so it doesn't slow the response.
     # Scans ALL messages in the session (not just the current one) for
@@ -1057,7 +1167,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
                 break
 
     background_tasks.add_task(
-        _capture_leads_from_session, tenant["id"], req.session_id, conversation_id,
+        _capture_leads_from_session,
+        tenant["id"],
+        req.session_id,
+        conversation_id,
     )
 
     # 11b. Structured-extractor lead enrichment (opt-in per tenant).
@@ -1083,7 +1196,10 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             {"role": "assistant", "content": assistant_text},
         ]
         background_tasks.add_task(
-            _categorize_conversation, tenant["id"], req.session_id, all_msgs,
+            _categorize_conversation,
+            tenant["id"],
+            req.session_id,
+            all_msgs,
         )
 
     # 13. AI action item extraction (every 8th message to save API calls)
@@ -1093,13 +1209,19 @@ async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks
             {"role": "assistant", "content": assistant_text},
         ]
         background_tasks.add_task(
-            _extract_action_items, tenant["id"], req.session_id, all_msgs_for_actions,
+            _extract_action_items,
+            tenant["id"],
+            req.session_id,
+            all_msgs_for_actions,
         )
 
     # 14. Response time tracking (first message → first response)
     if total_msgs <= 2:  # First exchange — record response time
         background_tasks.add_task(
-            _record_response_metric, tenant["id"], req.session_id, conversation_id,
+            _record_response_metric,
+            tenant["id"],
+            req.session_id,
+            conversation_id,
         )
 
     # 15. Watermark logic (treat NULL plan as free)
