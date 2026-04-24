@@ -837,3 +837,23 @@ Single-table migration for Zapier app authentication (spec: `specs/zapier-crm-ex
 **RLS:** service_role only. Tenant access via backend CRUD endpoints.
 **Conventions:** `client_id` not `tenant_id`.
 **Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified.
+
+### 111 — Missed-Call Text-Back (Phase 1)
+**Date:** 2026-04-22
+**Commit:** 6020a43
+Ships the first ops automation table backing the missed-call-text-back workflow (2026-04-21 pivot memory: `project_automation_vs_crm_pivot.md`).
+
+**Table:**
+- `missed_call_texts` — one row per inbound missed call → outbound SMS pairing. Captures `call_sid`, `sms_sid`, `from_phone`, `to_phone`, `template_id`, `status` enum (`sent`/`failed`/`skipped`), plus `converted_to_lead_id` FK for Phase-2 attribution. Tenant FK cascades.
+
+**Column add:**
+- `tenants.avg_ticket_override` — `decimal(10,2)` nullable. Phase-2 attribution (dollars recovered per tenant). Landed early; cheap + allows backfill independent of attribution UI.
+
+**Backfill:**
+- Insert `missed_call_textback` automation row for every existing tenant (`is_enabled=true`, default hold config `{mode: hold, hold_seconds: 60, template_id: default}`). `ON CONFLICT DO NOTHING` keeps re-runs safe.
+
+**RLS:** `missed_call_texts` RLS enabled with `tenant_id = auth.uid()` policy. Note — this migration uses `tenant_id` column name (diverges from project `client_id` convention on newer tables). Rationale: matches existing `tenants.id = auth.uid()` session pattern used by `automations`/`leads`. Flagged here so future schema-guardian passes don't misread as drift.
+
+**Index:** `(tenant_id, created_at DESC)` for activity-feed queries.
+
+**Applied:** 2026-04-22 via migration file commit. Prod apply **unverified** — needs `mcp__supabase__apply_migration` confirmation (tracked in current-tasks.md Priority 0).

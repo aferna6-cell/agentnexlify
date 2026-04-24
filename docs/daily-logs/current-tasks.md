@@ -1,14 +1,20 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-23 20:00 EDT (automated evening routine)
+Updated: 2026-04-24 08:00 EDT (automated morning routine)
 
-## Tomorrow's Top 3 Priorities
+## Today's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 21 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **QA 2026-04-22 missed-call-text-back automation (`6020a43`, migration 111)** — newest shipped feature; no QA pass yet. Agents: **qa-tester** + **widget-specialist**.
-3. **QA migrations 108/109/110 production paths** (carried) — photo-quote (`tenant_pricing_rules`, `quote_requests`, `tenant_quote_usage`), drive-kb (`tenant_integrations`, `integration_sync_log`, `kb_section_hashes`), zapier (`tenant_api_keys`). Agents: **schema-guardian** + **qa-tester**.
+1. **ROTATE compromised admin API key in Railway** — DAY 22 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **Reconcile local `main` divergence with `origin/main`** — local HEAD is 6 ahead / 12 behind `origin/main`. Origin has onboarding-v2 Week 1 feature (`1432b68`) + migrations 115/116/117 + CI fixes (`4d9b25f`, `bcaba73`, `dbdcb23`, `212e04d`). Local has Stripe pricing + dotenv bump + noshow_recovery fix + 2026-04-24 subconscious run. Needs `git fetch + git rebase origin/main` (or merge) before further work. Agent: **devops** / Human.
+3. **QA 2026-04-22 missed-call-text-back automation (`6020a43`, migration 111)** — migration 111 now documented in `schema-log.md` but prod apply still unverified; feature has zero QA pass. Agents: **qa-tester** + **widget-specialist**.
 
 ## Completed (Recent)
+
+### 2026-04-24
+- [x] Document migration 111 (`missed_call_texts`, `tenants.avg_ticket_override`, automations backfill) in `schema-log.md`
+- [x] Add skeleton bug-pattern entries for origin/main CI fixes — `4d9b25f`, `bcaba73`, `dbdcb23`, `212e04d`
+- [x] Morning health check: all green (dangerous_router=CLEAR, bare_except=0, silent_frontend_catch=0, widget_sync=OK, gitignore_env=YES)
+- [x] Scan for hardcoded API keys: clean (no `sk_live_`/`sk_test_`/`sk-ant-` literals in code)
 
 ### 2026-04-23
 - [x] KB autopopulate cycle — 14 raw ingests + 4 wiki promotions (`d540d32`, `f1f88ae`)
@@ -40,10 +46,11 @@ Updated: 2026-04-23 20:00 EDT (automated evening routine)
 
 ### Priority 0 — Security (Immediate Action Required)
 
-- [ ] **ROTATE compromised API key in Railway** — Key still live. DAY 21 of exposure. Agent: **devops** / Human.
+- [ ] **ROTATE compromised API key in Railway** — Key still live. **DAY 22 of exposure.** Agent: **devops** / Human.
+- [ ] **Reconcile local `main` divergence with `origin/main`** — 6 ahead / 12 behind. See Top-3 Priority 2 above. Agent: **devops** / Human. (New 2026-04-24)
 - [ ] **Reattach HEAD to main + push 2026-04-17 work** — Verify `git branch --show-current == main` and `git status` clean. (Carried)
-- [ ] **Investigate `morning-auto.sh` silent failure on 2026-04-23** — no daily log landed at 08:00; evening routine had to create the file. Agent: **devops**. (New 2026-04-23)
-- [ ] **QA missed-call-text-back automation + migration 111 (`6020a43`)** — newest shipped ops automation; zero QA. Agents: **qa-tester** + **widget-specialist**. (New 2026-04-23)
+- [ ] **Investigate `morning-auto.sh` silent failure on 2026-04-23** — no daily log landed at 08:00; evening routine had to create the file. Agent: **devops**. (2026-04-24 morning ran successfully — verify cron schedule still OK after divergence resolved.)
+- [ ] **QA missed-call-text-back automation + migration 111 (`6020a43`)** — newest shipped ops automation; zero QA. Migration 111 now documented in `schema-log.md` (2026-04-24). Agents: **qa-tester** + **widget-specialist**. (Carried 2026-04-23)
 
 ### Priority 0 — Schema (Pre-Launch)
 
@@ -93,6 +100,7 @@ Updated: 2026-04-23 20:00 EDT (automated evening routine)
 
 ### Priority 3 — Knowledge & Documentation
 
+- [ ] **Enrich bug patterns from origin/main 2026-04-23 CI batch** — skeletons added 2026-04-24 for `4d9b25f` (secret-scan false positive), `bcaba73` (onboarding-v2 coverage relocation), `dbdcb23` (pyyaml), `212e04d` (importlib.reload + asyncio marks). Run `/log-bug` on each for root-cause + prevention detail. (New 2026-04-24)
 - [ ] **Enrich bug pattern for `fac6124`** — Invariants guard conversations.tenant_id. Auto-logged skeleton 2026-04-21. (New 2026-04-21)
 - [ ] **Enrich auto-logged bug patterns (#30-41)** — 12 skeleton entries. Carried since 2026-03-24.
 - [ ] **Enrich bug patterns (#58-69)** — 12 skeleton entries from Apr 7-8.
