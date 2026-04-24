@@ -9,7 +9,7 @@ import Home from "./pages/Home";
 import SignupPage from "./pages/SignupPage";
 import "./index.css";
 
-// Lazy-load secondary public pages — not needed on initial landing
+// Lazy-load secondary public pages - not needed on initial landing
 const FreeWidget = lazy(() => import("./pages/FreeWidget"));
 const DentalChatbot = lazy(() => import("./pages/DentalChatbot"));
 const AutoShopChatbot = lazy(() => import("./pages/AutoShopChatbot"));
@@ -89,12 +89,12 @@ function CompareRoute() {
   return <Navigate to="/" replace />;
 }
 
-/* Redirect /onboarding — authenticated users go to dashboard, others to signup.
+/* Redirect /onboarding - authenticated users go to dashboard, others to signup.
    Handles the AuthProvider race condition where user is null on first render
    while the JWT is still being parsed. */
 function OnboardingRedirect() {
   const { user, token } = useAuth();
-  // Token exists but user not yet parsed — still loading
+  // Token exists but user not yet parsed - still loading
   if (token && user === null) return null;
   // Authenticated → dashboard has the inline onboarding checklist
   if (user) return <Navigate to="/dashboard" replace />;
@@ -128,7 +128,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/intercom-alternative" element={<IntercomAlternative />} />
             <Route path="/livechat-alternative" element={<LiveChatAlternative />} />
             <Route path="/tidio-alternative" element={<TidioAlternative />} />
-            {/* Marketing paths — scroll to Home anchor sections */}
+            {/* Marketing paths - scroll to Home anchor sections */}
             <Route path="/pricing" element={<HomeSection anchor="pricing" />} />
             <Route path="/features" element={<HomeSection anchor="features" />} />
             <Route path="/about" element={<HomeSection anchor="about-us" />} />
@@ -138,15 +138,15 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/compare/:competitor" element={<CompareRoute />} />
             {/* Team invite accept page (public, no auth) */}
             <Route path="/invite/:token" element={<AcceptInvitePage />} />
-            {/* Client portal — login, dashboard, and magic-link portal */}
+            {/* Client portal - login, dashboard, and magic-link portal */}
             <Route path="/client/login/:slug" element={<ClientLoginPage />} />
             <Route path="/client/dashboard/:slug" element={<ClientDashboardPage />} />
             <Route path="/client/:token" element={<ClientPortalPublicPage />} />
-            {/* Public business pages — no auth, standalone */}
+            {/* Public business pages - no auth, standalone */}
             <Route path="/biz/:slug" element={<BusinessPage />} />
-            {/* /setup — onboarding wizard for new tenants */}
+            {/* /setup - onboarding wizard for new tenants */}
             <Route path="/setup" element={<AuthProvider><OnboardingWizardPage /></AuthProvider>} />
-            {/* /onboarding — redirect authenticated users to dashboard, others to signup */}
+            {/* /onboarding - redirect authenticated users to dashboard, others to signup */}
             <Route path="/onboarding" element={<AuthProvider><OnboardingRedirect /></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}
             <Route path="*" element={<AuthProvider><App /></AuthProvider>} />

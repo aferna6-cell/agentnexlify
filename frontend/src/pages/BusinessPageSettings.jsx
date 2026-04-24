@@ -342,7 +342,7 @@ export default function BusinessPageSettings() {
               </div>
             </div>
 
-            {/* Appearance — Professional+ */}
+            {/* Appearance - Professional+ */}
             <div className="settings-card">
               <h3>Appearance</h3>
               <p className="settings-card-desc">Customize the look of your public business page.</p>
@@ -393,7 +393,7 @@ export default function BusinessPageSettings() {
               </GatedField>
             </div>
 
-            {/* SEO — Professional+ */}
+            {/* SEO - Professional+ */}
             <div className="settings-card">
               <h3>SEO</h3>
               <p className="settings-card-desc">Customize how your page appears in search results.</p>
@@ -420,7 +420,7 @@ export default function BusinessPageSettings() {
               </GatedField>
             </div>
 
-            {/* Branding — Professional+ */}
+            {/* Branding - Professional+ */}
             <div className="settings-card">
               <h3>Branding</h3>
 
@@ -441,7 +441,7 @@ export default function BusinessPageSettings() {
               </GatedField>
             </div>
 
-            {/* Custom CSS — Enterprise only */}
+            {/* Custom CSS - Enterprise only */}
             <div className="settings-card">
               <h3>Advanced</h3>
 

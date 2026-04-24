@@ -70,7 +70,7 @@ export default function WizardStepPlan({ wizardData, onNext, onBack, token, tena
         return;
       }
 
-      // Paid plan — redirect to Stripe Checkout
+      // Paid plan - redirect to Stripe Checkout
       const res = await checkoutForWizard(token, plan);
       if (res.checkout_url) {
         window.location.href = res.checkout_url;

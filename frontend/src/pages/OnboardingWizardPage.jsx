@@ -11,7 +11,7 @@ import WizardStepEmbed from "./wizard/WizardStepEmbed";
 
 // AuthContext user fields:
 //   tenantId, email, plan, businessName, businessType, role, isTeamMember, name, userId
-// Note: widgetApiKey and city are NOT on the JWT — steps that need them fetch from the API.
+// Note: widgetApiKey and city are NOT on the JWT - steps that need them fetch from the API.
 
 const STORAGE_KEY = "anx_wizard";
 const TOTAL_STEPS = 6;
@@ -52,7 +52,7 @@ export default function OnboardingWizardPage() {
   );
   const [wizardData, setWizardData] = useState(() =>
     saved?.data || {
-      // Business info — seeded from JWT claims where available
+      // Business info - seeded from JWT claims where available
       business_name: user?.businessName || "",
       business_type: user?.businessType || "",
       // city is not in the JWT; steps that need it will populate via API or user input
@@ -106,7 +106,7 @@ export default function OnboardingWizardPage() {
   const apiKey = null;
 
   const stepComponents = [
-    null, // index 0 unused — wizard is 1-indexed
+    null, // index 0 unused - wizard is 1-indexed
     <WizardStepBusiness
       key="1"
       wizardData={wizardData}

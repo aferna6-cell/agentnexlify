@@ -46,7 +46,7 @@ export default function ClientPortalPublicPage() {
 
   const handleBookAgain = () => {
     if (widgetInjected.current) {
-      // Widget already loaded — just open it
+      // Widget already loaded - just open it
       const bubble =
         document.querySelector("#anx-chat-widget")?.shadowRoot?.querySelector(".anx-bubble") ||
         document.querySelector("#nexlify-chat-widget")?.shadowRoot?.querySelector(".nex-bubble");

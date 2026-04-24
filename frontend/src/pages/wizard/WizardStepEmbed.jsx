@@ -67,7 +67,7 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
         {[
           "Open your website's HTML file or CMS template",
           "Paste the code above just before the closing </body> tag",
-          "Save and refresh your page — the chat widget will appear",
+          "Save and refresh your page - the chat widget will appear",
         ].map((step, i) => (
           <div key={i} style={{ display: "flex", gap: 14, marginBottom: i < 2 ? 12 : 0, alignItems: "flex-start" }}>
             <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>{i + 1}</div>

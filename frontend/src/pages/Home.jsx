@@ -629,8 +629,9 @@ export default function Home() {
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
               <h1 className="reveal">
-                Your hardest working employee. It answers, follows up, and sells
-                — while you <span className="accent-gradient">sleep.</span>
+                your hardest working employee that dosen't stop. It answers,
+                follows up, and continues to push the buisness forward{" "}
+                <span className="accent-gradient">around the clock.</span>
               </h1>
               <p
                 className="reveal"
@@ -715,7 +716,7 @@ export default function Home() {
               <h3>Launch Your Marketing + AI</h3>
               <p>
                 Embed the widget, run SEO audits, schedule social posts, and
-                send email and SMS campaigns — all from one dashboard.
+                send email and SMS campaigns - all from one dashboard.
               </p>
             </div>
             <div className="lp-how-step reveal">
@@ -741,7 +742,7 @@ export default function Home() {
           <div className="lp-features-header">
             <div className="section-label reveal">Features</div>
             <h2 className="section-title reveal">
-              Automate your workflows or grow your marketing — one platform
+              Automate your workflows or grow your marketing - one platform
               handles both.
             </h2>
           </div>
@@ -1021,7 +1022,7 @@ export default function Home() {
               <StripeCta plan="growth">Get Started {"\u2192"}</StripeCta>
             </div>
 
-            {/* Growth — Most Popular */}
+            {/* Growth - Most Popular */}
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">Growth</div>
               <div className="lp-pricing-tagline">Automate your follow-ups</div>

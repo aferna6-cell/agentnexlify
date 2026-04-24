@@ -135,7 +135,7 @@ export default function WidgetPage() {
     if (!user?.tenantId) return;
     setSaving(true);
     try {
-      // Build branding payload — only include non-empty values
+      // Build branding payload - only include non-empty values
       const brandingPayload = {};
       Object.entries(branding).forEach(([k, v]) => {
         if (v !== "" && v !== null && v !== undefined) {
@@ -543,7 +543,7 @@ export default function WidgetPage() {
             White-label your widget with custom branding
           </p>
 
-          {/* Logo — Growth+ */}
+          {/* Logo - Growth+ */}
           <div
             className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}
           >
@@ -559,7 +559,7 @@ export default function WidgetPage() {
             />
           </div>
 
-          {/* Secondary + Accent colors — Growth+ */}
+          {/* Secondary + Accent colors - Growth+ */}
           <div className="branding-color-group">
             <div
               className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}
@@ -627,7 +627,7 @@ export default function WidgetPage() {
             </div>
           </div>
 
-          {/* Widget title — Growth+ */}
+          {/* Widget title - Growth+ */}
           <div
             className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}
           >
@@ -643,7 +643,7 @@ export default function WidgetPage() {
             />
           </div>
 
-          {/* Font — Growth+ */}
+          {/* Font - Growth+ */}
           <div
             className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}
           >
@@ -665,7 +665,7 @@ export default function WidgetPage() {
             </select>
           </div>
 
-          {/* Powered-by text — Growth+ */}
+          {/* Powered-by text - Growth+ */}
           <div
             className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}
           >
@@ -681,7 +681,7 @@ export default function WidgetPage() {
             />
           </div>
 
-          {/* Powered-by URL — Growth+ */}
+          {/* Powered-by URL - Growth+ */}
           <div
             className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}
           >
@@ -697,7 +697,7 @@ export default function WidgetPage() {
             />
           </div>
 
-          {/* Hide powered-by — Growth+ */}
+          {/* Hide powered-by - Growth+ */}
           <div
             className={`settings-field ${!canAccess(plan, "growth") ? "branding-disabled" : ""}`}
           >
@@ -715,7 +715,7 @@ export default function WidgetPage() {
             </label>
           </div>
 
-          {/* Custom CSS — Professional+ */}
+          {/* Custom CSS - Professional+ */}
           <div
             className={`settings-field ${!canAccess(plan, "professional") ? "branding-disabled" : ""}`}
           >

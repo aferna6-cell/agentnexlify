@@ -44,15 +44,15 @@ const bannerStyle = {
 };
 
 /**
- * UpgradePrompt — reusable modal that appears when a user tries to access
+ * UpgradePrompt - reusable modal that appears when a user tries to access
  * a feature above their current plan.
  *
  * Props:
- *   feature       {string}   — human-readable feature name, e.g. "Local SEO"
- *   requiredPlan  {string}   — plan key required, e.g. "professional"
- *   onClose       {fn}       — called when the user dismisses without upgrading
- *   onNavigate    {fn}       — called with "billing" when Upgrade Now is clicked
- *   variant       {string}   — "modal" (default) | "banner"
+ *   feature       {string}   - human-readable feature name, e.g. "Local SEO"
+ *   requiredPlan  {string}   - plan key required, e.g. "professional"
+ *   onClose       {fn}       - called when the user dismisses without upgrading
+ *   onNavigate    {fn}       - called with "billing" when Upgrade Now is clicked
+ *   variant       {string}   - "modal" (default) | "banner"
  */
 export default function UpgradePrompt({ feature, requiredPlan, onClose, onNavigate, variant = "modal" }) {
   const plan = PLAN_DISPLAY[requiredPlan] || { name: requiredPlan, price: "" };

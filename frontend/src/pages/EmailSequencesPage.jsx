@@ -1027,7 +1027,7 @@ function SequenceDetail({ sequenceId, token, onClose, onEdit }) {
                             flex: 1,
                           }}
                         >
-                          {step.email_type === "sms" ? "SMS" : "Email"} — Step{" "}
+                          {step.email_type === "sms" ? "SMS" : "Email"} - Step{" "}
                           {i + 1}
                         </span>
                         <span

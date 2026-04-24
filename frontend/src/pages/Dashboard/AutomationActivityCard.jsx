@@ -1,5 +1,5 @@
 /**
- * AutomationActivityCard — Phase 1 dashboard card.
+ * AutomationActivityCard - Phase 1 dashboard card.
  * Shows last 5 automation events (missed call text-backs, etc.).
  * Dark theme. Masked phone numbers. Empty state included.
  */
@@ -12,7 +12,7 @@ const BORDER = "rgba(255,255,255,0.08)";
 const TEXT_MUTED = "rgba(255,255,255,0.5)";
 
 const EVENT_LABELS = {
-  missed_call_textback: "Missed call — text-back sent",
+  missed_call_textback: "Missed call - text-back sent",
   sms_conversation: "SMS conversation",
   appointment_booked: "Appointment booked",
 };
@@ -184,7 +184,7 @@ export default function AutomationActivityCard({
             padding: "16px 0",
           }}
         >
-          No automations yet — your AI employee is ready.
+          No automations yet - your AI employee is ready.
         </div>
       ) : (
         <div>

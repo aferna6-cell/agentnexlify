@@ -25,7 +25,7 @@ export function generateKb(tenantId, token, data) {
 }
 
 /**
- * Complete onboarding — persists all wizard data to the backend.
+ * Complete onboarding - persists all wizard data to the backend.
  */
 export function completeOnboarding(tenantId, token, data) {
   return apiFetch(`/api/v1/onboarding/${tenantId}/complete`, { token, body: data });
@@ -44,7 +44,7 @@ export function checkoutForWizard(token, plan) {
 
 /**
  * Log a wizard step event for drop-off tracking.
- * Fire-and-forget — never blocks the user's onboarding.
+ * Fire-and-forget - never blocks the user's onboarding.
  */
 export function trackWizardEvent(tenantId, token, step, action) {
   apiFetch(`/api/v1/wizard/${tenantId}/event`, {
