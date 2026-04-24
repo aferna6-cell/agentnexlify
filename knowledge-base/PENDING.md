@@ -212,11 +212,11 @@ _All compiled 2026-04-18 cron run._
 - [growth] Generative Engine Optimization (GEO) — 2026 Guide — `raw/growth/generative-engine-optimization-geo-2026-guide.md` — https://www.coseom.com/generative-engine-optimization-guide
 - ~~[growth] How to Track AI Citations Across ChatGPT, Perplexity, Google~~ → compiled `wiki/growth/ai-citation-tracking-chatgpt-perplexity-google-2026.md` (2026-04-24 cron)
 
-- [ai-llm] Claude is a space to think | Anthropic \ Anthropic — https://www.anthropic.com/news/claude-is-a-space-to-think (raw: knowledge-base/raw/ai-llm/claude-is-a-space-to-think-2026-04-24.md)
+- ~~[ai-llm] Claude is a space to think~~ → compiled `wiki/ai-llm/claude-ad-free-incentive-design-2026.md` (2026-04-24 cron)
 
-- [ai-llm] An update on recent Claude Code quality reports \ Anthropic — https://www.anthropic.com/engineering/april-23-postmortem (raw: knowledge-base/raw/ai-llm/april-23-postmortem-2026-04-24.md)
+- ~~[ai-llm] An update on recent Claude Code quality reports~~ → compiled `wiki/ai-llm/claude-code-april-23-postmortem-2026.md` (2026-04-24 cron)
 
-- [competitors] Introducing the Sales Agent Blueprint - The Intercom Blog — https://www.intercom.com/blog/introducing-the-sales-agent-blueprint/ (raw: knowledge-base/raw/competitors/introducing-the-sales-agent-blueprint-2026-04-24.md)
+- ~~[competitors] Introducing the Sales Agent Blueprint~~ → compiled `wiki/competitors/intercom-sales-agent-blueprint-2026.md` (2026-04-24 cron)
 
 - [competitors] Best AI Marketing Platforms for Multi-Location Brands in 2026 — https://birdeye.com/blog/best-ai-marketing-platforms-for-multi-location-brands-in-2026/ (raw: knowledge-base/raw/competitors/best-ai-marketing-platforms-for-multi-location-brands-in-2026-2026-04-24.md)
 
@@ -226,4 +226,4 @@ _All compiled 2026-04-18 cron run._
 
 - [technical] Agent responsibly - Vercel — https://vercel.com/blog/agent-responsibly (raw: knowledge-base/raw/technical/agent-responsibly-2026-04-24.md)
 
-- [technical] Agentic Infrastructure - Vercel — https://vercel.com/blog/agentic-infrastructure (raw: knowledge-base/raw/technical/agentic-infrastructure-2026-04-24.md)
+- ~~[technical] Agentic Infrastructure - Vercel~~ → compiled `wiki/technical/vercel-agentic-infrastructure-2026.md` (2026-04-24 cron)
