@@ -1,0 +1,51 @@
+{
+  "date": "2026-04-24",
+  "run": 7,
+  "evidence_sources_checked": [
+    "git_log_3d (20 commits)",
+    "git_log_7d_fixes (9 fix commits)",
+    "current-tasks.md (P0-P4 review)",
+    "bug-patterns.md (2204 total lines)",
+    "customer-gaps.md",
+    "knowledge-base/INDEX.md (63 articles)",
+    "governance.json + memory.jsonl (runs 1-6)",
+    "scripts/hooks/pre-commit (8 checks verified)",
+    "managed_agents_registry.py (251L), noshow_recovery.py (391L)"
+  ],
+  "evidence_summary": "52 commits in 7 days. Widget 3-way sync risk flagged 48h ago. bug-patterns.md at 2204L. JS silent catch guard (run 3) unimplemented 13+ days. Stripe pricing change (821f660) touched 16 files, zero QA planned. Migration guard implemented as WARNING not FAIL. widget_helpers split confirmed (6cf4646). Governance had stale pending_approval states. CAN-SPAM unsubscribe bug fixed (fd37906). API key P0 day 19.",
+  "ideas_generated": 5,
+  "top_3_debated": [
+    "Widget 3-Copy Sync Guard",
+    "Widget Hot-Zone Regression Suite",
+    "Stripe Billing Smoke Tests"
+  ],
+  "debate_verdicts": {
+    "Widget 3-Copy Sync Guard": "SURVIVES",
+    "Widget Hot-Zone Regression Suite": "WEAKENED — Playwright unconfirmed",
+    "Stripe Billing Smoke Tests": "WEAKENED — framing too narrow"
+  },
+  "winner": "Widget 3-Copy Sync Guard — Fix CLAUDE.md Invariant + CI Script",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "implementation_lag_status": {
+    "total_tracked": 6,
+    "actually_implemented": 1,
+    "partially_implemented": 1,
+    "pending": 4,
+    "escalate_to_human": true
+  },
+  "rejected": [],
+  "weakened": [
+    "Widget Hot-Zone Regression Suite",
+    "Stripe Billing Smoke Tests"
+  ],
+  "parking_lot_additions": [
+    "Stripe Billing Smoke Tests / Plan-Tier Contract Tests [ROI 2.2]",
+    "Bug-patterns.md Split by Month [ROI 1.8]"
+  ],
+  "flags": [
+    "API key compromise P0 still open — day 19",
+    "JS silent catch guard run 3 unimplemented 13+ days",
+    "governance.json stale — reconciled this run"
+  ]
+}
