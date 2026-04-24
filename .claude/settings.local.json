@@ -24,7 +24,8 @@
       "Bash(git push:*)",
       "Read(//c/Users/aidan/**)",
       "Bash(npx --no-install vite build)",
-      "Write(.mcp.json)"
+      "Write(.mcp.json)",
+      "Bash(python3 -m pytest tests/ -x --tb=short -q)"
     ]
   }
 }
