@@ -29,5 +29,25 @@ Default workflow for non-trivial tasks. 5 agents sequentially: Brainstormer → 
 - One task per subagent for focused execution
 - Delegation order: schema-guardian → backend-dev + frontend-dev (parallel) → qa-tester
 
-## Token Optimization (RTK)
-RTK is installed as a PreToolUse hook. Meta commands: `rtk gain`, `rtk gain --history`, `rtk discover`. Requires `jq`. If hook fails silently, check `which jq && which rtk`.
+## Token Optimization (3 layers, installed 2026-04-24)
+
+### RTK (Rust Token Killer) — Bash hook
+- Binary: `/c/Users/aidan/bin/rtk.exe` (v0.37.2, Apache-2.0)
+- Dep: `/c/Users/aidan/bin/jq.exe` (v1.8.1)
+- Wired: `.claude/settings.json` PreToolUse → `bash scripts/claude-hooks/rtk-rewrite.sh`
+- Meta: `rtk gain`, `rtk gain --history`, `rtk discover`
+- Fails silently if binary or jq missing — check `which rtk && which jq`
+
+### Token Savior — MCP server
+- Binary: `C:/Users/aidan/AppData/Roaming/Python/Python314/Scripts/token-savior.exe` (v2.6.0, MIT)
+- Wired: `.mcp.json` entry `token-savior` with `WORKSPACE_ROOTS` env
+- Exposes 106 MCP tools (tree-sitter symbol navigation, semantic chunks)
+- Context cost: non-trivial. Disable if session feels slow.
+
+### Context Mode — Claude Code plugin
+- Source: `mksglu/context-mode` marketplace (ELv2 license)
+- Install scope: user (installed via `npm run claude:2.1.98 -- plugin install context-mode@context-mode`)
+- 4 PreToolUse hooks + SQLite FTS5 sandboxing
+- Verify after restart: `/context-mode:ctx-doctor`
+
+Version pin: all three verified against Claude Code 2.1.98 per `.claude/rules/claude-version-pin.md`.

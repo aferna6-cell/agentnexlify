@@ -1,6 +1,14 @@
 # Plugin Routing — When to use which plugin
 
-36 plugins installed at project scope (2026-04-12). Use these by intent, not habit. Many overlap with existing MCPs/skills — prefer the built-in skill first, fall back to plugin only when it adds capability.
+37 plugins installed at project scope (2026-04-12, + `context-mode` 2026-04-24). Use these by intent, not habit. Many overlap with existing MCPs/skills — prefer the built-in skill first, fall back to plugin only when it adds capability.
+
+## Token Optimization — NEW (2026-04-24)
+
+| Intent | Plugin | Notes |
+|--------|--------|-------|
+| Context compression via SQLite FTS5 | `context-mode@context-mode` | 4 PreToolUse hooks; ELv2 license; verify with `/context-mode:ctx-doctor` after restart |
+
+Pairs with RTK (Bash hook) + Token Savior (MCP). See `.claude/rules/workflow-orchestration.md#token-optimization-3-layers`.
 
 ## Stack-relevant (use often)
 
