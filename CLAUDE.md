@@ -163,3 +163,4 @@ Triggers: "council this", "pressure-test this", "war room this". Five independen
 - **Update monthly** — stale facts cause wrong-direction work. Last audit: 2026-04-15.
 - **/init was run once** — this file is the curated version.
 - **Reference, never duplicate** — point to rule files and configs; don't copy contents.
+
