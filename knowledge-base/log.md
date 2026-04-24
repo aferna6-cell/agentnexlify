@@ -292,3 +292,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-24 06:10] compile | cron 06:00 headless | pending=16 compiled=4 wiki=4 index_touched=1 embeddings_skipped=4 errors=0
 
 ## [2026-04-24 06:16] discover+compile | cron 06:00 | commits=2 raw=11 wiki=4
+
+## [2026-04-24 18:13] discover+compile | cron 18:00 | commits=2 raw=8 wiki=4
