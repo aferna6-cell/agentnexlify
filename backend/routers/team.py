@@ -16,7 +16,8 @@ from backend.models.schemas import (
     TeamInviteRequest,
     TeamMemberResponse,
 )
-from backend.routers.auth import _create_token, _get_current_tenant, _hash_password
+from backend.dependencies import _get_current_tenant
+from backend.routers.auth import _create_token, _hash_password
 from backend.services.email_sender import send_email
 
 from backend.config import settings

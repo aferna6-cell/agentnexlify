@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.stripe_service import ensure_stripe_configured
 from backend.services.tenant_scope import tenant_table

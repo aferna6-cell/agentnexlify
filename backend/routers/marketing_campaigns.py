@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from backend.limiter import limiter
 from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.addon_gate import require_marketing_addon
 from backend.services.campaign_service import _send_campaign_background
 from backend.services.llm_runtime import call_claude_messages

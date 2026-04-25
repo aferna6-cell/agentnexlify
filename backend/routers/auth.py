@@ -115,8 +115,8 @@ def _create_token(
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-# Backward-compat alias — all routers that do `Depends(_get_current_tenant)` continue to work.
-_get_current_tenant = get_current_tenant
+# _get_current_tenant and require_role live in backend.dependencies — import for own use.
+from backend.dependencies import _get_current_tenant, require_role  # noqa: E402
 
 
 def _normalize_paid_plan(plan: str | None) -> str | None:
@@ -316,16 +316,6 @@ async def _run_signup_side_effects(
             await start_crawl(tenant_id, website_url)
         except Exception:
             logger.warning("Signup crawl failed for new tenant %s url=%s", tenant_id, website_url, exc_info=True)
-
-
-def require_role(*allowed_roles):
-    """FastAPI dependency factory: restrict endpoint to specific roles."""
-    async def checker(claims: dict = Depends(_get_current_tenant)):
-        role = claims.get("role", "owner")
-        if role not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        return claims
-    return checker
 
 
 # ── Industry FAQ Seeds ───────────────────────────────────────
@@ -1198,8 +1188,10 @@ async def billing_checkout(
 
     source = body.get("source")  # "wizard" | None
     if source == "wizard":
-        success_url = f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{settings.frontend_url}/onboarding?step=5&cancelled=1"
+        # Wizard expanded to 7 steps in Onboarding v2 (added auto-KB step at position 2).
+        # success → Embed (step 7); cancel → Plan (step 6).
+        success_url = f"{settings.frontend_url}/onboarding?step=7&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/onboarding?step=6&cancelled=1"
     else:
         success_url = f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/billing/cancel"

@@ -16,7 +16,7 @@ from backend.models.schemas import (
     SequenceCreateRequest,
     SequenceUpdateRequest,
 )
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 from backend.services.automation_engine import trigger_sequence
 from backend.services.email_sender import build_unsubscribe_url, send_email
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
