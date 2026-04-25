@@ -56,7 +56,7 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
         <label style={labelStyle}>
           Primary Color
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <input type="color" value={form.widget_primary_color} onChange={set("widget_primary_color")} style={{ width: 48, height: 40, border: "none", background: "none", cursor: "pointer", padding: 0, borderRadius: 6 }} />
+            <input type="color" value={form.widget_primary_color} onChange={set("widget_primary_color")} style={{ width: 48, height: 44, border: "none", background: "none", cursor: "pointer", padding: 0, borderRadius: 6 }} />
             <input style={{ ...inputStyle, flex: 1 }} value={form.widget_primary_color} onChange={set("widget_primary_color")} placeholder="#00BFFF" />
           </div>
         </label>

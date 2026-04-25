@@ -247,7 +247,8 @@ export default function WizardStepAutoKB({
             border: "none",
             fontSize: "0.85rem",
             cursor: "pointer",
-            padding: "8px",
+            padding: "12px",
+            minHeight: 44,
           }}
         >
           Skip — I'll fill in by hand

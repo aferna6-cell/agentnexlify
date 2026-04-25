@@ -109,6 +109,19 @@ export default function BillingPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Show success toast when returning from Stripe Checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout_success") === "1") {
+      notify.success("Payment successful! Your plan is being activated.");
+      // Clean the URL so refresh doesn't re-trigger
+      params.delete("checkout_success");
+      params.delete("session_id");
+      const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}${window.location.hash}`;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, []);
+
   const handleUpgrade = async (planKey) => {
     setUpgrading(planKey);
     try {

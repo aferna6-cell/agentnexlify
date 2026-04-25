@@ -96,4 +96,4 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
   );
 }
 
-const copyBtnStyle = { padding: "6px 14px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer", fontWeight: 600 };
+const copyBtnStyle = { padding: "8px 14px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer", fontWeight: 600, minHeight: 36 };

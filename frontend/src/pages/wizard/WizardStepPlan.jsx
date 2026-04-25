@@ -119,7 +119,7 @@ export default function WizardStepPlan({ wizardData, onNext, onBack, token, tena
               style={{
                 width: "100%", padding: "10px", background: plan.highlight ? plan.color : "rgba(255,255,255,0.08)",
                 color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "0.85rem", opacity: loading ? 0.7 : 1,
+                fontSize: "0.85rem", opacity: loading ? 0.7 : 1, minHeight: 44,
               }}
             >
               {loading ? "..." : plan.cta}
@@ -128,7 +128,7 @@ export default function WizardStepPlan({ wizardData, onNext, onBack, token, tena
         ))}
       </div>
 
-      <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "0.85rem" }}>Back</button>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "0.85rem", padding: "12px", minHeight: 44 }}>Back</button>
     </div>
   );
 }
