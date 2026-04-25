@@ -225,7 +225,7 @@ export default function ContentRepurposePage() {
           }}
         >
           Turn any blog post, YouTube video, or podcast into X threads, LinkedIn
-          carousels, email sequences, TikTok scripts, and social posts — all in
+          carousels, email sequences, TikTok scripts, and social posts - all in
           one click.
         </p>
         <div
@@ -823,7 +823,7 @@ export default function ContentRepurposePage() {
                             color: "var(--text-muted)",
                           }}
                         >
-                          Email {email.email_num || i + 1} — Day {email.day}
+                          Email {email.email_num || i + 1} - Day {email.day}
                         </span>
                       </div>
                       <div

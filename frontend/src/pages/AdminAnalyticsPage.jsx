@@ -50,7 +50,7 @@ const PIE_COLORS = [
   "#f87171",
 ];
 
-// Admin secret is entered at runtime via prompt — never baked into the JS bundle.
+// Admin secret is entered at runtime via prompt - never baked into the JS bundle.
 let _adminSecret = "";
 
 function getAdminSecret() {
@@ -75,7 +75,7 @@ async function apiFetch(path) {
   });
   if (res.status === 401) {
     clearAdminSecret();
-    throw new Error("Invalid admin secret — cleared. Refresh to retry.");
+    throw new Error("Invalid admin secret - cleared. Refresh to retry.");
   }
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json();

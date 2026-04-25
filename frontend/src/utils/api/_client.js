@@ -1,5 +1,5 @@
 /**
- * Shared API client — used by all domain modules.
+ * Shared API client - used by all domain modules.
  * DO NOT import this directly in components. Import from ../api.js instead.
  */
 
@@ -96,7 +96,7 @@ export async function request(path, { method = "GET", body, token } = {}) {
     throw new ApiError(res.status, err);
   }
 
-  // 204 No Content — nothing to parse (common for DELETE endpoints)
+  // 204 No Content - nothing to parse (common for DELETE endpoints)
   if (res.status === 204) return null;
 
   // Some endpoints may return empty bodies with 200/201

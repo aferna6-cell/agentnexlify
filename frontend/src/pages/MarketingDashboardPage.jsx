@@ -111,7 +111,7 @@ export default function MarketingDashboardPage() {
           );
         }
         if (dashRes.email_vs_sms_breakdown) {
-          // Backend returns a plain dict {email: N, sms: N} — convert to array for Recharts
+          // Backend returns a plain dict {email: N, sms: N} - convert to array for Recharts
           const raw = dashRes.email_vs_sms_breakdown;
           setBreakdown(
             Array.isArray(raw)

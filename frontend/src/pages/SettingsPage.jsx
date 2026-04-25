@@ -1235,7 +1235,7 @@ export default function SettingsPage({ onNavigate }) {
               </button>
             </div>
           ) : (
-            /* No number — show search UI */
+            /* No number - show search UI */
             <div>
               <div className="settings-field">
                 <label>Area Code</label>

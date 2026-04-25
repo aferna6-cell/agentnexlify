@@ -31,6 +31,7 @@ TEXT_EXTENSIONS = {
     ".jsx",
     ".mjs",
     ".cjs",
+    ".css",
     ".ts",
     ".tsx",
     ".py",
@@ -75,6 +76,13 @@ WIDGET_MIRRORS = (
     ROOT / "frontend" / "public" / "widget",
     ROOT / "landing-page-v2" / "widget",
 )
+WEBSITE_ROOTS = (
+    ROOT / "frontend" / "index.html",
+    ROOT / "frontend" / "src",
+    ROOT / "frontend" / "public" / "widget",
+    ROOT / "landing-page-v2",
+    ROOT / "widget" / "agentnexlify-widget.js",
+)
 
 RETIRED_PLAN_WORDS = ("foundation", "operations")
 LEAD_FIELD_WORDS = ("lead_stage", "service_interest")
@@ -115,6 +123,29 @@ def check(
 def iter_code_files() -> list[Path]:
     files: list[Path] = []
     for root in CODE_ROOTS:
+        if not root.exists():
+            continue
+        for dirpath, dirnames, filenames in os.walk(root):
+            current = Path(dirpath)
+            dirnames[:] = [
+                name
+                for name in dirnames
+                if name not in SKIP_DIR_NAMES and not name.startswith(".")
+            ]
+            for name in filenames:
+                path = current / name
+                if path.suffix.lower() in TEXT_EXTENSIONS:
+                    files.append(path)
+    return files
+
+
+def iter_website_files() -> list[Path]:
+    files: list[Path] = []
+    for root in WEBSITE_ROOTS:
+        if root.is_file():
+            if root.suffix.lower() in TEXT_EXTENSIONS:
+                files.append(root)
+            continue
         if not root.exists():
             continue
         for dirpath, dirnames, filenames in os.walk(root):
@@ -209,6 +240,29 @@ def check_widget_assets(failures: list[str]) -> None:
 
     check(
         "widget assets are byte-identical across mirrors",
+        not issues,
+        failures,
+        issues[:10],
+    )
+
+
+def check_website_copy_avoids_em_dashes(failures: list[str]) -> None:
+    issues: list[str] = []
+    em_dash = "\u2014"
+
+    for path in iter_website_files():
+        try:
+            lines = read_text(path).splitlines()
+        except OSError as exc:
+            issues.append(f"{rel(path)}: unreadable ({exc})")
+            continue
+
+        for lineno, line in enumerate(lines, start=1):
+            if em_dash in line:
+                issues.append(f"{rel(path)}:{lineno}: contains em dash")
+
+    check(
+        "website source avoids em dashes",
         not issues,
         failures,
         issues[:10],
@@ -329,6 +383,7 @@ def main() -> int:
     check_live_schema_fields(failures)
     check_retired_plan_names(failures)
     check_widget_assets(failures)
+    check_website_copy_avoids_em_dashes(failures)
     check_anthropic_sdk_usage(failures)
 
     if failures:

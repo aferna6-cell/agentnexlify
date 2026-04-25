@@ -1447,7 +1447,7 @@ export default function LocalSEOPage({ onNavigate }) {
   const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState("audit");
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-  // Fetch live plan from API — never trust JWT for plan gating
+  // Fetch live plan from API - never trust JWT for plan gating
   const [livePlan, setLivePlan] = useState(null);
   useEffect(() => {
     if (!user?.tenantId || !token) return;
@@ -1490,7 +1490,7 @@ export default function LocalSEOPage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Plan gate banner for free/growth users — uses live API plan, not JWT */}
+      {/* Plan gate banner for free/growth users - uses live API plan, not JWT */}
       {planBelowRequired(effectivePlan, "professional") && (
         <UpgradePrompt
           feature="Local SEO & Marketing Hub"

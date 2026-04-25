@@ -1,8 +1,8 @@
 /**
- * notify.js — minimal dark-theme toast notifications.
+ * notify.js - minimal dark-theme toast notifications.
  *
  * Replaces native alert() across the dashboard. Vanilla DOM (no deps, no React state)
- * so it works from anywhere — event handlers, async catches, utilities.
+ * so it works from anywhere - event handlers, async catches, utilities.
  *
  * Usage:
  *   import { notify } from "@/utils/notify";  // or relative path
@@ -12,7 +12,7 @@
  *
  * Design: matches dashboard dark theme (frontend/src/index.css palette).
  * Auto-dismisses after 5s for info/success, 7s for error. Click to dismiss early.
- * Stacks bottom-right. Max 4 visible — older ones drop off.
+ * Stacks bottom-right. Max 4 visible - older ones drop off.
  */
 
 const CONTAINER_ID = "_notify_root";

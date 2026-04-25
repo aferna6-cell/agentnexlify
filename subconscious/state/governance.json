@@ -1,16 +1,33 @@
 {
   "version": 1,
-  "last_run": "2026-04-24T00:00:00Z",
-  "total_runs": 7,
+  "last_run": "2026-04-25T00:00:00Z",
+  "total_runs": 8,
   "frozen_ideas": [],
+  "moratorium_config": {
+    "moratorium_active": true,
+    "triggered_run": 8,
+    "trigger_reason": "5 winners unimplemented; oldest 19+ days; run 7 explicitly mandated escalation by run 8",
+    "max_pending_approvals": 3,
+    "max_pending_age_days": 14,
+    "lift_condition": "pending_approvals_count <= 3 (human must implement at least 2 pending winners)",
+    "note": "Run 9 synthesis: if moratorium_active=true, recommend implementing oldest unimplemented winner rather than generating fresh ideas"
+  },
   "active_directions": [
+    {
+      "title": "Wire check_project_invariants.py into pre-commit hook",
+      "date": "2026-04-25",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit. S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest)."
+    },
     {
       "title": "Widget 3-Copy Sync Guard",
       "date": "2026-04-24",
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 7 winner. Fix CLAUDE.md Invariant #4 (2 → 3 widget paths) + create scripts/check-widget-sync.sh + wire into pre-push hook. S-effort, zero dependencies."
+      "note": "Run 7 winner. Fix CLAUDE.md Invariant #4 (2 → 3 widget paths) + create scripts/check-widget-sync.sh + wire into pre-push hook. S-effort, zero dependencies. Script still not created as of run 8."
     },
     {
       "title": "Migration Duplicate Number Pre-commit Guard",
@@ -26,7 +43,7 @@
       "confidence": "HIGH",
       "status": "implemented_unverified",
       "category": "code_health",
-      "note": "Run 5 winner. Implemented via 6cf4646 (1,673-LOC split). QA still pending in current-tasks.md."
+      "note": "Run 5 winner. Implemented via 6cf4646 (1,673-LOC split). QA still pending. Smoke test recommended in run 8 parking lot."
     },
     {
       "title": "JS Silent Catch Pre-commit Guard",
@@ -34,7 +51,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 3 winner. Unimplemented 13+ days. Add as Check 9 to scripts/hooks/pre-commit. Violations: MarketingDashboardPage.jsx:96, LocalSEOPage.jsx:262, AuthContext.jsx:89."
+      "note": "Run 3 winner. Unimplemented 14+ days. Escalated by run 7, moratorium triggered by run 8. Add as Check 9 to scripts/hooks/pre-commit. Violations: MarketingDashboardPage.jsx:96, LocalSEOPage.jsx:262, AuthContext.jsx:89."
     },
     {
       "title": "AI-to-Human Handoff (Explicit Trigger, v1)",
@@ -90,6 +107,13 @@
       "date": "2026-04-24",
       "status": "recommended",
       "run": 7
+    },
+    {
+      "title": "Wire check_project_invariants.py into pre-commit hook",
+      "date": "2026-04-25",
+      "status": "recommended",
+      "run": 8,
+      "note": "Fresh evidence: 037865f added the script today. S-effort. Moratorium triggered this run."
     }
   ],
   "rejected_paths": [
@@ -102,10 +126,16 @@
   ],
   "parking_lot": [
     {
+      "title": "widget_helpers Split Smoke Tests",
+      "date": "2026-04-25",
+      "roi": 2.0,
+      "note": "WEAKENED run 8. Only implemented_unverified governance item. Write backend/tests/test_widget_helpers_smoke.py: import each of 3 modules + call one function. Promote to run 9 winner if Widget Hot-Zone Playwright path confirmed."
+    },
+    {
       "title": "Widget Click Regression Guard (Playwright E2E)",
       "date": "2026-04-11",
       "roi": 2.0,
-      "note": "WEAKENED — Playwright infra unconfirmed. Verify `npx playwright install --check` first."
+      "note": "WEAKENED — Playwright infra unconfirmed. Verify `npx playwright install` first."
     },
     {
       "title": "Onboarding AI Parser Edge Case Tests",
@@ -135,7 +165,7 @@
       "title": "Widget Hot-Zone Regression Suite",
       "date": "2026-04-18",
       "roi": 2.1,
-      "note": "WEAKENED run 7. Pre-condition met (widget_helpers split done 6cf4646). Blocked on Playwright confirmation. Promote to run 8 winner candidate IF `npx playwright install --check` confirms."
+      "note": "WEAKENED runs 7+8. Pre-condition met (widget_helpers split done 6cf4646). Blocked on Playwright confirmation. Promote to run 9 winner candidate IF Playwright confirmed."
     },
     {
       "title": "SettingsPage.jsx split into tab-panel components",
@@ -165,7 +195,7 @@
       "title": "Small Business SaaS KB Category Seed (3 articles)",
       "date": "2026-04-20",
       "roi": 1.5,
-      "note": "KB INDEX shows 'No articles yet' for Small Business SaaS. /kb-discover on 3 SMB queries."
+      "note": "KB INDEX shows sparse SMB SaaS coverage. /kb-discover on 3 SMB queries."
     },
     {
       "title": "Stripe Billing Smoke Tests / Plan-Tier Contract Tests",
@@ -178,13 +208,19 @@
       "date": "2026-04-24",
       "roi": 1.8,
       "note": "2,204 lines. P4 task. Auto-logger writes to it. Split into monthly files + INDEX.md. Update auto-logger path."
+    },
+    {
+      "title": "Moratorium Governance Self-Enforcing Threshold",
+      "date": "2026-04-25",
+      "roi": 1.6,
+      "note": "Partially implemented this run via moratorium_config in governance.json. Auto-trigger logic needs wiring into subconscious SKILL.md Phase 5 synthesis gate."
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 2,
+    "runs_pending_approval": 4,
     "runs_implemented": 2,
     "oldest_pending": "2026-04-06 (Lead Source Analytics, run 2)",
-    "note": "Run 7 reconciled governance. widget_helpers split = implemented_unverified. Migration guard = implemented_weakened. JS Silent Catch + AI-to-Human Handoff still pending. Human should approve or reject before run 9.",
+    "note": "Run 8: moratorium triggered. 5 items pending (runs 2, 3, 4, 7, 8). Human must implement at least 2 before run 9 to lift moratorium. If moratorium_active=true in run 9, synthesis should recommend oldest pending winner, not generate new ideas.",
     "escalate": true
   },
   "config": {
