@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.twilio_service import send_sms
 

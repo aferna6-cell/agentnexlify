@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.models.database import get_service_supabase
 from backend.models.schemas import EmailTemplateCreate, EmailTemplateUpdate
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.email_sender import render_template
 
 logger = logging.getLogger(__name__)
