@@ -2,6 +2,13 @@
 
 Raw files awaiting compilation. Run `/kb-compile` to process.
 
+## Ingested 2026-04-25T22:10:52Z — cron autopop
+
+- [ai-llm] Anthropic — Writing Tools for Agents → `raw/ai-llm/anthropic-writing-tools-for-agents-2026-04-25.md`
+- [ai-llm] Anthropic — Multi-Agent Research System → `raw/ai-llm/anthropic-multi-agent-research-system-2026-04-25.md`
+- [competitors] Intercom — Kaizen for the AI Era (Fin Flywheel) → `raw/competitors/intercom-kaizen-ai-era-2026-04-25.md`
+- [competitors] Birdeye — AI in Multi-Location Marketing → `raw/competitors/birdeye-ai-multi-location-marketing-2026-04-25.md`
+
 ## Ingested 2026-04-12T22:25:10Z — filtered (off-topic removed)
 
 _All compiled._

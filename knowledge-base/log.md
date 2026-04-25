@@ -12,6 +12,11 @@ Tail with: `grep "^## \[" log.md | tail -20`
 
 ---
 
+## [2026-04-25 22:10] discover | cron autopop | found=4 ingested=4 deduped=0 skipped=5 (no source)
+- ai-llm: anthropic-writing-tools-for-agents, anthropic-multi-agent-research-system
+- competitors: intercom-kaizen-ai-era, birdeye-ai-multi-location-marketing
+- skipped (no usable source): small_biz_saas, verticals, technical, regulations, growth — search MCPs returned 401 (exa/tavily/firecrawl), agent-browser not installed, sources.yaml has no blog URLs for these categories
+
 ## [2026-04-18 12:00] compile | competitor-landscape-2026-04-18 | 1 source → 5 wiki articles
 
 Source: `raw/competitors/competitor-landscape-2026-04-18.md` (direct scrape of GHL, Drillbit, Phonely, Birdeye, Podium pricing pages on 2026-04-18 via agent-browser).
