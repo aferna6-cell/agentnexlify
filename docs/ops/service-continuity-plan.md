@@ -16,6 +16,19 @@ At least one partner besides Aidan should be able to reach:
 - Supabase dashboard
 - `help@agentnexlify.com`
 
+## Credential Distribution Checklist
+
+- [ ] Partner has Railway login (email invite accepted)
+- [ ] Partner has Vercel login (email invite accepted)
+- [ ] Partner has Stripe dashboard access (team member invite accepted)
+- [ ] Partner has Supabase dashboard access (team member invite accepted)
+- [ ] Partner has access to 1Password / Bitwarden vault with env vars
+- [ ] Partner knows how to open `help@agentnexlify.com`
+- [ ] Partner has run through one deploy rehearsal (Railway rollback + Vercel rollback)
+- [ ] Partner has rotated `STRIPE_WEBHOOK_SECRET` once under supervision
+- [ ] Partner has issued one test refund via admin endpoint
+- [ ] Partner has Aidan's emergency contact (phone + secondary email)
+
 ## Default Rule
 
 If the issue is customer-facing and the rollback path is obvious, roll back first and investigate second.
