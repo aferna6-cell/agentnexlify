@@ -856,3 +856,19 @@ ALTER widget_configs adding 3 columns for v2 wizard cohort tracking + readiness 
 **RLS:** unchanged (widget_configs already gated to service_role + tenant-scoped via existing policies).
 **Conventions:** `tenant_id` (widget_configs uses tenant_id, not client_id — leads/conversations are the client_id outliers).
 **Applied:** NOT YET — pending `mcp__supabase__apply_migration` after review.
+
+
+### 113 — Fraud Guardrails
+**Date:** 2026-04-25
+Adds `signup_attempts` table for velocity-based fraud detection on registration (criterion 10.2).
+
+**Table:**
+- `signup_attempts` — IP address, email, optional tenant_id FK, blocked_reason, created_at.
+
+**Indexes:**
+- `idx_signup_attempts_ip_created` — velocity lookups by IP
+- `idx_signup_attempts_email_created` — velocity lookups by email
+
+**RLS:** service_role only.
+**Conventions:** `tenant_id` (not `client_id`) on FK.
+**Applied:** NOT YET — pending `mcp__supabase__apply_migration` after review.

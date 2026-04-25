@@ -45,6 +45,12 @@ from backend.services.business_profiles import (
     get_dashboard_business_profile,
     get_widget_defaults,
 )
+from backend.services.fraud_guard import (
+    check_registration_velocity,
+    guard_checkout_for_fraud,
+    is_disposable_email,
+    _record_signup_attempt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -330,6 +336,10 @@ from backend.services.branding_service import INDUSTRY_FAQS, _seed_industry_faqs
 @router.post("/register", response_model=RegisterResponse)
 @limiter.limit("5/minute")
 async def register(request: Request, req: RegisterRequest):
+    email = req.email.lower().strip()
+    if is_disposable_email(email):
+        raise HTTPException(status_code=400, detail="Disposable email addresses are not allowed.")
+    check_registration_velocity(request, email)
     tenant_id, api_key = _provision_tenant_account(
         business_name=req.business_name,
         owner_name=req.owner_name,
@@ -353,7 +363,18 @@ async def register(request: Request, req: RegisterRequest):
         website_url=req.website_url,
     )
 
+    _record_signup_attempt(_get_client_ip_for_fraud(request), email, tenant_id)
     return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
+
+
+def _get_client_ip_for_fraud(request: Request) -> str:
+    """Extract real client IP for fraud tracking."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if ips:
+            return ips[-1]
+    return request.client.host if request.client else "127.0.0.1"
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -576,6 +597,10 @@ async def google_auth_callback(
 @limiter.limit("5/minute")
 async def google_register(request: Request, req: GoogleRegisterRequest):
     setup = _decode_google_setup_token(req.setup_token)
+    email = setup["email"].lower().strip()
+    if is_disposable_email(email):
+        raise HTTPException(status_code=400, detail="Disposable email addresses are not allowed.")
+    check_registration_velocity(request, email)
     generated_password = secrets.token_urlsafe(32)
 
     tenant_id, api_key = _provision_tenant_account(
@@ -608,6 +633,7 @@ async def google_register(request: Request, req: GoogleRegisterRequest):
         website_url=req.website_url,
     )
 
+    _record_signup_attempt(_get_client_ip_for_fraud(request), email, tenant_id)
     return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
 
 

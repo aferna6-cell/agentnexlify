@@ -16,6 +16,7 @@ from backend.models.database import get_service_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
+from backend.services.fraud_guard import guard_checkout_for_fraud
 from backend.services.stripe_service import (
     PLAN_PRICES,
     STRIPE_ADDON_MARKETING_VALUE,
@@ -387,6 +388,27 @@ def _handle_checkout_completed(db, session: dict) -> None:
         logger.warning(
             "checkout.session.completed: could not resolve plan (amount=%s, metadata=%s)",
             session.get("amount_total"), session.get("metadata"),
+        )
+        return
+
+    fraud_reason = guard_checkout_for_fraud(session)
+    if fraud_reason:
+        logger.warning(
+            "checkout.session.completed: fraud detected for tenant %s — %s. Pausing activation.",
+            tenant_id, fraud_reason,
+        )
+        update_data = {
+            "plan": plan,
+            "plan_status": "paused",
+            "stripe_customer_id": session.get("customer"),
+            "stripe_subscription_id": session.get("subscription"),
+        }
+        db.table("tenants").update(update_data).eq("id", tenant_id).execute()
+        log_activity(
+            tenant_id=tenant_id,
+            event_type="fraud_alert",
+            description=f"Checkout flagged: {fraud_reason}. Subscription paused pending review.",
+            metadata={"fraud_reason": fraud_reason, "session_id": session.get("id")},
         )
         return
 
