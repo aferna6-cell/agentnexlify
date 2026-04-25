@@ -15,6 +15,18 @@ Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
+## Why — Karpathy verbatim (failure modes this skill prevents)
+
+> **Blind assumptions:** "The models make wrong assumptions on your behalf and just run along with them without checking. They don't manage their confusion, don't seek clarifications, don't surface inconsistencies, don't present tradeoffs, don't push back when they should."
+
+> **Overcomplication:** "They really like to overcomplicate code and APIs, bloat abstractions, don't clean up dead code... implement a bloated construction over 1000 lines when 100 would do."
+
+> **Unwarranted changes:** "They still sometimes change/remove comments and code they don't sufficiently understand as side effects, even if orthogonal to the task."
+
+> **Loops are the lever:** "LLMs are exceptionally good at looping until they meet specific goals... Don't tell it what to do, give it success criteria and watch it go."
+
+If a diff smells like one of the first three, stop and re-apply the matching principle below. The fourth is the positive frame for principle #4 (Goal-Driven Execution).
+
 ## When to Use
 
 - Writing new code in any language
