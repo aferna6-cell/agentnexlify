@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 75 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-24
+- Total articles: 79 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-25
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -38,6 +38,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [GoHighLevel API V2 — OAuth 2.0, Granular Scopes, and the Marketplace Play](wiki/competitors/ghl-api-v2-developer-platform.md) — Migration from static API keys to OAuth 2.0 with granular scopes, enhanced webhooks, and private-app Marketplace turns GHL into a Shopify-style platform moat. Tags: gohighlevel, api-v2, oauth, marketplace, developer-platform, integrations, seo-ai
 - [GoHighLevel Unlimited AI — $97/mo Sub-Account Economics and Reseller Math (2026)](wiki/competitors/ghl-unlimited-ai-97-mo-breakdown-2026.md) — $97/sub bundles 6 AI tools; break-even at 4,850 messages or 750-970 voice minutes; agency rebill margin 65-80% on $197-497 prices; reseller rail is the moat. Tags: gohighlevel, ai-employee, unlimited-ai, agency-pricing, rebilling, saas-mode, fair-use, small-business
 - [Intercom Sales Agent Blueprint — Inbound Sales as the Next Agentic Wedge](wiki/competitors/intercom-sales-agent-blueprint-2026.md) — Intercom extends its Service Agent playbook to revenue teams; Track 1 "Launch it" deploys an inbound qualifying agent, Track 2 "Scale it" rewires the buyer journey. Same wedge AgentNexLiFy targets at the SMB tier. Tags: intercom, fin, sales-agent, inbound-sales, ai-go-to-market, agentic-commerce, buy-vs-build
+- [GoHighLevel AI Changelog 2024-2026 — Three-Year Feature Trajectory](wiki/competitors/ghl-ai-changelog-2024-2026.md) — Q4 2024 private beta → Q4 2026 Voice AI 19 langs → April 2026 27-language sub-800ms voice; release cadence and natural-language workflow builder collapse the agency-consultant value proposition. Tags: gohighlevel, ai-employee, voice-ai, conversation-ai, feature-history, competitive-roadmap, smb-marketing
+- [GoHighLevel API V2 + AI Employee Funnel Stack — 2026 Agency Implementation View](wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md) — Side-by-Side AI funnel design assistant + OAuth 2.0 granular scopes + Review AI absorbing Birdeye/Podium category; AgentNexLiFy must displace the consultant tier, not the platform itself. Tags: gohighlevel, api-v2, oauth, ai-employee, funnels, side-by-side-ai, review-ai, agency-implementation
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -64,6 +66,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Claude Opus 4.7 Tokenizer Cost Reality — Unchanged Rate Card, Higher Effective Bill](wiki/ai-llm/claude-opus-4-7-tokenizer-cost-reality-2026.md) — New tokenizer produces up to 1.35x more tokens for identical text; $5/$25 rate card unchanged but per-request cost rises 0-35%; caching + Batch + honest model selection are the recovery levers. Tags: claude, opus-4-7, tokenizer, pricing, cost-optimization, prompt-caching, batch-api, finops
 - [Claude Stays Ad-Free — Incentive Design as Vendor-Durability Signal](wiki/ai-llm/claude-ad-free-incentive-design-2026.md) — Anthropic publicly commits to keeping Claude ad-free; revenue from enterprise contracts and subscriptions only, removing optimization pressure that would compromise model honesty. Tags: anthropic, business-model, incentive-alignment, ai-trust, vendor-risk, agentic-commerce
 - [Claude Code April-23 Postmortem — Three Bugs That Faked Model Degradation](wiki/ai-llm/claude-code-april-23-postmortem-2026.md) — Three independent Claude Code changes (default-effort downgrade, broken thinking-cache pruning, verbosity system-prompt line) overlapped Mar-Apr 2026; all reverted by v2.1.116 on April 20, usage limits reset April 23. Tags: anthropic, claude-code, postmortem, prompt-caching, thinking-blocks, system-prompt, reliability, evals
+- [Claude Release Notes Feb-Apr 2026 — Opus 4.6 → Sonnet 4.6 → Opus 4.7 + Cowork GA](wiki/ai-llm/anthropic-claude-release-notes-feb-apr-2026.md) — Four model launches in 70 days, Cowork GA with OpenTelemetry + Analytics API, computer use to Pro/Max, memory for free users normalizes cross-session memory expectation. Tags: anthropic, claude, release-notes, opus-4-6, sonnet-4-6, opus-4-7, claude-cowork, claude-design, computer-use, release-cadence
+- [Claude Code v2.1.118 + v2.1.119 Release Notes — Settings Persistence, MCP OAuth Fixes](wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md) — v2.1.118/119 ship config persistence, vim visual mode, GitLab/Bitbucket PR ingestion, MCP OAuth concurrency fixes, Glob/Grep + denied-Bash recovery; pinned-version policy needs review. Tags: claude-code, v2-1-118, v2-1-119, release-notes, settings-persistence, mcp-oauth, gitlab, bitbucket, vim-mode, auto-mode
 
 ### Small Business SaaS
 - [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
