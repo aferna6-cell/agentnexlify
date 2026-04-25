@@ -294,3 +294,8 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-24 06:16] discover+compile | cron 06:00 | commits=2 raw=11 wiki=4
 
 ## [2026-04-24 18:13] discover+compile | cron 18:00 | commits=2 raw=8 wiki=4
+
+## [2026-04-25 10:35] compile | GoHighLevel AI Changelog 2024-2026 | competitors → wiki/competitors/ghl-ai-changelog-2024-2026.md (embedded)
+## [2026-04-25 10:35] compile | GHL API V2 + AI Employee Funnel Stack | competitors → wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md (embedded)
+## [2026-04-25 10:35] compile | Claude Release Notes Feb-Apr 2026 | ai-llm → wiki/ai-llm/anthropic-claude-release-notes-feb-apr-2026.md (embedded)
+## [2026-04-25 10:35] compile | Claude Code v2.1.118 + v2.1.119 | ai-llm → wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md (embedded after 429 retry)
