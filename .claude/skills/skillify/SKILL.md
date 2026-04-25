@@ -16,6 +16,14 @@ triggers: ["/skillify", "skillify", "create a skill", "turn this into a skill", 
 - The user asks to create, improve, or evaluate an Agent Nexlify skill.
 - A repo pattern should be captured as a concise `skills/canonical/<name>/SKILL.md` and synced to the target trees.
 
+## Proactive triggers — invoke without being asked
+- User issues the same instruction 3+ times in a session (e.g. asks for the same audit, eval, or report shape repeatedly).
+- User describes a workflow with words like "every time", "I always", "again", "repeat for X".
+- User pastes the same prompt template across 2+ chats (cross-session via `memory/`).
+- A nightly job, scheduled agent, or hook would benefit from a named skill instead of inline prompt.
+
+When triggered proactively: surface the suggestion in one line ("This pattern just repeated 3x — want me to /skillify it?"), don't auto-create. User confirms before write.
+
 ## When NOT to Use
 - Do not use for one-off notes that belong in normal docs.
 - Do not create a skill when an existing skill only needs a small update.
