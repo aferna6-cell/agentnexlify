@@ -299,3 +299,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-25 10:35] compile | GHL API V2 + AI Employee Funnel Stack | competitors → wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md (embedded)
 ## [2026-04-25 10:35] compile | Claude Release Notes Feb-Apr 2026 | ai-llm → wiki/ai-llm/anthropic-claude-release-notes-feb-apr-2026.md (embedded)
 ## [2026-04-25 10:35] compile | Claude Code v2.1.118 + v2.1.119 | ai-llm → wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md (embedded after 429 retry)
+
+## [2026-04-25 06:15] discover+compile | cron 06:00 | commits=3 raw=4 wiki=4
