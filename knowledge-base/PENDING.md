@@ -227,3 +227,9 @@ _All compiled 2026-04-18 cron run._
 - [technical] Agent responsibly - Vercel — https://vercel.com/blog/agent-responsibly (raw: knowledge-base/raw/technical/agent-responsibly-2026-04-24.md)
 
 - ~~[technical] Agentic Infrastructure - Vercel~~ → compiled `wiki/technical/vercel-agentic-infrastructure-2026.md` (2026-04-24 cron)
+
+## Auto-populate run 2026-04-25 10:03 UTC
+- [ ] `knowledge-base/raw/competitors/2026-04-25-gohighlevel-ai-changelog-every-ai-feature-release-2024-2026.md` — GoHighLevel AI Changelog: Every AI Feature Release (2024-2026)
+- [ ] `knowledge-base/raw/competitors/2026-04-25-mastering-ai-employees-and-custom-api-v2-for-high-performance-funnels-ninja-codi.md` — Mastering AI Employees and Custom API V2 for High-Performance Funnels – Ninja Coding Pro
+- [ ] `knowledge-base/raw/ai-llm/2026-04-25-claude-by-anthropic-release-notes-april-2026-latest-updates.md` — Claude by Anthropic - Release Notes - April 2026 Latest Updates
+- [ ] `knowledge-base/raw/ai-llm/2026-04-25-releases-anthropics-claude-code.md` — Releases · anthropics/claude-code
