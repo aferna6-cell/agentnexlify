@@ -89,15 +89,15 @@ function CompareRoute() {
   return <Navigate to="/" replace />;
 }
 
-/* Redirect /onboarding - authenticated users go to dashboard, others to signup.
+/* /onboarding - renders the wizard for authenticated users, redirects to signup otherwise.
    Handles the AuthProvider race condition where user is null on first render
    while the JWT is still being parsed. */
-function OnboardingRedirect() {
+function OnboardingRoute() {
   const { user, token } = useAuth();
   // Token exists but user not yet parsed - still loading
   if (token && user === null) return null;
-  // Authenticated → dashboard has the inline onboarding checklist
-  if (user) return <Navigate to="/dashboard" replace />;
+  // Authenticated → render wizard
+  if (user) return <OnboardingWizardPage />;
   // Not authenticated → signup
   return <Navigate to="/signup" replace />;
 }
@@ -146,8 +146,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/biz/:slug" element={<BusinessPage />} />
             {/* /setup - onboarding wizard for new tenants */}
             <Route path="/setup" element={<AuthProvider><OnboardingWizardPage /></AuthProvider>} />
-            {/* /onboarding - redirect authenticated users to dashboard, others to signup */}
-            <Route path="/onboarding" element={<AuthProvider><OnboardingRedirect /></AuthProvider>} />
+            {/* /onboarding - onboarding wizard for authenticated users, signup otherwise */}
+            <Route path="/onboarding" element={<AuthProvider><OnboardingRoute /></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}
             <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
             </Routes>

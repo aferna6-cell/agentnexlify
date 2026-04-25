@@ -164,11 +164,16 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
         line_items.append({"price": prices["setup"], "quantity": 1})
     line_items.append({"price": prices["monthly"], "quantity": 1})
 
+    success_path = (
+        f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
+        if req.source == "wizard"
+        else f"{settings.frontend_url}/dashboard?checkout_success=1&session_id={{CHECKOUT_SESSION_ID}}"
+    )
     session_params: dict = {
         "mode": "subscription",
         "customer": customer.id,
         "line_items": line_items,
-        "success_url": f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        "success_url": success_path,
         "cancel_url": f"{settings.frontend_url}/billing/cancel",
         "metadata": {"tenant_id": req.tenant_id, "plan": req.plan},
         "subscription_data": {
