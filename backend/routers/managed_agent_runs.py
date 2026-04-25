@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.document_drafting import (
     DocumentDraftingError,
     draft_document,

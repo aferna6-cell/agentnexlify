@@ -26,7 +26,7 @@ from backend.routers.widget_helpers import (
     _get_widget_config,
 )
 from backend.services.branding_helpers import _filter_branding_for_plan
-from backend.routers.auth import _get_current_tenant as _auth_get_tenant
+from backend.dependencies import _get_current_tenant as _auth_get_tenant
 
 from datetime import datetime, timezone
 

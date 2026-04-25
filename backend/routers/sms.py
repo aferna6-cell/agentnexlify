@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.twilio_service import send_sms

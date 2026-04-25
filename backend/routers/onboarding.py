@@ -34,7 +34,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.routers.auth import require_role
+from backend.dependencies import require_role
 from backend.services.business_profiles import get_widget_defaults
 from backend.services.llm_runtime import call_claude_messages
 
