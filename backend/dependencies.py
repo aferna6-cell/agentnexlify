@@ -6,9 +6,24 @@ Import from here instead of defining locally in each router.
 
 import logging
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
+
+from backend.services.auth_service import get_current_tenant
 
 logger = logging.getLogger(__name__)
+
+# Public alias — all routers use Depends(_get_current_tenant)
+_get_current_tenant = get_current_tenant
+
+
+def require_role(*allowed_roles):
+    """FastAPI dependency factory: restrict endpoint to specific roles."""
+    async def checker(claims: dict = Depends(_get_current_tenant)):
+        role = claims.get("role", "owner")
+        if role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return claims
+    return checker
 
 
 def verify_tenant(claims: dict, tenant_id: str) -> None:

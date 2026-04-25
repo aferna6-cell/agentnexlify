@@ -115,8 +115,8 @@ def _create_token(
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-# Backward-compat alias — all routers that do `Depends(_get_current_tenant)` continue to work.
-_get_current_tenant = get_current_tenant
+# _get_current_tenant and require_role live in backend.dependencies — import for own use.
+from backend.dependencies import _get_current_tenant, require_role  # noqa: E402
 
 
 def _normalize_paid_plan(plan: str | None) -> str | None:
@@ -316,16 +316,6 @@ async def _run_signup_side_effects(
             await start_crawl(tenant_id, website_url)
         except Exception:
             logger.warning("Signup crawl failed for new tenant %s url=%s", tenant_id, website_url, exc_info=True)
-
-
-def require_role(*allowed_roles):
-    """FastAPI dependency factory: restrict endpoint to specific roles."""
-    async def checker(claims: dict = Depends(_get_current_tenant)):
-        role = claims.get("role", "owner")
-        if role not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        return claims
-    return checker
 
 
 # ── Industry FAQ Seeds ───────────────────────────────────────

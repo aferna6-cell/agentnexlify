@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.addon_gate import require_marketing_addon
 
 logger = logging.getLogger(__name__)
