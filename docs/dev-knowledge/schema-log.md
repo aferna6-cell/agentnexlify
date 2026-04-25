@@ -837,3 +837,22 @@ Single-table migration for Zapier app authentication (spec: `specs/zapier-crm-ex
 **RLS:** service_role only. Tenant access via backend CRUD endpoints.
 **Conventions:** `client_id` not `tenant_id`.
 **Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified.
+
+### 112 — Onboarding v2 widget_configs columns
+**Date:** 2026-04-25
+ALTER widget_configs adding 3 columns for v2 wizard cohort tracking + readiness badge (spec: `specs/onboarding-v2_spec.md` §6.1.1).
+
+**Columns added:**
+- `onboarding_version TEXT NOT NULL DEFAULT 'v1'` CHECK IN ('v1','v2') — cohort filter for funnel analytics
+- `ready_to_launch BOOLEAN NOT NULL DEFAULT false` — drives "Ready to launch" badge
+- `readiness_criteria JSONB NOT NULL DEFAULT '{services_count, hours_filled, faqs_count, logo_uploaded}'::jsonb` — per-tenant checklist state
+
+**Index:** `idx_widget_configs_onboarding_version` partial WHERE `onboarding_version = 'v2'` (cohort queries).
+
+**Backward compat:** every existing tenant lands on `v1` + `ready_to_launch=false` automatically. v2 wizard completion flips on new signups only (per spec §3 — no re-onboarding existing tenants).
+
+**Migration number note:** spec reserved 115-117 but actual gap was 111→. Used 112 (next sequential per migration-workflow rule).
+
+**RLS:** unchanged (widget_configs already gated to service_role + tenant-scoped via existing policies).
+**Conventions:** `tenant_id` (widget_configs uses tenant_id, not client_id — leads/conversations are the client_id outliers).
+**Applied:** NOT YET — pending `mcp__supabase__apply_migration` after review.
