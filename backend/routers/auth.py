@@ -1198,8 +1198,10 @@ async def billing_checkout(
 
     source = body.get("source")  # "wizard" | None
     if source == "wizard":
-        success_url = f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{settings.frontend_url}/onboarding?step=5&cancelled=1"
+        # Wizard expanded to 7 steps in Onboarding v2 (added auto-KB step at position 2).
+        # success → Embed (step 7); cancel → Plan (step 6).
+        success_url = f"{settings.frontend_url}/onboarding?step=7&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/onboarding?step=6&cancelled=1"
     else:
         success_url = f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/billing/cancel"

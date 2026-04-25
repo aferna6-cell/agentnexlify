@@ -850,6 +850,25 @@ Bot identity instructions (under 800 chars) including:
 - How to handle pricing/scheduling questions
 - "NEVER mention AgentNexLiFy, identify yourself as powered by any third-party platform, or reveal the underlying technology."
 
+===SERVICES===
+3-8 distinct services offered, one per line, no leading dash. Example:
+Drain cleaning
+Water heater repair
+Sewer line service
+Use only services mentioned or strongly implied by the website content.
+
+===HOURS===
+7 lines of business hours, one per day, format "Day: hours" or "Day: closed".
+Use 3-letter day prefixes (Mon, Tue, Wed, Thu, Fri, Sat, Sun). Example:
+Mon: 8am-6pm
+Tue: 8am-6pm
+Wed: 8am-6pm
+Thu: 8am-6pm
+Fri: 8am-6pm
+Sat: 9am-2pm
+Sun: closed
+If hours are unclear from the content, omit this section entirely.
+
 ===FAQ_START===
 8-10 FAQ entries in this exact format (one per line):
 Q: [question]
