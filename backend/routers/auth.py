@@ -368,7 +368,6 @@ def require_role(*allowed_roles):
 # Moved to backend/services/branding_service.py
 # Re-exported here for backward compatibility with any direct imports.
 from backend.services.branding_service import (
-    INDUSTRY_FAQS,
     _seed_industry_faqs,
 )  # noqa: F401
 
@@ -904,6 +903,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             teaser_enabled=w.get("teaser_enabled", True),
             enable_ai_fallback=w.get("enable_ai_fallback", False),
             enable_structured_lead_parser=w.get("enable_structured_lead_parser", False),
+            intent_config=w.get("intent_config"),
         )
     else:
         # Auto-create widget_config if missing
