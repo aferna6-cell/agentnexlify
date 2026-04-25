@@ -1,19 +1,22 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-24 08:00 EDT (automated morning routine)
+Updated: 2026-04-24 20:00 EDT (automated evening review)
 
-## Today's Top 3 Priorities
+## Tomorrow's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 22 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **Reconcile local `main` divergence with `origin/main`** — local HEAD is 6 ahead / 12 behind `origin/main`. Origin has onboarding-v2 Week 1 feature (`1432b68`) + migrations 115/116/117 + CI fixes (`4d9b25f`, `bcaba73`, `dbdcb23`, `212e04d`). Local has Stripe pricing + dotenv bump + noshow_recovery fix + 2026-04-24 subconscious run. Needs `git fetch + git rebase origin/main` (or merge) before further work. Agent: **devops** / Human.
-3. **QA 2026-04-22 missed-call-text-back automation (`6020a43`, migration 111)** — migration 111 now documented in `schema-log.md` but prod apply still unverified; feature has zero QA pass. Agents: **qa-tester** + **widget-specialist**.
+1. **ROTATE compromised admin API key in Railway** — DAY 23 of exposure tomorrow. Still live. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **Reconcile local `main` divergence with `origin/main`** — local HEAD still 6 ahead / 12 behind `origin/main`; no rebase done today. Run `git fetch && git rebase origin/main` before any feature work. Agent: **devops** / Human.
+3. **QA missed-call-text-back automation + migration 111 (`6020a43`)** — feature shipped 2026-04-22, migration documented 2026-04-24, prod apply + end-to-end QA still unverified. Agents: **qa-tester** + **widget-specialist**.
 
 ## Completed (Recent)
 
 ### 2026-04-24
+- [x] Evening health check: all green, matches morning (dangerous_router=CLEAR, bare_except=0, silent_frontend_catch=0, widget_sync=OK, gitignore_env=YES)
+- [x] Evening review: 7 commits / 0 fixes / 0 migrations today — KB autopop + morning routine + auto-commit churn only
+- [x] KB autopopulate cycle (06:00 + 18:00) — 19 raw ingests + 8 wiki promotions
 - [x] Document migration 111 (`missed_call_texts`, `tenants.avg_ticket_override`, automations backfill) in `schema-log.md`
 - [x] Add skeleton bug-pattern entries for origin/main CI fixes — `4d9b25f`, `bcaba73`, `dbdcb23`, `212e04d`
-- [x] Morning health check: all green (dangerous_router=CLEAR, bare_except=0, silent_frontend_catch=0, widget_sync=OK, gitignore_env=YES)
+- [x] Morning health check: all green
 - [x] Scan for hardcoded API keys: clean (no `sk_live_`/`sk_test_`/`sk-ant-` literals in code)
 
 ### 2026-04-23
