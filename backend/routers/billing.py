@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.stripe_service import (
     PLAN_PRICES,
