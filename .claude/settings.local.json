@@ -24,7 +24,10 @@
       "Bash(git push:*)",
       "Read(//c/Users/aidan/**)",
       "Bash(npx --no-install vite build)",
-      "Write(.mcp.json)"
+      "Write(.mcp.json)",
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
+      "Bash(gh api *)",
+      "Bash(rtk gh *)"
     ]
   }
 }
