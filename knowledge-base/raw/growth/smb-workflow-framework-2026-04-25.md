@@ -91,7 +91,7 @@ Use this on landing page. Direct counter to GoHighLevel + Birdeye + Podium pitch
 - `.claude/skills/email-sequence/SKILL.md` — adjacent (outbound, not triage)
 
 ## Action items (suggestions, not committed)
-1. Audit `automation_engine` for "Email Center / Report Factory / Content Engine" naming + UI labels
+1. ~~Audit `automation_engine` for "Email Center / Report Factory / Content Engine" naming~~ → **DONE 2026-04-25:** grep on `backend/` returned zero matches for any of these 3 customer-friendly names. Gap confirmed. Action: rename internal automation modules + UI labels in next marketing sprint.
 2. Steal 🟢/🟡/🔴 labeling for tenant onboarding flow
 3. Lift 4-5 quotes for landing page hero/sub-hero copy
 4. Build "5-week autopilot rollout" as a sales narrative
