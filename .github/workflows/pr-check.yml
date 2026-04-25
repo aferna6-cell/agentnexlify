@@ -185,9 +185,18 @@ jobs:
           if [ -n "$CHANGED_MIGRATIONS" ]; then
             echo "New/changed migrations:"
             echo "$CHANGED_MIGRATIONS"
-            DUPES=$(ls migrations/*.sql 2>/dev/null | sed 's/.*\///' | grep -oP '^\d+' | sort | uniq -d)
-            if [ -n "$DUPES" ]; then
-              echo "::error::Duplicate migration numbers: $DUPES"
+            # Only check that the NEW migration numbers don't conflict with any other file.
+            # Pre-existing duplicates in the repo are not blocked here.
+            CHANGED_NUMS=$(echo "$CHANGED_MIGRATIONS" | sed 's/.*\///' | grep -oP '^\d+' | sort -u)
+            ERRORS=0
+            for NUM in $CHANGED_NUMS; do
+              COUNT=$(ls migrations/*.sql 2>/dev/null | sed 's/.*\///' | grep -oP '^\d+' | grep -c "^${NUM}$" || true)
+              if [ "$COUNT" -gt 1 ]; then
+                echo "::error::Duplicate migration number introduced by this PR: $NUM"
+                ERRORS=$((ERRORS + 1))
+              fi
+            done
+            if [ $ERRORS -gt 0 ]; then
               exit 1
             fi
           fi
