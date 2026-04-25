@@ -2202,3 +2202,24 @@ https://claude.ai/code/session_01AMEaRhVMfXypTzmBCpm9r4
 **Author:** aferna6-cell
 **Files Changed:** docs/dev-knowledge/bug-patterns.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(onboarding): soft edges — BillingPage toast, mobile tap targets, CSP verify
+
+- BillingPage: show success toast on ?checkout_success=1 return from Stripe
+- WizardStepPlan: minHeight 44 on plan buttons and Back button
+- WizardStepAutoKB: minHeight 44 on Skip link
+- WizardStepServices: minHeight on suggestion chips, remove buttons, add buttons
+- WizardStepKnowledgeBase: minHeight on Edit toggle
+- WizardStepCustomize: height 44 on color picker
+- WizardStepEmbed: minHeight on Copy button
+- WizardStepBusiness: minHeight on timezone select
+- Widget preview iframe already works same-origin with sandbox attrs
+
+All builds + tests pass.
+**Date:** 2026-04-25
+**Commit:** 62f8722
+**Author:** aferna6-cell
+**Files Changed:** frontend/src/pages/BillingPage.jsx,frontend/src/pages/wizard/WizardStepAutoKB.jsx,frontend/src/pages/wizard/WizardStepBusiness.jsx,frontend/src/pages/wizard/WizardStepCustomize.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,frontend/src/pages/wizard/WizardStepKnowledgeBase.jsx,frontend/src/pages/wizard/WizardStepPlan.jsx,frontend/src/pages/wizard/WizardStepServices.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
