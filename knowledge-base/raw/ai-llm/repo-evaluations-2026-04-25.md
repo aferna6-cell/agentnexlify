@@ -100,6 +100,41 @@ Filter rule for future viral lists: ignore "print money" framing, evaluate again
 
 ---
 
+## List 3 — anthropics/skills (17 skills, evaluated 2026-04-25)
+
+Investigated as candidate for tenant-facing document generation in Marketing/Operations addon.
+
+### License blocker (CRITICAL — re-eval gate)
+Doc skills (`docx`/`pdf`/`pptx`/`xlsx`) are **Proprietary**, not Apache 2.0. `LICENSE.txt` forbids: derivative works, third-party distribution, reverse engineering, sublicense. Cannot embed in AgentNexLiFy SaaS or ship to tenants. Only allowed: invoking via Anthropic-hosted Claude API where Anthropic runs the skill server-side.
+
+**If document generation is ever prioritized:** build on OSS libs the skills wrap — `python-docx` (MIT), `reportlab` (BSD), `python-pptx` (MIT), `openpyxl` (MIT). Same capability, no license risk, full control.
+
+### Verdicts
+| # | Skill | License | Verdict | Why |
+|---|-------|---------|---------|-----|
+| 1 | docx | Proprietary | ❌ Skip | License blocks SaaS resale; use python-docx if needed |
+| 2 | pdf | Proprietary | ❌ Skip | License blocks SaaS resale; use reportlab/pypdf if needed |
+| 3 | pptx | Proprietary | ❌ Skip | License blocks SaaS resale; use python-pptx if needed |
+| 4 | xlsx | Proprietary | ❌ Skip | License blocks SaaS resale; use openpyxl if needed |
+| 5 | mcp-builder | Apache 2.0 | N/A | Already in `.claude/skills/mcp-builder/` |
+| 6 | skill-creator | Apache 2.0 | N/A | Already in `.claude/skills/skill-creator/` |
+| 7 | frontend-design | Apache 2.0 | N/A | Already in `.claude/skills/frontend-design/` (project copy wins per `plugins.md`) |
+| 8 | webapp-testing | Apache 2.0 | N/A | Equivalent in stack via Playwright MCP |
+| 9 | claude-api | Apache 2.0 | N/A | Covered by `.claude/rules/opus-4-7.md` + `model-routing.md` |
+| 10 | doc-coauthoring | Apache 2.0 | ⚠️ Park | Pairs with `.claude/skills/write-prd/SKILL.md` — interview→draft→iterate. Diff before porting. Trigger: PRD-quality is active sprint. |
+| 11 | theme-factory | Apache 2.0 | ⚠️ Park | 10 preset themes for artifacts. Could power tenant widget themes. Trigger: widget theming sprint. |
+| 12 | internal-comms | Apache 2.0 | ❌ Skip | Partner scope (sales/marketing) per `plugins.md` |
+| 13 | brand-guidelines | Apache 2.0 | ❌ Skip | Anthropic-specific brand |
+| 14 | algorithmic-art | Apache 2.0 | ❌ Skip | Out of scope |
+| 15 | canvas-design | Apache 2.0 | ❌ Skip | Out of scope |
+| 16 | slack-gif-creator | Apache 2.0 | ❌ Skip | Out of scope |
+| 17 | web-artifacts-builder | Apache 2.0 | ❌ Skip | claude.ai artifact sandbox (see Critical Rule 6: no localStorage) |
+
+### Marketing/Operations addon — original hypothesis status
+**Killed by license.** Auto-invoices, KPI PPTX reports, contract drafts → cannot use anthropics/skills source. Future addon must use OSS lib path or Anthropic-hosted API path (data-residency tradeoff).
+
+---
+
 ## Cross-refs
 
 - `.claude/skills/karpathy-guidelines/SKILL.md` — updated with verbatim quotes (commit 8aa2dff)
