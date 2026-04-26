@@ -283,17 +283,17 @@ async def _run_support_fallback(
     return assistant_text, True
 
 
-def _chat_rate_limit(request: Request) -> str:
+def _chat_rate_limit(key: str) -> str:
     """Dynamic per-tenant rate limit based on plan tier.
 
-    Called by slowapi before the route handler. Looks up the tenant plan via
-    the api_key in the request body (cached on request.state after first read).
-    Falls back to free-tier (30/minute) if the plan cannot be resolved.
+    slowapi calls this with the result of key_function (the api_key string)
+    when the limit provider's signature includes a `key` parameter
+    (slowapi/wrappers.py:86-92). Looks up tenant plan via api_key, falls
+    back to free-tier (30/minute) if the plan cannot be resolved.
     """
-    api_key = get_client_id_key(request)
     try:
         from backend.routers.widget_helpers import _get_widget_config, _get_tenant
-        widget = _get_widget_config(api_key)
+        widget = _get_widget_config(key)
         tenant = _get_tenant(widget["tenant_id"])
         plan = tenant.get("plan", "free") or "free"
     except Exception:

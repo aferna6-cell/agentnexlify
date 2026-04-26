@@ -212,22 +212,38 @@ class TestRateLimiting:
         )
 
     def test_rate_limit_widget_chat(self, test_client):
-        """Verify the /api/v1/widget/chat endpoint has rate limiting configured
-        at 60/minute in slowapi's limiter._route_limits registry."""
+        """Verify the /api/v1/widget/chat endpoint has dynamic per-tier rate
+        limiting registered in slowapi's limiter._dynamic_route_limits.
+
+        steal-list 1-6 (commit b0b1fb4) replaced the static "60/minute" decorator
+        with @limiter.limit(_chat_rate_limit, ...) where _chat_rate_limit is a
+        callable that resolves the tenant's plan tier per request. slowapi
+        registers callable limits in `_dynamic_route_limits` (separate registry
+        from `_route_limits` which holds string-literal limits).
+        """
         _client, _db_mock = test_client
 
         from backend.limiter import limiter
+        from backend.middleware.rate_limit import get_tier_limit
 
         key = "backend.routers.widget_chat.widget_chat"
-        assert key in limiter._route_limits, (
-            f"Expected '{key}' to be registered in limiter._route_limits. "
-            f"Registered keys: {list(limiter._route_limits.keys())}"
+        dyn = getattr(limiter, "_dynamic_route_limits", {})
+        assert key in dyn, (
+            f"Expected '{key}' to be registered in limiter._dynamic_route_limits. "
+            f"Registered keys: {list(dyn.keys())}"
         )
-        limit_obj = limiter._route_limits[key][0]
-        limit_str = str(limit_obj.limit)
-        assert "60 per 1 minute" in limit_str, (
-            f"Expected '60 per 1 minute' but got '{limit_str}'"
-        )
+        # Verify the per-tier resolver returns sane defaults for each plan
+        for tier, expected_rpm in [
+            ("free", 30),
+            ("growth", 120),
+            ("autopilot", 240),
+            ("professional", 480),
+            ("enterprise", 1200),
+        ]:
+            assert get_tier_limit(tier) == f"{expected_rpm}/minute", (
+                f"Tier '{tier}' expected {expected_rpm}/minute, "
+                f"got {get_tier_limit(tier)}"
+            )
 
 
 # ===========================================================================
