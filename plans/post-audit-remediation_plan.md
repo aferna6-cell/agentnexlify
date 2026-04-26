@@ -2,7 +2,14 @@
 
 **Source audit:** [../audits/audit-architecture-2026-04-16.md](../audits/audit-architecture-2026-04-16.md)
 **Generated:** 2026-04-16 afternoon
+**Last updated:** 2026-04-26 — status reconcile vs HEAD
 **Scope:** 4 remaining HIGH/MEDIUM items blocked on own sessions per Rule 1 (plan first) + Rule 9 (factor before extending)
+
+## Status (2026-04-26 reconcile)
+- Session 1 — DONE. `backend/services/automation_engine.py` thinned to 1.4K wrapper; logic moved to `backend/services/automation/` package (orchestrator, rule_engine, trigger, scheduled_jobs, templates).
+- Session 2 — DONE. `backend/routers/analytics.py` replaced by `backend/routers/analytics/` package (dashboard, recovery, control_center, insights, operations, _common).
+- Session 3 — PARTIAL. `backend/routers/auth.py` shrunk from 1,896 → 1,506 lines, still 2.5x Rule 9's 600-line threshold. **This is the only remaining session.**
+- Session 4 — DONE. `backend/routers/widget_helpers.py` reduced to 98-line wrapper.
 
 ---
 
