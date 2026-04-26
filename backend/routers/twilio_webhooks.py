@@ -16,6 +16,7 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
+from backend.services.idempotency import check_and_record, record_response
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.twilio_service import format_textback_message, send_sms
 
