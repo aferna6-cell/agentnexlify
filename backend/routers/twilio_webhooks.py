@@ -16,6 +16,7 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
+from backend.services.idempotency import check_and_record, record_response
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.twilio_service import format_textback_message, send_sms
 
@@ -425,9 +426,18 @@ async def handle_inbound_sms(request: Request):
     from_number = params.get("From", "")
     to_number = params.get("To", "")
     message_body = params.get("Body", "").strip()
+    message_sid = params.get("MessageSid", "")
 
     if not from_number or not message_body:
         return PlainTextResponse("OK")
+
+    # Idempotency: skip Twilio redeliveries using MessageSid
+    if message_sid:
+        db_idem = get_service_supabase()
+        is_new, _cached = await check_and_record(db_idem, "twilio", message_sid)
+        if not is_new:
+            logger.info("Twilio duplicate MessageSid=%s — skipping", message_sid)
+            return PlainTextResponse("OK")
 
     logger.info("Inbound SMS from %s: %s", from_number, message_body[:100])
 
@@ -507,5 +517,13 @@ async def handle_inbound_sms(request: Request):
         description=f"SMS from {from_number}: {message_body[:50]}",
         metadata={"phone": from_number, "session_id": session_id},
     )
+
+    # Record idempotency response so replays return immediately
+    if message_sid:
+        try:
+            sms_db = get_service_supabase()
+            await record_response(sms_db, f"twilio:{message_sid}", 200, {"status": "ok"})
+        except Exception:
+            logger.warning("Failed to record Twilio idempotency response for %s", message_sid, exc_info=True)
 
     return PlainTextResponse("OK")
