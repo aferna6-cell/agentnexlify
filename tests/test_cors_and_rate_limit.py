@@ -245,6 +245,38 @@ class TestRateLimiting:
                 f"got {get_tier_limit(tier)}"
             )
 
+    def test_chat_rate_limit_signature_contract(self, test_client):
+        """Lock the slowapi calling convention for _chat_rate_limit.
+
+        slowapi/wrappers.py:86-94 calls callable limit providers with NO args
+        if the signature has no `key` param, OR with key_function(request) if
+        the signature DOES include `key`. A signature like (request) raises
+        TypeError on every request — production 500.
+
+        This test calls the function directly with the api_key string (matching
+        slowapi's calling convention) and asserts a valid limit string returns.
+        It will fail loudly if anyone reverts to (request) or any other shape.
+        """
+        _client, _db_mock = test_client
+
+        import inspect
+        from backend.routers.widget_chat import _chat_rate_limit
+
+        sig = inspect.signature(_chat_rate_limit)
+        params = list(sig.parameters.keys())
+        assert params == ["key"], (
+            f"_chat_rate_limit must take exactly one param named 'key' "
+            f"(slowapi convention). Got params: {params}. See "
+            f"slowapi/wrappers.py:86-94."
+        )
+
+        # Direct call with an unknown key must fall back to free tier (30/min)
+        # without raising. Exception → free fallback is the documented contract.
+        result = _chat_rate_limit("nonexistent-api-key-xyz")
+        assert result == "30/minute", (
+            f"Free-tier fallback expected '30/minute', got '{result}'"
+        )
+
 
 # ===========================================================================
 # Test Group 3: Automation Sequences
