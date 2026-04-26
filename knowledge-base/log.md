@@ -318,3 +318,5 @@ URLs kept in known-urls.json to prevent retry.
 - anthropic-nec-japan-partnership-2026 (ai-llm)
 - INDEX.md updated: 83 → 87 articles
 - embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
+
+## [2026-04-26 18:15] discover+compile | cron 18:00 | commits=1 raw=4 wiki=0
