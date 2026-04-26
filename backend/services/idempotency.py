@@ -36,6 +36,31 @@ async def check_and_record(
     the key and skip processing (last-write-wins on PRIMARY KEY conflict).
     """
     key = _build_key(provider, event_id)
+
+    # Atomic INSERT ... ON CONFLICT DO NOTHING via PostgREST upsert with
+    # ignore_duplicates=True. Closes the race where two concurrent webhook
+    # redeliveries both pass a SELECT-then-INSERT pattern.
+    try:
+        result = (
+            supabase.table("idempotency_keys")
+            .upsert(
+                {"key": key, "provider": provider},
+                on_conflict="key",
+                ignore_duplicates=True,
+            )
+            .execute()
+        )
+    except Exception:
+        logger.exception("idempotency upsert failed for key=%s", key)
+        # Fail open — worst case is a duplicate process. Retries will dedup.
+        return True, None
+
+    inserted_rows = getattr(result, "data", None) or []
+    if inserted_rows:
+        # Row was newly inserted by us — caller proceeds.
+        return True, None
+
+    # Row already existed — fetch its current cached response.
     try:
         existing = (
             supabase.table("idempotency_keys")
@@ -45,47 +70,27 @@ async def check_and_record(
             .execute()
         )
     except Exception:
-        logger.exception("idempotency check failed for key=%s", key)
-        # Fail open — let the caller process; worst case is a duplicate
+        logger.exception("idempotency post-conflict fetch failed key=%s", key)
         return True, None
 
-    if existing.data:
-        row = existing.data[0]
-        cached = {
-            "response_status": row.get("response_status"),
-            "response_body": row.get("response_body"),
-        }
-        logger.info("idempotency: duplicate webhook key=%s — returning cached", key)
-        return False, cached
-
-    # Insert the key immediately (before processing) to lock it
-    try:
-        supabase.table("idempotency_keys").insert(
-            {"key": key, "provider": provider}
-        ).execute()
-    except Exception:
-        # Another concurrent request may have just inserted — check again
-        logger.warning("idempotency insert conflict for key=%s — re-checking", key)
-        try:
-            recheck = (
-                supabase.table("idempotency_keys")
-                .select("key, response_status, response_body")
-                .eq("key", key)
-                .limit(1)
-                .execute()
-            )
-            if recheck.data:
-                row = recheck.data[0]
-                return False, {
-                    "response_status": row.get("response_status"),
-                    "response_body": row.get("response_body"),
-                }
-        except Exception:
-            logger.exception("idempotency re-check failed for key=%s", key)
-        # Still fail open
+    if not existing.data:
+        # Race: row appeared then disappeared (TTL cleanup mid-flight).
         return True, None
 
-    return True, None
+    row = existing.data[0]
+    cached = {
+        "response_status": row.get("response_status"),
+        "response_body": row.get("response_body"),
+    }
+    if row.get("response_body") is None:
+        # First delivery still in flight. Returning is_new=False causes the
+        # caller to ack 200 to the provider; the in-flight worker will
+        # complete the work. Provider stops redelivering.
+        cached["in_flight"] = True
+        logger.info("idempotency: in-flight duplicate key=%s", key)
+    else:
+        logger.info("idempotency: completed duplicate key=%s — returning cached", key)
+    return False, cached
 
 
 async def record_response(

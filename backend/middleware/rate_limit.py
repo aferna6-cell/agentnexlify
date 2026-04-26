@@ -87,10 +87,16 @@ def get_client_id_key(request: Request) -> str:
         except Exception:
             pass
 
-    # Fallback: client IP (same as global limiter default)
+    # Fallback: client IP. Prefer request.client.host (set by Railway/Vercel
+    # edge after TLS termination) over X-Forwarded-For, since XFF is
+    # client-controlled and an attacker can append arbitrary IPs to rotate
+    # rate-limit identities. If we must use XFF, take the LEFT-most entry
+    # (closest to origin client), not the right-most (closest to attacker).
+    if request.client and request.client.host:
+        return request.client.host
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
         ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
         if ips:
-            return ips[-1]
-    return request.client.host if request.client else "127.0.0.1"
+            return ips[0]
+    return "127.0.0.1"
