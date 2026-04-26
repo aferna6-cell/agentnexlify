@@ -52,6 +52,22 @@ def test_extracts_backtick_with_line_anchor():
     assert refs == {"backend/routers/auth.py"}
 
 
+# ---- skip marker ----
+
+
+def test_skip_marker_suppresses_line():
+    text = "see `backend/foo.py` here <!-- drift-skip -->"
+    assert extract_refs(text) == set()
+
+
+def test_skip_marker_only_affects_marked_line():
+    text = (
+        "real `backend/real.py` here\n"
+        "proposed `backend/future.py` <!-- drift-skip -->\n"
+    )
+    assert extract_refs(text) == {"backend/real.py"}
+
+
 # ---- is_external ----
 
 

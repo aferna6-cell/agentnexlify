@@ -7,7 +7,7 @@
 
 ## Status (2026-04-26 reconcile)
 - Session 1 — DONE. `backend/services/automation_engine.py` thinned to 1.4K wrapper; logic moved to `backend/services/automation/` package (orchestrator, rule_engine, trigger, scheduled_jobs, templates).
-- Session 2 — DONE. `backend/routers/analytics.py` replaced by `backend/routers/analytics/` package (dashboard, recovery, control_center, insights, operations, _common).
+- Session 2 — DONE. `backend/routers/analytics.py` replaced by `backend/routers/analytics/` package (dashboard, recovery, control_center, insights, operations, _common). <!-- drift-skip -->
 - Session 3 — PARTIAL. `backend/routers/auth.py` shrunk from 1,896 → 1,506 lines, still 2.5x Rule 9's 600-line threshold. **This is the only remaining session.**
 - Session 4 — DONE. `backend/routers/widget_helpers.py` reduced to 98-line wrapper.
 
@@ -91,7 +91,7 @@ backend/routers/analytics/
 1. `grep -rn "from backend.routers.analytics import" backend/` — list every consumer
 2. Classify the 60+ endpoints into 3 buckets by route prefix
 3. Check `main.py` lines 746–813 for router registration — single line → will become 3
-4. Shared helpers → `backend/services/analytics_helpers.py`
+4. Shared helpers → `backend/services/analytics_helpers.py` <!-- drift-skip -->
 
 **Risks:**
 - Shared query builders may need extraction (Rule 12: new file, not bloat)
@@ -108,7 +108,7 @@ backend/routers/analytics/
 **Current state:** 1,896 lines. JWT validation + branding logic + widget-config update co-located. Security layer doing business logic.
 
 **Target:**
-- Move branding endpoints + logic → `backend/routers/branding.py`
+- Move branding endpoints + logic → `backend/routers/branding.py` <!-- drift-skip -->
 - Move `WidgetConfigDetail` update logic → `backend/routers/widget_config.py` (already exists, may need merging)
 - Keep `auth.py` pure: JWT signing/decoding, tenant isolation, OAuth callbacks
 

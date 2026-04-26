@@ -1,7 +1,10 @@
-"""Scan plans/ and audits/ for references to files that no longer exist.
+"""Scan plans/ for references to files that no longer exist.
 
-Surfaces ghost references — paths that the plan claims but HEAD doesn't have.
+Surfaces ghost references — paths a plan claims but HEAD doesn't have.
 Read-only. Run before starting work from a stale-looking plan.
+
+Default scope is plans/ only — audits/ are dated historical snapshots and
+their drift is expected. Pass --dirs to widen scope.
 
 Usage:
     python scripts/check_plan_drift.py
@@ -29,6 +32,9 @@ EXT_GROUP = "|".join(EXTS)
 _md_link_re = re.compile(r"\[[^\]]*\]\(([^)#\s]+\.(?:" + EXT_GROUP + r"))(?:[#:]L?\d+(?:-L?\d+)?)?\)")
 _backtick_re = re.compile(r"`([^`\s]+/[^`\s]+\.(?:" + EXT_GROUP + r"))(?:[#:]L?\d+(?:-L?\d+)?)?`")
 
+# Per-line opt-out marker. Use on lines that reference aspirational/proposed paths.
+SKIP_MARKER = "<!-- drift-skip -->"
+
 
 def is_external(token: str) -> bool:
     return token.startswith(("http://", "https://", "ftp://", "//"))
@@ -48,16 +54,19 @@ def is_ignorable(token: str) -> bool:
 
 def extract_refs(text: str) -> set[str]:
     refs: set[str] = set()
-    for match in _md_link_re.finditer(text):
-        token = match.group(1)
-        if is_external(token) or is_ignorable(token):
+    for line in text.splitlines():
+        if SKIP_MARKER in line:
             continue
-        refs.add(token)
-    for match in _backtick_re.finditer(text):
-        token = match.group(1)
-        if is_external(token) or is_ignorable(token):
-            continue
-        refs.add(token)
+        for match in _md_link_re.finditer(line):
+            token = match.group(1)
+            if is_external(token) or is_ignorable(token):
+                continue
+            refs.add(token)
+        for match in _backtick_re.finditer(line):
+            token = match.group(1)
+            if is_external(token) or is_ignorable(token):
+                continue
+            refs.add(token)
     return refs
 
 
@@ -94,10 +103,11 @@ def main() -> int:
     parser.add_argument(
         "--dirs",
         nargs="+",
-        default=["plans", "audits"],
+        default=["plans"],
         help=(
-            "Directories to scan (default: plans audits). "
-            "Specs intentionally excluded — they reference proposed files."
+            "Directories to scan (default: plans). "
+            "Audits excluded by default — historical snapshots, drift is expected. "
+            "Specs excluded — they reference proposed files."
         ),
     )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
