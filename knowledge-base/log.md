@@ -310,3 +310,11 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-25 18:20] discover+compile | cron 18:00 | commits=2 raw=4 wiki=4
 ## [2026-04-26T22:03:39Z] discover | cats=1 fetched=2 new_raw=2 dedup=5 errors=1
 ## [2026-04-26T22:06:34Z] discover-pass2 | cats=1 fetched=2 new_raw=2 dedup=7 errors=0
+
+## [2026-04-26 22:10] compile (cron) | 4 articles compiled, 4 embedding skipped (Supabase MCP unauthorized)
+- ghl-manus-ai-monday-google-forms-integrations-2026 (competitors)
+- ghl-pricing-2026-true-monthly-cost-with-addons (competitors)
+- anthropic-election-safeguards-2026 (ai-llm)
+- anthropic-nec-japan-partnership-2026 (ai-llm)
+- INDEX.md updated: 83 → 87 articles
+- embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)

@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 83 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-25
+- Total articles: 87 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-26
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -42,6 +42,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [GoHighLevel API V2 + AI Employee Funnel Stack — 2026 Agency Implementation View](wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md) — Side-by-Side AI funnel design assistant + OAuth 2.0 granular scopes + Review AI absorbing Birdeye/Podium category; AgentNexLiFy must displace the consultant tier, not the platform itself. Tags: gohighlevel, api-v2, oauth, ai-employee, funnels, side-by-side-ai, review-ai, agency-implementation
 - [Intercom Fin Flywheel — Kaizen Framing for Continuous Agent Improvement](wiki/competitors/intercom-fin-flywheel-kaizen.md) — Train→Test→Deploy→Analyze loop + frontline-rep suggestion capture; positions ongoing tuning as a buyable category and a path-dependency lock-in narrative. Tags: intercom, fin, kaizen, continuous-improvement, ai-support-agents, human-in-the-loop, operational-excellence
 - [Birdeye Multi-Location AI Marketing — Location-Aware Agents and Generic-AI Liability](wiki/competitors/birdeye-multi-location-marketing-2026.md) — Location-memory + HIPAA/FINRA/FTC compliance + three-layer governance positions generic AI as buyer liability for 100-10,000+ location enterprise. Tags: birdeye, multi-location, agentic-marketing, compliance, hipaa, soc2, rbac, location-memory
+- [GoHighLevel February 2026 Integrations — Manus AI, Monday.com, Google Forms](wiki/competitors/ghl-manus-ai-monday-google-forms-integrations-2026.md) — Native premium-action wiring of Manus AI lead enrichment + Monday.com project sync + Google Forms capture; Manus billed per-token through Manus, not GHL. Tags: gohighlevel, manus-ai, monday-com, google-forms, premium-workflow-actions, lead-enrichment, agency-automation
+- [GoHighLevel 2026 Pricing — Three-Tier Headline vs. True Monthly Cost](wiki/competitors/ghl-pricing-2026-true-monthly-cost-with-addons.md) — $97/$297/$497 held flat; Pro and Agency SaaS Pro now bundle AI content/review/workflow ($47/mo savings); annual discount ~17% breaks even at ~5 months. Tags: gohighlevel, pricing, annual-billing, ai-bundling, agency-saas-pro, addon-cost, starter-tier, pro-unlimited
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
@@ -72,6 +74,8 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Claude Code v2.1.118 + v2.1.119 Release Notes — Settings Persistence, MCP OAuth Fixes](wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md) — v2.1.118/119 ship config persistence, vim visual mode, GitLab/Bitbucket PR ingestion, MCP OAuth concurrency fixes, Glob/Grep + denied-Bash recovery; pinned-version policy needs review. Tags: claude-code, v2-1-118, v2-1-119, release-notes, settings-persistence, mcp-oauth, gitlab, bitbucket, vim-mode, auto-mode
 - [Writing Effective Tools for AI Agents — Anthropic's Five Principles](wiki/ai-llm/anthropic-writing-tools-for-agents.md) — Consolidate over wrap, namespace by service+resource, return semantic identifiers, cap responses at ~25k tokens, prompt-engineer descriptions; evaluation-driven loop with Claude Code as reviewer. Tags: anthropic, tool-use, mcp, agent-design, prompt-engineering, namespacing, token-efficiency
 - [Anthropic's Multi-Agent Research System — Orchestrator-Worker and 90.2% Single-Agent Lift](wiki/ai-llm/anthropic-multi-agent-research-system.md) — Opus 4 lead + Sonnet 4 subagents in parallel beat single-agent Opus 4 by 90.2%; token usage explains 80% of variance, multi-agent burns 15x chat tokens. Tags: anthropic, multi-agent, research-agents, orchestrator-worker, parallel-tool-calling, rainbow-deployment, token-economics
+- [Anthropic Election Safeguards 2026 — Bias Evals, Influence-Op Tests, and the Autonomous-Campaign Threshold](wiki/ai-llm/anthropic-election-safeguards-2026.md) — Opus 4.7 95% / Sonnet 4.6 96% evenhandedness; first autonomous-influence-op test where Opus 4.7 + Mythos Preview cross >50% completion without safeguards. Tags: anthropic, claude, election-safety, political-bias, influence-operations, opus-4-7, sonnet-4-6, ai-policy, responsible-deployment
+- [Anthropic-NEC Partnership — 30,000 Claude Seats and Japan's First Global Partner](wiki/ai-llm/anthropic-nec-japan-partnership-2026.md) — NEC becomes first Japan-based global partner; Claude/Cowork ship to ~30k employees; Claude Code wired into NEC BluStellar across finance/manufacturing/cybersecurity/local-government. Tags: anthropic, claude, nec, japan, enterprise-deployment, claude-code, claude-cowork, vertical-ai, cybersecurity, global-partnerships
 
 ### Small Business SaaS
 - [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
