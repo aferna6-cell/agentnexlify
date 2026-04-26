@@ -144,6 +144,17 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 | Complex decision | `/skills/llm-council` | `SKILL.md` |
 | Sell managed agents to clients | `/planning/managed-agents` | `README.md` |
 
+### Dedicated Tools
+Prefer these over general Bash/Read when applicable:
+
+| Tool | Use for | Over |
+|------|---------|------|
+| `agent-browser` CLI | Web fetch with a11y snapshots | WebFetch raw HTML |
+| `pdftotext <file> -` | PDF text extraction (80-95% token reduction) | Read on PDFs (`.claude/rules/pdf-handling.md`) |
+| `scripts/claude_rules_doctor.py` | Validate `paths:` globs in rule frontmatter | Manual grep |
+| `scripts/lint_claude_agents.py` | Lint agent frontmatter (name/desc/model/tools) | Manual review |
+| `scripts/reindex_contextual.py` | Contextual retrieval reindex (--dry-run, --target) | Ad-hoc DB queries |
+
 ### Naming conventions
 - Specs: `/specs/feature-name_spec.md` (root, see `STRUCTURE.md`)
 - Plans: `/plans/feature-name_plan.md` (root, see `STRUCTURE.md`)
