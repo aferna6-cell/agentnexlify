@@ -154,6 +154,7 @@ Prefer these over general Bash/Read when applicable:
 | `scripts/claude_rules_doctor.py` | Validate `paths:` globs in rule frontmatter | Manual grep |
 | `scripts/lint_claude_agents.py` | Lint agent frontmatter (name/desc/model/tools) | Manual review |
 | `scripts/reindex_contextual.py` | Contextual retrieval reindex (--dry-run, --target) | Ad-hoc DB queries |
+| `scripts/check_plan_drift.py` | Detect ghost refs in plans/audits (paths claimed but missing from HEAD) | Manually re-checking plans before starting work |
 
 ### Naming conventions
 - Specs: `/specs/feature-name_spec.md` (root, see `STRUCTURE.md`)
