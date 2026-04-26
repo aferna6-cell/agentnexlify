@@ -240,3 +240,13 @@ _All compiled 2026-04-18 cron run._
 - ~~[competitors] Mastering AI Employees and Custom API V2 for High-Performance Funnels – Ninja Coding Pro~~ → compiled `wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md` (2026-04-25 cron)
 - ~~[ai-llm] Claude by Anthropic - Release Notes - April 2026 Latest Updates~~ → compiled `wiki/ai-llm/anthropic-claude-release-notes-feb-apr-2026.md` (2026-04-25 cron)
 - ~~[ai-llm] Releases · anthropics/claude-code~~ → compiled `wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md` (2026-04-25 cron)
+
+## Auto-discover 2026-04-26T22:03:39Z
+
+- [competitors] Manus AI Comes to GoHighLevel: Full Breakdown of the 2026 GHL Integrations — `raw/competitors/manus-ai-comes-to-gohighlevel-full-breakdown-of-the-2026-ghl.md` (https://www.wupscale.com/post/manus-ai-gohighlevel-2026-integrations)
+- [competitors] GoHighLevel Pricing 2026: True Monthly Cost (With Add-Ons) — `raw/competitors/gohighlevel-pricing-2026-true-monthly-cost-with-add-ons.md` (https://automatethejourney.com/blog/gohighlevel-pricing-plans-2026)
+
+## Auto-discover 2026-04-26T22:06:34Z
+
+- [ai-llm] An update on our election safeguards \ Anthropic — `raw/ai-llm/an-update-on-our-election-safeguards-anthropic.md` (https://www.anthropic.com/news/election-safeguards-update)
+- [ai-llm] Anthropic and NEC partner to build AI-native engineering at scale in Japan \ Anthropic — `raw/ai-llm/anthropic-and-nec-partner-to-build-ai-native-engineering-at-.md` (https://www.anthropic.com/news/anthropic-nec)

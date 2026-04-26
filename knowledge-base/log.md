@@ -308,3 +308,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-25 06:15] discover+compile | cron 06:00 | commits=3 raw=4 wiki=4
 
 ## [2026-04-25 18:20] discover+compile | cron 18:00 | commits=2 raw=4 wiki=4
+## [2026-04-26T22:03:39Z] discover | cats=1 fetched=2 new_raw=2 dedup=5 errors=1
+## [2026-04-26T22:06:34Z] discover-pass2 | cats=1 fetched=2 new_raw=2 dedup=7 errors=0
