@@ -190,3 +190,19 @@ Per `.claude/rules/daily-skills.md`: audit produces report only. Fixes happen in
 - `.claude/rules/daily-skills.md` §5 — improve-architecture skill scope
 
 Verified: 6 passes executed; report written — PASS (Pass 4 live-DB cross-check + Pass 3 dead code + widget byte-diff DEFERRED, recorded as carry-overs)
+
+---
+
+## Addendum — 2026-04-27 (post-merge re-scan)
+
+Re-ran passes after `feature/steal-list-1-6` merge (50123a4). Two facts to refresh:
+
+1. **Migration count: 109 → 119** (delta +10). Highest is now `migrations/116_idempotency_keys_rls.sql`. New range covers idempotency keys, contextual reindex marker, fraud guardrails, widget configs onboarding v2. `docs/dev-knowledge/schema-log.md` not updated past `109_tenant_integrations.sql` — audit script flagged this as MEDIUM `migration-gap`. Append entries 110-116 next session.
+
+2. **Widget byte-identical: PASS** (was DEFERRED). md5 = `de2a19aa03a48e0664bae6f367962c65` on both `widget/agentnexlify-widget.js` and `frontend/public/widget/agentnexlify-widget.js` (68233 bytes). No drift.
+
+3. **`from __future__` false positive cleared.** `backend/services/branding_helpers.py:10` is a WARNING docstring telling future authors NOT to add the import. Grep matched the warning text. Confirmed clean — 0 actual `__future__` imports in backend.
+
+4. **Recommended ranking #1 (`widget_helpers.py` barrel migration)** already complete per main report §MEDIUM line 59. Next-action #1 is now: **`local_seo.py` (1,552 lines) split** — largest single offender, lowest blast radius (no router-router cycles, no shared dependency cluster).
+
+No fixes applied this session. Daily-skills rule observed: audit produces report, fixes happen separately.
