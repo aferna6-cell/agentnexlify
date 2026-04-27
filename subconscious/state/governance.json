@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-04-25T00:00:00Z",
-  "total_runs": 8,
+  "last_run": "2026-04-27T00:00:00Z",
+  "total_runs": 9,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -9,10 +9,18 @@
     "trigger_reason": "5 winners unimplemented; oldest 19+ days; run 7 explicitly mandated escalation by run 8",
     "max_pending_approvals": 3,
     "max_pending_age_days": 14,
-    "lift_condition": "pending_approvals_count <= 3 (human must implement at least 2 pending winners)",
-    "note": "Run 9 synthesis: if moratorium_active=true, recommend implementing oldest unimplemented winner rather than generating fresh ideas"
+    "lift_condition": "pending_approvals_count <= 3 (need 1 implementation after run 2 corrected to implemented)",
+    "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10: if moratorium_active=true AND js-silent-catch not implemented, re-escalate again."
   },
   "active_directions": [
+    {
+      "title": "JS + Python Silent Catch Guard",
+      "date": "2026-04-27",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 9 winner (Run 3 escalation + new Python evidence). Add Check 9 to scripts/hooks/pre-commit blocking JS .catch(() => null/{}). Patch widget_chat.py:295 bare except with logger.warning. Fix 3 known JS violations: MarketingDashboardPage.jsx:96, LocalSEOPage.jsx:262, AuthContext.jsx:89. S-effort. Implementing lifts moratorium."
+    },
     {
       "title": "Wire check_project_invariants.py into pre-commit hook",
       "date": "2026-04-25",
@@ -72,8 +80,9 @@
     {
       "title": "Add Lead Source Analytics Chart to Dashboard",
       "date": "2026-04-06",
-      "status": "recommended",
-      "run": 2
+      "status": "implemented",
+      "run": 2,
+      "note": "Governance correction run 9 (2026-04-27): AnalyticsPage.jsx has fetchLeadSources + BarChart with per-source colors. Was listed as pending in governance — corrected to implemented."
     },
     {
       "title": "JS Silent Catch Pre-commit Guard",
@@ -114,6 +123,13 @@
       "status": "recommended",
       "run": 8,
       "note": "Fresh evidence: 037865f added the script today. S-effort. Moratorium triggered this run."
+    },
+    {
+      "title": "JS + Python Silent Catch Guard",
+      "date": "2026-04-27",
+      "status": "recommended",
+      "run": 9,
+      "note": "Run 3 winner escalation. New Python evidence: widget_chat.py:295 bare except pays-tenants silently at free tier (issue #97). Add Check 9 to pre-commit + patch Python. Governance correction: run 2 Lead Source Analytics corrected to implemented."
     }
   ],
   "rejected_paths": [
@@ -218,9 +234,10 @@
   ],
   "implementation_lag_warning": {
     "runs_pending_approval": 4,
-    "runs_implemented": 2,
-    "oldest_pending": "2026-04-06 (Lead Source Analytics, run 2)",
-    "note": "Run 8: moratorium triggered. 5 items pending (runs 2, 3, 4, 7, 8). Human must implement at least 2 before run 9 to lift moratorium. If moratorium_active=true in run 9, synthesis should recommend oldest pending winner, not generate new ideas.",
+    "runs_implemented": 3,
+    "oldest_pending": "2026-04-11 (JS Silent Catch Guard, run 3)",
+    "governance_correction": "Lead Source Analytics (run 2) corrected to implemented in run 9 — was listed as pending, already built in AnalyticsPage.jsx",
+    "note": "Run 9: moratorium still active. 4 pending (runs 3, 4, 7, 8). Lift requires implementing run 3 winner → drops to 3. No implementations since run 8 moratorium trigger.",
     "escalate": true
   },
   "config": {
