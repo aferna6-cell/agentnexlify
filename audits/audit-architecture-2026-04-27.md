@@ -56,13 +56,15 @@ _None._ No `from __future__ import annotations` in backend `*.py` files (only do
 
 ## MEDIUM (tech debt backlog)
 
-- [ ] **WIN since 2026-04-18: `widget_helpers.py` god class DEMOLISHED (1,635 → 98 lines)** | Pass 1 | informational
-  - `backend/routers/widget_helpers.py:1` — now a 98-line back-compat barrel re-exporting from:
-    - `backend/routers/widget_chat_helpers.py` (776 lines) — prompt building, history, cache (NEW since 2026-04-18)
-    - `backend/routers/widget_lead_helpers.py` (833 lines) — extraction, enrichment, capture (NEW since 2026-04-18)
-    - `backend/routers/widget_booking_helpers.py` (23-line stub) (NEW since 2026-04-18)
-  - Carry-forward: chat_helpers (776) + lead_helpers (833) are now MEDIUM god classes themselves.
-  - Migration debt (Rule 8): **CORRECTED 2026-04-27 — actual scope 13 callers, not 5.** Backend: `widget_chat.py:33,295`, `widget_lead.py:20`, `widget_config.py:23`, `twilio_webhooks.py:466`. Tests: `conftest.py:276`, `test_widget_api.py:82,189`, `test_business_page.py:230`, `test_appointments.py:119`, `test_login_and_chat.py:58`, `test_cors_and_rate_limit.py:48`, `test_ai_runtime_hardening.py:20`, `test_industry_presets.py:172`, `test_lead_extraction.py:15`. Migrate all to direct imports, then delete barrel.
+- [x] **WIN since 2026-04-18: `widget_helpers.py` god class DEMOLISHED (1,635 → 0 lines, barrel deleted 2026-04-27)** | Pass 1 | done
+  - `backend/routers/widget_helpers.py` — DELETED 2026-04-27. Barrel was 98-line re-export shim; all 13+ callers redirected to source modules.
+  - Source modules now canonical:
+    - `backend/routers/widget_chat_helpers.py` (776 lines) — prompt building, history, cache
+    - `backend/routers/widget_lead_helpers.py` (833 lines) — extraction, enrichment, capture
+    - `backend/routers/widget_booking_helpers.py` (23-line stub)
+  - Carry-forward: chat_helpers (776) + lead_helpers (833) are now MEDIUM god classes themselves; track separately.
+  - Rule 8 (no half migrations) cleared: zero runtime callers of `widget_helpers` remain. Comment/docstring references in extracted modules + historical audits/plans intentionally retained as historical context.
+  - Verified: `python -c "from backend.routers import widget_chat, widget_lead, widget_config, twilio_webhooks, widget_chat_helpers, widget_lead_helpers, widget_booking_helpers"` — PASS. `pytest tests/test_tenant_scope.py backend/tests/test_lead_enrichment.py backend/tests/test_lead_regex_tag.py` — 20/20 PASS. Wider sweep (15 test files, 193 tests) — 190 PASS, 3 PRE-EXISTING auth failures unrelated to this cleanup (confirmed via `git stash` rerun).
 
 - [ ] **Frontend pages 1,000-1,600 lines (carried)** | Pass 1 | Effort: M each
   - `EmailSequencesPage.jsx` (1,554, unchanged), plus 13 others trending list per 2026-04-18.
