@@ -129,7 +129,7 @@ async def test_execute_keyword_tracking_returns_dicts_for_response_model(mock_su
     assert items[0]["id"] == "row-1"
     assert items[0]["difficulty_score"] == 60
     # Pydantic round-trip: handler output must be valid for KeywordRankingItem
-    from backend.routers.local_seo import KeywordRankingItem
+    from backend.models.local_seo import KeywordRankingItem
     KeywordRankingItem(**items[0])
 
 
