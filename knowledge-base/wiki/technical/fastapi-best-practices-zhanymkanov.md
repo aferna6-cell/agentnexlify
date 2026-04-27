@@ -4,7 +4,7 @@ category: technical
 tags: ["fastapi", "python", "pydantic", "async", "dependency-injection", "project-structure", "sqlalchemy"]
 sources: ["raw/technical/fastapi-best-practices.md"]
 created: 2026-04-20
-updated: 2026-04-20
+updated: 2026-04-27
 summary: "Netflix-Dispatch-inspired domain-module layout, strict async/threadpool discipline, Pydantic-everywhere validation, and dependency-injection-for-validation patterns from zhanymkanov — the most-referenced production FastAPI playbook on GitHub."
 ---
 
@@ -41,4 +41,6 @@ REST conventions reduce dependency duplication. Two routes `/profiles/{profile_i
 
 ## Relevance to AgentNexLiFy
 
-Three actionable bets. First, audit every `async def` route in `backend/routers/` for blocking calls — Anthropic SDK sync calls, Supabase client sync calls, and file I/O in non-test code are the three most likely offenders. Each one caught and converted via `run_in_threadpool` improves throughput under concurrency, and the fix is mechanical enough to delegate to Haiku per `.claude/rules/model-routing.md`. Second, consolidate the per-tenant validation pattern into a named dependency (e.g., `valid_tenant_scoped_lead`) that enforces CLAUDE.md's Critical Rule 1 (`client_id not tenant_id`) once, and make it the only place that checks — today the check is scattered across routers and is exactly the bug surface the guide warns against. Third, the domain-module restructure is a longer-term play but the first clean split is probably the `widget/` and `chat/` domains, which already have their own routers, services, and Pydantic models spread across shared directories — collapsing them into self-contained domain folders would make both easier to refactor in isolation. This aligns with `user-rules.md` Rule 9 (factor god classes) and Rule 12 (new files over bloat).
+Three actionable bets. First, audit every `async def` route in `backend/routers/` for blocking calls — Anthropic SDK sync calls, Supabase client sync calls, and file I/O in non-test code are the three most likely offenders. Each one caught and converted via `run_in_threadpool` improves throughput under concurrency, and the fix is mechanical enough to delegate to Haiku per `.claude/rules/model-routing.md`. Second, **as of 2026-04-25 (PR #92), auth helpers were consolidated into `backend/dependencies.py`** — common `get_current_user` and tenant-scoping logic now live in one place rather than scattered across routers. This partially fulfills the dependency-as-validation pattern: the next step is exposing a `valid_tenant_scoped_resource` dependency that accepts a `client_id` and enforces CLAUDE.md Critical Rule 1 at the boundary. Additionally, PR #95 (2026-04-26) added `backend/middleware/rate_limit.py` — per-tenant RPM caps enforced via slowapi before route handlers run, demonstrating the middleware-layer validation pattern described in this guide. Third, the domain-module restructure is a longer-term play but the first clean split is probably the `widget/` and `chat/` domains, which already have their own routers, services, and Pydantic models spread across shared directories — collapsing them into self-contained domain folders would make both easier to refactor in isolation. This aligns with `user-rules.md` Rule 9 (factor god classes) and Rule 12 (new files over bloat).
+
+Updated 2026-04-27 due to #92, #95

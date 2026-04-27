@@ -4,7 +4,7 @@ category: technical
 tags: [contextual-retrieval, rag, embeddings, bm25, reranking, prompt-caching]
 sources: ["raw/technical/anthropic-contextual-retrieval.md"]
 created: 2026-04-14
-updated: 2026-04-14
+updated: 2026-04-27
 summary: "Contextual Retrieval prepends chunk-specific context before embedding and BM25 indexing, reducing RAG retrieval failure rates by 49% (67% with reranking) at $1.02 per million document tokens using prompt caching."
 ---
 
@@ -40,4 +40,6 @@ Reranking adds a filtering step between initial retrieval and final prompt injec
 
 ## Relevance to AgentNexLiFy
 
-AgentNexLiFy's tenant knowledge base ingestion pipeline (`backend/services/knowledge_base.py`) chunks uploaded documents and stores embeddings in the `kb_articles` table via pgvector. The current implementation uses standard chunking without contextual prefixes — exactly the failure mode this paper addresses. Implementing Contextual Retrieval for tenant FAQ ingestion would reduce the cases where the chat widget fails to find a relevant answer, which is the #1 cause of user frustration in chat widget interactions. The cost is minimal ($1.02/M tokens) and the preprocessing can run during the existing upload pipeline. For tenants with small knowledge bases (<500 pages), the prompt-stuffing approach with prompt caching should be evaluated first — it eliminates retrieval failures entirely at the cost of higher per-request token usage, which may be acceptable for tenants with compact FAQs.
+AgentNexLiFy's tenant knowledge base ingestion pipeline (`backend/services/knowledge_base.py`) chunks uploaded documents and stores embeddings in the `kb_articles` table via pgvector. **As of 2026-04-26 (PR #95), the contextual reindex infrastructure is now live:** `scripts/reindex_contextual.py` implements the full contextual retrieval preprocessing loop — it calls Claude Haiku to generate a 50-100 token context prefix per chunk, enriches the chunk text, and re-embeds with Voyage AI. Migration 115 (`migrations/115_contextual_reindex_marker.sql`) added a `contextual_reindexed_at` column to `kb_articles`; the script is idempotent and skips rows that already have this column set. Run `python scripts/reindex_contextual.py --dry-run` to preview, `--target wiki` to reindex the system knowledge base, or `--target tenants` (no-op until a per-tenant chunks table is added). For tenants with small knowledge bases (<500 pages), the prompt-stuffing approach with prompt caching should still be evaluated first — it eliminates retrieval failures entirely at the cost of higher per-request token usage, which may be acceptable for tenants with compact FAQs.
+
+Updated 2026-04-27 due to #95

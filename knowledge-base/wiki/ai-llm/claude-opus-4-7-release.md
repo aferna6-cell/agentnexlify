@@ -4,7 +4,7 @@ category: ai-llm
 tags: ["claude", "opus-4-7", "self-verification", "xhigh-effort", "task-budgets", "agentic-coding"]
 sources: ["raw/ai-llm/anthropic-claude-opus-4-7.md"]
 created: 2026-04-17
-updated: 2026-04-17
+updated: 2026-04-27
 summary: "Opus 4.7 (claude-opus-4-7) lifts CursorBench to 70% vs 58%, resolves 3x more Rakuten-SWE-Bench production tasks than 4.6, and verifies its own outputs — same $5/$25 pricing."
 ---
 
@@ -39,4 +39,6 @@ Vision capability also tripled — images up to 2,576 pixels on the long edge (~
 
 ## Relevance to AgentNexLiFy
 
-Opus 4.7 is the new default for planning, architecture review, and advisor-consult passes in the `backend/services/advisor_executor.py` runtime — swap the model ID from `claude-opus-4-6` to `claude-opus-4-7`, bump advisor `max_tokens` from 800 to 1200 to absorb the 1.35x tokenizer expansion, and leave Sonnet 4.6 as the executor. The real wins ship at the workflow layer: enable `task_budget` on the nightly commit review (20k-50k), KB compile loop (20k per article), and issue-to-PR autopilot (80k per issue) so those runs finish gracefully under budget instead of running hot. Mandate `/ultrareview` on every PR over 20 LOC and on every auth/payments/tenant-isolation touch — the 10% recall lift CodeRabbit measured is the kind of difference that catches the client_id-vs-tenant_id class of bug before it ships. Avoid the trap of using Opus 4.7 for mechanical work: rename, grammar, and formatting still route to Haiku 4.5 per `.claude/rules/model-routing.md`; Opus 4.7's depth only pays off on ambiguous decomposition, security-critical review, and multi-step agentic loops.
+Opus 4.7 is the new default for planning, architecture review, and advisor-consult passes in the `backend/services/advisor_executor.py` runtime — swap the model ID from `claude-opus-4-6` to `claude-opus-4-7`, bump advisor `max_tokens` from 800 to 1200 to absorb the 1.35x tokenizer expansion, and leave Sonnet 4.6 as the executor. The real wins ship at the workflow layer: enable `task_budget` on the nightly commit review (20k-50k), KB compile loop (20k per article), and issue-to-PR autopilot (80k per issue) so those runs finish gracefully under budget instead of running hot. Mandate `/ultrareview` on every PR over 20 LOC and on every auth/payments/tenant-isolation touch — the 10% recall lift CodeRabbit measured is the kind of difference that catches the client_id-vs-tenant_id class of bug before it ships. **As of 2026-04-26 (PR #96), `.claude/rules/effort-per-prompt.md` codifies the per-prompt effort tuning discipline**: default `xhigh` is correct for agentic coding loops, but mechanical edits, renames, and single-file fixes should drop to `medium` (~1x baseline cost) or `low` (~0.5x). The rule also confirms that `/effort` is a per-turn output-config knob that does NOT invalidate the cached prefix — safe to dial without restarting the session. Avoid the trap of using Opus 4.7 for mechanical work: rename, grammar, and formatting still route to Haiku 4.5 per `.claude/rules/model-routing.md`; Opus 4.7's depth only pays off on ambiguous decomposition, security-critical review, and multi-step agentic loops.
+
+Updated 2026-04-27 due to #96
