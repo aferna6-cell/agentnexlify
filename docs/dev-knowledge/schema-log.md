@@ -908,7 +908,7 @@ Adds `idempotency_keys` table to dedup webhook redeliveries from Stripe and Twil
 
 **RLS:** NOT enabled in this migration — see 116 for the security followup.
 **Conventions:** no tenant column (cross-tenant dedup store; access gated to service role via 116).
-**Applied:** UNVERIFIED — migration file present in `migrations/`. Verify via `mcp__supabase__list_migrations` before relying on dedup behavior in prod.
+**Applied:** YES — confirmed 2026-04-27.
 
 
 ### 115 — Contextual Reindex Marker
@@ -922,7 +922,7 @@ Adds `contextual_reindexed_at` marker to `kb_articles` so `scripts/reindex_conte
 
 **RLS:** unchanged.
 **Conventions:** column add only; no tenant-column impact.
-**Applied:** UNVERIFIED — verify via `mcp__supabase__list_migrations`.
+**Applied:** YES — confirmed 2026-04-27.
 
 
 ### 116 — Idempotency Keys RLS (security followup to 114)
@@ -935,4 +935,4 @@ Closes the public-readability gap on `idempotency_keys`. `response_body` JSONB c
 
 **Effect:** anon + authenticated roles get nothing. Service role bypasses RLS automatically — backend webhook handlers continue to work.
 **Conventions:** deny-all-public is the right pattern for cross-tenant infra tables that backend-only code touches.
-**Applied:** UNVERIFIED — security-critical. Verify via `mcp__supabase__list_migrations` before next prod webhook receive.
+**Applied:** YES — confirmed 2026-04-27. RLS active on `idempotency_keys`.
