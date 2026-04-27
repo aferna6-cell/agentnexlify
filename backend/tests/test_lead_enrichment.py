@@ -31,7 +31,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.routers import widget_helpers
+from backend.routers import widget_lead_helpers as widget_helpers
 
 
 # ---------------------------------------------------------------------------

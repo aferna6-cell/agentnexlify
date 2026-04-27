@@ -30,7 +30,7 @@ from backend.services.llm_runtime import (
     resolve_string_setting,
 )
 from backend.services.webhook_dispatcher import fire_event_background
-from backend.routers.widget_helpers import (
+from backend.routers.widget_chat_helpers import (
     MODEL,
     MAX_TOKENS,
     TEMPERATURE,
@@ -39,12 +39,7 @@ from backend.routers.widget_helpers import (
     _build_intent_window,
     _build_system_prompt,
     _compact_messages_for_llm,
-    _capture_leads_from_session,
-    _categorize_conversation,
     _check_origin,
-    _enrich_lead_from_message,
-    _extract_action_items,
-    _extract_lead_info,
     _get_cached,
     _get_or_create_conversation,
     _get_tenant,
@@ -55,6 +50,13 @@ from backend.routers.widget_helpers import (
     _record_response_metric,
     _save_chat_messages,
     _set_cache,
+)
+from backend.routers.widget_lead_helpers import (
+    _capture_leads_from_session,
+    _categorize_conversation,
+    _enrich_lead_from_message,
+    _extract_action_items,
+    _extract_lead_info,
 )
 from backend.routers.widget_booking import (
     _extract_order_from_response,
@@ -291,8 +293,7 @@ def _chat_rate_limit(key: str) -> str:
     back to free-tier (30/minute) if the plan cannot be resolved.
     """
     try:
-        from backend.routers.widget_helpers import _get_widget_config, _get_tenant
-
+        from backend.routers.widget_chat_helpers import _get_widget_config, _get_tenant
         widget = _get_widget_config(key)
         tenant = _get_tenant(widget["tenant_id"])
         plan = tenant.get("plan", "free") or "free"

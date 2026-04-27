@@ -17,7 +17,7 @@ from backend.routers.widget_booking import (
     _extract_bid_request_from_response,
     _extract_order_from_response,
 )
-from backend.routers.widget_helpers import _build_system_prompt
+from backend.routers.widget_chat_helpers import _build_system_prompt
 
 
 class TestWidgetStructuredPayloadValidation:

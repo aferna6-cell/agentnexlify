@@ -17,10 +17,12 @@ from backend.services.activity import log_activity
 from backend.services.lead_qualification import qualify_lead_background
 from backend.services.lead_scoring import score_lead_background
 from backend.services.webhook_dispatcher import fire_event_background
-from backend.routers.widget_helpers import (
+from backend.routers.widget_chat_helpers import (
     _get_or_create_conversation,
     _get_tenant,
     _get_widget_config,
+)
+from backend.routers.widget_lead_helpers import (
     _send_new_lead_email_notification,
     _send_new_lead_sms_notification,
 )

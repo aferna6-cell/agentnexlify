@@ -45,7 +45,7 @@ def test_client(mock_settings):
         p.start()
 
     # Clear widget cache to avoid state leaking between tests
-    from backend.routers.widget_helpers import _cache
+    from backend.routers.widget_chat_helpers import _cache
     _cache.clear()
 
     from backend.main import app

@@ -55,10 +55,8 @@ def test_client(mock_settings):
 
     # Clear widget module in-memory cache between tests
     try:
-        from backend.routers.widget_helpers import _cache
+        from backend.routers.widget_chat_helpers import _cache
         _cache.clear()
-        from backend.routers.widget_chat_helpers import _cache as chat_cache
-        chat_cache.clear()
     except Exception:
         pass
 

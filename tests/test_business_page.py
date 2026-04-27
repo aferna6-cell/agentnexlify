@@ -227,7 +227,7 @@ def http_client(mock_settings):
     yield client, db_mock
 
     try:
-        from backend.routers.widget_helpers import _cache
+        from backend.routers.widget_chat_helpers import _cache
         _cache.clear()
     except Exception:
         pass
