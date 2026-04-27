@@ -14,6 +14,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 
 from backend.config import settings
 from backend.limiter import limiter
+from backend.middleware.rate_limit import get_client_id_key, get_tier_limit
 from backend.models.database import get_service_supabase
 from backend.models.schemas import WidgetChatRequest, WidgetChatResponse
 from backend.services.activity import log_activity
@@ -282,8 +283,26 @@ async def _run_support_fallback(
     return assistant_text, True
 
 
+def _chat_rate_limit(key: str) -> str:
+    """Dynamic per-tenant rate limit based on plan tier.
+
+    slowapi calls this with the result of key_function (the api_key string)
+    when the limit provider's signature includes a `key` parameter
+    (slowapi/wrappers.py:86-92). Looks up tenant plan via api_key, falls
+    back to free-tier (30/minute) if the plan cannot be resolved.
+    """
+    try:
+        from backend.routers.widget_helpers import _get_widget_config, _get_tenant
+        widget = _get_widget_config(key)
+        tenant = _get_tenant(widget["tenant_id"])
+        plan = tenant.get("plan", "free") or "free"
+    except Exception:
+        plan = "free"
+    return get_tier_limit(plan)
+
+
 @router.post("/chat", response_model=WidgetChatResponse)
-@limiter.limit("60/minute")
+@limiter.limit(_chat_rate_limit, key_func=get_client_id_key)
 async def widget_chat(request: Request, req: WidgetChatRequest, background_tasks: BackgroundTasks):
     """Process a chat message through the multi-tenant widget pipeline."""
     request_started = perf_counter()
