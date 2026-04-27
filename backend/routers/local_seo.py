@@ -1,27 +1,26 @@
 """Local SEO Tools endpoints — profile completeness, SEO audit, GEO scoring, keyword tracking."""
 
-import json
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant
 from backend.services.addon_gate import require_marketing_addon
-from backend.services.llm_runtime import call_claude_messages
 from backend.services.local_seo_ai import (
-    _analyze_keywords_ai,
     _generate_keywords,
     _run_geo_score_ai,
-    _run_seo_audit_ai,
+)
+from backend.services.local_seo_handlers import (
+    execute_competitor_analysis,
+    execute_keyword_tracking,
+    execute_seo_audit,
 )
 from backend.services.local_seo_scoring import (
     _calculate_completeness,
-    _parse_json_object_response,
     _verify_tenant,
 )
 
@@ -436,144 +435,8 @@ async def run_seo_audit(
 ):
     """Run a full SEO audit using crawled website content and Claude AI analysis."""
     _verify_tenant(claims, tenant_id)
-
-    db = get_service_supabase()
-
-    # Load tenant info
-    try:
-        tenant_result = (
-            db.table("tenants")
-            .select("business_name, business_type, city, website_url")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to load tenant %s for SEO audit", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to load tenant data")
-
-    if not tenant_result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    tenant = tenant_result.data[0]
-
-    # Load crawled website content
-    try:
-        crawl_result = (
-            db.table("website_content")
-            .select("pages_json, extracted_text, crawl_status, pages_found")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to load website content for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to load website content")
-
-    if not crawl_result.data:
-        raise HTTPException(
-            status_code=400,
-            detail="No crawled website content found. Please scan your website first using the Website Scanner in Settings.",
-        )
-
-    crawl = crawl_result.data[0]
-    if crawl.get("crawl_status") != "completed":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Website crawl status is '{crawl.get('crawl_status', 'unknown')}'. Please complete a website scan first.",
-        )
-
-    pages_json = crawl.get("pages_json") or []
-    extracted_text = crawl.get("extracted_text") or ""
-    pages_found = crawl.get("pages_found", 0)
-
-    if not pages_json and not extracted_text:
-        raise HTTPException(
-            status_code=400,
-            detail="Crawled content is empty. Please re-scan your website.",
-        )
-
-    # Run AI analysis
-    business_name = tenant.get("business_name") or "Unknown Business"
-    business_type = tenant.get("business_type") or "local business"
-
-    audit_result = await _run_seo_audit_ai(
-        pages_json, extracted_text, business_name, business_type,
-    )
-
-    if not audit_result:
-        raise HTTPException(
-            status_code=500,
-            detail="SEO audit analysis could not be completed. Please try again.",
-        )
-
-    # Extract structured data from AI result
-    try:
-        overall_score = int(audit_result.get("overall_score") or 0)
-    except (TypeError, ValueError):
-        logger.warning("AI returned non-integer overall_score: %s", audit_result.get("overall_score"))
-        overall_score = 0
-    categories = audit_result.get("categories", {})
-    recommendations_list = audit_result.get("recommendations", [])
-
-    # Categorize issues by severity
-    critical_issues = []
-    warnings = []
-    passed_checks = []
-
-    for cat_name, cat_data in categories.items():
-        if not isinstance(cat_data, dict):
-            continue
-        for issue in cat_data.get("issues", []):
-            if not isinstance(issue, dict):
-                continue
-            issue["category"] = cat_name
-            severity = issue.get("severity", "warning")
-            if severity == "critical":
-                critical_issues.append(issue)
-            elif severity == "warning":
-                warnings.append(issue)
-            elif severity == "passed":
-                passed_checks.append(issue)
-
-    # Save to seo_audits table
-    audit_data = {
-        "tenant_id": tenant_id,
-        "overall_score": overall_score,
-        "categories": categories,
-        "critical_issues": critical_issues,
-        "warnings": warnings,
-        "passed_checks": passed_checks,
-        "recommendations": recommendations_list,
-        "pages_analyzed": pages_found if isinstance(pages_found, int) else len(pages_json),
-    }
-
-    saved = audit_data
-    try:
-        insert_result = (
-            db.table("seo_audits")
-            .insert(audit_data)
-            .execute()
-        )
-        if insert_result.data:
-            saved = insert_result.data[0]
-    except Exception:
-        logger.error("Failed to save SEO audit for tenant %s", tenant_id, exc_info=True)
-        # Still return computed results even if save fails
-
-    return SEOAuditResponse(
-        id=saved.get("id"),
-        tenant_id=tenant_id,
-        overall_score=overall_score,
-        categories=categories,
-        critical_issues=critical_issues,
-        warnings=warnings,
-        passed_checks=passed_checks,
-        recommendations=recommendations_list,
-        pages_analyzed=audit_data["pages_analyzed"],
-        created_at=saved.get("created_at"),
-    )
+    result = await execute_seo_audit(tenant_id)
+    return SEOAuditResponse(**result)
 
 
 @router.get("/{tenant_id}/audit", response_model=SEOAuditResponse)
@@ -836,117 +699,10 @@ async def track_keywords(
 ):
     """Add keywords to track and analyze their competitiveness using Claude AI."""
     _verify_tenant(claims, tenant_id)
-
-    db = get_service_supabase()
-
-    # Load tenant info for context
-    try:
-        tenant_result = (
-            db.table("tenants")
-            .select("business_type, city")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to load tenant %s for keyword tracking", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to load tenant data")
-
-    if not tenant_result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    tenant = tenant_result.data[0]
-    business_type = tenant.get("business_type") or "local business"
-    city = tenant.get("city") or "unknown"
-
-    # Deduplicate and clean keywords
-    cleaned_keywords = list(set(kw.strip().lower() for kw in body.keywords if kw.strip()))
-    if not cleaned_keywords:
-        raise HTTPException(status_code=400, detail="No valid keywords provided")
-
-    # Run AI analysis
-    analysis_results = await _analyze_keywords_ai(cleaned_keywords, business_type, city)
-
-    # Build a lookup from the AI results
-    ai_lookup: dict[str, dict] = {}
-    for item in analysis_results:
-        if isinstance(item, dict) and "keyword" in item:
-            ai_lookup[item["keyword"].lower()] = item
-
-    now = datetime.now(timezone.utc).isoformat()
-    saved_items: list[KeywordRankingItem] = []
-
-    for kw in cleaned_keywords:
-        ai_data = ai_lookup.get(kw, {})
-
-        ranking_data = {
-            "tenant_id": tenant_id,
-            "keyword": kw,
-            "difficulty_score": int(ai_data.get("difficulty_score", 50)),
-            "estimated_position": ai_data.get("estimated_position", "unknown"),
-            "search_volume_estimate": ai_data.get("search_volume_estimate", "unknown"),
-            "recommendations": ai_data.get("recommendations", []),
-            "last_analyzed_at": now,
-        }
-
-        # Upsert: check if keyword already tracked, update or insert
-        try:
-            existing = (
-                db.table("keyword_rankings")
-                .select("id")
-                .eq("tenant_id", tenant_id)
-                .eq("keyword", kw)
-                .limit(1)
-                .execute()
-            )
-            if existing.data:
-                # Update existing record (omit tenant_id and keyword from update)
-                update_data = {
-                    "difficulty_score": ranking_data["difficulty_score"],
-                    "estimated_position": ranking_data["estimated_position"],
-                    "search_volume_estimate": ranking_data["search_volume_estimate"],
-                    "recommendations": ranking_data["recommendations"],
-                    "last_analyzed_at": now,
-                }
-                result = (
-                    db.table("keyword_rankings")
-                    .update(update_data)
-                    .eq("id", existing.data[0]["id"])
-                    .execute()
-                )
-                saved = result.data[0] if result.data else ranking_data
-            else:
-                result = (
-                    db.table("keyword_rankings")
-                    .insert(ranking_data)
-                    .execute()
-                )
-                saved = result.data[0] if result.data else ranking_data
-
-            saved_items.append(KeywordRankingItem(
-                id=saved.get("id"),
-                keyword=kw,
-                difficulty_score=saved.get("difficulty_score", 50),
-                estimated_position=saved.get("estimated_position"),
-                search_volume_estimate=saved.get("search_volume_estimate"),
-                recommendations=saved.get("recommendations", []),
-                last_analyzed_at=saved.get("last_analyzed_at"),
-            ))
-        except Exception:
-            logger.error("Failed to save keyword ranking for '%s', tenant %s", kw, tenant_id, exc_info=True)
-            # Still include the keyword with AI data even if DB save fails
-            saved_items.append(KeywordRankingItem(
-                keyword=kw,
-                difficulty_score=ranking_data["difficulty_score"],
-                estimated_position=ranking_data["estimated_position"],
-                search_volume_estimate=ranking_data["search_volume_estimate"],
-                recommendations=ranking_data["recommendations"],
-                last_analyzed_at=now,
-            ))
-
+    items = await execute_keyword_tracking(tenant_id, body.keywords)
     return KeywordRankingsResponse(
         tenant_id=tenant_id,
-        keywords=saved_items,
+        keywords=[KeywordRankingItem(**item) for item in items],
     )
 
 
@@ -1006,97 +762,5 @@ async def run_competitor_analysis(
     claims: dict = Depends(_get_current_tenant),
 ):
     """AI-powered competitor comparison. Analyzes your business against up to 5 competitors."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    db = get_service_supabase()
-
-    # Get your business context
-    tenant_result = (
-        db.table("tenants")
-        .select("business_name, business_type, city, website_url")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not tenant_result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    tenant = tenant_result.data[0]
-    business_name = tenant.get("business_name") or "Your business"
-    business_type = tenant.get("business_type") or "business"
-    city = tenant.get("city") or ""
-
-    # Get your latest SEO audit score if available
-    your_score = None
-    try:
-        audit_result = (
-            db.table("seo_audits")
-            .select("overall_score, categories")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if audit_result.data:
-            your_score = audit_result.data[0].get("overall_score")
-    except Exception:
-        logger.warning("Failed to fetch SEO audit for competitor analysis")
-
-    competitors_text = "\n".join(f"- {c}" for c in req.competitors)
-    location_context = f" in {city}" if city else ""
-
-    try:
-        resp = await call_claude_messages(
-            operation="seo.competitor_analysis",
-            model="claude-sonnet-4-6",
-            max_tokens=3000,
-            temperature=0.3,
-            timeout=60.0,
-            max_retries=1,
-            retry_delay_seconds=1.0,
-            system=(
-                "You are a local SEO and business competitive analysis expert. "
-                "Analyze a business against its competitors based on your knowledge. "
-                "Be specific, actionable, and honest. Use realistic scores.\n\n"
-                "Return ONLY valid JSON in this exact format:\n"
-                "{\n"
-                '  "your_business": {"name": "...", "estimated_score": 0-100, "strengths": ["..."], "weaknesses": ["..."]},\n'
-                '  "competitors": [\n'
-                '    {"name": "...", "estimated_score": 0-100, "strengths": ["..."], "weaknesses": ["..."], "threat_level": "high|medium|low"}\n'
-                "  ],\n"
-                '  "gaps": ["actionable gap you should close"],\n'
-                '  "advantages": ["things you do better than competitors"],\n'
-                '  "recommendations": ["top 3-5 specific actions to outrank competitors"]\n'
-                "}"
-            ),
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Analyze {business_name} ({business_type}{location_context}) against these competitors:\n"
-                    f"{competitors_text}\n\n"
-                    f"{'My current SEO score is ' + str(your_score) + '/100. ' if your_score else ''}"
-                    f"Compare online presence, likely SEO performance, review reputation, "
-                    f"and local search visibility. Score each business 0-100."
-                ),
-            }],
-            metadata={"tenant_id": tenant_id, "business_name": business_name, "competitor_count": len(req.competitors)},
-        )
-        raw = resp.text.strip()
-    except anthropic.RateLimitError:
-        raise HTTPException(status_code=429, detail="AI service rate limited")
-    except anthropic.AuthenticationError:
-        logger.error("Anthropic API auth failure during competitor analysis")
-        raise HTTPException(status_code=502, detail="AI service configuration error")
-    except Exception:
-        logger.exception("Competitor analysis AI call failed for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Competitor analysis failed")
-
-    # Parse JSON response
-    try:
-        result = _parse_json_object_response(raw)
-    except (json.JSONDecodeError, ValueError, IndexError):
-        logger.error("Failed to parse competitor analysis JSON: %s", raw[:500])
-        raise HTTPException(status_code=500, detail="Failed to parse competitor analysis")
-
-    return result
+    _verify_tenant(claims, tenant_id)
+    return await execute_competitor_analysis(tenant_id, req.competitors)
