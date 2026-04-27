@@ -46,19 +46,18 @@ No security/invariant breakage. All findings are token-efficiency / prompt-quali
 
 ---
 
-### MEDIUM 2 — Negative-rule bloat in skills (291 occurrences / 76 files)
+### LOW 3 — Negative-rule bloat in skills — DOWNGRADED from MEDIUM 2
 
 **Scope:** `.claude/skills/*/SKILL.md`
 **Pattern:** "never", "don't", "do not", "avoid"
 
-**Issue:** Same as MEDIUM 1, larger surface. Skills are loaded on trigger match — high-traffic skills (`caveman-mode`, `karpathy-guidelines`, `compound-engineering`, daily-skills gates) have outsized impact.
+**Density check (2026-04-27):** 291 hits / 76 files = ~3.8 per skill average. Top offender = `compound-engineering/references/full-pipeline.md` at 13 — barely 3x average. No bloat hot spots.
 
-**Fix shape:**
-- Prioritize by skill traffic: caveman-mode, karpathy-guidelines, grill-me, write-prd, prd-to-issues, tdd-workflow, compound-engineering FIRST
-- Long-tail skills (verticals, partner tooling) DEFER
+**Spot check on highest-traffic skill:** `karpathy-guidelines/SKILL.md` audited line-by-line. Already uses positive imperatives ("leave as-is", "ship exactly what was asked"). Karpathy verbatim quotes contain "don't" but quotes don't modify. Single "forbidden" (line 89, drive-by deletions) is a load-bearing invariant.
 
-**Effort:** XL (76 files, top-10 in ~1 hour, full sweep ~4 hours)
-**Impact:** MEDIUM — top-10 skills cover ~80% of session loads
+**Verdict:** Original raw-count metric over-weighted. Each skill carrying 3-5 negatives is normal/healthy. No fix session warranted.
+
+**Lesson for future audits:** density per file matters more than total count. Flag only files with >15 negative rules or >2x stdev from mean.
 
 ---
 
@@ -95,9 +94,10 @@ Not enormous in raw count, but agent/skill prompts are loaded on every relevant 
 
 ~~Session A~~ — RETRACTED. grill-me already at v1.1.0 batch-mode. Stale `opus-4-7-prompting.md` references fixed inline this session.
 
-1. **Session B (M effort, MEDIUM impact):** Top-10 skills negative-rule audit. caveman-mode, karpathy-guidelines, daily-skills gates. ~1 hour.
-2. **Session C (L effort, MEDIUM impact):** Top-10 agents (backend-dev, frontend-dev, schema-guardian, opus-advisor, sonnet-executor, code-reviewer, qa-tester, vertical-checker, widget-specialist, devops). ~1 hour.
-3. **Session D (XL, low priority):** Long-tail skills + agents. Defer; revisit only if context-pressure becomes visible in `claude-usage-monitor`.
+~~Session B~~ — RETRACTED 2026-04-27. Density check showed skills at ~3.8 negatives/file average; no bloat. karpathy-guidelines spot-check confirmed positive-imperative discipline already in place.
+
+1. **Session C (DEFERRED until verified):** Before scoping agent flips, run the same density check on `.claude/agents/*.md` (139 hits / 47 files = ~2.96 average — likely also healthy). If density >2x stdev on specific files, target those only. Otherwise close out.
+2. **Session D:** Cancelled.
 
 ---
 
