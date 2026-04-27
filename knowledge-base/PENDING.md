@@ -250,3 +250,16 @@ _All compiled 2026-04-18 cron run._
 
 - ~~[ai-llm] An update on our election safeguards \ Anthropic~~ → compiled `wiki/ai-llm/anthropic-election-safeguards-2026.md` (2026-04-26 cron)
 - ~~[ai-llm] Anthropic and NEC partner to build AI-native engineering at scale in Japan \ Anthropic~~ → compiled `wiki/ai-llm/anthropic-nec-japan-partnership-2026.md` (2026-04-26 cron)
+
+## Auto-discover 2026-04-27T22:15:12Z
+
+- [competitors] GoHighLevel Pricing Breakdown 2026: Is It Worth It? — https://www.systemshifthq.com/blog/gohighlevel-pricing-2026 (raw: knowledge-base/raw/competitors/systemshift-gohighlevel-pricing-2026.md)
+- [competitors] GoHighLevel Voice AI Review 2026: AI Employee That Handles Calls — https://oneexpand.com/gohighlevel-voice-ai-review-2026/ (raw: knowledge-base/raw/competitors/oneexpand-ghl-voice-ai-review-2026.md)
+- [ai-llm] Anthropic Launches Managed Agents and Claude Cowork GA: April 9, 2026 — https://pasqualepillitteri.it/en/news/755/anthropic-managed-agents-cowork-ga-april-9-2026 (raw: knowledge-base/raw/ai-llm/anthropic-managed-agents-cowork-ga-2026-04-09.md)
+- [ai-llm] Claude Prompt Caching API Cost Optimization Guide (2026) — https://kissapi.ai/blog/claude-prompt-caching-api-cost-optimization-2026.html (raw: knowledge-base/raw/ai-llm/kissapi-claude-prompt-caching-cost-optimization-2026.md)
+- [verticals] AI Receptionist for General Contractors: Handle More Jobs Without More Staff — https://niceagents.com/blog/ai-receptionist-general-contractors-2026/ (raw: knowledge-base/raw/verticals/ai-receptionist-general-contractors-2026.md)
+- [verticals] The Best AI Chatbot for Spas and Salons in 2026 — https://www.bosar.agency/blog/best-chatbot-salons-spas/ (raw: knowledge-base/raw/verticals/bosar-best-chatbot-salons-spas-2026.md)
+- [technical] Postgres Semantic Search: pgvector Guide (Supabase) — https://techsynth.tech/blog/semantic-search-postgres-pgvector-supabase/ (raw: knowledge-base/raw/technical/techsynth-pgvector-supabase-semantic-search.md)
+- [technical] Embedding Model Pricing: OpenAI, Cohere, Voyage Cost Comparison — https://www.tokenburner.dev/insights/embedding-model-pricing-comparison (raw: knowledge-base/raw/technical/embedding-model-pricing-openai-cohere-voyage-tokenburner.md)
+- [regulations] TCPA Compliance for SMS 2026 (Signalmash) — https://www.signalmash.com/post/tcpa-compliance-sms-2026 (raw: knowledge-base/raw/regulations/tcpa-sms-compliance-2026-signalmash.md)
+- [regulations] 2026 AI Laws Update: Key Regulations and Practical Guidance (Gunderson Dettmer) — https://www.gunder.com/en/news-insights/insights/2026-ai-laws-update-key-regulations-and-practical-guidance (raw: knowledge-base/raw/regulations/gunder-2026-ai-laws-update.md)
