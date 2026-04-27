@@ -322,3 +322,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-26 18:15] discover+compile | cron 18:00 | commits=1 raw=4 wiki=0
 
 ## [2026-04-27 22:17] discover | found 16 candidates | ingested 10 | skipped 2 categories (small-biz-saas, growth — DDG anomaly captcha)
+
+## [2026-04-27 18:25] discover+compile | cron 18:00 | commits=2 raw=10 wiki=4
