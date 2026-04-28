@@ -39,4 +39,5 @@ jobs:
           AUTOPILOT_GH_TOKEN: ${{ secrets.AUTOPILOT_GH_TOKEN }}
           GH_TOKEN: ${{ secrets.AUTOPILOT_GH_TOKEN }}
           AUTOPILOT_MAX_TOKENS_PER_RUN: ${{ vars.AUTOPILOT_MAX_TOKENS_PER_RUN || '200000' }}
+          AUTOPILOT_MAX_ACTIVE_RUNS: ${{ vars.AUTOPILOT_MAX_ACTIVE_RUNS || '2' }}
         run: python scripts/autopilot/classify_and_dispatch.py

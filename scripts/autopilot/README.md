@@ -4,6 +4,11 @@ This directory contains the GitHub Actions scripts for the issue-driven
 autopilot loop. The loop classifies labeled issues, opens bot PRs for ready
 work, and can address human review comments on those PRs. It never merges.
 
+The durable workflow contract lives in `docs/AUTOPILOT_WORKFLOW.md`. The
+classifier, Codex executor, and PR review handler load that contract into their
+prompts so the issue loop behaves like a small Symphony-style state machine
+instead of a one-off script.
+
 ## Labeling Issues
 
 Add `ai-ready` to an open issue only when the issue has enough detail for an
@@ -100,8 +105,21 @@ The Codex subprocess does not expose token usage to these scripts, so treat
 PR count and review-comment iterations as the practical spend controls:
 
 - Issue loop dispatches at most one issue per cron tick.
+- Issue loop dispatches only while open `wip-autopilot` issues are below
+  `AUTOPILOT_MAX_ACTIVE_RUNS`, defaulting to `2`.
 - Review handler stops after five bot commits on a PR.
 - Every generated PR still requires human review and merge.
+
+## Proof Of Work
+
+Every autopilot PR body includes:
+
+- Source issue link.
+- Classifier reason and proposed plan.
+- Changed file summary.
+- Local verification command and pass/fail result.
+- Workflow contract path.
+- Residual risk notes for human review.
 
 ## Revoking The Bot Token
 

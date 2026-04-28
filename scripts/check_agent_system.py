@@ -248,6 +248,7 @@ def main() -> int:
     check("workflow_dispatch" in issue_loop, "autopilot issue loop can run manually", failures)
     check("classify_and_dispatch.py" in issue_loop, "issue loop dispatch script is wired", failures)
     check("AUTOPILOT_MAX_TOKENS_PER_RUN" in issue_loop, "issue loop token budget is wired", failures)
+    check("AUTOPILOT_MAX_ACTIVE_RUNS" in issue_loop, "issue loop active-run cap is wired", failures)
 
     pr_loop = read_text(".github/workflows/autopilot-pr-review.yml")
     check("pull_request_review_comment" in pr_loop, "PR review handler listens for comments", failures)
@@ -256,6 +257,12 @@ def main() -> int:
 
     dispatcher = read_text("scripts/autopilot/classify_and_dispatch.py")
     review_handler = read_text("scripts/autopilot/implement_review_comment.py")
+    workflow_contract = read_text("docs/AUTOPILOT_WORKFLOW.md")
+    check("Autopilot Workflow" in workflow_contract, "autopilot workflow contract exists", failures)
+    check("WORKFLOW_CONTRACT_PATH" in dispatcher, "issue loop loads workflow contract", failures)
+    check("Autopilot Proof Of Work" in dispatcher, "issue loop writes PR proof of work", failures)
+    check("AUTOPILOT_MAX_ACTIVE_RUNS" in dispatcher, "issue loop enforces active-run cap", failures)
+    check("WORKFLOW_CONTRACT_PATH" in review_handler, "PR review handler loads workflow contract", failures)
     check('"codex", "exec", "--write"' in dispatcher, "issue loop dispatches to Codex", failures)
     check('"codex", "exec", "--write"' in review_handler, "PR review handler dispatches to Codex", failures)
     check('"worktree", "add"' in dispatcher, "issue loop uses worktree isolation", failures)

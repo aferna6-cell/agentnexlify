@@ -33,6 +33,8 @@ from scripts.autopilot.classify_and_dispatch import (  # noqa: E402
     AUTOPILOT_AUTHOR_NAME,
     AutopilotError,
     TokenBudget,
+    WORKFLOW_CONTRACT_PATH,
+    _workflow_contract,
 )
 
 REVIEW_MODEL = "claude-sonnet-4-6"
@@ -260,6 +262,11 @@ Human review comment:
 Sonnet implementation brief:
 {brief}
 
+Workflow contract:
+```markdown
+{_workflow_contract()}
+```
+
 Surrounding code context:
 ```text
 {context}
@@ -268,6 +275,7 @@ Surrounding code context:
 Requirements:
 - Apply the requested change directly.
 - Keep edits narrowly scoped to the reviewed file unless the brief requires another file.
+- Follow `{WORKFLOW_CONTRACT_PATH}`, especially the human review and scope rules.
 - Do not commit, push, or reply to GitHub; this script handles that.
 - Do not hardcode secrets.
 - Do not add future-annotations imports.

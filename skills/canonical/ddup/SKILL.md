@@ -21,17 +21,32 @@ triggers: ["/ddup", "ddup", "dedupe", "find duplicates", "duplicate docs", "dupl
 - Do not use when the user already identified one exact file to edit.
 - Do not use for generated artifacts that are intentionally mirrored by build or publish steps.
 
+## Read First
+- Define the duplicate surface before searching.
+- Inspect existing canonical sources, generated mirrors, sync scripts, and ownership docs for the touched surface.
+- Check git status so user work is preserved.
+
 ## Workflow
-1. Define the duplicate surface: skills, docs, agents, widget, backend routes/services, frontend pages, tests, or config.
-2. Search for near-duplicates with `rg`, `rg --files`, file names, trigger phrases, route names, exported symbols, and repeated headings.
-3. Classify each candidate:
+1. Search for near-duplicates with `rg`, `rg --files`, file names, trigger phrases, route names, exported symbols, and repeated headings.
+2. Classify each candidate:
    - `merge`: two live sources should become one canonical source.
    - `alias`: both should stay, but one should point to the other.
    - `generated mirror`: keep both and verify the sync rule.
    - `stale`: likely removable after confirmation.
-4. Produce a candidate table with file paths, evidence, risk, recommended owner, and proposed action.
-5. Ask for confirmation before deleting, moving, or collapsing any candidate.
-6. After approval, make the smallest consolidation and run targeted checks for the touched surface.
+3. Produce a candidate table with file paths, evidence, risk, recommended owner, and proposed action.
+4. Ask for confirmation before deleting, moving, or collapsing any candidate.
+5. After approval, make the smallest consolidation and run targeted checks for the touched surface.
+
+## Output Format
+Return a candidate table with:
+- File paths
+- Duplicate evidence
+- Classification
+- Risk
+- Recommended owner
+- Proposed action
+
+Then list confirmation needed before edits.
 
 ## Constraints
 - Never delete files during the discovery pass.
