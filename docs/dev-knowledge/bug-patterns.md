@@ -2223,3 +2223,26 @@ All builds + tests pass.
 **Author:** aferna6-cell
 **Files Changed:** frontend/src/pages/BillingPage.jsx,frontend/src/pages/wizard/WizardStepAutoKB.jsx,frontend/src/pages/wizard/WizardStepBusiness.jsx,frontend/src/pages/wizard/WizardStepCustomize.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,frontend/src/pages/wizard/WizardStepKnowledgeBase.jsx,frontend/src/pages/wizard/WizardStepPlan.jsx,frontend/src/pages/wizard/WizardStepServices.jsx
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(silent-errors): add logging to 4 bare-exception/silent-catch handlers
+
+- widget_chat.py:299: except Exception as exc + logger.warning on rate-limit
+  fallback — paid tenants silently downgraded to free tier on DB failure
+  (issue #97, partially closes logging gap)
+- AuthContext.jsx:89: .catch(() => {}) → console.warn on /me refresh failure
+- MarketingDashboardPage.jsx:90,96: two .catch(() => null) → console.warn
+- LocalSEOPage.jsx:262: .catch(() => null) → console.warn on history reload
+
+All additive — fallback behaviour unchanged; now visible in logs/console.
+Flagged by subconscious run 2026-04-27 + nightly review #97.
+
+ops: nightly-commit-review 2026-04-28
+
+https://claude.ai/code/session_01Adpyce6podoNid2EKJSogD
+**Date:** 2026-04-28
+**Commit:** e68677a
+**Author:** Claude
+**Files Changed:** backend/routers/widget_chat.py,frontend/src/context/AuthContext.jsx,frontend/src/pages/LocalSEOPage.jsx,frontend/src/pages/MarketingDashboardPage.jsx,ops/routines/logs/nightly-commit-review-2026-04-28.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
