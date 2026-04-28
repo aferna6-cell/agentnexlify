@@ -80,13 +80,13 @@ export function AuthProvider({ children }) {
                 plan: me.plan || prev.plan,
                 marketing_addon_active: Boolean(me.marketing_addon_active),
                 marketing_addon_grandfathered: Boolean(
-                  me.marketing_addon_grandfathered
+                  me.marketing_addon_grandfathered,
                 ),
               }
-            : prev
+            : prev,
         );
       })
-      .catch(() => {});
+      .catch((err) => console.warn("AuthContext: /me refresh failed:", err));
 
     // Proactive expiry check - logs out before next API call can 401
     const intervalId = setInterval(() => {
