@@ -32,6 +32,7 @@ from backend.services.api_key_auth import (
     validate_api_key,
     _ALLOWED_PLANS,
 )
+from backend.services.api_key_limiter import check_and_increment
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,17 @@ def _get_api_key_client(x_api_key: str = Header(...)) -> dict:
                 "Zapier integration requires a Growth, Autopilot, Professional, or "
                 "Enterprise plan. Upgrade to use this feature."
             ),
+        )
+
+    # Per-key rate limit (in-memory per worker; effective ~4x with 4 uvicorn workers).
+    # Fail-open on internal error — paying tenants must not be blocked by limiter outage.
+    rpm_limit = key_row.get("rate_limit_rpm") or 100
+    allowed, _count = check_and_increment(key_row["key_prefix"], limit_per_minute=rpm_limit)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded ({rpm_limit}/min). Retry after a minute.",
+            headers={"Retry-After": "60"},
         )
 
     # best-effort touch — never fail the request

@@ -62,7 +62,9 @@ def validate_api_key(raw_key: str) -> dict | None:
     try:
         result = (
             db.table("tenant_api_keys")
-            .select("id, client_id, key_hash, key_prefix, name, last_used_at, revoked_at")
+            .select(
+                "id, client_id, key_hash, key_prefix, name, last_used_at, revoked_at, rate_limit_rpm"
+            )
             .eq("key_prefix", key_prefix)
             .is_("revoked_at", "null")
             .execute()

@@ -444,3 +444,141 @@ class TestAllowedTiers:
         assert "professional" in _ALLOWED_PLANS
         assert "enterprise" in _ALLOWED_PLANS
         assert "free" not in _ALLOWED_PLANS
+
+
+# ---------------------------------------------------------------------------
+# Rate limiter — in-memory per-prefix counter (per-process)
+# ---------------------------------------------------------------------------
+
+
+class TestApiKeyLimiter:
+    def setup_method(self):
+        from backend.services import api_key_limiter
+
+        api_key_limiter.reset_for_tests()
+
+    def test_first_request_allowed(self):
+        from backend.services.api_key_limiter import check_and_increment
+
+        allowed, count = check_and_increment("zap_aaaa", limit_per_minute=100)
+        assert allowed is True
+        assert count == 1
+
+    def test_under_limit_allowed(self):
+        from backend.services.api_key_limiter import check_and_increment
+
+        for i in range(99):
+            allowed, _ = check_and_increment("zap_bbbb", limit_per_minute=100)
+            assert allowed is True
+        allowed, count = check_and_increment("zap_bbbb", limit_per_minute=100)
+        assert allowed is True
+        assert count == 100
+
+    def test_over_limit_rejected(self):
+        from backend.services.api_key_limiter import check_and_increment
+
+        for _ in range(100):
+            check_and_increment("zap_cccc", limit_per_minute=100)
+        allowed, count = check_and_increment("zap_cccc", limit_per_minute=100)
+        assert allowed is False
+        assert count == 101
+
+    def test_separate_prefixes_independent(self):
+        from backend.services.api_key_limiter import check_and_increment
+
+        for _ in range(100):
+            check_and_increment("zap_dddd", limit_per_minute=100)
+        # Different prefix should still be allowed
+        allowed, _ = check_and_increment("zap_eeee", limit_per_minute=100)
+        assert allowed is True
+
+    def test_resets_next_minute(self, monkeypatch):
+        import backend.services.api_key_limiter as lim
+
+        base = 1_700_000_000
+        monkeypatch.setattr(lim.time, "time", lambda: float(base))
+        for _ in range(100):
+            lim.check_and_increment("zap_ffff", limit_per_minute=100)
+        allowed, _ = lim.check_and_increment("zap_ffff", limit_per_minute=100)
+        assert allowed is False
+
+        # Advance 60s into next bucket
+        monkeypatch.setattr(lim.time, "time", lambda: float(base + 60))
+        allowed, count = lim.check_and_increment("zap_ffff", limit_per_minute=100)
+        assert allowed is True
+        assert count == 1
+
+    def test_fail_open_on_exception(self, monkeypatch):
+        """Limiter must fail-open: if internal error, allow request + log."""
+        import backend.services.api_key_limiter as lim
+
+        class _BoomDict:
+            def setdefault(self, *_a, **_kw):
+                raise RuntimeError("simulated infra failure")
+
+        monkeypatch.setattr(lim, "_BUCKETS", _BoomDict())
+        allowed, count = lim.check_and_increment("zap_gggg", limit_per_minute=100)
+        assert allowed is True
+        assert count == 0
+
+
+# ---------------------------------------------------------------------------
+# Rate limit integration: GET /api/zapier/leads/new
+# ---------------------------------------------------------------------------
+
+
+class TestRateLimitIntegration:
+    def setup_method(self):
+        from backend.services import api_key_limiter
+
+        api_key_limiter.reset_for_tests()
+
+    def _key_auth_headers(self, raw_key: str) -> dict:
+        return {"x-api-key": raw_key}
+
+    def test_429_after_limit(self, mock_supabase):
+        from backend.services.api_key_auth import generate_api_key
+
+        client = _make_client()
+        raw, key_hash, key_prefix = generate_api_key()
+
+        key_row = {
+            "id": _KEY_ID,
+            "client_id": _CLIENT_ID,
+            "key_hash": key_hash,
+            "key_prefix": key_prefix,
+            "rate_limit_rpm": 3,  # tight limit for fast test
+        }
+
+        def _table_side_effect(table_name):
+            mock = MagicMock()
+            if table_name == "tenant_api_keys":
+                mock.select.return_value.eq.return_value.is_.return_value.execute.return_value.data = [key_row]
+                mock.update.return_value.eq.return_value.execute.return_value.data = []
+            elif table_name == "tenants":
+                mock.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [
+                    {"id": _CLIENT_ID, "plan": "growth", "plan_status": "active"}
+                ]
+            elif table_name == "leads":
+                mock.select.return_value.eq.return_value.gt.return_value.order.return_value.limit.return_value.execute.return_value.data = []
+            return mock
+
+        mock_supabase.table.side_effect = _table_side_effect
+
+        # First 3 should succeed
+        for i in range(3):
+            resp = client.get(
+                "/api/zapier/leads/new",
+                params={"since": "2026-01-01T00:00:00Z"},
+                headers=self._key_auth_headers(raw),
+            )
+            assert resp.status_code == 200, f"req {i+1} got {resp.status_code}"
+
+        # 4th hits limit
+        resp = client.get(
+            "/api/zapier/leads/new",
+            params={"since": "2026-01-01T00:00:00Z"},
+            headers=self._key_auth_headers(raw),
+        )
+        assert resp.status_code == 429
+        assert "retry-after" in {k.lower() for k in resp.headers.keys()}
