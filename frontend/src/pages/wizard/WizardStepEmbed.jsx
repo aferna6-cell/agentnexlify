@@ -67,7 +67,7 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
         {[
           "Open your website's HTML file or CMS template",
           "Paste the code above just before the closing </body> tag",
-          "Save and refresh your page — the chat widget will appear",
+          "Save and refresh your page - the chat widget will appear",
         ].map((step, i) => (
           <div key={i} style={{ display: "flex", gap: 14, marginBottom: i < 2 ? 12 : 0, alignItems: "flex-start" }}>
             <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>{i + 1}</div>
@@ -96,4 +96,4 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
   );
 }
 
-const copyBtnStyle = { padding: "6px 14px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer", fontWeight: 600 };
+const copyBtnStyle = { padding: "8px 14px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer", fontWeight: 600, minHeight: 36 };

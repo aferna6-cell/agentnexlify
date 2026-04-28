@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 
 logger = logging.getLogger(__name__)
 

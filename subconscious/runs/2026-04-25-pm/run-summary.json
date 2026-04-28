@@ -1,0 +1,36 @@
+{
+  "run": 8,
+  "date": "2026-04-25-pm",
+  "evidence_window": "2026-04-22 to 2026-04-25",
+  "commits_analyzed": 20,
+  "key_signals": [
+    "037865f added check_project_invariants.py — stdlib-only, unwired",
+    "widget sync script (run 7 winner) still not created",
+    "JS silent catch guard (run 3 winner) still unimplemented at day 14+",
+    "25+ QA carried items in current-tasks.md",
+    "moratorium threshold met per run 7 mandate",
+    "API key P0 at day 22+"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "winner": "Wire check_project_invariants.py into pre-commit hook",
+  "winner_category": "code_health",
+  "winner_confidence": "HIGH",
+  "winner_effort": "S",
+  "debate_results": {
+    "Idea 1 — Wire check_project_invariants.py": "SURVIVES → WINNER",
+    "Idea 2 — JS Silent Catch Escalation": "WEAKENED → Parking Lot",
+    "Idea 3 — widget_helpers Smoke Tests": "WEAKENED → Parking Lot"
+  },
+  "moratorium_triggered": true,
+  "moratorium_reason": "5 winners unimplemented; oldest 19+ days; run 7 mandated escalation by run 8",
+  "pending_approvals_count": 5,
+  "governance_updates": [
+    "total_runs: 7 → 8",
+    "last_run updated",
+    "active_directions: new winner added",
+    "moratorium_config added",
+    "rejected_paths: none new",
+    "parking_lot: 2 new additions (widget smoke test, JS catch mechanism)"
+  ]
+}

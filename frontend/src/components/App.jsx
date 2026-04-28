@@ -58,7 +58,7 @@ class PageErrorBoundary extends Component {
   }
 }
 
-// Lazy-load all dashboard pages — each becomes its own chunk
+// Lazy-load all dashboard pages - each becomes its own chunk
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const LeadsPage = lazy(() => import("../pages/LeadsPage"));
 const ClientList = lazy(() => import("../pages/Dashboard/ClientList"));
@@ -357,7 +357,7 @@ export default function App() {
 
   const PageComponent = pages[currentPage] || Dashboard;
 
-  // Marketing Suite add-on gate — block 7 pages when tenant lacks the add-on.
+  // Marketing Suite add-on gate - block 7 pages when tenant lacks the add-on.
   // Backend enforces via addon_gate dependency; this is the UI half (answer #5 = C).
   const marketingAddonGated =
     MARKETING_ADDON_GATED_KEYS.has(currentPage) &&

@@ -1,5 +1,5 @@
 /**
- * API barrel export — re-exports all domain modules.
+ * API barrel export - re-exports all domain modules.
  * New features should add functions to domain modules, not the monolith api.js.
  */
 

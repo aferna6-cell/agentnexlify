@@ -16,7 +16,7 @@ user-invocable: false
 
 # Churn Prevention — Retention Playbook
 
-Retention playbook adapted for AgentNexLiFy plans: free, growth ($249), professional ($499), autopilot ($299), enterprise ($899).
+Retention playbook adapted for AgentNexLiFy plans: free, growth ($99 Starter), autopilot ($150 Growth), professional ($250 Pro), enterprise ($899).
 
 ## When to Use
 - Editing `frontend/src/pages/BillingPage.jsx` cancel/downgrade UX
@@ -47,8 +47,9 @@ Retention playbook adapted for AgentNexLiFy plans: free, growth ($249), professi
 | Plan | Primary offer | Fallback |
 |------|---------------|----------|
 | free → (nothing to retain) | email nurture sequence | – |
-| growth ($249) | downgrade to free + re-engagement email | 30% off 3 months |
-| professional ($499) | downgrade to growth + pause option | 20% off 3 months |
+| growth ($99) | downgrade to free + re-engagement email | 30% off 3 months |
+| autopilot ($150) | downgrade to growth + pause option | 20% off 3 months |
+| professional ($250) | downgrade to autopilot + pause option | 20% off 3 months |
 | autopilot ($299 addon) | pause-3-months | drop addon, keep base plan |
 | enterprise ($899) | account manager call BEFORE offer | custom contract terms |
 

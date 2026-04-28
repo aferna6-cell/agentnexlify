@@ -4102,23 +4102,23 @@ body {
   .analytics-charts-row { grid-template-columns: 1fr; }
   .analytics-bottom-row { grid-template-columns: 1fr; }
 
-  /* Page headers — prevent overflow on narrow screens */
+  /* Page headers - prevent overflow on narrow screens */
   .page-header { flex-wrap: wrap; gap: 8px; }
   .page-header h1 { font-size: 1.25rem; }
   .page-header-actions { width: 100%; }
   .page-header-actions > * { flex: 1; min-width: 0; }
 
-  /* Invoices, bids, forms — stack grids */
+  /* Invoices, bids, forms - stack grids */
   .invoice-header-grid,
   .bid-header-grid { grid-template-columns: 1fr !important; }
 
-  /* Modal/drawer — full-width on mobile */
+  /* Modal/drawer - full-width on mobile */
   .modal-content { width: 95vw !important; max-width: 95vw !important; margin: 16px auto; }
 
-  /* Lead detail drawer — full width */
+  /* Lead detail drawer - full width */
   .lead-drawer { width: 100vw !important; }
 
-  /* Tabs — horizontal scroll instead of wrapping */
+  /* Tabs - horizontal scroll instead of wrapping */
   .tab-list { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .tab-list::-webkit-scrollbar { display: none; }
 }

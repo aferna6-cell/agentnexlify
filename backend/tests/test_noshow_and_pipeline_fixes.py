@@ -3,6 +3,7 @@
 Covers:
 - bug-patterns #70: noshow follow-up silently dropped when tenant not in cache
 - bug-patterns #71: pipeline notify_team email XSS via unescaped HTML
+- bug-patterns #72: noshow_recovery unsubscribe check failure must default-deny (CAN-SPAM)
 """
 
 import asyncio
@@ -156,6 +157,87 @@ class TestNoshowFollowupTenantCache:
             )
 
             assert sent == 0
+            send_sms_mock.assert_not_called()
+            send_email_mock.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Bug #72 — noshow_recovery unsubscribe check must default-deny on failure
+# ---------------------------------------------------------------------------
+
+
+class TestNoshowRecoveryUnsubscribeDefaultDeny:
+    """Regression: when the unsubscribe-status lookup on `leads` raises,
+    we must NOT proceed to send SMS/email. CAN-SPAM requires default-deny.
+    Previously the exception was swallowed at debug-level and the loop
+    proceeded to contact a potentially-unsubscribed customer.
+    """
+
+    def test_unsubscribe_check_exception_skips_send(self):
+        from backend.services import noshow_recovery
+
+        tenant_id = "tenant-csp"
+        appt = {
+            "id": "appt-unsub",
+            "tenant_id": tenant_id,
+            "customer_name": "Pat Doe",
+            "customer_email": "pat@example.com",
+            "customer_phone": "+15555557777",
+            "start_time": "2026-04-23T10:00:00+00:00",
+            "updated_at": "2026-04-22T10:00:00+00:00",
+            "lead_id": "lead-unsub",
+        }
+        tenant_row = {
+            "business_name": "Acme Co",
+            "plan": "growth",
+            "google_review_link": None,
+            "owner_email": "owner@acme.test",
+            "noshow_recovery_enabled": True,
+        }
+
+        appt_query = MagicMock()
+        appt_query.data = [appt]
+        tenant_query = MagicMock()
+        tenant_query.data = [tenant_row]
+
+        def table_side_effect(name):
+            chain = MagicMock()
+            if name == "appointments":
+                chain.select.return_value.eq.return_value.is_.return_value.limit.return_value.execute.return_value = appt_query
+                chain.select.return_value.eq.return_value.not_.is_.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
+                chain.update.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+            elif name == "tenants":
+                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = tenant_query
+            elif name == "leads":
+                # Raise on unsubscribe lookup — forces default-deny path
+                chain.select.return_value.eq.return_value.limit.return_value.execute.side_effect = RuntimeError("supabase down")
+            elif name == "activity_log":
+                chain.insert.return_value.execute.return_value = MagicMock(data=[])
+            else:
+                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
+            return chain
+
+        db = MagicMock()
+        db.table.side_effect = table_side_effect
+
+        send_sms_mock = AsyncMock(return_value=True)
+        send_email_mock = AsyncMock(return_value={"success": True})
+
+        with (
+            patch.object(noshow_recovery, "get_service_supabase", return_value=db),
+            patch.object(noshow_recovery, "send_sms", new=send_sms_mock),
+            patch.object(noshow_recovery, "send_email", new=send_email_mock),
+            patch.object(noshow_recovery, "check_sms_rate_limit", return_value=True),
+            patch.object(noshow_recovery, "increment_sms_count"),
+            patch.object(noshow_recovery, "build_unsubscribe_url", return_value="https://unsub.test"),
+            patch.object(noshow_recovery, "fire_event_background"),
+        ):
+            sent = asyncio.run(noshow_recovery.process_noshow_recovery())
+
+            assert sent == 0, (
+                "regression: unsubscribe check failure must default-deny — "
+                "no messages should be sent (bug-patterns #72)"
+            )
             send_sms_mock.assert_not_called()
             send_email_mock.assert_not_called()
 

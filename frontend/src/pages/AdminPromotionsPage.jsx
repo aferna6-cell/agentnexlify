@@ -94,7 +94,7 @@ const PROMOTION_TYPES = [
   {
     key: "extended_trial",
     label: "Extended Trial",
-    desc: "Longer than standard 14-day trial",
+    desc: "Longer than standard 7-day Growth trial",
   },
   {
     key: "partner_deal",
@@ -109,7 +109,7 @@ const PROMOTION_TYPES = [
   { key: "referral", label: "Referral", desc: "Referred by another business" },
 ];
 
-// Admin secret is entered at runtime via prompt — never baked into the JS bundle.
+// Admin secret is entered at runtime via prompt - never baked into the JS bundle.
 let _adminSecret = "";
 
 function getAdminSecret() {
@@ -136,7 +136,7 @@ async function apiFetch(path, opts = {}) {
   });
   if (res.status === 401) {
     clearAdminSecret();
-    throw new Error("Invalid admin secret — cleared. Refresh to retry.");
+    throw new Error("Invalid admin secret - cleared. Refresh to retry.");
   }
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json();
@@ -287,7 +287,7 @@ function CreatePromotionModal({ onClose, onCreated }) {
                     fontSize: "0.85rem",
                   }}
                 >
-                  <strong>{t.business_name}</strong> — {t.owner_email}
+                  <strong>{t.business_name}</strong> - {t.owner_email}
                   <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>
                     ({t.plan})
                   </span>
@@ -318,7 +318,7 @@ function CreatePromotionModal({ onClose, onCreated }) {
           >
             {PROMOTION_TYPES.map((t) => (
               <option key={t.key} value={t.key}>
-                {t.label} — {t.desc}
+                {t.label} - {t.desc}
               </option>
             ))}
           </select>

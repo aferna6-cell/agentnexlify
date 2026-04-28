@@ -165,3 +165,61 @@
 - Create inconsistent button styles
 - Use bright white (#fff) as text in dark mode — use #f0f0f5
 - Add gratuitous animations or transitions over 0.3s
+
+## Writing Tone
+UI copy voice. Cross-ref `.claude/rules/personality.md`.
+
+- Button labels: imperative verb, 1-3 words (`Save`, `Create Lead`, `Book Appointment`). Never `Click to Save` or `Save Changes Now`
+- Empty states: acknowledge + guide. "No leads yet. Add your first to start tracking." Not `0 leads` or `No data`
+- Error messages: plain English + next action. "Couldn't save — check connection and retry." Not `Error 500`
+- Success toasts: short + specific. "Lead saved." Not `Operation completed successfully`
+- Field labels: noun phrase, sentence case. `Email address`, `Phone number`. Not `EMAIL:` or `Enter your email`
+- Help text: one sentence max under input. "We'll never share this."
+- Destructive confirmations: name the object. "Delete lead 'John Doe'? This cannot be undone."
+- Plan/feature gates: upgrade path + benefit. "Upgrade to Growth to unlock SMS follow-ups."
+- No marketing fluff: never `unlock`, `leverage`, `seamless`, `best-in-class`, `powerful`
+- Numbers > adjectives: "Saves 4 hours/week" beats "Saves significant time"
+
+## Widget Tokens
+Widget embeds on 3rd-party sites. Separate token set from dashboard — no CSS vars available in embed context, all values inline.
+
+- Default brand color: `#6cff5c` (green) — overridable per tenant via `data-brand-color` script attribute at `widget/agentnexlify-widget.js:11`
+- Widget window background: `#0a0a0f` (matches dashboard `bg-primary`)
+- Bubble: 60px circle, 24px offset from bottom-right, box-shadow `0 4px 24px rgba(0,0,0,0.3)`
+- Window: 380px × 560px, 24px offset from bottom-right
+- Font stack: system only — `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`. NOT Inter (avoid external font load in embed)
+- Badge (unread count): `#ff4444` (matches status/error red), 18px circle, 11px bold
+- Z-index layers: container `99997`, bubble `99998`, window `99999` — high to survive tenant CSS
+- Pulse animation: 2s infinite on bubble for attention
+- **Byte-identical rule:** widget JS must be identical in `widget/` and `frontend/public/widget/` — see `.claude/rules/widget-rules.md`
+- **Known divergence:** widget default brand `#6cff5c` green ≠ dashboard accent `#00bfff` blue. Intentional per-tenant overridability; flagged for future alignment decision.
+
+## Quality Gates
+New component passes review if ALL true:
+
+- [ ] Uses only palette colors (no hex outside token list)
+- [ ] Uses only defined spacing (multiples of 4px)
+- [ ] Uses one of 4 radius values (`6px`/`10px`/`20px`/`50%`)
+- [ ] Has visible focus state (accent glow outline)
+- [ ] Empty / loading / error states designed, not just success path
+- [ ] Button text is imperative verb, 1-3 words
+- [ ] Labels present on all form inputs (associated via `htmlFor`/`id`)
+- [ ] Contrast ratio ≥ 4.5:1 body text, ≥ 3:1 large text (verify via browser devtools)
+- [ ] No inline hex in JSX; uses CSS vars from `frontend/src/index.css`
+- [ ] Works at 320px mobile, 768px tablet, 1440px desktop
+- [ ] Dark theme default; light theme opt-in only
+- [ ] No animation exceeds 0.3s
+
+Verification: screenshot at 3 viewports via `preview_screenshot`, compare to existing pages in `frontend/src/pages/`.
+
+## Pair with AGENTS.md
+This file (`design.md`) = how it should look + feel.
+`AGENTS.md` (root) = how to build it.
+
+Format convention: Google Stitch `DESIGN.md` spec. AI agents read both before generating UI.
+
+Cross-refs:
+- `.claude/rules/frontend-patterns.md` — frontend implementation rules
+- `.claude/rules/widget-rules.md` — widget byte-identical + CORS discipline
+- `.claude/rules/personality.md` — voice + writing style canonical
+- `frontend/src/index.css` — CSS var definitions (source of truth for tokens)

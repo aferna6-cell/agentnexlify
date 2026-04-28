@@ -1011,7 +1011,7 @@ export default function ABTestsPage() {
                       textTransform: "capitalize",
                     }}
                   >
-                    {t.test_type?.replace("_", " ") || "—"}
+                    {t.test_type?.replace("_", " ") || "-"}
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <StatusBadge status={t.status} />

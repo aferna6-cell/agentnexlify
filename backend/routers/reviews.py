@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.email_sender import send_email, build_unsubscribe_url
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background

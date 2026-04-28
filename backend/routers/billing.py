@@ -14,8 +14,9 @@ from pydantic import BaseModel, Field, field_validator
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
+from backend.services.fraud_guard import guard_checkout_for_fraud
 from backend.services.stripe_service import (
     PLAN_PRICES,
     STRIPE_ADDON_MARKETING_VALUE,
@@ -164,17 +165,24 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
         line_items.append({"price": prices["setup"], "quantity": 1})
     line_items.append({"price": prices["monthly"], "quantity": 1})
 
+    success_path = (
+        f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
+        if req.source == "wizard"
+        else f"{settings.frontend_url}/dashboard?checkout_success=1&session_id={{CHECKOUT_SESSION_ID}}"
+    )
     session_params: dict = {
         "mode": "subscription",
         "customer": customer.id,
         "line_items": line_items,
-        "success_url": f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        "success_url": success_path,
         "cancel_url": f"{settings.frontend_url}/billing/cancel",
         "metadata": {"tenant_id": req.tenant_id, "plan": req.plan},
         "subscription_data": {
             "metadata": {"tenant_id": req.tenant_id, "plan": req.plan},
         },
     }
+    if req.plan == "growth":
+        session_params["subscription_data"]["trial_period_days"] = 7
 
     # Attach promo code if provided
     if req.promo_code:
@@ -254,19 +262,20 @@ async def stripe_webhook(request: Request):
 
 AMOUNT_TO_PLAN: dict[int, str] = {
     # Monthly only (current pricing)
+    9900: "growth",
+    15000: "professional",
+    25000: "enterprise",
+    # Legacy monthly pricing (keep for existing subscribers)
     24900: "growth",
     29900: "autopilot",
     49900: "professional",
-    89900: "enterprise",
-    # Legacy monthly pricing (keep for existing subscribers)
     19900: "growth",
     39900: "professional",
     79900: "enterprise",
-    # Monthly + setup fee (first invoice, setup currently waived)
+    # Monthly + setup fee (legacy, setup now waived)
     54800: "growth",         # $249 + $299 setup
     99800: "professional",   # $499 + $499 setup
     189800: "enterprise",    # $899 + $999 setup
-    # Legacy monthly + setup fee
     49800: "growth",         # $199 + $299 setup
     89800: "professional",   # $399 + $499 setup
     179800: "enterprise",    # $799 + $999 setup
@@ -274,8 +283,10 @@ AMOUNT_TO_PLAN: dict[int, str] = {
 
 # Keywords to match in product/price descriptions
 PLAN_KEYWORDS: dict[str, str] = {
+    "starter": "growth",
     "growth": "growth",
     "autopilot": "autopilot",
+    "pro": "professional",
     "professional": "professional",
     "enterprise": "enterprise",
 }
@@ -382,6 +393,27 @@ def _handle_checkout_completed(db, session: dict) -> None:
         logger.warning(
             "checkout.session.completed: could not resolve plan (amount=%s, metadata=%s)",
             session.get("amount_total"), session.get("metadata"),
+        )
+        return
+
+    fraud_reason = guard_checkout_for_fraud(session)
+    if fraud_reason:
+        logger.warning(
+            "checkout.session.completed: fraud detected for tenant %s — %s. Pausing activation.",
+            tenant_id, fraud_reason,
+        )
+        update_data = {
+            "plan": plan,
+            "plan_status": "paused",
+            "stripe_customer_id": session.get("customer"),
+            "stripe_subscription_id": session.get("subscription"),
+        }
+        db.table("tenants").update(update_data).eq("id", tenant_id).execute()
+        log_activity(
+            tenant_id=tenant_id,
+            event_type="fraud_alert",
+            description=f"Checkout flagged: {fraud_reason}. Subscription paused pending review.",
+            metadata={"fraud_reason": fraud_reason, "session_id": session.get("id")},
         )
         return
 

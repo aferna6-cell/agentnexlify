@@ -4,6 +4,16 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### noshow_recovery swallowed CAN-SPAM unsubscribe check failures
+**Date:** 2026-04-23
+**Symptom:** `backend/services/noshow_recovery.py:122` wrapped the `leads.unsubscribed` lookup in `except Exception: logger.debug(...)`. On any transient Supabase failure the loop proceeded to send SMS + email to a customer whose unsubscribe status could not be verified — CAN-SPAM compliance violation. Also line 71 silently dropped appointments with unparseable `updated_at`; lines 191/352 warned on mark-sent failure when the same query would re-match next tick → duplicate SMS charges + customer spam; lines 298/317/343 logged SMS/email/rebook-check failures at debug, obscuring real outages.
+**Root Cause:** Defensive try/except blocks written to keep the 5-min automation loop alive, but severity levels did not reflect business impact. Unsubscribe check and mark-sent updates are load-bearing for compliance + duplicate-send prevention; debug/warning logs hide those breakages from alerting.
+**Files Changed:** `backend/services/noshow_recovery.py`, `backend/tests/test_noshow_and_pipeline_fixes.py`, `docs/dev-knowledge/bug-patterns.md`
+**Fix:** Unsubscribe-check exception now `continue`s (default-deny) with warning log. Parse-failure path logs warning before `continue`. Mark-sent failures (initial + follow-up) upgraded to `logger.error` with explicit duplicate-send risk note. Follow-up SMS/email/rebook-check exceptions upgraded from debug to warning for parity with initial send path (lines 150/181). Added regression test `TestNoshowRecoveryUnsubscribeDefaultDeny::test_unsubscribe_check_exception_skips_send` that injects a Supabase failure on `leads.unsubscribed` lookup and asserts no messages are sent.
+**Prevention:** When catching exceptions in tenant-facing automation loops, match log severity to business impact: (a) compliance/legal checks → default-deny + warning, (b) idempotency keys / mark-as-sent updates → error (duplicate-send risk), (c) outbound send failures → warning (parity across initial + follow-up paths), (d) observability-only paths (activity_log insert) → debug. Audit any `except Exception: logger.debug(...)` in send paths before relying on "the audit said it's silent."
+
+---
+
 ### Spec referenced ExtractorError but real code raises ValueError
 **Date:** 2026-04-15
 **Symptom:** While shipping Phase 2 of the lead-parser-replacement feature, the spec at `specs/lead-parser-replacement_spec.md` line 96/103 told the implementer to `from backend.services.structured_extractor import extract_structured, ExtractorError` and `except ExtractorError as exc:`. The symbol `ExtractorError` does not exist in `backend/services/structured_extractor.py` — that module raises `ValueError` directly on parse failure (line 207 + 214 of structured_extractor.py).
@@ -2210,3 +2220,65 @@ https://claude.ai/code/session_01AMEaRhVMfXypTzmBCpm9r4
 **Author:** (origin/main)
 **Files Changed:** tests/test_integration_key_vault.py, tests/test_vertical_preset_loader.py
 **Details:** Two pytest hygiene fixes. (1) `importlib.reload(vault)` removed from `test_wrong_key_raises_invalid_token` — `_get_fernet()` reads `os.environ` at call time so module reload was unnecessary and was confusing `pytest-cov`. (2) `@pytest.mark.asyncio` decorators stripped from class-based async test methods — `asyncio_mode = auto` in `pytest.ini` already handles all async functions and the explicit decorator triggered warnings/conflicts in `pytest-asyncio 1.x`. Prevention: don't reload env-reading modules in tests; don't double-decorate when `asyncio_mode=auto`.
+
+---
+
+### fix(noshow_recovery): CAN-SPAM default-deny on unsubscribe check + escalate mark-sent failure logs
+
+- Unsubscribe check failure now skips send (default-deny) instead of proceeding
+- Mark-sent failures (both initial + follow-up) escalated to error log with
+  duplicate-send risk note
+- Follow-up SMS/email/rebook-check failures upgraded debug -> warning for
+  parity with initial send path
+- Parse-failure on updated_at now logs warning before continue
+- Added regression test TestNoshowRecoveryUnsubscribeDefaultDeny
+- Documented as bug-patterns #72
+**Date:** 2026-04-23
+**Commit:** fd37906
+**Author:** aferna6-cell
+**Files Changed:** docs/dev-knowledge/bug-patterns.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(onboarding): soft edges — BillingPage toast, mobile tap targets, CSP verify
+
+- BillingPage: show success toast on ?checkout_success=1 return from Stripe
+- WizardStepPlan: minHeight 44 on plan buttons and Back button
+- WizardStepAutoKB: minHeight 44 on Skip link
+- WizardStepServices: minHeight on suggestion chips, remove buttons, add buttons
+- WizardStepKnowledgeBase: minHeight on Edit toggle
+- WizardStepCustomize: height 44 on color picker
+- WizardStepEmbed: minHeight on Copy button
+- WizardStepBusiness: minHeight on timezone select
+- Widget preview iframe already works same-origin with sandbox attrs
+
+All builds + tests pass.
+**Date:** 2026-04-25
+**Commit:** 62f8722
+**Author:** aferna6-cell
+**Files Changed:** frontend/src/pages/BillingPage.jsx,frontend/src/pages/wizard/WizardStepAutoKB.jsx,frontend/src/pages/wizard/WizardStepBusiness.jsx,frontend/src/pages/wizard/WizardStepCustomize.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,frontend/src/pages/wizard/WizardStepKnowledgeBase.jsx,frontend/src/pages/wizard/WizardStepPlan.jsx,frontend/src/pages/wizard/WizardStepServices.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(silent-errors): add logging to 4 bare-exception/silent-catch handlers
+
+- widget_chat.py:299: except Exception as exc + logger.warning on rate-limit
+  fallback — paid tenants silently downgraded to free tier on DB failure
+  (issue #97, partially closes logging gap)
+- AuthContext.jsx:89: .catch(() => {}) → console.warn on /me refresh failure
+- MarketingDashboardPage.jsx:90,96: two .catch(() => null) → console.warn
+- LocalSEOPage.jsx:262: .catch(() => null) → console.warn on history reload
+
+All additive — fallback behaviour unchanged; now visible in logs/console.
+Flagged by subconscious run 2026-04-27 + nightly review #97.
+
+ops: nightly-commit-review 2026-04-28
+
+https://claude.ai/code/session_01Adpyce6podoNid2EKJSogD
+**Date:** 2026-04-28
+**Commit:** e68677a
+**Author:** Claude
+**Files Changed:** backend/routers/widget_chat.py,frontend/src/context/AuthContext.jsx,frontend/src/pages/LocalSEOPage.jsx,frontend/src/pages/MarketingDashboardPage.jsx,ops/routines/logs/nightly-commit-review-2026-04-28.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.

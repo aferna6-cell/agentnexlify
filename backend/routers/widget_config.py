@@ -20,13 +20,13 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.models.schemas import OnlineStatusRequest, WidgetConfigResponse
 from backend.services.email_sender import _make_unsub_sig
-from backend.routers.widget_helpers import (
+from backend.routers.widget_chat_helpers import (
     _check_origin,
     _get_tenant,
     _get_widget_config,
 )
 from backend.services.branding_helpers import _filter_branding_for_plan
-from backend.routers.auth import _get_current_tenant as _auth_get_tenant
+from backend.dependencies import _get_current_tenant as _auth_get_tenant
 
 from datetime import datetime, timezone
 

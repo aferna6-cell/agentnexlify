@@ -38,7 +38,7 @@ const data = {
       {
         icon: "dollar",
         heading: "Stop paying enterprise prices for basic chat",
-        body: "Intercom\u2019s $74/seat/mo adds up fast. A 3-person team costs $222/mo before add-ons. NexLiFy\u2019s Growth plan is $249/mo flat \u2014 no matter how many people access the dashboard. Includes SEO, marketing campaigns, and AI content tools.",
+        body: "Intercom\u2019s $74/seat/mo adds up fast. A 3-person team costs $222/mo before add-ons. NexLiFy\u2019s Growth plan is $99/mo flat \u2014 no matter how many people access the dashboard. Includes SEO, marketing campaigns, and AI content tools.",
       },
       {
         icon: "zap",
@@ -63,7 +63,7 @@ const data = {
       {
         question: "Why is NexLiFy cheaper than Intercom?",
         answer:
-          "Intercom is built for enterprise SaaS companies and charges per agent seat, starting at around $74/month per seat. NexLiFy is purpose-built for local businesses with flat monthly pricing (Free, $249, $499, or $899/mo) \u2014 no per-seat charges, no usage surprises. You get AI chat, CRM, SEO tools, social media marketing, and email campaigns without paying for enterprise tools you\u2019ll never use.",
+          "Intercom is built for enterprise SaaS companies and charges per agent seat, starting at around $74/month per seat. NexLiFy is purpose-built for local businesses with flat monthly pricing (Free, $99, $150, or $250/mo) \u2014 no per-seat charges, no usage surprises. You get AI chat, CRM, SEO tools, social media marketing, and email campaigns without paying for enterprise tools you\u2019ll never use.",
       },
       {
         question: "Does NexLiFy have the same features as Intercom?",

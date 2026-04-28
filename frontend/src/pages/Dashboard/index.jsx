@@ -313,7 +313,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           let dotColor = "#666";
           let label = "No Activity Yet";
           let detail =
-            "Your widget is ready — share your website link to start capturing leads";
+            "Your widget is ready - share your website link to start capturing leads";
 
           if (lastActivity) {
             const diffMs = Date.now() - new Date(lastActivity).getTime();
@@ -391,7 +391,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           }}
         >
           <span>
-            <strong>Complete your setup</strong> — finish the onboarding wizard
+            <strong>Complete your setup</strong> - finish the onboarding wizard
             to activate your AI assistant (
             {onboardingStatus.completion_percentage || 0}% done)
           </span>

@@ -1,5 +1,5 @@
 /* ============================================
-   LANDING PAGE — Dark Theme
+   LANDING PAGE - Dark Theme
    All styles scoped under .landing-page
    Inherits vars from index.css (:root)
    ============================================ */
@@ -1007,7 +1007,7 @@
 }
 
 /* ============================================
-   DEMO PREVIEW — Slideshow
+   DEMO PREVIEW - Slideshow
    ============================================ */
 .landing-page .lp-demo-preview {
   background: var(--bg-primary);
@@ -2330,7 +2330,7 @@ html { scroll-behavior: smooth; }
   color: var(--text-primary);
 }
 
-/* Mobile floating CTA — smaller & offset from chat widget bubble */
+/* Mobile floating CTA - smaller & offset from chat widget bubble */
 @media (max-width: 768px) {
   .lp-floating-cta {
     bottom: 12px;

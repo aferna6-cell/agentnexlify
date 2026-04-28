@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 os.environ.setdefault("TESTING", "1")
 
 # Force-import widget_helpers without going through conftest
-from backend.routers import widget_helpers  # noqa: E402
+from backend.routers import widget_lead_helpers as widget_helpers  # noqa: E402
 
 
 TENANT = "11111111-1111-1111-1111-111111111111"

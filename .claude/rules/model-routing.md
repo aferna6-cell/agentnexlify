@@ -68,10 +68,27 @@ Claude Platform launched the advisor pattern: pair Opus as an advisor with Sonne
 
 **Product-runtime mirror:** Same pattern ships for tenant-facing agents in `backend/services/advisor_executor.py` (A2). Opt-in per call site via `advised_*()` helpers in `managed_agents_registry.py`.
 
+## Subagent spawn discipline (added 2026-04-26)
+
+Spawn rules apply recursively, with hard caps:
+
+1. **Max spawn depth = 2.** Parent → subagent → one further tier. Past that, return to the parent and let it re-plan.
+2. **Haiku does not spawn.** If a Haiku subagent finds it needs to delegate, the parent sized the task wrong — return to parent rather than escalating.
+3. **No tier escalation without a concrete reason.** A subagent that realizes it needs a higher tier than itself returns to the parent. Parent decides whether to re-spawn at the higher tier. Prevents quiet cost blow-up where a Haiku subagent silently spawns Opus children.
+4. **Parent owns synthesis.** Cross-spawn output assembly happens at the parent. Don't push merge logic down into subagents.
+
+When NOT to spawn at all:
+- Parent needs the reasoning context to continue
+- Synthesis requires holding multiple threads together
+- Spawn overhead (briefing + parsing report) dominates the actual work
+- Task is <5 minutes for parent
+
 ## Never
 - Never Opus for mechanical work (rename, format, lookup)
 - Never Haiku for architecture or security design
 - Never default to Opus execution when Sonnet fits - use Opus 4.7 as the advisor boost for uncertainty
+- Never spawn deeper than 2 tiers; return to parent instead
+- Never let Haiku spawn subagents
 
 ## Hook agent model delegation
 - Security scanner on auth/payment file edit → Haiku

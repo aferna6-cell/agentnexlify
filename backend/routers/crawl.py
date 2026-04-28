@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.limiter import limiter
-from backend.routers.auth import require_role
+from backend.dependencies import require_role
 from backend.services.website_crawler import get_crawl_status, get_crawled_content, start_crawl
 
 logger = logging.getLogger(__name__)

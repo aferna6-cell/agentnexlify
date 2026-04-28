@@ -133,7 +133,7 @@ _ONBOARDING_STEPS = [
             "<li><strong>Team collaboration</strong> &mdash; invite team members, assign leads, internal notes</li>"
             "</ul>"
             "<p>One captured lead that turns into a customer pays for months of AgentNexLiFy. "
-            "The Growth plan is $249/month &mdash; less than a single Google ad click in most industries. "
+            "The Growth plan is $150/month &mdash; less than a single Google ad click in most industries. "
             "Now with SEO audit tools and AI content writer included.</p>"
             "<p><a href='https://app.agentnexlify.com' style='background:#3b82f6;color:#fff;"
             "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"

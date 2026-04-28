@@ -88,7 +88,7 @@ Registration (existing `SignupPage.jsx`) happens before the wizard. After `POST 
 
 ### Step 5 — Plan Selection
 **What the user sees:**
-- Four plan cards: Free (always available), Growth ($249/mo), Professional ($499/mo), Autopilot ($299/mo)
+- Four plan cards: Free (always available), Starter ($99/mo), Growth ($150/mo), Pro ($250/mo)
 - Each card shows the 2–3 most relevant features for that plan
 - A "Continue Free" CTA is always visible so users never feel forced to pay
 

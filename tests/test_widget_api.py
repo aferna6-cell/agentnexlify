@@ -62,7 +62,7 @@ def test_client(mock_settings):
         patch("backend.routers.widget_config.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_lead.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_booking.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_chat_helpers.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_chat_helpers.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_lead_helpers.get_service_supabase", return_value=db_mock),
         patch("backend.services.activity.get_service_supabase", return_value=db_mock),
@@ -79,7 +79,7 @@ def test_client(mock_settings):
     yield client, db_mock
 
     try:
-        from backend.routers.widget_helpers import _cache
+        from backend.routers.widget_chat_helpers import _cache
         _cache.clear()
     except Exception:
         pass
@@ -186,7 +186,7 @@ class TestWidgetChat:
 
         # Clear cache to force fresh lookup
         try:
-            from backend.routers.widget_helpers import _cache
+            from backend.routers.widget_chat_helpers import _cache
             _cache.clear()
         except Exception:
             pass

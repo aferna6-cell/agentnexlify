@@ -35,7 +35,7 @@ Go to your dashboard and set up:
 **Step 3: Watch the leads come in**
 Every visitor who shares their name, email, or phone number through the chat becomes a lead in your dashboard. You'll see their conversation, contact info, and a lead score that tells you who's ready to buy.
 
-**Your 14-day free trial is active.** You have full access to everything — no credit card needed.
+**Your 7-day free trial is active.** You have full access to everything — no credit card needed.
 
 Questions? Just reply to this email.
 

@@ -496,7 +496,7 @@ export default function CallsPage() {
                   </div>
                 ) : null}
 
-                {/* Transcript — chat log style */}
+                {/* Transcript - chat log style */}
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>
                     Transcript

@@ -117,7 +117,7 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>Business Hours</span>
             <select
-              style={{ ...inputStyle, width: "auto", padding: "4px 8px", fontSize: "0.8rem" }}
+              style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: "0.8rem", minHeight: 36 }}
               value={form.hours.timezone}
               onChange={e => setForm(f => ({ ...f, hours: { ...f.hours, timezone: e.target.value } }))}
             >

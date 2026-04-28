@@ -313,7 +313,7 @@ function FilterBuilder({ filters, onChange, onPreview, previewing, previewCount 
         />
       </div>
 
-      {/* Preview: requires saved list to query leads — only shown when editing */}
+      {/* Preview: requires saved list to query leads - only shown when editing */}
     </div>
   );
 }
@@ -337,10 +337,10 @@ function SmartListModal({ list, onClose, onSave, saving }) {
   const handlePreview = async () => {
     setPreviewing(true);
     try {
-      // Use onSave's tenant context — preview is just to show count
+      // Use onSave's tenant context - preview is just to show count
       // For now, we'll set a local count; the parent can override with actual API
       setPreviewCount(null);
-      // Simulated — the parent will provide real preview through API if available
+      // Simulated - the parent will provide real preview through API if available
       setPreviewing(false);
     } catch {
       setPreviewing(false);
@@ -938,7 +938,7 @@ export default function SmartListsPage({ onNavigate }) {
           }}
         >
           {!selectedList ? (
-            /* Empty state — no list selected */
+            /* Empty state - no list selected */
             <div
               style={{
                 display: "flex",

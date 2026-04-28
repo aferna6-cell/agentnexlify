@@ -169,7 +169,7 @@ class TestBusinessProfiles:
         assert "estimate" in profile["proof_metric_empty_hint"].lower()
 
     def test_widget_prompt_personalizes_after_business_type_selection(self):
-        from backend.routers.widget_helpers import _build_system_prompt
+        from backend.routers.widget_chat_helpers import _build_system_prompt
 
         general_prompt = _build_system_prompt(
             {"business_name": "Acme", "business_type": "other"},

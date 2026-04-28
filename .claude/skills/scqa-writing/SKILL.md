@@ -48,7 +48,7 @@ The implicit question the Complication raises. Don't literally write "The questi
 
 ### A — Answer (rest of message)
 Your specific answer. Concrete, measurable, differentiated. Not a product pitch — a resolution to the Q.
-> "AgentNexLiFy's chat widget books after-hours leads directly into your calendar. Average tenant sees 2.4x lead capture in the first 30 days. No call center, no new hires, $249/mo."
+> "AgentNexLiFy's chat widget books after-hours leads directly into your calendar. Average tenant sees 2.4x lead capture in the first 30 days. No call center, no new hires, from $99/mo."
 
 ## Rules
 - Situation + Complication combined ≤ 60 words
@@ -65,7 +65,7 @@ Your specific answer. Concrete, measurable, differentiated. Not a product pitch 
 S: You're running a small contractor crew and your reviews on Google are solid.
 C: Most of your new leads come in after 6pm — when nobody's manning the phone. They call the next three guys on the map.
 Q: [implicit — how do you capture them?]
-A: AgentNexLiFy drops a chat widget on your site that books leads into your calendar 24/7. MTOptions saw 2.4x lead capture in month one. $249/mo, 14-day free trial, no contract. Reply "demo" and I'll show you.
+A: AgentNexLiFy drops a chat widget on your site that books leads into your calendar 24/7. MTOptions saw 2.4x lead capture in month one. From $99/mo, 14-day free trial, no contract. Reply "demo" and I'll show you.
 ```
 
 ### PRD Intro

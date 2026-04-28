@@ -133,7 +133,7 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)" }}>Q&A #{i + 1}</span>
               {faqs.length > 1 && (
-                <button onClick={() => removeFaq(i)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.85rem" }}>Remove</button>
+                <button onClick={() => removeFaq(i)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.85rem", padding: "8px", minHeight: 36 }}>Remove</button>
               )}
             </div>
             <input
@@ -168,7 +168,7 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
 
 const inputStyle = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "10px 14px", color: "#e2e8f0", fontSize: "0.9rem", width: "100%", boxSizing: "border-box" };
 const chipStyle = { display: "flex", alignItems: "center", gap: 6, background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 20, padding: "4px 12px", fontSize: "0.85rem", color: "#a5b4fc" };
-const chipXStyle = { background: "none", border: "none", cursor: "pointer", color: "#a5b4fc", fontSize: "1rem", lineHeight: 1, padding: 0 };
+const chipXStyle = { background: "none", border: "none", cursor: "pointer", color: "#a5b4fc", fontSize: "1rem", lineHeight: 1, padding: "4px", minWidth: 32, minHeight: 32 };
 const btnStyle = { padding: "14px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 10, fontSize: "1rem", fontWeight: 600, cursor: "pointer" };
-const btnSmall = { padding: "8px 16px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer" };
-const suggStyle = { marginRight: 6, marginBottom: 4, padding: "4px 10px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", cursor: "pointer" };
+const btnSmall = { padding: "8px 16px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer", minHeight: 44 };
+const suggStyle = { marginRight: 6, marginBottom: 4, padding: "6px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", cursor: "pointer", minHeight: 36 };
