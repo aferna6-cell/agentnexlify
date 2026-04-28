@@ -37,7 +37,7 @@ DISPATCHER_MODEL = "claude-sonnet-4-6"
 AUTOPILOT_AUTHOR_NAME = "Autopilot Bot"
 AUTOPILOT_AUTHOR_EMAIL = "autopilot-bot@users.noreply.github.com"
 WORKFLOW_CONTRACT_PATH = "docs/AUTOPILOT_WORKFLOW.md"
-DEFAULT_MAX_ACTIVE_RUNS = 2
+DEFAULT_MAX_ACTIVE_RUNS = 1
 
 CLASSIFIER_SYSTEM = (
     "Classify this GitHub issue as READY, NEEDS_INFO, or OUT_OF_SCOPE. "

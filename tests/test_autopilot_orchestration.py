@@ -9,10 +9,10 @@ from scripts.autopilot.classify_and_dispatch import (
 )
 
 
-def test_max_active_runs_defaults_to_two(monkeypatch):
+def test_max_active_runs_defaults_to_one(monkeypatch):
     monkeypatch.delenv("AUTOPILOT_MAX_ACTIVE_RUNS", raising=False)
 
-    assert _max_active_runs_from_env() == 2
+    assert _max_active_runs_from_env() == 1
 
 
 def test_max_active_runs_rejects_non_positive(monkeypatch):

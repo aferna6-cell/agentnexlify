@@ -1,5 +1,5 @@
-// frontend/src/pages/wizard/WizardStepAutoKB.jsx
-// Onboarding v2 — auto-fill wizard from existing website URL.
+﻿// frontend/src/pages/wizard/WizardStepAutoKB.jsx
+// Onboarding v2 â€” auto-fill wizard from existing website URL.
 // Calls /api/v1/onboarding/{tenant}/auto-kb, surfaces structured services + hours
 // + KB + FAQs for owner review before continuing.
 import { useState } from "react";
@@ -97,7 +97,7 @@ export default function WizardStepAutoKB({
           />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem" }}>
-            Reading {url}…
+            Reading {url}â€¦
           </p>
         </div>
       )}
@@ -137,7 +137,7 @@ export default function WizardStepAutoKB({
                     fontSize: "0.85rem",
                   }}
                 >
-                  None detected — you can add later.
+                  None detected â€” you can add later.
                 </span>
               )}
             </div>
@@ -169,7 +169,7 @@ export default function WizardStepAutoKB({
                       marginTop: 2,
                     }}
                   >
-                    {result.hours?.[d] || "—"}
+                    {result.hours?.[d] || "â€”"}
                   </div>
                 </div>
               ))}
@@ -204,7 +204,7 @@ export default function WizardStepAutoKB({
               }}
             >
               {(result.knowledge_base || "").slice(0, 600)}
-              {(result.knowledge_base || "").length > 600 ? "…" : ""}
+              {(result.knowledge_base || "").length > 600 ? "â€¦" : ""}
             </pre>
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function WizardStepAutoKB({
           onClick={onBack}
           style={{ ...btnStyle, background: "rgba(255,255,255,0.08)", flex: 1 }}
         >
-          ← Back
+          â† Back
         </button>
         {status !== "done" ? (
           <button
@@ -227,11 +227,11 @@ export default function WizardStepAutoKB({
               opacity: status === "loading" || !url ? 0.5 : 1,
             }}
           >
-            {status === "loading" ? "Reading…" : "Auto-fill from website"}
+            {status === "loading" ? "Readingâ€¦" : "Auto-fill from website"}
           </button>
         ) : (
           <button onClick={handleContinue} style={{ ...btnStyle, flex: 2 }}>
-            Use this and continue →
+            Use this and continue â†’
           </button>
         )}
       </div>
@@ -251,7 +251,7 @@ export default function WizardStepAutoKB({
             minHeight: 44,
           }}
         >
-          Skip — I'll fill in by hand
+          Skip â€” I'll fill in by hand
         </button>
       )}
     </div>

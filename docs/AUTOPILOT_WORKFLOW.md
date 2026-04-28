@@ -45,7 +45,7 @@ Use GitHub labels as the durable state machine:
 | PR open | `autopilot-pr` | A pull request was opened by the autopilot loop. |
 
 Autopilot should run with bounded concurrency. The default active-run cap is
-two open `wip-autopilot` issues unless `AUTOPILOT_MAX_ACTIVE_RUNS` overrides it.
+one open `wip-autopilot` issue unless `AUTOPILOT_MAX_ACTIVE_RUNS` overrides it.
 
 ## Workspace Rules
 

@@ -106,7 +106,7 @@ PR count and review-comment iterations as the practical spend controls:
 
 - Issue loop dispatches at most one issue per cron tick.
 - Issue loop dispatches only while open `wip-autopilot` issues are below
-  `AUTOPILOT_MAX_ACTIVE_RUNS`, defaulting to `2`.
+  `AUTOPILOT_MAX_ACTIVE_RUNS`, defaulting to `1`.
 - Review handler stops after five bot commits on a PR.
 - Every generated PR still requires human review and merge.
 
