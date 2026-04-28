@@ -34,6 +34,14 @@ billing, customer communications, legal exposure, or product strategy.
 - `autopilot-skipped`: classifier declined the issue as out of scope.
 - `autopilot-pr`: PR was opened by the loop and review comments can be handled.
 
+Routing labels from `docs/AGENT_ROUTING.md` can be added before future model
+routing decisions:
+
+- `ai-routine`: low-risk implementation or cleanup.
+- `ai-docs`: docs, sales assets, playbooks, or skill wording.
+- `ai-tests`: tests or test-only refactors.
+- `ai-risky`: premium-only work. Autopilot will not dispatch these issues.
+
 ## State Machine
 
 ```text
@@ -87,10 +95,22 @@ Use `workflow_dispatch` from the Actions UI:
 2. Select `Autopilot Issue Loop`.
 3. Click `Run workflow` on the default branch.
 
-For local smoke checks, run:
+For local smoke checks that do not mutate GitHub, run:
 
 ```bash
-python3 scripts/autopilot/classify_and_dispatch.py --dry-run --issue 1
+npm run autopilot:dry-run
+npm run autopilot:dry-run:issue -- 1
+```
+
+Dry-run mode still needs `gh` installed and authenticated plus
+`ANTHROPIC_API_KEY` in the local environment. It classifies issues but does not
+label, dispatch Codex, push branches, comment, or open pull requests.
+
+Pair dry-run checks with the local release gate while Actions minutes are
+paused:
+
+```bash
+npm run check:local-release
 ```
 
 ## Cost Model
@@ -141,4 +161,8 @@ gh label create wip-autopilot --color 1d76db --description "Autopilot actively w
 gh label create autopilot-failed --color b60205 --description "Autopilot dispatch failed - manual intervention needed"
 gh label create autopilot-skipped --color cccccc --description "Autopilot declined as out of scope"
 gh label create autopilot-pr --color 5319e7 --description "PR was opened by autopilot"
+gh label create ai-routine --color 0e8a16 --description "Low-risk task for future low-cost agent routing"
+gh label create ai-docs --color 0075ca --description "Documentation task for future low-cost agent routing"
+gh label create ai-tests --color d4c5f9 --description "Test task for future low-cost agent routing"
+gh label create ai-risky --color b60205 --description "Premium-only task, do not dispatch autonomously"
 ```

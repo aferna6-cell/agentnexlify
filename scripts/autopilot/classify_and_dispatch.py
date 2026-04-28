@@ -37,6 +37,7 @@ DISPATCHER_MODEL = "claude-sonnet-4-6"
 AUTOPILOT_AUTHOR_NAME = "Autopilot Bot"
 AUTOPILOT_AUTHOR_EMAIL = "autopilot-bot@users.noreply.github.com"
 WORKFLOW_CONTRACT_PATH = "docs/AUTOPILOT_WORKFLOW.md"
+ROUTING_POLICY_PATH = "docs/AGENT_ROUTING.md"
 DEFAULT_MAX_ACTIVE_RUNS = 1
 
 CLASSIFIER_SYSTEM = (
@@ -147,6 +148,17 @@ def _workflow_contract(max_chars: int = 6000) -> str:
     if len(text) <= max_chars:
         return text
     return text[:max_chars].rstrip() + "\n\n[workflow contract truncated]"
+
+
+def _routing_policy(max_chars: int = 5000) -> str:
+    path = _REPO_ROOT / ROUTING_POLICY_PATH
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return f"{ROUTING_POLICY_PATH} was not readable. Use premium autopilot defaults."
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip() + "\n\n[routing policy truncated]"
 
 
 def _tail(text: str, max_chars: int = 2000) -> str:
@@ -274,6 +286,10 @@ def _classification_payload(issue: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
+def _has_risky_label(issue: dict[str, Any]) -> bool:
+    return labels.AI_RISKY in _issue_label_names(issue)
+
+
 def classify_issue(
     issue: dict[str, Any],
     *,
@@ -297,6 +313,7 @@ def classify_issue(
                 "content": (
                     "Classify this GitHub issue for the AgentNexLiFy autopilot.\n\n"
                     f"Workflow contract:\n```markdown\n{_workflow_contract()}\n```\n\n"
+                    f"Agent routing policy:\n```markdown\n{_routing_policy()}\n```\n\n"
                     f"{_classification_payload(issue)}"
                 ),
             }
@@ -400,12 +417,19 @@ Workflow contract:
 {_workflow_contract()}
 ```
 
+Agent routing policy:
+```markdown
+{_routing_policy()}
+```
+
 Requirements:
 - Implement the issue directly in this worktree.
 - Keep the change scoped to the issue and the proposed plan.
 - Do not commit, push, create labels, or open a pull request.
 - Do not hardcode secrets.
 - Do not add future-annotations imports.
+- Do not use yolo, Agent Swarm, or broad batch execution.
+- Decline and leave a note if the task touches ai-risky surfaces.
 - Prefer existing repo patterns and smallest concrete changes.
 - Leave the worktree ready for `bash scripts/hooks/pre-commit`.
 """
@@ -669,6 +693,21 @@ def run(args: argparse.Namespace, logger: logging.Logger) -> int:
     for issue in issues:
         issue_number = int(issue["number"])
         if _should_skip_issue(issue, logger):
+            continue
+        if _has_risky_label(issue):
+            did_work = True
+            result = ClassificationResult(
+                classification=labels.OUT_OF_SCOPE,
+                reason=(
+                    "Issue has the ai-risky label. Premium human-reviewed routing "
+                    "is required before autonomous dispatch."
+                ),
+                needed_info=None,
+                proposed_plan=None,
+            )
+            logger.info("issue %s skipped: ai-risky requires human routing", issue_number)
+            if not args.dry_run:
+                _handle_out_of_scope(issue, result, state_marker.compute_state_hash(issue))
             continue
 
         issue_hash = state_marker.compute_state_hash(issue)

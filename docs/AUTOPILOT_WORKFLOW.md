@@ -16,6 +16,7 @@ review, merge, product judgment, and final release authority.
 Autopilot may work on an issue when all of these are true:
 
 - The issue has the `ai-ready` label.
+- The issue does not have the `ai-risky` label.
 - Desired behavior, acceptance criteria, and likely surface are clear.
 - The change can be implemented and verified in one focused PR.
 - Required credentials, services, and test data are already available to the repo.
@@ -44,6 +45,16 @@ Use GitHub labels as the durable state machine:
 | Skipped | `autopilot-skipped` | The classifier declined the issue as out of scope. |
 | PR open | `autopilot-pr` | A pull request was opened by the autopilot loop. |
 
+Use routing labels from `docs/AGENT_ROUTING.md` to classify future model
+choices:
+
+| Routing label | Meaning |
+| --- | --- |
+| `ai-routine` | Low-risk scoped implementation or cleanup. |
+| `ai-docs` | Documentation, playbooks, sales assets, and skill wording. |
+| `ai-tests` | Test generation or test-only refactors. |
+| `ai-risky` | Premium-only work that must not dispatch autonomously. |
+
 Autopilot should run with bounded concurrency. The default active-run cap is
 one open `wip-autopilot` issue unless `AUTOPILOT_MAX_ACTIVE_RUNS` overrides it.
 
@@ -55,6 +66,7 @@ one open `wip-autopilot` issue unless `AUTOPILOT_MAX_ACTIVE_RUNS` overrides it.
 - Do not commit, push, label, or open a PR from inside Codex; the script owns those actions.
 - Preserve user-authored or unrelated changes.
 - Clean up the worktree after dispatch completes or fails.
+- Do not use yolo, Agent Swarm, or broad batch execution in autopilot worktrees.
 
 ## Proof Of Work
 

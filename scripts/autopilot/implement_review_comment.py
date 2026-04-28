@@ -34,7 +34,9 @@ from scripts.autopilot.classify_and_dispatch import (  # noqa: E402
     AutopilotError,
     TokenBudget,
     WORKFLOW_CONTRACT_PATH,
+    ROUTING_POLICY_PATH,
     _workflow_contract,
+    _routing_policy,
 )
 
 REVIEW_MODEL = "claude-sonnet-4-6"
@@ -267,6 +269,11 @@ Workflow contract:
 {_workflow_contract()}
 ```
 
+Agent routing policy:
+```markdown
+{_routing_policy()}
+```
+
 Surrounding code context:
 ```text
 {context}
@@ -276,9 +283,11 @@ Requirements:
 - Apply the requested change directly.
 - Keep edits narrowly scoped to the reviewed file unless the brief requires another file.
 - Follow `{WORKFLOW_CONTRACT_PATH}`, especially the human review and scope rules.
+- Follow `{ROUTING_POLICY_PATH}` for routing and safety constraints.
 - Do not commit, push, or reply to GitHub; this script handles that.
 - Do not hardcode secrets.
 - Do not add future-annotations imports.
+- Do not use yolo, Agent Swarm, or broad batch execution.
 - Leave the repository ready for `bash scripts/hooks/pre-commit`.
 """
     prompt_path.write_text(prompt, encoding="utf-8")
