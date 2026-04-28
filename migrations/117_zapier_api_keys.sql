@@ -1,4 +1,4 @@
--- 112_zapier_api_keys.sql
+-- 117_zapier_api_keys.sql
 -- Zapier CRM export — named alias migration for zapier API keys
 -- Adds rate_limit_rpm and notes columns to tenant_api_keys table.
 -- The base table was created in 110_tenant_api_keys.sql.
