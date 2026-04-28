@@ -262,11 +262,11 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 3,
+    "runs_pending_approval": 4,
     "runs_implemented": 4,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff, run 4)",
-    "run_10_update": "e68677a classified run 3 + run 9 as implemented_weakened. Pending drops to 3 (runs 4, 7, 8). Moratorium lifted. Run 10 winner (Check 9) closes run 3 fully on implementation.",
-    "note": "Run 10: moratorium LIFTED. 3 pending (runs 4, 7, 8). Fresh ideas allowed next run if Check 9 implemented.",
+    "run_10_update": "e68677a classified runs 3+9 as implemented_weakened. Carry-over pending: 3 (runs 4, 7, 8). Run 10 adds its own new winner → 4 pending total. Moratorium lifted because carry-over was ≤3 when measured (pre-new-winner count).",
+    "note": "Run 10: moratorium LIFTED. 4 pending including fresh run 10 winner. Carry-over (runs 4, 7, 8) = 3. Fresh ideas allowed next run if Check 9 implemented.",
     "escalate": false
   },
   "config": {
