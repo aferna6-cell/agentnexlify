@@ -4,9 +4,11 @@
 import logging
 import re
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 from backend.models.database import get_service_supabase
+from backend.services import attribution_service
 
 logger = logging.getLogger(__name__)
 
@@ -130,15 +132,18 @@ def get_activity_totals(
 ) -> dict:
     """Return aggregate totals for a tenant's activity_log.
 
-    Phase 1: returns ``events_count`` only.
-    Phase 2 will add dollar/hours attribution via attribution_service.
-
     Args:
         tenant_id: Tenant UUID string.
-        since: Only count events after this UTC datetime.
+        since: Only count events after this UTC datetime. Affects
+            ``events_count`` only — ``dollars_this_month`` always covers
+            calendar month UTC, ``hours_this_week`` always covers ISO
+            week UTC (Mon-Sun) regardless of ``since``.
 
     Returns:
-        Dict with key ``events_count`` (int).
+        Dict with keys:
+            - ``events_count`` (int)
+            - ``dollars_this_month`` (str, Decimal serialized)
+            - ``hours_this_week`` (str, Decimal serialized)
     """
     try:
         db = get_service_supabase()
@@ -151,9 +156,30 @@ def get_activity_totals(
             query = query.gte("created_at", since.isoformat())
         result = query.execute()
         count = result.count if result.count is not None else len(result.data or [])
-        return {"events_count": count}
     except Exception:
         logger.warning(
             "Failed to get activity totals tenant=%s", tenant_id, exc_info=True
         )
-        return {"events_count": 0}
+        count = 0
+
+    try:
+        dollars = attribution_service.compute_dollars_this_month(tenant_id)
+    except Exception:
+        logger.warning(
+            "compute_dollars_this_month failed tenant=%s", tenant_id, exc_info=True
+        )
+        dollars = Decimal("0")
+
+    try:
+        hours = attribution_service.compute_hours_this_week(tenant_id)
+    except Exception:
+        logger.warning(
+            "compute_hours_this_week failed tenant=%s", tenant_id, exc_info=True
+        )
+        hours = Decimal("0")
+
+    return {
+        "events_count": count,
+        "dollars_this_month": str(dollars),
+        "hours_this_week": str(hours),
+    }
