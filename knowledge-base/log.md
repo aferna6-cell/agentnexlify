@@ -12,6 +12,11 @@ Tail with: `grep "^## \[" log.md | tail -20`
 
 ---
 
+## [2026-04-25 22:10] discover | cron autopop | found=4 ingested=4 deduped=0 skipped=5 (no source)
+- ai-llm: anthropic-writing-tools-for-agents, anthropic-multi-agent-research-system
+- competitors: intercom-kaizen-ai-era, birdeye-ai-multi-location-marketing
+- skipped (no usable source): small_biz_saas, verticals, technical, regulations, growth — search MCPs returned 401 (exa/tavily/firecrawl), agent-browser not installed, sources.yaml has no blog URLs for these categories
+
 ## [2026-04-18 12:00] compile | competitor-landscape-2026-04-18 | 1 source → 5 wiki articles
 
 Source: `raw/competitors/competitor-landscape-2026-04-18.md` (direct scrape of GHL, Drillbit, Phonely, Birdeye, Podium pricing pages on 2026-04-18 via agent-browser).
@@ -301,3 +306,31 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-25 10:35] compile | Claude Code v2.1.118 + v2.1.119 | ai-llm → wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md (embedded after 429 retry)
 
 ## [2026-04-25 06:15] discover+compile | cron 06:00 | commits=3 raw=4 wiki=4
+
+## [2026-04-25 18:20] discover+compile | cron 18:00 | commits=2 raw=4 wiki=4
+## [2026-04-26T22:03:39Z] discover | cats=1 fetched=2 new_raw=2 dedup=5 errors=1
+## [2026-04-26T22:06:34Z] discover-pass2 | cats=1 fetched=2 new_raw=2 dedup=7 errors=0
+
+## [2026-04-26 22:10] compile (cron) | 4 articles compiled, 4 embedding skipped (Supabase MCP unauthorized)
+- ghl-manus-ai-monday-google-forms-integrations-2026 (competitors)
+- ghl-pricing-2026-true-monthly-cost-with-addons (competitors)
+- anthropic-election-safeguards-2026 (ai-llm)
+- anthropic-nec-japan-partnership-2026 (ai-llm)
+- INDEX.md updated: 83 → 87 articles
+- embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
+
+## [2026-04-26 18:15] discover+compile | cron 18:00 | commits=1 raw=4 wiki=0
+
+## [2026-04-27 22:17] discover | found 16 candidates | ingested 10 | skipped 2 categories (small-biz-saas, growth — DDG anomaly captcha)
+
+## [2026-04-27 18:25] discover+compile | cron 18:00 | commits=2 raw=10 wiki=4
+
+## [2026-04-28 23:30] compile (cron) | 4 articles compiled, 4 embedding skipped (Supabase MCP unauthorized)
+- ghl-voice-ai-review-2026 (competitors)
+- claude-prompt-caching-cost-optimization-kissapi (ai-llm)
+- ai-receptionist-general-contractors-2026 (verticals)
+- tcpa-sms-compliance-2026 (regulations)
+- INDEX.md updated: 92 → 95 articles
+- embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
+
+## [2026-04-29 08:18] discover+compile | cron 18:00 | commits=3 raw=0 wiki=4

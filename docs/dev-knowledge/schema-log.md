@@ -957,3 +957,16 @@ Closes the public-readability gap on `idempotency_keys`. `response_body` JSONB c
 **Effect:** anon + authenticated roles get nothing. Service role bypasses RLS automatically — backend webhook handlers continue to work.
 **Conventions:** deny-all-public is the right pattern for cross-tenant infra tables that backend-only code touches.
 **Applied:** YES — confirmed 2026-04-27. RLS active on `idempotency_keys`.
+
+
+### 117 — Zapier API Keys
+**Date:** 2026-04-27
+**Commit:** feature/58-zapier-auth
+Adds `zapier_api_keys` table backing Issue #58 — Zapier API key auth + tier gating + rate limit. Originally numbered 112 on the feature branch; renumbered to 117 to avoid collision with `112_widget_configs_onboarding_v2.sql` after rebase.
+
+**Table:**
+- `zapier_api_keys` — `id`, `client_id` FK, `name`, `key_prefix` (8 chars, indexed for lookup), `key_hash` (bcrypt cost 12), `last_used_at`, `revoked_at`, `rate_limit_rpm` (default 100), `created_at`.
+
+**RLS:** service_role only (backend CRUD endpoints handle tenant scoping).
+**Conventions:** `client_id` (matches leads/conversations convention).
+**Applied:** YES — confirmed via PR #91 squash-merge.

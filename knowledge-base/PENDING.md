@@ -2,6 +2,13 @@
 
 Raw files awaiting compilation. Run `/kb-compile` to process.
 
+## Ingested 2026-04-25T22:10:52Z — cron autopop
+
+- ~~[ai-llm] Anthropic — Writing Tools for Agents~~ → compiled `wiki/ai-llm/anthropic-writing-tools-for-agents.md` (2026-04-25 cron)
+- ~~[ai-llm] Anthropic — Multi-Agent Research System~~ → compiled `wiki/ai-llm/anthropic-multi-agent-research-system.md` (2026-04-25 cron)
+- ~~[competitors] Intercom — Kaizen for the AI Era (Fin Flywheel)~~ → compiled `wiki/competitors/intercom-fin-flywheel-kaizen.md` (2026-04-25 cron)
+- ~~[competitors] Birdeye — AI in Multi-Location Marketing~~ → compiled `wiki/competitors/birdeye-multi-location-marketing-2026.md` (2026-04-25 cron)
+
 ## Ingested 2026-04-12T22:25:10Z — filtered (off-topic removed)
 
 _All compiled._
@@ -233,3 +240,26 @@ _All compiled 2026-04-18 cron run._
 - ~~[competitors] Mastering AI Employees and Custom API V2 for High-Performance Funnels – Ninja Coding Pro~~ → compiled `wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md` (2026-04-25 cron)
 - ~~[ai-llm] Claude by Anthropic - Release Notes - April 2026 Latest Updates~~ → compiled `wiki/ai-llm/anthropic-claude-release-notes-feb-apr-2026.md` (2026-04-25 cron)
 - ~~[ai-llm] Releases · anthropics/claude-code~~ → compiled `wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md` (2026-04-25 cron)
+
+## Auto-discover 2026-04-26T22:03:39Z
+
+- ~~[competitors] Manus AI Comes to GoHighLevel: Full Breakdown of the 2026 GHL Integrations~~ → compiled `wiki/competitors/ghl-manus-ai-monday-google-forms-integrations-2026.md` (2026-04-26 cron)
+- ~~[competitors] GoHighLevel Pricing 2026: True Monthly Cost (With Add-Ons)~~ → compiled `wiki/competitors/ghl-pricing-2026-true-monthly-cost-with-addons.md` (2026-04-26 cron)
+
+## Auto-discover 2026-04-26T22:06:34Z
+
+- ~~[ai-llm] An update on our election safeguards \ Anthropic~~ → compiled `wiki/ai-llm/anthropic-election-safeguards-2026.md` (2026-04-26 cron)
+- ~~[ai-llm] Anthropic and NEC partner to build AI-native engineering at scale in Japan \ Anthropic~~ → compiled `wiki/ai-llm/anthropic-nec-japan-partnership-2026.md` (2026-04-26 cron)
+
+## Auto-discover 2026-04-27T22:15:12Z
+
+- ~~[competitors] GoHighLevel Pricing Breakdown 2026: Is It Worth It?~~ → compiled `wiki/competitors/ghl-pricing-systemshift-2026.md` (2026-04-27 cron)
+- ~~[competitors] GoHighLevel Voice AI Review 2026: AI Employee That Handles Calls~~ → compiled `wiki/competitors/ghl-voice-ai-review-2026.md` (2026-04-28 cron)
+- ~~[ai-llm] Anthropic Launches Managed Agents and Claude Cowork GA: April 9, 2026~~ → compiled `wiki/ai-llm/anthropic-managed-agents-cowork-ga-april-2026.md` (2026-04-27 cron)
+- ~~[ai-llm] Claude Prompt Caching API Cost Optimization Guide (2026)~~ → compiled `wiki/ai-llm/claude-prompt-caching-cost-optimization-kissapi.md` (2026-04-28 cron)
+- ~~[verticals] AI Receptionist for General Contractors: Handle More Jobs Without More Staff~~ → compiled `wiki/verticals/ai-receptionist-general-contractors-2026.md` (2026-04-28 cron)
+- [verticals] The Best AI Chatbot for Spas and Salons in 2026 — https://www.bosar.agency/blog/best-chatbot-salons-spas/ (raw: knowledge-base/raw/verticals/bosar-best-chatbot-salons-spas-2026.md)
+- [technical] Postgres Semantic Search: pgvector Guide (Supabase) — https://techsynth.tech/blog/semantic-search-postgres-pgvector-supabase/ (raw: knowledge-base/raw/technical/techsynth-pgvector-supabase-semantic-search.md)
+- ~~[technical] Embedding Model Pricing: OpenAI, Cohere, Voyage Cost Comparison~~ → compiled `wiki/technical/embedding-model-pricing-comparison-2026.md` (2026-04-27 cron)
+- ~~[regulations] TCPA Compliance for SMS 2026 (Signalmash)~~ → compiled `wiki/regulations/tcpa-sms-compliance-2026.md` (2026-04-28 cron)
+- ~~[regulations] 2026 AI Laws Update: Key Regulations and Practical Guidance (Gunderson Dettmer)~~ → compiled `wiki/regulations/gunder-2026-ai-laws-update.md` (2026-04-27 cron)
