@@ -37,7 +37,18 @@ Smallest user-visible win = **missed-call text-back fires, writes `missed_call_t
 
 ---
 
-## Phase 1 — Tracer Bullet: Missed-Call Event Surfacing (REVISED)
+## Phase 1 — Tracer Bullet: Missed-Call Event Surfacing (REVISED) — **DONE 2026-04-22**
+
+**Status:** SHIPPED. Verified 2026-04-29 audit:
+- Migration `111_missed_call_texts.sql` applied
+- `backend/routers/twilio_webhooks.py::handle_missed_call` wired (replay window, automation lookup, masked insert, runs_total increment)
+- `backend/routers/automations.py:134` `GET /{tenant_id}/activity` live
+- `backend/services/activity.py` `_mask_phone`, `log_activity`, `get_activity_events`, `get_activity_totals`
+- `frontend/src/pages/Dashboard/AutomationActivityCard.jsx` + `ActivityFeed.jsx` mounted in `Dashboard/index.jsx:414,462`
+- `frontend/src/utils/api/automations.js::getActivity()` matches API shape
+- Tests green: `pytest test_twilio_webhooks.py test_activity.py` → 26 passed
+
+Browser smoke + simulated webhook POST not yet run — defer to Phase 2 verification. Next phase = Phase 2.
 
 **Goal:** Twilio missed-call webhook writes `missed_call_texts` row + `activity_log` event + dashboard card shows last 5 events. No totals, no `/activity` page, no widget.
 
