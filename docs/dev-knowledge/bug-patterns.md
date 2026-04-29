@@ -2282,3 +2282,39 @@ https://claude.ai/code/session_01Adpyce6podoNid2EKJSogD
 **Author:** Claude
 **Files Changed:** backend/routers/widget_chat.py,frontend/src/context/AuthContext.jsx,frontend/src/pages/LocalSEOPage.jsx,frontend/src/pages/MarketingDashboardPage.jsx,ops/routines/logs/nightly-commit-review-2026-04-28.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget-chat): correct _chat_rate_limit signature for slowapi
+
+slowapi calls callable limit providers with no args OR with the result of key_function when the signature includes a `key` parameter (slowapi/wrappers.py:86-94). Previous signature `_chat_rate_limit(request)` raised TypeError on every widget chat request — production 500 on every call.
+
+Also fixed stale test contract: `test_rate_limit_widget_chat` asserted against `_route_limits` but steal-list 1-6 (b0b1fb4) moved widget_chat to a dynamic callable limit, which slowapi tracks in `_dynamic_route_limits`.
+
+Verified: 37/37 tests pass across `tests/test_cors_and_rate_limit.py`, `tests/test_stripe_webhook.py`, `backend/tests/test_twilio_webhooks.py`, `backend/tests/test_widget_chat.py`.
+
+**Date:** 2026-04-26
+**Commit:** ee4bc16
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/widget_chat.py,tests/test_cors_and_rate_limit.py
+**Details:** Auto-logged 2026-04-29 morning routine. Root cause: callable rate-limit provider signature mismatch with slowapi internal call convention. Prevention: when wrapping slowapi limits in dynamic callables, signature must accept zero args (or a single `key` param) — read slowapi/wrappers.py:86-94 before refactoring. Run /log-bug to expand.
+
+---
+
+### fix(idempotency,rate-limit): close race + RLS + XFF spoofing
+
+Code-reviewer pass on b0b1fb4 (steal-list 1-6) flagged 3 HIGH issues; this commit closes 2 of 3.
+
+1. **RACE** — `idempotency.py` did SELECT-then-INSERT non-atomically; concurrent webhook redeliveries could both pass the check and double-process. Replaced with PostgREST `upsert(ignore_duplicates=True, on_conflict="key")` which executes as `INSERT ... ON CONFLICT DO NOTHING` atomically. Post-conflict path now signals `in_flight` when `response_body IS NULL` so callers can distinguish in-progress dupes from completed cached ones.
+
+2. **RLS** — migration 114 created `idempotency_keys` with no row-level security. `response_body` JSONB caches webhook payloads (Stripe customer email, subscription IDs, Twilio phone numbers). Migration 116 enables RLS, denies public-role access; service-role bypasses RLS so backend handlers continue to work.
+
+3. **XFF SPOOFING** — `rate_limit.py` used `X-Forwarded-For` `ips[-1]` (right-most), client-controlled, lets attackers rotate identities by appending fake IPs. Switched to `request.client.host` (set by Railway/Vercel edge after TLS termination) with XFF `ips[0]` as fallback.
+
+Skipped (reviewer false-positive): `hmac.new` works in Python 3.x. Deferred to separate PR: `widget_chat.py` rate-limit lookup failure logging, Stripe `SignatureVerificationError` exception pattern, Twilio `_find_tenant_by_phone` unbounded scan.
+
+**Date:** 2026-04-26
+**Commit:** fb57995
+**Author:** aferna6-cell
+**Files Changed:** backend/services/idempotency.py,backend/services/rate_limit.py,migrations/116_idempotency_keys_rls.sql,docs/env-vars-2026-04-26.md
+**Details:** Auto-logged 2026-04-29 morning routine. Three security/correctness fixes: TOCTOU race on idempotency upsert, missing RLS on payload-storing table, XFF spoofing in rate-limit key. Prevention: every new table holding webhook payloads needs RLS in same migration (or immediate followup); SELECT-then-INSERT is never atomic — use upsert; never trust X-Forwarded-For terminal element. Run /log-bug to expand.
