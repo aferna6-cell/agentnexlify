@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import JWTError, jwt
 
 from backend.config import settings
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.google_calendar import (
     delete_integration,
     exchange_code,

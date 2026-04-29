@@ -69,6 +69,11 @@ async def process_noshow_recovery() -> int:
                 appt["updated_at"].replace("Z", "+00:00")
             )
         except Exception:
+            logger.warning(
+                "noshow_recovery: unparseable updated_at on appointment %s — skipping",
+                appt_id,
+                exc_info=True,
+            )
             continue
 
         # Wait the initial delay before sending
@@ -106,7 +111,9 @@ async def process_noshow_recovery() -> int:
         safe_biz = html.escape(business_name)
         safe_name = html.escape(customer_name)
 
-        # CAN-SPAM: check unsubscribe status
+        # CAN-SPAM: check unsubscribe status. Default-deny on failure —
+        # compliance requires that we not contact a customer we cannot
+        # prove is still subscribed.
         lead_id = appt.get("lead_id")
         if lead_id:
             try:
@@ -120,7 +127,12 @@ async def process_noshow_recovery() -> int:
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                logger.debug("noshow_recovery: unsubscribe check failed for lead %s", lead_id, exc_info=True)
+                logger.warning(
+                    "noshow_recovery: unsubscribe check failed for lead %s — skipping (default-deny)",
+                    lead_id,
+                    exc_info=True,
+                )
+                continue
 
         # Build rebooking URL
         base_url = settings.api_url.rstrip("/")
@@ -183,13 +195,19 @@ async def process_noshow_recovery() -> int:
 
         if messages_sent > 0:
             sent += messages_sent
-            # Mark appointment so we don't send again
+            # Mark appointment so we don't send again. If this fails the next
+            # tick will re-send (query still matches) → duplicate SMS/email +
+            # customer spam. Log at error so alerting catches it.
             try:
                 db.table("appointments").update({
                     "noshow_recovery_sent_at": now.isoformat(),
                 }).eq("id", appt_id).execute()
             except Exception:
-                logger.warning("noshow_recovery: failed to mark appointment %s", appt_id, exc_info=True)
+                logger.error(
+                    "noshow_recovery: failed to mark appointment %s — next tick will re-send (duplicate-send risk)",
+                    appt_id,
+                    exc_info=True,
+                )
 
             # Log activity
             try:
@@ -296,7 +314,11 @@ async def _send_noshow_followups(
                     }).eq("id", appt_id).execute()
                     continue
         except Exception:
-            logger.debug("noshow_followup: rebook check failed", exc_info=True)
+            logger.warning(
+                "noshow_followup: rebook check failed for appointment %s",
+                appt_id,
+                exc_info=True,
+            )
 
         messages_sent = 0
 
@@ -314,7 +336,11 @@ async def _send_noshow_followups(
                         increment_sms_count(tenant_id)
                         messages_sent += 1
             except Exception:
-                logger.debug("noshow_followup: SMS failed", exc_info=True)
+                logger.warning(
+                    "noshow_followup: SMS failed for appointment %s",
+                    appt_id,
+                    exc_info=True,
+                )
 
         # Follow-up email
         if appt.get("customer_email"):
@@ -340,15 +366,26 @@ async def _send_noshow_followups(
                 )
                 messages_sent += 1
             except Exception:
-                logger.debug("noshow_followup: email failed", exc_info=True)
+                logger.warning(
+                    "noshow_followup: email failed for appointment %s",
+                    appt_id,
+                    exc_info=True,
+                )
 
         if messages_sent > 0:
             sent += messages_sent
+            # Mark appointment so we don't re-send follow-up. Failure here
+            # means next tick will match the same row → duplicate follow-up.
+            # Log at error so alerting catches it.
             try:
                 db.table("appointments").update({
                     "noshow_followup_sent_at": now.isoformat(),
                 }).eq("id", appt_id).execute()
             except Exception:
-                logger.debug("noshow_followup: mark failed", exc_info=True)
+                logger.error(
+                    "noshow_followup: failed to mark appointment %s — next tick will re-send (duplicate-send risk)",
+                    appt_id,
+                    exc_info=True,
+                )
 
     return sent

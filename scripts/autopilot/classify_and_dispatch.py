@@ -36,6 +36,9 @@ CLASSIFIER_MODEL = "claude-haiku-4-5-20251001"
 DISPATCHER_MODEL = "claude-sonnet-4-6"
 AUTOPILOT_AUTHOR_NAME = "Autopilot Bot"
 AUTOPILOT_AUTHOR_EMAIL = "autopilot-bot@users.noreply.github.com"
+WORKFLOW_CONTRACT_PATH = "docs/AUTOPILOT_WORKFLOW.md"
+ROUTING_POLICY_PATH = "docs/AGENT_ROUTING.md"
+DEFAULT_MAX_ACTIVE_RUNS = 1
 
 CLASSIFIER_SYSTEM = (
     "Classify this GitHub issue as READY, NEEDS_INFO, or OUT_OF_SCOPE. "
@@ -63,6 +66,15 @@ class ClassificationResult:
     proposed_plan: str | None = None
     raw_reply: str | None = None
     malformed: bool = False
+
+
+@dataclass(frozen=True)
+class ProofOfWork:
+    """Human-review packet attached to autopilot pull requests."""
+
+    changed_files: str
+    local_check: str
+    residual_risks: str
 
 
 class TokenBudget:
@@ -114,6 +126,39 @@ def _token_budget_from_env() -> TokenBudget:
     except ValueError as exc:
         raise AutopilotError("autopilot token budget must be an integer") from exc
     return TokenBudget(max_tokens=max_tokens)
+
+
+def _max_active_runs_from_env() -> int:
+    raw_limit = os.environ.get("AUTOPILOT_MAX_ACTIVE_RUNS", str(DEFAULT_MAX_ACTIVE_RUNS))
+    try:
+        limit = int(raw_limit)
+    except ValueError as exc:
+        raise AutopilotError("autopilot active-run cap must be an integer") from exc
+    if limit < 1:
+        raise AutopilotError("autopilot active-run cap must be at least 1")
+    return limit
+
+
+def _workflow_contract(max_chars: int = 6000) -> str:
+    path = _REPO_ROOT / WORKFLOW_CONTRACT_PATH
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return f"{WORKFLOW_CONTRACT_PATH} was not readable. Follow repo autopilot defaults."
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip() + "\n\n[workflow contract truncated]"
+
+
+def _routing_policy(max_chars: int = 5000) -> str:
+    path = _REPO_ROOT / ROUTING_POLICY_PATH
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return f"{ROUTING_POLICY_PATH} was not readable. Use premium autopilot defaults."
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip() + "\n\n[routing policy truncated]"
 
 
 def _tail(text: str, max_chars: int = 2000) -> str:
@@ -195,6 +240,24 @@ def _candidate_issues(issue_number: int | None = None) -> list[dict[str, Any]]:
     return [_fetch_issue(int(issue["number"])) for issue in raw_issues]
 
 
+def _active_autopilot_issue_count() -> int:
+    active = _gh_json(
+        [
+            "issue",
+            "list",
+            "--label",
+            labels.WIP_AUTOPILOT,
+            "--state",
+            "open",
+            "--limit",
+            "100",
+            "--json",
+            "number",
+        ]
+    )
+    return len(active)
+
+
 def _issue_label_names(issue: dict[str, Any]) -> set[str]:
     return labels.normalize_label_names(issue.get("labels") or [])
 
@@ -223,6 +286,10 @@ def _classification_payload(issue: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
+def _has_risky_label(issue: dict[str, Any]) -> bool:
+    return labels.AI_RISKY in _issue_label_names(issue)
+
+
 def classify_issue(
     issue: dict[str, Any],
     *,
@@ -245,6 +312,8 @@ def classify_issue(
                 "role": "user",
                 "content": (
                     "Classify this GitHub issue for the AgentNexLiFy autopilot.\n\n"
+                    f"Workflow contract:\n```markdown\n{_workflow_contract()}\n```\n\n"
+                    f"Agent routing policy:\n```markdown\n{_routing_policy()}\n```\n\n"
                     f"{_classification_payload(issue)}"
                 ),
             }
@@ -343,12 +412,24 @@ Proposed plan:
 Issue body:
 {issue.get("body") or ""}
 
+Workflow contract:
+```markdown
+{_workflow_contract()}
+```
+
+Agent routing policy:
+```markdown
+{_routing_policy()}
+```
+
 Requirements:
 - Implement the issue directly in this worktree.
 - Keep the change scoped to the issue and the proposed plan.
 - Do not commit, push, create labels, or open a pull request.
 - Do not hardcode secrets.
 - Do not add future-annotations imports.
+- Do not use yolo, Agent Swarm, or broad batch execution.
+- Decline and leave a note if the task touches ai-risky surfaces.
 - Prefer existing repo patterns and smallest concrete changes.
 - Leave the worktree ready for `bash scripts/hooks/pre-commit`.
 """
@@ -371,6 +452,62 @@ def _run_codex(prompt_path: Path, *, cwd: Path) -> None:
 def _run_pre_commit_gate(worktree: Path) -> None:
     _run(["git", "add", "-A"], cwd=worktree)
     _run(["bash", "scripts/hooks/pre-commit"], cwd=worktree)
+
+
+def _changed_files_summary(worktree: Path) -> str:
+    staged = _run(
+        ["git", "diff", "--cached", "--name-status"],
+        cwd=worktree,
+    ).stdout.strip()
+    if staged:
+        return staged
+    return _run(["git", "status", "--short"], cwd=worktree).stdout.strip() or "No files listed"
+
+
+def _proof_of_work(worktree: Path) -> ProofOfWork:
+    return ProofOfWork(
+        changed_files=_changed_files_summary(worktree),
+        local_check="bash scripts/hooks/pre-commit: passed",
+        residual_risks=(
+            "GitHub CI and human review still required. Visual review is required "
+            "for UI-facing changes unless screenshots are attached separately."
+        ),
+    )
+
+
+def _format_pr_body(
+    issue: dict[str, Any],
+    result: ClassificationResult,
+    proof: ProofOfWork,
+) -> str:
+    issue_number = int(issue["number"])
+    plan = result.proposed_plan or result.reason or "Autopilot implementation."
+    return f"""\
+Closes #{issue_number}
+
+## Autopilot Proof Of Work
+
+Workflow contract: `{WORKFLOW_CONTRACT_PATH}`
+
+Classifier reason:
+{result.reason or "No classifier reason returned."}
+
+Proposed plan:
+{plan}
+
+Changed files:
+```text
+{proof.changed_files}
+```
+
+Local verification:
+{proof.local_check}
+
+Residual risks:
+{proof.residual_risks}
+
+Human review required before merge.
+"""
 
 
 def _configure_git_author(worktree: Path) -> None:
@@ -420,6 +557,7 @@ def dispatch_issue(
 
         _configure_git_author(worktree)
         _run_pre_commit_gate(worktree)
+        proof = _proof_of_work(worktree)
         _run(
             [
                 "git",
@@ -431,10 +569,6 @@ def dispatch_issue(
         )
         _run(["git", "push", "--set-upstream", "origin", branch], cwd=worktree)
 
-        pr_body = (
-            f"Closes #{issue_number}\n\n"
-            f"{result.proposed_plan or result.reason or 'Autopilot implementation.'}"
-        )
         _run(
             [
                 "gh",
@@ -443,7 +577,7 @@ def dispatch_issue(
                 "--title",
                 f"autopilot: {issue.get('title') or f'issue #{issue_number}'}",
                 "--body",
-                pr_body,
+                _format_pr_body(issue, result, proof),
                 "--label",
                 labels.AUTOPILOT_PR,
                 "--base",
@@ -537,6 +671,17 @@ def _should_skip_issue(issue: dict[str, Any], logger: logging.Logger) -> bool:
 
 def run(args: argparse.Namespace, logger: logging.Logger) -> int:
     budget = _token_budget_from_env()
+    if not args.dry_run:
+        active_count = _active_autopilot_issue_count()
+        max_active = _max_active_runs_from_env()
+        if active_count >= max_active:
+            logger.info(
+                "autopilot active-run cap reached: %d/%d wip issues",
+                active_count,
+                max_active,
+            )
+            return 2
+
     issues = _candidate_issues(args.issue)
     if not issues:
         logger.info("no open ai-ready issues found")
@@ -548,6 +693,21 @@ def run(args: argparse.Namespace, logger: logging.Logger) -> int:
     for issue in issues:
         issue_number = int(issue["number"])
         if _should_skip_issue(issue, logger):
+            continue
+        if _has_risky_label(issue):
+            did_work = True
+            result = ClassificationResult(
+                classification=labels.OUT_OF_SCOPE,
+                reason=(
+                    "Issue has the ai-risky label. Premium human-reviewed routing "
+                    "is required before autonomous dispatch."
+                ),
+                needed_info=None,
+                proposed_plan=None,
+            )
+            logger.info("issue %s skipped: ai-risky requires human routing", issue_number)
+            if not args.dry_run:
+                _handle_out_of_scope(issue, result, state_marker.compute_state_hash(issue))
             continue
 
         issue_hash = state_marker.compute_state_hash(issue)

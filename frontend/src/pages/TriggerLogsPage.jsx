@@ -533,7 +533,7 @@ export default function TriggerLogsPage() {
                 const triggerEvent = log.trigger_event || {};
                 const triggerLabel = triggerEvent.trigger_type
                   ? triggerEvent.trigger_type.replace(/_/g, " ")
-                  : triggerEvent.type || "—";
+                  : triggerEvent.type || "-";
                 return (
                   <>
                     <tr
@@ -558,7 +558,7 @@ export default function TriggerLogsPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {rule?.name || log.rule_name || "—"}
+                        {rule?.name || log.rule_name || "-"}
                       </td>
                       <td
                         style={{

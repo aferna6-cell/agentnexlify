@@ -6,10 +6,9 @@ import { notify } from "../utils/notify";
 
 const PLANS = [
   { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
-  { key: "growth",       name: "Growth",       price: "$249", period: "/mo" },
-  { key: "autopilot",   name: "Autopilot",    price: "$299", period: "/mo" },
-  { key: "professional", name: "Professional", price: "$499", period: "/mo", popular: true },
-  { key: "enterprise",  name: "Enterprise",   price: "$899", period: "/mo" },
+  { key: "growth",       name: "Growth",       price: "$99", period: "/mo", trial: "7-day free trial" },
+  { key: "professional", name: "Professional", price: "$150", period: "/mo", popular: true },
+  { key: "enterprise",  name: "Enterprise",   price: "$250", period: "/mo" },
 ];
 
 // Data-driven feature comparison matrix
@@ -20,7 +19,7 @@ const FEATURE_MATRIX = [
     free: true, growth: true, professional: true, autopilot: true, enterprise: true,
   },
   {
-    feature: "Leads & CRM",
+    feature: "Leads & Customer Management",
     free: "50 leads", growth: "Unlimited", professional: "Unlimited", autopilot: "Unlimited", enterprise: "Unlimited",
   },
   {
@@ -109,6 +108,19 @@ export default function BillingPage() {
   }, [user?.tenantId, token]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Show success toast when returning from Stripe Checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout_success") === "1") {
+      notify.success("Payment successful! Your plan is being activated.");
+      // Clean the URL so refresh doesn't re-trigger
+      params.delete("checkout_success");
+      params.delete("session_id");
+      const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}${window.location.hash}`;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, []);
 
   const handleUpgrade = async (planKey) => {
     setUpgrading(planKey);
@@ -427,6 +439,18 @@ export default function BillingPage() {
                     }}>
                       {plan.price}<span style={{ fontSize: "0.7rem" }}>{plan.period}</span>
                     </div>
+                    {plan.trial && (
+                      <div style={{
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        color: "var(--green)",
+                        marginTop: 4,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                      }}>
+                        {plan.trial}
+                      </div>
+                    )}
                     {isCurrent && (
                       <div style={{
                         fontSize: "0.65rem",

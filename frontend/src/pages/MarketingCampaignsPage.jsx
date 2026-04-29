@@ -122,7 +122,7 @@ const modalStyle = {
 export default function MarketingCampaignsPage({ onNavigate }) {
   const { user, token } = useAuth();
 
-  // Plan gating — use live plan from API, fall back to JWT only as initial value
+  // Plan gating - use live plan from API, fall back to JWT only as initial value
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
@@ -163,7 +163,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
     if (user?.tenantId) {
       fetchDashboard(user.tenantId, token)
         .then((res) => { if (res?.plan) setLivePlan(res.plan); })
-        .catch((e) => { console.warn('Dashboard fetch failed, using JWT plan fallback:', e?.message); }); // non-critical — JWT plan is the fallback
+        .catch((e) => { console.warn('Dashboard fetch failed, using JWT plan fallback:', e?.message); }); // non-critical - JWT plan is the fallback
     }
   }, [loadCampaigns, user?.tenantId, token]);
 

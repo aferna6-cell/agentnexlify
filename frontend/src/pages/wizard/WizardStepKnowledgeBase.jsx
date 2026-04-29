@@ -106,5 +106,5 @@ export default function WizardStepKnowledgeBase({ wizardData, onNext, onBack, to
 }
 
 const btnStyle = { padding: "14px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 10, fontSize: "1rem", fontWeight: 600, cursor: "pointer" };
-const btnSecondary = { padding: "6px 14px", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer" };
+const btnSecondary = { padding: "8px 14px", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer", minHeight: 36 };
 const textareaStyle = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "12px", color: "#e2e8f0", fontSize: "0.9rem", width: "100%", boxSizing: "border-box", resize: "vertical" };

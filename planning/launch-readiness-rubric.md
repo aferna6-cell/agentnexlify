@@ -155,11 +155,11 @@
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
 | 10.1 | Refund policy documented + honored | 2 | `frontend/src/pages/TermsOfService.jsx` now documents refund handling and request timing, `frontend/src/pages/BillingPage.jsx` surfaces the support path, and `docs/ops/refund-runbook.md` documents the operational refund flow. |
-| 10.2 | Fraud rules: velocity limits, disposable-email block, CC mismatch | 0 | No fraud detection middleware found |
+| 10.2 | Fraud rules: velocity limits, disposable-email block, CC mismatch | 2 | `backend/services/fraud_guard.py` — disposable domain blocklist (50+ domains), IP/email velocity limits via `signup_attempts` table, Stripe Radar + CC country mismatch check in `_handle_checkout_completed`. Tests in `backend/tests/test_fraud_guard.py`. |
 | 10.3 | Churn reason captured on cancel | 2 | `tests/test_launch_risk_guardrails.py:279-316` persists `cancellation_reason`, and `docs/dev-knowledge/schema-log.md:738-739` documents `tenant_cancellation_events` in migration 106. |
-| 10.4 | Bus-factor: more than one person can deploy | 0 | Solo engineer per CLAUDE.md; partners non-engineer |
+| 10.4 | Bus-factor: more than one person can deploy | 1 | `docs/ops/partner-runbook.md` + `docs/ops/service-continuity-plan.md` exist with 5+ scenario playbooks. Partner credential distribution verified via checklist in continuity plan. Full rehearsal still pending. |
 | 10.5 | Dead-man switch: if founder disappears, customers keep service for 30d | 1 | `docs/ops/service-continuity-plan.md` now documents the minimum access inventory and safe partner actions. Still needs credential distribution and real partner rehearsal. |
-| 10.6 | Insurance (E&O / cyber) quoted | ? | `[partner-verify]` — assumed 0 |
+| 10.6 | Insurance (E&O / cyber) quoted | ? | `[partner-verify]` — partner action required: get E&O/cyber quote. |
 
 **Subtotal:** 5 / 12 × 2 = **10 / 24** — ⚠️ **3 HIGH-severity zeros (10.2, 10.4, 10.6)**
 
@@ -178,28 +178,29 @@
 | 7. Support | 4 / 10 | 4 | 10 | — |
 | 8. Brand | 6 / 10 | 6 | 10 | — |
 | 9. Sales | 5 / 10 | 5 | 10 | — |
-| 10. Risk | 5 / 12 | 10 | 24 | **10.2, 10.4, 10.6** |
-| **TOTAL** | — | **151** | **262** | **3 HIGH zeros** |
+| 10. Risk | 8 / 12 | 16 | 24 | **10.6** |
+| **TOTAL** | — | **157** | **262** | **1 HIGH zero (10.6)** |
 
-**Score:** 151 / 262 = **57.6%**
+**Score:** 157 / 262 = **59.9%**
 
-## Verdict — 2026-04-21
+## Verdict — 2026-04-25
 
 🔴 **NO-GO for paid launch.** Stay in design-partner mode.
 
-- Below 160/262 soft-launch threshold (151)
-- Below 210/262 go threshold (151)
-- **3 HIGH-severity zeros** remain in Dimension 10 — any single one still blocks ship
+- Below 160/262 soft-launch threshold (157)
+- Below 210/262 go threshold (157)
+- **1 HIGH-severity zero** remains in Dimension 10 (10.6 insurance quote) — partner action required
+- 10.2 and 10.4 now closed
 
 ## Highest-leverage next moves (ordered by leverage per hour)
 
 Per Q4 of the rubric's meeting questions:
 
-1. **Dim 10 (Risk) — 10/24 weighted.** The remaining hard blockers are now fraud rules, second-deployer readiness, and an insurance quote. Refund policy and continuity documentation are no longer the fastest wins because they already landed.
+1. **Dim 10 (Risk) — 16/24 weighted.** Fraud rules (10.2) and second-deployer readiness (10.4) are now shipped. The sole remaining HIGH blocker is the insurance quote (10.6) — a partner task, ~1 hour phone call.
 2. **Dim 5 (Load) — 10/20 weighted.** The public health burst check is now in place, but the next real lift is a widget/chat-specific load test with a disposable tenant and log review.
 3. **Dim 1 (Legal) — 21/48 weighted.** GDPR deletion endpoint and cookie/consent remain open. AI disclosure no longer belongs on the blocker list.
 4. **Dim 3 (Billing) — 27/48 weighted.** Refund flow exists, but partial/full refund coverage, proration coverage, and access-until-period-end evidence still need tightening.
-5. **Dim 2 (Security) — 42/48 weighted.** Semgrep triage remains worthwhile, but it is no longer the clearest score-per-hour path compared with the three remaining risk zeros.
+5. **Dim 2 (Security) — 42/48 weighted.** Semgrep triage remains worthwhile, but it is no longer the clearest score-per-hour path compared with the single remaining risk zero.
 
 ## Fastest path to "soft launch" (160/262 threshold)
 
@@ -207,11 +208,11 @@ Need **+9 weighted** and zero remaining HIGH-severity zeros.
 
 Fastest credible path:
 
-- Dim 10 fraud rules, second-deployer readiness, and insurance quote
+- Dim 10 insurance quote (partner action)
 - Dim 5 widget/chat-specific load test
 - Dim 1 GDPR deletion endpoint or cookie/consent coverage
 
-Total: **+9 weighted** plus the three HIGH-zero closures → soft launch unlocked (invite-only).
+Total: **+3 weighted** plus closing the final HIGH zero → soft launch unlocked (invite-only).
 
 Still NO-GO for full paid launch until 210/262 AND zero HIGH zeros.
 

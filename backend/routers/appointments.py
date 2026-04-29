@@ -31,7 +31,7 @@ from backend.services.booking import (
     upsert_business_hours,
 )
 
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)

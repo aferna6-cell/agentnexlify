@@ -56,7 +56,7 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
         <label style={labelStyle}>
           Primary Color
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <input type="color" value={form.widget_primary_color} onChange={set("widget_primary_color")} style={{ width: 48, height: 40, border: "none", background: "none", cursor: "pointer", padding: 0, borderRadius: 6 }} />
+            <input type="color" value={form.widget_primary_color} onChange={set("widget_primary_color")} style={{ width: 48, height: 44, border: "none", background: "none", cursor: "pointer", padding: 0, borderRadius: 6 }} />
             <input style={{ ...inputStyle, flex: 1 }} value={form.widget_primary_color} onChange={set("widget_primary_color")} placeholder="#00BFFF" />
           </div>
         </label>
@@ -92,7 +92,7 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
         </div>
       )}
 
-      {/* Color preview patch — instant visual feedback before cache expires */}
+      {/* Color preview patch - instant visual feedback before cache expires */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 16, background: "rgba(255,255,255,0.04)", borderRadius: 10, marginBottom: 32 }}>
         <div style={{ width: 48, height: 48, borderRadius: "50%", background: form.widget_primary_color, flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>

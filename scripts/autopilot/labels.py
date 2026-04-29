@@ -8,6 +8,10 @@ WIP_AUTOPILOT = "wip-autopilot"
 AUTOPILOT_FAILED = "autopilot-failed"
 AUTOPILOT_SKIPPED = "autopilot-skipped"
 AUTOPILOT_PR = "autopilot-pr"
+AI_ROUTINE = "ai-routine"
+AI_DOCS = "ai-docs"
+AI_TESTS = "ai-tests"
+AI_RISKY = "ai-risky"
 
 READY = "READY"
 NEEDS_INFO_DECISION = "NEEDS_INFO"
@@ -22,6 +26,17 @@ ALL_LABELS = (
     AUTOPILOT_FAILED,
     AUTOPILOT_SKIPPED,
     AUTOPILOT_PR,
+    AI_ROUTINE,
+    AI_DOCS,
+    AI_TESTS,
+    AI_RISKY,
+)
+
+ROUTING_LABELS = (
+    AI_ROUTINE,
+    AI_DOCS,
+    AI_TESTS,
+    AI_RISKY,
 )
 
 

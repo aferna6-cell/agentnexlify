@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.llm_runtime import (
     call_claude_messages,

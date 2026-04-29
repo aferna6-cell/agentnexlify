@@ -20,7 +20,7 @@ from backend.models.schemas import (
     WebhookUpdateRequest,
     WebhookLogResponse,
 )
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 from backend.services.webhook_dispatcher import SUPPORTED_EVENTS
 
 logger = logging.getLogger(__name__)

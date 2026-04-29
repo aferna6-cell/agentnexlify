@@ -3,12 +3,12 @@ import { useAuth } from "../context/AuthContext";
 
 const planLabels = {
   free: "Free",
-  growth: "Growth",
-  professional: "Professional",
-  autopilot: "Autopilot",
+  growth: "Starter",
+  autopilot: "Growth",
+  professional: "Pro",
   enterprise: "Enterprise",
-  foundation: "Growth",
-  operations: "Professional",
+  foundation: "Starter",
+  operations: "Pro",
 };
 
 const planColors = {
@@ -202,7 +202,7 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
 
   return (
     <>
-      {/* Hamburger button — only visible on mobile */}
+      {/* Hamburger button - only visible on mobile */}
       <button
         className="sidebar-hamburger"
         onClick={() => setMobileOpen((prev) => !prev)}
@@ -211,7 +211,7 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
         {mobileOpen ? <CloseIcon /> : <HamburgerIcon />}
       </button>
 
-      {/* Backdrop overlay — only on mobile when open */}
+      {/* Backdrop overlay - only on mobile when open */}
       {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
 
       <div className={`sidebar${mobileOpen ? " sidebar-mobile-open" : ""}`}>

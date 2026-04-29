@@ -395,29 +395,12 @@ def get_conversation_messages(tenant_id: str, session_id: str) -> dict:
 # Trial status helper (used by dashboard + trial-status endpoint)
 # ---------------------------------------------------------------------------
 
-FREE_TRIAL_DAYS = 14
+FREE_TRIAL_DAYS = 7
 
 
 def compute_trial_status(tenant: dict) -> dict:
     """Return trial_days_remaining + trial_expired for a tenant row."""
-    from datetime import datetime, timezone
-    plan = tenant.get("plan") or "free"
-    if plan != "free":
-        return {"trial_days_remaining": None, "trial_expired": False}
-
-    trial_started = tenant.get("free_trial_started_at")
-    if not trial_started:
-        return {"trial_days_remaining": None, "trial_expired": False}
-
-    if isinstance(trial_started, str):
-        trial_started = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
-    if trial_started.tzinfo is None:
-        trial_started = trial_started.replace(tzinfo=timezone.utc)
-
-    now = datetime.now(timezone.utc)
-    elapsed = (now - trial_started).days
-    remaining = max(0, FREE_TRIAL_DAYS - elapsed)
-    return {"trial_days_remaining": remaining, "trial_expired": remaining <= 0}
+    return {"trial_days_remaining": None, "trial_expired": False}
 
 
 # Backward-compat alias used in dashboard handler

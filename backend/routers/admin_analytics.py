@@ -128,10 +128,10 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
 
         # MRR calculation (rough estimate from active plans)
         PLAN_PRICES = {
-            "growth": 24900,
-            "professional": 49900,
+            "growth": 9900,
+            "professional": 15000,
             "autopilot": 29900,
-            "enterprise": 89900,
+            "enterprise": 25000,
         }
         mrr_cents = 0
         for t in active_paid:
@@ -270,10 +270,10 @@ async def get_weekly_growth(
     _verify_admin_secret(x_api_secret)
 
     PLAN_PRICES = {
-        "growth": 24900,
-        "professional": 49900,
+        "growth": 9900,
+        "professional": 15000,
         "autopilot": 29900,
-        "enterprise": 89900,
+        "enterprise": 25000,
     }
 
     try:
@@ -479,10 +479,10 @@ async def get_revenue_trends(
 async def _calculate_live_revenue(db, start_month, now, months):
     """Calculate revenue live from tenant data when no pre-computed aggregates exist."""
     PLAN_PRICES = {
-        "growth": 24900,
-        "professional": 49900,
+        "growth": 9900,
+        "professional": 15000,
         "autopilot": 29900,
-        "enterprise": 89900,
+        "enterprise": 25000,
     }
 
     # Get all tenants with paid plans

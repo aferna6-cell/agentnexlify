@@ -1009,7 +1009,7 @@
     s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
     // Italic *text* (only when not inside bold)
     s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
-    // Links [text](url) — only https?:// to prevent XSS
+    // Links [text](url) - only https?:// to prevent XSS
     s = s.replace(
       /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
       '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
@@ -1784,7 +1784,7 @@
     await fetchConfig();
     updateHeader();
 
-    // Offline mode — show contact form instead of chat
+    // Offline mode - show contact form instead of chat
     if (!widgetIsOnline) {
       const statusEl = document.querySelector("#anx-header-text p");
       if (statusEl)

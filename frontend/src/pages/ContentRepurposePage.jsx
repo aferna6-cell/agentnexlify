@@ -225,7 +225,7 @@ export default function ContentRepurposePage() {
           }}
         >
           Turn any blog post, YouTube video, or podcast into X threads, LinkedIn
-          carousels, email sequences, TikTok scripts, and social posts — all in
+          carousels, email sequences, TikTok scripts, and social posts - all in
           one click.
         </p>
         <div
@@ -248,8 +248,8 @@ export default function ContentRepurposePage() {
               marginBottom: 16,
             }}
           >
-            Content Repurposer is available on Professional ($499/mo) and
-            Enterprise ($899/mo) plans.
+            Content Repurposer is available on Professional ($150/mo) and
+            Enterprise ($250/mo) plans.
           </p>
           <button
             className="btn-primary"
@@ -823,7 +823,7 @@ export default function ContentRepurposePage() {
                             color: "var(--text-muted)",
                           }}
                         >
-                          Email {email.email_num || i + 1} — Day {email.day}
+                          Email {email.email_num || i + 1} - Day {email.day}
                         </span>
                       </div>
                       <div

@@ -1,5 +1,5 @@
 /**
- * Claude Managed Agents API — backend-driven agent runs.
+ * Claude Managed Agents API - backend-driven agent runs.
  *
  * These endpoints are backed by `backend/routers/managed_agent_runs.py`
  * and spend container runtime + model tokens per call. Rate-limited at
@@ -21,7 +21,7 @@ export function draftDocument(tenantId, token, body) {
 }
 
 /**
- * Download a drafted document. Returns a blob — caller is responsible
+ * Download a drafted document. Returns a blob - caller is responsible
  * for creating a temporary object URL and triggering browser download.
  */
 export async function downloadDraftedDocument(tenantId, token, documentId) {

@@ -857,3 +857,103 @@ Ships the first ops automation table backing the missed-call-text-back workflow 
 **Index:** `(tenant_id, created_at DESC)` for activity-feed queries.
 
 **Applied:** 2026-04-22 via migration file commit. Prod apply **unverified** — needs `mcp__supabase__apply_migration` confirmation (tracked in current-tasks.md Priority 0).
+
+
+### 112 — Onboarding v2 widget_configs columns
+**Date:** 2026-04-25
+ALTER widget_configs adding 3 columns for v2 wizard cohort tracking + readiness badge (spec: `specs/onboarding-v2_spec.md` §6.1.1).
+
+**Columns added:**
+- `onboarding_version TEXT NOT NULL DEFAULT 'v1'` CHECK IN ('v1','v2') — cohort filter for funnel analytics
+- `ready_to_launch BOOLEAN NOT NULL DEFAULT false` — drives "Ready to launch" badge
+- `readiness_criteria JSONB NOT NULL DEFAULT '{services_count, hours_filled, faqs_count, logo_uploaded}'::jsonb` — per-tenant checklist state
+
+**Index:** `idx_widget_configs_onboarding_version` partial WHERE `onboarding_version = 'v2'` (cohort queries).
+
+**Backward compat:** every existing tenant lands on `v1` + `ready_to_launch=false` automatically. v2 wizard completion flips on new signups only (per spec §3 — no re-onboarding existing tenants).
+
+**Migration number note:** spec reserved 115-117 but actual gap was 111→. Used 112 (next sequential per migration-workflow rule).
+
+**RLS:** unchanged (widget_configs already gated to service_role + tenant-scoped via existing policies).
+**Conventions:** `tenant_id` (widget_configs uses tenant_id, not client_id — leads/conversations are the client_id outliers).
+**Applied:** NOT YET — pending `mcp__supabase__apply_migration` after review.
+
+
+### 113 — Fraud Guardrails
+**Date:** 2026-04-25
+Adds `signup_attempts` table for velocity-based fraud detection on registration (criterion 10.2).
+
+**Table:**
+- `signup_attempts` — IP address, email, optional tenant_id FK, blocked_reason, created_at.
+
+**Indexes:**
+- `idx_signup_attempts_ip_created` — velocity lookups by IP
+- `idx_signup_attempts_email_created` — velocity lookups by email
+
+**RLS:** service_role only.
+**Conventions:** `tenant_id` (not `client_id`) on FK.
+**Applied:** NOT YET — pending `mcp__supabase__apply_migration` after review.
+
+
+### 111 — Missed Call Texts (Phase 1)
+**Date:** 2026-04-22
+Adds `missed_call_texts` table for missed-call-textback automation, `tenants.avg_ticket_override` for Phase 2 attribution, and seeds the `missed_call_textback` automation row for every existing tenant.
+
+**Table:**
+- `missed_call_texts` — `tenant_id` FK to `tenants(ON DELETE CASCADE)`, `call_sid`, `sms_sid`, `from_phone`, `to_phone`, `template_id`, `status` CHECK (`sent`/`failed`/`skipped`), `created_at`, `converted_to_lead_id` FK to `leads`.
+
+**Column add:**
+- `tenants.avg_ticket_override decimal(10,2)` — manual override for revenue attribution.
+
+**Indexes:**
+- `idx_missed_call_texts_tenant_created` on `(tenant_id, created_at DESC)`.
+
+**Backfill:** seeds one `automations` row per tenant: `type='missed_call_textback'`, `is_enabled=true`, default config `{mode:"hold", hold_seconds:60, template_id:"default"}`. `ON CONFLICT DO NOTHING`.
+
+**RLS:** enabled. Policy `missed_call_texts_tenant_isolation` — `tenant_id = auth.uid()`.
+**Conventions:** `tenant_id` (NOT `client_id` — leads/conversations are the outliers; new tables use `tenant_id`).
+**Applied:** YES — 2026-04-22 (per `-- Applied:` marker in migration file).
+
+
+### 114 — Idempotency Keys
+**Date:** 2026-04-23
+Adds `idempotency_keys` table to dedup webhook redeliveries from Stripe and Twilio.
+
+**Table:**
+- `idempotency_keys` — `key TEXT PRIMARY KEY` (format `'provider:event_id'`, e.g. `'stripe:evt_abc123'` or `'twilio:<MessageSid>'`), `provider TEXT NOT NULL`, `created_at TIMESTAMPTZ DEFAULT now()`, `response_status INT`, `response_body JSONB` (cached payload for replay).
+
+**Indexes:**
+- `idempotency_keys_created_at_idx` on `(created_at)` — supports TTL cleanup queries.
+
+**TTL:** 7 days, manual cron — no auto-delete trigger. Recommended cleanup query in migration comment: `DELETE FROM idempotency_keys WHERE created_at < now() - INTERVAL '7 days';`.
+
+**RLS:** NOT enabled in this migration — see 116 for the security followup.
+**Conventions:** no tenant column (cross-tenant dedup store; access gated to service role via 116).
+**Applied:** YES — confirmed 2026-04-27.
+
+
+### 115 — Contextual Reindex Marker
+**Date:** 2026-04-24
+Adds `contextual_reindexed_at` marker to `kb_articles` so `scripts/reindex_contextual.py` can skip already-processed chunks.
+
+**Column add:**
+- `kb_articles.contextual_reindexed_at TIMESTAMPTZ` — set when chunk has been re-embedded with Anthropic contextual retrieval prefix. NULL = not yet reindexed.
+
+**Affected tables:** `kb_articles` (from migration 081 — system-wide wiki, `vector(512)`).
+
+**RLS:** unchanged.
+**Conventions:** column add only; no tenant-column impact.
+**Applied:** YES — confirmed 2026-04-27.
+
+
+### 116 — Idempotency Keys RLS (security followup to 114)
+**Date:** 2026-04-25
+Closes the public-readability gap on `idempotency_keys`. `response_body` JSONB caches webhook payloads (Stripe customer email, subscription IDs, Twilio phone numbers). Without RLS, anon/authenticated callers using project public keys could enumerate cached webhook responses across all tenants.
+
+**Changes:**
+- `ALTER TABLE idempotency_keys ENABLE ROW LEVEL SECURITY;`
+- `CREATE POLICY "idempotency_keys_deny_public" ON idempotency_keys FOR ALL TO public USING (false) WITH CHECK (false);`
+
+**Effect:** anon + authenticated roles get nothing. Service role bypasses RLS automatically — backend webhook handlers continue to work.
+**Conventions:** deny-all-public is the right pattern for cross-tenant infra tables that backend-only code touches.
+**Applied:** YES — confirmed 2026-04-27. RLS active on `idempotency_keys`.

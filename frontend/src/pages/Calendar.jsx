@@ -420,7 +420,7 @@ export default function Calendar({ onNavigate }) {
               <label>Notes</label>
               <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} className="modal-textarea" rows={3} />
             </div>
-            {/* Recurrence section — only for parent/non-child confirmed appointments */}
+            {/* Recurrence section - only for parent/non-child confirmed appointments */}
             {selectedAppt.status === "confirmed" && !selectedAppt.recurrence_parent_id && (
               <div className="modal-field" style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 8 }}>
                 <label>{selectedAppt.recurrence_rule ? "Recurring" : "Make Recurring"}</label>

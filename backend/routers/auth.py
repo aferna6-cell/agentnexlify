@@ -45,6 +45,12 @@ from backend.services.business_profiles import (
     get_dashboard_business_profile,
     get_widget_defaults,
 )
+from backend.services.fraud_guard import (
+    check_registration_velocity,
+    guard_checkout_for_fraud,
+    is_disposable_email,
+    _record_signup_attempt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,8 +121,8 @@ def _create_token(
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-# Backward-compat alias — all routers that do `Depends(_get_current_tenant)` continue to work.
-_get_current_tenant = get_current_tenant
+# _get_current_tenant and require_role live in backend.dependencies — import for own use.
+from backend.dependencies import _get_current_tenant, require_role  # noqa: E402
 
 
 def _normalize_paid_plan(plan: str | None) -> str | None:
@@ -235,7 +241,6 @@ def _provision_tenant_account(
         "password_hash": password_hash,
         "city": city,
         "plan": "free",
-        "free_trial_started_at": datetime.now(timezone.utc).isoformat(),
     }
     result = db.table("tenants").insert(tenant_data).execute()
     if not result.data:
@@ -319,16 +324,6 @@ async def _run_signup_side_effects(
             logger.warning("Signup crawl failed for new tenant %s url=%s", tenant_id, website_url, exc_info=True)
 
 
-def require_role(*allowed_roles):
-    """FastAPI dependency factory: restrict endpoint to specific roles."""
-    async def checker(claims: dict = Depends(_get_current_tenant)):
-        role = claims.get("role", "owner")
-        if role not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        return claims
-    return checker
-
-
 # ── Industry FAQ Seeds ───────────────────────────────────────
 # Moved to backend/services/branding_service.py
 # Re-exported here for backward compatibility with any direct imports.
@@ -341,6 +336,10 @@ from backend.services.branding_service import INDUSTRY_FAQS, _seed_industry_faqs
 @router.post("/register", response_model=RegisterResponse)
 @limiter.limit("5/minute")
 async def register(request: Request, req: RegisterRequest):
+    email = req.email.lower().strip()
+    if is_disposable_email(email):
+        raise HTTPException(status_code=400, detail="Disposable email addresses are not allowed.")
+    check_registration_velocity(request, email)
     tenant_id, api_key = _provision_tenant_account(
         business_name=req.business_name,
         owner_name=req.owner_name,
@@ -364,7 +363,18 @@ async def register(request: Request, req: RegisterRequest):
         website_url=req.website_url,
     )
 
+    _record_signup_attempt(_get_client_ip_for_fraud(request), email, tenant_id)
     return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
+
+
+def _get_client_ip_for_fraud(request: Request) -> str:
+    """Extract real client IP for fraud tracking."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if ips:
+            return ips[-1]
+    return request.client.host if request.client else "127.0.0.1"
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -587,6 +597,10 @@ async def google_auth_callback(
 @limiter.limit("5/minute")
 async def google_register(request: Request, req: GoogleRegisterRequest):
     setup = _decode_google_setup_token(req.setup_token)
+    email = setup["email"].lower().strip()
+    if is_disposable_email(email):
+        raise HTTPException(status_code=400, detail="Disposable email addresses are not allowed.")
+    check_registration_velocity(request, email)
     generated_password = secrets.token_urlsafe(32)
 
     tenant_id, api_key = _provision_tenant_account(
@@ -619,6 +633,7 @@ async def google_register(request: Request, req: GoogleRegisterRequest):
         website_url=req.website_url,
     )
 
+    _record_signup_attempt(_get_client_ip_for_fraud(request), email, tenant_id)
     return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
 
 
@@ -1199,8 +1214,10 @@ async def billing_checkout(
 
     source = body.get("source")  # "wizard" | None
     if source == "wizard":
-        success_url = f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{settings.frontend_url}/onboarding?step=5&cancelled=1"
+        # Wizard expanded to 7 steps in Onboarding v2 (added auto-KB step at position 2).
+        # success → Embed (step 7); cancel → Plan (step 6).
+        success_url = f"{settings.frontend_url}/onboarding?step=7&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/onboarding?step=6&cancelled=1"
     else:
         success_url = f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/billing/cancel"
@@ -1214,6 +1231,8 @@ async def billing_checkout(
         "metadata": {"tenant_id": tenant_id, "plan": plan},
         "subscription_data": {"metadata": {"tenant_id": tenant_id, "plan": plan}},
     }
+    if plan == "growth":
+        session_params["subscription_data"]["trial_period_days"] = 7
 
     promo_code = body.get("promo_code")
     if promo_code:
@@ -1445,7 +1464,7 @@ async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenan
     trial_started = tenant.get("free_trial_started_at")
 
     trial_expires = None
-    if trial_started:
+    if trial_started and trial["trial_days_remaining"] is not None:
         from datetime import datetime, timezone, timedelta
         if isinstance(trial_started, str):
             ts = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
