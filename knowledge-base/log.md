@@ -332,3 +332,5 @@ URLs kept in known-urls.json to prevent retry.
 - tcpa-sms-compliance-2026 (regulations)
 - INDEX.md updated: 92 → 95 articles
 - embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
+
+## [2026-04-29 08:18] discover+compile | cron 18:00 | commits=3 raw=0 wiki=4
