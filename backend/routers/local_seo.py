@@ -35,12 +35,7 @@ from backend.services.local_seo_handlers import (
     fetch_latest_geo_score,
     fetch_seo_profile,
 )
-from backend.services.local_seo_scoring import (
-    _parse_json_array_response,
-    _parse_json_object_response,
-    _strip_json_fences,
-    _verify_tenant,
-)
+from backend.services.local_seo_scoring import _verify_tenant
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,4 @@
-﻿// frontend/src/pages/wizard/WizardStepAutoKB.jsx
+// frontend/src/pages/wizard/WizardStepAutoKB.jsx
 // Onboarding v2 â€” auto-fill wizard from existing website URL.
 // Calls /api/v1/onboarding/{tenant}/auto-kb, surfaces structured services + hours
 // + KB + FAQs for owner review before continuing.
@@ -97,7 +97,7 @@ export default function WizardStepAutoKB({
           />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem" }}>
-            Reading {url}â€¦
+            Reading {url}…
           </p>
         </div>
       )}
@@ -204,7 +204,7 @@ export default function WizardStepAutoKB({
               }}
             >
               {(result.knowledge_base || "").slice(0, 600)}
-              {(result.knowledge_base || "").length > 600 ? "â€¦" : ""}
+              {(result.knowledge_base || "").length > 600 ? "…" : ""}
             </pre>
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function WizardStepAutoKB({
           onClick={onBack}
           style={{ ...btnStyle, background: "rgba(255,255,255,0.08)", flex: 1 }}
         >
-          â† Back
+          ← Back
         </button>
         {status !== "done" ? (
           <button
@@ -227,11 +227,11 @@ export default function WizardStepAutoKB({
               opacity: status === "loading" || !url ? 0.5 : 1,
             }}
           >
-            {status === "loading" ? "Readingâ€¦" : "Auto-fill from website"}
+            {status === "loading" ? "Reading…" : "Auto-fill from website"}
           </button>
         ) : (
           <button onClick={handleContinue} style={{ ...btnStyle, flex: 2 }}>
-            Use this and continue â†’
+            Use this and continue ←’
           </button>
         )}
       </div>
