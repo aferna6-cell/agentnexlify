@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 95 (plus 1 in `_outputs/`)
+- Total articles: 98 (plus 1 in `_outputs/`)
 - Last compiled: 2026-04-28
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -80,9 +80,12 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Anthropic-NEC Partnership — 30,000 Claude Seats and Japan's First Global Partner](wiki/ai-llm/anthropic-nec-japan-partnership-2026.md) — NEC becomes first Japan-based global partner; Claude/Cowork ship to ~30k employees; Claude Code wired into NEC BluStellar across finance/manufacturing/cybersecurity/local-government. Tags: anthropic, claude, nec, japan, enterprise-deployment, claude-code, claude-cowork, vertical-ai, cybersecurity, global-partnerships
 - [Anthropic April 9 2026 Triple Launch — Managed Agents Beta, Cowork GA, Claude Code Update](wiki/ai-llm/anthropic-managed-agents-cowork-ga-april-2026.md) — Managed Agents public beta with $0.08/hr active-session billing + credential vault + ClickUp/Slack/Notion OAuth; Cowork GA with RBAC/Group Spend Limits/OpenTelemetry/Zoom MCP; Claude Code policy controls + Bedrock setup wizard; Notion/Asana/Sentry early adopters. Tags: anthropic, managed-agents, claude-cowork, claude-code, credential-vault, rbac, opentelemetry, zoom-mcp, session-pricing
 - [Claude Prompt Caching — Cost Optimization Without Model Downgrade](wiki/ai-llm/claude-prompt-caching-cost-optimization-kissapi.md) — Prompt caching cuts Claude input cost 40-70% by reusing stable prefixes; hit-rate math (30%→74%, 70%→40%, 90%→23%) is the entire pitch. Tags: claude-api, prompt-caching, cost-optimization, ephemeral-cache, cache-hit-rate, anthropic-beta
+- [Managed Agents Pricing — Finout's Three-Axis Cost Breakdown for Claude in 2026](wiki/ai-llm/anthropic-managed-agents-pricing-finout-2026.md) — Finout dissects Claude Managed Agents into three independent cost axes (tokens, $0.08/session-hour, $10/1k web searches), worked $0.705-vs-$0.525 prompt-cache scenario. Tags: anthropic, managed-agents, pricing, finops, prompt-caching, session-billing, opus-4-6, cost-optimization
 
 ### Small Business SaaS
 - [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
+- [B2B SaaS Churn Benchmarks 2026 — Churnfree's Segment Math and the Case Against Aggregate Numbers](wiki/small-biz-saas/churnfree-b2b-saas-churn-benchmarks-2026.md) — Churnfree's 2026 benchmark guide breaks B2B SaaS churn into three segment bands (SMB 3-7% monthly, mid-market 1.5-3%, enterprise 1-2%), B2B voluntary 3.50% vs B2C 4.04%, sales 10.5% / marketing 8% of ARR. Tags: churn, b2b-saas, benchmarks, smb, mid-market, enterprise, retention
+- [SaaS Churn 2026 — VantaInsights' Federal-Data Baseline and the LTV Math That Survives Compounding](wiki/small-biz-saas/vantainsights-saas-churn-federal-baseline-2026.md) — VantaInsights grounds SaaS churn benchmarks in audited federal data (Census SUSB ~20% firm year-one mortality, BLS QCEW vertical employment, SEC EDGAR 120%+ NRR best-in-class); stage bands (SMB <8%, mid-market <5%, enterprise <3%) plus LTV = ARPA/churn identity. Tags: churn, saas-benchmarks, federal-data, census-susb, bls-qcew, fred, sec-edgar, nrr, ltv, cohort-analysis
 
 ### Vertical Industries
 - [Customer Gaps by Industry](wiki/verticals/customer-gaps-by-industry.md) — Product-market fit across 7 industries; Salon 9/10, Plumber 8/10, Dental 8/10. Tags: salon, plumber, dental, restaurant, fitness, lawyer, real-estate

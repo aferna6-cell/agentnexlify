@@ -174,10 +174,10 @@ _All compiled 2026-04-18 cron run._
 
 - ~~[competitors] GoHighLevel Pricing Plans 2026~~ → compiled `wiki/competitors/ghl-pricing-teardown-2026.md` (2026-04-21 cron)
 - ~~[competitors] Pricing Update – Effective April 2026 | HighLevel Changelog~~ → compiled `wiki/competitors/ghl-carrier-pricing-april-2026.md` (2026-04-21 cron)
-- [ ] **ai-llm**: Anthropic Just Launched Managed Agents. Let's Talk About How We're Going to Pay for This — `raw/ai-llm/www-finout-io-blog-anthropic-just-launched-managed-agents-lets-talk-ab.md` — <https://www.finout.io/blog/anthropic-just-launched-managed-agents.-lets-talk-about-how-were-going-to-pay-for-this>
-- [ ] **ai-llm**: Anthropic, OpenAI, Google, and Microsoft agree that the harness is the product. They disagree on the price. - The New Stack — `raw/ai-llm/thenewstack-io-ai-agent-harness-pricing-split.md` — <https://thenewstack.io/ai-agent-harness-pricing-split/>
-- [ ] **small-biz-saas**: B2B SaaS Benchmarks: A Complete Guide 2026 — `raw/small-biz-saas/churnfree-com-blog-b2b-saas-churn-rate-benchmarks.md` — <https://churnfree.com/blog/b2b-saas-churn-rate-benchmarks/>
-- [ ] **small-biz-saas**: Saas Churn Rate: Key Metrics & Benchmarks 2026 | VantaInsights — `raw/small-biz-saas/vantainsights-com-insights-saas-churn-rate.md` — <https://vantainsights.com/insights/saas-churn-rate>
+- ~~[ai-llm] Anthropic Just Launched Managed Agents. Let's Talk About How We're Going to Pay for This~~ → compiled `wiki/ai-llm/anthropic-managed-agents-pricing-finout-2026.md` (2026-04-29 cron)
+- ~~[ai-llm] Anthropic, OpenAI, Google, and Microsoft agree that the harness is the product. They disagree on the price. - The New Stack~~ → SKIPPED 2026-04-29 cron (raw is empty/JS-rendered, no extractable content)
+- ~~[small-biz-saas] B2B SaaS Benchmarks: A Complete Guide 2026~~ → compiled `wiki/small-biz-saas/churnfree-b2b-saas-churn-benchmarks-2026.md` (2026-04-29 cron)
+- ~~[small-biz-saas] Saas Churn Rate: Key Metrics & Benchmarks 2026 | VantaInsights~~ → compiled `wiki/small-biz-saas/vantainsights-saas-churn-federal-baseline-2026.md` (2026-04-29 cron)
 - [ ] **verticals**: AI Receptionist Software for Plumbers 2026 | 24/7 Answering Service — `raw/verticals/agentzap-ai-industries-plumbing.md` — <https://agentzap.ai/industries/plumbing>
 - [ ] **verticals**: Top 5 AI Receptionist Solutions for Plumbing Businesses in 2026 — `raw/verticals/www-myaifrontdesk-com-blogs-top-5-ai-receptionist-solutions-for-plumbi.md` — <https://www.myaifrontdesk.com/blogs/top-5-ai-receptionist-solutions-for-plumbing-businesses-in-2026>
 
