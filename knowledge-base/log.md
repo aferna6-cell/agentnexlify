@@ -334,3 +334,11 @@ URLs kept in known-urls.json to prevent retry.
 - embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
 
 ## [2026-04-29 08:18] discover+compile | cron 18:00 | commits=3 raw=0 wiki=4
+
+## [2026-04-29 cron] compile | 3 articles compiled, embeddings skipped (no VOYAGE_API_KEY in cron env), 1 raw skipped
+- anthropic-managed-agents-pricing-finout-2026 (ai-llm)
+- churnfree-b2b-saas-churn-benchmarks-2026 (small-biz-saas)
+- vantainsights-saas-churn-federal-baseline-2026 (small-biz-saas)
+- INDEX.md updated: 96 → 98 articles
+- skipped: thenewstack-io-ai-agent-harness-pricing-split (raw is empty/JS-rendered, no extractable content)
+- embedding_errors=3 (no Voyage key in cron env); kb_articles upsert NOT attempted
