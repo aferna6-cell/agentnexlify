@@ -254,12 +254,12 @@ _All compiled 2026-04-18 cron run._
 ## Auto-discover 2026-04-27T22:15:12Z
 
 - ~~[competitors] GoHighLevel Pricing Breakdown 2026: Is It Worth It?~~ → compiled `wiki/competitors/ghl-pricing-systemshift-2026.md` (2026-04-27 cron)
-- [competitors] GoHighLevel Voice AI Review 2026: AI Employee That Handles Calls — https://oneexpand.com/gohighlevel-voice-ai-review-2026/ (raw: knowledge-base/raw/competitors/oneexpand-ghl-voice-ai-review-2026.md)
+- ~~[competitors] GoHighLevel Voice AI Review 2026: AI Employee That Handles Calls~~ → compiled `wiki/competitors/ghl-voice-ai-review-2026.md` (2026-04-28 cron)
 - ~~[ai-llm] Anthropic Launches Managed Agents and Claude Cowork GA: April 9, 2026~~ → compiled `wiki/ai-llm/anthropic-managed-agents-cowork-ga-april-2026.md` (2026-04-27 cron)
-- [ai-llm] Claude Prompt Caching API Cost Optimization Guide (2026) — https://kissapi.ai/blog/claude-prompt-caching-api-cost-optimization-2026.html (raw: knowledge-base/raw/ai-llm/kissapi-claude-prompt-caching-cost-optimization-2026.md)
-- [verticals] AI Receptionist for General Contractors: Handle More Jobs Without More Staff — https://niceagents.com/blog/ai-receptionist-general-contractors-2026/ (raw: knowledge-base/raw/verticals/ai-receptionist-general-contractors-2026.md)
+- ~~[ai-llm] Claude Prompt Caching API Cost Optimization Guide (2026)~~ → compiled `wiki/ai-llm/claude-prompt-caching-cost-optimization-kissapi.md` (2026-04-28 cron)
+- ~~[verticals] AI Receptionist for General Contractors: Handle More Jobs Without More Staff~~ → compiled `wiki/verticals/ai-receptionist-general-contractors-2026.md` (2026-04-28 cron)
 - [verticals] The Best AI Chatbot for Spas and Salons in 2026 — https://www.bosar.agency/blog/best-chatbot-salons-spas/ (raw: knowledge-base/raw/verticals/bosar-best-chatbot-salons-spas-2026.md)
 - [technical] Postgres Semantic Search: pgvector Guide (Supabase) — https://techsynth.tech/blog/semantic-search-postgres-pgvector-supabase/ (raw: knowledge-base/raw/technical/techsynth-pgvector-supabase-semantic-search.md)
 - ~~[technical] Embedding Model Pricing: OpenAI, Cohere, Voyage Cost Comparison~~ → compiled `wiki/technical/embedding-model-pricing-comparison-2026.md` (2026-04-27 cron)
-- [regulations] TCPA Compliance for SMS 2026 (Signalmash) — https://www.signalmash.com/post/tcpa-compliance-sms-2026 (raw: knowledge-base/raw/regulations/tcpa-sms-compliance-2026-signalmash.md)
+- ~~[regulations] TCPA Compliance for SMS 2026 (Signalmash)~~ → compiled `wiki/regulations/tcpa-sms-compliance-2026.md` (2026-04-28 cron)
 - ~~[regulations] 2026 AI Laws Update: Key Regulations and Practical Guidance (Gunderson Dettmer)~~ → compiled `wiki/regulations/gunder-2026-ai-laws-update.md` (2026-04-27 cron)

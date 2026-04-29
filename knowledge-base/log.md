@@ -324,3 +324,11 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-27 22:17] discover | found 16 candidates | ingested 10 | skipped 2 categories (small-biz-saas, growth — DDG anomaly captcha)
 
 ## [2026-04-27 18:25] discover+compile | cron 18:00 | commits=2 raw=10 wiki=4
+
+## [2026-04-28 23:30] compile (cron) | 4 articles compiled, 4 embedding skipped (Supabase MCP unauthorized)
+- ghl-voice-ai-review-2026 (competitors)
+- claude-prompt-caching-cost-optimization-kissapi (ai-llm)
+- ai-receptionist-general-contractors-2026 (verticals)
+- tcpa-sms-compliance-2026 (regulations)
+- INDEX.md updated: 92 → 95 articles
+- embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
