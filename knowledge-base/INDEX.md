@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 91 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-27
+- Total articles: 92 (plus 1 in `_outputs/`)
+- Last compiled: 2026-04-28
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -45,6 +45,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [GoHighLevel February 2026 Integrations — Manus AI, Monday.com, Google Forms](wiki/competitors/ghl-manus-ai-monday-google-forms-integrations-2026.md) — Native premium-action wiring of Manus AI lead enrichment + Monday.com project sync + Google Forms capture; Manus billed per-token through Manus, not GHL. Tags: gohighlevel, manus-ai, monday-com, google-forms, premium-workflow-actions, lead-enrichment, agency-automation
 - [GoHighLevel 2026 Pricing — Three-Tier Headline vs. True Monthly Cost](wiki/competitors/ghl-pricing-2026-true-monthly-cost-with-addons.md) — $97/$297/$497 held flat; Pro and Agency SaaS Pro now bundle AI content/review/workflow ($47/mo savings); annual discount ~17% breaks even at ~5 months. Tags: gohighlevel, pricing, annual-billing, ai-bundling, agency-saas-pro, addon-cost, starter-tier, pro-unlimited
 - [GoHighLevel Pricing Breakdown — SystemShift's True Monthly Cost View 2026](wiki/competitors/ghl-pricing-systemshift-2026.md) — Reseller pitch view lands $97/$297/$497 sticker prices at $150-180/$350-500/$600-1,000 realistic cost; SMS $0.0079/seg, voice $0.014/min, A2P 10DLC $4/campaign + $0.003/msg pass-through; $1,428/mo displaced-stack baseline. Tags: gohighlevel, pricing, starter-tier, unlimited-tier, saas-pro, twilio, lc-phone, a2p-10dlc, agency-economics
+- [GoHighLevel Voice AI Review 2026: Native CRM Moat vs Standalone Voice Platforms](wiki/competitors/ghl-voice-ai-review-2026.md) — 4.5/5 verdict: sub-600ms latency, $97/mo Unlimited tier, LC Phone/Twilio carrier requirement; English-only and no outbound cold calling are real gaps. Tags: gohighlevel, voice-ai, ai-receptionist, agency, latency, pricing
 
 ### AI/LLM Developments
 - [LLM Wiki — Karpathy's Compounding Knowledge Base Pattern](wiki/ai-llm/llm-wiki-karpathy-pattern.md) — LLM Wiki replaces RAG's ephemeral retrieval with a persistent, self-maintaining wiki where every source updates multiple entity pages simultaneously. Tags: knowledge-management, rag, llm-wiki, karpathy, compounding-knowledge
