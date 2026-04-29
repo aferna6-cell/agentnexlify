@@ -1,5 +1,5 @@
 // frontend/src/pages/wizard/WizardStepAutoKB.jsx
-// Onboarding v2 â€” auto-fill wizard from existing website URL.
+// Onboarding v2 — auto-fill wizard from existing website URL.
 // Calls /api/v1/onboarding/{tenant}/auto-kb, surfaces structured services + hours
 // + KB + FAQs for owner review before continuing.
 import { useState } from "react";
@@ -137,7 +137,7 @@ export default function WizardStepAutoKB({
                     fontSize: "0.85rem",
                   }}
                 >
-                  None detected â€” you can add later.
+                  None detected — you can add later.
                 </span>
               )}
             </div>
@@ -169,7 +169,7 @@ export default function WizardStepAutoKB({
                       marginTop: 2,
                     }}
                   >
-                    {result.hours?.[d] || "â€”"}
+                    {result.hours?.[d] || "—"}
                   </div>
                 </div>
               ))}
@@ -215,7 +215,7 @@ export default function WizardStepAutoKB({
           onClick={onBack}
           style={{ ...btnStyle, background: "rgba(255,255,255,0.08)", flex: 1 }}
         >
-          ← Back
+          ← Back
         </button>
         {status !== "done" ? (
           <button
@@ -231,7 +231,7 @@ export default function WizardStepAutoKB({
           </button>
         ) : (
           <button onClick={handleContinue} style={{ ...btnStyle, flex: 2 }}>
-            Use this and continue ←’
+            Use this and continue →
           </button>
         )}
       </div>
@@ -251,7 +251,7 @@ export default function WizardStepAutoKB({
             minHeight: 44,
           }}
         >
-          Skip â€” I'll fill in by hand
+          Skip — I'll fill in by hand
         </button>
       )}
     </div>
