@@ -342,3 +342,5 @@ URLs kept in known-urls.json to prevent retry.
 - INDEX.md updated: 96 → 98 articles
 - skipped: thenewstack-io-ai-agent-harness-pricing-split (raw is empty/JS-rendered, no extractable content)
 - embedding_errors=3 (no Voyage key in cron env); kb_articles upsert NOT attempted
+
+## [2026-04-29 18:19] discover+compile | cron 18:00 | commits=2 raw=0 wiki=3
