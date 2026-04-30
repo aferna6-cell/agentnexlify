@@ -119,6 +119,7 @@ Already filtered out — do not re-relitigate without new evidence:
 - SWE-bench/OSWorld leaderboard chasing
 - Naive parallel multi-agent (5 agents on shared memory)
 - Per-seat SaaS pricing (market on outcome/usage)
+- Kimi K2.6 / GPT-5.5 cross-provider auto-routing — vendor-blog claims, no postmortem, no cross-model eval harness in repo. Re-eval trigger: monthly LLM spend exceeds $200 in `logs/llm_traces/` aggregated by month.
 
 ## Production Picks (April 2026, treat as reference, re-evaluate quarterly)
 
