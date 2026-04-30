@@ -266,10 +266,10 @@ _All compiled 2026-04-18 cron run._
 
 ## Ingested 2026-04-30T22:19:03Z — cron autopop
 
-- [competitors] GoHighLevel New Features 2026 (Stripe Tax, Smart Lists, Voice AI) → competitors/gohighlevel-updates-2026.md
-- [ai-llm] MCP 2026 Roadmap (Tasks, DPoP, Workload Identity) → ai-llm/mcp-2026-roadmap.md
-- [growth] 23 Live Chat Statistics 2026 (Tidio market share, ROI) → growth/tidio-live-chat-statistics-2026.md
-- [small-biz-saas] SaaS Retention: The AI Churn Wave (ChartMogul) → small-biz-saas/chartmogul-saas-retention-ai-churn-wave.md
+- ~~[competitors] GoHighLevel New Features 2026 (Stripe Tax, Smart Lists, Voice AI)~~ → compiled `wiki/competitors/gohighlevel-updates-2026.md` (2026-04-30 cron)
+- ~~[ai-llm] MCP 2026 Roadmap (Tasks, DPoP, Workload Identity)~~ → compiled `wiki/ai-llm/mcp-2026-roadmap.md` (2026-04-30 cron)
+- ~~[growth] 23 Live Chat Statistics 2026 (Tidio market share, ROI)~~ → compiled `wiki/growth/tidio-live-chat-statistics-2026.md` (2026-04-30 cron)
+- ~~[small-biz-saas] SaaS Retention: The AI Churn Wave (ChartMogul)~~ → compiled `wiki/small-biz-saas/chartmogul-saas-retention-ai-churn-wave.md` (2026-04-30 cron)
 - [small-biz-saas] Average SaaS Churn Rate + 10 Strategies (Userpilot) → small-biz-saas/userpilot-churn-strategies-2026.md
 - [technical] FastAPI Production Best Practices 2026 (FastLaunchAPI) → technical/fastlaunchapi-fastapi-best-practices-production-2026.md
 - [technical] Production-Ready FastAPI Architecture Patterns (OneUptime) → technical/oneuptime-fastapi-production-ready-2026.md
