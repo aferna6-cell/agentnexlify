@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-04-25T00:00:00Z",
-  "total_runs": 8,
+  "last_run": "2026-04-30T00:00:00Z",
+  "total_runs": 9,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -72,8 +72,9 @@
     {
       "title": "Add Lead Source Analytics Chart to Dashboard",
       "date": "2026-04-06",
-      "status": "recommended",
-      "run": 2
+      "status": "implemented_unverified",
+      "run": 2,
+      "note": "Confirmed implemented by run 9 evidence check. AnalyticsPage.jsx lines 909-913: full Recharts BarChart with fetchLeadSources API call and state. Implementation predates run 9."
     },
     {
       "title": "JS Silent Catch Pre-commit Guard",
@@ -113,7 +114,14 @@
       "date": "2026-04-25",
       "status": "recommended",
       "run": 8,
-      "note": "Fresh evidence: 037865f added the script today. S-effort. Moratorium triggered this run."
+      "note": "Fresh evidence: 037865f added the script today. S-effort. Moratorium triggered this run. Run 9 finding: script fails on em-dash violations in WizardStepAutoKB.jsx — fix required before wiring."
+    },
+    {
+      "title": "JS Silent Catch Pre-commit Guard (moratorium re-recommendation)",
+      "date": "2026-04-30",
+      "status": "recommended",
+      "run": 9,
+      "note": "Moratorium mode. Oldest unimplemented winner (run 3, day 19+). Violations confirmed at MarketingDashboardPage.jsx:96 and LocalSEOPage.jsx:262. S-effort: add Check 9 to scripts/hooks/pre-commit."
     }
   ],
   "rejected_paths": [
@@ -218,9 +226,9 @@
   ],
   "implementation_lag_warning": {
     "runs_pending_approval": 4,
-    "runs_implemented": 2,
-    "oldest_pending": "2026-04-06 (Lead Source Analytics, run 2)",
-    "note": "Run 8: moratorium triggered. 5 items pending (runs 2, 3, 4, 7, 8). Human must implement at least 2 before run 9 to lift moratorium. If moratorium_active=true in run 9, synthesis should recommend oldest pending winner, not generate new ideas.",
+    "runs_implemented": 3,
+    "oldest_pending": "2026-04-11 (JS Silent Catch Guard, run 3)",
+    "note": "Run 9: moratorium still active. Run 2 winner (Lead Source Analytics) confirmed implemented — AnalyticsPage.jsx lines 909-913 has full Recharts BarChart. Count corrected 5→4 pending (runs 3, 4, 7, 8). Run 9 winner: JS Silent Catch Guard (oldest pending, day 19+). Moratorium lifts when pending_approvals_count <= 3. Implement run 3 + one more (run 7 recommended) to lift.",
     "escalate": true
   },
   "config": {
