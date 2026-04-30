@@ -23,11 +23,11 @@ LOG_DIR="$REPO_ROOT/logs"
 LOG_FILE="$LOG_DIR/friday-reading.log"
 mkdir -p "$LOG_DIR"
 
-OUTPUT_DIR="$REPO_ROOT/knowledge-base/raw/weekly"
+OUTPUT_DIR="$REPO_ROOT/knowledge-base/raw/ai-llm"
 mkdir -p "$OUTPUT_DIR"
 
 DATE_STAMP="$(daily_date)"
-OUTPUT_FILE="$OUTPUT_DIR/digest-${DATE_STAMP}.md"
+OUTPUT_FILE="$OUTPUT_DIR/friday-digest-${DATE_STAMP}.md"
 
 SOURCES_FILE="$REPO_ROOT/scripts/daily/friday-reading.sources.txt"
 
