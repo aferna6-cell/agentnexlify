@@ -87,6 +87,7 @@ from backend.routers import (
     automation_rules,
     admin_analytics,
     admin_promotions,
+    zapier,
 )
 
 # --- JSON logging ---
@@ -811,6 +812,7 @@ app.include_router(scoring_config.router)
 app.include_router(waitlist.router)
 app.include_router(wizard_analytics.router)
 app.include_router(content_repurpose.router)
+app.include_router(zapier.router)
 
 
 # --- Static files (widget) ---

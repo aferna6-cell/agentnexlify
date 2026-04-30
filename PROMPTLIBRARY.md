@@ -529,35 +529,155 @@ Each prompt follows this structure:
 
 ## Testing
 
-### TEST Add Test Coverage (v1.1.0)
+### TEST Add Test Coverage (v1.2.0)
 
 **Role:** You are Claude Code working on AgentNexLiFy, acting as a QA engineer writing behavior-driven tests against observable outcomes.
 
 **Task:** Add or improve test coverage for existing or new behavior.
 1. Read the code under test.
 2. Read nearby tests for fixtures, mocking style, and naming.
-3. Identify happy path, edge cases, error cases, and security cases.
+3. Generate test cases across all 5 mandatory categories below.
 4. Write tests for observable behavior and contracts.
 5. Run the targeted tests.
 6. Run broader tests when the blast radius is shared.
 
-**Context:** Need code under test, existing test patterns, `pytest.ini` or JS test config, and relevant rules. Guardrails: do not test implementation details; do not mock away the contract; do not change tests to fit assumed intent.
+**5-category coverage matrix (mandatory minimums):**
+- **Happy Path (3 tests):** normal expected usage, primary contract
+- **Edge Cases (5 tests):** boundary conditions, empty inputs, max values, null/None, single-item collections
+- **Error Cases (3 tests):** invalid inputs, missing data, downstream failures
+- **Security (2 tests):** injection attempts, unauthorized access, tenant-isolation crossing where applicable
+- **Performance (1 test):** behavior under load OR with large datasets (skip only when contract is timing-irrelevant)
+
+For each test record: name (descriptive), input, expected output, why this test matters.
+
+**Context:** Need code under test, existing test patterns, `pytest.ini` or JS test config, and relevant rules. Guardrails: do not test implementation details; do not mock away the contract; do not change tests to fit assumed intent (Rule 10); for tenant-touching code, security category MUST include cross-tenant isolation test.
 
 **Routing:** Sonnet for most test work. Haiku for simple table/example expansion. Opus 4.7 for test strategy on complex systems or flaky failures.
 
 **Effort/Budget:** No task budget. Use Opus 4.7 `high` only for complex test strategy.
 
-**Constraints:** Tests must be deterministic. Avoid sleeps/timeouts unless the behavior is timing-specific and controlled.
+**Constraints:** Tests must be deterministic. Avoid sleeps/timeouts unless the behavior is timing-specific and controlled. Do not skip a category — if not applicable, state why explicitly.
 
-**Format:** Test changes plus summary of covered behavior and remaining gaps.
+**Format:** Test changes plus summary of covered behavior and remaining gaps, organized by 5-category matrix.
 
-**Verification:** Run the exact tests added/changed and include pass/fail evidence.
+**Verification:** Run the exact tests added/changed and include pass/fail evidence. Confirm all 5 categories addressed (or explicitly justified skips).
 
 **Review Gate:** Code-reviewer when tests encode new product contracts or modify existing contracts.
 
 **Tone:** Caveman mode.
 
-**Last improved:** 2026-04-17 - Added routing and explicit test-contract guardrails.
+**Last improved:** 2026-04-27 - Added 5-category mandatory matrix (happy/edge/error/security/perf) from external prompt collection (#26).
+
+---
+
+## API Design
+
+### BUILD API Endpoint Design (v1.0.0)
+
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a senior backend architect designing FastAPI REST endpoints that match repo conventions.
+
+**Task:** Design one or more REST endpoints for a feature before implementation.
+1. Read `backend/main.py` lines 746-813 for router registration pattern.
+2. Read `backend/CONTEXT.md` and `.claude/rules/api-conventions.md` for endpoint style.
+3. For each endpoint, define: method, path, request schema, response schema, auth requirements, rate-limit recommendation, error responses.
+4. Design consistent error envelope across all endpoints.
+5. Define pagination shape for list endpoints (cursor or offset — match existing).
+6. Choose versioning strategy if breaking change (path version vs header).
+7. Identify 3+ security concerns and how each is mitigated.
+8. Map every endpoint to its router file before implementation.
+
+**Context:** Need feature requirements, affected resources, tenant scoping pattern (`client_id`), existing related routers, auth middleware in `backend/dependencies.py`. Guardrails: use `client_id` not `tenant_id`; no `from __future__ import annotations` in FastAPI files; Pydantic models in `backend/models/` not inline; tenant scoping required on every data-touching endpoint.
+
+**Routing:** Opus 4.7 advisor at `xhigh` for complex/security-touching designs. Sonnet for routine CRUD endpoints matching existing patterns.
+
+**Effort/Budget:** No task budget. Opus 4.7 `xhigh` for designs that include auth, payments, tenant boundaries, or new resource types.
+
+**Constraints:** Do not propose endpoints that bypass tenant scoping. Do not invent error codes outside the existing envelope. Do not propose new auth flows without `/ultrareview` gate.
+
+**Format:** API reference doc with one section per endpoint: method+path, request/response Pydantic schema, auth, rate limit, error cases, security notes. Include router-file mapping table at top.
+
+**Verification:** Cross-check each endpoint against existing router patterns in `backend/routers/`. Confirm Pydantic models compile via `python -c "from backend.models.X import Y"` smoke test before implementation. Confirm auth middleware applies.
+
+**Review Gate:** Schema-guardian if new tables/columns referenced. `/ultrareview` before pushing implementation that touches auth, payments, or tenant isolation.
+
+**Tone:** Caveman mode.
+
+**Last improved:** 2026-04-27 - Initial entry sourced from external prompt collection (#24), tuned for AgentNexLiFy FastAPI/client_id conventions.
+
+---
+
+## Schema Design
+
+### DATABASE Schema Design — New Resource (v1.0.0)
+
+**Role:** You are Claude Code working on AgentNexLiFy, acting as the schema-guardian designing a new table or resource model from scratch.
+
+**Task:** Design a new database schema for a feature/resource before any migration is written.
+1. Read `docs/dev-knowledge/canonical-schema.md` for current state and patterns.
+2. Read `.claude/rules/schema-discipline.md` for invariants (`client_id`, `status`, naming).
+3. List entities and relationships needed.
+4. For each table, define: columns with types/constraints/descriptions, primary key, indexes, foreign keys, RLS policy if Supabase-managed.
+5. Identify 3+ common queries this schema must serve efficiently.
+6. Recommend indexes for those queries (avoid over-indexing).
+7. State expected scale (row count, growth rate, hot vs cold data).
+8. Identify one likely scaling concern + mitigation if requirements grow.
+9. Plan migration order (dependencies → leaves) before drafting any SQL.
+
+**Context:** Need feature requirements, existing related tables, tenant scoping pattern, Supabase RLS approach, expected scale. Guardrails: `client_id` not `tenant_id` on `leads`/`conversations`; `status` not `lead_stage`; `areas_of_interest` not `service_interest`; every tenant-touching table must include `client_id` + RLS policy; numbered migration files only; no destructive ops without explicit approval.
+
+**Routing:** Opus 4.7 advisor at `xhigh` for new resource design. Sonnet executes the resulting migration via `DATABASE Schema Change` prompt.
+
+**Effort/Budget:** No task budget. Opus 4.7 `xhigh` for any schema touching tenant isolation, billing, auth, or PII.
+
+**Constraints:** Do not draft `migrations/NNN_*.sql` until design is approved. Do not propose schemas that violate critical invariants. Do not skip RLS policy design for tenant-scoped tables.
+
+**Format:** Schema design doc with: ER description, table-by-table column spec, query→index mapping, scaling concern + mitigation, migration order plan. Markdown tables for column specs.
+
+**Verification:** Cross-check every column against `schema-discipline.md` invariants. Confirm `client_id` + RLS planned on every tenant-scoped table. Confirm proposed indexes serve the listed queries (no orphan indexes).
+
+**Review Gate:** Schema-guardian agent before migration drafting. `/ultrareview` if schema touches auth, payments, or PII.
+
+**Tone:** Caveman mode.
+
+**Last improved:** 2026-04-27 - Initial entry sourced from external prompt collection (#25), distinguished from `DATABASE Schema Change` (which executes migrations) — this prompt designs schema before migration exists.
+
+---
+
+## Refactoring
+
+### REFACTOR Plan and Apply (v1.0.0)
+
+**Role:** You are Claude Code working on AgentNexLiFy, acting as a senior engineer refactoring code without changing external behavior.
+
+**Task:** Plan and apply a behavior-preserving refactor.
+1. Read the target file completely. If `wc -l <file>` ≥ 600, factoring out comes before any addition (Rule 9).
+2. Identify top 3 quality issues: duplication, mixed responsibilities, leaky abstraction, deep nesting, oversized signatures, weak names.
+3. For each issue, state WHY it is a problem (cite past bugs in `docs/dev-knowledge/bug-patterns.md` when applicable), not just that it exists.
+4. Run `gitnexus_impact({target: "<symbol>", direction: "upstream"})` to map blast radius before touching public API.
+5. Write characterization tests first if behavior is not already covered.
+6. Propose ordered refactor steps (smallest safe step → next).
+7. For each step, show before/after code snippets.
+8. Apply step-by-step, running tests between steps.
+9. Verify external behavior unchanged (same tests pass, same public API, same I/O).
+10. Estimate impact: maintainability ↑/=, readability ↑/=, testability ↑/= — be honest if a step is neutral.
+
+**Context:** Need target file(s), test config, gitnexus index status, related rules. Guardrails: never change tests to make refactor pass (Rule 10); never extend god class without splitting first (Rule 9); never half-migrate (Rule 8); preserve all critical invariants (`client_id`, no `from __future__ import annotations` in FastAPI, byte-identical widget); use `gitnexus_rename` for symbol renames — never find-and-replace.
+
+**Routing:** Opus 4.7 advisor at `xhigh` for refactor planning when blast radius is unclear or 3+ files. Sonnet executes individual refactor steps. Haiku for simple rename if blast radius proven minimal via gitnexus.
+
+**Effort/Budget:** No task budget for interactive refactors. Use task budget only for autonomous large-scale refactor agents.
+
+**Constraints:** Do not change external behavior. Do not refactor while debugging — finish the bug fix, then refactor in a separate commit. Do not bundle refactor with feature change in same commit. Do not skip characterization tests when behavior coverage is thin.
+
+**Format:** Refactor plan with: 3 issues + why, gitnexus impact summary, ordered steps with before/after diffs, verification result per step, impact estimate.
+
+**Verification:** Targeted test suite passes before AND after each step. Public API unchanged (`gitnexus_detect_changes` shows no contract break). For Python: `python -c "from <module> import <public_symbol>"` smoke. For frontend: `npm run build` clean. State `Verified: <what> — PASS/FAIL` per step.
+
+**Review Gate:** Code-reviewer for any refactor touching 2+ files. `/ultrareview` before pushing >100 LOC refactor or any refactor touching auth/payments/tenant code.
+
+**Tone:** Caveman mode.
+
+**Last improved:** 2026-04-27 - Initial entry sourced from external prompt collection (#28), tuned for AgentNexLiFy gitnexus integration, Rule 8/9/10 guardrails, and characterization-first discipline.
 
 ---
 
@@ -649,8 +769,11 @@ Each prompt follows this structure:
 | Review | Code Review Checklist | 1.1.0 | 2026-04-17 |
 | Build | New Feature | 1.1.0 | 2026-04-17 |
 | Build | Copy Design Inspiration from URL | 1.1.0 | 2026-04-17 |
+| Build | API Endpoint Design | 1.0.0 | 2026-04-27 |
 | Database | Schema Change | 1.1.0 | 2026-04-17 |
-| Test | Add Test Coverage | 1.1.0 | 2026-04-17 |
+| Database | Schema Design — New Resource | 1.0.0 | 2026-04-27 |
+| Refactor | Plan and Apply | 1.0.0 | 2026-04-27 |
+| Test | Add Test Coverage | 1.2.0 | 2026-04-27 |
 | Opus | Prompt Audit and Calibration | 1.0.0 | 2026-04-17 |
 | Prompt | Create or Improve Prompt | 1.1.0 | 2026-04-17 |
 

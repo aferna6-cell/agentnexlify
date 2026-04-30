@@ -1,11 +1,11 @@
 {
   "date": "2026-04-30",
-  "run": 9,
+  "run": 10,
   "mode": "moratorium",
   "moratorium_active": true,
   "evidence_summary": "5 days, ~20 commits. Onboarding wizard landed (Stripe success_url, fraud detection, mobile fixes). Auth helpers refactored. No widget or pre-commit changes. Run 2 winner (Lead Source Analytics) confirmed IMPLEMENTED — AnalyticsPage.jsx lines 909-913 has full Recharts BarChart. Moratorium count corrected: 5→4 pending. JS Silent Catch violations confirmed still present (MarketingDashboardPage.jsx:96, LocalSEOPage.jsx:262). check_project_invariants.py EXISTS but fails on em-dash violations in WizardStepAutoKB.jsx — wiring now would block commits.",
   "ideas_count": 5,
-  "winner": "JS Silent Catch Pre-commit Guard (Run 3 — oldest pending, day 19+)",
+  "winner": "JS Silent Catch Pre-commit Guard (Run 3 — moratorium re-recommendation, day 23+)",
   "winner_category": "code_health",
   "confidence": "HIGH",
   "debate_verdicts": {

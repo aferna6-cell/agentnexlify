@@ -14,7 +14,7 @@ Source: Suryansh Tiwari migration post (2026-04-17). Four moves not already cove
 **Why:** Each turn on 4.7 layers literal interpretations from prior turns. Multi-turn clarification compounds drift. Single-turn batch keeps intent coherent.
 
 **Applies to:**
-- `.claude/skills/grill-me/SKILL.md` — reframe "one question at a time" as "batch 5-8 questions per branch, wait for answers, branch, batch next 5-8"
+- ~~`.claude/skills/grill-me/SKILL.md`~~ — DONE 2026-04 (v1.1.0). Batch loop at lines 46-56 enforces 5-8 per branch, one branch per message.
 - `.claude/skills/write-prd/SKILL.md` — interview phase
 - `.claude/skills/triage-issue/SKILL.md` — repro questions
 - Any agent that uses `AskUserQuestion` — prefer 4-option structured choice over 3-turn back-and-forth
@@ -139,7 +139,7 @@ grep -rn "budget_tokens" backend/
 - `rules/opus-4-7.md` — canonical feature matrix
 - `rules/parallel-approaches.md` — worktree dispatch
 - `rules/prompt-formula.md` — ROLE/TASK/CONTEXT/CONSTRAINTS/OUTPUT
-- `.claude/skills/grill-me/SKILL.md` — needs batch-mode rewrite
+- `.claude/skills/grill-me/SKILL.md` — batch-mode rewrite DONE 2026-04 (v1.1.0)
 - `.claude/skills/compound-engineering/SKILL.md` — needs explicit fan-out phrasing
 
 ## Source

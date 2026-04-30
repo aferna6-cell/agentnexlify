@@ -7,7 +7,7 @@ Every SKILL.md file follows this structure:
 ```yaml
 ---
 name: skill-name
-description: "One sentence. When to use it. What it does."
+description: "One sentence. Front-load when to use it and what it does."
 version: 1.0.0
 origin: claude | codex | repo | generated
 user_invocable: true  # optional, default true
@@ -22,13 +22,20 @@ triggers: ["phrase one", "phrase two"]  # optional, common user phrases that sho
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Kebab-case identifier. Must match directory name. |
-| `description` | Yes | One sentence. Must include when to use AND what it does. |
+| `description` | Yes | One sentence. Must include when to use AND what it does. Front-load the use case and include concrete trigger words when possible. |
 | `version` | Yes | Semver. Start at 1.0.0. Bump on breaking changes. |
 | `origin` | Yes | Where this skill lives: `claude` (.claude/skills/), `codex` (.codex/skills/), `repo` (skills/), or `generated` (skills/generated/) |
 | `user_invocable` | No | Whether users can directly invoke this skill. Default: `true`. |
 | `allowed_tools` | No | Tools this skill is permitted to use. Omit if unconstrained. |
 | `depends_on` | No | Other SKILL.md names this skill requires. Enables dependency resolution. |
 | `triggers` | No | Common user phrases that should load this skill. |
+
+## Description Rules
+
+- Start repo-owned descriptions with `Use when ...` unless the skill comes from an external source with its own standard.
+- Say when to use the skill before explaining implementation details.
+- Include 3-5 concrete trigger phrases in `triggers` when the routing surface is known.
+- Avoid generic descriptions such as "code review tool" or "testing helper"; they do not give the agent enough routing context.
 
 ## Body Structure
 
@@ -43,8 +50,16 @@ Clear list of situations. Bullet points. No ambiguity.
 ## When NOT to Use
 Explicitly state when this skill should NOT be loaded.
 
+## Read First
+Files, commands, diffs, existing tests, docs, or searches to inspect before acting.
+Omit only when there is no project context to inspect.
+
 ## Workflow
 Step-by-step instructions. Numbered. Actionable.
+
+## Output Format
+Exact final response or artifact format. Include required headings, table columns,
+fields, or state that no separate artifact is produced.
 
 ## Constraints
 Hard rules. Things this skill must not do.
@@ -63,6 +78,8 @@ Skills are designed for three-level loading:
 - **Level 3 (referenced files):** Skill references external files via `depends_on` or inline file paths
 
 Every skill must be usable at all three levels. The frontmatter is Level 1. The body is Level 2. Cross-references are Level 3.
+
+Keep `SKILL.md` concise. Repo-owned canonical skills should usually stay under 150 body lines, and every skill should stay under 500 body lines. Move long examples, API references, framework variants, and reusable snippets into referenced files.
 
 ## Naming Conventions
 
@@ -90,3 +107,6 @@ For existing skills:
 5. Add `triggers` if the skill has clear trigger phrases
 6. Add `depends_on` if the skill references other skills
 7. Ensure body has "When to Use" and "When NOT to Use" sections
+8. Add "Read First" guidance for project-aware work
+9. Add "Output Format" for reports, generated artifacts, or final handoff text
+10. Split skills over 500 body lines into references or scripts

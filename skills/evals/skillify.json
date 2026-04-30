@@ -3,7 +3,8 @@
   "positive": [
     "Skillify this repeat release checklist.",
     "Turn this workflow into a reusable skill.",
-    "Create a SKILL.md trigger for our launch audit."
+    "Create a SKILL.md trigger for our launch audit.",
+    "Fix why this custom skill does not fire."
   ],
   "negative": [
     "Run the existing tests.",
