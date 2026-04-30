@@ -117,7 +117,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **Behavioral** — caveman-mode, model-routing, no-assumptions, parallel-approaches, ultrathink, prompt-library, kb-first, claude-usage-patterns, personality, user-rules, one-task-one-chat, prompt-formula, claude-execution-layers, **daily-skills** (grill-me gate, write-prd, prd-to-issues, tdd-workflow, improve-architecture), **fill-instructions-before-guessing** (stop when instructions are missing/ambiguous/wrong — real incidents: twilio 10.x ghost, pyiceberg blame)
 - **Model (Opus 4.7)** — **opus-4-7** (canonical reference — `claude-opus-4-7` ID, xhigh effort default, same $5/$25 pricing as 4.6), **self-verification** ("Verified: … — PASS/FAIL" on every task completion), **ultrareview** (invoke /ultrareview for PRs >20 LOC, auth/payments/tenant code, pre-deploy), **task-budgets** (call-site budget tiers: widget none / advisor 5k / executor 50k), **vision-3x** (high-res input for screenshots, diagrams, design comps), **opus-4-7-prompting** (batch clarifications, positive examples > negative rules, delete progress scaffolding, explicit fan-out, /ultraplan vs plan mode)
 - **Security** — claude-code-security (permissions.deny + ask + sandbox, Trail of Bits pattern)
-- **Tooling** — claude-version-pin (v2.1.98 workaround for 20k phantom tokens in v2.1.100+), claude-renderer (CLAUDE_CODE_NO_FLICKER=1 virtual terminal renderer)
+- **Tooling** — claude-version-pin (v2.1.98 workaround for 20k phantom tokens in v2.1.100+), claude-renderer (CLAUDE_CODE_NO_FLICKER=1 virtual terminal renderer), **effort-per-prompt** (set `/effort` on the prompt that needs depth, not the session — xhigh default burns ~2x medium), **usage-observability** (claude-usage historical + claude-usage-monitor real-time + platform cache dashboard for API)
 - **Plugins** — `.claude/rules/plugins.md` (36 plugins as of 2026-04-12; project skills beat plugin skills on overlap)
 
 ### Automation
@@ -143,6 +143,18 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 | Deploy, monitor, docs | `/ops` | `CONTEXT.md` |
 | Complex decision | `/skills/llm-council` | `SKILL.md` |
 | Sell managed agents to clients | `/planning/managed-agents` | `README.md` |
+
+### Dedicated Tools
+Prefer these over general Bash/Read when applicable:
+
+| Tool | Use for | Over |
+|------|---------|------|
+| `agent-browser` CLI | Web fetch with a11y snapshots | WebFetch raw HTML |
+| `pdftotext <file> -` | PDF text extraction (80-95% token reduction) | Read on PDFs (`.claude/rules/pdf-handling.md`) |
+| `scripts/claude_rules_doctor.py` | Validate `paths:` globs in rule frontmatter | Manual grep |
+| `scripts/lint_claude_agents.py` | Lint agent frontmatter (name/desc/model/tools) | Manual review |
+| `scripts/reindex_contextual.py` | Contextual retrieval reindex (--dry-run, --target) | Ad-hoc DB queries |
+| `scripts/check_plan_drift.py` | Detect ghost refs in `plans/` (default; pass `--dirs plans audits` to widen). Mark aspirational paths with `<!-- drift-skip -->` on the line. Wired into pre-push as warning-only CHECK 9. | Manually re-checking plans before starting work |
 
 ### Naming conventions
 - Specs: `/specs/feature-name_spec.md` (root, see `STRUCTURE.md`)

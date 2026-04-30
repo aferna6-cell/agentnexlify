@@ -625,7 +625,7 @@ export default function Home() {
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
               <h1 className="reveal">
-                your hardest working employee that dosen't stop. It answers,
+                Your hardest working employee that dosen't stop. It answers,
                 follows up, and continues to push the buisness forward{" "}
                 <span className="accent-gradient">around the clock.</span>
               </h1>

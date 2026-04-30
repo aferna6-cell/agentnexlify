@@ -127,6 +127,16 @@ Why:
 
 ## Model Routing Policy
 
+Detailed routing policy now lives in:
+- `docs/AGENT_ROUTING.md`
+- `config/agent-routing-eval.json`
+- `npm run eval:agent-routing`
+
+The short version: keep Codex/Claude as the premium autopilot path, evaluate
+Kimi Code or other low-cost workers only for `ai-routine`, `ai-docs`,
+`ai-tests`, and batch-candidate work, and block `ai-risky` issues from
+autonomous dispatch.
+
 ### Codex
 Use for:
 - implementation

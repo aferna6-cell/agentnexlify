@@ -38,14 +38,14 @@ def test_client(mock_settings):
         patch("backend.routers.widget_config.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_lead.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_booking.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_chat_helpers.get_service_supabase", return_value=db_mock),
         patch("backend.routers.sequences.get_service_supabase", return_value=db_mock),
     ]
     for p in patches:
         p.start()
 
     # Clear widget cache to avoid state leaking between tests
-    from backend.routers.widget_helpers import _cache
+    from backend.routers.widget_chat_helpers import _cache
     _cache.clear()
 
     from backend.main import app
@@ -212,21 +212,69 @@ class TestRateLimiting:
         )
 
     def test_rate_limit_widget_chat(self, test_client):
-        """Verify the /api/v1/widget/chat endpoint has rate limiting configured
-        at 60/minute in slowapi's limiter._route_limits registry."""
+        """Verify the /api/v1/widget/chat endpoint has dynamic per-tier rate
+        limiting registered in slowapi's limiter._dynamic_route_limits.
+
+        steal-list 1-6 (commit b0b1fb4) replaced the static "60/minute" decorator
+        with @limiter.limit(_chat_rate_limit, ...) where _chat_rate_limit is a
+        callable that resolves the tenant's plan tier per request. slowapi
+        registers callable limits in `_dynamic_route_limits` (separate registry
+        from `_route_limits` which holds string-literal limits).
+        """
         _client, _db_mock = test_client
 
         from backend.limiter import limiter
+        from backend.middleware.rate_limit import get_tier_limit
 
         key = "backend.routers.widget_chat.widget_chat"
-        assert key in limiter._route_limits, (
-            f"Expected '{key}' to be registered in limiter._route_limits. "
-            f"Registered keys: {list(limiter._route_limits.keys())}"
+        dyn = getattr(limiter, "_dynamic_route_limits", {})
+        assert key in dyn, (
+            f"Expected '{key}' to be registered in limiter._dynamic_route_limits. "
+            f"Registered keys: {list(dyn.keys())}"
         )
-        limit_obj = limiter._route_limits[key][0]
-        limit_str = str(limit_obj.limit)
-        assert "60 per 1 minute" in limit_str, (
-            f"Expected '60 per 1 minute' but got '{limit_str}'"
+        # Verify the per-tier resolver returns sane defaults for each plan
+        for tier, expected_rpm in [
+            ("free", 30),
+            ("growth", 120),
+            ("autopilot", 240),
+            ("professional", 480),
+            ("enterprise", 1200),
+        ]:
+            assert get_tier_limit(tier) == f"{expected_rpm}/minute", (
+                f"Tier '{tier}' expected {expected_rpm}/minute, "
+                f"got {get_tier_limit(tier)}"
+            )
+
+    def test_chat_rate_limit_signature_contract(self, test_client):
+        """Lock the slowapi calling convention for _chat_rate_limit.
+
+        slowapi/wrappers.py:86-94 calls callable limit providers with NO args
+        if the signature has no `key` param, OR with key_function(request) if
+        the signature DOES include `key`. A signature like (request) raises
+        TypeError on every request — production 500.
+
+        This test calls the function directly with the api_key string (matching
+        slowapi's calling convention) and asserts a valid limit string returns.
+        It will fail loudly if anyone reverts to (request) or any other shape.
+        """
+        _client, _db_mock = test_client
+
+        import inspect
+        from backend.routers.widget_chat import _chat_rate_limit
+
+        sig = inspect.signature(_chat_rate_limit)
+        params = list(sig.parameters.keys())
+        assert params == ["key"], (
+            f"_chat_rate_limit must take exactly one param named 'key' "
+            f"(slowapi convention). Got params: {params}. See "
+            f"slowapi/wrappers.py:86-94."
+        )
+
+        # Direct call with an unknown key must fall back to free tier (30/min)
+        # without raising. Exception → free fallback is the documented contract.
+        result = _chat_rate_limit("nonexistent-api-key-xyz")
+        assert result == "30/minute", (
+            f"Free-tier fallback expected '30/minute', got '{result}'"
         )
 
 

@@ -232,7 +232,9 @@ class TestGetActivityTotals:
     """Tests for get_activity_totals()."""
 
     def test_get_activity_totals_returns_count(self, mock_supabase):
-        """Returns dict with events_count key."""
+        """Returns dict with events_count key (Phase 2 shape)."""
+        from decimal import Decimal
+
         execute_result = MagicMock()
         execute_result.count = 3
         execute_result.data = []
@@ -243,14 +245,23 @@ class TestGetActivityTotals:
             .execute.return_value
         ) = execute_result
 
-        from backend.services.activity import get_activity_totals
+        with patch(
+            "backend.services.activity.attribution_service.compute_dollars_this_month",
+            return_value=Decimal("0"),
+        ), patch(
+            "backend.services.activity.attribution_service.compute_hours_this_week",
+            return_value=Decimal("0"),
+        ):
+            from backend.services.activity import get_activity_totals
 
-        result = get_activity_totals("tenant-A")
+            result = get_activity_totals("tenant-A")
         assert "events_count" in result
         assert result["events_count"] == 3
 
     def test_get_activity_totals_falls_back_to_data_len(self, mock_supabase):
         """When .count is None, falls back to len(data)."""
+        from decimal import Decimal
+
         execute_result = MagicMock()
         execute_result.count = None
         execute_result.data = [{"id": "a"}, {"id": "b"}]
@@ -261,16 +272,92 @@ class TestGetActivityTotals:
             .execute.return_value
         ) = execute_result
 
-        from backend.services.activity import get_activity_totals
+        with patch(
+            "backend.services.activity.attribution_service.compute_dollars_this_month",
+            return_value=Decimal("0"),
+        ), patch(
+            "backend.services.activity.attribution_service.compute_hours_this_week",
+            return_value=Decimal("0"),
+        ):
+            from backend.services.activity import get_activity_totals
 
-        result = get_activity_totals("tenant-A")
+            result = get_activity_totals("tenant-A")
         assert result["events_count"] == 2
 
     def test_get_activity_totals_returns_zero_on_error(self, mock_supabase):
-        """DB error returns {events_count: 0} without raising."""
+        """DB error returns events_count=0 + zero dollars/hours without raising."""
+        from decimal import Decimal
+
         mock_supabase.table.side_effect = RuntimeError("DB gone")
 
-        from backend.services.activity import get_activity_totals
+        with patch(
+            "backend.services.activity.attribution_service.compute_dollars_this_month",
+            return_value=Decimal("0"),
+        ), patch(
+            "backend.services.activity.attribution_service.compute_hours_this_week",
+            return_value=Decimal("0"),
+        ):
+            from backend.services.activity import get_activity_totals
 
-        result = get_activity_totals("tenant-A")
-        assert result == {"events_count": 0}
+            result = get_activity_totals("tenant-A")
+        assert result == {
+            "events_count": 0,
+            "dollars_this_month": "0",
+            "hours_this_week": "0",
+        }
+
+    def test_get_activity_totals_includes_attribution_fields(self, mock_supabase):
+        """Phase 2: dollars_this_month + hours_this_week from attribution_service."""
+        from decimal import Decimal
+
+        execute_result = MagicMock()
+        execute_result.count = 1
+        execute_result.data = []
+        (
+            mock_supabase.table.return_value
+            .select.return_value
+            .eq.return_value
+            .execute.return_value
+        ) = execute_result
+
+        with patch(
+            "backend.services.activity.attribution_service.compute_dollars_this_month",
+            return_value=Decimal("325.00"),
+        ), patch(
+            "backend.services.activity.attribution_service.compute_hours_this_week",
+            return_value=Decimal("1.50"),
+        ):
+            from backend.services.activity import get_activity_totals
+
+            result = get_activity_totals("tenant-A")
+
+        assert result["events_count"] == 1
+        assert result["dollars_this_month"] == "325.00"
+        assert result["hours_this_week"] == "1.50"
+
+    def test_get_activity_totals_attribution_failure_isolated(self, mock_supabase):
+        """Attribution exceptions degrade to 0; events_count still returns."""
+        execute_result = MagicMock()
+        execute_result.count = 5
+        execute_result.data = []
+        (
+            mock_supabase.table.return_value
+            .select.return_value
+            .eq.return_value
+            .execute.return_value
+        ) = execute_result
+
+        with patch(
+            "backend.services.activity.attribution_service.compute_dollars_this_month",
+            side_effect=RuntimeError("attribution boom"),
+        ), patch(
+            "backend.services.activity.attribution_service.compute_hours_this_week",
+            side_effect=RuntimeError("attribution boom"),
+        ):
+            from backend.services.activity import get_activity_totals
+
+            result = get_activity_totals("tenant-A")
+
+        assert result["events_count"] == 5
+        assert result["dollars_this_month"] == "0"
+        assert result["hours_this_week"] == "0"
