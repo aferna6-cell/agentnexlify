@@ -1,9 +1,8 @@
 """Activity logging service — fire-and-forget, never raises."""
 
-
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -26,20 +25,8 @@ def _mask_phone(phone: str) -> str:
     digits = re.sub(r"\D", "", stripped)  # pure digits only
 
     if len(digits) >= 8:
-        # Show first (len - 8) digits, mask 4, show last 4
-        # e.g. 12345557890 (11 digits): show 3 + **** + 4 = "123****7890"
-        # But spec wants +1234****7890 from +12345557890:
-        # digits = 12345557890 (11 digits), show first 7-4=... no.
-        # Spec: +12345557890 -> +1234****7890: prefix=+, show 4 digits, ****, last 4.
-        # Rule: show (len(digits) - 8) prefix digits + **** + last 4
-        # 11 digits: show 11-8=3 -> +123****7890 — but spec says +1234****7890 (4 shown).
-        # Recount: +12345557890 has digits=12345557890 (11). Spec output: +1234****7890
-        # That's 4 visible + **** + 4 = 12 total digits shown. But input is 11.
-        # Actually spec says "last 4 visible" for the masked middle, keep start up to len-8+1.
-        # Simplest: always show first 4 digits of the number, then ****, then last 4.
-        # Only apply when total digits >= 9 (otherwise overlap).
+        # Show first max(len-8, 4) digits + **** + last 4 (min 9 digits to avoid overlap)
         visible_start = digits[:-8] if len(digits) > 8 else ""
-        # Ensure at least 4 visible start chars when number is long enough
         if len(digits) >= 9 and len(visible_start) < 4:
             visible_start = digits[:4]
         masked = prefix + visible_start + "****" + digits[-4:]
@@ -100,7 +87,9 @@ def get_activity_events(
         db = get_service_supabase()
         query = (
             db.table("activity_log")
-            .select("id, tenant_id, activity_type, description, metadata, lead_id, created_at")
+            .select(
+                "id, tenant_id, activity_type, description, metadata, lead_id, created_at"
+            )
             .eq("tenant_id", tenant_id)
         )
         if since is not None:
