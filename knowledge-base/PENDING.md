@@ -263,3 +263,17 @@ _All compiled 2026-04-18 cron run._
 - ~~[technical] Embedding Model Pricing: OpenAI, Cohere, Voyage Cost Comparison~~ → compiled `wiki/technical/embedding-model-pricing-comparison-2026.md` (2026-04-27 cron)
 - ~~[regulations] TCPA Compliance for SMS 2026 (Signalmash)~~ → compiled `wiki/regulations/tcpa-sms-compliance-2026.md` (2026-04-28 cron)
 - ~~[regulations] 2026 AI Laws Update: Key Regulations and Practical Guidance (Gunderson Dettmer)~~ → compiled `wiki/regulations/gunder-2026-ai-laws-update.md` (2026-04-27 cron)
+
+## Ingested 2026-04-30T22:19:03Z — cron autopop
+
+- [competitors] GoHighLevel New Features 2026 (Stripe Tax, Smart Lists, Voice AI) → competitors/gohighlevel-updates-2026.md
+- [ai-llm] MCP 2026 Roadmap (Tasks, DPoP, Workload Identity) → ai-llm/mcp-2026-roadmap.md
+- [growth] 23 Live Chat Statistics 2026 (Tidio market share, ROI) → growth/tidio-live-chat-statistics-2026.md
+- [small-biz-saas] SaaS Retention: The AI Churn Wave (ChartMogul) → small-biz-saas/chartmogul-saas-retention-ai-churn-wave.md
+- [small-biz-saas] Average SaaS Churn Rate + 10 Strategies (Userpilot) → small-biz-saas/userpilot-churn-strategies-2026.md
+- [technical] FastAPI Production Best Practices 2026 (FastLaunchAPI) → technical/fastlaunchapi-fastapi-best-practices-production-2026.md
+- [technical] Production-Ready FastAPI Architecture Patterns (OneUptime) → technical/oneuptime-fastapi-production-ready-2026.md
+- [verticals] Top 5 AI Receptionist Solutions for Plumbing 2026 → verticals/myaifrontdesk-ai-receptionist-plumbing-2026.md
+- [verticals] 6 Best AI Answering Services for Contractors 2026 (LeadTruffle) → verticals/leadtruffle-ai-answering-contractors-2026.md
+- [regulations] California Companion Chatbot Law Now in Effect (Perkins Coie) → regulations/perkinscoie-ca-companion-chatbot-law-now-effect.md
+- [regulations] California's SB 243 Companion AI Mandate (Jones Walker) → regulations/joneswalker-sb-243-companion-ai-mandate.md
