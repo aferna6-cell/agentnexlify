@@ -1,0 +1,40 @@
+{
+  "date": "2026-04-30-pm",
+  "run": 11,
+  "mode": "moratorium",
+  "moratorium_active": true,
+  "evidence_summary": "3 days, ~20 commits. Agent filter skill + lead qualifier golden eval harness added (7854ede). Attribution dollars/hours slice 2. Dashboard activity feed UI. Onboarding V2 plan created (21 issues). GOVERNANCE CORRECTION: MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. NEW: AdminAnalyticsPage.jsx:117-122 has 6 .catch(() => null) in Promise.all with zero logging. Golden eval harness backend/tests/evals/ exists but not wired to CI.",
+  "ideas_count": 5,
+  "governance_correction": "Run 3 original violations (MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262) FIXED by e68677a. New violation cluster: AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added.",
+  "winner": "JS Silent Catch Pre-commit Guard (Run 3) — fix AdminAnalyticsPage.jsx:117-122 + add Check 9 to pre-commit",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "debate_verdicts": {
+    "JS Silent Catch Guard (Idea 1)": "SURVIVES → WINNER",
+    "Wire golden eval harness to CI (Idea 2)": "WEAKENED → parking lot ROI 2.5 (promote post-moratorium)",
+    "Fix em-dash + wire check_project_invariants (Idea 3)": "WEAKENED → parking lot (run 12 candidate)"
+  },
+  "key_findings": [
+    "MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a — governance correction",
+    "AdminAnalyticsPage.jsx:117-122 has 6 new .catch(() => null) — pattern recurred without guard",
+    "backend/tests/evals/ golden eval harness created (7854ede) — not wired to CI",
+    "plans/onboarding-v2_plan.md created with 21 issues — sprint starting without JS catch guard"
+  ],
+  "moratorium_status": {
+    "pending_count": 4,
+    "oldest_pending": "Run 3 (2026-04-11, day 23+)",
+    "lift_condition": "pending_approvals_count <= 3",
+    "implement_run3_to_lift": true
+  },
+  "parking_lot_promotions": [
+    "Wire golden eval harness to weekly CI — ROI 2.5, run 12 winner candidate",
+    "Onboarding V2 characterization tests — write before first sprint issue begins"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-04-30-pm/ideas/ideas.md",
+    "subconscious/runs/2026-04-30-pm/debate/debate-log.md",
+    "subconscious/runs/2026-04-30-pm/winning-concept.md",
+    "subconscious/runs/2026-04-30-pm/improvement-backlog.md",
+    "subconscious/runs/2026-04-30-pm/run-summary.json"
+  ]
+}

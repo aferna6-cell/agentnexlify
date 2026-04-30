@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-04-25T00:00:00Z",
-  "total_runs": 8,
+  "last_run": "2026-04-30T20:00:00Z",
+  "total_runs": 11,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -9,17 +9,25 @@
     "trigger_reason": "5 winners unimplemented; oldest 19+ days; run 7 explicitly mandated escalation by run 8",
     "max_pending_approvals": 3,
     "max_pending_age_days": 14,
-    "lift_condition": "pending_approvals_count <= 3 (human must implement at least 2 pending winners)",
-    "note": "Run 9 synthesis: if moratorium_active=true, recommend implementing oldest unimplemented winner rather than generating fresh ideas"
+    "lift_condition": "pending_approvals_count <= 3 (need 1 implementation after run 2 corrected to implemented)",
+    "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI."
   },
   "active_directions": [
+    {
+      "title": "JS + Python Silent Catch Guard",
+      "date": "2026-04-27",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 9 winner (Run 3 escalation + new Python evidence). Add Check 9 to scripts/hooks/pre-commit blocking JS .catch(() => null/{}). Patch widget_chat.py:295 bare except with logger.warning. GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. NEW violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging). Pre-commit guard (Check 9) still never added. S-effort. Implementing lifts moratorium."
+    },
     {
       "title": "Wire check_project_invariants.py into pre-commit hook",
       "date": "2026-04-25",
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit. S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest)."
+      "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit. S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest). BLOCKED: fails on em-dash in WizardStepAutoKB.jsx:140/172/254 — diagnose first."
     },
     {
       "title": "Widget 3-Copy Sync Guard",
@@ -27,7 +35,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 7 winner. Fix CLAUDE.md Invariant #4 (2 → 3 widget paths) + create scripts/check-widget-sync.sh + wire into pre-push hook. S-effort, zero dependencies. Script still not created as of run 8."
+      "note": "Run 7 winner. Fix CLAUDE.md Invariant #4 (2 → 3 widget paths) + create scripts/check-widget-sync.sh + wire into pre-push hook. S-effort, zero dependencies. Script still not created as of run 11."
     },
     {
       "title": "Migration Duplicate Number Pre-commit Guard",
@@ -51,7 +59,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 3 winner. Unimplemented 14+ days. Escalated by run 7, moratorium triggered by run 8. Add as Check 9 to scripts/hooks/pre-commit. Violations: MarketingDashboardPage.jsx:96, LocalSEOPage.jsx:262, AuthContext.jsx:89."
+      "note": "Run 3 winner. Unimplemented 23+ days. Escalated by run 7, moratorium triggered by run 8. Add as Check 9 to scripts/hooks/pre-commit. GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. NEW violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging). Pre-commit guard (Check 9) still never added."
     },
     {
       "title": "AI-to-Human Handoff (Explicit Trigger, v1)",
@@ -72,8 +80,9 @@
     {
       "title": "Add Lead Source Analytics Chart to Dashboard",
       "date": "2026-04-06",
-      "status": "recommended",
-      "run": 2
+      "status": "implemented",
+      "run": 2,
+      "note": "Governance correction run 9 (2026-04-27): AnalyticsPage.jsx has fetchLeadSources + BarChart with per-source colors. Was listed as pending in governance — corrected to implemented."
     },
     {
       "title": "JS Silent Catch Pre-commit Guard",
@@ -114,6 +123,27 @@
       "status": "recommended",
       "run": 8,
       "note": "Fresh evidence: 037865f added the script today. S-effort. Moratorium triggered this run."
+    },
+    {
+      "title": "JS + Python Silent Catch Guard",
+      "date": "2026-04-27",
+      "status": "recommended",
+      "run": 9,
+      "note": "Run 3 winner escalation. New Python evidence: widget_chat.py:295 bare except pays-tenants silently at free tier (issue #97). Add Check 9 to pre-commit + patch Python. Governance correction: run 2 Lead Source Analytics corrected to implemented."
+    },
+    {
+      "title": "JS Silent Catch Pre-commit Guard (moratorium re-recommendation)",
+      "date": "2026-04-30",
+      "status": "recommended",
+      "run": 10,
+      "note": "Run 10 moratorium mode. Same winner as run 9 — oldest pending still JS Silent Catch (run 3, day 23+). Violations confirmed: MarketingDashboardPage.jsx:96, LocalSEOPage.jsx:262. New blocker found: check_project_invariants.py (run 8 winner) fails on em-dash in WizardStepAutoKB.jsx."
+    },
+    {
+      "title": "JS Silent Catch Pre-commit Guard + AdminAnalyticsPage fix",
+      "date": "2026-04-30-pm",
+      "status": "recommended",
+      "run": 11,
+      "note": "Run 11 PM moratorium mode. GOVERNANCE CORRECTION: original violations (MarketingDashboard + LocalSEO) FIXED by e68677a. NEW violations: AdminAnalyticsPage.jsx:117-122 (6 .catch(() => null) in Promise.all). Pattern recurred without systematic guard — confirms pre-commit guard is the system fix. Golden eval harness (backend/tests/evals/) added but not wired to CI."
     }
   ],
   "rejected_paths": [
@@ -126,10 +156,22 @@
   ],
   "parking_lot": [
     {
+      "title": "Wire golden eval harness to weekly CI",
+      "date": "2026-04-30-pm",
+      "roi": 2.5,
+      "note": "WEAKENED run 11 (moratorium override). backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json added 7854ede. Env-var gated, 80% pass threshold. Add .github/workflows/lead-qualifier-eval.yml with Monday cron. Requires LEAD_QUALIFIER_AGENT_ID in GH Secrets. PROMOTE AS RUN 12 WINNER once moratorium lifts."
+    },
+    {
+      "title": "Onboarding V2 characterization tests",
+      "date": "2026-04-30-pm",
+      "roi": 1.7,
+      "note": "plans/onboarding-v2_plan.md created with 21 issues. Write backend/tests/test_onboarding_characterization.py before first sprint issue begins. Covers POST /api/onboarding/start, complete_step, get_wizard_state. Prevents implemented_unverified syndrome."
+    },
+    {
       "title": "widget_helpers Split Smoke Tests",
       "date": "2026-04-25",
       "roi": 2.0,
-      "note": "WEAKENED run 8. Only implemented_unverified governance item. Write backend/tests/test_widget_helpers_smoke.py: import each of 3 modules + call one function. Promote to run 9 winner if Widget Hot-Zone Playwright path confirmed."
+      "note": "WEAKENED run 8. Only implemented_unverified governance item. Write backend/tests/test_widget_helpers_smoke.py: import each of 3 modules + call one function."
     },
     {
       "title": "Widget Click Regression Guard (Playwright E2E)",
@@ -165,7 +207,7 @@
       "title": "Widget Hot-Zone Regression Suite",
       "date": "2026-04-18",
       "roi": 2.1,
-      "note": "WEAKENED runs 7+8. Pre-condition met (widget_helpers split done 6cf4646). Blocked on Playwright confirmation. Promote to run 9 winner candidate IF Playwright confirmed."
+      "note": "WEAKENED runs 7+8. Pre-condition met (widget_helpers split done 6cf4646). Blocked on Playwright confirmation."
     },
     {
       "title": "SettingsPage.jsx split into tab-panel components",
@@ -207,20 +249,21 @@
       "title": "Bug-patterns.md Split by Month",
       "date": "2026-04-24",
       "roi": 1.8,
-      "note": "2,204 lines. P4 task. Auto-logger writes to it. Split into monthly files + INDEX.md. Update auto-logger path."
+      "note": "2,320 lines (updated run 11). P4 task. Auto-logger writes to it. Split into monthly files + INDEX.md. Update auto-logger path."
     },
     {
       "title": "Moratorium Governance Self-Enforcing Threshold",
       "date": "2026-04-25",
       "roi": 1.6,
-      "note": "Partially implemented this run via moratorium_config in governance.json. Auto-trigger logic needs wiring into subconscious SKILL.md Phase 5 synthesis gate."
+      "note": "Partially implemented via moratorium_config in governance.json. Auto-trigger logic needs wiring into subconscious SKILL.md Phase 5 synthesis gate."
     }
   ],
   "implementation_lag_warning": {
     "runs_pending_approval": 4,
-    "runs_implemented": 2,
-    "oldest_pending": "2026-04-06 (Lead Source Analytics, run 2)",
-    "note": "Run 8: moratorium triggered. 5 items pending (runs 2, 3, 4, 7, 8). Human must implement at least 2 before run 9 to lift moratorium. If moratorium_active=true in run 9, synthesis should recommend oldest pending winner, not generate new ideas.",
+    "runs_implemented": 3,
+    "oldest_pending": "2026-04-11 (JS Silent Catch Guard, run 3)",
+    "governance_correction": "Lead Source Analytics (run 2) corrected to implemented in run 9 — was listed as pending, already built in AnalyticsPage.jsx. Run 11: MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a — original run 3 evidence updated. New violations at AdminAnalyticsPage.jsx:117-122.",
+    "note": "Run 11 (2026-04-30-pm): moratorium still active. 4 pending winners (runs 3, 4, 7, 8). Original run 3 violations fixed but guard never added and new violations appeared. Runs 9+10+11 all recommend JS Silent Catch. Moratorium lifts when pending_approvals_count <= 3.",
     "escalate": true
   },
   "config": {
