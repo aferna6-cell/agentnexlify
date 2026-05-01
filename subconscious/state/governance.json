@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-04-30T20:00:00Z",
-  "total_runs": 11,
+  "last_run": "2026-05-01T00:00:00Z",
+  "total_runs": 12,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -10,16 +10,16 @@
     "max_pending_approvals": 3,
     "max_pending_age_days": 14,
     "lift_condition": "pending_approvals_count <= 3 (need 1 implementation after run 2 corrected to implemented)",
-    "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI."
+    "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review."
   },
   "active_directions": [
     {
-      "title": "JS + Python Silent Catch Guard",
+      "title": "JS Silent Catch Guard — Check 10 (corrected from Check 9)",
       "date": "2026-04-27",
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 9 winner (Run 3 escalation + new Python evidence). Add Check 9 to scripts/hooks/pre-commit blocking JS .catch(() => null/{}). Patch widget_chat.py:295 bare except with logger.warning. GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. NEW violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging). Pre-commit guard (Check 9) still never added. S-effort. Implementing lifts moratorium."
+      "note": "Run 9 winner (Run 3 escalation + new Python evidence). NUMBERING CORRECTED run 12: pre-commit has 9 existing checks; JS silent catch is Check 10 (not Check 9 — Check 9 = 'dropped conversations.messages queries'). Patch widget_chat.py:295 bare except also part of original run 9 scope. GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. ACTIVE violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging) — Issue #109 opened. Pre-commit guard (Check 10) still never added. S-effort. Implementing lifts moratorium (4 → 3)."
     },
     {
       "title": "Wire check_project_invariants.py into pre-commit hook",
@@ -27,7 +27,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit. S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest). BLOCKED: fails on em-dash in WizardStepAutoKB.jsx:140/172/254 — diagnose first."
+      "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit as Check 11. S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest). BLOCKED: em-dash check fires as false positive on JSX UI render chars (|| '—' for empty table cells). EXPANDED blocker run 12: now 9 violations across WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Fix path: scope em-dash check to skip .jsx/.tsx files (one-line change) FIRST, then wire script. Nightly review 2026-05-01 incorrectly reported blocker as stale — direct script execution confirms."
     },
     {
       "title": "Widget 3-Copy Sync Guard",
@@ -144,6 +144,13 @@
       "status": "recommended",
       "run": 11,
       "note": "Run 11 PM moratorium mode. GOVERNANCE CORRECTION: original violations (MarketingDashboard + LocalSEO) FIXED by e68677a. NEW violations: AdminAnalyticsPage.jsx:117-122 (6 .catch(() => null) in Promise.all). Pattern recurred without systematic guard — confirms pre-commit guard is the system fix. Golden eval harness (backend/tests/evals/) added but not wired to CI."
+    },
+    {
+      "title": "JS Silent Catch Guard — Check 10 (numbering corrected) + AdminAnalyticsPage fix",
+      "date": "2026-05-01",
+      "status": "recommended",
+      "run": 12,
+      "note": "Run 12 moratorium mode. KEY CORRECTION: pre-commit has 9 existing checks; JS silent catch is Check 10 not Check 9. Nightly review 2026-05-01 opened Issue #109 (AdminAnalyticsPage) + Issue #110 (eval harness CI). Em-dash blocker for run 8 NOT cleared despite nightly review claim — direct check_project_invariants.py confirms 9 violations (WizardStepAutoKB + AutomationActivityCard). Em-dash check needs jsx/tsx scoping fix before run 8 can be wired."
     }
   ],
   "rejected_paths": [
@@ -261,9 +268,9 @@
   "implementation_lag_warning": {
     "runs_pending_approval": 4,
     "runs_implemented": 3,
-    "oldest_pending": "2026-04-11 (JS Silent Catch Guard, run 3)",
-    "governance_correction": "Lead Source Analytics (run 2) corrected to implemented in run 9 — was listed as pending, already built in AnalyticsPage.jsx. Run 11: MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a — original run 3 evidence updated. New violations at AdminAnalyticsPage.jsx:117-122.",
-    "note": "Run 11 (2026-04-30-pm): moratorium still active. 4 pending winners (runs 3, 4, 7, 8). Original run 3 violations fixed but guard never added and new violations appeared. Runs 9+10+11 all recommend JS Silent Catch. Moratorium lifts when pending_approvals_count <= 3.",
+    "oldest_pending": "2026-04-11 (JS Silent Catch Guard, run 3, day 24+)",
+    "governance_correction": "Lead Source Analytics (run 2) corrected to implemented in run 9 — was listed as pending, already built in AnalyticsPage.jsx. Run 11: MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a — original run 3 evidence updated. New violations at AdminAnalyticsPage.jsx:117-122 (Issue #109). Run 12: JS silent catch guard is Check 10 (not Check 9 as cited in runs 9-11 — Check 9 already exists as 'dropped conversations.messages queries'). Em-dash blocker for run 8 confirmed still active (nightly review was wrong).",
+    "note": "Run 12 (2026-05-01): moratorium still active. 4 pending winners (runs 3, 4, 7, 8). Runs 9+10+11+12 all recommend JS Silent Catch. Implementation lifts moratorium. Issue #109 (AdminAnalyticsPage) + Issue #110 (eval harness) opened by nightly review — external pressure now exists. Check 10 correction removes implementation friction.",
     "escalate": true
   },
   "config": {
