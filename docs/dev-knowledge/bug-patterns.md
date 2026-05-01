@@ -4,6 +4,26 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Zapier API key client lookup did not enforce plan_status (issue #107)
+**Date:** 2026-04-30
+**Symptom:** `backend/services/zapier_auth.py::_get_api_key_client` resolves API keys without checking `tenants.plan_status`. Cancelled / past-due / unpaid tenants whose API keys were not revoked at cancellation time still authenticate against the Zapier endpoints, bypassing the tier gate. Found by nightly-commit-review on `8050912`.
+**Root Cause:** Plan-status enforcement lives in the billing/tier gate at the chat surface, not in the Zapier API key resolver. Skeleton — confirm exact path before remediation.
+**Files Changed:** GitHub issue #107 filed; no code fix yet. `docs/dev-knowledge/nightly-reviews/logs/nightly-commit-review-2026-04-30.md` has triage detail.
+**Fix:** TODO — backend-dev to add `plan_status IN ('active','trialing')` check inside `_get_api_key_client`, return 402/403 for cancelled tenants. Add regression test seeding cancelled tenant + valid key + asserting auth fails.
+**Prevention:** Any API-key auth resolver MUST short-circuit on cancelled / past-due / unpaid plans. Pattern: tier gate at billing UI is necessary but not sufficient — tenant-facing surfaces (Zapier, widget chat, dashboard endpoints) re-check plan_status on every request. Treat plan_status as the canonical access control, not as a UI flag.
+
+---
+
+### Reasoning-trace comments leaked into production code (LOW noise)
+**Date:** 2026-04-30
+**Symptom:** `backend/services/activity.py::_mask_phone` carried an 11-line block of internal reasoning comments left in by a prior LLM edit. No behavior impact; pure noise. Replaced with a 1-line accurate description in `8050912`. AST verified no behavior change.
+**Root Cause:** Auto-commit hook captured intermediate "thinking" comments without a trim pass.
+**Files Changed:** `backend/services/activity.py`
+**Fix:** Removed reasoning-trace comments; kept single-line description.
+**Prevention:** Pre-commit hook should flag comments containing common reasoning markers (`reasoning:`, `step 1:`, `let me`, `I need to`, `we should`) inside production source files. Add as warning-only check; bare LOW signal across nightly review.
+
+---
+
 ### noshow_recovery swallowed CAN-SPAM unsubscribe check failures
 **Date:** 2026-04-23
 **Symptom:** `backend/services/noshow_recovery.py:122` wrapped the `leads.unsubscribed` lookup in `except Exception: logger.debug(...)`. On any transient Supabase failure the loop proceeded to send SMS + email to a customer whose unsubscribe status could not be verified — CAN-SPAM compliance violation. Also line 71 silently dropped appointments with unparseable `updated_at`; lines 191/352 warned on mark-sent failure when the same query would re-match next tick → duplicate SMS charges + customer spam; lines 298/317/343 logged SMS/email/rebook-check failures at debug, obscuring real outages.
