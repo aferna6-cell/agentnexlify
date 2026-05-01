@@ -346,3 +346,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-29 18:19] discover+compile | cron 18:00 | commits=2 raw=0 wiki=3
 
 ## [2026-04-30 18:37] discover+compile | cron 18:00 | commits=2 raw=11 wiki=4
+
+## [2026-05-01T22:05:21Z] discover | BLOCKED: network sandbox denies outbound + agent-browser not installed | found 0 | ingested 0

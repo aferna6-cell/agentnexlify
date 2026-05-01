@@ -9,9 +9,40 @@ from pydantic import BaseModel
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant
+from backend.services.activity import log_activity
 from backend.services.email_sender import build_unsubscribe_url, render_template, send_email
 
 logger = logging.getLogger(__name__)
+
+
+def _increment_runs_total(tenant_id: str, automation_type: str) -> None:
+    """Increment automations.runs_total for (tenant_id, type). Silently swallows errors.
+
+    Mirrors twilio_webhooks._increment_runs_total. No-op when no automation row exists
+    for the tenant — matches missed-call pattern.
+    """
+    try:
+        db = get_service_supabase()
+        result = (
+            db.table("automations")
+            .select("id, runs_total")
+            .eq("tenant_id", tenant_id)
+            .eq("type", automation_type)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            row = result.data[0]
+            db.table("automations").update(
+                {"runs_total": row["runs_total"] + 1}
+            ).eq("id", row["id"]).execute()
+    except Exception:
+        logger.warning(
+            "Failed to increment runs_total tenant=%s type=%s",
+            tenant_id,
+            automation_type,
+            exc_info=True,
+        )
 
 router = APIRouter(prefix="/api/v1/email-sequences", tags=["email-sequences"])
 
@@ -900,6 +931,20 @@ async def process_sequences(
                     "Sent sequence email send=%s lead=%s step=%s",
                     send_id, lead_id, step_id,
                 )
+                log_activity(
+                    tenant_id=tenant_id,
+                    activity_type="email_sequence_sent",
+                    description=f"Follow-up email sent to {lead.get('name') or lead_email}",
+                    lead_id=lead_id,
+                    metadata={
+                        "send_id": send_id,
+                        "step_id": step_id,
+                        "step_order": step.get("step_order"),
+                        "sequence_id": step.get("sequence_id"),
+                        "enrollment_id": enrollment_id,
+                    },
+                )
+                _increment_runs_total(tenant_id, "email_sequence")
             else:
                 err = result.get("detail", "send failed")
                 _update_send_status(db, send_id, "failed", error=err)
@@ -1025,6 +1070,20 @@ async def run_sequence_processor() -> dict:
             if result.get("success"):
                 _update_send_status(db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat())
                 sent += 1
+                log_activity(
+                    tenant_id=tenant_id,
+                    activity_type="email_sequence_sent",
+                    description=f"Follow-up email sent to {lead.get('name') or lead_email}",
+                    lead_id=lead_id,
+                    metadata={
+                        "send_id": send_id,
+                        "step_id": step_id,
+                        "step_order": step.get("step_order"),
+                        "sequence_id": step.get("sequence_id"),
+                        "enrollment_id": enrollment_id,
+                    },
+                )
+                _increment_runs_total(tenant_id, "email_sequence")
             else:
                 _update_send_status(db, send_id, "failed", error=result.get("detail", "send failed"))
                 failed += 1
