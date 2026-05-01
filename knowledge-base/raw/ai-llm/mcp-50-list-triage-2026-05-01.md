@@ -66,17 +66,15 @@
 
 **Why relevant:** Twilio is core to widget appointment booking + SMS follow-up. Existing code in `backend/services/twilio_*.py` is the integration. No MCP server wired for debugging call/SMS flows.
 
+**Package verified 2026-05-01:** `@twilio-alpha/mcp@0.7.0` — MIT, maintainer `twilio-alpha-ci <eti@twilio.com>`, exposes all Twilio APIs via OpenAPI MCP server. Bin: `twilio-mcp-server`. Deps: `@modelcontextprotocol/sdk ^1.7.0`, `@twilio-alpha/openapi-mcp-server 0.7.0`. Source: `npm view @twilio-alpha/mcp`.
+
 **Install procedure** (run when ready):
 ```bash
-# 1. Verify package on npm
-npm view @twilio-alpha/mcp 2>/dev/null || npm view twilio-mcp
-
-# 2. Add to .mcp.json (replace <PACKAGE> with verified name)
-# Example block (DO NOT paste blindly — verify package first):
+# 1. Add to .mcp.json (verified package name)
 #  "twilio": {
 #    "type": "stdio",
 #    "command": "npx",
-#    "args": ["-y", "<PACKAGE>"],
+#    "args": ["-y", "@twilio-alpha/mcp@0.7.0"],
 #    "env": {
 #      "TWILIO_ACCOUNT_SID": "${TWILIO_ACCOUNT_SID}",
 #      "TWILIO_API_KEY":     "${TWILIO_API_KEY}",
@@ -84,15 +82,15 @@ npm view @twilio-alpha/mcp 2>/dev/null || npm view twilio-mcp
 #    }
 #  }
 
-# 3. Verify env vars exist
+# 2. Verify env vars exist
 grep -E "TWILIO_(ACCOUNT_SID|API_KEY|API_SECRET)" .env
 
-# 4. Restart Claude Code session
+# 3. Restart Claude Code session
 ```
 
 **Capability vs current stack:** Backend services already call Twilio API directly. MCP server would add session-level read access (call logs, SMS history, message status) for live debugging without writing one-off Python.
 
-**Open question:** Confirm official Twilio MCP package name. As of training cutoff, `@twilio-alpha/mcp` is the candidate but unverified. User confirms before adding to `.mcp.json`.
+**Status:** Pending creds setup. User decides when to wire — package name no longer a blocker.
 
 ### #4 MCPHub — DOCUMENTED, NOT YET INSTALLED
 
@@ -141,9 +139,14 @@ Wire via:
 ## Decisions locked
 - **Don't install** Task Master AI, Postgres MCP, Codebase Memory MCP, Markdownify, Mixpanel — better alternatives in stack
 - **Don't install** any data warehouse / NoSQL / partner CRM MCPs — no workload
-- **Future install candidate** Twilio MCP — verify package name + creds first
+- **Future install candidate** Twilio MCP — package verified `@twilio-alpha/mcp@0.7.0` (2026-05-01); creds setup pending
 - **Defer** MCPHub — current deferred-tool pattern sufficient
 - **Template ready** FastMCP scaffold — extend when tenant-specific MCP need arises
+
+## Adjacent claims verified 2026-05-01
+
+### Off-peak 2x usage limit — EXPIRED PROMO
+Marketing claim "use Claude during off-peak for 2x weekly limit" verified at `support.claude.com/en/?q=off-peak`. Result: **time-limited March 2026 promotion** (March 13 - March 28, 2026). Five-hour usage was doubled during off-peak hours, additional usage didn't count toward weekly limits. **Promo ended.** No ongoing rule needed for `usage-observability.md`. Re-check support center if Anthropic re-runs promo.
 
 ## Cross-refs
 - `.claude/rules/plugins.md` — full routing decisions
