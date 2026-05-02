@@ -10,7 +10,11 @@ from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
-from backend.services.email_sender import build_unsubscribe_url, render_template, send_email
+from backend.services.email_sender import (
+    build_unsubscribe_url,
+    render_template,
+    send_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +37,9 @@ def _increment_runs_total(tenant_id: str, automation_type: str) -> None:
         )
         if result.data:
             row = result.data[0]
-            db.table("automations").update(
-                {"runs_total": row["runs_total"] + 1}
-            ).eq("id", row["id"]).execute()
+            db.table("automations").update({"runs_total": row["runs_total"] + 1}).eq(
+                "id", row["id"]
+            ).execute()
     except Exception:
         logger.warning(
             "Failed to increment runs_total tenant=%s type=%s",
@@ -44,12 +48,14 @@ def _increment_runs_total(tenant_id: str, automation_type: str) -> None:
             exc_info=True,
         )
 
+
 router = APIRouter(prefix="/api/v1/email-sequences", tags=["email-sequences"])
 
 
 # ---------------------------------------------------------------------------
 # Pydantic Models
 # ---------------------------------------------------------------------------
+
 
 class StepCreate(BaseModel):
     step_order: int
@@ -95,6 +101,7 @@ class EnrollRequest(BaseModel):
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _enroll_lead(
     db,
     sequence_id: str,
@@ -105,7 +112,8 @@ def _enroll_lead(
     """Enroll a lead in a sequence and schedule all active steps.
 
     Uses ON CONFLICT DO NOTHING to silently skip duplicate enrollments.
-    Returns the enrollment_id, or None if already enrolled (conflict).
+    Returns enrollment_id on success or on duplicate (existing id returned).
+    Returns None only on database error.
     """
     now = datetime.now(timezone.utc)
 
@@ -129,7 +137,9 @@ def _enroll_lead(
         )
     except Exception:
         logger.exception(
-            "Failed to upsert enrollment for lead %s in sequence %s", lead_id, sequence_id
+            "Failed to upsert enrollment for lead %s in sequence %s",
+            lead_id,
+            sequence_id,
         )
         return None
 
@@ -147,7 +157,9 @@ def _enroll_lead(
             if existing.data:
                 logger.info(
                     "Lead %s already enrolled in sequence %s (enrollment %s)",
-                    lead_id, sequence_id, existing.data[0]["id"],
+                    lead_id,
+                    sequence_id,
+                    existing.data[0]["id"],
                 )
                 return existing.data[0]["id"]
         except Exception:
@@ -164,22 +176,29 @@ def _enroll_lead(
             hours=step.get("delay_hours", 0),
         )
         try:
-            db.table("email_sequence_sends").insert({
-                "enrollment_id": enrollment_id,
-                "step_id": step["id"],
-                "lead_id": lead_id,
-                "tenant_id": tenant_id,
-                "status": "pending",
-                "scheduled_for": scheduled_for.isoformat(),
-            }).execute()
+            db.table("email_sequence_sends").insert(
+                {
+                    "enrollment_id": enrollment_id,
+                    "step_id": step["id"],
+                    "lead_id": lead_id,
+                    "tenant_id": tenant_id,
+                    "status": "pending",
+                    "scheduled_for": scheduled_for.isoformat(),
+                }
+            ).execute()
         except Exception:
             logger.exception(
-                "Failed to schedule send for step %s (enrollment %s)", step["id"], enrollment_id
+                "Failed to schedule send for step %s (enrollment %s)",
+                step["id"],
+                enrollment_id,
             )
 
     logger.info(
         "Enrolled lead %s in sequence %s — enrollment %s, %d steps scheduled",
-        lead_id, sequence_id, enrollment_id, len(active_steps),
+        lead_id,
+        sequence_id,
+        enrollment_id,
+        len(active_steps),
     )
     return enrollment_id
 
@@ -231,6 +250,7 @@ async def enroll_lead_in_sequences(tenant_id: str, lead_id: str) -> None:
 # CRUD — Sequences
 # ---------------------------------------------------------------------------
 
+
 @router.get("")
 async def list_sequences(
     claims: dict = Depends(_get_current_tenant),
@@ -264,9 +284,13 @@ async def list_sequences(
                 .eq("sequence_id", seq_id)
                 .execute()
             )
-            seq["step_count"] = step_count_res.count if step_count_res.count is not None else 0
+            seq["step_count"] = (
+                step_count_res.count if step_count_res.count is not None else 0
+            )
         except Exception:
-            logger.warning("Failed to fetch step count for sequence %s", seq_id, exc_info=True)
+            logger.warning(
+                "Failed to fetch step count for sequence %s", seq_id, exc_info=True
+            )
             seq["step_count"] = 0
 
         try:
@@ -276,9 +300,15 @@ async def list_sequences(
                 .eq("sequence_id", seq_id)
                 .execute()
             )
-            seq["enrollment_count"] = enroll_count_res.count if enroll_count_res.count is not None else 0
+            seq["enrollment_count"] = (
+                enroll_count_res.count if enroll_count_res.count is not None else 0
+            )
         except Exception:
-            logger.warning("Failed to fetch enrollment count for sequence %s", seq_id, exc_info=True)
+            logger.warning(
+                "Failed to fetch enrollment count for sequence %s",
+                seq_id,
+                exc_info=True,
+            )
             seq["enrollment_count"] = 0
 
         enriched.append(seq)
@@ -298,13 +328,15 @@ async def create_sequence(
     try:
         seq_result = (
             db.table("email_sequences")
-            .insert({
-                "tenant_id": tenant_id,
-                "name": req.name,
-                "trigger_type": req.trigger_type,
-                "trigger_config": req.trigger_config,
-                "is_active": req.is_active,
-            })
+            .insert(
+                {
+                    "tenant_id": tenant_id,
+                    "name": req.name,
+                    "trigger_type": req.trigger_type,
+                    "trigger_config": req.trigger_config,
+                    "is_active": req.is_active,
+                }
+            )
             .execute()
         )
         if not seq_result.data:
@@ -323,16 +355,18 @@ async def create_sequence(
         try:
             step_result = (
                 db.table("email_sequence_steps")
-                .insert({
-                    "sequence_id": sequence_id,
-                    "step_order": step.step_order,
-                    "delay_days": step.delay_days,
-                    "delay_hours": step.delay_hours,
-                    "subject": step.subject,
-                    "body": step.body,
-                    "email_type": step.email_type,
-                    "is_active": step.is_active,
-                })
+                .insert(
+                    {
+                        "sequence_id": sequence_id,
+                        "step_order": step.step_order,
+                        "delay_days": step.delay_days,
+                        "delay_hours": step.delay_hours,
+                        "subject": step.subject,
+                        "body": step.body,
+                        "email_type": step.email_type,
+                        "is_active": step.is_active,
+                    }
+                )
                 .execute()
             )
             if step_result.data:
@@ -370,7 +404,9 @@ async def get_sequence(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to get sequence %s for tenant %s", sequence_id, tenant_id)
+        logger.exception(
+            "Failed to get sequence %s for tenant %s", sequence_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to get sequence")
 
     # Fetch steps
@@ -384,7 +420,9 @@ async def get_sequence(
         )
         sequence["steps"] = steps_result.data or []
     except Exception:
-        logger.warning("Failed to fetch steps for sequence %s", sequence_id, exc_info=True)
+        logger.warning(
+            "Failed to fetch steps for sequence %s", sequence_id, exc_info=True
+        )
         sequence["steps"] = []
 
     # Enrollment stats
@@ -405,7 +443,11 @@ async def get_sequence(
             "by_status": by_status,
         }
     except Exception:
-        logger.warning("Failed to fetch enrollment stats for sequence %s", sequence_id, exc_info=True)
+        logger.warning(
+            "Failed to fetch enrollment stats for sequence %s",
+            sequence_id,
+            exc_info=True,
+        )
         sequence["enrollment_stats"] = {"total": 0, "by_status": {}}
 
     return sequence
@@ -457,24 +499,30 @@ async def update_sequence(
 
         # Replace steps if provided
         if new_steps is not None:
-            db.table("email_sequence_steps").delete().eq("sequence_id", sequence_id).execute()
+            db.table("email_sequence_steps").delete().eq(
+                "sequence_id", sequence_id
+            ).execute()
             for s in new_steps:
-                db.table("email_sequence_steps").insert({
-                    "sequence_id": sequence_id,
-                    "step_order": s["step_order"],
-                    "delay_days": s.get("delay_days", 0),
-                    "delay_hours": s.get("delay_hours", 0),
-                    "subject": s["subject"],
-                    "body": s["body"],
-                    "email_type": s.get("email_type", "email"),
-                    "is_active": s.get("is_active", True),
-                }).execute()
+                db.table("email_sequence_steps").insert(
+                    {
+                        "sequence_id": sequence_id,
+                        "step_order": s["step_order"],
+                        "delay_days": s.get("delay_days", 0),
+                        "delay_hours": s.get("delay_hours", 0),
+                        "subject": s["subject"],
+                        "body": s["body"],
+                        "email_type": s.get("email_type", "email"),
+                        "is_active": s.get("is_active", True),
+                    }
+                ).execute()
 
         return seq
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to update sequence %s for tenant %s", sequence_id, tenant_id)
+        logger.exception(
+            "Failed to update sequence %s for tenant %s", sequence_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to update sequence")
 
 
@@ -490,10 +538,12 @@ async def delete_sequence(
     try:
         result = (
             db.table("email_sequences")
-            .update({
-                "is_active": False,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            })
+            .update(
+                {
+                    "is_active": False,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
             .eq("id", sequence_id)
             .eq("tenant_id", tenant_id)
             .execute()
@@ -503,13 +553,16 @@ async def delete_sequence(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to delete sequence %s for tenant %s", sequence_id, tenant_id)
+        logger.exception(
+            "Failed to delete sequence %s for tenant %s", sequence_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to delete sequence")
 
 
 # ---------------------------------------------------------------------------
 # CRUD — Steps
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{sequence_id}/steps", status_code=201)
 async def add_step(
@@ -542,16 +595,18 @@ async def add_step(
     try:
         result = (
             db.table("email_sequence_steps")
-            .insert({
-                "sequence_id": sequence_id,
-                "step_order": req.step_order,
-                "delay_days": req.delay_days,
-                "delay_hours": req.delay_hours,
-                "subject": req.subject,
-                "body": req.body,
-                "email_type": req.email_type,
-                "is_active": req.is_active,
-            })
+            .insert(
+                {
+                    "sequence_id": sequence_id,
+                    "step_order": req.step_order,
+                    "delay_days": req.delay_days,
+                    "delay_hours": req.delay_hours,
+                    "subject": req.subject,
+                    "body": req.body,
+                    "email_type": req.email_type,
+                    "is_active": req.is_active,
+                }
+            )
             .execute()
         )
         if not result.data:
@@ -611,7 +666,9 @@ async def update_step(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to update step %s in sequence %s", step_id, sequence_id)
+        logger.exception(
+            "Failed to update step %s in sequence %s", step_id, sequence_id
+        )
         raise HTTPException(status_code=500, detail="Failed to update step")
 
 
@@ -656,13 +713,16 @@ async def delete_step(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to delete step %s from sequence %s", step_id, sequence_id)
+        logger.exception(
+            "Failed to delete step %s from sequence %s", step_id, sequence_id
+        )
         raise HTTPException(status_code=500, detail="Failed to delete step")
 
 
 # ---------------------------------------------------------------------------
 # Enrollments
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{sequence_id}/enrollments")
 async def list_enrollments(
@@ -688,7 +748,9 @@ async def list_enrollments(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to verify sequence %s for tenant %s", sequence_id, tenant_id)
+        logger.exception(
+            "Failed to verify sequence %s for tenant %s", sequence_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to list enrollments")
 
     try:
@@ -719,7 +781,9 @@ async def list_enrollments(
             )
             enrollment["lead"] = lead_result.data[0] if lead_result.data else None
         except Exception:
-            logger.warning("Failed to fetch lead %s for enrollment listing", lead_id, exc_info=True)
+            logger.warning(
+                "Failed to fetch lead %s for enrollment listing", lead_id, exc_info=True
+            )
             enrollment["lead"] = None
         enriched.append(enrollment)
 
@@ -769,7 +833,9 @@ async def enroll_lead(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to verify lead %s for tenant %s", req.lead_id, tenant_id)
+        logger.exception(
+            "Failed to verify lead %s for tenant %s", req.lead_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to enroll lead")
 
     # Load steps
@@ -788,7 +854,9 @@ async def enroll_lead(
 
     enrollment_id = _enroll_lead(db, sequence_id, steps, req.lead_id, tenant_id)
     if enrollment_id is None:
-        raise HTTPException(status_code=409, detail="Lead is already enrolled in this sequence")
+        raise HTTPException(
+            status_code=500, detail="Failed to enroll lead (database error)"
+        )
 
     return {
         "enrollment_id": enrollment_id,
@@ -801,6 +869,7 @@ async def enroll_lead(
 # ---------------------------------------------------------------------------
 # Internal: Sequence Processor
 # ---------------------------------------------------------------------------
+
 
 @router.post("/internal/process-sequences")
 async def process_sequences(
@@ -855,7 +924,9 @@ async def process_sequences(
                 .execute()
             )
             if not step_result.data:
-                logger.warning("Step %s not found for send %s — skipping", step_id, send_id)
+                logger.warning(
+                    "Step %s not found for send %s — skipping", step_id, send_id
+                )
                 _update_send_status(db, send_id, "skipped", error="step not found")
                 skipped += 1
                 continue
@@ -876,7 +947,9 @@ async def process_sequences(
                 .execute()
             )
             if not lead_result.data:
-                logger.warning("Lead %s not found for send %s — skipping", lead_id, send_id)
+                logger.warning(
+                    "Lead %s not found for send %s — skipping", lead_id, send_id
+                )
                 _update_send_status(db, send_id, "skipped", error="lead not found")
                 skipped += 1
                 continue
@@ -903,8 +976,16 @@ async def process_sequences(
 
         # Render template variables before sending
         try:
-            biz_row = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
-            business_name = (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
+            biz_row = (
+                db.table("tenants")
+                .select("business_name")
+                .eq("id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            business_name = (
+                (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
+            )
         except Exception:
             business_name = ""
         ctx = {
@@ -925,11 +1006,15 @@ async def process_sequences(
                 lead_id=lead_id,
             )
             if result.get("success"):
-                _update_send_status(db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat())
+                _update_send_status(
+                    db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat()
+                )
                 sent += 1
                 logger.info(
                     "Sent sequence email send=%s lead=%s step=%s",
-                    send_id, lead_id, step_id,
+                    send_id,
+                    lead_id,
+                    step_id,
                 )
                 log_activity(
                     tenant_id=tenant_id,
@@ -951,10 +1036,14 @@ async def process_sequences(
                 failed += 1
                 logger.warning(
                     "Failed to send sequence email send=%s lead=%s: %s",
-                    send_id, lead_id, err,
+                    send_id,
+                    lead_id,
+                    err,
                 )
         except Exception:
-            logger.exception("Exception sending sequence email send=%s lead=%s", send_id, lead_id)
+            logger.exception(
+                "Exception sending sequence email send=%s lead=%s", send_id, lead_id
+            )
             _update_send_status(db, send_id, "failed", error="send exception")
             failed += 1
             continue
@@ -964,7 +1053,9 @@ async def process_sequences(
             _maybe_complete_enrollment(db, enrollment_id, step["sequence_id"])
         except Exception:
             logger.warning(
-                "Failed to check enrollment completion for enrollment %s", enrollment_id, exc_info=True
+                "Failed to check enrollment completion for enrollment %s",
+                enrollment_id,
+                exc_info=True,
             )
 
     return {
@@ -1021,7 +1112,13 @@ async def run_sequence_processor() -> dict:
         enrollment_id = send_row["enrollment_id"]
         processed += 1
         try:
-            step_result = db.table("email_sequence_steps").select("subject, body, email_type, step_order, sequence_id").eq("id", step_id).limit(1).execute()
+            step_result = (
+                db.table("email_sequence_steps")
+                .select("subject, body, email_type, step_order, sequence_id")
+                .eq("id", step_id)
+                .limit(1)
+                .execute()
+            )
             if not step_result.data:
                 _update_send_status(db, send_id, "skipped", error="step not found")
                 skipped += 1
@@ -1032,7 +1129,13 @@ async def run_sequence_processor() -> dict:
             failed += 1
             continue
         try:
-            lead_result = db.table("leads").select("id, name, email, unsubscribed").eq("id", lead_id).limit(1).execute()
+            lead_result = (
+                db.table("leads")
+                .select("id, name, email, unsubscribed")
+                .eq("id", lead_id)
+                .limit(1)
+                .execute()
+            )
             if not lead_result.data:
                 _update_send_status(db, send_id, "skipped", error="lead not found")
                 skipped += 1
@@ -1053,11 +1156,21 @@ async def run_sequence_processor() -> dict:
             skipped += 1
             continue
         try:
-            biz_row = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
+            biz_row = (
+                db.table("tenants")
+                .select("business_name")
+                .eq("id", tenant_id)
+                .limit(1)
+                .execute()
+            )
             _biz = (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
         except Exception:
             _biz = ""
-        _ctx = {"name": lead.get("name") or "there", "email": lead_email, "business_name": _biz}
+        _ctx = {
+            "name": lead.get("name") or "there",
+            "email": lead_email,
+            "business_name": _biz,
+        }
         try:
             result = await send_email(
                 to=lead_email,
@@ -1068,7 +1181,9 @@ async def run_sequence_processor() -> dict:
                 lead_id=lead_id,
             )
             if result.get("success"):
-                _update_send_status(db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat())
+                _update_send_status(
+                    db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat()
+                )
                 sent += 1
                 log_activity(
                     tenant_id=tenant_id,
@@ -1085,20 +1200,34 @@ async def run_sequence_processor() -> dict:
                 )
                 _increment_runs_total(tenant_id, "email_sequence")
             else:
-                _update_send_status(db, send_id, "failed", error=result.get("detail", "send failed"))
+                _update_send_status(
+                    db, send_id, "failed", error=result.get("detail", "send failed")
+                )
                 failed += 1
         except Exception:
-            logger.exception("run_sequence_processor: exception sending send=%s", send_id)
+            logger.exception(
+                "run_sequence_processor: exception sending send=%s", send_id
+            )
             _update_send_status(db, send_id, "failed", error="send exception")
             failed += 1
             continue
         try:
             _maybe_complete_enrollment(db, enrollment_id, step["sequence_id"])
         except Exception:
-            logger.warning("run_sequence_processor: completion check failed for enrollment %s", enrollment_id, exc_info=True)
+            logger.warning(
+                "run_sequence_processor: completion check failed for enrollment %s",
+                enrollment_id,
+                exc_info=True,
+            )
 
     if processed:
-        logger.info("run_sequence_processor: processed=%d sent=%d failed=%d skipped=%d", processed, sent, failed, skipped)
+        logger.info(
+            "run_sequence_processor: processed=%d sent=%d failed=%d skipped=%d",
+            processed,
+            sent,
+            failed,
+            skipped,
+        )
     return {"processed": processed, "sent": sent, "failed": failed, "skipped": skipped}
 
 
@@ -1115,10 +1244,12 @@ def _maybe_complete_enrollment(db, enrollment_id: str, sequence_id: str) -> None
         )
         pending_count = remaining.count if remaining.count is not None else 0
         if pending_count == 0:
-            db.table("email_sequence_enrollments").update({
-                "status": "completed",
-                "completed_at": datetime.now(timezone.utc).isoformat(),
-            }).eq("id", enrollment_id).execute()
+            db.table("email_sequence_enrollments").update(
+                {
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }
+            ).eq("id", enrollment_id).execute()
             logger.info("Enrollment %s marked as completed", enrollment_id)
     except Exception:
         logger.exception("Failed to complete enrollment %s", enrollment_id)
