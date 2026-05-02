@@ -274,6 +274,6 @@ _All compiled 2026-04-18 cron run._
 - ~~[technical] FastAPI Production Best Practices 2026 (FastLaunchAPI)~~ → compiled `wiki/technical/fastlaunchapi-fastapi-best-practices-production-2026.md` (2026-05-01 cron)
 - ~~[technical] Production-Ready FastAPI Architecture Patterns (OneUptime)~~ → compiled `wiki/technical/oneuptime-fastapi-production-ready-2026.md` (2026-05-01 cron)
 - ~~[verticals] Top 5 AI Receptionist Solutions for Plumbing 2026~~ → compiled `wiki/verticals/myaifrontdesk-ai-receptionist-plumbing-2026.md` (2026-05-01 cron)
-- [verticals] 6 Best AI Answering Services for Contractors 2026 (LeadTruffle) → verticals/leadtruffle-ai-answering-contractors-2026.md
-- [regulations] California Companion Chatbot Law Now in Effect (Perkins Coie) → regulations/perkinscoie-ca-companion-chatbot-law-now-effect.md
+- ~~[verticals] 6 Best AI Answering Services for Contractors 2026 (LeadTruffle)~~ → compiled `wiki/verticals/leadtruffle-ai-answering-contractors-2026.md` (2026-05-02 cron)
+- ~~[regulations] California Companion Chatbot Law Now in Effect (Perkins Coie)~~ → compiled `wiki/regulations/perkinscoie-ca-companion-chatbot-law-now-effect.md` (2026-05-02 cron)
 - [regulations] California's SB 243 Companion AI Mandate (Jones Walker) → regulations/joneswalker-sb-243-companion-ai-mandate.md

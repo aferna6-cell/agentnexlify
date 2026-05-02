@@ -3,8 +3,8 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 106 (plus 1 in `_outputs/`)
-- Last compiled: 2026-04-30
+- Total articles: 108 (plus 1 in `_outputs/`)
+- Last compiled: 2026-05-02
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
 ## Articles by Category
@@ -97,6 +97,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [AI Receptionist Platforms — 2026 Competitive Landscape](wiki/verticals/ai-receptionist-platforms-2026.md) — Voice-AI category bifurcated into phone-only niche tools vs omni-channel platforms; pricing $199/mo flat to $9.50/call; channel breadth is primary buyer decision. Tags: ai-receptionist, voice-ai, competitive-landscape, smith-ai, synthflow, vapi, bland-ai, nextphone, parallel-ai
 - [AI Receptionist for General Contractors — Missed-Call Economics in 2026](wiki/verticals/ai-receptionist-general-contractors-2026.md) — GCs miss 20-30% of inbound calls; 85% of missed callers never call back, 62% try a competitor; AI receptionists at $49-$449/mo turn that revenue back on. Tags: general-contractors, ai-receptionist, missed-calls, speed-to-lead, vertical-saas, niceagents, sameday
 - [MyAIFrontDesk's Top 5 AI Receptionists for Plumbers — Trillet's $49/150-Minute Floor and the ServiceTitan Integration Tax](wiki/verticals/myaifrontdesk-ai-receptionist-plumbing-2026.md) — AgentZap (24-48hr setup, plumbing terminology, ServiceTitan), My AI Front Desk (9000+ Zapier), MyBusinessFlow (unlimited concurrency for winter freezes), Trillet ($49/mo 150 min, 5-min setup, sub-2-sec response, $0.20/min overage), AI Frontdesk (unlimited parallel, white-label). Tags: plumbing, ai-receptionist, trillet, agentzap, my-ai-front-desk, mybusinessflow, ai-frontdesk, servicetitan, housecall-pro, jobber, vertical-saas
+- [LeadTruffle's 2026 Comparison — Six AI Answering Services for Contractors and the 5,400% ROI Pitch](wiki/verticals/leadtruffle-ai-answering-contractors-2026.md) — 78% buy from first responder, 85% miss-to-competitor, 5,400% ROI on recovered jobs ($5K close ÷ $229/mo); CRM-integration depth (Jobber/HCP/ServiceTitan/Google LSA) is the buying axis. Tags: ai-receptionist, ai-answering, contractors, leadtruffle, smith-ai, goodcall, answerforce, missed-call-roi, home-services
 
 ### Technical Patterns
 - [pgvector — Native Vector Search in Postgres](wiki/technical/pgvector-postgres-vector-search.md) — Open-source Postgres extension powering AgentNexLiFy's KB search; six distance metrics, HNSW/IVFFlat indexes, hybrid queries. Tags: pgvector, postgres, embeddings, semantic-search, hnsw, ivfflat
@@ -122,6 +123,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [U.S. Chatbot Legislation 2026 — 98 State Bills and the Definitional Patchwork](wiki/regulations/us-chatbot-legislation-2026.md) — 98 chatbot-specific bills across 34 states (53% D / 46% R); three definitional models (capability, behavior, intent) determine scope; Colorado AI Act effective 1 Feb 2026. Tags: chatbot-law, ai-governance, state-regulation, colorado-ai-act, nist-ai-rmf, bias-audit, transparency-disclosure
 - [2026 AI Laws Update — Federal EO, State AI Acts, EU AI Act, and Consumer Chatbot Statutes](wiki/regulations/gunder-2026-ai-laws-update.md) — Trump's Dec 2025 EO leaves 2026 state AI laws enforceable; California SB 243's $1,000-per-violation private right of action against companion chatbots is the most consequential SMB-impacting deadline; Colorado AI Act June 30 2026; EU AI Act high-risk obligations Aug 2 2026. Tags: ai-regulation, executive-order, colorado-ai-act, california-sb-243, ny-raise-act, texas-traiga, eu-ai-act, gdpr-article-22, chatbot-disclosure, private-right-of-action
 - [TCPA SMS Compliance 2026 — One-to-One Consent and the $500-$1,500 Per-Message Penalty](wiki/regulations/tcpa-sms-compliance-2026.md) — TCPA penalties run $500-$1,500 per non-consented message; FCC's December 2024 one-to-one consent rule killed shared opt-in lists; 8AM-9PM recipient-local-time window and 5-year retention are non-negotiable. Tags: tcpa, sms-compliance, fcc, consent, opt-out, 10dlc, statutory-damages
+- [California's SB 243 Companion Chatbot Law — Operational Mandate Beyond Disclosure, In Effect 2026](wiki/regulations/perkinscoie-ca-companion-chatbot-law-now-effect.md) — SB 243 (effective Jan 1 2026) imposes operational duties (crisis-referral protocols, minor break reminders every 3hrs, annual reports starting July 2027) on "companion chatbots"; AgentNexLiFy fits the customer service / business operations exclusion but should document the scope analysis; private right of action with attorney-fee recovery monetizes plaintiff enforcement. Tags: sb-243, california, companion-chatbot, perkins-coie, private-right-of-action, minor-protections, crisis-protocol, preemption-watch
 
 ### Growth & Distribution
 - [Post-Launch Growth Strategy](wiki/growth/post-launch-growth-strategy.md) — Top 10 features for activation, viral growth, daily engagement, and lock-in. Tags: activation, retention, viral-growth, onboarding, quickbooks, reviews
