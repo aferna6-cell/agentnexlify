@@ -2338,3 +2338,23 @@ Skipped (reviewer false-positive): `hmac.new` works in Python 3.x. Deferred to s
 **Author:** aferna6-cell
 **Files Changed:** backend/services/idempotency.py,backend/services/rate_limit.py,migrations/116_idempotency_keys_rls.sql,docs/env-vars-2026-04-26.md
 **Details:** Auto-logged 2026-04-29 morning routine. Three security/correctness fixes: TOCTOU race on idempotency upsert, missing RLS on payload-storing table, XFF spoofing in rate-limit key. Prevention: every new table holding webhook payloads needs RLS in same migration (or immediate followup); SELECT-then-INSERT is never atomic — use upsert; never trust X-Forwarded-For terminal element. Run /log-bug to expand.
+
+---
+
+### fix(email-sequences): correct _enroll_lead docstring and 409 error code
+
+- Docstring claimed None returned on conflict; code actually returns
+  existing enrollment_id on duplicate. Fixed to reflect real behavior.
+- 409 "already enrolled" was unreachable (None only returned on DB error);
+  changed to 500 "database error" which accurately describes the failure.
+- Formatter (ruff) also reformatted file for line-length consistency.
+
+ops: nightly-commit-review 2026-05-02 — GH #112 #113 opened for N+1 queries
+and process_sequences/run_sequence_processor duplication.
+
+https://claude.ai/code/session_01NTRA3CyVY1ZjnnhDSegThE
+**Date:** 2026-05-02
+**Commit:** b4b7c10
+**Author:** Claude
+**Files Changed:** backend/routers/email_sequences.py,ops/routines/logs/nightly-commit-review-2026-05-02.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
