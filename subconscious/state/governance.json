@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-01T00:00:00Z",
-  "total_runs": 12,
+  "last_run": "2026-05-02T00:00:00Z",
+  "total_runs": 13,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -19,7 +19,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 9 winner (Run 3 escalation + new Python evidence). NUMBERING CORRECTED run 12: pre-commit has 9 existing checks; JS silent catch is Check 10 (not Check 9 — Check 9 = 'dropped conversations.messages queries'). Patch widget_chat.py:295 bare except also part of original run 9 scope. GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. ACTIVE violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging) — Issue #109 opened. Pre-commit guard (Check 10) still never added. S-effort. Implementing lifts moratorium (4 → 3)."
+      "note": "Run 9 winner (Run 3 escalation + new Python evidence). NUMBERING CORRECTED run 12: pre-commit has 9 existing checks; JS silent catch is Check 10 (not Check 9 — Check 9 = 'dropped conversations.messages queries'). GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. ACTIVE violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging) — Issue #109 opened. Pre-commit guard (Check 10) still never added. S-effort. Implementing lifts moratorium (4 → 3). RUN 13 (2026-05-02): violations re-confirmed via grep. Onboarding V2 sprint live — guard needed before first sprint JSX commit. Day 21 of oldest pending."
     },
     {
       "title": "Wire check_project_invariants.py into pre-commit hook",
@@ -270,7 +270,7 @@
     "runs_implemented": 3,
     "oldest_pending": "2026-04-11 (JS Silent Catch Guard, run 3, day 24+)",
     "governance_correction": "Lead Source Analytics (run 2) corrected to implemented in run 9 — was listed as pending, already built in AnalyticsPage.jsx. Run 11: MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a — original run 3 evidence updated. New violations at AdminAnalyticsPage.jsx:117-122 (Issue #109). Run 12: JS silent catch guard is Check 10 (not Check 9 as cited in runs 9-11 — Check 9 already exists as 'dropped conversations.messages queries'). Em-dash blocker for run 8 confirmed still active (nightly review was wrong).",
-    "note": "Run 12 (2026-05-01): moratorium still active. 4 pending winners (runs 3, 4, 7, 8). Runs 9+10+11+12 all recommend JS Silent Catch. Implementation lifts moratorium. Issue #109 (AdminAnalyticsPage) + Issue #110 (eval harness) opened by nightly review — external pressure now exists. Check 10 correction removes implementation friction.",
+    "note": "Run 13 (2026-05-02): moratorium still active. 4 pending winners (runs 3, 4, 7, 8). Runs 9+10+11+12+13 all recommend JS Silent Catch. AdminAnalyticsPage.jsx:117-122 confirmed 6 .catch(() => null) (grep this run). Pre-commit = 9 checks, Check 10 slot open. Onboarding V2 sprint live (21 issues). Nightly 2026-05-02 opened #112 (N+1 email_sequences) + #113 (code dupe email_sequences) — already tracked in GH, not subconscious territory. Run 13 = 5th consecutive moratorium-mode run. ESCALATION: if run 14 shows no implementation, offer /subconscious --implement.",
     "escalate": true
   },
   "config": {

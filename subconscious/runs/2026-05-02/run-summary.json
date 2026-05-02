@@ -1,0 +1,35 @@
+{
+  "run": 13,
+  "date": "2026-05-02",
+  "mode": "moratorium",
+  "evidence_window_days": 2,
+  "commits_reviewed": 9,
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "winner": "JS Silent Catch Check 10 + AdminAnalyticsPage.jsx fix",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "moratorium_active": true,
+  "moratorium_pending_before": 4,
+  "moratorium_pending_after": 4,
+  "moratorium_lift_condition": "pending_approvals <= 3 (implement run 3 winner)",
+  "key_evidence": [
+    "AdminAnalyticsPage.jsx:117-122 confirmed 6 .catch(() => null) — unchanged from run 12",
+    "Pre-commit has exactly 9 checks (verified echo-n count) — Check 10 slot open",
+    "Nightly 2026-05-02 opened Issue #112 (N+1 email_sequences) + Issue #113 (code dupe) — already tracked",
+    "Onboarding V2 sprint live (21 issues) — new JSX files incoming, guard needed now",
+    "email_sequences shipped clean (no silent catches) — pattern is dashboard-page-specific"
+  ],
+  "ideas_killed": [
+    "email_sequences N+1 fix — moratorium + already in GH #112",
+    "Wire golden eval harness — moratorium violation",
+    "Reasoning-trace scanner — moratorium violation"
+  ],
+  "ideas_weakened": [
+    "em-dash scope + wire invariants.py — belongs as run 8 blocker note, not standalone"
+  ],
+  "next_run_first_check": "Has JS Silent Catch Check 10 been implemented? If yes: moratorium lifts, next winner = golden eval harness CI (ROI 2.5, Issue #110).",
+  "escalation_note": "Run 13 is 5th consecutive moratorium-mode run. If run 14 evidence shows no implementation, consider offering /subconscious --implement to directly execute the implementation sketch.",
+  "same_winner_as_run_12": true,
+  "days_oldest_pending": 21
+}
