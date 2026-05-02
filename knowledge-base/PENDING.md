@@ -229,7 +229,7 @@ _All compiled 2026-04-18 cron run._
 
 - [growth] Is AI Content Bad for SEO? No, and It Never Will Be (7 Reasons) — https://ahrefs.com/blog/ai-content-is-not-bad-for-seo/ (raw: knowledge-base/raw/growth/ai-content-is-not-bad-for-seo-2026-04-24.md)
 
-- [growth] How many keywords can you rank for with one page? (Ahrefs’ study of 3M searches) — https://ahrefs.com/blog/also-rank-for-study/ (raw: knowledge-base/raw/growth/also-rank-for-study-2026-04-24.md)
+- ~~[growth] How many keywords can you rank for with one page? (Ahrefs' study of 3M searches)~~ → compiled `wiki/growth/ahrefs-also-rank-for-study.md` (2026-05-02 cron)
 
 - [technical] Agent responsibly - Vercel — https://vercel.com/blog/agent-responsibly (raw: knowledge-base/raw/technical/agent-responsibly-2026-04-24.md)
 
@@ -276,4 +276,4 @@ _All compiled 2026-04-18 cron run._
 - ~~[verticals] Top 5 AI Receptionist Solutions for Plumbing 2026~~ → compiled `wiki/verticals/myaifrontdesk-ai-receptionist-plumbing-2026.md` (2026-05-01 cron)
 - ~~[verticals] 6 Best AI Answering Services for Contractors 2026 (LeadTruffle)~~ → compiled `wiki/verticals/leadtruffle-ai-answering-contractors-2026.md` (2026-05-02 cron)
 - ~~[regulations] California Companion Chatbot Law Now in Effect (Perkins Coie)~~ → compiled `wiki/regulations/perkinscoie-ca-companion-chatbot-law-now-effect.md` (2026-05-02 cron)
-- [regulations] California's SB 243 Companion AI Mandate (Jones Walker) → regulations/joneswalker-sb-243-companion-ai-mandate.md
+- ~~[regulations] California's SB 243 Companion AI Mandate (Jones Walker)~~ → compiled `wiki/regulations/joneswalker-sb-243-companion-ai-mandate.md` (2026-05-02 cron)
