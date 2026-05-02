@@ -27,7 +27,9 @@
       "Write(.mcp.json)",
       "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
       "Bash(gh api *)",
-      "Bash(rtk gh *)"
+      "Bash(rtk gh *)",
+      "Bash(bash /tmp/claude-1000/file-issues.sh)",
+      "Bash(bash /tmp/claude-1000/file-issues-2.sh)"
     ]
   }
 }
