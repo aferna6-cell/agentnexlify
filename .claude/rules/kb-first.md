@@ -28,7 +28,14 @@ Before starting any research/analysis task, check `knowledge-base/wiki/` for rel
 - Regulations & compliance
 - Growth & distribution
 
+## Read order (cheapest → most expensive)
+1. `knowledge-base/HOT.md` — 500-token rolling active-state cache. Read FIRST. Karpathy hot-cache pattern.
+2. `knowledge-base/INDEX.md` — 44K full catalog of 110+ articles
+3. Specific `wiki/<category>/<article>.md` if INDEX points to one
+4. `raw/` only when wiki doesn't have it
+
 ## Pointers
+- Hot cache: `/home/aidan/agentnexlify/knowledge-base/HOT.md`
 - Index: `/home/aidan/agentnexlify/knowledge-base/INDEX.md`
 - Wiki: `/home/aidan/agentnexlify/knowledge-base/wiki/`
 - Raw sources (pending compile): `/home/aidan/agentnexlify/knowledge-base/raw/`
