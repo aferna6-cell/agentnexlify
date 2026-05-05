@@ -277,3 +277,12 @@ _All compiled 2026-04-18 cron run._
 - ~~[verticals] 6 Best AI Answering Services for Contractors 2026 (LeadTruffle)~~ → compiled `wiki/verticals/leadtruffle-ai-answering-contractors-2026.md` (2026-05-02 cron)
 - ~~[regulations] California Companion Chatbot Law Now in Effect (Perkins Coie)~~ → compiled `wiki/regulations/perkinscoie-ca-companion-chatbot-law-now-effect.md` (2026-05-02 cron)
 - ~~[regulations] California's SB 243 Companion AI Mandate (Jones Walker)~~ → compiled `wiki/regulations/joneswalker-sb-243-companion-ai-mandate.md` (2026-05-02 cron)
+
+## [2026-05-05 18:08] auto-populate batch (6 new, 4 rejected)
+- [competitors] raw/competitors/best-reputation-management-platforms-for-multi-location-brands-in-2026.md — https://birdeye.com/blog/best-reputation-management-platforms-for-multi-location-brands-in-2026/
+- [ai-llm] raw/ai-llm/economic-index-march-2026-report.md — https://www.anthropic.com/research/economic-index-march-2026-report
+- [ai-llm] raw/ai-llm/finance-agents.md — https://www.anthropic.com/news/finance-agents
+- [technical] raw/technical/supabase-incident-on-february-12-2026.md — https://supabase.com/blog/supabase-incident-on-february-12-2026
+- [technical] raw/technical/supabase-security-2025-retro.md — https://supabase.com/blog/supabase-security-2025-retro
+- [regulations] raw/regulations/ftc-ban-kochava-subsidiary-selling-sensitive-location-data-settle-charges-they-s.md — https://www.ftc.gov/news-events/news/press-releases/2026/05/ftc-ban-kochava-subsidiary-selling-sensitive-location-data-settle-charges-they-sold-location-data
+- REJECTED birdeye/wp-json (REST endpoint, not article); ahrefs/wp-json (same); ahrefs/de (German index page); ftc horseracing budget (off-topic). URLs remain in known-urls.json to prevent retry.

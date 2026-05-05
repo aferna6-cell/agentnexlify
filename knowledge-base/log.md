@@ -354,3 +354,4 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-05-02 18:22] discover+compile | cron 18:00 | commits=6 raw=0 wiki=4
 
 ## [2026-05-05 11:16] discover+compile | cron 18:00 | commits=4 raw=0 wiki=0
+[2026-05-05 18:09] discover+autopop | cron 18:00 | new_raw=6 rejected=4 deduped=50 known_urls=413
