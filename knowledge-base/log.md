@@ -355,3 +355,8 @@ URLs kept in known-urls.json to prevent retry.
 
 ## [2026-05-05 11:16] discover+compile | cron 18:00 | commits=4 raw=0 wiki=0
 [2026-05-05 18:09] discover+autopop | cron 18:00 | new_raw=6 rejected=4 deduped=50 known_urls=413
+
+## [2026-05-05 18:22] compile | Birdeye Multi-Location Reputation Platforms 2026
+## [2026-05-05 18:22] compile | Anthropic Economic Index March 2026 — Learning Curves
+## [2026-05-05 18:22] compile | Anthropic Finance Agents — Managed Agents + Cowork May 2026
+## [2026-05-05 18:22] compile | Supabase us-east-2 BPA Incident Feb 12 2026 Postmortem
