@@ -35,6 +35,7 @@ logs/llm_traces/
 scripts/daily/run-morning.bat
 scripts/daily/run-evening.bat
 .claude/command-log.txt
+.claude/settings.local.json
 .claude/worktrees/
 .gitnexus
 .mcp.json

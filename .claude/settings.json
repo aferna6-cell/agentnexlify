@@ -54,6 +54,12 @@
       "Edit(~/.bash_profile)",
       "Edit(~/.profile)",
       "Edit(/etc/**)",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
+      "Bash(sudo:*)",
+      "Bash(chmod 777:*)",
+      "Bash(chmod -R 777:*)",
+      "Bash(*> /dev/*)",
       "Bash(nc:*)",
       "Bash(ncat:*)",
       "Bash(socat:*)",
@@ -74,7 +80,7 @@
       "Bash(chown:*)"
     ]
   },
-  "enableAllProjectMcpServers": true,
+  "enableAllProjectMcpServers": false,
   "hooks": {
     "PreToolUse": [
       {

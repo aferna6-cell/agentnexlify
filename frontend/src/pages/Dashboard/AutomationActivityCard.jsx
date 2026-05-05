@@ -154,7 +154,7 @@ function TotalsHeadline({ totals, loading, error }) {
           {loading ? (
             <SkeletonBar width={70} height={22} />
           ) : error ? (
-            <span style={{ color: "#ef4444", fontSize: "0.9rem" }}>—</span>
+            <span style={{ color: "#ef4444", fontSize: "0.9rem" }}>-</span>
           ) : (
             formatDollars(dollars)
           )}
@@ -170,7 +170,7 @@ function TotalsHeadline({ totals, loading, error }) {
           {loading ? (
             <SkeletonBar width={52} height={22} />
           ) : error ? (
-            <span style={{ color: "#ef4444", fontSize: "0.9rem" }}>—</span>
+            <span style={{ color: "#ef4444", fontSize: "0.9rem" }}>-</span>
           ) : (
             formatHours(hours)
           )}
@@ -186,7 +186,7 @@ function TotalsHeadline({ totals, loading, error }) {
           {loading ? (
             <SkeletonBar width={36} height={22} />
           ) : error ? (
-            <span style={{ color: "#ef4444", fontSize: "0.9rem" }}>—</span>
+            <span style={{ color: "#ef4444", fontSize: "0.9rem" }}>-</span>
           ) : (
             count
           )}
@@ -249,7 +249,7 @@ function EventRow({ event }) {
 }
 
 // ----------------------------------------------------------------
-// Empty state — shown when no activity has been logged yet
+// Empty state - shown when no activity has been logged yet
 // ----------------------------------------------------------------
 
 function EmptyState() {
@@ -387,7 +387,7 @@ export default function AutomationActivityCard({
         )}
       </div>
 
-      {/* Totals headline — always rendered (zeros / skeleton / error state) */}
+      {/* Totals headline - always rendered (zeros / skeleton / error state) */}
       <TotalsHeadline totals={totals} loading={loading} error={error} />
 
       {/* Event list */}

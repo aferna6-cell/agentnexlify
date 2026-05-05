@@ -79,6 +79,8 @@ ECC_AGENTS = (
 
 EXPECTED_ECC_COMMIT = "7eb7c598fba384a5e5829928945d59868c6eb075"
 CLAUDE_CODE_PIN = "@anthropic-ai/claude-code@2.1.98"
+AGENTSHIELD_PIN = "ecc-agentshield@1.4.0"
+AGENTSHIELD_BASELINE = "config/agentshield-baseline.json"
 
 
 def read_text(path: str) -> str:
@@ -195,6 +197,33 @@ def main() -> int:
         failures,
     )
     check(
+        scripts.get("agent-config:scan")
+        == f"npx -y {AGENTSHIELD_PIN} scan --path . --baseline {AGENTSHIELD_BASELINE} --gate --min-severity high",
+        "package agent config security scan is pinned and baseline-gated",
+        failures,
+    )
+    check(
+        scripts.get("agent-config:scan:report") == f"npx -y {AGENTSHIELD_PIN} scan --path .",
+        "package full agent config security report command is pinned",
+        failures,
+    )
+    check(
+        scripts.get("agent-config:scan:baseline")
+        == f"npx -y {AGENTSHIELD_PIN} scan --path . --save-baseline {AGENTSHIELD_BASELINE} --min-severity high",
+        "package agent config security baseline command is pinned",
+        failures,
+    )
+    check(
+        scripts.get("agent-config:scan:fix") == f"npx -y {AGENTSHIELD_PIN} scan --path . --fix",
+        "package agent config security fix command is pinned",
+        failures,
+    )
+    check(
+        file_exists(AGENTSHIELD_BASELINE),
+        "AgentShield baseline exists",
+        failures,
+    )
+    check(
         scripts.get("check:skills") == f"{python_runner} scripts/check_skills.py",
         "package skill metadata check script is registered",
         failures,
@@ -289,6 +318,12 @@ def main() -> int:
     settings_text = read_text(".claude/settings.json")
     check("WebFetch|WebSearch" in settings_text, "WebFetch/WebSearch block is configured", failures)
     check("git push" in settings_text, "pre-push review hook is configured", failures)
+
+    agent_config_security = read_text(".github/workflows/agent-config-security.yml")
+    check("npm run agent-config:scan" in agent_config_security, "AgentShield workflow runs repo script", failures)
+    check("contents: read" in agent_config_security, "AgentShield workflow uses read-only permissions", failures)
+    for watched_path in (".claude/**", ".codex/**", ".mcp.json", "scripts/claude-hooks/**"):
+        check(watched_path in agent_config_security, f"AgentShield workflow watches {watched_path}", failures)
 
     issue_to_pr_skill = read_text(".claude/skills/issue-to-pr-loop/SKILL.md")
     issue_to_pr = read_text("scripts/automation/issue-to-pr.sh")

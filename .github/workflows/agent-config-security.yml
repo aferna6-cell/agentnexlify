@@ -1,0 +1,61 @@
+name: Agent Config Security
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - ".agents/**"
+      - ".claude/**"
+      - ".claude-plugin/**"
+      - ".codex/**"
+      - ".mcp.json"
+      - ".mcp.example.json"
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "GEMINI.md"
+      - "KARPATHY.md"
+      - ".clinerules"
+      - ".cursorrules"
+      - ".windsurfrules"
+      - "opencode.json"
+      - "package.json"
+      - "scripts/claude-hooks/**"
+      - ".github/workflows/agent-config-security.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - ".agents/**"
+      - ".claude/**"
+      - ".claude-plugin/**"
+      - ".codex/**"
+      - ".mcp.json"
+      - ".mcp.example.json"
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "GEMINI.md"
+      - "KARPATHY.md"
+      - ".clinerules"
+      - ".cursorrules"
+      - ".windsurfrules"
+      - "opencode.json"
+      - "package.json"
+      - "scripts/claude-hooks/**"
+      - ".github/workflows/agent-config-security.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: AgentShield scan
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run pinned AgentShield scan
+        run: npm run agent-config:scan

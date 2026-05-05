@@ -86,6 +86,7 @@ cd frontend && npm run dev              # frontend dev (Vite :3001)
 cd frontend && npm run build            # prod build
 python -m uvicorn backend.main:app --reload --port 8000   # backend dev (requires .venv)
 npm run agent-system:check              # verify Claude/Codex agent control plane
+npm run agent-config:scan               # baseline-gated AgentShield scan for agent/MCP/hook config
 npm run claude:2.1.98 -- --version      # pinned Claude Code runner
 npm run claude:noflicker                # pinned + experimental no-flicker renderer
 bash scripts/install-hooks.sh           # install git hooks
@@ -125,6 +126,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **Pre-push hook** — frontend build + schema consistency check
 - **GitHub Actions** — daily health check, PR validation, auto bug logging, AI auto-improve
 - **Agent system guardrail** - `scripts/check_agent_system.py` runs in PR validation and proves CLAUDE.md, Everything Claude Code agents, Claude Code 2.1.98 pin, and issue-to-PR workflows are intact.
+- **Agent config security** - `npm run agent-config:scan` runs pinned baseline-gated AgentShield on Claude/Codex agents, hooks, MCP config, and project instruction files; CI triggers on those paths.
 - **Claude Code hooks** — pre-edit sensitive-file warn, post-edit pattern scan, anti-desperation, UltraPlan/UltraThink, 90% confidence gate, 15-msg handoff summary (`scripts/claude-hooks/message-counter.sh`), Opus 4.7 feature reminder (`scripts/claude-hooks/invoke-opus-47-features.sh` — nudges self-verification / /ultrareview / task-budgets / 3x-vision based on prompt keywords), agent-browser router (`scripts/claude-hooks/route-to-agent-browser.sh` — routes WebFetch/WebSearch to agent-browser CLI when installed; falls back to native tools otherwise)
 - **Issue → PR loop** — `.claude/skills/issue-to-pr-loop/SKILL.md`. Polls assigned GH issues every 15 min, Haiku classifies, Sonnet worktree implements, PR opens + feedback loop patches reviews. Replaces `autopilot-loop` (kept for reference).
 - **Nightly commit review** — `.claude/skills/nightly-commit-review/SKILL.md`. Fires daily 2:37 AM local via scheduled-tasks MCP. Haiku triages last 24h commits, Sonnet fixes LOW-risk bugs (commits + pushes), MEDIUM/HIGH → GH issue feeding issue-to-pr-loop. Manual trigger: `bash scripts/daily/nightly-commit-review.sh`. Disable: `CLAUDE_NIGHTLY_REVIEW=0`.

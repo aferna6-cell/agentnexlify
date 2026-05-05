@@ -1,0 +1,400 @@
+{
+  "version": 1,
+  "timestamp": "2026-05-05T14:50:19.982Z",
+  "score": {
+    "grade": "D",
+    "numericScore": 54,
+    "breakdown": {
+      "secrets": 100,
+      "permissions": 70,
+      "hooks": 0,
+      "mcp": 100,
+      "agents": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "permissions-claude-md-world-writable",
+      "severity": "high",
+      "category": "permissions",
+      "title": "CLAUDE.md is world-writable and group-writable (0o666)",
+      "file": "CLAUDE.md",
+      "evidence": "permissions: 0o666",
+      "fingerprint": "permissions-claude-md-world-writable::CLAUDE.md::permissions: 0o666"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\a11y-architect.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\a11y-architect.md",
+      "file": ".claude\\agents\\a11y-architect.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\a11y-architect.md::.claude\\agents\\a11y-architect.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\a11y-architect.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\a11y-architect.md",
+      "file": ".claude\\agents\\a11y-architect.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\a11y-architect.md::.claude\\agents\\a11y-architect.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\chief-of-staff.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\chief-of-staff.md",
+      "file": ".claude\\agents\\chief-of-staff.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\chief-of-staff.md::.claude\\agents\\chief-of-staff.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\chief-of-staff.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\chief-of-staff.md",
+      "file": ".claude\\agents\\chief-of-staff.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Edit, Write + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\chief-of-staff.md::.claude\\agents\\chief-of-staff.md::Discovery: Grep, Glob + Read + Write: Edit, Write + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\code-explorer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\code-explorer.md",
+      "file": ".claude\\agents\\code-explorer.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\code-explorer.md::.claude\\agents\\code-explorer.md::"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\code-simplifier.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\code-simplifier.md",
+      "file": ".claude\\agents\\code-simplifier.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\code-simplifier.md::.claude\\agents\\code-simplifier.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\code-simplifier.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\code-simplifier.md",
+      "file": ".claude\\agents\\code-simplifier.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\code-simplifier.md::.claude\\agents\\code-simplifier.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\comment-analyzer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\comment-analyzer.md",
+      "file": ".claude\\agents\\comment-analyzer.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\comment-analyzer.md::.claude\\agents\\comment-analyzer.md::"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\gan-evaluator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\gan-evaluator.md",
+      "file": ".claude\\agents\\gan-evaluator.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\gan-evaluator.md::.claude\\agents\\gan-evaluator.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\gan-evaluator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\gan-evaluator.md",
+      "file": ".claude\\agents\\gan-evaluator.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\gan-evaluator.md::.claude\\agents\\gan-evaluator.md::Discovery: Grep, Glob + Read + Write: Write + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\gan-generator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\gan-generator.md",
+      "file": ".claude\\agents\\gan-generator.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\gan-generator.md::.claude\\agents\\gan-generator.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\gan-generator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\gan-generator.md",
+      "file": ".claude\\agents\\gan-generator.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\gan-generator.md::.claude\\agents\\gan-generator.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\harness-optimizer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\harness-optimizer.md",
+      "file": ".claude\\agents\\harness-optimizer.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\harness-optimizer.md::.claude\\agents\\harness-optimizer.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\harness-optimizer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\harness-optimizer.md",
+      "file": ".claude\\agents\\harness-optimizer.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Edit + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\harness-optimizer.md::.claude\\agents\\harness-optimizer.md::Discovery: Grep, Glob + Read + Write: Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\loop-operator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\loop-operator.md",
+      "file": ".claude\\agents\\loop-operator.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\loop-operator.md::.claude\\agents\\loop-operator.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\loop-operator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\loop-operator.md",
+      "file": ".claude\\agents\\loop-operator.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Edit + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\loop-operator.md::.claude\\agents\\loop-operator.md::Discovery: Grep, Glob + Read + Write: Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\opensource-forker.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\opensource-forker.md",
+      "file": ".claude\\agents\\opensource-forker.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\opensource-forker.md::.claude\\agents\\opensource-forker.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\opensource-forker.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\opensource-forker.md",
+      "file": ".claude\\agents\\opensource-forker.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\opensource-forker.md::.claude\\agents\\opensource-forker.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\opensource-packager.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\opensource-packager.md",
+      "file": ".claude\\agents\\opensource-packager.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\opensource-packager.md::.claude\\agents\\opensource-packager.md::"
+    },
+    {
+      "id": "agents-escalation-chain-.claude\\agents\\opensource-packager.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude\\agents\\opensource-packager.md",
+      "file": ".claude\\agents\\opensource-packager.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
+      "fingerprint": "agents-escalation-chain-.claude\\agents\\opensource-packager.md::.claude\\agents\\opensource-packager.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\opensource-sanitizer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\opensource-sanitizer.md",
+      "file": ".claude\\agents\\opensource-sanitizer.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\opensource-sanitizer.md::.claude\\agents\\opensource-sanitizer.md::"
+    },
+    {
+      "id": "agents-encoded-payload-1887",
+      "severity": "high",
+      "category": "injection",
+      "title": "Encoded payload or decode instruction detected",
+      "file": ".claude\\agents\\pytorch-build-resolver.md",
+      "evidence": "backward pass works\r\n",
+      "fingerprint": "agents-encoded-payload-1887::.claude\\agents\\pytorch-build-resolver.md::backward pass works\r\n"
+    },
+    {
+      "id": "agents-encoded-payload-3428",
+      "severity": "high",
+      "category": "injection",
+      "title": "Encoded payload or decode instruction detected",
+      "file": ".claude\\agents\\pytorch-build-resolver.md",
+      "evidence": "backward through the graph a second time",
+      "fingerprint": "agents-encoded-payload-3428::.claude\\agents\\pytorch-build-resolver.md::backward through the graph a second time"
+    },
+    {
+      "id": "agents-web-write-.claude\\agents\\seo-specialist.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has web access + write access: .claude\\agents\\seo-specialist.md",
+      "file": ".claude\\agents\\seo-specialist.md",
+      "evidence": "Web: WebSearch, WebFetch + Write: Bash",
+      "fingerprint": "agents-web-write-.claude\\agents\\seo-specialist.md::.claude\\agents\\seo-specialist.md::Web: WebSearch, WebFetch + Write: Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude\\agents\\type-design-analyzer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude\\agents\\type-design-analyzer.md",
+      "file": ".claude\\agents\\type-design-analyzer.md",
+      "fingerprint": "agents-bash-access-.claude\\agents\\type-design-analyzer.md::.claude\\agents\\type-design-analyzer.md::"
+    },
+    {
+      "id": "hooks-logging-disabled-733",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "file": "scripts\\claude-hooks\\rtk-rewrite.sh",
+      "evidence": "&>/dev/null",
+      "fingerprint": "hooks-logging-disabled-733::scripts\\claude-hooks\\rtk-rewrite.sh::&>/dev/null"
+    },
+    {
+      "id": "hooks-logging-disabled-918",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "file": "scripts\\claude-hooks\\rtk-rewrite.sh",
+      "evidence": "&>/dev/null",
+      "fingerprint": "hooks-logging-disabled-918::scripts\\claude-hooks\\rtk-rewrite.sh::&>/dev/null"
+    },
+    {
+      "id": "hooks-global-install-1588",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook installs packages: cargo install",
+      "file": "scripts\\claude-hooks\\rtk-rewrite.sh",
+      "evidence": "cargo install",
+      "fingerprint": "hooks-global-install-1588::scripts\\claude-hooks\\rtk-rewrite.sh::cargo install"
+    },
+    {
+      "id": "hooks-logging-disabled-213",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "file": "scripts\\claude-hooks\\require-tests-for-pr.sh",
+      "evidence": "> /dev/null 2>&1",
+      "fingerprint": "hooks-logging-disabled-213::scripts\\claude-hooks\\require-tests-for-pr.sh::> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-logging-disabled-344",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "file": "scripts\\claude-hooks\\require-tests-for-pr.sh",
+      "evidence": "&>/dev/null",
+      "fingerprint": "hooks-logging-disabled-344::scripts\\claude-hooks\\require-tests-for-pr.sh::&>/dev/null"
+    },
+    {
+      "id": "hooks-global-install-1291",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook installs packages: npm install -g",
+      "file": "scripts\\claude-hooks\\route-to-agent-browser.sh",
+      "evidence": "npm install -g",
+      "fingerprint": "hooks-global-install-1291::scripts\\claude-hooks\\route-to-agent-browser.sh::npm install -g"
+    },
+    {
+      "id": "hooks-logging-disabled-927",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "file": "scripts\\claude-hooks\\kb-viewer-sync.sh",
+      "evidence": "> /dev/null 2>&1",
+      "fingerprint": "hooks-logging-disabled-927::scripts\\claude-hooks\\kb-viewer-sync.sh::> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-logging-disabled-525",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "file": "scripts\\claude-hooks\\run-tests-after-edit.sh",
+      "evidence": "&>/dev/null",
+      "fingerprint": "hooks-logging-disabled-525::scripts\\claude-hooks\\run-tests-after-edit.sh::&>/dev/null"
+    },
+    {
+      "id": "hooks-bg-process-1282",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook spawns background process: &",
+      "file": "scripts\\claude-hooks\\notify-complete.sh",
+      "evidence": "&",
+      "fingerprint": "hooks-bg-process-1282::scripts\\claude-hooks\\notify-complete.sh::&"
+    },
+    {
+      "id": "hooks-logging-disabled-257",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "file": "scripts\\claude-hooks\\calm-on-failure.sh",
+      "evidence": "> /dev/null 2>&1",
+      "fingerprint": "hooks-logging-disabled-257::scripts\\claude-hooks\\calm-on-failure.sh::> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-file-delete-266",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook deletes files: rm -rf",
+      "file": "scripts\\claude-hooks\\cleanup-worktree.sh",
+      "evidence": "rm -rf",
+      "fingerprint": "hooks-file-delete-266::scripts\\claude-hooks\\cleanup-worktree.sh::rm -rf"
+    },
+    {
+      "id": "hooks-file-delete-266",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook deletes files: rm -rf",
+      "file": "scripts\\claude-hooks\\cleanup-worktree.sh",
+      "evidence": "rm -rf",
+      "fingerprint": "hooks-file-delete-266::scripts\\claude-hooks\\cleanup-worktree.sh::rm -rf"
+    },
+    {
+      "id": "hooks-file-delete-460",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook deletes files: rm -f",
+      "file": "scripts\\claude-hooks\\confidence-gate.sh",
+      "evidence": "rm -f",
+      "fingerprint": "hooks-file-delete-460::scripts\\claude-hooks\\confidence-gate.sh::rm -f"
+    },
+    {
+      "id": "hooks-logging-disabled-236",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "file": "scripts\\claude-hooks\\confidence-gate.sh",
+      "evidence": "> /dev/null 2>&1",
+      "fingerprint": "hooks-logging-disabled-236::scripts\\claude-hooks\\confidence-gate.sh::> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-logging-disabled-169",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "file": "scripts\\claude-hooks\\auto-commit.sh",
+      "evidence": "> /dev/null 2>&1",
+      "fingerprint": "hooks-logging-disabled-169::scripts\\claude-hooks\\auto-commit.sh::> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-bg-process-998",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook spawns background process: &",
+      "file": "scripts\\claude-hooks\\notify-stop.sh",
+      "evidence": "&",
+      "fingerprint": "hooks-bg-process-998::scripts\\claude-hooks\\notify-stop.sh::&"
+    },
+    {
+      "id": "hooks-logging-disabled-210",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "file": "scripts\\claude-hooks\\notify-stop.sh",
+      "evidence": "> /dev/null 2>&1",
+      "fingerprint": "hooks-logging-disabled-210::scripts\\claude-hooks\\notify-stop.sh::> /dev/null 2>&1"
+    },
+    {
+      "id": "permissions-claude-md-world-writable",
+      "severity": "high",
+      "category": "permissions",
+      "title": "CLAUDE.md is world-writable and group-writable (0o666)",
+      "file": "knowledge-base\\CLAUDE.md",
+      "evidence": "permissions: 0o666",
+      "fingerprint": "permissions-claude-md-world-writable::knowledge-base\\CLAUDE.md::permissions: 0o666"
+    }
+  ]
+}

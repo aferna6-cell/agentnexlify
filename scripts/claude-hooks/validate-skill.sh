@@ -44,7 +44,18 @@ done
 
 if [[ -n "$ERRORS" ]]; then
   MSG=$(echo -e "$ERRORS" | head -10)
-  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"SKILL TEMPLATE VIOLATION in ${FILE}:\n${MSG}\nRequired: frontmatter (name, description, version, origin, triggers) + sections (When to Use, When NOT to Use). Fix before writing.\"}}"
+  jq -n -c \
+    --arg file "$FILE" \
+    --arg msg "$MSG" \
+    '{
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        additionalContext: (
+          "SKILL TEMPLATE VIOLATION in " + $file + ":\n" + $msg +
+          "\nRequired: frontmatter (name, description, version, origin, triggers) + sections (When to Use, When NOT to Use). Fix before writing."
+        )
+      }
+    }'
   exit 0
 fi
 

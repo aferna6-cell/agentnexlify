@@ -14,6 +14,7 @@ Prefer these root commands before hunting through package files or ad-hoc script
 - `npm run sync-widget` - copy canonical widget assets to deploy mirrors.
 - `npm run sync-widget:check` - fail if widget mirrors drift.
 - `npm run check:agent` - agent-system guardrail only.
+- `npm run agent-config:scan` - pinned baseline-gated AgentShield scan for Claude/Codex agents, hooks, MCP config, and project instruction files.
 
 Use narrower commands when a change is clearly isolated, but finish with the smallest command that covers the touched surface.
 
@@ -95,6 +96,7 @@ For non-trivial coding work:
 - Public smoke: `npm run smoke`
 - Widget sync: `npm run sync-widget`
 - Agent system check: `npm run agent-system:check`
+- Agent config security scan: `npm run agent-config:scan`
 - Pinned Claude Code: `npm run claude:2.1.98 -- --version`
 
 ## Note
