@@ -1,25 +1,35 @@
 {
   "version": 1,
-  "last_run": "2026-05-04T00:00:00Z",
-  "total_runs": 13,
+  "last_run": "2026-05-05T12:00:00Z",
+  "total_runs": 14,
   "frozen_ideas": [],
   "moratorium_config": {
-    "moratorium_active": true,
+    "moratorium_active": false,
     "triggered_run": 8,
     "trigger_reason": "5 winners unimplemented; oldest 19+ days; run 7 explicitly mandated escalation by run 8",
+    "lifted_run": 14,
+    "lifted_reason": "Run 13 winner (JS Silent Catch Guard) implemented by 72f8204 on 2026-05-05. pending_approvals 4→3. Moratorium lift condition met.",
     "max_pending_approvals": 3,
     "max_pending_age_days": 14,
     "lift_condition": "pending_approvals_count <= 3 (need 1 implementation after run 2 corrected to implemented)",
-    "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6)."
+    "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Wire golden eval harness to CI",
+      "date": "2026-05-05",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "operational",
+      "note": "Run 14 winner. First post-moratorium recommendation. Create .github/workflows/lead-qualifier-eval.yml (Monday cron + PR trigger). Add LEAD_QUALIFIER_AGENT_ID GH Secret. Closes Issue #110. Harness already passes locally (backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json, added 7854ede). Onboarding V2 sprint active — new risk vector for silent regression. S-effort."
+    },
     {
       "title": "JS Silent Catch Guard — Check 10 (corrected from Check 9)",
       "date": "2026-04-27",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "implemented",
       "category": "code_health",
-      "note": "Run 9 winner (Run 3 escalation + new Python evidence). NUMBERING CORRECTED run 12: pre-commit has 9 existing checks; JS silent catch is Check 10 (not Check 9 — Check 9 = 'dropped conversations.messages queries'). Patch widget_chat.py:295 bare except also part of original run 9 scope. GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. ACTIVE violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging) — Issue #109 opened. Pre-commit guard (Check 10) still never added. S-effort. Implementing lifts moratorium (4 → 3)."
+      "note": "Run 9 winner (Run 3 escalation + new Python evidence). IMPLEMENTED by 72f8204 on 2026-05-05 — nightly review applied fix. AdminAnalyticsPage.jsx:117-122 fixed (6 console.warn replacements). Pre-commit Check 9 (named Check 9 in commit, was projected as Check 10 — naming discrepancy noted) added. Issue #109 closed. Moratorium lifted: pending_approvals 4→3."
     },
     {
       "title": "Wire check_project_invariants.py into pre-commit hook",
@@ -27,7 +37,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit as Check 11. S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest). BLOCKED: em-dash check fires as false positive on JSX UI render chars (|| '—' for empty table cells). EXPANDED blocker run 12: now 9 violations across WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Fix path: scope em-dash check to skip .jsx/.tsx files (one-line change) FIRST, then wire script. Nightly review 2026-05-01 incorrectly reported blocker as stale — direct script execution confirms."
+      "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit as Check 10 (pre-commit now has 9 checks after 72f8204). S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest). BLOCKER CLEARED run 14 (2026-05-05): 8f680e8 fixed WizardStepAutoKB.jsx + AutomationActivityCard.jsx em-dash violations. Direct script run on 2026-05-05 shows all 6 checks PASS (including PASS website source avoids em dashes). No implementation blockers remain."
     },
     {
       "title": "Widget 3-Copy Sync Guard",
@@ -35,7 +45,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 7 winner. Fix CLAUDE.md Invariant #4 (2 → 3 widget paths) + create scripts/check-widget-sync.sh + wire into pre-push hook. S-effort, zero dependencies. Script still not created as of run 11."
+      "note": "Run 7 winner. Fix CLAUDE.md Invariant #4 (2 → 3 widget paths) + create scripts/check-widget-sync.sh + wire into pre-push hook. S-effort, zero dependencies. Script still not created as of run 14 (2026-05-05). Three widget copies confirmed: widget/, frontend/public/widget/, landing-page-v2/widget/."
     },
     {
       "title": "Migration Duplicate Number Pre-commit Guard",
@@ -57,9 +67,9 @@
       "title": "JS Silent Catch Pre-commit Guard",
       "date": "2026-04-11",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "implemented",
       "category": "code_health",
-      "note": "Run 3 winner. Unimplemented 23+ days. Escalated by run 7, moratorium triggered by run 8. Add as Check 9 to scripts/hooks/pre-commit. GOVERNANCE CORRECTION (run 11): Original violations MarketingDashboardPage.jsx:96 + LocalSEOPage.jsx:262 FIXED by e68677a. NEW violations: AdminAnalyticsPage.jsx:117-122 (6x .catch(() => null) in Promise.all, zero logging). Pre-commit guard (Check 9) still never added."
+      "note": "Run 3 winner. IMPLEMENTED by 72f8204 on 2026-05-05 (as Check 9 in pre-commit, final numbering). AdminAnalyticsPage.jsx:117-122 violations fixed. Issue #109 closed. Moratorium lifted."
     },
     {
       "title": "AI-to-Human Handoff (Explicit Trigger, v1)",
@@ -155,9 +165,16 @@
     {
       "title": "JS Silent Catch Guard — Check 10 + AdminAnalyticsPage.jsx (11th recommendation)",
       "date": "2026-05-04",
-      "status": "recommended",
+      "status": "implemented",
       "run": 13,
-      "note": "Run 13 moratorium mode. Repo idle 48h — implementation window open. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations by live grep. Pre-commit Check 10 still absent. New findings: email sequences N+1 (GH #112, ROI 2.3 — parking lot), CA AI companion law disclosure audit (ROI 1.6 — new). Em-dash bonus step included in winning-concept as one-liner prerequisite for run 8."
+      "note": "Run 13 moratorium mode. IMPLEMENTED by 72f8204 on 2026-05-05 — nightly review applied. AdminAnalyticsPage.jsx fixed, pre-commit Check 9 (final numbering) added. Moratorium lifted."
+    },
+    {
+      "title": "Wire golden eval harness to CI",
+      "date": "2026-05-05",
+      "status": "recommended",
+      "run": 14,
+      "note": "Run 14 — first post-moratorium winner. Create .github/workflows/lead-qualifier-eval.yml. Monday cron + PR trigger. Closes Issue #110. Bonus: wire check_project_invariants.py (run 8 unblocked — em-dash cleared by 8f680e8). Moratorium lifted this run."
     }
   ],
   "rejected_paths": [
@@ -173,7 +190,8 @@
       "title": "Wire golden eval harness to weekly CI",
       "date": "2026-04-30-pm",
       "roi": 2.5,
-      "note": "WEAKENED run 11 (moratorium override). backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json added 7854ede. Env-var gated, 80% pass threshold. Add .github/workflows/lead-qualifier-eval.yml with Monday cron. Requires LEAD_QUALIFIER_AGENT_ID in GH Secrets. PROMOTE AS RUN 12 WINNER once moratorium lifts."
+      "status": "promoted_to_active_run14",
+      "note": "WINNER run 14. Promoted from parking lot. Create .github/workflows/lead-qualifier-eval.yml. Closes Issue #110."
     },
     {
       "title": "Onboarding V2 characterization tests",
@@ -291,12 +309,12 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 4,
-    "runs_implemented": 3,
-    "oldest_pending": "2026-04-11 (JS Silent Catch Guard, run 3, day 24+)",
-    "governance_correction": "Lead Source Analytics (run 2) corrected to implemented in run 9 — was listed as pending, already built in AnalyticsPage.jsx. Run 11: MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a — original run 3 evidence updated. New violations at AdminAnalyticsPage.jsx:117-122 (Issue #109). Run 12: JS silent catch guard is Check 10 (not Check 9 as cited in runs 9-11 — Check 9 already exists as 'dropped conversations.messages queries'). Em-dash blocker for run 8 confirmed still active (nightly review was wrong).",
-    "note": "Run 13 (2026-05-04): moratorium still active. 4 pending winners (runs 3, 4, 7, 8). Runs 9+10+11+12+13 all recommend JS Silent Catch. Repo idle 48h — implementation window open. AdminAnalyticsPage violations confirmed live. New parking lot: email N+1 (ROI 2.3), _process_pending_sends (ROI 1.8), CA disclosure audit (ROI 1.6). Em-dash bonus step included as one-liner in winning-concept to unblock run 8.",
-    "escalate": true
+    "runs_pending_approval": 3,
+    "runs_implemented": 5,
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 19+)",
+    "governance_correction": "Run 14 (2026-05-05): MORATORIUM LIFTED. Run 13 winner implemented by 72f8204 (nightly review). Runs 3+9+10+11+12+13 all mapped to JS Silent Catch — now implemented. Run 3 + Run 9/13 effective status corrected to implemented. Em-dash blocker cleared (8f680e8) — run 8 unblocked. SettingsPage.jsx split done (27e06f0). Implemented count updated.",
+    "note": "Run 14 (2026-05-05): moratorium OFF. 3 pending winners (runs 4, 7, 8). New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8, unblocked). Pending queue healthy (3 < threshold of 3... wait, 3 = threshold). Next implementation closes queue to 2. AI handoff (run 4) oldest at 19+ days — watch for moratorium re-trigger.",
+    "escalate": false
   },
   "config": {
     "max_ideas_per_run": 5,
