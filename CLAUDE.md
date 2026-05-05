@@ -88,6 +88,8 @@ python -m uvicorn backend.main:app --reload --port 8000   # backend dev (require
 npm run agent-system:check              # verify Claude/Codex agent control plane
 npm run check:instruction-budget        # keep always-on instruction surface small
 npm run agent-config:scan               # baseline-gated AgentShield scan for agent/MCP/hook config
+npm run kb:health                       # deterministic knowledge-base health report
+npm run kb:lint                         # validate wiki article template + index coverage
 npm run claude:2.1.98 -- --version      # pinned Claude Code runner
 npm run claude:noflicker                # pinned + experimental no-flicker renderer
 bash scripts/install-hooks.sh           # install git hooks

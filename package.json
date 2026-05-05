@@ -23,6 +23,8 @@
     "test:backend:focused": "python scripts/run_python.py -m pytest tests/test_autopilot_orchestration.py tests/test_local_seo_parsers.py -q",
     "test:frontend": "npm --prefix frontend run test -- --run",
     "smoke": "npm run smoke:public",
+    "kb:lint": "python scripts/run_python.py scripts/kb/kb-lint.py --fix-index",
+    "kb:health": "python scripts/run_python.py scripts/kb/kb-health.py",
     "sync-widget": "python scripts/run_python.py scripts/sync_widget_assets.py",
     "sync-widget:check": "python scripts/run_python.py scripts/sync_widget_assets.py --check",
     "sync-skills": "python scripts/run_python.py scripts/sync_skills.py --write",

@@ -44,7 +44,7 @@ def parse_frontmatter(text):
 
 def lint_article(path):
     violations = []
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8", errors="replace")
     slug = path.stem
 
     fm = parse_frontmatter(text)
@@ -87,7 +87,7 @@ def lint_article(path):
 def check_index_coverage():
     if not INDEX.exists():
         return ["INDEX.md missing"]
-    index_text = INDEX.read_text()
+    index_text = INDEX.read_text(encoding="utf-8", errors="replace")
     missing = []
     for article in WIKI.rglob("*.md"):
         if "_outputs" in article.parts:

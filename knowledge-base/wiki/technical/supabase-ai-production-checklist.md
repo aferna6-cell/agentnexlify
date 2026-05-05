@@ -5,7 +5,7 @@ tags: ["supabase", "pgvector", "hnsw", "ivfflat", "production-readiness", "vecto
 sources: ["raw/technical/going-to-prod.md"]
 created: 2026-04-20
 updated: 2026-04-20
-summary: "Supabase's AI production guide frames the pgvector tradeoff as accuracy vs. RAM vs. QPS; HNSW is preferred, ef_construction ≥ 2×m, pre-warm via pg_prewarm and 10k+ warm-up queries before prod cutover."
+summary: "Supabase's AI production guide frames pgvector production readiness around accuracy, RAM, and QPS tradeoffs; HNSW is preferred, ef_construction must be at least twice m, and pg_prewarm plus 10k+ warm-up queries should run before prod cutover."
 ---
 
 # Supabase AI Production Checklist — pgvector Indexing, HNSW Tuning, and Scale Prep
