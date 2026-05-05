@@ -114,12 +114,30 @@ export default function AdminAnalyticsPage() {
         revenueRes,
         industryRes,
       ] = await Promise.all([
-        apiFetch("/overview").catch(() => null),
-        apiFetch("/weekly-growth").catch(() => null),
-        apiFetch(`/monthly-growth?months=${months}`).catch(() => null),
-        apiFetch("/plan-distribution").catch(() => null),
-        apiFetch(`/revenue-trends?months=${months}`).catch(() => null),
-        apiFetch("/industry-breakdown").catch(() => null),
+        apiFetch("/overview").catch((err) => {
+          console.warn("AdminAnalytics: overview fetch failed:", err);
+          return null;
+        }),
+        apiFetch("/weekly-growth").catch((err) => {
+          console.warn("AdminAnalytics: weekly-growth fetch failed:", err);
+          return null;
+        }),
+        apiFetch(`/monthly-growth?months=${months}`).catch((err) => {
+          console.warn("AdminAnalytics: monthly-growth fetch failed:", err);
+          return null;
+        }),
+        apiFetch("/plan-distribution").catch((err) => {
+          console.warn("AdminAnalytics: plan-distribution fetch failed:", err);
+          return null;
+        }),
+        apiFetch(`/revenue-trends?months=${months}`).catch((err) => {
+          console.warn("AdminAnalytics: revenue-trends fetch failed:", err);
+          return null;
+        }),
+        apiFetch("/industry-breakdown").catch((err) => {
+          console.warn("AdminAnalytics: industry-breakdown fetch failed:", err);
+          return null;
+        }),
       ]);
 
       if (overviewRes) setOverview(overviewRes);

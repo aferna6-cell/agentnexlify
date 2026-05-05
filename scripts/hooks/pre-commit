@@ -221,6 +221,30 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
+# CHECK 9: JS silent catch — .catch(() => null) / .catch(() => {})
+echo -n "Check 9: JS silent catch guard... "
+JS_STAGED=$(git diff --cached --name-only | grep -E '\.(js|jsx)$' || true)
+SILENT_CATCH_HITS=""
+if [ -n "$JS_STAGED" ]; then
+    for f in $JS_STAGED; do
+        if [ -f "$f" ]; then
+            hits=$(grep -nE '\.catch\(\s*\(\s*\)\s*=>\s*(null|\{\s*\})\s*\)' "$f" \
+                   | grep -v "ok-silent-catch" || true)
+            if [ -n "$hits" ]; then
+                SILENT_CATCH_HITS="$SILENT_CATCH_HITS\n  $f:\n$hits"
+            fi
+        fi
+    done
+fi
+if [ -n "$SILENT_CATCH_HITS" ]; then
+    echo -e "${RED}BLOCKED${NC}"
+    echo -e "  Silent .catch found — exceptions swallowed without logging.$SILENT_CATCH_HITS"
+    echo "  Fix: log the error, or add '// ok-silent-catch' if intentional graceful degradation."
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "${GREEN}OK${NC}"
+fi
+
 if [ $ERRORS -gt 0 ]; then
     echo -e "${RED}COMMIT BLOCKED: $ERRORS critical issue(s) found.${NC}"
     echo "Fix the issues above before committing."
