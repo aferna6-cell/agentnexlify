@@ -155,7 +155,7 @@ def main() -> int:
     )
     check(
         scripts.get("check:quick")
-        == "npm run agent-system:check && npm run check:skills && npm run sync-skills:check && npm run skills:eval && npm run eval:agent-routing && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
+        == "npm run agent-system:check && npm run check:instruction-budget && npm run check:skills && npm run sync-skills:check && npm run skills:eval && npm run eval:agent-routing && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
         "package quick check script wires the expected checks",
         failures,
     )
@@ -194,6 +194,16 @@ def main() -> int:
     check(
         scripts.get("check:project") == f"{python_runner} scripts/check_project_invariants.py",
         "package project check script points at project invariants",
+        failures,
+    )
+    check(
+        scripts.get("check:instruction-budget") == f"{python_runner} scripts/check_instruction_budget.py",
+        "package instruction budget check script is registered",
+        failures,
+    )
+    check(
+        file_exists("scripts/check_instruction_budget.py"),
+        "instruction budget guardrail exists",
         failures,
     )
     check(

@@ -3,10 +3,11 @@
   "private": true,
   "scripts": {
     "check": "npm run check:quick",
-    "check:quick": "npm run agent-system:check && npm run check:skills && npm run sync-skills:check && npm run skills:eval && npm run eval:agent-routing && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
+    "check:quick": "npm run agent-system:check && npm run check:instruction-budget && npm run check:skills && npm run sync-skills:check && npm run skills:eval && npm run eval:agent-routing && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
     "check:full": "npm run check:quick && npm run build && npm run test",
     "check:local-release": "npm run check:quick && npm run build && npm run test:backend:focused && npm run test:frontend",
     "check:agent": "npm run agent-system:check",
+    "check:instruction-budget": "python scripts/run_python.py scripts/check_instruction_budget.py",
     "check:skills": "python scripts/run_python.py scripts/check_skills.py",
     "check:project": "python scripts/run_python.py scripts/check_project_invariants.py",
     "agent-config:scan": "npx -y ecc-agentshield@1.4.0 scan --path . --baseline config/agentshield-baseline.json --gate --min-severity high",

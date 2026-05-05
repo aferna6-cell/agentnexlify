@@ -7,6 +7,7 @@ Prefer these root commands before hunting through package files or ad-hoc script
 
 - `npm run check` - default quick verification alias.
 - `npm run check:quick` - agent-system guardrail, product invariants, and widget sync check.
+- `npm run check:instruction-budget` - fail if always-on Claude prompt injections or CLAUDE.md grow past budget.
 - `npm run check:full` - quick checks plus frontend build and test suite.
 - `npm run build` - production frontend build.
 - `npm run test` - backend pytest plus frontend Vitest.
@@ -96,6 +97,7 @@ For non-trivial coding work:
 - Public smoke: `npm run smoke`
 - Widget sync: `npm run sync-widget`
 - Agent system check: `npm run agent-system:check`
+- Instruction budget check: `npm run check:instruction-budget`
 - Agent config security scan: `npm run agent-config:scan`
 - Pinned Claude Code: `npm run claude:2.1.98 -- --version`
 
