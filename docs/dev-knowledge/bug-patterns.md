@@ -2358,3 +2358,22 @@ https://claude.ai/code/session_01NTRA3CyVY1ZjnnhDSegThE
 **Author:** Claude
 **Files Changed:** backend/routers/email_sequences.py,ops/routines/logs/nightly-commit-review-2026-05-02.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(admin-analytics): add console.warn to 6 silent catches, add pre-commit Check 9
+
+AdminAnalyticsPage.jsx:117-122 had .catch(() => null) swallowing all errors
+silently — added console.warn to all 6 catches so failures surface in devtools.
+
+Added Check 9 to scripts/hooks/pre-commit blocking future .catch(() => null)
+patterns in staged JS/JSX files. Use // ok-silent-catch to opt out per-line.
+
+Closes #109. Moratorium on subconscious run 13 lifts (pending_approvals: 4→3).
+
+https://claude.ai/code/session_01NxHKhvY7nvZQdKLguG5mHS
+**Date:** 2026-05-05
+**Commit:** 72f8204
+**Author:** Claude
+**Files Changed:** frontend/src/pages/AdminAnalyticsPage.jsx,scripts/hooks/pre-commit
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
