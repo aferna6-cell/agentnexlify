@@ -37,6 +37,13 @@ triggers: ["phrase one", "phrase two"]  # optional, common user phrases that sho
 - Include 3-5 concrete trigger phrases in `triggers` when the routing surface is known.
 - Avoid generic descriptions such as "code review tool" or "testing helper"; they do not give the agent enough routing context.
 
+## Eval Rules
+
+- Every `skills/canonical/<name>/SKILL.md` must have a matching `skills/evals/<name>.json` fixture.
+- Each fixture must include at least 3 positive prompts and 3 negative prompts.
+- Positive prompts should use realistic phrasing users would type; negative prompts should cover nearby tasks the skill must not steal.
+- Run `npm run skills:eval` after changing canonical skills, trigger descriptions, or eval fixtures.
+
 ## Body Structure
 
 After the frontmatter, the skill body follows this structure:
@@ -80,6 +87,13 @@ Skills are designed for three-level loading:
 Every skill must be usable at all three levels. The frontmatter is Level 1. The body is Level 2. Cross-references are Level 3.
 
 Keep `SKILL.md` concise. Repo-owned canonical skills should usually stay under 150 body lines, and every skill should stay under 500 body lines. Move long examples, API references, framework variants, and reusable snippets into referenced files.
+
+## Import Policy
+
+- Prefer repo-owned canonical skills for repeated AgentNexLiFy workflows.
+- Review marketplace or community skills before installing or syncing them into the repo.
+- Do not import broad skill packs wholesale; copy only the narrow workflow that has a clear trigger, owner, and eval fixture.
+- Treat executable scripts in third-party skills as code dependencies: read them, test them, and keep them out of always-on instruction files.
 
 ## Naming Conventions
 

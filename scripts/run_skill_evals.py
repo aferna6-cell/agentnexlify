@@ -18,6 +18,7 @@ DEFAULT_ROOTS = (
 )
 CANONICAL_ROOT = "skills/canonical"
 DEFAULT_EVAL_DIR = "skills/evals"
+MIN_PROMPTS_PER_SIDE = 3
 
 STOPWORDS = {
     "about",
@@ -235,6 +236,20 @@ def load_eval_entries(eval_dir):
     return entries
 
 
+def canonical_skill_names():
+    names = set()
+    root_path = REPO_ROOT / CANONICAL_ROOT
+    if not root_path.exists():
+        return names
+
+    for path in sorted(root_path.rglob("SKILL.md")):
+        meta = parse_frontmatter(path)
+        name = clean_scalar(str(meta.get("name") or path.parent.name))
+        if name:
+            names.add(name.lower())
+    return names
+
+
 def skill_signal(skill):
     source_parts = [skill["name"], skill["description"]]
     source_parts.extend(skill["triggers"])
@@ -279,6 +294,7 @@ def main(argv=None):
 
     skills, preferred_duplicates, duplicate_failures = load_skills(args.roots)
     entries = load_eval_entries(args.eval_dir)
+    canonical_names = canonical_skill_names()
     failures = list(duplicate_failures)
     skipped = []
     total_positive = 0
@@ -287,14 +303,30 @@ def main(argv=None):
     if not entries:
         failures.append(f"No eval fixtures found under {args.eval_dir}")
 
+    fixture_names = {entry["name"].lower() for entry in entries if entry["name"]}
+    for name in sorted(canonical_names - fixture_names):
+        failures.append(
+            f"{CANONICAL_ROOT}/{name}/SKILL.md: missing trigger eval fixture "
+            f"under {args.eval_dir}/{name}.json"
+        )
+
     for entry in entries:
         name = entry["name"]
         if not name:
             failures.append(f"{entry['file']}: missing skill name")
             continue
-        if not entry["positive"] or not entry["negative"]:
-            failures.append(f"{entry['file']}: requires positive and negative prompts")
+        if len(entry["positive"]) < MIN_PROMPTS_PER_SIDE or len(entry["negative"]) < MIN_PROMPTS_PER_SIDE:
+            failures.append(
+                f"{entry['file']}: requires at least {MIN_PROMPTS_PER_SIDE} positive "
+                f"and {MIN_PROMPTS_PER_SIDE} negative prompts"
+            )
             continue
+
+        expected_file_name = f"{name}.json"
+        if entry["file"].name != expected_file_name:
+            failures.append(
+                f"{entry['file']}: eval fixture filename should be {expected_file_name!r}"
+            )
 
         skill = skills.get(name.lower())
         if not skill:

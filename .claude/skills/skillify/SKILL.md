@@ -35,7 +35,7 @@ triggers: ["/skillify", "skillify", "create a skill", "turn this into a skill", 
 5. Include frontmatter with `name`, `description`, `version`, `origin`, and useful `triggers`.
 6. Include `When to Use`, `When NOT to Use`, `Read First`, `Workflow`, `Output Format`, `Constraints`, and `Examples`.
 7. Add 3-5 prompts that should trigger the skill and 3-5 prompts that should not trigger it.
-8. If an eval fixture, trigger checker, or skill index exists, update it with the new trigger examples.
+8. For canonical skills, add or update `skills/evals/<name>.json` with at least 3 positive and 3 negative prompts.
 9. For canonical-managed skills, run `python scripts/sync_skills.py --target all --write` after updating the source copy.
 10. Validate frontmatter, path/name alignment, canonical sync status, and trigger evals with the smallest relevant checker available.
 
@@ -53,6 +53,7 @@ Report:
 - Prefer scripts for deterministic repeated checks instead of long natural-language recipes.
 - Do not create README, quick-reference, changelog, or other auxiliary files inside the skill unless explicitly required.
 - Do not broaden an existing skill's trigger description so far that it steals unrelated tasks.
+- Do not import marketplace or community skill packs wholesale; review scripts and copy only narrow workflows with eval coverage.
 
 ## Examples
 - Use when asked: "/skillify this release checklist"
