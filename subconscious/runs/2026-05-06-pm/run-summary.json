@@ -1,0 +1,39 @@
+{
+  "run": 15,
+  "date": "2026-05-06-pm",
+  "mode": "moratorium_re_triggered",
+  "moratorium_active": true,
+  "moratorium_trigger": "pending_approvals went 3->4 when run 14 winner added to queue",
+  "evidence_summary": "7 commits in 3 days — light KB maintenance activity. Run 14 winner (eval harness CI) unimplemented after 1 day. Pre-commit Check 10 bonus also missing. Widget sync guard script still absent (run 7, 12 days). check_project_invariants.py PASSES all 6 checks — wire is zero-risk. Architecture audit (2026-05-02) flags 10 god classes CRITICAL + N+1 in leads.py:714,866. Zapier auth bypass (Issue #107) path unconfirmed — `backend/services/zapier_auth.py` not found. Nightly review fired 2026-05-06 06:40 UTC (e9c100e).",
+  "ideas_count": 5,
+  "top_3_debated": [
+    "Fix Zapier plan_status auth bypass (Issue #107)",
+    "Wire check_project_invariants.py into pre-commit (run 8 close)",
+    "AI-to-Human Handoff v1 (run 4, 20+ days pending)"
+  ],
+  "winner": "Wire check_project_invariants.py into pre-commit as Check 10 (closes run 8)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "rejected": [
+    "Fix Zapier auth bypass as winner — path unconfirmed, escalated to GH #107 via bug fix channel",
+    "AI-to-Human Handoff v1 as winner — no new evidence, M-effort, moratorium just lifted"
+  ],
+  "weakened": [
+    "Widget 3-Copy Sync Guard — valid S-effort, run 16 candidate",
+    "Fix N+1 in leads.py — promote next sprint"
+  ],
+  "pending_queue_before": 4,
+  "pending_queue_after_winner": 3,
+  "moratorium_threshold": 3,
+  "governance_corrections": [
+    "implementation_lag_warning.runs_pending_approval corrected from 3 to 4",
+    "moratorium_active re-triggered (4 > 3)"
+  ],
+  "security_escalation": "Zapier plan_status auth bypass (Issue #107) — path needs confirmation, handle via backend-dev bug fix channel",
+  "moratorium_warning": "Run 4 (AI-to-Human Handoff v1) at 20+ days — exceeds max_pending_age_days of 14. If pending at run 16 (30+ days), mandate dedicated escalation.",
+  "next_run_candidates": [
+    "Widget 3-Copy Sync Guard (run 7, S-effort, 12+ days)",
+    "Wire eval harness to CI (run 14, S-effort, still pending)",
+    "AI-to-Human Handoff v1 (run 4, if 30+ days pending)"
+  ]
+}
