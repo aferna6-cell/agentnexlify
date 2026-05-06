@@ -13,15 +13,30 @@ Updated: 2026-07-20 (subconscious run 99 complete)
 
 Updated: 2026-05-01 09:31 EDT (automated morning startup)
 
-## Today's Top 3 Priorities
+## Tomorrow's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 29 of exposure. Still live. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **Fix Zapier plan_status bypass (GH issue #107)** — `_get_api_key_client` does not enforce `tenants.plan_status`; cancelled tenants still authenticate. Filed by nightly review on `8050912`. Agents: **backend-dev** + **schema-guardian** + **qa-tester**.
-3. **QA Zapier API key auth + rate-limiting (PR #91 merged `eed7794`)** — verify migration 117 applied prod, end-to-end auth + per-key limiter. Agents: **schema-guardian** + **qa-tester** + **backend-dev**.
+1. **ROTATE compromised admin API key in Railway** — DAY 33 of exposure. Still live. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **Fix Zapier plan_status bypass (GH issue #107)** — `_get_api_key_client` does not enforce `tenants.plan_status`; cancelled tenants still authenticate. Agents: **backend-dev** + **schema-guardian** + **qa-tester**.
+3. **Enrich bug pattern `72f8204`** — silent-catch fix auto-logged 2026-05-05; add root cause + prevention via `/log-bug`. Agent: **doc-updater**.
 
 ## Completed (Recent)
 
-### 2026-05-01 (this morning)
+### 2026-05-05 (today)
+- [x] Health check: all green (silent_frontend_catch_count=0, was 6 this morning)
+- [x] `72f8204` fix(admin-analytics): 6 silent catches → console.warn + pre-commit Check 9 (closes #109)
+- [x] **Implement JS silent catch pre-commit guard** — Check 9 landed in `scripts/hooks/pre-commit` (Priority 2 task closed)
+- [x] `27e06f0` refactor(settings): split SettingsPage god-class into 6 modules under `frontend/src/pages/settings/` (Rule 9)
+- [x] `8f680e8` feat: AgentShield config security gate + baseline + GH workflow
+- [x] `64e9058` feat: deterministic KB health check (`scripts/kb/kb-health.py`)
+- [x] `edd6016` feat: require eval fixtures for canonical skills
+- [x] `3b34984` refactor: prune always-on Claude prompt injections (CLAUDE.md, settings.json)
+- [x] `d68fafa` subconscious run 14 — Wire golden eval harness to CI (winning concept selected)
+- [x] `a84a5fa` ops: nightly-commit-review log written
+- [x] `ee35d1f` kb: PageIndex tree-RAG assessment (watch, no adopt)
+- [x] KB autopopulate ran 11:16 + 18:28; 5 wiki articles compiled
+- [x] Daily log written for 2026-05-05
+
+### 2026-05-01 (morning)
 - [x] Health check: all green (dangerous_router=CLEAR, bare_except=0, silent_frontend_catch=0, widget_sync=OK, gitignore_env=YES)
 - [x] Hardcoded API key scan: clean
 - [x] Auto-log skeleton bug-pattern entries for `8050912` (Zapier plan_status bypass — issue #107 + LOW reasoning-trace cleanup)
@@ -69,7 +84,7 @@ Updated: 2026-05-01 09:31 EDT (automated morning startup)
 - [ ] **QA slice 3 UI — totals headline + activity feed (`2baf7b2`)** — agents: **qa-tester** + **frontend-dev**. (New 2026-05-01)
 - [ ] **Review onboarding-v2 implementation plan + 21 issue drafts (`37c151c`)** — feed to `prd-to-issues` skill, schedule into sprint. Agent: **planner**. (New 2026-05-01)
 - [ ] **QA agent-filter Kimi K2.6 / GPT-5.5 routing (`8b91ec7`)** — verify cross-provider skip list. Agent: **qa-tester**. (New 2026-05-01)
-- [ ] **Land JS Silent Catch Guard pre-commit hook (subconscious runs 10-12)** — three runs of governance/doctrine work; needs concrete implementation PR. Agent: **devops** + **frontend-dev**. (New 2026-05-01)
+- [x] ~~**Land JS Silent Catch Guard pre-commit hook (subconscious runs 10-12)**~~ — DONE 2026-05-05 (`72f8204` Check 9 + AdminAnalyticsPage fix).
 - [ ] **QA steal-list 1-6 idempotency + rate-limit (`b0b1fb4`)** — base of `fb57995` fix. Agent: **qa-tester** + **backend-dev**.
 - [ ] **QA `local_seo` refactor (`80f9815`, `a002e18`)** — verify no regression in vertical-tier SEO content. Agent: **qa-tester** + **frontend-dev**.
 - [ ] **Verify agent-system guardrails (`d60331e`, `c289c2f`, `2bb6982`)** — `scripts/check_agent_system.py` clean, autopilot rollout cleanup. Agent: **devops**.
@@ -103,7 +118,7 @@ Updated: 2026-05-01 09:31 EDT (automated morning startup)
 - [ ] **Implement reasoning-trace comment scanner pre-commit hook (LOW finding from `8050912`)** — flag `reasoning:`, `step N:`, `let me`, `I need to` patterns inside production source. Agent: **devops**. (New 2026-05-01)
 - [ ] **Reconcile silent_frontend_catch_count glob drift**.
 - [ ] **Fix 3 non-admin silent `.catch(() => null)` patterns** — Agent: **frontend-dev**.
-- [ ] **Implement JS silent catch pre-commit guard** — Agent: **devops**. (See subconscious runs 10-12)
+- [x] ~~**Implement JS silent catch pre-commit guard**~~ — DONE 2026-05-05 in `72f8204` (Check 9 added).
 - [ ] **Validate 47 rewritten skills** — `b83577f` + `0f1d23a`.
 - [ ] **E2E test onboarding wizard** — Agent: **qa-tester** + **frontend-dev**.
 - [ ] **Verify expired JWT token handling (6d10cf5)**.
