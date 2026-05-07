@@ -15,13 +15,22 @@ Updated: 2026-05-01 09:31 EDT (automated morning startup)
 
 ## Tomorrow's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 33 of exposure. Still live. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **Fix Zapier plan_status bypass (GH issue #107)** — `_get_api_key_client` does not enforce `tenants.plan_status`; cancelled tenants still authenticate. Agents: **backend-dev** + **schema-guardian** + **qa-tester**.
-3. **Enrich bug pattern `72f8204`** — silent-catch fix auto-logged 2026-05-05; add root cause + prevention via `/log-bug`. Agent: **doc-updater**.
+1. **ROTATE compromised admin API key in Railway** — DAY 34 of exposure. Still live. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **Commit + QA `agent_escalation` service + tests** — `backend/services/agent_escalation.py` + `backend/tests/test_agent_escalation.py` untracked at EOD 2026-05-06. Rule 8 (no half-done migrations) risk. Agents: **backend-dev** + **qa-tester**.
+3. **Fix Zapier plan_status bypass (GH issue #107)** — `_get_api_key_client` does not enforce `tenants.plan_status`; cancelled tenants still authenticate. Agents: **backend-dev** + **schema-guardian** + **qa-tester**.
 
 ## Completed (Recent)
 
-### 2026-05-05 (today)
+### 2026-05-06 (today)
+- [x] Health check: all green (no regression vs morning snapshot)
+- [x] `e9c100e` ops: nightly-commit-review 2026-05-06 log written
+- [x] `b25dbc4` kb: PageIndex tree-RAG assessment logged (decision: watch, no adopt)
+- [x] `641a819` docs: yesterday's automated evening review committed
+- [x] Daily log written for 2026-05-06
+- [ ] **Carryover:** `agent_escalation` service + tests still untracked — see priority #2
+- [ ] **Carryover:** 2 raw KB articles (subquadratic-claim, solo-agency-7-agent) added without compile cycle
+
+### 2026-05-05
 - [x] Health check: all green (silent_frontend_catch_count=0, was 6 this morning)
 - [x] `72f8204` fix(admin-analytics): 6 silent catches → console.warn + pre-commit Check 9 (closes #109)
 - [x] **Implement JS silent catch pre-commit guard** — Check 9 landed in `scripts/hooks/pre-commit` (Priority 2 task closed)
