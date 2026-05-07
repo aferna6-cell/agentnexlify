@@ -69,9 +69,12 @@ pytest-of-*/
 # Claude Code, so only .agents/ (canonical storage) + .claude/skills/
 # (symlinked from .agents/) are committed. Next `npx autoskills` run
 # will recreate these locally — safe to leave untracked.
+.aider*
 .augment/
 .codebuddy/
 .continue/
+.cody/
+.cursor/
 .junie/
 .kiro/
 
