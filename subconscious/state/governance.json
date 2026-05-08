@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "last_run": "2026-05-05T12:00:00Z",
-  "total_runs": 14,
+  "last_run": "2026-05-08T00:00:00Z",
+  "total_runs": 15,
   "frozen_ideas": [],
   "moratorium_config": {
-    "moratorium_active": false,
-    "triggered_run": 8,
-    "trigger_reason": "5 winners unimplemented; oldest 19+ days; run 7 explicitly mandated escalation by run 8",
+    "moratorium_active": true,
+    "triggered_run": 15,
+    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item).",
     "lifted_run": 14,
     "lifted_reason": "Run 13 winner (JS Silent Catch Guard) implemented by 72f8204 on 2026-05-05. pending_approvals 4→3. Moratorium lift condition met.",
     "max_pending_approvals": 3,
@@ -16,12 +16,20 @@
   },
   "active_directions": [
     {
+      "title": "Widget 3-Copy Sync Guard",
+      "date": "2026-05-08",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 15 winner. Moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). Create scripts/check-widget-sync.sh (diff all 3 widget copies, FAIL on diverge). Wire into scripts/hooks/pre-push. Fix CLAUDE.md Invariant #4 ('2 copies' → '3 copies'). S-effort, 30 min. Bonus A: Wire check_project_invariants.py (run 8, 5 min, drops pending 4→3). Bonus B: Wire lead qualifier eval to CI (run 14, 20 min, drops pending 3→2). Together: pending 4→1."
+    },
+    {
       "title": "Wire golden eval harness to CI",
       "date": "2026-05-05",
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "operational",
-      "note": "Run 14 winner. First post-moratorium recommendation. Create .github/workflows/lead-qualifier-eval.yml (Monday cron + PR trigger). Add LEAD_QUALIFIER_AGENT_ID GH Secret. Closes Issue #110. Harness already passes locally (backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json, added 7854ede). Onboarding V2 sprint active — new risk vector for silent regression. S-effort."
+      "note": "Run 14 winner. First post-moratorium recommendation. Create .github/workflows/lead-qualifier-eval.yml (Monday cron + PR trigger). Add LEAD_QUALIFIER_AGENT_ID GH Secret. Closes Issue #110. Harness already passes locally (backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json, added 7854ede). Onboarding V2 sprint active — new risk vector for silent regression. S-effort. Run 15: promoted as Bonus B alongside run 7 winner — implement together in 1 hour to drop pending 4→1."
     },
     {
       "title": "JS Silent Catch Guard — Check 10 (corrected from Check 9)",
@@ -175,6 +183,13 @@
       "status": "recommended",
       "run": 14,
       "note": "Run 14 — first post-moratorium winner. Create .github/workflows/lead-qualifier-eval.yml. Monday cron + PR trigger. Closes Issue #110. Bonus: wire check_project_invariants.py (run 8 unblocked — em-dash cleared by 8f680e8). Moratorium lifted this run."
+    },
+    {
+      "title": "Widget 3-Copy Sync Guard (run 7 re-escalation)",
+      "date": "2026-05-08",
+      "status": "recommended",
+      "run": 15,
+      "note": "Run 15 — moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). S-effort: create scripts/check-widget-sync.sh + wire pre-push + fix CLAUDE.md Invariant #4. Bonus A: wire check_project_invariants.py (run 8, 5 min). Bonus B: wire lead qualifier eval to CI (run 14, 20 min). Together drops pending 4→1. Run 4 (AI-to-Human Handoff) escalated to urgent status."
     }
   ],
   "rejected_paths": [
@@ -309,12 +324,12 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 3,
+    "runs_pending_approval": 4,
     "runs_implemented": 5,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 19+)",
-    "governance_correction": "Run 14 (2026-05-05): MORATORIUM LIFTED. Run 13 winner implemented by 72f8204 (nightly review). Runs 3+9+10+11+12+13 all mapped to JS Silent Catch — now implemented. Run 3 + Run 9/13 effective status corrected to implemented. Em-dash blocker cleared (8f680e8) — run 8 unblocked. SettingsPage.jsx split done (27e06f0). Implemented count updated.",
-    "note": "Run 14 (2026-05-05): moratorium OFF. 3 pending winners (runs 4, 7, 8). New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8, unblocked). Pending queue healthy (3 < threshold of 3... wait, 3 = threshold). Next implementation closes queue to 2. AI handoff (run 4) oldest at 19+ days — watch for moratorium re-trigger.",
-    "escalate": false
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 22+)",
+    "governance_correction": "Run 15 (2026-05-08): MORATORIUM RE-TRIGGERED. pending_approvals corrected to 4 (was 3 — run 14's recommendation not counted in prior update). Oldest pending = run 4 at 22 days > max_pending_age_days=14. Both moratorium conditions exceeded. moratorium_active corrected to true. Winner = Widget 3-Copy Sync Guard (run 7, S-effort). Bonus: runs 8 + 14 (together drop pending 4→1 in 1 hour). Run 4 (AI-to-Human Handoff) escalated to urgent status.",
+    "note": "Run 15 (2026-05-08): moratorium RE-TRIGGERED (pending=4). S-effort path to exiting: implement runs 7+8+14 (total ~1 hour). After all 3: pending=1 (only run 4 remains). AI handoff (run 4) now at 22 days — cannot be auto-implemented, requires deliberate sprint allocation.",
+    "escalate": true
   },
   "config": {
     "max_ideas_per_run": 5,
