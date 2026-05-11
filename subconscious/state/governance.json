@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "last_run": "2026-05-08T00:00:00Z",
-  "total_runs": 15,
+  "last_run": "2026-05-11T00:00:00Z",
+  "total_runs": 16,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
     "triggered_run": 15,
-    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item).",
+    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item). Run 16 (2026-05-11): 3 more days elapsed, zero implementation. Run 4 now 25 days. Nightly reviews May 9-10 independently flagged moratorium and confirmed S-effort items ready. Same winner: Widget 3-Copy Sync Guard.",
     "lifted_run": 14,
     "lifted_reason": "Run 13 winner (JS Silent Catch Guard) implemented by 72f8204 on 2026-05-05. pending_approvals 4→3. Moratorium lift condition met.",
     "max_pending_approvals": 3,
@@ -21,7 +21,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 15 winner. Moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). Create scripts/check-widget-sync.sh (diff all 3 widget copies, FAIL on diverge). Wire into scripts/hooks/pre-push. Fix CLAUDE.md Invariant #4 ('2 copies' → '3 copies'). S-effort, 30 min. Bonus A: Wire check_project_invariants.py (run 8, 5 min, drops pending 4→3). Bonus B: Wire lead qualifier eval to CI (run 14, 20 min, drops pending 3→2). Together: pending 4→1."
+      "note": "Run 15 winner. Moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). Create scripts/check-widget-sync.sh (diff all 3 widget copies, FAIL on diverge). Wire into scripts/hooks/pre-push. Fix CLAUDE.md Invariant #4 ('2 copies' → '3 copies'). S-effort, 30 min. Bonus A: Wire check_project_invariants.py (run 8, 5 min, drops pending 4→3). Bonus B: Wire lead qualifier eval to CI (run 14, 20 min, drops pending 3→2). Together: pending 4→1. Run 16 (2026-05-11): STILL UNIMPLEMENTED. 3 more days elapsed. Run 4 now 25 days. Script MISSING. All copies in sync (nightly PASS) but guard missing. Same recommendation stands."
     },
     {
       "title": "Wire golden eval harness to CI",
@@ -67,9 +67,9 @@
       "title": "Split widget_helpers.py into chat/lead/booking modules",
       "date": "2026-04-18",
       "confidence": "HIGH",
-      "status": "implemented_unverified",
+      "status": "implemented_production_verified",
       "category": "code_health",
-      "note": "Run 5 winner. Implemented via 6cf4646 (1,673-LOC split). QA still pending. Smoke test recommended in run 8 parking lot."
+      "note": "Run 5 winner. Implemented via 6cf4646 (1,673-LOC split). Run 16 governance correction (2026-05-11): 23 days of production use with zero reported errors (nightly reviews May 9-10 confirm no Railway errors). Status upgraded: implemented_unverified → implemented_production_verified."
     },
     {
       "title": "JS Silent Catch Pre-commit Guard",
@@ -190,6 +190,13 @@
       "status": "recommended",
       "run": 15,
       "note": "Run 15 — moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). S-effort: create scripts/check-widget-sync.sh + wire pre-push + fix CLAUDE.md Invariant #4. Bonus A: wire check_project_invariants.py (run 8, 5 min). Bonus B: wire lead qualifier eval to CI (run 14, 20 min). Together drops pending 4→1. Run 4 (AI-to-Human Handoff) escalated to urgent status."
+    },
+    {
+      "title": "Widget 3-Copy Sync Guard (run 7 re-escalation, day 17)",
+      "date": "2026-05-11",
+      "status": "recommended",
+      "run": 16,
+      "note": "Run 16 — moratorium still active (pending=4, run 4 at 25 days). Zero implementation since run 15 (3 days). scripts/check-widget-sync.sh MISSING. Nightly reviews May 9-10 confirmed moratorium independently. Same winner as run 15 — persistence is the mechanism. New parking lot: Zapier API key plan_status enforcement (ROI ~2.5, security, issue #107), Automated moratorium escalation hook (workflow). Governance correction: widget_helpers split status → implemented_production_verified."
     }
   ],
   "rejected_paths": [
@@ -321,14 +328,26 @@
       "date": "2026-05-04",
       "roi": 1.6,
       "note": "KB added: joneswalker-sb-243-companion-ai-mandate + perkinscoie-ca-companion-chatbot-law-now-effect. SB 243 + companion chatbot law in effect. Widget may require disclosure if it provides emotional support or guidance. Low-effort compliance audit: review laws vs widget behavior, determine if disclosure required."
+    },
+    {
+      "title": "Zapier API key plan_status enforcement",
+      "date": "2026-05-11",
+      "roi": 2.5,
+      "note": "Added run 16. GH issue #107 (2026-04-30). backend/services/zapier_auth.py::_get_api_key_client resolves keys without plan_status check. Cancelled tenants with un-revoked keys bypass tier gate. Fix: add plan_status IN ('active','trialing') filter + regression test. HIGH security. Route via issue-to-pr-loop, NOT subconscious winner queue. KILLED in run 16 debate (moratorium + issue already tracked). Promote to first non-moratorium winner if #107 still open."
+    },
+    {
+      "title": "Automated moratorium escalation hook",
+      "date": "2026-05-11",
+      "roi": 1.8,
+      "note": "Added run 16. When moratorium active + oldest pending > 14 days, nightly-commit-review.sh auto-creates GH comment on oldest pending issue linking winning-concept.md. Closes feedback loop between recommendation and implementation. Consider if run 17 has same winner again."
     }
   ],
   "implementation_lag_warning": {
     "runs_pending_approval": 4,
     "runs_implemented": 5,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 22+)",
-    "governance_correction": "Run 15 (2026-05-08): MORATORIUM RE-TRIGGERED. pending_approvals corrected to 4 (was 3 — run 14's recommendation not counted in prior update). Oldest pending = run 4 at 22 days > max_pending_age_days=14. Both moratorium conditions exceeded. moratorium_active corrected to true. Winner = Widget 3-Copy Sync Guard (run 7, S-effort). Bonus: runs 8 + 14 (together drop pending 4→1 in 1 hour). Run 4 (AI-to-Human Handoff) escalated to urgent status.",
-    "note": "Run 15 (2026-05-08): moratorium RE-TRIGGERED (pending=4). S-effort path to exiting: implement runs 7+8+14 (total ~1 hour). After all 3: pending=1 (only run 4 remains). AI handoff (run 4) now at 22 days — cannot be auto-implemented, requires deliberate sprint allocation.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 25+)",
+    "governance_correction": "Run 16 (2026-05-11): moratorium still active (pending=4, unchanged). Zero implementation since run 15. Run 4 now 25 days (was 22). Nightly reviews May 9-10 independently confirmed moratorium. widget_helpers.py split governance status corrected to implemented_production_verified (23 days production, no errors). Zapier security (issue #107) + Automated escalation hook added to parking_lot.",
+    "note": "Run 16 (2026-05-11): 3 more days elapsed since run 15 with zero implementation. S-effort path unchanged: implement runs 7+8+14 (total ~45 min). After all 3: pending=1 (only run 4 remains). Run 4 (AI-to-Human Handoff) now 25 days — cannot be auto-implemented, requires deliberate sprint allocation. If run 17 arrives with same winner, consider adding Automated moratorium escalation hook as meta-fix.",
     "escalate": true
   },
   "config": {
