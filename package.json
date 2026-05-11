@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@typescript-eslint/parser": "^8.46.1",
+    "@typescript-eslint/parser": "^8.59.3",
     "cross-env": "^7.0.3",
     "eslint": "^9.37.0"
   }
