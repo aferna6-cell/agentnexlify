@@ -1,0 +1,42 @@
+{
+  "run": 18,
+  "date": "2026-05-15-pm",
+  "mode": "moratorium_mandate",
+  "winner": "Automated Moratorium Escalation Hook",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "governance_mandate_fired": true,
+  "mandate_condition": "Widget Sync Guard still unimplemented at run 18 (4-consecutive-run threshold)",
+  "moratorium_active": true,
+  "moratorium_pending_after": 4,
+  "moratorium_oldest_days": 29,
+  "evidence_summary": "Widget Sync Guard (scripts/check-widget-sync.sh) MISSING confirmed May 15 (5 consecutive nightly reviews). Zero implementation commits in 10 days (since 72f8204 May 5). Moratorium day 29 for run 4, day 21 for run 7. Current notification mechanism (git commits, PDF files) insufficient — 4 consecutive moratorium runs with same winner. GH issue creation via mcp__github__ is Claude Code toolset, jq available for governance.json parsing. Nightly review already produces moratorium prose — formalizing into GH issue step.",
+  "ideas_generated": 5,
+  "ideas_survived": 1,
+  "ideas_killed": 2,
+  "ideas_demoted_to_bonus": 2,
+  "debate_verdicts": {
+    "Automated Moratorium Escalation Hook": "SURVIVES → WINNER (governance mandate + sound technical impl)",
+    "Widget 3-Copy Sync Guard": "GOVERNANCE OVERRIDE → demoted to Bonus A (4-consecutive-run threshold reached)",
+    "PR Queue Auto-Merge": "KILLED (supply chain risk + moratorium protocol)",
+    "Email Sequences N+1": "KILLED (moratorium protocol categorical)",
+    "Wire check_project_invariants.py": "ACTIVE DIRECTION → Bonus B (not a new idea)"
+  },
+  "implementation_sketch_target": ".claude/skills/nightly-commit-review/SKILL.md",
+  "implementation_effort": "~20 min (winner) + ~40 min (all bonuses = pending 4→1)",
+  "bonus_steps": [
+    "Bonus A: Widget 3-Copy Sync Guard (scripts/check-widget-sync.sh), ~15 min, drops pending 4→3",
+    "Bonus B: Wire check_project_invariants.py into pre-commit, ~5 min, drops 3→2",
+    "Bonus C: Wire lead qualifier golden eval to CI, ~20 min, drops 2→1"
+  ],
+  "next_run_candidates": [
+    "Verify moratorium GH issue was created and produced human response",
+    "Check if any pending items (runs 7/8/14) implemented — moratorium exit condition",
+    "If pending <= 3: first free-choice run since run 8 → Zapier issue #107 (ROI 2.5)"
+  ],
+  "parking_lot_killed": [
+    "PR Queue Auto-Merge (supply chain risk + moratorium protocol)",
+    "Email Sequences N+1 (moratorium protocol override)"
+  ],
+  "total_runs": 18
+}
