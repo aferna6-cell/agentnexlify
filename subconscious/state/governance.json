@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "last_run": "2026-05-11T00:00:00Z",
-  "total_runs": 16,
+  "last_run": "2026-05-15T00:00:00Z",
+  "total_runs": 17,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
     "triggered_run": 15,
-    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item). Run 16 (2026-05-11): 3 more days elapsed, zero implementation. Run 4 now 25 days. Nightly reviews May 9-10 independently flagged moratorium and confirmed S-effort items ready. Same winner: Widget 3-Copy Sync Guard.",
+    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item). Run 16 (2026-05-11): 3 more days elapsed, zero implementation. Run 4 now 25 days. Nightly reviews May 9-10 independently flagged moratorium and confirmed S-effort items ready. Same winner: Widget 3-Copy Sync Guard. Run 17 (2026-05-15): 4 more days elapsed, zero implementation. Run 4 now 29 days. Widget Sync Guard day 21. Third consecutive moratorium run with same winner. Run 18 boundary condition set: if Widget Sync Guard still unimplemented, winner MUST switch to Automated Moratorium Escalation Hook (4-consecutive-run threshold per run 16 governance).",
     "lifted_run": 14,
     "lifted_reason": "Run 13 winner (JS Silent Catch Guard) implemented by 72f8204 on 2026-05-05. pending_approvals 4→3. Moratorium lift condition met.",
     "max_pending_approvals": 3,
@@ -21,7 +21,7 @@
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "code_health",
-      "note": "Run 15 winner. Moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). Create scripts/check-widget-sync.sh (diff all 3 widget copies, FAIL on diverge). Wire into scripts/hooks/pre-push. Fix CLAUDE.md Invariant #4 ('2 copies' → '3 copies'). S-effort, 30 min. Bonus A: Wire check_project_invariants.py (run 8, 5 min, drops pending 4→3). Bonus B: Wire lead qualifier eval to CI (run 14, 20 min, drops pending 3→2). Together: pending 4→1. Run 16 (2026-05-11): STILL UNIMPLEMENTED. 3 more days elapsed. Run 4 now 25 days. Script MISSING. All copies in sync (nightly PASS) but guard missing. Same recommendation stands."
+      "note": "Run 15 winner. Moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). Create scripts/check-widget-sync.sh (diff all 3 widget copies, FAIL on diverge). Wire into scripts/hooks/pre-push. Fix CLAUDE.md Invariant #4 ('2 copies' → '3 copies'). S-effort, 30 min. Bonus A: Wire check_project_invariants.py (run 8, 5 min, drops pending 4→3). Bonus B: Wire lead qualifier eval to CI (run 14, 20 min, drops pending 3→2). Together: pending 4→1. Run 16 (2026-05-11): STILL UNIMPLEMENTED. 3 more days elapsed. Run 4 now 25 days. Script MISSING. All copies in sync (nightly PASS) but guard missing. Run 17 (2026-05-15): STILL UNIMPLEMENTED. 4 more days elapsed. Run 4 now 29 days. Script MISSING. Widget copies confirmed IN SYNC (May 15). Third consecutive moratorium run with same winner. Run 18 boundary: if still unimplemented, winner switches to Automated Moratorium Escalation Hook."
     },
     {
       "title": "Wire golden eval harness to CI",
@@ -197,6 +197,13 @@
       "status": "recommended",
       "run": 16,
       "note": "Run 16 — moratorium still active (pending=4, run 4 at 25 days). Zero implementation since run 15 (3 days). scripts/check-widget-sync.sh MISSING. Nightly reviews May 9-10 confirmed moratorium independently. Same winner as run 15 — persistence is the mechanism. New parking lot: Zapier API key plan_status enforcement (ROI ~2.5, security, issue #107), Automated moratorium escalation hook (workflow). Governance correction: widget_helpers split status → implemented_production_verified."
+    },
+    {
+      "title": "Widget 3-Copy Sync Guard (run 7 re-escalation, day 21)",
+      "date": "2026-05-15",
+      "status": "recommended",
+      "run": 17,
+      "note": "Run 17 — moratorium still active (pending=4, run 4 at 29 days). Zero implementation since run 16 (4 days). scripts/check-widget-sync.sh MISSING. Widget copies confirmed IN SYNC (May 15 nightly PASS). Third consecutive moratorium run with same winner. Debate: Automated Moratorium Escalation Hook WEAKENED (premature at run 3, mandated for run 18). Zapier security KILLED (moratorium + wrong queue). Run 18 boundary condition set: if Widget Sync Guard still unimplemented, winner switches to Automated Moratorium Escalation Hook."
     }
   ],
   "rejected_paths": [
@@ -345,9 +352,9 @@
   "implementation_lag_warning": {
     "runs_pending_approval": 4,
     "runs_implemented": 5,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 25+)",
-    "governance_correction": "Run 16 (2026-05-11): moratorium still active (pending=4, unchanged). Zero implementation since run 15. Run 4 now 25 days (was 22). Nightly reviews May 9-10 independently confirmed moratorium. widget_helpers.py split governance status corrected to implemented_production_verified (23 days production, no errors). Zapier security (issue #107) + Automated escalation hook added to parking_lot.",
-    "note": "Run 16 (2026-05-11): 3 more days elapsed since run 15 with zero implementation. S-effort path unchanged: implement runs 7+8+14 (total ~45 min). After all 3: pending=1 (only run 4 remains). Run 4 (AI-to-Human Handoff) now 25 days — cannot be auto-implemented, requires deliberate sprint allocation. If run 17 arrives with same winner, consider adding Automated moratorium escalation hook as meta-fix.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 29)",
+    "governance_correction": "Run 17 (2026-05-15): moratorium still active (pending=4, unchanged). Zero implementation since run 16. Run 4 now 29 days (was 25). Widget Sync Guard (run 7) day 21. Third consecutive moratorium run with same winner. Run 18 boundary condition set: if Widget Sync Guard still unimplemented at run 18, winner MUST switch to Automated Moratorium Escalation Hook.",
+    "note": "Run 17 (2026-05-15): 4 more days elapsed since run 16 with zero implementation. S-effort path unchanged: implement runs 7+8+14 (total ~45 min). After all 3: pending=1 (only run 4 remains). Run 4 (AI-to-Human Handoff) now 29 days — cannot be auto-implemented, requires deliberate sprint allocation. Run 18 mandate: if Widget Sync Guard still unimplemented, winner switches to Automated Moratorium Escalation Hook (4-consecutive-run threshold reached).",
     "escalate": true
   },
   "config": {
