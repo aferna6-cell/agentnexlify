@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "last_run": "2026-05-17T00:00:00Z",
-  "total_runs": 21,
+  "last_run": "2026-05-17T12:00:00Z",
+  "total_runs": 22,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
     "triggered_run": 15,
-    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item). Run 16 (2026-05-11): 3 more days elapsed, zero implementation. Run 4 now 25 days. Nightly reviews May 9-10 independently flagged moratorium and confirmed S-effort items ready. Same winner: Widget 3-Copy Sync Guard. Run 17 (2026-05-15-AM): 4 more days elapsed, zero implementation. Run 4 now 29 days. Widget Sync Guard day 21. Third consecutive moratorium run with same winner. Run 18 boundary condition set: if Widget Sync Guard still unimplemented, winner MUST switch to Automated Moratorium Escalation Hook (4-consecutive-run threshold per run 16 governance). Run 18 (2026-05-15-PM): BOUNDARY CONDITION FIRED. scripts/check-widget-sync.sh MISSING confirmed. Winner switched to Automated Moratorium Escalation Hook. Widget Sync Guard demoted to Bonus A. Run 4 now 29 days. 4-consecutive-run threshold reached and enforced. Run 19 (2026-05-16): GH issue #169 created by nightly review via IMPROVISED behavior (SKILL.md not updated). Run 18 partially implemented (GH escalation fired once) but SKILL.md Moratorium Escalation Protocol section missing. Run 19 winner: complete run 18 by formally encoding protocol in SKILL.md. Zero production commits day 11. Pending=5 (unchanged). Run 20 (2026-05-16-pm): SKILL.md still NOT updated (confirmed direct read). Run 19 governance condition fires — governance action mandated: max_pending_approvals 3→2 + GH milestone 'Moratorium Exit Sprint'. Third consecutive meta-fix recommendation without implementation; mechanism changed to GitHub-native sprint board. Run 4 now 30 days. Pending=5 (unchanged). Run 21 (2026-05-17): Run 20 NOT implemented (max_pending=3 unchanged, milestone not created, SKILL.md not updated). Run 20 P0 mandate fires. Zero production commits day 12. Pending=6 (run 20 added). Run 4 now 31 days. Loop confirmed dormant. PIVOT: meta loop broken — winner switches to AI-to-Human Handoff v1 Sprint Planning GH Issue (parallel track authorized by run 20 backlog). P0 mandate honored inside GH issue body. Debate: Idea 1 WEAKENED (mandate honored inside winner), Idea 2 SURVIVES→WINNER, Idea 3 KILLED (loop dormant). Pending unchanged at 6 until human implements.",
+    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item). Run 16 (2026-05-11): 3 more days elapsed, zero implementation. Run 4 now 25 days. Nightly reviews May 9-10 independently flagged moratorium and confirmed S-effort items ready. Same winner: Widget 3-Copy Sync Guard. Run 17 (2026-05-15-AM): 4 more days elapsed, zero implementation. Run 4 now 29 days. Widget Sync Guard day 21. Third consecutive moratorium run with same winner. Run 18 boundary condition set: if Widget Sync Guard still unimplemented, winner MUST switch to Automated Moratorium Escalation Hook (4-consecutive-run threshold per run 16 governance). Run 18 (2026-05-15-PM): BOUNDARY CONDITION FIRED. scripts/check-widget-sync.sh MISSING confirmed. Winner switched to Automated Moratorium Escalation Hook. Widget Sync Guard demoted to Bonus A. Run 4 now 29 days. 4-consecutive-run threshold reached and enforced. Run 19 (2026-05-16): GH issue #169 created by nightly review via IMPROVISED behavior (SKILL.md not updated). Run 18 partially implemented (GH escalation fired once) but SKILL.md Moratorium Escalation Protocol section missing. Run 19 winner: complete run 18 by formally encoding protocol in SKILL.md. Zero production commits day 11. Pending=5 (unchanged). Run 20 (2026-05-16-pm): SKILL.md still NOT updated (confirmed direct read). Run 19 governance condition fires — governance action mandated: max_pending_approvals 3→2 + GH milestone 'Moratorium Exit Sprint'. Third consecutive meta-fix recommendation without implementation; mechanism changed to GitHub-native sprint board. Run 4 now 30 days. Pending=5 (unchanged). Run 21 (2026-05-17): Run 20 NOT implemented (max_pending=3 unchanged, milestone not created, SKILL.md not updated). Run 20 P0 mandate fires. Zero production commits day 12. Pending=6 (run 20 added). Run 4 now 31 days. Loop confirmed dormant. PIVOT: meta loop broken — winner switches to AI-to-Human Handoff v1 Sprint Planning GH Issue (parallel track authorized by run 20 backlog). P0 mandate honored inside GH issue body. Debate: Idea 1 WEAKENED (mandate honored inside winner), Idea 2 SURVIVES→WINNER, Idea 3 KILLED (loop dormant). Pending unchanged at 6 until human implements. Run 22 (2026-05-17-pm): Run 21 NOT implemented (no AI-to-Human Handoff GH issue found in filesystem or nightly log). Zero production commits day 12 continued. Pending=7 (run 21 added). Run 4 now 32 days. Human PRESENT in session (ran subconscious interactively) — highest-probability implementation window. Winner switches to most atomic S-effort item: Wire check_project_invariants.py into pre-commit as Check 10 (~5 min, run 8 mandate, 22 days stale). Debate: Autopilot restart WEAKENED (loop config unverified), check_project_invariants SURVIVES→WINNER (5 min, human present), AI-to-Human GH issue WEAKENED (same-day run 21 repeat). After run 22: immediate next sprint (runs 7+14+19, ~45 min) drops pending 6→3 = moratorium exits.",
     "lifted_run": 14,
     "lifted_reason": "Run 13 winner (JS Silent Catch Guard) implemented by 72f8204 on 2026-05-05. pending_approvals 4→3. Moratorium lift condition met.",
     "max_pending_approvals": 3,
@@ -15,6 +15,14 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Wire check_project_invariants.py into pre-commit as Check 10",
+      "date": "2026-05-17-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 22 winner. Most atomic S-effort item. ~5 min, 3 lines to scripts/hooks/pre-commit. Script passes all 6 checks. Em-dash blocker cleared May 5 (8f680e8). Run 8 mandate (22 days stale). After this: immediate next sprint (runs 7+14+19, ~45 min) drops pending 6→3 = moratorium exits. Implementation sketch: subconscious/runs/2026-05-17-pm/winning-concept.md §Steps 1-3."
+    },
     {
       "title": "AI-to-Human Handoff v1 — Implementation Sprint GH Issue",
       "date": "2026-05-17",
@@ -259,6 +267,13 @@
       "note": "Run 21 PIVOT. Meta loop broken after 4 consecutive governance-type recommendations. Winner: Create GH issue with full implementation sketch for AI-to-Human Handoff v1. Parallel track explicitly authorized by run 20 backlog. Oldest pending item (31 days), Critical gap all 7 industries, infrastructure exists. P0 moratorium mandate honored inside issue body. Debate: P0 GH Issue WEAKENED (included as body content), ai-ready tags KILLED (loop dormant confirmed). MEDIUM confidence."
     },
     {
+      "title": "Wire check_project_invariants.py into pre-commit as Check 10",
+      "date": "2026-05-17-pm",
+      "status": "recommended",
+      "run": 22,
+      "note": "Run 22 — human PRESENT in session (interactive run). Most atomic S-effort item: ~5 min, 3 lines. Run 8 mandate 22 days stale. Script passes all checks. Em-dash blocker cleared May 5. Debate: autopilot restart WEAKENED (loop config unverified), AI-to-Human GH issue WEAKENED (same-day run 21 repeat). Winner: check_project_invariants (5 min, zero blockers, human present). After winner: immediate sprint (runs 7+14+19, ~45 min) drops pending 7→4→3 = moratorium exits."
+    },
+    {
       "title": "Governance Escalation: reduce max_pending_approvals 3→2 + create GH milestone 'Moratorium Exit Sprint'",
       "date": "2026-05-16-pm",
       "status": "recommended",
@@ -416,11 +431,11 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 7,
+    "runs_pending_approval": 8,
     "runs_implemented": 5,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 31)",
-    "governance_correction": "Run 21 (2026-05-17): Run 20 NOT implemented. max_pending_approvals still=3, milestone not created, SKILL.md not updated. Zero production commits day 12. pending=7 (runs 4, 7, 8, 14, 19, 20, 21). Run 21 PIVOT: meta loop broken. Winner = AI-to-Human Handoff v1 Sprint GH Issue (parallel track). S-effort exit: runs 7+8+14+19 (~50 min, drops pending 7→3). After run 4+21: pending→1. autopilot-issue-loop confirmed dormant.",
-    "note": "Run 21: 4th consecutive governance-type recommendation broken by pivot to customer value. Loop dormant. Pending=7 now exceeds threshold by 4. Sprint allocation for run 4 is the highest-ROI next step.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 32)",
+    "governance_correction": "Run 22 (2026-05-17-pm): Run 21 NOT implemented (AI-to-Human Handoff GH issue not created). Zero production commits day 12 continued. pending=8 (run 22 added). Human PRESENT in session. Winner: wire check_project_invariants.py into pre-commit (5 min, run 8, 22 days stale). After run 22: immediate next sprint (runs 7+14+19, ~45 min) drops pending 7→4. After both: pending→3 = moratorium exits. Run 20 governance mandate (max_pending 3→2) now 2 runs overdue — fires unconditionally in run 23 if run 22 not implemented.",
+    "note": "Run 22: human presence in session is the forcing function. Most atomic action (5 min, 3 lines) maximizes implementation probability. AI-to-Human Handoff GH issue deferred to parking lot (run 21 sketch complete, human can act independently).",
     "escalate": true
   },
   "config": {

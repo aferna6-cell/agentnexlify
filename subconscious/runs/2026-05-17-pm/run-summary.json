@@ -1,0 +1,47 @@
+{
+  "run": 22,
+  "date": "2026-05-17-pm",
+  "mode": "moratorium_atomic",
+  "winner": "Wire check_project_invariants.py into pre-commit as Check 10",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "moratorium_active": true,
+  "pending_before": 7,
+  "pending_after": 8,
+  "production_commits_since_last": 0,
+  "days_since_production_commit": 12,
+  "run4_days_pending": 32,
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Restart autopilot-issue-loop + ai-ready tags": "WEAKENED -> parking lot (loop config unverified)",
+    "Wire check_project_invariants.py into pre-commit": "SURVIVES -> WINNER (5 min, zero blockers, human present)",
+    "Create AI-to-Human Handoff GH issue": "WEAKENED -> parking lot (same-day run 21 repeat, sketch exists)"
+  },
+  "key_finding": "Human present in active session is the unique forcing function for run 22. Most atomic action (5 min, 3 lines in scripts/hooks/pre-commit) maximizes implementation probability in the open window. After winner: immediate sprint (runs 7+14+19, ~45 min) drops pending 7->4->3 = moratorium exits.",
+  "governance_mandate_run20": "max_pending_approvals 3->2 now 2 runs overdue. Fires unconditionally in run 23 if run 22 not implemented.",
+  "immediate_next_sprint": {
+    "items": [
+      "run 19: SKILL.md ~10 min",
+      "run 7: widget sync guard ~15 min",
+      "run 14: eval CI ~20 min"
+    ],
+    "total_minutes": 45,
+    "pending_after_sprint": 3,
+    "moratorium_exits": true
+  },
+  "artifacts": [
+    "subconscious/runs/2026-05-17-pm/ideas/candidate-ideas.md",
+    "subconscious/runs/2026-05-17-pm/debate/debate-log.md",
+    "subconscious/runs/2026-05-17-pm/winning-concept.md",
+    "subconscious/runs/2026-05-17-pm/improvement-backlog.md",
+    "subconscious/runs/2026-05-17-pm/run-summary.json"
+  ],
+  "run23_trigger_conditions": [
+    "Check if check_project_invariants wired (pending 7->6)",
+    "Check if immediate sprint done (pending 6->3 = moratorium exits)",
+    "If run 22 not implemented: governance mandate fires (max_pending 3->2)",
+    "Check if run 21 GH issue created (AI-to-Human Handoff sprint planning)",
+    "Check autopilot-issue-loop: any production commits in git log"
+  ]
+}
