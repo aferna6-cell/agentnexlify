@@ -8,15 +8,13 @@ Generated: 2026-05-18 UTC
 
 | SHA | Message | Branch | Risk |
 |-----|---------|--------|------|
-| `6187d5f` | subconscious: run 2026-05-17-pm (run 22) — Wire check_project_invariants.py into pre-commit | **dangling** (not on main) | LOW |
+| `6187d5f` | subconscious: run 2026-05-17-pm (run 22) — Wire check_project_invariants.py into pre-commit | main | LOW |
 | `642c9a1` | subconscious: run 2026-05-17 (run 21) — AI-to-Human Handoff v1 Sprint Issue (meta-loop pivot) | main | LOW |
 | `1d86b5e` | ops: nightly-commit-review 2026-05-17 | main | LOW |
 
-> **Note:** `6187d5f` is a dangling commit from a previous Claude Code web session that ran in
-> detached HEAD state. It was committed locally but never pushed to any branch. Content reviewed
-> (subconscious run 22 docs + governance.json update) — no bugs. The nightly-review used it for
-> content context; moratorium status table reflects its backlog data. Human should decide whether
-> to integrate this commit (via `git cherry-pick 6187d5f` onto main) or let it be GC'd.
+> **Note:** `6187d5f` appeared locally as a detached-HEAD commit (session started with HEAD
+> detached from `refs/heads/main`). On push, it was confirmed already present on `origin/main` —
+> the prior session committed and pushed it correctly. All 3 commits are on main.
 
 ---
 
