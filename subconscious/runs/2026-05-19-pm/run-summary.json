@@ -1,0 +1,48 @@
+{
+  "run": 26,
+  "date": "2026-05-19-pm",
+  "mode": "moratorium_invoke_now",
+  "governance_mandate_status": "FIRED — run 25 mandate: nightly auto-trigger if sprint not invoked by run 26. Honored in governance update (Phase 6) as fallback escalation flag.",
+  "evidence_summary": {
+    "production_commits_14d": 0,
+    "pending_approvals": 11,
+    "moratorium_active": true,
+    "moratorium_day": 11,
+    "oldest_pending": "run 4 (AI-to-Human Handoff), day 33",
+    "s_effort_items_status": {
+      "A_precommit_check_10": "MISSING — NOT_IN_PRECOMMIT confirmed by grep",
+      "B_widget_sync_guard": "MISSING — check-widget-sync.sh not found by ls",
+      "C_skillmd_escalation": "MISSING — grep nightly-commit-review SKILL.md returns 0 moratorium results",
+      "D_ci_eval_workflow": "MISSING — lead-qualifier-eval.yml not found by ls"
+    },
+    "moratorium_sprint_skill": "EXISTS — .claude/skills/moratorium-sprint/SKILL.md created by 7985fbb (2026-05-19)",
+    "skill_discovery_latest": "2026-05-18 — proposed moratorium-sprint (now built), pre-commit-guard-add, dep-batch-merge, governance-state-sync",
+    "new_evidence_this_run": "User present in interactive session. Three first-time conditions simultaneously true: (1) tool built, (2) user present, (3) sketches ready.",
+    "safe_dep_prs": ["#163", "#164", "#102", "#103"]
+  },
+  "ideas_count": 5,
+  "top_3_debated": [
+    "Invoke /moratorium-sprint (SURVIVES → WINNER)",
+    "nightly-commit-review auto-invoke trigger (WEAKENED → parking lot)",
+    "dep-batch-merge (KILLED as winner → bonus action)"
+  ],
+  "winner": "Invoke /moratorium-sprint — tool ready, user present, governance mandate fires",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "rejected": [],
+  "weakened": [
+    "nightly auto-trigger (sequencing: sprint must execute first)",
+    "dep-batch-merge (valid bonus, wrong winner slot)"
+  ],
+  "key_finding": "Three first-time conditions simultaneously true: moratorium-sprint skill built + user in interactive session + implementation sketches pre-written. Activation energy at minimum. Run 25 governance mandate fires — honored as governance action regardless of winner invocation.",
+  "governance_mandate_honored": true,
+  "governance_action": "Flag nightly-commit-review auto-trigger as fallback in governance.json active_directions",
+  "next_run_candidates": [
+    "Was /moratorium-sprint invoked? Which items completed?",
+    "If not: did nightly-commit-review auto-trigger fire?",
+    "Have safe dep PRs been cleared?",
+    "Post-sprint: new pending count and critical path to exit condition (≤ 2)"
+  ],
+  "moratorium_exit_condition": "pending_approvals ≤ 2",
+  "moratorium_exit_path": "Sprint PR merge: pending 11→7. Then 5 more resolutions to reach ≤ 2."
+}
