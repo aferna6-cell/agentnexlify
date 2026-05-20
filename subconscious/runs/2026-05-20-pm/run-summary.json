@@ -1,0 +1,70 @@
+{
+  "run": 27,
+  "date": "2026-05-20-pm",
+  "mode": "moratorium_final_interactive",
+  "moratorium_day": 15,
+  "total_runs": 27,
+  "winner": "Invoke /moratorium-sprint — FINAL interactive recommendation (3 items A+B+D)",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Invoke /moratorium-sprint (interactive)": "SURVIVES → WINNER",
+    "Authorize nightly Items A+D": "WEAKENED → PARKING LOT with run 28 hard mandate",
+    "Merge 4 safe dep PRs": "WEAKENED → BONUS ACTION",
+    "Create AI-to-Human Handoff GH Issue": "Not debated — parking lot (M-effort, post-moratorium)",
+    "pre-commit-guard-add skill": "Not debated — parking lot (moratorium active)"
+  },
+  "run_28_hard_mandate": {
+    "fires_if": "sprint not invoked by end of this session",
+    "winner": "Authorize nightly review to execute Items A+D autonomously",
+    "item_a": "3 additive lines to scripts/hooks/pre-commit (LOW-risk)",
+    "item_d": "New file .github/workflows/lead-qualifier-eval.yml (LOW-risk additive)",
+    "item_b": "Kept for human-supervised sprint (bash script + pre-push hook)"
+  },
+  "evidence_sources_checked": [
+    "git log --since=3d (items A/B/D all confirmed MISSING)",
+    "subconscious/runs/2026-05-20/winning-concept.md",
+    "subconscious/runs/2026-05-20/improvement-backlog.md",
+    "ops/routines/logs/morning-digest-2026-05-20.md",
+    "ops/routines/logs/nightly-commit-review-2026-05-20.md",
+    "docs/dev-knowledge/bug-patterns.md",
+    "docs/dev-knowledge/customer-gaps.md",
+    "docs/skill-discovery/2026-05-18.md",
+    "knowledge-base/INDEX.md",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl (last 5)"
+  ],
+  "moratorium_status": {
+    "active": true,
+    "days": 15,
+    "pending_approvals": 11,
+    "oldest_pending": "run 4 (AI-to-Human Handoff v1, 2026-04-16, 34 days)",
+    "exit_condition": "pending <= 2"
+  },
+  "governance_changes": [
+    "total_runs: 26 → 27",
+    "last_run: 2026-05-20 → 2026-05-20-pm",
+    "trigger_reason updated with run 27 context",
+    "active_directions: new run 27 winner added with FINAL INTERACTIVE RECOMMENDATION status and run 28 hard mandate",
+    "ideas_explored: run 27 entry added",
+    "implementation_lag_warning: runs_pending_approval 10 → 11",
+    "memory.jsonl: run 27 entry appended"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-05-20-pm/ideas/candidate-ideas.md",
+    "subconscious/runs/2026-05-20-pm/debate/debate-log.md",
+    "subconscious/runs/2026-05-20-pm/winning-concept.md",
+    "subconscious/runs/2026-05-20-pm/improvement-backlog.md",
+    "subconscious/runs/2026-05-20-pm/run-summary.json"
+  ],
+  "bonus_actions": [
+    "Merge safe dep PRs #102, #103, #164, #171 (~5 min, independent, any time)"
+  ],
+  "next_run_candidates": [
+    "If sprint invoked: pending 9→6, resolve governance items, moratorium exit",
+    "If sprint NOT invoked: run 28 = authorize nightly Items A+D (hard mandate fires)",
+    "Post-moratorium: AI-to-Human Handoff v1 (Critical, 34d), Zapier fix, pre-commit-guard-add"
+  ]
+}
