@@ -88,6 +88,12 @@ from backend.routers import (
     admin_analytics,
     admin_promotions,
     zapier,
+    os_threads,
+    os_agent_runs,
+    os_deliverables,
+    os_memory,
+    os_backlog,
+    os_usage,
 )
 
 # --- JSON logging ---
