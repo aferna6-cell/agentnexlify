@@ -1,11 +1,11 @@
 # Agent OS Overhaul — Grill-Me Interview Notes (WIP)
 
-Status: **interview in progress** — all 7 branches answered. 2 clarifications
-outstanding (day-1 workflow set, exact connector platforms) before `write-prd`.
+Status: **interview COMPLETE** — all 7 branches + 2 clarifications resolved.
+Ready for `write-prd`.
 Branch: `claude/agent-os-grill-resume-cHznV` (continued from
 `claude/nexlify-os-overhaul-51nga`, commit 26aac47). Started 2026-05-21.
-Next: resolve 2 clarifications → hand to `write-prd` →
-`specs/agent-os-overhaul_spec.md`. No code until that spec is approved.
+Next: `write-prd` → `specs/agent-os-overhaul_spec.md`. No code until that spec
+is approved.
 
 This file is the durable record of the design interview (the
 `.claude/agent-comms/checkpoint.md` copy is gitignored and does not survive the
@@ -108,16 +108,20 @@ customer data from it.
   when needed (widget data feeds orchestrator memory).
 
 ### Branch 7 — Scope / MVP / Cost / Success / Failure modes
-- **Day-1 workflows**: launch with **multiple end-to-end workflows**, not one.
-  User: "MVP can contain 1 workflow, but day 1 has to have multiple end-to-end
-  so it's a product worth buying." Exact count + identity → **clarification C1
-  outstanding** (see below).
+- **Day-1 workflows**: **all four ship end-to-end on day 1** — marketing
+  campaign (hero), lead follow-up/nurture, appointment booking,
+  customer-question answering. User: "day 1 has to have multiple end-to-end so
+  it's a product worth buying." Broad day-1 surface — `write-prd` must sequence
+  the build so each workflow is independently shippable.
 - **Day-1 agent roster**: **orchestrator + a small set of worker agents**. The
   **no-fit backlog flow ships in v1** (not deferred).
-- **Connectors**: **all Branch 5 connectors ship day 1** — Google Calendar,
-  Facebook, Google Business Profile, Zapier, Gmail, social media, Microsoft
-  Office. Exact "social media" platforms + "Microsoft Office" scope →
-  **clarification C2 outstanding** (see below).
+- **Connectors**: **all connectors ship day 1**. Existing: Google Calendar,
+  Facebook, Google Business Profile, Zapier. New: Gmail. Social media =
+  **Facebook + Instagram + LinkedIn + X/Twitter** (Facebook exists; Instagram
+  via Meta Graph; LinkedIn + X are net-new OAuth apps). Microsoft Office
+  (Microsoft Graph OAuth) = **Outlook email + Outlook calendar + Word/Excel
+  file handling + OneDrive**. `write-prd` must sequence connector build by
+  OAuth-app + review cost (existing → Meta-shared → net-new).
 - **Model + cost model**: **Opus orchestrator, Sonnet worker agents** (user
   override of the Branch 2 Haiku-routing advisor note — accepted; the usage cap
   below bounds the cost, routing tier stays an internal lever with no UX
@@ -137,16 +141,13 @@ customer data from it.
 
 ---
 
-## Clarifications outstanding (block `write-prd` handoff)
+## Clarifications resolved (2026-05-21)
 
-- **C1 — day-1 workflow set**: user wants "multiple end-to-end" workflows but
-  exact count + identity not pinned. Candidates (Branch 1): marketing campaign
-  (hero), lead follow-up/nurture, appointment booking, customer-question
-  answering. AskUserQuestion sent 2026-05-21.
-- **C2 — connector platforms**: "social media" and "Microsoft Office" are
-  umbrella terms. Pin exact social platforms (Facebook exists already) and
-  exact Microsoft Office products (Outlook mail/calendar, file handling,
-  OneDrive). AskUserQuestion sent 2026-05-21.
+- **C1 — day-1 workflow set**: **all four** ship day 1 — marketing campaign,
+  lead follow-up/nurture, appointment booking, customer-question answering.
+- **C2 — connector platforms**: social media = **Facebook + Instagram +
+  LinkedIn + X/Twitter**; Microsoft Office = **Outlook email + Outlook
+  calendar + Word/Excel files + OneDrive**.
 
 ---
 
@@ -219,11 +220,11 @@ Raw Q&A (user answers verbatim, lightly normalized):
 
 Resolved decisions folded into the "Branch 7" entry under Resolved decisions above.
 
-## Open tensions (not yet settled)
-- **C1** — day-1 workflow set: user wants "multiple end-to-end" but exact count + identity not pinned. AskUserQuestion sent 2026-05-21.
-- **C2** — "social media" + "Microsoft Office" connectors: exact platforms/products not pinned. AskUserQuestion sent 2026-05-21.
-- Opus-orchestrator (Branch 7 Q4) overrides the Branch 2 Haiku-routing advisor note — accepted; the per-tenant usage cap bounds cost. Routing tier stays an internal cost lever with no UX impact. `write-prd` should note Haiku-pre-routing as a future cost optimization.
+## Notes carried into `write-prd` (not blockers)
+- Day-1 scope is broad — 4 end-to-end workflows + ~9 connectors. `write-prd` must phase the build so each workflow + connector is independently shippable; the 90-day / 5-paying-tenant goal depends on sequencing, not a single big-bang delivery of all of it.
+- Opus-orchestrator (Branch 7 Q4) overrides the Branch 2 Haiku-routing advisor note — accepted; the per-tenant usage cap bounds cost. Haiku pre-routing is a future cost optimization, no UX impact.
 - Draft-editing surface (chat vs side panel) — recommend side panel; user open to it. `write-prd` to decide.
+- Karpathy graph memory in v1 — user open to a better approach if one is advised; `write-prd` should state the chosen memory architecture explicitly.
 
 ## Schema invariants (CLAUDE.md — must hold in any implementation)
 `client_id` not `tenant_id` on leads/conversations; `status` not `lead_stage`;
