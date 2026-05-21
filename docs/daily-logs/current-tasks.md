@@ -1,6 +1,14 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-05-01 09:31 EDT (automated morning startup)
+Updated: 2026-05-21 (Agent OS overhaul design interview)
+
+## In Progress — Design
+
+- [ ] **Agent OS overhaul — grill-me design interview** (branch `claude/nexlify-os-overhaul-51nga`).
+  Turning AgentNexLiFy into a chat-first "Agent OS": orchestrator chatbot delegates to
+  specialist agents. 4 of 7 grill branches done. Resume via `specs/agent-os-overhaul_grill-notes.md`
+  → grill Branch 5 (connectors/OAuth), 6 (onboarding/memory), 7 (scope/cost/success) →
+  `write-prd` → `specs/agent-os-overhaul_spec.md`. No code until spec approved.
 
 ## Today's Top 3 Priorities
 
