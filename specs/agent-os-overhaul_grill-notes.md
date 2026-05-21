@@ -1,9 +1,11 @@
 # Agent OS Overhaul — Grill-Me Interview Notes (WIP)
 
 Status: **interview in progress** — 4 of 7 branches resolved. Not a spec yet.
-Branch: `claude/nexlify-os-overhaul-51nga`. Started 2026-05-21.
-Next: resume grill at Branch 5 → finish 6, 7 → hand to `write-prd` →
-`specs/agent-os-overhaul_spec.md`. No code until that spec is approved.
+Branch: `claude/agent-os-grill-resume-cHznV` (continued from
+`claude/nexlify-os-overhaul-51nga`, commit 26aac47). Started 2026-05-21.
+Next: Branch 5 (Connectors/OAuth) questions posed to user, awaiting answers →
+finish 6, 7 → hand to `write-prd` → `specs/agent-os-overhaul_spec.md`.
+No code until that spec is approved.
 
 This file is the durable record of the design interview (the
 `.claude/agent-comms/checkpoint.md` copy is gitignored and does not survive the
@@ -83,6 +85,21 @@ layer** on top of substantial existing infra — NOT a from-scratch build.
 - KB: stored in `widget_configs.knowledge_base`; embeddings via Voyage AI (voyage-3-lite, 512d) + pgvector.
 - OAuth connectors exist: Google Calendar (`integrations.py`), Facebook (`channels_facebook.py`), Google Business Profile (`gbp.py`), Zapier (`zapier.py`).
 - 77 frontend pages in `frontend/src/pages/`.
+
+## Branch 5 — Connectors / OAuth / Tools (questions posed 2026-05-21, AWAITING ANSWERS)
+
+Codebase grounding: `tenant_integrations` table (migration 109) stores OAuth
+tokens; `backend/routers/integrations.py` has working Google OAuth with
+signed-JWT state; Facebook / Google Business Profile / Zapier connectors exist.
+
+7 questions sent to user:
+1. Connector request UX — in-chat "Connect X" button + auto-resume vs upfront setup gate.
+2. Launch connector set — minimum viable day-1 set (existing: GCal, Facebook, GBP, Zapier; likely need email-send).
+3. Email sending infra — user's connected Gmail (OAuth, "from them") vs platform Resend.
+4. Connector catalog — business-type-scoped vs flat catalog.
+5. Token security bar — reuse `tenant_integrations` as-is vs encryption-at-rest/vault before v1.
+6. Missing connector mid-task — pause+approval-gate vs fail vs partial-complete-and-report.
+7. Connector failure (revoked/expired) — silent re-auth vs proactive email vs Settings banner.
 
 ## Open tensions (not yet settled)
 - "All hero workflows by day 1" is scope creep — force-rank to one MVP workflow (Branch 7).
