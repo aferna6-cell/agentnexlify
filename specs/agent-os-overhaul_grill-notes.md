@@ -1,10 +1,10 @@
 # Agent OS Overhaul — Grill-Me Interview Notes (WIP)
 
-Status: **interview in progress** — 4 of 7 branches resolved. Not a spec yet.
+Status: **interview in progress** — 5 of 7 branches resolved. Not a spec yet.
 Branch: `claude/agent-os-grill-resume-cHznV` (continued from
 `claude/nexlify-os-overhaul-51nga`, commit 26aac47). Started 2026-05-21.
-Next: Branch 5 (Connectors/OAuth) questions posed to user, awaiting answers →
-finish 6, 7 → hand to `write-prd` → `specs/agent-os-overhaul_spec.md`.
+Next: Branch 6 (Onboarding/Memory) questions posed to user, awaiting answers →
+finish 7 → hand to `write-prd` → `specs/agent-os-overhaul_spec.md`.
 No code until that spec is approved.
 
 This file is the durable record of the design interview (the
@@ -63,11 +63,30 @@ customer data from it.
 - **Launch surface = chat + survivors: Leads page, Conversations inbox, Settings.** Everything else rolls into agent functionality.
 - **Desktop-first.** iOS app much later.
 
+### Branch 5 — Connectors / OAuth / Tools
+- **Connector request UX**: agent prompts the user **in chat** for any connector it
+  needs ("Connect X" in-conversation) — no upfront setup gate.
+- **Launch connector set**: all existing connectors (Google Calendar, Facebook,
+  Google Business Profile, Zapier) **plus Gmail, "social media", and "Microsoft
+  Office"**. "Social media" and "Microsoft Office" are umbrella terms — exact
+  platforms/scopes unresolved → force-rank in Branch 7.
+- **Email sending**: through the user's **connected Gmail** (OAuth, sends "from
+  them") — **user must approve every send first** (matches Branch 2 approval gate).
+- **Connector catalog**: **one flat catalog** (not business-type-scoped). Agent
+  invokes a connector only when the user's request requires it.
+- **Token security** (user deferred to Claude's discretion — recommendation):
+  **app-level encryption-at-rest** for OAuth refresh/access tokens in
+  `tenant_integrations` (envelope encryption, key from env/secret manager).
+  Reuse the existing `tenant_integrations` table — **no dedicated vault for v1**.
+- **Missing connector mid-task**: agent **pauses, asks for the connector, then
+  continues** once connected (approval-gate pattern — not fail, not partial).
+- **Connector failure (revoked/expired)**: **Settings banner** shows what is
+  connected; user can **manually connect any connector** from Settings anytime.
+
 ---
 
 ## Remaining branches to grill
 
-- **Branch 5 — Connectors / OAuth / Tools**: how agents request connectors (Gmail etc.), consent UX, token storage, launch connector set, behavior when a needed connector is missing. Reuse existing Google Calendar / Facebook / Zapier OAuth in `backend/routers/integrations.py`.
 - **Branch 6 — Onboarding & Memory/Context**: website-link ingestion (reuse onboarding crawl → KB), other onboarding questions, orchestrator cross-conversation memory storage/retrieval, per-tenant memory schema, staleness.
 - **Branch 7 — Scope / MVP / Cost / Success / Failure modes**: force-rank the hero workflow, define the day-1 MVP cut, pin the LLM cost model, define a concrete success metric, enumerate failure-mode fallbacks.
 
@@ -86,23 +105,43 @@ layer** on top of substantial existing infra — NOT a from-scratch build.
 - OAuth connectors exist: Google Calendar (`integrations.py`), Facebook (`channels_facebook.py`), Google Business Profile (`gbp.py`), Zapier (`zapier.py`).
 - 77 frontend pages in `frontend/src/pages/`.
 
-## Branch 5 — Connectors / OAuth / Tools (questions posed 2026-05-21, AWAITING ANSWERS)
+## Branch 5 — Connectors / OAuth / Tools (RESOLVED 2026-05-21)
 
 Codebase grounding: `tenant_integrations` table (migration 109) stores OAuth
 tokens; `backend/routers/integrations.py` has working Google OAuth with
 signed-JWT state; Facebook / Google Business Profile / Zapier connectors exist.
 
+Raw Q&A (user answers verbatim, lightly normalized):
+1. Connector request UX → agent prompts user in chat for any connector it needs.
+2. Launch connector set → all existing connectors + Gmail + social media + Microsoft Office.
+3. Email sending → through the user's connected Gmail, but user must approve each send first.
+4. Connector catalog → one flat catalog; agent only invokes a connector the request requires.
+5. Token security bar → user deferred ("up to your discretion").
+6. Missing connector mid-task → pause, request the connector, then continue afterwards.
+7. Connector failure → Settings banner of connection status + manual connect from Settings.
+
+Resolved decisions folded into the "Branch 5" entry under Resolved decisions above.
+
+## Branch 6 — Onboarding & Memory/Context (questions posed 2026-05-21, AWAITING ANSWERS)
+
+Codebase grounding: `POST /api/v1/onboarding/{tenant_id}/complete` already
+crawls a website URL → Claude → structured KB and auto-seeds FAQs. KB lives in
+`widget_configs.knowledge_base`; embeddings via Voyage AI (voyage-3-lite, 512d)
++ pgvector. `tenants` table has business_name, industry, plan,
+onboarding_completed_at, autopilot_enabled.
+
 7 questions sent to user:
-1. Connector request UX — in-chat "Connect X" button + auto-resume vs upfront setup gate.
-2. Launch connector set — minimum viable day-1 set (existing: GCal, Facebook, GBP, Zapier; likely need email-send).
-3. Email sending infra — user's connected Gmail (OAuth, "from them") vs platform Resend.
-4. Connector catalog — business-type-scoped vs flat catalog.
-5. Token security bar — reuse `tenant_integrations` as-is vs encryption-at-rest/vault before v1.
-6. Missing connector mid-task — pause+approval-gate vs fail vs partial-complete-and-report.
-7. Connector failure (revoked/expired) — silent re-auth vs proactive email vs Settings banner.
+1. Onboarding shape — wizard form vs a conversation with the orchestrator itself; beyond website link + business type, what minimum facts collected (goals, brand voice, team, target customer)?
+2. Website ingestion — homepage-only vs full-site crawl; behavior when business has no website; one-time at signup vs scheduled re-crawl.
+3. Memory contents — business facts only vs also decisions/preferences/past agent outputs; who can edit or delete memory (owner only vs any staff).
+4. Memory write trigger — orchestrator auto-decides what to remember vs explicit "remember this" vs both.
+5. Memory retrieval — load full memory every orchestrator turn vs semantic retrieval of relevant slices (reuse Voyage AI + pgvector).
+6. Staleness — how memory stays current: manual Settings edits vs periodic re-crawl vs agent flags contradictions when it notices them.
+7. Memory vs widget KB — orchestrator memory same store as `widget_configs.knowledge_base` vs separate; does widget customer data feed orchestrator memory.
 
 ## Open tensions (not yet settled)
 - "All hero workflows by day 1" is scope creep — force-rank to one MVP workflow (Branch 7).
+- "Social media" and "Microsoft Office" connectors (Branch 5 Q2) are umbrella terms — pin exact platforms/scopes and force-rank in Branch 7.
 - LLM orchestration cost model not yet pinned.
 - Draft-editing surface (chat vs side panel) — recommend side panel; user open to it.
 
