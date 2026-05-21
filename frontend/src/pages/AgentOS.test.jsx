@@ -122,6 +122,8 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("New conversation")).toBeInTheDocument(),
     );
     expect(createOsThread).toHaveBeenCalledWith("jwt");
+    // The fresh thread becomes active, so the empty-rail state clears.
+    expect(screen.queryByText(/No tasks yet/i)).not.toBeInTheDocument();
   });
 
   it("sends a message and appends the user + assistant turns", async () => {

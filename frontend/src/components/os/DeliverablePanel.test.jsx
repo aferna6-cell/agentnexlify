@@ -69,7 +69,7 @@ describe("DeliverablePanel", () => {
       <DeliverablePanel run={pendingRun()} token={TOKEN} onClose={onClose} />,
     );
     fireEvent.click(screen.getByLabelText("Close draft panel"));
-    expect(onClose).toHaveBeenCalled();
+    expect(onClose.mock.calls.length).toBe(1);
   });
 
   it("keeps the save button disabled until the draft is edited", () => {
@@ -105,6 +105,8 @@ describe("DeliverablePanel", () => {
       title: "Edited title",
       body: "Draft body",
     });
+    // Parent receives the run the server returned, not the stale prop.
+    expect(onUpdated.mock.calls[0][0]).toEqual(updated);
   });
 
   it("approves the deliverable", async () => {
@@ -122,6 +124,8 @@ describe("DeliverablePanel", () => {
     fireEvent.click(screen.getByText("Approve"));
     await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(updated));
     expect(approveOsDeliverable).toHaveBeenCalledWith(TOKEN, "r1");
+    // The run handed back to the parent carries the approved status.
+    expect(onUpdated.mock.calls[0][0].deliverable_status).toBe("approved");
   });
 
   it("rejects the deliverable", async () => {
@@ -158,6 +162,8 @@ describe("DeliverablePanel", () => {
       expect(screen.getByText("Bug reported — thanks")).toBeInTheDocument(),
     );
     expect(reportOsRunBug).toHaveBeenCalledWith(TOKEN, "r1");
+    // Button is locked after a report so it can't be filed twice.
+    expect(screen.getByText("Bug reported — thanks")).toBeDisabled();
   });
 
   it("is read-only after a decision", () => {

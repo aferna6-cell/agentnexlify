@@ -27,64 +27,75 @@ import {
 
 const TOKEN = "jwt-token";
 
+// Sentinel the mocked transport resolves with. Each wrapper is a thin pass
+// through, so asserting identity (toBe) proves it returns the transport
+// result unchanged — not just that the transport was called.
+const API_RESPONSE = { ok: true };
+
 beforeEach(() => {
   request.mockReset();
-  request.mockResolvedValue({ ok: true });
+  request.mockResolvedValue(API_RESPONSE);
 });
 
 describe("os threads api", () => {
   it("listOsThreads issues a GET with token", async () => {
-    await listOsThreads(TOKEN);
+    const result = await listOsThreads(TOKEN);
     expect(request).toHaveBeenCalledWith("/api/v1/os/threads", {
       token: TOKEN,
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("createOsThread posts the given title", async () => {
-    await createOsThread(TOKEN, "Plan launch");
+    const result = await createOsThread(TOKEN, "Plan launch");
     expect(request).toHaveBeenCalledWith("/api/v1/os/threads", {
       method: "POST",
       token: TOKEN,
       body: { title: "Plan launch" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("createOsThread falls back to a default title", async () => {
-    await createOsThread(TOKEN);
+    const result = await createOsThread(TOKEN);
     expect(request).toHaveBeenCalledWith("/api/v1/os/threads", {
       method: "POST",
       token: TOKEN,
       body: { title: "New conversation" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("fetchOsThreadMessages targets the thread path", async () => {
-    await fetchOsThreadMessages(TOKEN, "t1");
+    const result = await fetchOsThreadMessages(TOKEN, "t1");
     expect(request).toHaveBeenCalledWith("/api/v1/os/threads/t1/messages", {
       token: TOKEN,
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("postOsMessage posts content to the thread", async () => {
-    await postOsMessage(TOKEN, "t1", "do the thing");
+    const result = await postOsMessage(TOKEN, "t1", "do the thing");
     expect(request).toHaveBeenCalledWith("/api/v1/os/threads/t1/messages", {
       method: "POST",
       token: TOKEN,
       body: { content: "do the thing" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 });
 
 describe("os agent runs api", () => {
   it("fetchOsAgentRun targets the run path", async () => {
-    await fetchOsAgentRun(TOKEN, "r1");
+    const result = await fetchOsAgentRun(TOKEN, "r1");
     expect(request).toHaveBeenCalledWith("/api/v1/os/agent-runs/r1", {
       token: TOKEN,
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("reportOsRunBug posts to the report-bug path", async () => {
-    await reportOsRunBug(TOKEN, "r1");
+    const result = await reportOsRunBug(TOKEN, "r1");
     expect(request).toHaveBeenCalledWith(
       "/api/v1/os/agent-runs/r1/report-bug",
       {
@@ -92,117 +103,140 @@ describe("os agent runs api", () => {
         token: TOKEN,
       },
     );
+    expect(result).toBe(API_RESPONSE);
   });
 });
 
 describe("os deliverables api", () => {
   it("editOsDeliverable patches title and body", async () => {
-    await editOsDeliverable(TOKEN, "r1", { title: "T", body: "B" });
+    const result = await editOsDeliverable(TOKEN, "r1", {
+      title: "T",
+      body: "B",
+    });
     expect(request).toHaveBeenCalledWith("/api/v1/os/deliverables/r1", {
       method: "PATCH",
       token: TOKEN,
       body: { title: "T", body: "B" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("approveOsDeliverable posts to the approve path", async () => {
-    await approveOsDeliverable(TOKEN, "r1");
+    const result = await approveOsDeliverable(TOKEN, "r1");
     expect(request).toHaveBeenCalledWith("/api/v1/os/deliverables/r1/approve", {
       method: "POST",
       token: TOKEN,
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("rejectOsDeliverable posts to the reject path", async () => {
-    await rejectOsDeliverable(TOKEN, "r1");
+    const result = await rejectOsDeliverable(TOKEN, "r1");
     expect(request).toHaveBeenCalledWith("/api/v1/os/deliverables/r1/reject", {
       method: "POST",
       token: TOKEN,
     });
+    expect(result).toBe(API_RESPONSE);
   });
 });
 
 describe("os memory api", () => {
   it("listOsMemory issues a GET", async () => {
-    await listOsMemory(TOKEN);
+    const result = await listOsMemory(TOKEN);
     expect(request).toHaveBeenCalledWith("/api/v1/os/memory", { token: TOKEN });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("createOsMemory posts content with explicit kind", async () => {
-    await createOsMemory(TOKEN, { content: "c", kind: "preference" });
+    const result = await createOsMemory(TOKEN, {
+      content: "c",
+      kind: "preference",
+    });
     expect(request).toHaveBeenCalledWith("/api/v1/os/memory", {
       method: "POST",
       token: TOKEN,
       body: { content: "c", kind: "preference" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("createOsMemory defaults kind to fact", async () => {
-    await createOsMemory(TOKEN, { content: "c" });
+    const result = await createOsMemory(TOKEN, { content: "c" });
     expect(request).toHaveBeenCalledWith("/api/v1/os/memory", {
       method: "POST",
       token: TOKEN,
       body: { content: "c", kind: "fact" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("rememberOsFact posts to the remember path", async () => {
-    await rememberOsFact(TOKEN, "we ship Fridays");
+    const result = await rememberOsFact(TOKEN, "we ship Fridays");
     expect(request).toHaveBeenCalledWith("/api/v1/os/memory/remember", {
       method: "POST",
       token: TOKEN,
       body: { content: "we ship Fridays" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("updateOsMemory patches the memory row", async () => {
-    await updateOsMemory(TOKEN, "m1", { content: "new" });
+    const result = await updateOsMemory(TOKEN, "m1", { content: "new" });
     expect(request).toHaveBeenCalledWith("/api/v1/os/memory/m1", {
       method: "PATCH",
       token: TOKEN,
       body: { content: "new" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("deleteOsMemory deletes the memory row", async () => {
-    await deleteOsMemory(TOKEN, "m1");
+    const result = await deleteOsMemory(TOKEN, "m1");
     expect(request).toHaveBeenCalledWith("/api/v1/os/memory/m1", {
       method: "DELETE",
       token: TOKEN,
     });
+    expect(result).toBe(API_RESPONSE);
   });
 });
 
 describe("os backlog api", () => {
   it("listOsBacklog issues a GET", async () => {
-    await listOsBacklog(TOKEN);
+    const result = await listOsBacklog(TOKEN);
     expect(request).toHaveBeenCalledWith("/api/v1/os/backlog", {
       token: TOKEN,
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("decideOsBacklog posts decision and note", async () => {
-    await decideOsBacklog(TOKEN, "req1", { decision: "approve", note: "go" });
+    const result = await decideOsBacklog(TOKEN, "req1", {
+      decision: "approve",
+      note: "go",
+    });
     expect(request).toHaveBeenCalledWith("/api/v1/os/backlog/req1/decision", {
       method: "POST",
       token: TOKEN,
       body: { decision: "approve", note: "go" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 
   it("decideOsBacklog defaults the note to empty", async () => {
-    await decideOsBacklog(TOKEN, "req1", { decision: "reject" });
+    const result = await decideOsBacklog(TOKEN, "req1", { decision: "reject" });
     expect(request).toHaveBeenCalledWith("/api/v1/os/backlog/req1/decision", {
       method: "POST",
       token: TOKEN,
       body: { decision: "reject", note: "" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 });
 
 describe("os usage api", () => {
   it("fetchOsUsage issues a GET", async () => {
-    await fetchOsUsage(TOKEN);
+    const result = await fetchOsUsage(TOKEN);
     expect(request).toHaveBeenCalledWith("/api/v1/os/usage", { token: TOKEN });
+    expect(result).toBe(API_RESPONSE);
   });
 });
