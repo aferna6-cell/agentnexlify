@@ -1,5 +1,5 @@
 /**
- * Agent OS — chat-first orchestrator shell (P0).
+ * Agent OS - chat-first orchestrator shell (P0).
  *
  * Left rail lists task threads. The main column is the chat: the owner
  * posts a task, the orchestrator answers / delegates / backlogs it, and
@@ -75,7 +75,7 @@ export default function AgentOS() {
       .catch((err) => console.warn("usage fetch failed:", err.message || err));
   }, [token]);
 
-  // Initial load — threads + usage.
+  // Initial load - threads + usage.
   useEffect(() => {
     if (!token) return;
     let live = true;

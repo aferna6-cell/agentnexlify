@@ -1,5 +1,5 @@
 /**
- * Agent OS deliverable panel — P0.
+ * Agent OS deliverable panel - P0.
  *
  * Side panel for the approval-gated draft a worker run produces. The
  * deliverable lives on os_agent_runs.deliverable (JSONB). While the run's
@@ -283,7 +283,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
           }}
         >
           {bugReported
-            ? "Bug reported — thanks"
+            ? "Bug reported - thanks"
             : busy === "bug"
               ? "Reporting..."
               : "Report a problem with this run"}

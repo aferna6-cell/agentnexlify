@@ -1,5 +1,5 @@
 /**
- * Agent OS run flowchart — P0.
+ * Agent OS run flowchart - P0.
  *
  * Renders an os_agent_runs row's thought_process array as a vertical
  * step timeline so the owner can watch the worker agent reason through

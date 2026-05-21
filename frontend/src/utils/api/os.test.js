@@ -29,7 +29,7 @@ const TOKEN = "jwt-token";
 
 // Sentinel the mocked transport resolves with. Each wrapper is a thin pass
 // through, so asserting identity (toBe) proves it returns the transport
-// result unchanged — not just that the transport was called.
+// result unchanged - not just that the transport was called.
 const API_RESPONSE = { ok: true };
 
 beforeEach(() => {

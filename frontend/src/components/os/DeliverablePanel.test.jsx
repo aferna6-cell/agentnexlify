@@ -159,11 +159,11 @@ describe("DeliverablePanel", () => {
     );
     fireEvent.click(screen.getByText("Report a problem with this run"));
     await waitFor(() =>
-      expect(screen.getByText("Bug reported — thanks")).toBeInTheDocument(),
+      expect(screen.getByText("Bug reported - thanks")).toBeInTheDocument(),
     );
     expect(reportOsRunBug).toHaveBeenCalledWith(TOKEN, "r1");
     // Button is locked after a report so it can't be filed twice.
-    expect(screen.getByText("Bug reported — thanks")).toBeDisabled();
+    expect(screen.getByText("Bug reported - thanks")).toBeDisabled();
   });
 
   it("is read-only after a decision", () => {
@@ -187,6 +187,6 @@ describe("DeliverablePanel", () => {
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByText("Bug reported — thanks")).toBeDisabled();
+    expect(screen.getByText("Bug reported - thanks")).toBeDisabled();
   });
 });

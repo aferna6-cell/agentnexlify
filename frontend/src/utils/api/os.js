@@ -1,5 +1,5 @@
 /**
- * Agent OS API functions — P0.
+ * Agent OS API functions - P0.
  *
  * All endpoints derive client_id from the JWT, so no tenant id is passed
  * in the path. Just the bearer token.
