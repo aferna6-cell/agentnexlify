@@ -4,6 +4,7 @@ Route bodies delegate to backend.services.local_seo_handlers (Phases 2 + 4).
 Pydantic models live in backend.models.local_seo (Phase 3).
 """
 
+import json
 import logging
 
 from fastapi import APIRouter, Depends, Query
@@ -44,6 +45,40 @@ router = APIRouter(
     tags=["local-seo"],
     dependencies=[Depends(require_marketing_addon)],
 )
+
+
+# ---------------------------------------------------------------------------
+# AI JSON response parsing helpers
+# ---------------------------------------------------------------------------
+
+
+def _strip_json_fences(raw: str) -> str:
+    """Strip markdown code fences from an AI JSON response."""
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    return text
+
+
+def _parse_json_object_response(raw: str) -> dict:
+    """Parse an AI response expected to contain a JSON object."""
+    parsed = json.loads(_strip_json_fences(raw))
+    if not isinstance(parsed, dict):
+        raise ValueError("Expected a JSON object response")
+    return parsed
+
+
+def _parse_json_array_response(raw: str) -> list:
+    """Parse an AI response expected to contain a JSON array."""
+    parsed = json.loads(_strip_json_fences(raw))
+    if not isinstance(parsed, list):
+        raise ValueError("Expected a JSON array response")
+    return parsed
 
 
 # ---------------------------------------------------------------------------
