@@ -1,10 +1,10 @@
 # Nightly Commit Review — 2026-05-21
 
 **Run time:** 2026-05-21 UTC  
-**Commits reviewed:** 4 (in detached HEAD — see §MEDIUM Finding below)  
+**Commits reviewed:** 4 (all LOW — docs/state/subconscious/ops)  
 **Production bugs found:** 0  
 **LOW fixes applied:** 0  
-**MEDIUM/HIGH issues filed:** 1 (orphaned git commits)  
+**MEDIUM/HIGH issues filed:** 0 net (GH #175 filed then self-retracted same run — false alarm)  
 **Moratorium escalation:** fired → comment on GH #169
 
 ---
@@ -134,8 +134,8 @@ git push origin recover/orphaned-commits-2026-05-17-to-20
 
 ## Summary
 
-**MEDIUM finding:** 15 commits (runs 22–27, 2026-05-17 to 2026-05-20, including moratorium-sprint SKILL.md) are orphaned in detached HEAD — NOT on main. GitHub issue filed. Human action required to rebase/merge before git GC deletes them.
-
 No production code bugs found. Moratorium escalation comment filed on GH #169 (day 6). Run 28 mandate NOT executed pending explicit human authorization.
 
-**Overall: MEDIUM — orphaned commits need recovery; no production bugs.**
+**Note on GH #175:** A MEDIUM issue was filed mid-run about 15 "orphaned" commits. This was a false alarm — the commits ARE on `origin/main`. Local `main` was simply behind remote; `git pull --rebase` resolved it. Issue #175 closed as not-planned with retraction note.
+
+**Overall: ALL CLEAR — no production bugs, moratorium escalation filed, false positive self-corrected.**
