@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "last_run": "2026-05-20-pm",
-  "total_runs": 27,
+  "last_run": "2026-05-21",
+  "total_runs": 28,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
     "triggered_run": 15,
-    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item). Run 16 (2026-05-11): 3 more days elapsed, zero implementation. Run 4 now 25 days. Nightly reviews May 9-10 independently flagged moratorium and confirmed S-effort items ready. Same winner: Widget 3-Copy Sync Guard. Run 17 (2026-05-15-AM): 4 more days elapsed, zero implementation. Run 4 now 29 days. Widget Sync Guard day 21. Third consecutive moratorium run with same winner. Run 18 boundary condition set: if Widget Sync Guard still unimplemented, winner MUST switch to Automated Moratorium Escalation Hook (4-consecutive-run threshold per run 16 governance). Run 18 (2026-05-15-PM): BOUNDARY CONDITION FIRED. scripts/check-widget-sync.sh MISSING confirmed. Winner switched to Automated Moratorium Escalation Hook. Widget Sync Guard demoted to Bonus A. Run 4 now 29 days. 4-consecutive-run threshold reached and enforced. Run 19 (2026-05-16): GH issue #169 created by nightly review via IMPROVISED behavior (SKILL.md not updated). Run 18 partially implemented (GH escalation fired once) but SKILL.md Moratorium Escalation Protocol section missing. Run 19 winner: complete run 18 by formally encoding protocol in SKILL.md. Zero production commits day 11. Pending=5 (unchanged). Run 20 (2026-05-16-pm): SKILL.md still NOT updated (confirmed direct read). Run 19 governance condition fires — governance action mandated: max_pending_approvals 3→2 + GH milestone 'Moratorium Exit Sprint'. Third consecutive meta-fix recommendation without implementation; mechanism changed to GitHub-native sprint board. Run 4 now 30 days. Pending=5 (unchanged). Run 21 (2026-05-17): Run 20 NOT implemented (max_pending=3 unchanged, milestone not created, SKILL.md not updated). Run 20 P0 mandate fires. Zero production commits day 12. Pending=6 (run 20 added). Run 4 now 31 days. Loop confirmed dormant. PIVOT: meta loop broken — winner switches to AI-to-Human Handoff v1 Sprint Planning GH Issue (parallel track authorized by run 20 backlog). P0 mandate honored inside GH issue body. Debate: Idea 1 WEAKENED (mandate honored inside winner), Idea 2 SURVIVES→WINNER, Idea 3 KILLED (loop dormant). Pending unchanged at 6 until human implements. Run 22 (2026-05-17-pm): Run 21 NOT implemented (no AI-to-Human Handoff GH issue found in filesystem or nightly log). Zero production commits day 12 continued. Pending=7 (run 21 added). Run 4 now 32 days. Human PRESENT in session (ran subconscious interactively) — highest-probability implementation window. Winner switches to most atomic S-effort item: Wire check_project_invariants.py into pre-commit as Check 10 (~5 min, run 8 mandate, 22 days stale). Debate: Autopilot restart WEAKENED (loop config unverified), check_project_invariants SURVIVES→WINNER (5 min, human present), AI-to-Human GH issue WEAKENED (same-day run 21 repeat). After run 22: immediate next sprint (runs 7+14+19, ~45 min) drops pending 6→3 = moratorium exits. Run 23 (2026-05-18): Run 22 NOT implemented (check_project_invariants still not in pre-commit — grep confirmed). Zero production commits day 13. Pending=9 (run 23 added). Run 20 mandate fires unconditionally: max_pending_approvals 3→2 applied. Winner: Consolidate all 4 S-effort items into single sprint PR — create branch moratorium-exit-sprint, one draft PR, one approval drops pending 9→5. New moratorium exit condition: pending ≤ 2 (threshold reduced by mandate). Run 24 (2026-05-18-pm): Run 23 NOT implemented (all 4 sprint items still MISSING confirmed). Zero production commits day 13. Pending=10. MECHANISM CHANGE: 10 consecutive moratorium recommendations without implementation signals bottleneck is execution friction not just approval friction. Winner: Create moratorium-sprint skill (.claude/skills/moratorium-sprint/SKILL.md) — execution-layer tool that reads governance.json, locates S-effort sketches, executes sequentially, opens draft PR. Skill discovery 2026-05-18 provided first external validation. Debate: sprint PR echo KILLED (10th consecutive same-mechanism rec), safe dep merges WEAKENED → parking lot. First run where tooling is primary winner. Run 25 (2026-05-19): Run 24 IMPLEMENTED by nightly review (7985fbb) — moratorium-sprint SKILL.md created autonomously without human instruction. First autonomous implementation of a subconscious winner. Skill exists and is ready. Zero production feature commits day 14. Pending=10 (run 24 marked implemented, run 25 adds 1). Winner: Invoke /moratorium-sprint (~50 min, 4 S-effort items, draft PR). Debate: Idea 1 SURVIVES 3 rounds (tool ready, lowest activation energy ever), pre-commit-guard-add WEAKENED (moratorium still active), AI-to-Human Handoff WEAKENED (M-effort, loop uncertain). If not invoked by run 26: escalate to nightly-commit-review automatic trigger. Run 26 (2026-05-20): Nightly review 2026-05-20 (2ce31b2) autonomously implemented Item C (Moratorium Escalation Protocol added to nightly-commit-review SKILL.md) — second consecutive autonomous implementation. Sprint reduced to 3 items (A+B+D, ~40 min). Run 19 governance correction: status pending_approval → implemented (done by 2ce31b2). Effective pending = 9 (run 25 adds 1, run 19 corrected to implemented, run 26 adds 1 = net 10). Item C done, escalation path encoded in SKILL.md. Debate: Authorize nightly Items A+B KILLED (parallel execution conflict with sprint PR model), pre-commit-guard-add WEAKENED → parking lot. Winner: Invoke /moratorium-sprint (3 items). If not invoked by run 27: recommend triggering sprint from nightly review as LOW-risk scheduled execution. Run 27 (2026-05-20-pm): Sprint still NOT invoked (Items A/B/D all MISSING confirmed). Moratorium day 15. Zero production commits day 15. Pending=10. Governance note from run 26 fires. Debate: Idea 1 SURVIVES 3 rounds (human present, tool ready, final interactive rec), Idea 2 WEAKENED→parking lot with HARD RUN 28 MANDATE, Idea 3 WEAKENED→bonus. Winner: Invoke /moratorium-sprint (FINAL interactive recommendation). RUN 28 HARD MANDATE: if sprint not invoked this session, nightly review authorized to execute Items A+D autonomously. Item A = 3-line pre-commit addition (LOW-risk). Item D = new CI YAML (LOW-risk additive). Item B kept for human sprint. This is the binding constraint — no more soft notes.",
+    "trigger_reason": "pending_approvals=4 (runs 4, 7, 8, 14) > threshold=3 AND oldest_pending=22_days (run 4) > max_pending_age_days=14. Repo quiet 3 days. governance.json was stale (moratorium_active=false after run 14 added 4th pending item). Run 16 (2026-05-11): 3 more days elapsed, zero implementation. Run 4 now 25 days. Nightly reviews May 9-10 independently flagged moratorium and confirmed S-effort items ready. Same winner: Widget 3-Copy Sync Guard. Run 17 (2026-05-15-AM): 4 more days elapsed, zero implementation. Run 4 now 29 days. Widget Sync Guard day 21. Third consecutive moratorium run with same winner. Run 18 boundary condition set: if Widget Sync Guard still unimplemented, winner MUST switch to Automated Moratorium Escalation Hook (4-consecutive-run threshold per run 16 governance). Run 18 (2026-05-15-PM): BOUNDARY CONDITION FIRED. scripts/check-widget-sync.sh MISSING confirmed. Winner switched to Automated Moratorium Escalation Hook. Widget Sync Guard demoted to Bonus A. Run 4 now 29 days. 4-consecutive-run threshold reached and enforced. Run 19 (2026-05-16): GH issue #169 created by nightly review via IMPROVISED behavior (SKILL.md not updated). Run 18 partially implemented (GH escalation fired once) but SKILL.md Moratorium Escalation Protocol section missing. Run 19 winner: complete run 18 by formally encoding protocol in SKILL.md. Zero production commits day 11. Pending=5 (unchanged). Run 20 (2026-05-16-pm): SKILL.md still NOT updated (confirmed direct read). Run 19 governance condition fires — governance action mandated: max_pending_approvals 3→2 + GH milestone 'Moratorium Exit Sprint'. Third consecutive meta-fix recommendation without implementation; mechanism changed to GitHub-native sprint board. Run 4 now 30 days. Pending=5 (unchanged). Run 21 (2026-05-17): Run 20 NOT implemented (max_pending=3 unchanged, milestone not created, SKILL.md not updated). Run 20 P0 mandate fires. Zero production commits day 12. Pending=6 (run 20 added). Run 4 now 31 days. Loop confirmed dormant. PIVOT: meta loop broken — winner switches to AI-to-Human Handoff v1 Sprint Planning GH Issue (parallel track authorized by run 20 backlog). P0 mandate honored inside GH issue body. Debate: Idea 1 WEAKENED (mandate honored inside winner), Idea 2 SURVIVES→WINNER, Idea 3 KILLED (loop dormant). Pending unchanged at 6 until human implements. Run 22 (2026-05-17-pm): Run 21 NOT implemented (no AI-to-Human Handoff GH issue found in filesystem or nightly log). Zero production commits day 12 continued. Pending=7 (run 21 added). Run 4 now 32 days. Human PRESENT in session (ran subconscious interactively) — highest-probability implementation window. Winner switches to most atomic S-effort item: Wire check_project_invariants.py into pre-commit as Check 10 (~5 min, run 8 mandate, 22 days stale). Debate: Autopilot restart WEAKENED (loop config unverified), check_project_invariants SURVIVES→WINNER (5 min, human present), AI-to-Human GH issue WEAKENED (same-day run 21 repeat). After run 22: immediate next sprint (runs 7+14+19, ~45 min) drops pending 6→3 = moratorium exits. Run 23 (2026-05-18): Run 22 NOT implemented (check_project_invariants still not in pre-commit — grep confirmed). Zero production commits day 13. Pending=9 (run 23 added). Run 20 mandate fires unconditionally: max_pending_approvals 3→2 applied. Winner: Consolidate all 4 S-effort items into single sprint PR — create branch moratorium-exit-sprint, one draft PR, one approval drops pending 9→5. New moratorium exit condition: pending ≤ 2 (threshold reduced by mandate). Run 24 (2026-05-18-pm): Run 23 NOT implemented (all 4 sprint items still MISSING confirmed). Zero production commits day 13. Pending=10. MECHANISM CHANGE: 10 consecutive moratorium recommendations without implementation signals bottleneck is execution friction not just approval friction. Winner: Create moratorium-sprint skill (.claude/skills/moratorium-sprint/SKILL.md) — execution-layer tool that reads governance.json, locates S-effort sketches, executes sequentially, opens draft PR. Skill discovery 2026-05-18 provided first external validation. Debate: sprint PR echo KILLED (10th consecutive same-mechanism rec), safe dep merges WEAKENED → parking lot. First run where tooling is primary winner. Run 25 (2026-05-19): Run 24 IMPLEMENTED by nightly review (7985fbb) — moratorium-sprint SKILL.md created autonomously without human instruction. First autonomous implementation of a subconscious winner. Skill exists and is ready. Zero production feature commits day 14. Pending=10 (run 24 marked implemented, run 25 adds 1). Winner: Invoke /moratorium-sprint (~50 min, 4 S-effort items, draft PR). Debate: Idea 1 SURVIVES 3 rounds (tool ready, lowest activation energy ever), pre-commit-guard-add WEAKENED (moratorium still active), AI-to-Human Handoff WEAKENED (M-effort, loop uncertain). If not invoked by run 26: escalate to nightly-commit-review automatic trigger. Run 26 (2026-05-20): Nightly review 2026-05-20 (2ce31b2) autonomously implemented Item C (Moratorium Escalation Protocol added to nightly-commit-review SKILL.md) — second consecutive autonomous implementation. Sprint reduced to 3 items (A+B+D, ~40 min). Run 19 governance correction: status pending_approval → implemented (done by 2ce31b2). Effective pending = 9 (run 25 adds 1, run 19 corrected to implemented, run 26 adds 1 = net 10). Item C done, escalation path encoded in SKILL.md. Debate: Authorize nightly Items A+B KILLED (parallel execution conflict with sprint PR model), pre-commit-guard-add WEAKENED → parking lot. Winner: Invoke /moratorium-sprint (3 items). If not invoked by run 27: recommend triggering sprint from nightly review as LOW-risk scheduled execution. Run 27 (2026-05-20-pm): Sprint still NOT invoked (Items A/B/D all MISSING confirmed). Moratorium day 15. Zero production commits day 15. Pending=10. Governance note from run 26 fires. Debate: Idea 1 SURVIVES 3 rounds (human present, tool ready, final interactive rec), Idea 2 WEAKENED→parking lot with HARD RUN 28 MANDATE, Idea 3 WEAKENED→bonus. Winner: Invoke /moratorium-sprint (FINAL interactive recommendation). RUN 28 HARD MANDATE: if sprint not invoked this session, nightly review authorized to execute Items A+D autonomously. Item A = 3-line pre-commit addition (LOW-risk). Item D = new CI YAML (LOW-risk additive). Item B kept for human sprint. This is the binding constraint — no more soft notes. Run 28 (2026-05-21): Nightly review 2026-05-21 formally DECLINED run 27 hard mandate — correctly cited governance principle (one autonomous system cannot authorize another to bypass moratorium). Hard mandate mechanism resolved: interactive-only path confirmed. KEY NEW INSIGHT: governance audit reveals pending count 12 is inflated by 8 superseded/subsumed recs. True pending = 4. After moratorium-sprint: 2 = EXIT. Moratorium day 16. Zero production commits day 16. Winner: invoke /moratorium-sprint + governance audit applied in Phase 6.",
     "lifted_run": 14,
     "lifted_reason": "Run 13 winner (JS Silent Catch Guard) implemented by 72f8204 on 2026-05-05. pending_approvals 4→3. Moratorium lift condition met.",
     "max_pending_approvals": 2,
@@ -16,18 +16,26 @@
   },
   "active_directions": [
     {
-      "title": "Invoke /moratorium-sprint — execute 3 remaining S-effort items (A+B+D) and open draft PR [FINAL INTERACTIVE RECOMMENDATION]",
-      "date": "2026-05-20-pm",
+      "title": "Invoke /moratorium-sprint — Phase 6 governance audit clears pending 12→4, sprint executes Items A+B+D, pending 4→2 = moratorium exits",
+      "date": "2026-05-21",
       "confidence": "HIGH",
       "status": "pending_approval",
       "category": "workflow",
-      "note": "Run 27 winner. FINAL interactive recommendation — if not invoked this session, run 28 winner is hard-mandated as nightly autonomous execution of Items A+D. Sprint is 3 items only (~40 min). moratorium-sprint SKILL.md exists (7985fbb). Invoke /moratorium-sprint → executes A (check_project_invariants pre-commit ~5 min), B (widget sync guard ~15 min), D (CI eval workflow ~20 min) → draft PR → pending 9→6 when merged. RUN 28 HARD MANDATE: If sprint not invoked: nightly review executes Items A+D autonomously (Item A = 3-line pre-commit addition, Item D = new CI YAML — both LOW-risk additive). Item B kept for human sprint. Implementation sketch: subconscious/runs/2026-05-20-pm/winning-concept.md."
+      "note": "Run 28 winner. KEY NEW EVIDENCE: nightly review 2026-05-21 formally declined run 27 hard mandate on governance grounds (one autonomous system cannot authorize another to bypass moratorium layer). Governance audit applied in Phase 6 of this run: marks runs 23/25/26/27 as superseded, runs 7/8/14/15/22 as subsumed_in_sprint. Pending drops 12→4 immediately. Sprint (Items A+B+D, ~40 min) reduces to 2 = moratorium exits. moratorium-sprint SKILL.md ready (7985fbb). Implementation sketch: subconscious/runs/2026-05-21/winning-concept.md."
+    },
+    {
+      "title": "Invoke /moratorium-sprint — execute 3 remaining S-effort items (A+B+D) and open draft PR [FINAL INTERACTIVE RECOMMENDATION]",
+      "date": "2026-05-20-pm",
+      "confidence": "HIGH",
+      "status": "superseded",
+      "category": "workflow",
+      "note": "Run 27 winner. SUPERSEDED by run 28. Run 28 adds governance audit (pending 12→4) as Phase 6 bonus. Run 27 winner. FINAL interactive recommendation — if not invoked this session, run 28 winner is hard-mandated as nightly autonomous execution of Items A+D. Sprint is 3 items only (~40 min). moratorium-sprint SKILL.md exists (7985fbb). Invoke /moratorium-sprint → executes A (check_project_invariants pre-commit ~5 min), B (widget sync guard ~15 min), D (CI eval workflow ~20 min) → draft PR → pending 9→6 when merged. RUN 28 HARD MANDATE: If sprint not invoked: nightly review executes Items A+D autonomously (Item A = 3-line pre-commit addition, Item D = new CI YAML — both LOW-risk additive). Item B kept for human sprint. Implementation sketch: subconscious/runs/2026-05-20-pm/winning-concept.md."
     },
     {
       "title": "Invoke /moratorium-sprint — execute 3 remaining S-effort items (A+B+D) and open draft PR",
       "date": "2026-05-20",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "category": "workflow",
       "note": "Run 26 winner. Item C (Moratorium Escalation Protocol) autonomously implemented by nightly review 2026-05-20 (2ce31b2). Sprint now A+B+D only (~40 min). moratorium-sprint SKILL.md exists (7985fbb). Invoke /moratorium-sprint in interactive session → executes A (check_project_invariants pre-commit ~5 min), B (widget sync guard ~15 min), D (CI eval workflow ~20 min) → draft PR → pending 9→6 when merged. If not invoked by run 27: escalate to nightly review automatic trigger. Implementation sketch: subconscious/runs/2026-05-20/winning-concept.md."
     },
@@ -35,7 +43,7 @@
       "title": "Invoke /moratorium-sprint — execute 4 S-effort items and open draft PR",
       "date": "2026-05-19",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "category": "workflow",
       "note": "Run 25 winner. moratorium-sprint SKILL.md implemented by nightly review (7985fbb, 2026-05-19) — first production artifact in 14 days. Tool ready. Invoke /moratorium-sprint in any interactive session (~50 min): executes A (check_project_invariants pre-commit, 5 min), B (widget sync guard, 15 min), C (SKILL.md escalation protocol, 10 min), D (CI eval workflow, 20 min) → opens draft PR → pending 10→6 when merged. Bonus: merge safe dep PRs #102/#103/#163/#164 (~5 min, independent). Implementation sketch: subconscious/runs/2026-05-19/winning-concept.md."
     },
@@ -51,7 +59,7 @@
       "title": "Moratorium Exit Sprint PR — 4 S-effort items in one branch (subsumed by run 24 skill)",
       "date": "2026-05-18",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "category": "workflow / code_health",
       "note": "Run 23 winner. Create branch moratorium-exit-sprint with 4 items: (A) check_project_invariants.py into pre-commit Check 10 (~5 min), (B) scripts/check-widget-sync.sh + pre-push + CLAUDE.md fix (~15 min), (C) SKILL.md Moratorium Escalation Protocol section (~10 min), (D) .github/workflows/lead-qualifier-eval.yml (~20 min). One draft PR = one approval. Pending 9→5. Sketches at subconscious/runs/2026-05-18/winning-concept.md §Steps 1-5."
     },
@@ -59,7 +67,7 @@
       "title": "Wire check_project_invariants.py into pre-commit as Check 10",
       "date": "2026-05-17-pm",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "subsumed_in_sprint",
       "category": "code_health",
       "note": "Run 22 winner. Most atomic S-effort item. ~5 min, 3 lines to scripts/hooks/pre-commit. Script passes all 6 checks. Em-dash blocker cleared May 5 (8f680e8). Run 8 mandate (22 days stale). After this: immediate next sprint (runs 7+14+19, ~45 min) drops pending 6→3 = moratorium exits. Implementation sketch: subconscious/runs/2026-05-17-pm/winning-concept.md §Steps 1-3."
     },
@@ -99,7 +107,7 @@
       "title": "Widget 3-Copy Sync Guard",
       "date": "2026-05-08",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "subsumed_in_sprint",
       "category": "code_health",
       "note": "Run 15 winner. Moratorium re-triggered (pending=4 > threshold=3, oldest=22 days). Create scripts/check-widget-sync.sh (diff all 3 widget copies, FAIL on diverge). Wire into scripts/hooks/pre-push. Fix CLAUDE.md Invariant #4 ('2 copies' → '3 copies'). S-effort, 30 min. Bonus A: Wire check_project_invariants.py (run 8, 5 min, drops pending 4→3). Bonus B: Wire lead qualifier eval to CI (run 14, 20 min, drops pending 3→2). Together: pending 4→1. Run 16 (2026-05-11): STILL UNIMPLEMENTED. 3 more days elapsed. Run 4 now 25 days. Script MISSING. All copies in sync (nightly PASS) but guard missing. Run 17 (2026-05-15-AM): STILL UNIMPLEMENTED. 4 more days elapsed. Run 4 now 29 days. Script MISSING. Widget copies confirmed IN SYNC (May 15). Third consecutive moratorium run with same winner. Run 18 (2026-05-15-PM): GOVERNANCE OVERRIDE — winner switched to Automated Moratorium Escalation Hook. Widget Sync Guard demoted to Bonus A. Still unimplemented, still valid."
     },
@@ -107,7 +115,7 @@
       "title": "Wire golden eval harness to CI",
       "date": "2026-05-05",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "subsumed_in_sprint",
       "category": "operational",
       "note": "Run 14 winner. First post-moratorium recommendation. Create .github/workflows/lead-qualifier-eval.yml (Monday cron + PR trigger). Add LEAD_QUALIFIER_AGENT_ID GH Secret. Closes Issue #110. Harness already passes locally (backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json, added 7854ede). Onboarding V2 sprint active — new risk vector for silent regression. S-effort. Run 15: promoted as Bonus B alongside run 7 winner — implement together in 1 hour to drop pending 4→1."
     },
@@ -123,7 +131,7 @@
       "title": "Wire check_project_invariants.py into pre-commit hook",
       "date": "2026-04-25",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "subsumed_in_sprint",
       "category": "code_health",
       "note": "Run 8 winner. 037865f added scripts/check_project_invariants.py — stdlib-only, designed for CI/agents. Add call to scripts/hooks/pre-commit as Check 10 (pre-commit now has 9 checks after 72f8204). S-effort, zero deps. Blocks commits with naming violations (client_id, status, areas_of_interest). BLOCKER CLEARED run 14 (2026-05-05): 8f680e8 fixed WizardStepAutoKB.jsx + AutomationActivityCard.jsx em-dash violations. Direct script run on 2026-05-05 shows all 6 checks PASS (including PASS website source avoids em dashes). No implementation blockers remain."
     },
@@ -131,7 +139,7 @@
       "title": "Widget 3-Copy Sync Guard",
       "date": "2026-04-24",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "subsumed_in_sprint",
       "category": "code_health",
       "note": "Run 7 winner. Fix CLAUDE.md Invariant #4 (2 → 3 widget paths) + create scripts/check-widget-sync.sh + wire into pre-push hook. S-effort, zero dependencies. Script still not created as of run 14 (2026-05-05). Three widget copies confirmed: widget/, frontend/public/widget/, landing-page-v2/widget/."
     },
@@ -505,11 +513,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 11,
+    "runs_pending_approval": 4,
+    "runs_pending_approval_raw": 12,
+    "runs_pending_approval_note": "Raw count 12 inflated by superseded/subsumed governance recs. Governance audit run 28 (2026-05-21): marks runs 23/25/26/27 superseded + runs 7/8/14/15/22 subsumed_in_sprint. True actionable pending = 4 (runs 4, 20, 21, 28). After moratorium-sprint: pending = 2 = moratorium exits.",
     "runs_implemented": 7,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 34)",
-    "governance_correction": "Run 27 (2026-05-20-pm): No new implementations between runs 26→27. Items A/B/D all confirmed MISSING. Pending=11 (run 26 adds 1, run 27 adds 1 = 10+1=11 pre-merge). Moratorium day 15. FINAL interactive recommendation for /moratorium-sprint. Run 28 hard mandate encoded: nightly review to execute Items A+D if sprint not invoked this session.",
-    "note": "Run 27: moratorium-sprint skill exists. Items A/B/D still missing. FINAL interactive recommendation. Run 28 mandate: nightly executes A+D autonomously. Critical path: invoke /moratorium-sprint NOW → sprint PR → pending 9→6 when merged. Moratorium exit: pending ≤ 2. Post-moratorium queue: AI-to-Human Handoff (Critical, 34d), Zapier fix (security, ROI 2.5), pre-commit-guard-add skill (workflow, parking lot).",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 35)",
+    "governance_correction": "Run 28 (2026-05-21): Nightly review 2026-05-21 formally declined run 27 hard mandate on governance grounds. Items A/B/D all MISSING (day 16). Governance audit reduces pending 12→4. Sprint (40 min) reduces to 2 = exit. Zero production commits day 16.",
+    "note": "Run 28: moratorium-sprint SKILL.md ready. True pending = 4 after governance audit. Sprint = moratorium exit. Post-moratorium: AI-to-Human Handoff (Critical, 35d), Zapier security (GH #107, ROI 2.5), pre-commit-guard-add skill.",
     "escalate": true
   },
   "config": {
