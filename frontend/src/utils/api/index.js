@@ -44,3 +44,4 @@ export * from "./scoring";
 
 export { request, BASE, ApiError } from "./_client";
 export * from "./onboarding";
+export * from "./os";

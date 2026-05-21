@@ -10,10 +10,25 @@ parallel.
 
 ## P0 scope
 
-Orchestrator routing, dual-layer memory, chat shell, onboarding hook,
-agent-run flowchart, no-fit backlog, usage metering. No workflow agents yet —
-P0 proves the orchestrator → agent-run → deliverable → memory loop with a
-single stub worker.
+Orchestrator routing, semantic memory, chat shell, agent-run flowchart, no-fit
+backlog, usage metering. No workflow agents yet — P0 proves the orchestrator →
+agent-run → deliverable → memory loop with a single stub worker.
+
+### Confirmed decisions (2026-05-21)
+
+1. **`os_` prefix on every new table** — `os_threads`, `os_messages`,
+   `os_agent_runs`, `os_memory_entries`, `os_backlog_requests`,
+   `os_tenant_usage`. Avoids collision with existing `agent_runs`-style names.
+2. **Semantic memory only in P0** — the Karpathy graph layer (entity
+   pages/edges) is dropped from P0. Rationale: the graph layer is the API-cost
+   driver (an LLM call per memory write to update entity pages); the semantic
+   layer is cheap (one embedding per write, free pgvector retrieval). The spec
+   already marks graph the cut candidate (§Memory architecture, Open Questions).
+   Graph layer is re-decided at end of P1.
+3. **Migrations written to `migrations/` AND applied via Supabase MCP.**
+4. **Async agent runs via FastAPI `BackgroundTasks`** — proves the real
+   async post-back path (worker writes status/result back to `os_agent_runs` +
+   `os_messages`) that P0 must de-risk. No external queue in P0.
 
 ## Build order
 
@@ -29,26 +44,27 @@ frontend codes against the spec's documented API contract.
 
 | File | Table |
 |---|---|
-| `118_os_threads.sql` | `os_threads` + `client_id`/`(client_id,status)` index + RLS |
+| `118_os_threads.sql` | `os_threads` + `(client_id,status)` index + RLS |
 | `119_os_messages.sql` | `os_messages` + `thread_id` index + RLS |
-| `120_agent_runs.sql` | `agent_runs` + `(client_id,status)` index + RLS |
-| `121_os_memory_entries.sql` | `os_memory_entries` + pgvector index + RLS (owner-write) |
-| `122_os_memory_graph.sql` | `os_memory_nodes` + `os_memory_edges` + RLS (owner-write) |
-| `123_backlog_requests.sql` | `backlog_requests` + `(client_id,status)` index + RLS |
-| `124_tenant_usage.sql` | `tenant_usage` + `client_id` index + RLS |
+| `120_os_agent_runs.sql` | `os_agent_runs` + `(client_id,status)` index + RLS |
+| `121_os_memory_entries.sql` | `os_memory_entries` + pgvector index + RLS |
+| `122_os_backlog_requests.sql` | `os_backlog_requests` + `(client_id,status)` index + RLS |
+| `123_os_tenant_usage.sql` | `os_tenant_usage` + `client_id` index + RLS |
 
-All additive. Schema invariants: `client_id` not `tenant_id`; no destructive
-changes to existing tables.
+Six migrations (graph-memory migration dropped per decision 2). All additive.
+Schema invariants: `client_id` not `tenant_id`; no destructive changes to
+existing tables. RLS = `client_id`-scoped on every table; memory edit/delete
+and backlog decisions gated to owner role at the app layer (`require_role`).
 
 ## Backend files (new)
 
 - `backend/services/orchestrator.py` — Opus orchestrator: intent classify,
   route to worker, spawn agent runs, no-fit → backlog. Reuse `llm_runtime.py`,
   `advisor_executor.py`, `managed_agents_registry.py`.
-- `backend/services/os_memory.py` — dual-layer memory: semantic
-  (Voyage `voyage-3-lite` 512d + pgvector) + Karpathy graph
-  (`os_memory_nodes`/`os_memory_edges`). Write trigger = auto + explicit
-  "remember this". Owner-only edit/delete.
+- `backend/services/os_memory.py` — semantic memory only (decision 2): Voyage
+  `voyage-3-lite` 512d embeddings + pgvector top-k retrieval. Reuses
+  `backend/services/embeddings.py`. Write trigger = auto + explicit "remember
+  this". Owner-only edit/delete enforced in the router via `require_role`.
 - `backend/services/usage_meter.py` — per-tenant API spend metering + cap
   enforcement before each agent run.
 - `backend/routers/os_threads.py` — thread + message endpoints.
@@ -77,11 +93,12 @@ changes to existing tables.
 
 ## P0 done criteria
 
-- All 7 migrations apply cleanly.
+- All 6 migrations apply cleanly via Supabase MCP.
 - `/api/v1/os/threads` round-trip: send prompt → orchestrator responds →
-  agent_run row created → deliverable approval gate works.
+  `os_agent_runs` row created → stub worker posts deliverable back →
+  approval gate works.
 - Memory write (auto + explicit) + semantic retrieval verified.
-- No-fit request → `backlog_requests` row + owner email path.
+- No-fit request → `os_backlog_requests` row + owner email path.
 - Usage meter blocks a run when the cap is hit.
 - `npm run build` clean.
 

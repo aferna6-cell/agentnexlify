@@ -17,6 +17,12 @@ _TENANT_COLUMN_OVERRIDES = {
     "conversations": "client_id",
     "leads": "client_id",
     "tenants": "id",
+    "os_threads": "client_id",
+    "os_messages": "client_id",
+    "os_agent_runs": "client_id",
+    "os_memory_entries": "client_id",
+    "os_backlog_requests": "client_id",
+    "os_tenant_usage": "client_id",
 }
 
 
@@ -40,7 +46,9 @@ def tenant_select(
     )
 
 
-def tenant_update(db: Any, table_name: str, tenant_id: str, values: Mapping[str, Any]) -> Any:
+def tenant_update(
+    db: Any, table_name: str, tenant_id: str, values: Mapping[str, Any]
+) -> Any:
     """Start an update query scoped to the tenant."""
     return (
         db.table(table_name)
@@ -59,7 +67,9 @@ def tenant_insert(db: Any, table_name: str, tenant_id: str, rows: Any) -> Any:
     return db.table(table_name).insert(_scope_insert_rows(table_name, tenant_id, rows))
 
 
-def tenant_upsert(db: Any, table_name: str, tenant_id: str, rows: Any, **upsert_kwargs: Any) -> Any:
+def tenant_upsert(
+    db: Any, table_name: str, tenant_id: str, rows: Any, **upsert_kwargs: Any
+) -> Any:
     """Start an upsert query after injecting and validating tenant ownership."""
     return db.table(table_name).upsert(
         _scope_insert_rows(table_name, tenant_id, rows),
@@ -76,7 +86,9 @@ class TenantScopedTable:
         self.tenant_id = tenant_id
 
     def select(self, columns: str = "*", **select_kwargs: Any) -> Any:
-        return tenant_select(self.db, self.table_name, self.tenant_id, columns, **select_kwargs)
+        return tenant_select(
+            self.db, self.table_name, self.tenant_id, columns, **select_kwargs
+        )
 
     def update(self, values: Mapping[str, Any]) -> Any:
         return tenant_update(self.db, self.table_name, self.tenant_id, values)
@@ -88,7 +100,9 @@ class TenantScopedTable:
         return tenant_insert(self.db, self.table_name, self.tenant_id, rows)
 
     def upsert(self, rows: Any, **upsert_kwargs: Any) -> Any:
-        return tenant_upsert(self.db, self.table_name, self.tenant_id, rows, **upsert_kwargs)
+        return tenant_upsert(
+            self.db, self.table_name, self.tenant_id, rows, **upsert_kwargs
+        )
 
 
 def tenant_table(db: Any, table_name: str, tenant_id: str) -> TenantScopedTable:
@@ -131,13 +145,17 @@ def _scope_insert_rows(table_name: str, tenant_id: str, rows: Any) -> Any:
     raise TypeError("tenant_insert rows must be a mapping or sequence of mappings")
 
 
-def _scope_insert_row(scope_column: str, tenant_id: str, row: Mapping[str, Any]) -> dict[str, Any]:
+def _scope_insert_row(
+    scope_column: str, tenant_id: str, row: Mapping[str, Any]
+) -> dict[str, Any]:
     if not isinstance(row, Mapping):
         raise TypeError("tenant_insert row items must be mappings")
 
     scoped = deepcopy(dict(row))
     if scope_column in scoped and scoped[scope_column] != tenant_id:
-        raise TenantScopeError(f"Refusing to insert row for another tenant via {scope_column}")
+        raise TenantScopeError(
+            f"Refusing to insert row for another tenant via {scope_column}"
+        )
 
     scoped[scope_column] = tenant_id
     return scoped

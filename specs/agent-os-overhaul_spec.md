@@ -231,13 +231,14 @@ this sequencing landing in order, not on a single big-bang code drop.
 
 ## Data Model
 
-New tables (numbers from 118; exact names confirmed at build time):
+New tables (numbers from 118; all `os_`-prefixed, confirmed at build time
+2026-05-21):
 
 - `os_threads` — one row per task conversation. `client_id`, `title`,
   `created_by`, `status`, timestamps. Separate conversations per task.
 - `os_messages` — messages within a thread. `thread_id`, `role`, `content`,
   `agent_run_id` nullable.
-- `agent_runs` — one row per delegated agent invocation. `client_id`,
+- `os_agent_runs` — one row per delegated agent invocation. `client_id`,
   `thread_id`, `agent_name`, `status` (queued/running/succeeded/failed),
   `thought_process` (JSON, for the flowchart), `error_detail` nullable,
   timestamps. Async — worker writes status back here.
@@ -245,21 +246,23 @@ New tables (numbers from 118; exact names confirmed at build time):
   (fact/preference/decision/conversation_summary), `content`, `embedding`
   (pgvector), `source`, `created_by`, `is_pinned` (explicit "remember this").
 - `os_memory_nodes` — graph entity pages. `client_id`, `entity_type`,
-  `name`, `summary`, `attributes` (JSON).
+  `name`, `summary`, `attributes` (JSON). **Deferred past P0** — semantic
+  layer only ships in P0 (build decision 2026-05-21); graph layer re-decided
+  at end of P1 per Open Questions.
 - `os_memory_edges` — typed relationships. `client_id`, `from_node`,
-  `to_node`, `relation`.
-- `backlog_requests` — no-fit requests. `client_id`, `requested_by`,
+  `to_node`, `relation`. **Deferred past P0** (see above).
+- `os_backlog_requests` — no-fit requests. `client_id`, `requested_by`,
   `request_text`, `status` (new/emailed/approved/rejected/shipped),
   `created_at`.
-- `tenant_usage` — per-tenant API spend per billing cycle. `client_id`,
+- `os_tenant_usage` — per-tenant API spend per billing cycle. `client_id`,
   `cycle_start`, `api_spend_usd`, `cap_usd`, `blocked_at` nullable.
 
 Reused: `tenant_integrations` (connectors), `widget_configs.knowledge_base`
 (KB), `leads`, `conversations`, `tenants`.
 
 - **Indexes**: pgvector index on `os_memory_entries.embedding`; `client_id`
-  index on every new table; composite `(client_id, status)` on `agent_runs`
-  and `backlog_requests`.
+  index on every new table; composite `(client_id, status)` on `os_agent_runs`
+  and `os_backlog_requests`.
 - **RLS**: every new table gets a `client_id`-scoped RLS policy. Memory
   edit/delete additionally gated to the owner role (staff = read-only).
 - **Migration safety**: all additive — new tables only, no destructive changes

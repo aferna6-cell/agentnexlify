@@ -970,3 +970,22 @@ Adds `zapier_api_keys` table backing Issue #58 — Zapier API key auth + tier ga
 **RLS:** service_role only (backend CRUD endpoints handle tenant scoping).
 **Conventions:** `client_id` (matches leads/conversations convention).
 **Applied:** YES — confirmed via PR #91 squash-merge.
+
+
+### 118-123 — Agent OS P0 Foundation
+**Date:** 2026-05-21
+**Branch:** claude/agent-os-grill-resume-cHznV
+Six tables backing the Agent OS overhaul P0 (chat-first orchestrator). Spec: `specs/agent-os-overhaul_spec.md`. Plan: `plans/agent-os-p0_plan.md`. Every new table carries the `os_` prefix and is `client_id`-scoped (matches leads/conversations).
+
+**Tables:**
+- `118 os_threads` — task-conversation threads. `id`, `client_id`, `title`, `created_by`, `status` (active|archived), timestamps. Index `(client_id, status)`.
+- `119 os_messages` — thread messages. `id`, `client_id`, `thread_id` FK→os_threads ON DELETE CASCADE, `role` (user|assistant|agent|system), `content`, `agent_run_id`, `created_at`. Index `(thread_id, created_at)`.
+- `120 os_agent_runs` — worker-agent invocations (async). `id`, `client_id`, `thread_id` FK CASCADE, `agent_name`, `status` (queued|running|succeeded|failed), `thought_process` JSONB, `deliverable` JSONB (approval-gated draft, no separate table in P0), `deliverable_status` (pending_approval|approved|rejected), `error_detail`, `bug_reported_at`, timestamps, `completed_at`. Index `(client_id, status)`.
+- `121 os_memory_entries` — semantic memory. `id`, `client_id`, `kind` (fact|preference|decision|conversation_summary), `content`, `embedding vector(512)` (voyage-3-lite), `source`, `created_by`, `is_pinned`, timestamps. HNSW cosine index on `embedding`. Also creates `match_os_memory(p_client_id, p_query_embedding, p_match_count)` SQL function for client-scoped ANN search. Karpathy graph layer (os_memory_nodes/edges) deferred past P0.
+- `122 os_backlog_requests` — no-fit backlog. `id`, `client_id`, `thread_id` FK→os_threads ON DELETE SET NULL, `summary`, `detail`, `reason`, `status` (open|accepted|declined|deferred), `decided_by`, `decision_note`, `created_at`, `decided_at`. Index `(client_id, status)`.
+- `123 os_tenant_usage` — per-tenant usage metering. `id`, `client_id`, `cycle_start` DATE, `agent_runs`, `messages`, `input_tokens`, `output_tokens`, timestamps. UNIQUE `(client_id, cycle_start)`. Index `(client_id, cycle_start DESC)`.
+
+**Extension:** 121 runs `CREATE EXTENSION IF NOT EXISTS vector`.
+**RLS:** deny-public on all 6 tables (`FOR ALL TO public USING (false) WITH CHECK (false)` — matches migration 116 pattern). Backend uses the service-role client (bypasses RLS); app-layer tenant scoping via `tenant_scope.py`.
+**Conventions:** `client_id` on every table (registered in `_TENANT_COLUMN_OVERRIDES` in `backend/services/tenant_scope.py`).
+**Applied:** YES — confirmed 2026-05-21 via Supabase MCP `list_tables` (all 6 tables present, RLS enabled, project `pxserpybmajixqrmzaly`).
