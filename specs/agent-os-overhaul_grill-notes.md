@@ -1,11 +1,11 @@
 # Agent OS Overhaul — Grill-Me Interview Notes (WIP)
 
-Status: **interview in progress** — 6 of 7 branches resolved. Not a spec yet.
+Status: **interview in progress** — all 7 branches answered. 2 clarifications
+outstanding (day-1 workflow set, exact connector platforms) before `write-prd`.
 Branch: `claude/agent-os-grill-resume-cHznV` (continued from
 `claude/nexlify-os-overhaul-51nga`, commit 26aac47). Started 2026-05-21.
-Next: Branch 7 (Scope/MVP/Cost/Success/Failure) questions posed to user,
-awaiting answers → hand to `write-prd` → `specs/agent-os-overhaul_spec.md`.
-No code until that spec is approved.
+Next: resolve 2 clarifications → hand to `write-prd` →
+`specs/agent-os-overhaul_spec.md`. No code until that spec is approved.
 
 This file is the durable record of the design interview (the
 `.claude/agent-comms/checkpoint.md` copy is gitignored and does not survive the
@@ -107,11 +107,46 @@ customer data from it.
   conversations — is stored**, and the orchestrator **pulls from that store**
   when needed (widget data feeds orchestrator memory).
 
+### Branch 7 — Scope / MVP / Cost / Success / Failure modes
+- **Day-1 workflows**: launch with **multiple end-to-end workflows**, not one.
+  User: "MVP can contain 1 workflow, but day 1 has to have multiple end-to-end
+  so it's a product worth buying." Exact count + identity → **clarification C1
+  outstanding** (see below).
+- **Day-1 agent roster**: **orchestrator + a small set of worker agents**. The
+  **no-fit backlog flow ships in v1** (not deferred).
+- **Connectors**: **all Branch 5 connectors ship day 1** — Google Calendar,
+  Facebook, Google Business Profile, Zapier, Gmail, social media, Microsoft
+  Office. Exact "social media" platforms + "Microsoft Office" scope →
+  **clarification C2 outstanding** (see below).
+- **Model + cost model**: **Opus orchestrator, Sonnet worker agents** (user
+  override of the Branch 2 Haiku-routing advisor note — accepted; the usage cap
+  below bounds the cost, routing tier stays an internal lever with no UX
+  impact). Pricing = **monthly subscription with a per-tenant usage cap tied to
+  API spend**. Illustrative only: ~$500/mo plan includes ~$100 of API usage
+  (≈5:1 margin). Cap enforced per tenant.
+- **Memory**: **Karpathy graph memory ships in v1** (not a fast-follow). User:
+  most optimal way for the agent to hold memory; open to a better approach if
+  one is advised.
+- **Success metric**: **5 paying tenants by 90 days after launch.**
+- **Failure handling**: on any agent failure → the agent **tells the user it
+  failed**, **logs the failure with all necessary detail**, and **sends it to
+  the owner (Aidan)** to review and fix (consistent with the Branch 3
+  bug-to-Aidan flow).
+- **Migration**: **all existing tenants move to the OS at once** at launch
+  (big-bang — no pilot, no opt-in).
+
 ---
 
-## Remaining branches to grill
+## Clarifications outstanding (block `write-prd` handoff)
 
-- **Branch 7 — Scope / MVP / Cost / Success / Failure modes**: force-rank the hero workflow, define the day-1 MVP cut, pin the LLM cost model, define a concrete success metric, enumerate failure-mode fallbacks.
+- **C1 — day-1 workflow set**: user wants "multiple end-to-end" workflows but
+  exact count + identity not pinned. Candidates (Branch 1): marketing campaign
+  (hero), lead follow-up/nurture, appointment booking, customer-question
+  answering. AskUserQuestion sent 2026-05-21.
+- **C2 — connector platforms**: "social media" and "Microsoft Office" are
+  umbrella terms. Pin exact social platforms (Facebook exists already) and
+  exact Microsoft Office products (Outlook mail/calendar, file handling,
+  OneDrive). AskUserQuestion sent 2026-05-21.
 
 ---
 
@@ -164,30 +199,31 @@ Raw Q&A (user answers verbatim, lightly normalized):
 
 Resolved decisions folded into the "Branch 6" entry under Resolved decisions above.
 
-## Branch 7 — Scope / MVP / Cost / Success / Failure modes (questions posed 2026-05-21, AWAITING ANSWERS)
+## Branch 7 — Scope / MVP / Cost / Success / Failure modes (RESOLVED 2026-05-21)
 
 This is the final branch. It converts every "we'll do all of it" answer from
-Branches 1-6 into a single shippable cut. Codebase grounding: runtime agent
-infra already exists (`managed_agents_registry.py`, `advisor_executor.py`,
+Branches 1-6 into a shippable cut. Codebase grounding: runtime agent infra
+already exists (`managed_agents_registry.py`, `advisor_executor.py`,
 `llm_runtime.py`); the overhaul is an orchestrator layer + interaction-model
 re-conception, not a from-scratch build.
 
-8 questions sent to user:
-1. Hero workflow force-rank — Branch 1 said "all of these" by launch (hero = build a marketing campaign). Pick the ONE end-to-end workflow that must work on day 1 (e.g. marketing campaign / lead follow-up / appointment booking / customer-question answering). Everything else is post-launch.
-2. Day-1 agent roster — Branch 3 said "fewer agents, simple". For the day-1 cut, how many specialist agents ship: just the orchestrator + 1 hero agent, or orchestrator + a small fixed set (which)? Backlog/no-fit email flow in v1 or later?
-3. Connector MVP cut — Branch 5 launch set was existing connectors + Gmail + "social media" + "Microsoft Office". Pin exact day-1 connectors. Name the real "social media" platforms (Facebook/Instagram/LinkedIn/X?) and what "Microsoft Office" means (Outlook mail? Word/Excel files? Calendar?). Which can slip to post-launch?
-4. LLM cost model — you flagged API cost twice (orchestrator routing, chat onboarding). Acceptable target cost per tenant per month? This decides Haiku-routes vs Opus-routes and whether chat onboarding ships v1 or the wizard fallback does.
-5. Memory/graph scope for v1 — semantic retrieval (Voyage + pgvector) is confirmed. Does the Karpathy graph-memory layer ship in v1, or is v1 semantic-only with graph memory as a fast-follow?
-6. Success metric — Branch 1 said success = "people paying and using it". Pin one concrete number to hit by a date (e.g. N paying tenants in 90 days, or N hero-workflows completed/week, or X% of existing widget customers migrated).
-7. Failure-mode fallbacks — when the orchestrator misroutes, an agent fails mid-task, or a connector is down: what does the user see, and what is the v1 fallback (retry / manual takeover / "we logged a bug" / human email)? Which failures block launch if unhandled?
-8. Migration cut — Branch 1 said existing widget customers migrate over (not a separate SKU). Day-1: do all existing tenants get the OS at once, is it opt-in, or gated to a pilot group? Does the old dashboard stay reachable during transition?
+Raw Q&A (user answers verbatim, lightly normalized):
+1. Hero workflow → should launch with more than one workflow. MVP can contain 1 workflow, but day 1 has to have multiple end-to-end so it's a product worth buying. (Exact set → clarification C1.)
+2. Day-1 agent roster → orchestrator + a small set of worker agents; the backlog should also ship v1.
+3. Connector MVP cut → all the connectors listed should be day 1. (Exact platforms → clarification C2.)
+4. Cost model → Opus orchestrator, Sonnet workers. Monthly subscription where each user has a usage limit tied to how much API they spend — e.g. very roughly a $500/mo subscription gives them $100 in API usage.
+5. Memory/graph scope → Karpathy graph is v1; user thinks it's the most optimal way for the agent to hold memory, open to a better idea if advised.
+6. Success metric → 5 paying tenants 90 days after launch.
+7. Failure-mode fallbacks → the agent should let the user know it failed, log the failure and all necessary detail, and send it to the owner (Aidan) to look at and fix.
+8. Migration → all tenants move over at once, once this is launched.
+
+Resolved decisions folded into the "Branch 7" entry under Resolved decisions above.
 
 ## Open tensions (not yet settled)
-- Hero workflow not yet force-ranked to one MVP workflow (Branch 7 Q1).
-- "Social media" and "Microsoft Office" connectors (Branch 5 Q2) are umbrella terms — pin exact platforms/scopes (Branch 7 Q3).
-- LLM orchestration + chat-onboarding cost model not yet pinned (Branch 7 Q4).
-- Karpathy graph-memory layer — v1 or fast-follow (Branch 7 Q5).
-- Draft-editing surface (chat vs side panel) — recommend side panel; user open to it.
+- **C1** — day-1 workflow set: user wants "multiple end-to-end" but exact count + identity not pinned. AskUserQuestion sent 2026-05-21.
+- **C2** — "social media" + "Microsoft Office" connectors: exact platforms/products not pinned. AskUserQuestion sent 2026-05-21.
+- Opus-orchestrator (Branch 7 Q4) overrides the Branch 2 Haiku-routing advisor note — accepted; the per-tenant usage cap bounds cost. Routing tier stays an internal cost lever with no UX impact. `write-prd` should note Haiku-pre-routing as a future cost optimization.
+- Draft-editing surface (chat vs side panel) — recommend side panel; user open to it. `write-prd` to decide.
 
 ## Schema invariants (CLAUDE.md — must hold in any implementation)
 `client_id` not `tenant_id` on leads/conversations; `status` not `lead_stage`;
