@@ -1,5 +1,6 @@
 ---
 name: gitnexus-debugging
+effort: high
 description: Debug bugs, trace errors, and investigate unexpected behavior using GitNexus query, context, and process tools. Use when user says 'why is this failing', 'trace this error', 'who calls this method', 'trace this bug', 'debug with gitnexus', '500 error investigation', or asks about gitnexus debugging.
 version: 1.0.0
 origin: claude

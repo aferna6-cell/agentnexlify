@@ -1,5 +1,6 @@
 ---
 name: mcp-builder
+effort: high
 description: Build or debug MCP servers that expose external services (Railway, Twilio, Resend, custom) as Claude tools. Load when user says "add MCP server", "build an MCP for X", "FastMCP server", "new MCP tool", or when extending .mcp.json entries beyond existing supabase.
 origin: https://github.com/anthropics/skills/tree/main/skills/mcp-builder
 version: 1.0.0

@@ -1,5 +1,6 @@
 ---
 name: write-prd
+effort: high
 description: Generate a Product Requirements Document via interactive interview, codebase exploration, and module design. Output saved to specs/<feature>_spec.md. Load when user says "write a PRD", "draft a spec", "spec this feature", "PRD for X".
 origin: https://github.com/mattpocock/skills/tree/main/write-a-prd
 version: 1.1.0

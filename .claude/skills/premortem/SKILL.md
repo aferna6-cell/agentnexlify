@@ -1,5 +1,6 @@
 ---
 name: premortem
+effort: high
 description: Stress-test a plan by assuming it already failed 6 months out. Forces failure-mode enumeration before execute. Load when user says "premortem this", "stress-test this plan", "what could kill this", or before merging architectural PRs / shipping multi-week features / locking pricing or schema changes.
 origin: Klein 2007 "Performing a Project Premortem" (HBR); Kahneman endorsed in Thinking Fast and Slow
 version: 1.0.0

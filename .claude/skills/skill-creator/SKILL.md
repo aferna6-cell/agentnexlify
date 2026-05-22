@@ -1,5 +1,6 @@
 ---
 name: skill-creator
+effort: high
 description: Create new skills, edit existing skills, or benchmark skill triggering accuracy. Load when user says "create a skill", "add a skill to .claude/skills/", "improve this SKILL.md description", "eval this skill", or "why isn't my skill triggering".
 origin: https://github.com/anthropics/skills/tree/main/skills/skill-creator
 version: 1.0.0

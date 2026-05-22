@@ -1,5 +1,6 @@
 ---
 name: prd-to-plan
+effort: high
 description: Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Output ordered phases that reduce integration risk. Load when user says "plan from PRD", "phase this spec", "vertical slice plan", "implementation plan for spec".
 origin: https://github.com/mattpocock/skills/tree/main/prd-to-plan
 version: 1.0.0
