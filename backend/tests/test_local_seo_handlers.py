@@ -12,12 +12,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import HTTPException
 
-from backend.services.local_seo_handlers import (
+from backend.services.local_seo_execute import (
     execute_analyze_seo_profile,
     execute_competitor_analysis,
     execute_geo_score,
     execute_keyword_tracking,
     execute_seo_audit,
+)
+from backend.services.local_seo_fetch import (
     fetch_audit_history,
     fetch_dashboard_widget,
     fetch_keyword_rankings,
@@ -63,7 +65,16 @@ async def test_execute_seo_audit_404_when_tenant_missing(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_execute_seo_audit_400_when_no_crawl_content(mock_supabase):
-    tenant_chain = _build_table_chain([{"business_name": "Biz", "business_type": "salon", "city": "NYC", "website_url": None}])
+    tenant_chain = _build_table_chain(
+        [
+            {
+                "business_name": "Biz",
+                "business_type": "salon",
+                "city": "NYC",
+                "website_url": None,
+            }
+        ]
+    )
     crawl_chain = _build_table_chain([])
     mock_supabase.table.side_effect = [tenant_chain, crawl_chain]
     with pytest.raises(HTTPException) as exc:
@@ -74,8 +85,26 @@ async def test_execute_seo_audit_400_when_no_crawl_content(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_execute_seo_audit_400_when_crawl_incomplete(mock_supabase):
-    tenant_chain = _build_table_chain([{"business_name": "Biz", "business_type": "salon", "city": "NYC", "website_url": None}])
-    crawl_chain = _build_table_chain([{"crawl_status": "in_progress", "pages_json": [], "extracted_text": "", "pages_found": 0}])
+    tenant_chain = _build_table_chain(
+        [
+            {
+                "business_name": "Biz",
+                "business_type": "salon",
+                "city": "NYC",
+                "website_url": None,
+            }
+        ]
+    )
+    crawl_chain = _build_table_chain(
+        [
+            {
+                "crawl_status": "in_progress",
+                "pages_json": [],
+                "extracted_text": "",
+                "pages_found": 0,
+            }
+        ]
+    )
     mock_supabase.table.side_effect = [tenant_chain, crawl_chain]
     with pytest.raises(HTTPException) as exc:
         await execute_seo_audit(TENANT_ID)
@@ -110,28 +139,36 @@ async def test_execute_keyword_tracking_400_on_empty_keywords(mock_supabase):
 async def test_execute_keyword_tracking_returns_dicts_for_response_model(mock_supabase):
     tenant_chain = _build_table_chain([{"business_type": "salon", "city": "NYC"}])
     rankings_select = _build_table_chain([])  # no existing record → insert path
-    rankings_insert = _build_table_chain([{
-        "id": "row-1",
-        "tenant_id": TENANT_ID,
-        "keyword": "salon nyc",
-        "difficulty_score": 60,
-        "estimated_position": "10-20",
-        "search_volume_estimate": "medium",
-        "recommendations": ["a"],
-        "last_analyzed_at": "2026-04-27T00:00:00+00:00",
-    }])
+    rankings_insert = _build_table_chain(
+        [
+            {
+                "id": "row-1",
+                "tenant_id": TENANT_ID,
+                "keyword": "salon nyc",
+                "difficulty_score": 60,
+                "estimated_position": "10-20",
+                "search_volume_estimate": "medium",
+                "recommendations": ["a"],
+                "last_analyzed_at": "2026-04-27T00:00:00+00:00",
+            }
+        ]
+    )
     # Each loop iteration calls .table() twice (select-existing, then insert)
     mock_supabase.table.side_effect = [tenant_chain, rankings_select, rankings_insert]
 
     with patch(
-        "backend.services.local_seo_handlers._analyze_keywords_ai",
-        new=AsyncMock(return_value=[{
-            "keyword": "salon nyc",
-            "difficulty_score": 60,
-            "estimated_position": "10-20",
-            "search_volume_estimate": "medium",
-            "recommendations": ["a"],
-        }]),
+        "backend.services.local_seo_execute._analyze_keywords_ai",
+        new=AsyncMock(
+            return_value=[
+                {
+                    "keyword": "salon nyc",
+                    "difficulty_score": 60,
+                    "estimated_position": "10-20",
+                    "search_volume_estimate": "medium",
+                    "recommendations": ["a"],
+                }
+            ]
+        ),
     ):
         items = await execute_keyword_tracking(TENANT_ID, ["salon nyc"])
     assert isinstance(items, list)
@@ -141,6 +178,7 @@ async def test_execute_keyword_tracking_returns_dicts_for_response_model(mock_su
     assert items[0]["difficulty_score"] == 60
     # Pydantic round-trip: handler output must be valid for KeywordRankingItem
     from backend.models.local_seo import KeywordRankingItem
+
     KeywordRankingItem(**items[0])
 
 
@@ -185,19 +223,24 @@ async def test_fetch_seo_profile_404_when_missing(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_fetch_seo_profile_returns_pydantic_compatible_dict(mock_supabase):
-    mock_supabase.table.return_value = _build_table_chain([{
-        "id": "p1",
-        "tenant_id": TENANT_ID,
-        "completeness_score": 75,
-        "missing_fields": [],
-        "recommendations": [],
-        "keyword_suggestions": [],
-        "last_analyzed_at": "2026-04-27T00:00:00+00:00",
-        "created_at": "2026-04-27T00:00:00+00:00",
-        "updated_at": "2026-04-27T00:00:00+00:00",
-    }])
+    mock_supabase.table.return_value = _build_table_chain(
+        [
+            {
+                "id": "p1",
+                "tenant_id": TENANT_ID,
+                "completeness_score": 75,
+                "missing_fields": [],
+                "recommendations": [],
+                "keyword_suggestions": [],
+                "last_analyzed_at": "2026-04-27T00:00:00+00:00",
+                "created_at": "2026-04-27T00:00:00+00:00",
+                "updated_at": "2026-04-27T00:00:00+00:00",
+            }
+        ]
+    )
     result = await fetch_seo_profile(TENANT_ID)
     from backend.models.local_seo import SEOProfileResponse
+
     SEOProfileResponse(**result)
     assert result["completeness_score"] == 75
 
@@ -217,9 +260,11 @@ async def test_fetch_keyword_suggestions_404_when_no_profile(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_fetch_keyword_suggestions_returns_shape(mock_supabase):
-    mock_supabase.table.return_value = _build_table_chain([
-        {"keyword_suggestions": ["seo nyc", "salon nyc"]},
-    ])
+    mock_supabase.table.return_value = _build_table_chain(
+        [
+            {"keyword_suggestions": ["seo nyc", "salon nyc"]},
+        ]
+    )
     result = await fetch_keyword_suggestions(TENANT_ID)
     assert result == {"tenant_id": TENANT_ID, "keywords": ["seo nyc", "salon nyc"]}
 
@@ -236,6 +281,7 @@ async def test_fetch_dashboard_widget_empty_state(mock_supabase):
     mock_supabase.table.side_effect = [profile_chain, review_chain]
     result = await fetch_dashboard_widget(TENANT_ID)
     from backend.models.local_seo import DashboardWidgetResponse
+
     DashboardWidgetResponse(**result)
     assert result == {
         "completeness_score": 0,
@@ -246,12 +292,18 @@ async def test_fetch_dashboard_widget_empty_state(mock_supabase):
 
 
 @pytest.mark.asyncio
-async def test_fetch_dashboard_widget_with_profile_caps_top_recommendations(mock_supabase):
-    profile_chain = _build_table_chain([{
-        "completeness_score": 80,
-        "recommendations": ["a", "b", "c", "d", "e"],
-        "keyword_suggestions": ["k1", "k2"],
-    }])
+async def test_fetch_dashboard_widget_with_profile_caps_top_recommendations(
+    mock_supabase,
+):
+    profile_chain = _build_table_chain(
+        [
+            {
+                "completeness_score": 80,
+                "recommendations": ["a", "b", "c", "d", "e"],
+                "keyword_suggestions": ["k1", "k2"],
+            }
+        ]
+    )
     review_chain = _build_table_chain([], count=7)
     mock_supabase.table.side_effect = [profile_chain, review_chain]
     result = await fetch_dashboard_widget(TENANT_ID)
@@ -276,20 +328,25 @@ async def test_fetch_latest_audit_404_when_missing(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_fetch_latest_audit_returns_pydantic_compatible_dict(mock_supabase):
-    mock_supabase.table.return_value = _build_table_chain([{
-        "id": "a1",
-        "tenant_id": TENANT_ID,
-        "overall_score": 65,
-        "categories": {},
-        "critical_issues": [],
-        "warnings": [],
-        "passed_checks": [],
-        "recommendations": [],
-        "pages_analyzed": 5,
-        "created_at": "2026-04-27T00:00:00+00:00",
-    }])
+    mock_supabase.table.return_value = _build_table_chain(
+        [
+            {
+                "id": "a1",
+                "tenant_id": TENANT_ID,
+                "overall_score": 65,
+                "categories": {},
+                "critical_issues": [],
+                "warnings": [],
+                "passed_checks": [],
+                "recommendations": [],
+                "pages_analyzed": 5,
+                "created_at": "2026-04-27T00:00:00+00:00",
+            }
+        ]
+    )
     result = await fetch_latest_audit(TENANT_ID)
     from backend.models.local_seo import SEOAuditResponse
+
     SEOAuditResponse(**result)
     assert result["overall_score"] == 65
 
@@ -308,15 +365,19 @@ async def test_fetch_audit_history_empty(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_fetch_audit_history_aggregates_severity_counts(mock_supabase):
-    mock_supabase.table.return_value = _build_table_chain([{
-        "id": "a1",
-        "overall_score": 70,
-        "pages_analyzed": 4,
-        "critical_issues": [{"x": 1}, {"x": 2}],
-        "warnings": [{"x": 1}],
-        "passed_checks": [{"x": 1}, {"x": 2}, {"x": 3}],
-        "created_at": "2026-04-27T00:00:00+00:00",
-    }])
+    mock_supabase.table.return_value = _build_table_chain(
+        [
+            {
+                "id": "a1",
+                "overall_score": 70,
+                "pages_analyzed": 4,
+                "critical_issues": [{"x": 1}, {"x": 2}],
+                "warnings": [{"x": 1}],
+                "passed_checks": [{"x": 1}, {"x": 2}, {"x": 3}],
+                "created_at": "2026-04-27T00:00:00+00:00",
+            }
+        ]
+    )
     result = await fetch_audit_history(TENANT_ID, days=30)
     assert result["days"] == 30
     assert len(result["audits"]) == 1
@@ -341,12 +402,16 @@ async def test_execute_geo_score_404_when_tenant_missing(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_execute_geo_score_400_when_business_name_missing(mock_supabase):
-    tenant_chain = _build_table_chain([{
-        "business_name": None,
-        "business_type": None,
-        "city": None,
-        "website_url": None,
-    }])
+    tenant_chain = _build_table_chain(
+        [
+            {
+                "business_name": None,
+                "business_type": None,
+                "city": None,
+                "website_url": None,
+            }
+        ]
+    )
     mock_supabase.table.return_value = tenant_chain
     with pytest.raises(HTTPException) as exc:
         await execute_geo_score(TENANT_ID, None, None, None, None)
@@ -369,17 +434,22 @@ async def test_fetch_latest_geo_score_404_when_missing(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_fetch_latest_geo_score_returns_pydantic_compatible_dict(mock_supabase):
-    mock_supabase.table.return_value = _build_table_chain([{
-        "id": "g1",
-        "tenant_id": TENANT_ID,
-        "overall_score": 55,
-        "platform_scores": {},
-        "visibility_factors": [],
-        "recommendations": [],
-        "created_at": "2026-04-27T00:00:00+00:00",
-    }])
+    mock_supabase.table.return_value = _build_table_chain(
+        [
+            {
+                "id": "g1",
+                "tenant_id": TENANT_ID,
+                "overall_score": 55,
+                "platform_scores": {},
+                "visibility_factors": [],
+                "recommendations": [],
+                "created_at": "2026-04-27T00:00:00+00:00",
+            }
+        ]
+    )
     result = await fetch_latest_geo_score(TENANT_ID)
     from backend.models.local_seo import GEOScoreResponse
+
     GEOScoreResponse(**result)
     assert result["overall_score"] == 55
 
@@ -398,17 +468,22 @@ async def test_fetch_keyword_rankings_empty(mock_supabase):
 
 @pytest.mark.asyncio
 async def test_fetch_keyword_rankings_returns_pydantic_compatible_list(mock_supabase):
-    mock_supabase.table.return_value = _build_table_chain([{
-        "id": "r1",
-        "keyword": "salon nyc",
-        "difficulty_score": 60,
-        "estimated_position": "10-20",
-        "search_volume_estimate": "medium",
-        "recommendations": ["x"],
-        "last_analyzed_at": "2026-04-27T00:00:00+00:00",
-    }])
+    mock_supabase.table.return_value = _build_table_chain(
+        [
+            {
+                "id": "r1",
+                "keyword": "salon nyc",
+                "difficulty_score": 60,
+                "estimated_position": "10-20",
+                "search_volume_estimate": "medium",
+                "recommendations": ["x"],
+                "last_analyzed_at": "2026-04-27T00:00:00+00:00",
+            }
+        ]
+    )
     rows = await fetch_keyword_rankings(TENANT_ID)
     from backend.models.local_seo import KeywordRankingItem
+
     [KeywordRankingItem(**r) for r in rows]
     assert len(rows) == 1
     assert rows[0]["keyword"] == "salon nyc"
