@@ -1,5 +1,6 @@
 ---
 name: grill-me
+effort: high
 description: Socratic clarifying questions before any new feature, refactor, or risky migration. Load when user says "grill me", "interview me", "clarify this feature", "what am I missing", or proposes new work touching 2+ files in backend/, frontend/, widget/, or migrations/.
 origin: https://github.com/mattpocock/skills/tree/main/grill-me
 version: 1.1.0

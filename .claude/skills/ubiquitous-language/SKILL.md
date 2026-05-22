@@ -1,5 +1,6 @@
 ---
 name: ubiquitous-language
+effort: medium
 description: Extract a DDD-style domain glossary from conversation, code, or specs. Surface AgentNexLiFy term mismatches (client_id vs tenant_id, status vs lead_stage). Output to docs/glossary.md. Load when user says "glossary", "ubiquitous language", "domain terms", "what does X mean here".
 origin: https://github.com/mattpocock/skills/tree/main/ubiquitous-language
 version: 1.0.0

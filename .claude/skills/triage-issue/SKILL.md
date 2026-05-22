@@ -1,5 +1,6 @@
 ---
 name: triage-issue
+effort: medium
 description: Investigate a bug by exploring the codebase, identify root cause, and file a GitHub issue with TDD-based fix plan. Load when user says "triage this bug", "investigate this issue", "what's causing X", "root cause this", or pastes a bug report.
 origin: https://github.com/mattpocock/skills/tree/main/triage-issue
 version: 1.0.0

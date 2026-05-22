@@ -1,5 +1,6 @@
 ---
 name: gitnexus-guide
+effort: low
 description: Reference guide for all GitNexus MCP tools, resources, graph schema, and the skill routing table for different code tasks. Use when user says 'what gitnexus tools', 'gitnexus reference', 'gitnexus schema', 'gitnexus tools available', 'how to use gitnexus', 'gitnexus guide', or asks about gitnexus guide.
 version: 1.0.0
 origin: claude

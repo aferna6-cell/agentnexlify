@@ -1,5 +1,6 @@
 ---
 name: edit-article
+effort: low
 description: Restructure and tighten articles by cutting filler, sharpening arguments, and reordering sections. Use on knowledge-base/wiki/, blog drafts, marketing copy. Load when user says "edit this article", "tighten this", "restructure this post", "cut the fluff".
 origin: https://github.com/mattpocock/skills/tree/main/edit-article
 version: 1.0.0

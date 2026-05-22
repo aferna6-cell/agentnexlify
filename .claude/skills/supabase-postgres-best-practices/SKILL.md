@@ -1,5 +1,6 @@
 ---
 name: supabase-postgres-best-practices
+effort: high
 description: Postgres performance + schema best practices from Supabase. Load when writing, reviewing, or optimizing Postgres queries, designing tables/indexes in migrations/, reviewing RLS policies, or debugging slow Supabase queries in backend/routers/*.
 origin: https://github.com/supabase/agent-skills
 version: 1.0.0

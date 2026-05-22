@@ -1,5 +1,6 @@
 ---
 name: api-docs-generator
+effort: medium
 description: Extract FastAPI OpenAPI schema and produce human-readable markdown docs with examples, error codes, and auth. Output to docs/api/. Load when user says "generate API docs", "document the API", "openapi to markdown", "API reference for X".
 origin: inspired by ComposioHQ/awesome-claude-skills/api-docs-generator
 version: 1.0.0

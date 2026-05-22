@@ -1,6 +1,6 @@
 # Morning Digest — 2026-05-22
 
-**Generated:** 2026-05-22 UTC  
+**Generated:** 2026-05-22 UTC
 **Moratorium:** DAY 17 — 5 pending items, oldest 36 days (run 4)
 
 ---

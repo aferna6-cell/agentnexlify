@@ -1,5 +1,6 @@
 ---
 name: skillify
+effort: medium
 description: "Use when asked to /skillify, create, improve, audit, or fix an Agent Nexlify skill. Produces repo-compliant SKILL.md files with triggers, read-first steps, output formats, scope limits, eval prompts, and validation."
 version: 1.0.0
 origin: claude

@@ -1,8 +1,9 @@
-"""Service layer for local SEO route handlers.
+"""Write/compute operations for local SEO — the five execute_ functions.
 
-Orchestration extracted from backend/routers/local_seo.py per User Rule 9
-(>600 line god class). Pure functions return plain dict/list — Pydantic
-response model construction happens at the router boundary.
+Extracted from backend/services/local_seo_handlers.py per Rule 9
+(>600 line god class). Each function orchestrates AI analysis + DB writes.
+Pure functions return plain dict/list — Pydantic construction happens at
+the router boundary.
 
 Each function raises HTTPException directly on validation/AI/DB failure;
 FastAPI handles the exception at any layer in the call stack.
@@ -10,7 +11,7 @@ FastAPI handles the exception at any layer in the call stack.
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import anthropic
@@ -69,7 +70,9 @@ async def execute_seo_audit(tenant_id: str) -> Dict[str, Any]:
             .execute()
         )
     except Exception:
-        logger.error("Failed to load website content for tenant %s", tenant_id, exc_info=True)
+        logger.error(
+            "Failed to load website content for tenant %s", tenant_id, exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Failed to load website content")
 
     if not crawl_result.data:
@@ -100,7 +103,10 @@ async def execute_seo_audit(tenant_id: str) -> Dict[str, Any]:
     business_type = tenant.get("business_type") or "local business"
 
     audit_result = await _run_seo_audit_ai(
-        pages_json, extracted_text, business_name, business_type,
+        pages_json,
+        extracted_text,
+        business_name,
+        business_type,
     )
 
     if not audit_result:
@@ -113,7 +119,10 @@ async def execute_seo_audit(tenant_id: str) -> Dict[str, Any]:
     try:
         overall_score = int(audit_result.get("overall_score") or 0)
     except (TypeError, ValueError):
-        logger.warning("AI returned non-integer overall_score: %s", audit_result.get("overall_score"))
+        logger.warning(
+            "AI returned non-integer overall_score: %s",
+            audit_result.get("overall_score"),
+        )
         overall_score = 0
     categories = audit_result.get("categories", {})
     recommendations_list = audit_result.get("recommendations", [])
@@ -153,11 +162,7 @@ async def execute_seo_audit(tenant_id: str) -> Dict[str, Any]:
 
     saved = audit_data
     try:
-        insert_result = (
-            db.table("seo_audits")
-            .insert(audit_data)
-            .execute()
-        )
+        insert_result = db.table("seo_audits").insert(audit_data).execute()
         if insert_result.data:
             saved = insert_result.data[0]
     except Exception:
@@ -179,7 +184,8 @@ async def execute_seo_audit(tenant_id: str) -> Dict[str, Any]:
 
 
 async def execute_keyword_tracking(
-    tenant_id: str, keywords: List[str],
+    tenant_id: str,
+    keywords: List[str],
 ) -> List[Dict[str, Any]]:
     """Add keywords to track + analyze competitiveness via Claude.
 
@@ -198,7 +204,9 @@ async def execute_keyword_tracking(
             .execute()
         )
     except Exception:
-        logger.error("Failed to load tenant %s for keyword tracking", tenant_id, exc_info=True)
+        logger.error(
+            "Failed to load tenant %s for keyword tracking", tenant_id, exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Failed to load tenant data")
 
     if not tenant_result.data:
@@ -264,40 +272,46 @@ async def execute_keyword_tracking(
                 )
                 saved = result.data[0] if result.data else ranking_data
             else:
-                result = (
-                    db.table("keyword_rankings")
-                    .insert(ranking_data)
-                    .execute()
-                )
+                result = db.table("keyword_rankings").insert(ranking_data).execute()
                 saved = result.data[0] if result.data else ranking_data
 
-            saved_items.append({
-                "id": saved.get("id"),
-                "keyword": kw,
-                "difficulty_score": saved.get("difficulty_score", 50),
-                "estimated_position": saved.get("estimated_position"),
-                "search_volume_estimate": saved.get("search_volume_estimate"),
-                "recommendations": saved.get("recommendations", []),
-                "last_analyzed_at": saved.get("last_analyzed_at"),
-            })
+            saved_items.append(
+                {
+                    "id": saved.get("id"),
+                    "keyword": kw,
+                    "difficulty_score": saved.get("difficulty_score", 50),
+                    "estimated_position": saved.get("estimated_position"),
+                    "search_volume_estimate": saved.get("search_volume_estimate"),
+                    "recommendations": saved.get("recommendations", []),
+                    "last_analyzed_at": saved.get("last_analyzed_at"),
+                }
+            )
         except Exception:
-            logger.error("Failed to save keyword ranking for '%s', tenant %s", kw, tenant_id, exc_info=True)
+            logger.error(
+                "Failed to save keyword ranking for '%s', tenant %s",
+                kw,
+                tenant_id,
+                exc_info=True,
+            )
             # Still include the keyword with AI data even if DB save fails
-            saved_items.append({
-                "id": None,
-                "keyword": kw,
-                "difficulty_score": ranking_data["difficulty_score"],
-                "estimated_position": ranking_data["estimated_position"],
-                "search_volume_estimate": ranking_data["search_volume_estimate"],
-                "recommendations": ranking_data["recommendations"],
-                "last_analyzed_at": now,
-            })
+            saved_items.append(
+                {
+                    "id": None,
+                    "keyword": kw,
+                    "difficulty_score": ranking_data["difficulty_score"],
+                    "estimated_position": ranking_data["estimated_position"],
+                    "search_volume_estimate": ranking_data["search_volume_estimate"],
+                    "recommendations": ranking_data["recommendations"],
+                    "last_analyzed_at": now,
+                }
+            )
 
     return saved_items
 
 
 async def execute_competitor_analysis(
-    tenant_id: str, competitors: List[str],
+    tenant_id: str,
+    competitors: List[str],
 ) -> Dict[str, Any]:
     """AI-powered competitor comparison. Returns parsed JSON dict.
 
@@ -364,17 +378,23 @@ async def execute_competitor_analysis(
                 '  "recommendations": ["top 3-5 specific actions to outrank competitors"]\n'
                 "}"
             ),
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Analyze {business_name} ({business_type}{location_context}) against these competitors:\n"
-                    f"{competitors_text}\n\n"
-                    f"{'My current SEO score is ' + str(your_score) + '/100. ' if your_score else ''}"
-                    f"Compare online presence, likely SEO performance, review reputation, "
-                    f"and local search visibility. Score each business 0-100."
-                ),
-            }],
-            metadata={"tenant_id": tenant_id, "business_name": business_name, "competitor_count": len(competitors)},
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Analyze {business_name} ({business_type}{location_context}) against these competitors:\n"
+                        f"{competitors_text}\n\n"
+                        f"{'My current SEO score is ' + str(your_score) + '/100. ' if your_score else ''}"
+                        f"Compare online presence, likely SEO performance, review reputation, "
+                        f"and local search visibility. Score each business 0-100."
+                    ),
+                }
+            ],
+            metadata={
+                "tenant_id": tenant_id,
+                "business_name": business_name,
+                "competitor_count": len(competitors),
+            },
         )
         raw = resp.text.strip()
     except anthropic.RateLimitError:
@@ -391,12 +411,9 @@ async def execute_competitor_analysis(
         return _parse_json_object_response(raw)
     except (json.JSONDecodeError, ValueError, IndexError):
         logger.error("Failed to parse competitor analysis JSON: %s", raw[:500])
-        raise HTTPException(status_code=500, detail="Failed to parse competitor analysis")
-
-
-# ---------------------------------------------------------------------------
-# Phase 4 handlers — extracted from remaining inline route bodies
-# ---------------------------------------------------------------------------
+        raise HTTPException(
+            status_code=500, detail="Failed to parse competitor analysis"
+        )
 
 
 async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
@@ -412,7 +429,9 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
             .execute()
         )
     except Exception:
-        logger.error("Failed to load tenant %s for SEO analysis", tenant_id, exc_info=True)
+        logger.error(
+            "Failed to load tenant %s for SEO analysis", tenant_id, exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Failed to load tenant data")
 
     if not tenant_result.data:
@@ -432,7 +451,9 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
         if wc_result.data:
             widget_config = wc_result.data[0]
     except Exception:
-        logger.warning("Failed to load widget config for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Failed to load widget config for tenant %s", tenant_id, exc_info=True
+        )
 
     faq_count = 0
     try:
@@ -456,7 +477,9 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
         )
         review_count = review_result.count or 0
     except Exception:
-        logger.warning("Failed to count reviews for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Failed to count reviews for tenant %s", tenant_id, exc_info=True
+        )
 
     content_count = 0
     try:
@@ -468,14 +491,21 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
         )
         content_count = content_result.count or 0
     except Exception:
-        logger.warning("Failed to count content items for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Failed to count content items for tenant %s", tenant_id, exc_info=True
+        )
 
     score, missing, recommendations = _calculate_completeness(
-        tenant, widget_config, faq_count, review_count, content_count,
+        tenant,
+        widget_config,
+        faq_count,
+        review_count,
+        content_count,
     )
 
     keywords = await _generate_keywords(
-        tenant.get("business_type"), tenant.get("city"),
+        tenant.get("business_type"),
+        tenant.get("city"),
     )
 
     now = datetime.now(timezone.utc).isoformat()
@@ -506,15 +536,13 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
                 .execute()
             )
         else:
-            result = (
-                db.table("seo_profiles")
-                .insert(profile_data)
-                .execute()
-            )
+            result = db.table("seo_profiles").insert(profile_data).execute()
 
         saved = result.data[0] if result.data else profile_data
     except Exception:
-        logger.error("Failed to save SEO profile for tenant %s", tenant_id, exc_info=True)
+        logger.error(
+            "Failed to save SEO profile for tenant %s", tenant_id, exc_info=True
+        )
         saved = profile_data
 
     return {
@@ -528,189 +556,6 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
         "created_at": saved.get("created_at"),
         "updated_at": saved.get("updated_at", now),
     }
-
-
-async def fetch_seo_profile(tenant_id: str) -> Dict[str, Any]:
-    """Get cached SEO profile."""
-    db = get_service_supabase()
-
-    try:
-        result = (
-            db.table("seo_profiles")
-            .select("*")
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to fetch SEO profile for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to fetch SEO profile")
-
-    if not result.data:
-        raise HTTPException(
-            status_code=404,
-            detail="No SEO profile found. Run an analysis first.",
-        )
-
-    profile = result.data[0]
-    return {
-        "id": profile.get("id"),
-        "tenant_id": profile.get("tenant_id", tenant_id),
-        "completeness_score": profile.get("completeness_score", 0),
-        "missing_fields": profile.get("missing_fields", []),
-        "recommendations": profile.get("recommendations", []),
-        "keyword_suggestions": profile.get("keyword_suggestions", []),
-        "last_analyzed_at": profile.get("last_analyzed_at"),
-        "created_at": profile.get("created_at"),
-        "updated_at": profile.get("updated_at"),
-    }
-
-
-async def fetch_keyword_suggestions(tenant_id: str) -> Dict[str, Any]:
-    """Get keyword suggestions from cached SEO profile."""
-    db = get_service_supabase()
-
-    try:
-        result = (
-            db.table("seo_profiles")
-            .select("keyword_suggestions")
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to fetch keywords for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to fetch keyword suggestions")
-
-    if not result.data:
-        raise HTTPException(
-            status_code=404,
-            detail="No SEO profile found. Run an analysis first.",
-        )
-
-    keywords = result.data[0].get("keyword_suggestions", [])
-    return {"tenant_id": tenant_id, "keywords": keywords}
-
-
-async def fetch_dashboard_widget(tenant_id: str) -> Dict[str, Any]:
-    """Summary card data for main dashboard."""
-    db = get_service_supabase()
-
-    completeness_score = 0
-    recommendations: list[str] = []
-    keyword_count = 0
-
-    try:
-        profile_result = (
-            db.table("seo_profiles")
-            .select("completeness_score, recommendations, keyword_suggestions")
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if profile_result.data:
-            profile = profile_result.data[0]
-            completeness_score = profile.get("completeness_score", 0)
-            all_recs = profile.get("recommendations", [])
-            recommendations = all_recs[:3] if isinstance(all_recs, list) else []
-            kw = profile.get("keyword_suggestions", [])
-            keyword_count = len(kw) if isinstance(kw, list) else 0
-    except Exception:
-        logger.warning("Failed to load SEO profile for dashboard widget, tenant %s", tenant_id, exc_info=True)
-
-    review_count = 0
-    try:
-        review_result = (
-            db.table("reviews")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .execute()
-        )
-        review_count = review_result.count or 0
-    except Exception:
-        logger.warning("Failed to count reviews for dashboard widget, tenant %s", tenant_id, exc_info=True)
-
-    return {
-        "completeness_score": completeness_score,
-        "top_recommendations": recommendations,
-        "review_count": review_count,
-        "keyword_count": keyword_count,
-    }
-
-
-async def fetch_latest_audit(tenant_id: str) -> Dict[str, Any]:
-    """Get latest SEO audit results."""
-    db = get_service_supabase()
-
-    try:
-        result = (
-            db.table("seo_audits")
-            .select("*")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to fetch SEO audit for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to fetch SEO audit")
-
-    if not result.data:
-        raise HTTPException(
-            status_code=404,
-            detail="No SEO audit found. Run an audit first.",
-        )
-
-    audit = result.data[0]
-    return {
-        "id": audit.get("id"),
-        "tenant_id": audit.get("tenant_id", tenant_id),
-        "overall_score": audit.get("overall_score", 0),
-        "categories": audit.get("categories", {}),
-        "critical_issues": audit.get("critical_issues", []),
-        "warnings": audit.get("warnings", []),
-        "passed_checks": audit.get("passed_checks", []),
-        "recommendations": audit.get("recommendations", []),
-        "pages_analyzed": audit.get("pages_analyzed", 0),
-        "created_at": audit.get("created_at"),
-    }
-
-
-async def fetch_audit_history(tenant_id: str, days: int) -> Dict[str, Any]:
-    """Get SEO audit history for last N days."""
-    db = get_service_supabase()
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-
-    try:
-        result = (
-            db.table("seo_audits")
-            .select("id, overall_score, pages_analyzed, critical_issues, warnings, passed_checks, created_at")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", cutoff)
-            .order("created_at", desc=True)
-            .limit(50)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to fetch audit history for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to fetch audit history")
-
-    audits: List[Dict[str, Any]] = []
-    for audit in (result.data or []):
-        critical_list = audit.get("critical_issues", [])
-        warning_list = audit.get("warnings", [])
-        passed_list = audit.get("passed_checks", [])
-        audits.append({
-            "id": audit["id"],
-            "overall_score": audit.get("overall_score", 0),
-            "pages_analyzed": audit.get("pages_analyzed", 0),
-            "critical_count": len(critical_list) if isinstance(critical_list, list) else 0,
-            "warning_count": len(warning_list) if isinstance(warning_list, list) else 0,
-            "passed_count": len(passed_list) if isinstance(passed_list, list) else 0,
-            "created_at": audit.get("created_at"),
-        })
-
-    return {"tenant_id": tenant_id, "audits": audits, "days": days}
 
 
 async def execute_geo_score(
@@ -732,7 +577,9 @@ async def execute_geo_score(
             .execute()
         )
     except Exception:
-        logger.error("Failed to load tenant %s for GEO scoring", tenant_id, exc_info=True)
+        logger.error(
+            "Failed to load tenant %s for GEO scoring", tenant_id, exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Failed to load tenant data")
 
     if not tenant_result.data:
@@ -764,10 +611,18 @@ async def execute_geo_score(
         if crawl_result.data:
             extracted_text = crawl_result.data[0].get("extracted_text")
     except Exception:
-        logger.warning("Failed to load website content for GEO scoring, tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Failed to load website content for GEO scoring, tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
 
     geo_result = await _run_geo_score_ai(
-        business_name, business_type, city, website_url, extracted_text,
+        business_name,
+        business_type,
+        city,
+        website_url,
+        extracted_text,
     )
 
     if not geo_result:
@@ -779,7 +634,10 @@ async def execute_geo_score(
     try:
         overall_score = int(geo_result.get("overall_score") or 0)
     except (TypeError, ValueError):
-        logger.warning("AI returned non-integer GEO overall_score: %s", geo_result.get("overall_score"))
+        logger.warning(
+            "AI returned non-integer GEO overall_score: %s",
+            geo_result.get("overall_score"),
+        )
         overall_score = 0
     platform_scores = geo_result.get("platform_scores", {})
     visibility_factors = geo_result.get("visibility_factors", [])
@@ -799,11 +657,7 @@ async def execute_geo_score(
 
     saved = geo_data
     try:
-        insert_result = (
-            db.table("geo_scores")
-            .insert(geo_data)
-            .execute()
-        )
+        insert_result = db.table("geo_scores").insert(geo_data).execute()
         if insert_result.data:
             saved = insert_result.data[0]
     except Exception:
@@ -818,69 +672,3 @@ async def execute_geo_score(
         "recommendations": recommendations_list,
         "created_at": saved.get("created_at"),
     }
-
-
-async def fetch_latest_geo_score(tenant_id: str) -> Dict[str, Any]:
-    """Get latest GEO visibility score."""
-    db = get_service_supabase()
-
-    try:
-        result = (
-            db.table("geo_scores")
-            .select("*")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to fetch GEO score for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to fetch GEO score")
-
-    if not result.data:
-        raise HTTPException(
-            status_code=404,
-            detail="No GEO score found. Run a GEO analysis first.",
-        )
-
-    geo = result.data[0]
-    return {
-        "id": geo.get("id"),
-        "tenant_id": geo.get("tenant_id", tenant_id),
-        "overall_score": geo.get("overall_score", 0),
-        "platform_scores": geo.get("platform_scores", {}),
-        "visibility_factors": geo.get("visibility_factors", []),
-        "recommendations": geo.get("recommendations", []),
-        "created_at": geo.get("created_at"),
-    }
-
-
-async def fetch_keyword_rankings(tenant_id: str) -> List[Dict[str, Any]]:
-    """Get all tracked keyword rankings."""
-    db = get_service_supabase()
-
-    try:
-        result = (
-            db.table("keyword_rankings")
-            .select("*")
-            .eq("tenant_id", tenant_id)
-            .order("difficulty_score", desc=False)
-            .execute()
-        )
-    except Exception:
-        logger.error("Failed to fetch keyword rankings for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to fetch keyword rankings")
-
-    rows: List[Dict[str, Any]] = []
-    for row in (result.data or []):
-        rows.append({
-            "id": row.get("id"),
-            "keyword": row.get("keyword", ""),
-            "difficulty_score": row.get("difficulty_score", 50),
-            "estimated_position": row.get("estimated_position"),
-            "search_volume_estimate": row.get("search_volume_estimate"),
-            "recommendations": row.get("recommendations", []),
-            "last_analyzed_at": row.get("last_analyzed_at"),
-        })
-
-    return rows

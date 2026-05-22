@@ -34,11 +34,11 @@ No handoff path exists — the AI keeps trying to respond, degrading trust.
 Critical gap across all 7 verticals (customer-gaps.md).
 
 ## Scope (v1 — explicit trigger only)
-- Trigger: user types one of ["talk to someone", "speak to a person", 
+- Trigger: user types one of ["talk to someone", "speak to a person",
   "human please", "call me", "connect me with owner"]
 - Action: send webhook + Twilio SMS to tenant owner with lead context
 - Fallback: send email if Twilio not configured
-- Lead status: set to "needs_follow_up" 
+- Lead status: set to "needs_follow_up"
 - Widget message: "I've let [Business Name] know. Expect a call/text soon."
 - NO proactive detection (deferred to v2)
 - NO live chat (deferred to v2)

@@ -28,10 +28,10 @@ No production bugs, no schema drift, no security surface changes.
 
 ## Moratorium Status
 
-**moratorium_active:** true  
-**Total subconscious runs:** 29  
-**Last run:** 2026-05-21-pm  
-**Pending approval items:** 5  
+**moratorium_active:** true
+**Total subconscious runs:** 29
+**Last run:** 2026-05-21-pm
+**Pending approval items:** 5
 **Oldest pending:** 2026-04-16 (AI-to-Human Handoff v1, run 4) — **day 36**
 
 Trigger condition: N_pending (5) > 3 AND oldest_age (36) > 14 → **ESCALATE**
@@ -48,7 +48,7 @@ Action: Added comment to GH #169 with updated pending count + ages.
 | 20 | Governance Escalation: reduce max_pending_approvals 3→2 | 2026-05-16-pm | 6 |
 | 4  | AI-to-Human Handoff v1 (explicit trigger) | 2026-04-16 | **36** |
 
-**Fastest exit path:** invoke `/moratorium-sprint` in any interactive session (~40 min, Items A+B+D).  
+**Fastest exit path:** invoke `/moratorium-sprint` in any interactive session (~40 min, Items A+B+D).
 Sprint sketch: `subconscious/runs/2026-05-21/winning-concept.md`
 
 ---

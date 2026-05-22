@@ -1,1 +1,0 @@
-from backend.services.intent_detection import detect_intent
