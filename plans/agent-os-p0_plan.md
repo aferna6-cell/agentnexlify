@@ -107,3 +107,123 @@ and backlog decisions gated to owner role at the app layer (`require_role`).
 Fan out in parallel: P1 (customer-question agent), P2 (booking), P3
 (lead-nurture), P4 (marketing campaign); connector groups A/B/C. Each becomes
 its own plan + build agent.
+
+---
+
+# Phase C — Pre-Merge Cleanup & Refactoring
+
+Runs **last**, after P1–P4 + connectors land and **before** the branch merges
+to `main`. The rehaul replaces old surfaces; this phase removes what the
+replacement makes obsolete so `main` does not inherit two generations of code.
+
+## Operating rules for this phase
+
+- **Audit produces a report; deletion is a separate step.** No file is removed
+  until its candidate row is confirmed. Honors `no-assumptions.md` — never guess
+  which files to delete.
+- **One PR per category** (skills / docs / plans / dead code). No mixed
+  deletion commits. Honors `user-rules.md` Rule 8 (no half migrations).
+- **Separate session from the build.** Per `improve-architecture.md`: do not
+  audit and fix in the same session.
+- **Reversible by design.** Everything removed is recoverable from git history;
+  prefer `git rm` over archive-move unless a file is referenced by an external
+  consumer.
+- Each category below: (1) run the audit, (2) produce a candidate table with a
+  keep/remove/uncertain verdict + rationale, (3) get explicit confirmation on
+  the `uncertain` rows, (4) delete in one commit, (5) grep for dangling
+  references, (6) run `check:quick` + build.
+
+## C1 — Skills audit (`.claude/skills/`, 83 skills)
+
+Goal: remove skills that do not relate to the Claude-driven workflow or are
+superseded.
+
+Audit steps:
+1. List every skill, classify by relation to the current Claude Code workflow.
+2. Flag non-Claude-tool skills, duplicates of a rule file, and skills no
+   command/hook/agent references.
+3. `grep -rl "<skill-name>" .claude/commands .claude/hooks .claude/agents
+   CLAUDE.md` for each — zero hits = orphan candidate.
+
+Initial candidate set (verdict pending confirmation):
+- `kevin-mode` — joke persona skill; not workflow.
+- `go`, `nodejs-backend-patterns`, `nodejs-best-practices` — off-stack
+  (backend is FastAPI/Python, not Node/Go).
+- `obsidian-sync` — Obsidian note sync; not Claude workflow.
+- `autopilot-loop` — CLAUDE.md states `issue-to-pr-loop` replaced it
+  ("kept for reference"); confirm whether reference copy is still wanted.
+- `buddy`, `kairos`, `subconscious`, `last30days` — purpose unclear; classify
+  during audit, do not pre-judge.
+
+Deliverable: candidate table; confirmed removals deleted in one commit;
+update CLAUDE.md skill count + any skill index.
+
+## C2 — Stale `.md` files
+
+Goal: remove dead docs — non-Claude AI configs, one-time audit reports,
+superseded guides.
+
+Root `.md` candidates (verdict pending confirmation):
+- `GEMINI.md` — Gemini AI tool config; does not relate to Claude. Remove.
+- One-time/dated reports: `AUDIT_RESULTS.md`, `CLEANUP_REPORT.md`,
+  `CODEBASE-AUDIT-2026-03-25.md`, `DEBUGGING_SESSION_REPORT.md`,
+  `FULL_AUDIT.md`, `PRE_LAUNCH_AUDIT.md` — confirm each is fully actioned,
+  then remove (git history retains them).
+- Keep: `CLAUDE.md`, `AGENTS.md`, `README.md`, `STRUCTURE.md`, `CHANGELOG.md`,
+  `PROMPTLIBRARY.md`, `KARPATHY.md`, `design.md`.
+
+`docs/` candidates: dated/one-time reports (`ai-auto-improve-report.md`,
+`IMPLEMENTATION_SUMMARY_2026-04-05.md`, `env-vars-2026-04-26.md`,
+`claude-code-audit.md`, `CODEBURN.md`, etc.) — audit each, confirm before
+removal. Keep `dev-knowledge/` (bug-patterns, schema-log, architecture-
+decisions) and live runbooks.
+
+`audits/` candidates: 20+ dated audit files — superseded by later audits.
+Confirm which the latest audit obsoletes, remove the rest.
+
+Audit step for every removal: `grep -rl "<filename>" .` — fix or accept each
+inbound reference before deleting.
+
+## C3 — Stale plans (`plans/`)
+
+Goal: remove plan files for work that has shipped or been abandoned.
+
+Candidates (verify completion against the codebase before removing):
+- `lead-parser-replacement_plan.md`, `marketing-addon-activation_plan.md`,
+  `onboarding-v2_plan.md`, `onboarding-v2_issues.md`,
+  `ops-automation-surfacing_plan.md`, `post-audit-remediation_plan.md`,
+  `handoff-2026-04-16-post-analytics-split.md`.
+- Keep: `agent-os-p0_plan.md` (this file), `plans/README.md`.
+
+For each: confirm the feature shipped (grep the codebase for the implemented
+surface) or was explicitly dropped. Shipped/dropped → remove. Still-open →
+keep. Run `scripts/check_plan_drift.py` after to confirm no dangling refs.
+
+## C4 — Dead code from the rehaul
+
+Goal: remove code the Agent OS replaces. P0–P4 were additive; the dead code is
+whatever the OS surfaces supersede (old dashboard pages, routers, services no
+longer reachable once the chat-first OS is the entry point).
+
+This step is **scoped only after P1–P4 land** — the dead set depends on which
+old surfaces the workflow agents replace. Do not pre-list here.
+
+Audit steps:
+1. `dead-code-sweep` skill + `knip` / `ts-prune` / `depcheck` (frontend),
+   `vulture` or grep-based reachability (backend).
+2. `gitnexus_impact` on each candidate symbol — confirm zero live callers.
+3. Cross-check against the spec: a surface the spec marks "replaced by Agent
+   OS" is a removal candidate; a surface still referenced is not.
+4. Removal PR: delete file + its tests + its router registration in `main.py`
+   + its route in `App.jsx`/`Sidebar.jsx` together (no half-removal).
+5. Verify: backend imports resolve, `npm run build` clean, full test suite
+   green (minus the 21 pre-existing `main` failures already de-scoped).
+
+## Phase C done criteria
+
+- C1–C4 candidate tables produced and confirmed.
+- Four removal commits (one per category), each with a passing
+  `check:quick` + build.
+- No dangling references (`grep` + `check_plan_drift.py` clean).
+- CLAUDE.md updated: skill count, any removed-file references.
+- Branch ready to merge to `main` with no obsolete code carried over.
