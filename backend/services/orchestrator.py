@@ -1,13 +1,13 @@
-"""Agent OS orchestrator — P0.
+"""Agent OS orchestrator.
 
 Classifies a user message and routes it one of three ways:
   - answer:   reply directly in chat, no worker agent
   - delegate: spawn a worker-agent run that produces an approval-gated draft
   - backlog:  no available worker agent fits — park it for an owner decision
 
-Opus 4.7 makes the routing decision. P0 ships one stub worker ("generalist")
-whose job is to prove the async agent-run -> deliverable -> memory loop without
-real workflow agents. P1-P4 add the real workers.
+Opus 4.7 makes the routing decision. Worker agents are auto-discovered from the
+``os_workers`` package — the registry there is the single source of truth for
+which agents the orchestrator may route to.
 """
 
 import json
@@ -15,24 +15,13 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from backend.models.database import get_service_supabase
-from backend.services import usage_meter
+from backend.services import os_workers
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_memory import search_memory, write_memory
-from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
 ORCHESTRATOR_MODEL = "claude-opus-4-7"
-
-# P0 worker registry — one stub agent. P1-P4 register real workers here.
-WORKER_AGENTS: dict[str, str] = {
-    "generalist": (
-        "Handles general business tasks that produce a written draft: "
-        "documents, summaries, plans, outreach copy, answers that need work. "
-        "The only worker agent available in P0."
-    ),
-}
 
 
 @dataclass
@@ -51,11 +40,13 @@ def _now() -> str:
 
 
 def available_agents() -> dict[str, str]:
-    return dict(WORKER_AGENTS)
+    return os_workers.worker_descriptions()
 
 
 def _system_prompt(memory_hits: list[dict]) -> str:
-    agent_lines = "\n".join(f"- {name}: {desc}" for name, desc in WORKER_AGENTS.items())
+    agent_lines = "\n".join(
+        f"- {name}: {desc}" for name, desc in available_agents().items()
+    )
     memory_block = "none"
     if memory_hits:
         memory_block = "\n".join(
@@ -157,7 +148,7 @@ async def orchestrate(
         return _fallback_decision(user_message)
 
     agent_name = decision.get("agent_name")
-    if action == "delegate" and agent_name not in WORKER_AGENTS:
+    if action == "delegate" and agent_name not in available_agents():
         # LLM picked a worker that does not exist yet — that is a no-fit.
         action = "backlog"
 
@@ -188,99 +179,6 @@ async def orchestrate(
         thought_process=thought,
         memory_writes=memory_writes,
     )
-
-
-def run_stub_worker(
-    run_id: str,
-    client_id: str,
-    thread_id: str,
-    agent_name: str,
-    user_message: str,
-    deliverable_title: str,
-) -> None:
-    """Background task: the P0 stub worker.
-
-    Proves the async post-back path — writes status + thought process +
-    approval-gated deliverable back to os_agent_runs, posts an agent message,
-    and meters the run. Runs in a threadpool via FastAPI BackgroundTasks.
-    """
-    db = get_service_supabase()
-    runs = tenant_table(db, "os_agent_runs", client_id)
-    try:
-        existing = runs.select("thought_process").eq("id", run_id).limit(1).execute()
-        thought = list(existing.data[0]["thought_process"]) if existing.data else []
-
-        thought.append(
-            {
-                "step": len(thought) + 1,
-                "label": "Worker started",
-                "status": "done",
-                "detail": f"'{agent_name}' picked up the task.",
-                "at": _now(),
-            }
-        )
-        runs.update(
-            {"status": "running", "thought_process": thought, "updated_at": _now()}
-        ).eq("id", run_id).execute()
-
-        deliverable = {
-            "title": deliverable_title or "Draft",
-            "format": "markdown",
-            "body": (
-                f"# {deliverable_title or 'Draft'}\n\n"
-                f"Draft prepared in response to:\n\n> {user_message}\n\n"
-                "This is a P0 stub deliverable. Review and edit it in the side "
-                "panel, then approve or reject."
-            ),
-        }
-        thought.append(
-            {
-                "step": len(thought) + 1,
-                "label": "Draft prepared",
-                "status": "done",
-                "detail": "Deliverable ready for review.",
-                "at": _now(),
-            }
-        )
-        runs.update(
-            {
-                "status": "succeeded",
-                "thought_process": thought,
-                "deliverable": deliverable,
-                "deliverable_status": "pending_approval",
-                "completed_at": _now(),
-                "updated_at": _now(),
-            }
-        ).eq("id", run_id).execute()
-
-        tenant_table(db, "os_messages", client_id).insert(
-            {
-                "thread_id": thread_id,
-                "role": "agent",
-                "content": (
-                    f"Draft ready: {deliverable_title or 'Draft'}. "
-                    "Review it in the side panel, then approve or reject."
-                ),
-                "agent_run_id": run_id,
-            }
-        ).execute()
-
-        usage_meter.record_agent_run(db, client_id)
-    except Exception:
-        logger.exception("os stub worker failed run_id=%s", run_id)
-        try:
-            runs.update(
-                {
-                    "status": "failed",
-                    "error_detail": "Stub worker raised an exception.",
-                    "completed_at": _now(),
-                    "updated_at": _now(),
-                }
-            ).eq("id", run_id).execute()
-        except Exception:
-            logger.exception(
-                "os stub worker could not record failure run_id=%s", run_id
-            )
 
 
 async def record_memory_writes(

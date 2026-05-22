@@ -3,7 +3,7 @@
 A thread is one task conversation. Posting a user message runs the
 orchestrator, which routes the message one of three ways:
   - answer:   an assistant reply is posted, no worker run
-  - delegate: an os_agent_runs row is created and a stub worker is
+  - delegate: an os_agent_runs row is created and a worker run is
               scheduled as a FastAPI background task
   - backlog:  an os_backlog_requests row is created for an owner decision
 
@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
-from backend.services import orchestrator, usage_meter
+from backend.services import orchestrator, os_workers, usage_meter
 from backend.services.email_sender import send_email
 from backend.services.tenant_scope import tenant_table
 
@@ -162,7 +162,7 @@ async def post_message(
             .data[0]
         )
         background_tasks.add_task(
-            orchestrator.run_stub_worker,
+            os_workers.run_worker,
             run["id"],
             client_id,
             thread_id,

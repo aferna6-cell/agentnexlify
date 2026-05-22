@@ -23,7 +23,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
-from backend.services import orchestrator, os_memory, usage_meter
+from backend.services import orchestrator, os_memory, os_workers, usage_meter
 from backend.services.tenant_scope import (
     TenantScopeError,
     tenant_scope_column,
@@ -596,14 +596,14 @@ class TestOrchestrate:
         assert decision.action == "answer"
 
 
-class TestStubWorker:
-    def test_run_stub_worker_completes_and_meters(self):
+class TestRunWorker:
+    async def test_run_worker_completes_and_meters(self):
         fake = FakeSupabase()
         _seed_run(fake, "run-001")
         with patch(
-            "backend.services.orchestrator.get_service_supabase", return_value=fake
+            "backend.services.os_workers.get_service_supabase", return_value=fake
         ):
-            orchestrator.run_stub_worker(
+            await os_workers.run_worker(
                 "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
             )
         run = fake.store["os_agent_runs"][0]
@@ -613,14 +613,14 @@ class TestStubWorker:
         assert any(m["role"] == "agent" for m in fake.store["os_messages"])
         assert usage_meter.get_usage(fake, _TENANT).agent_runs == 1
 
-    def test_run_stub_worker_records_failure(self):
+    async def test_run_worker_records_failure(self):
         fake = FakeSupabase()
         _seed_run(fake, "run-001")
         fake.raise_on.add(("os_agent_runs", "select"))
         with patch(
-            "backend.services.orchestrator.get_service_supabase", return_value=fake
+            "backend.services.os_workers.get_service_supabase", return_value=fake
         ):
-            orchestrator.run_stub_worker(
+            await os_workers.run_worker(
                 "run-001", _TENANT, "thread-001", "generalist", "do it", "Draft"
             )
         assert fake.store["os_agent_runs"][0]["status"] == "failed"
