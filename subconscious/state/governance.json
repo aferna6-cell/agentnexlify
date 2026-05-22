@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-21-pm",
-  "total_runs": 29,
+  "last_run": "2026-05-22",
+  "total_runs": 30,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,14 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Add Interactive Approval Gate to Subconscious Phase 7",
+      "date": "2026-05-22",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "workflow",
+      "note": "Run 30 winner. Root cause identified: approval gate is outside session — human reads report, session ends, second activation event for execution hasn't materialized in 17 days across 8 consecutive non-implementations. Fix: modify .claude/skills/subconscious/SKILL.md Phase 7 to append yes/no/defer approval prompt. If human types 'do it', execute winning-concept.md sketch immediately. S-effort (~15 min). Nightly review can implement autonomously (SKILL.md modification, LOW-risk additive — same class as 7985fbb + 2ce31b2). Implementation sketch: subconscious/runs/2026-05-22/winning-concept.md."
+    },
     {
       "title": "Write AI-to-Human Handoff v1 GH Issue — 5 min docs, moratorium-exempt, parallel track, Critical gap 35d",
       "date": "2026-05-21-pm",
@@ -521,13 +529,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 5,
-    "runs_pending_approval_raw": 5,
-    "runs_pending_approval_note": "After run 28 governance audit (pending 12→4) + run 29 adds 1 = 5 true actionable pending (runs 4, 20, 21, 28, 29). After run 29 winner (GH issue): pending 5→4 (runs 4+21 partially resolved). After moratorium-sprint: pending 4→2 = moratorium exits. No longer inflated — raw = true.",
+    "runs_pending_approval": 6,
+    "runs_pending_approval_raw": 6,
+    "runs_pending_approval_note": "Pending = 6 after run 30 (runs 4, 20, 21, 28, 29, 30). After Approval Gate implemented + Handoff GH issue created: pending 6→4. After moratorium-sprint: 4→2 = moratorium exits.",
     "runs_implemented": 7,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 35)",
-    "governance_correction": "Run 29 (2026-05-21-pm): 7th consecutive /moratorium-sprint recommendation without invocation. Winner pivots to AI-to-Human Handoff GH Issue (5 min, docs, moratorium-exempt). /moratorium-sprint demoted from 'new winner' slot but remains standing active direction. True pending = 5 after run 29 added.",
-    "note": "Run 29: bottleneck is 40-min sprint commitment, not information. Parallel track: GH issue for AI-to-Human Handoff (5 min, any time). Sprint still highest-leverage action. Post-moratorium first: Zapier security (GH #107, ROI 2.5), pre-commit-guard-add skill.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 36)",
+    "governance_correction": "Run 30 (2026-05-22): root cause of 8 consecutive non-implementations identified as session-gap (approval gate outside session). Winner: Approval Gate in Subconscious Phase 7. Run 29 winner (Handoff GH issue) NOT implemented. Pending 5→6 after run 30.",
+    "note": "Run 30: structural fix. Add Approval Gate to SKILL.md Phase 7. Nightly review can implement autonomously. Once live: Handoff GH issue is first fast-track target. /moratorium-sprint remains highest-leverage action. Post-moratorium: Zapier security (GH #107, ROI 2.5), email N+1 (GH #112, ROI 2.3).",
     "escalate": true
   },
   "config": {

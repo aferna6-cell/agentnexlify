@@ -1,0 +1,33 @@
+{
+  "date": "2026-05-22",
+  "run": 30,
+  "mode": "moratorium_structural_fix",
+  "evidence_summary": "Zero production commits day 17 (since 72f8204 May 5). Items A/B/D MISSING confirmed. Moratorium day 17. True pending = 5 (runs 4/20/21/28/29). Nightly review working: escalation comment posted to GH #169 May 22. Run 29 winner (AI-to-Human Handoff GH issue, 5 min) NOT implemented. 8 consecutive non-implementations runs 22-29. Even 5-min tasks with human present not done. Root cause identified: approval gate is outside the session — human reads report, session ends, second activation event for execution has not materialized in 17 days.",
+  "ideas_count": 5,
+  "winner": "Add Interactive Approval Gate to Subconscious Phase 7 — modify .claude/skills/subconscious/SKILL.md to append yes/no/defer approval prompt after Phase 7 Report, enabling immediate execution in same session",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "effort": "S",
+  "estimated_time_min": 15,
+  "moratorium_active": true,
+  "moratorium_day": 17,
+  "moratorium_pending_before": 5,
+  "moratorium_pending_after": 6,
+  "rejected": [],
+  "weakened": [
+    "/moratorium-sprint as run 30 winner — 9th consecutive, no new information, demoted to active-direction only"
+  ],
+  "debate_verdicts": {
+    "Add Interactive Approval Gate": "SURVIVES → WINNER — session-gap bottleneck confirmed by 8 non-implementations; change is structural, qualitatively different from prior meta-fixes; nightly review can implement autonomously",
+    "Create Handoff GH Issue as artifact": "SURVIVES → parking lot — first application target of the Approval Gate mechanism; already has full body written",
+    "/moratorium-sprint": "WEAKENED — not killed, remains active direction; 9th consecutive winner recommendation adds no new forcing function"
+  },
+  "key_insight": "All prior meta-fixes (moratorium-sprint skill, nightly GH escalation, governance audit) improved tooling/visibility/accounting. None changed WHERE the approval decision happens. The Approval Gate changes the subconscious from a journaling loop into an action loop. Session-gap hypothesis is consistent with all 8 non-implementations including 5-min tasks with human present.",
+  "nightly_review_executable": true,
+  "nightly_review_note": "SKILL.md modification within nightly review's demonstrated capability (7985fbb moratorium-sprint, 2ce31b2 escalation protocol). Item is LOW-risk additive. No parallel execution conflict with sprint (different file, different scope).",
+  "next_run_candidates": [
+    "Confirm Approval Gate added to SKILL.md (nightly review May 23 candidate)",
+    "If gate live: AI-to-Human Handoff GH issue as first fast-track item",
+    "If /moratorium-sprint invoked: free-choice run, Zapier plan_status (ROI 2.5) or email N+1 fix (ROI 2.3)"
+  ]
+}
