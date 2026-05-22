@@ -1,5 +1,6 @@
 ---
 name: tech-debt
+effort: high
 description: "Use when asked to /tech-debt, audit Agent Nexlify technical debt, or rank architecture, dead-code, security, dependency, and launch-readiness risks."
 version: 1.0.0
 origin: claude

@@ -1,5 +1,6 @@
 ---
 name: ddup
+effort: medium
 description: "Use when asked to /ddup or dedupe duplicate Agent Nexlify skills, docs, agents, widget files, routes, or repeated workflow surfaces safely."
 version: 1.0.0
 origin: claude

@@ -1,5 +1,6 @@
 ---
 name: verify
+effort: high
 description: "Use when asked to run /verify, verify Agent Nexlify changes, run checks, or prepare a quality gate without committing or pushing."
 version: 1.0.0
 origin: claude
