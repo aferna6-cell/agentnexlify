@@ -1,8 +1,8 @@
-"""Smoke tests for backend.services.local_seo_handlers.
+"""Smoke tests for backend.services.local_seo_execute + local_seo_fetch.
 
-Phase 2 refactor verification — exercises validation branches of the three
-extracted service functions without invoking Claude. Confirms the orchestration
-moved cleanly from routers/local_seo.py and that error semantics are preserved.
+Exercises validation branches of the extracted service functions without
+invoking Claude. Confirms error semantics are preserved across the
+local_seo_handlers god-class split.
 """
 
 from __future__ import annotations
