@@ -16,17 +16,11 @@ Any AI agent can read `manifest.json` to discover available resources and unders
 
 ## Platform-Specific Configuration
 
-Each AI tool has its own configuration file at the repo root:
+Each agent tool has its own configuration file at the repo root:
 
 | File | Tool |
 |------|------|
 | `CLAUDE.md` | Claude Code (most comprehensive) |
 | `AGENTS.md` | OpenAI Codex / general agents |
-| `GEMINI.md` | Google Gemini CLI |
-| `.github/copilot-instructions.md` | GitHub Copilot |
-| `.cursorrules` | Cursor AI |
-| `.windsurfrules` | Windsurf / Codeium |
-| `.clinerules` | Cline / Roo Code |
-| `.aider.conf.yml` | Aider CLI |
 
-All files share the same critical rules and point to `manifest.json` for full resource discovery.
+Both files share the same critical rules and point to `manifest.json` for full resource discovery.
