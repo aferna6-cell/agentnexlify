@@ -5,7 +5,6 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.services.auth_service import get_current_tenant as _get_current_tenant
-from backend.services import branding_service as _branding_svc
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ async def list_conversations(
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return _branding_svc.list_conversations(tenant_id, channel=channel, search=search)
+    return _conv_svc.list_conversations(tenant_id, channel=channel, search=search)
 
 
 @router.get("/conversations/{tenant_id}/{session_id}")
@@ -32,7 +31,7 @@ async def get_conversation_messages(
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return _branding_svc.get_conversation_messages(tenant_id, session_id)
+    return _conv_svc.get_conversation_messages(tenant_id, session_id)
 
 
 @router.put("/conversations/{tenant_id}/{session_id}/tags")
@@ -45,4 +44,6 @@ async def update_conversation_tags(
     """Update tags on a conversation. Body: {"tags": ["tag1", "tag2"]}"""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return _branding_svc.update_conversation_tags(tenant_id, session_id, req.get("tags", []))
+    return _conv_svc.update_conversation_tags(
+        tenant_id, session_id, req.get("tags", [])
+    )
