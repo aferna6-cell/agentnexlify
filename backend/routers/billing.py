@@ -1,6 +1,5 @@
 """Stripe billing endpoints — checkout, webhooks, and customer portal."""
 
-
 import hashlib
 import html as html_mod
 import logging
@@ -13,7 +12,11 @@ from pydantic import BaseModel, Field, field_validator
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
-from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
+from backend.models.schemas import (
+    CreateCheckoutRequest,
+    CheckoutResponse,
+    PortalResponse,
+)
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.fraud_guard import guard_checkout_for_fraud
@@ -56,8 +59,10 @@ class AdminRefundRequest(BaseModel):
 # Auth dependency (same pattern as clients.py)
 # ---------------------------------------------------------------------------
 
+
 def _verify_secret(x_api_secret: str = Header(...)):
     import hmac as _hmac
+
     secret = settings.billing_secret or settings.api_secret_key
     if not secret or not _hmac.compare_digest(x_api_secret, secret):
         raise HTTPException(status_code=403, detail="Invalid API secret")
@@ -73,6 +78,7 @@ def _admin_secret() -> str:
 
 def _verify_admin_secret(x_api_secret: str | None) -> None:
     import hmac as _hmac
+
     secret = _admin_secret()
     if not secret or not x_api_secret or not _hmac.compare_digest(x_api_secret, secret):
         raise HTTPException(status_code=401, detail="Invalid admin secret")
@@ -84,7 +90,15 @@ def _stripe_obj_to_dict(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return dict(value)
     result: dict[str, Any] = {}
-    for key in ("id", "amount", "currency", "status", "payment_intent", "charge", "reason"):
+    for key in (
+        "id",
+        "amount",
+        "currency",
+        "status",
+        "payment_intent",
+        "charge",
+        "reason",
+    ):
         if hasattr(value, key):
             result[key] = getattr(value, key)
     return result
@@ -98,7 +112,9 @@ def _refund_idempotency_key(req: AdminRefundRequest) -> str:
     return f"agentnexlify-refund:{digest}"
 
 
-def _refund_response_from_audit(row: dict[str, Any], *, idempotent_replay: bool) -> dict[str, Any]:
+def _refund_response_from_audit(
+    row: dict[str, Any], *, idempotent_replay: bool
+) -> dict[str, Any]:
     return {
         "status": "refunded",
         "stripe_refund_id": row.get("stripe_refund_id"),
@@ -133,6 +149,7 @@ def _find_refund_audit(
 # POST /api/v1/billing/create-checkout
 # ---------------------------------------------------------------------------
 
+
 @router.post("/create-checkout", response_model=CheckoutResponse)
 async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret)):
     """Create a Stripe Checkout session for a subscription plan."""
@@ -148,7 +165,13 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
         raise HTTPException(status_code=503, detail=str(exc))
 
     db = get_service_supabase()
-    result = db.table("tenants").select("id, owner_email, business_name").eq("id", req.tenant_id).limit(1).execute()
+    result = (
+        db.table("tenants")
+        .select("id, owner_email, business_name")
+        .eq("id", req.tenant_id)
+        .limit(1)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
     tenant = result.data[0]
@@ -195,7 +218,9 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
     session = stripe.checkout.Session.create(**session_params)
     logger.info(
         "Created checkout session %s for tenant %s plan %s",
-        session.id, req.tenant_id, req.plan,
+        session.id,
+        req.tenant_id,
+        req.plan,
     )
     return CheckoutResponse(checkout_url=session.url)
 
@@ -203,6 +228,7 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
 # ---------------------------------------------------------------------------
 # POST /api/v1/billing/webhook
 # ---------------------------------------------------------------------------
+
 
 @router.post("/webhook")
 async def stripe_webhook(request: Request):
@@ -220,7 +246,9 @@ async def stripe_webhook(request: Request):
         # Handle both pre-v11 and v11+ stripe SDK exception names
         if "SignatureVerification" in type(exc).__name__:
             raise HTTPException(status_code=400, detail="Invalid signature")
-        raise HTTPException(status_code=400, detail="Webhook verification failed") from exc
+        raise HTTPException(
+            status_code=400, detail="Webhook verification failed"
+        ) from exc
 
     event_type = event["type"]
     data = event["data"]["object"]
@@ -238,7 +266,10 @@ async def stripe_webhook(request: Request):
                 _handle_addon_checkout_completed(db, data)
             else:
                 _handle_checkout_completed(db, data)
-        elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
+        elif event_type in (
+            "customer.subscription.created",
+            "customer.subscription.updated",
+        ):
             if _is_marketing_addon_subscription(data):
                 _handle_addon_subscription_updated(db, data)
             else:
@@ -263,8 +294,7 @@ async def stripe_webhook(request: Request):
 AMOUNT_TO_PLAN: dict[int, str] = {
     # Monthly only (current pricing)
     9900: "growth",
-    15000: "professional",
-    25000: "enterprise",
+    89900: "enterprise",
     # Legacy monthly pricing (keep for existing subscribers)
     24900: "growth",
     29900: "autopilot",
@@ -273,12 +303,12 @@ AMOUNT_TO_PLAN: dict[int, str] = {
     39900: "professional",
     79900: "enterprise",
     # Monthly + setup fee (legacy, setup now waived)
-    54800: "growth",         # $249 + $299 setup
-    99800: "professional",   # $499 + $499 setup
-    189800: "enterprise",    # $899 + $999 setup
-    49800: "growth",         # $199 + $299 setup
-    89800: "professional",   # $399 + $499 setup
-    179800: "enterprise",    # $799 + $999 setup
+    54800: "growth",  # $249 + $299 setup
+    99800: "professional",  # $499 + $499 setup
+    189800: "enterprise",  # $899 + $999 setup
+    49800: "growth",  # $199 + $299 setup
+    89800: "professional",  # $399 + $499 setup
+    179800: "enterprise",  # $799 + $999 setup
 }
 
 # Keywords to match in product/price descriptions
@@ -302,7 +332,11 @@ def _resolve_plan(session: dict) -> str | None:
 
     # Try amount_total (in cents)
     amount = session.get("amount_total")
-    logger.info("_resolve_plan: amount_total=%s, known amounts=%s", amount, list(AMOUNT_TO_PLAN.keys()))
+    logger.info(
+        "_resolve_plan: amount_total=%s, known amounts=%s",
+        amount,
+        list(AMOUNT_TO_PLAN.keys()),
+    )
     if amount and amount in AMOUNT_TO_PLAN:
         return AMOUNT_TO_PLAN[amount]
 
@@ -311,7 +345,7 @@ def _resolve_plan(session: dict) -> str | None:
         items = session.get(field, {})
         if isinstance(items, dict):
             items = items.get("data", [])
-        for item in (items or []):
+        for item in items or []:
             desc = (
                 item.get("description", "")
                 or item.get("price", {}).get("nickname", "")
@@ -336,9 +370,8 @@ def _resolve_tenant_id(db, session: dict) -> str | None:
         return tenant_id
 
     # Fall back to email lookup
-    email = (
-        session.get("customer_email")
-        or session.get("customer_details", {}).get("email")
+    email = session.get("customer_email") or session.get("customer_details", {}).get(
+        "email"
     )
     logger.info(
         "_resolve_tenant_id: no metadata tenant_id, trying email lookup: "
@@ -351,7 +384,9 @@ def _resolve_tenant_id(db, session: dict) -> str | None:
         return None
 
     search_email = email.lower().strip()
-    logger.info("_resolve_tenant_id: searching tenants for owner_email=%s", search_email)
+    logger.info(
+        "_resolve_tenant_id: searching tenants for owner_email=%s", search_email
+    )
     result = (
         db.table("tenants")
         .select("id, owner_email")
@@ -381,18 +416,22 @@ def _handle_checkout_completed(db, session: dict) -> None:
     tenant_id = _resolve_tenant_id(db, session)
     plan = _resolve_plan(session)
 
-    logger.info("checkout.session.completed: resolved tenant_id=%s, plan=%s", tenant_id, plan)
+    logger.info(
+        "checkout.session.completed: resolved tenant_id=%s, plan=%s", tenant_id, plan
+    )
 
     if not tenant_id:
         logger.warning(
             "checkout.session.completed: could not resolve tenant (email=%s, metadata=%s)",
-            session.get("customer_email"), session.get("metadata"),
+            session.get("customer_email"),
+            session.get("metadata"),
         )
         return
     if not plan:
         logger.warning(
             "checkout.session.completed: could not resolve plan (amount=%s, metadata=%s)",
-            session.get("amount_total"), session.get("metadata"),
+            session.get("amount_total"),
+            session.get("metadata"),
         )
         return
 
@@ -400,7 +439,8 @@ def _handle_checkout_completed(db, session: dict) -> None:
     if fraud_reason:
         logger.warning(
             "checkout.session.completed: fraud detected for tenant %s — %s. Pausing activation.",
-            tenant_id, fraud_reason,
+            tenant_id,
+            fraud_reason,
         )
         update_data = {
             "plan": plan,
@@ -423,9 +463,13 @@ def _handle_checkout_completed(db, session: dict) -> None:
         "stripe_customer_id": session.get("customer"),
         "stripe_subscription_id": session.get("subscription"),
     }
-    logger.info("checkout.session.completed: updating tenant %s with %s", tenant_id, update_data)
+    logger.info(
+        "checkout.session.completed: updating tenant %s with %s", tenant_id, update_data
+    )
 
-    update_result = db.table("tenants").update(update_data).eq("id", tenant_id).execute()
+    update_result = (
+        db.table("tenants").update(update_data).eq("id", tenant_id).execute()
+    )
     logger.info("checkout.session.completed: update result data=%s", update_result.data)
 
     logger.info("Tenant %s upgraded to %s", tenant_id, plan)
@@ -457,12 +501,26 @@ def _handle_subscription_updated(db, subscription: dict) -> None:
     tenant_id = _resolve_tenant_from_subscription(db, subscription)
     plan = subscription.get("metadata", {}).get("plan")
     if not tenant_id:
-        logger.warning("subscription.updated: could not resolve tenant (customer=%s)", subscription.get("customer"))
+        logger.warning(
+            "subscription.updated: could not resolve tenant (customer=%s)",
+            subscription.get("customer"),
+        )
         return
 
-    _ALLOWED_STATUSES = {"active", "paused", "past_due", "unpaid", "incomplete", "canceled", "trialing", "incomplete_expired"}
+    _ALLOWED_STATUSES = {
+        "active",
+        "paused",
+        "past_due",
+        "unpaid",
+        "incomplete",
+        "canceled",
+        "trialing",
+        "incomplete_expired",
+    }
     raw_status = subscription.get("status", "active")
-    update_data: dict = {"plan_status": raw_status if raw_status in _ALLOWED_STATUSES else "paused"}
+    update_data: dict = {
+        "plan_status": raw_status if raw_status in _ALLOWED_STATUSES else "paused"
+    }
     if plan:
         update_data["plan"] = plan
 
@@ -473,13 +531,18 @@ def _handle_subscription_updated(db, subscription: dict) -> None:
 def _handle_subscription_deleted(db, subscription: dict) -> None:
     tenant_id = _resolve_tenant_from_subscription(db, subscription)
     if not tenant_id:
-        logger.warning("subscription.deleted: could not resolve tenant (customer=%s)", subscription.get("customer"))
+        logger.warning(
+            "subscription.deleted: could not resolve tenant (customer=%s)",
+            subscription.get("customer"),
+        )
         return
 
-    db.table("tenants").update({
-        "plan": "free",
-        "plan_status": "cancelled",
-    }).eq("id", tenant_id).execute()
+    db.table("tenants").update(
+        {
+            "plan": "free",
+            "plan_status": "cancelled",
+        }
+    ).eq("id", tenant_id).execute()
 
     logger.info("Tenant %s subscription cancelled, reverted to free", tenant_id)
 
@@ -532,11 +595,13 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
     currency = (invoice.get("currency") or "usd").lower()
     subscription_id = invoice.get("subscription")
 
-    db.table("tenants").update({
-        "plan_status": "paused",
-        "billing_dunning_last_sent_at": now_iso,
-        "billing_dunning_attempt_count": attempt_count,
-    }).eq("id", tenant_id).execute()
+    db.table("tenants").update(
+        {
+            "plan_status": "paused",
+            "billing_dunning_last_sent_at": now_iso,
+            "billing_dunning_attempt_count": attempt_count,
+        }
+    ).eq("id", tenant_id).execute()
 
     logger.info("Tenant %s payment failed, plan paused", tenant_id)
 
@@ -546,13 +611,14 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
     if owner_email:
         try:
             from backend.services.email_sender import send_email
-            business_name = html_mod.escape(tenant.get("business_name") or "your business")
+
+            business_name = html_mod.escape(
+                tenant.get("business_name") or "your business"
+            )
             invoice_link = ""
             if hosted_invoice_url:
                 safe_invoice_url = html_mod.escape(str(hosted_invoice_url))
-                invoice_link = (
-                    f"<p><a href=\"{safe_invoice_url}\">Review and pay the open invoice</a>.</p>"
-                )
+                invoice_link = f'<p><a href="{safe_invoice_url}">Review and pay the open invoice</a>.</p>'
             next_retry = ""
             if next_payment_attempt_iso:
                 next_retry = (
@@ -576,24 +642,28 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
             )
         except Exception:
             email_result = {"success": False, "detail": "send_failed"}
-            logger.warning("Failed to send payment failure email to %s", owner_email, exc_info=True)
+            logger.warning(
+                "Failed to send payment failure email to %s", owner_email, exc_info=True
+            )
 
     try:
-        db.table("billing_dunning_events").insert({
-            "tenant_id": tenant_id,
-            "stripe_invoice_id": invoice.get("id") or "",
-            "stripe_subscription_id": subscription_id,
-            "stripe_customer_id": customer_id,
-            "attempt_count": attempt_count,
-            "next_payment_attempt": next_payment_attempt_iso,
-            "amount_due_cents": amount_due,
-            "currency": currency,
-            "hosted_invoice_url": hosted_invoice_url,
-            "invoice_pdf": invoice_pdf,
-            "email_sent": bool(email_result.get("success")),
-            "email_detail": str(email_result.get("detail") or "")[:500],
-            "raw_invoice": _safe_invoice_snapshot(invoice),
-        }).execute()
+        db.table("billing_dunning_events").insert(
+            {
+                "tenant_id": tenant_id,
+                "stripe_invoice_id": invoice.get("id") or "",
+                "stripe_subscription_id": subscription_id,
+                "stripe_customer_id": customer_id,
+                "attempt_count": attempt_count,
+                "next_payment_attempt": next_payment_attempt_iso,
+                "amount_due_cents": amount_due,
+                "currency": currency,
+                "hosted_invoice_url": hosted_invoice_url,
+                "invoice_pdf": invoice_pdf,
+                "email_sent": bool(email_result.get("success")),
+                "email_detail": str(email_result.get("detail") or "")[:500],
+                "raw_invoice": _safe_invoice_snapshot(invoice),
+            }
+        ).execute()
     except Exception:
         logger.warning(
             "Failed to insert dunning event for tenant %s invoice %s",
@@ -607,6 +677,7 @@ async def _handle_payment_failed(db, invoice: dict) -> None:
 # POST /api/v1/billing/admin/refund
 # ---------------------------------------------------------------------------
 
+
 @router.post("/admin/refund")
 async def admin_create_refund(
     req: AdminRefundRequest,
@@ -615,9 +686,13 @@ async def admin_create_refund(
     """Issue a Stripe refund and persist an internal audit record."""
     _verify_admin_secret(x_api_secret)
     if not req.payment_intent and not req.charge:
-        raise HTTPException(status_code=400, detail="payment_intent or charge is required")
+        raise HTTPException(
+            status_code=400, detail="payment_intent or charge is required"
+        )
     if req.payment_intent and req.charge:
-        raise HTTPException(status_code=400, detail="Provide only one of payment_intent or charge")
+        raise HTTPException(
+            status_code=400, detail="Provide only one of payment_intent or charge"
+        )
 
     allowed_reasons = {"duplicate", "fraudulent", "requested_by_customer"}
     if req.stripe_reason and req.stripe_reason not in allowed_reasons:
@@ -684,7 +759,8 @@ async def admin_create_refund(
         "tenant_id": req.tenant_id,
         "refund_request_id": req.refund_request_id,
         "stripe_refund_id": refund_id,
-        "stripe_payment_intent_id": refund_data.get("payment_intent") or req.payment_intent,
+        "stripe_payment_intent_id": refund_data.get("payment_intent")
+        or req.payment_intent,
         "stripe_charge_id": refund_data.get("charge") or req.charge,
         "amount_cents": refund_data.get("amount") or req.amount_cents,
         "currency": refund_data.get("currency") or "usd",
@@ -706,7 +782,9 @@ async def admin_create_refund(
             logger.info("Refund audit already exists for refund %s", refund_id)
             return _refund_response_from_audit(existing_refund, idempotent_replay=True)
         logger.exception("Refund audit insert failed for refund %s", refund_id)
-        raise HTTPException(status_code=500, detail="Refund created but audit log failed")
+        raise HTTPException(
+            status_code=500, detail="Refund created but audit log failed"
+        )
 
     log_activity(
         tenant_id=req.tenant_id,
@@ -735,13 +813,20 @@ async def admin_create_refund(
 # GET /api/v1/billing/portal/{tenant_id}
 # ---------------------------------------------------------------------------
 
+
 @router.get("/portal/{tenant_id}", response_model=PortalResponse)
 async def billing_portal(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
     """Create a Stripe Customer Portal session for managing subscriptions."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     db = get_service_supabase()
-    result = db.table("tenants").select("stripe_customer_id").eq("id", tenant_id).limit(1).execute()
+    result = (
+        db.table("tenants")
+        .select("stripe_customer_id")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
@@ -780,8 +865,10 @@ async def marketing_addon_checkout(claims: dict = Depends(_get_current_tenant)):
     db = get_service_supabase()
     result = (
         db.table("tenants")
-        .select("id, owner_email, business_name, marketing_addon_active, "
-                "marketing_addon_stripe_sub_id")
+        .select(
+            "id, owner_email, business_name, marketing_addon_active, "
+            "marketing_addon_stripe_sub_id"
+        )
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -814,8 +901,11 @@ async def marketing_addon_checkout(claims: dict = Depends(_get_current_tenant)):
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
-    logger.info("Created marketing addon checkout session %s for tenant %s",
-                session.id, tenant_id)
+    logger.info(
+        "Created marketing addon checkout session %s for tenant %s",
+        session.id,
+        tenant_id,
+    )
     return CheckoutResponse(checkout_url=session.url)
 
 
@@ -851,8 +941,9 @@ async def marketing_addon_cancel(claims: dict = Depends(_get_current_tenant)):
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
-    logger.info("Marketing addon cancel-at-period-end for tenant %s sub %s",
-                tenant_id, sub_id)
+    logger.info(
+        "Marketing addon cancel-at-period-end for tenant %s sub %s", tenant_id, sub_id
+    )
     return {"status": "scheduled_cancel"}
 
 
@@ -872,14 +963,20 @@ def _handle_addon_checkout_completed(db, session: dict) -> None:
         return
     subscription_id = session.get("subscription")
     from datetime import datetime, timezone
-    db.table("tenants").update({
-        "marketing_addon_active": True,
-        "marketing_addon_stripe_sub_id": subscription_id,
-        "marketing_addon_started_at": datetime.now(timezone.utc).isoformat(),
-        "marketing_addon_grandfathered": False,
-    }).eq("id", tenant_id).execute()
-    logger.info("Tenant %s marketing add-on activated via subscription %s",
-                tenant_id, subscription_id)
+
+    db.table("tenants").update(
+        {
+            "marketing_addon_active": True,
+            "marketing_addon_stripe_sub_id": subscription_id,
+            "marketing_addon_started_at": datetime.now(timezone.utc).isoformat(),
+            "marketing_addon_grandfathered": False,
+        }
+    ).eq("id", tenant_id).execute()
+    logger.info(
+        "Tenant %s marketing add-on activated via subscription %s",
+        tenant_id,
+        subscription_id,
+    )
 
 
 def _handle_addon_subscription_updated(db, subscription: dict) -> None:
@@ -888,20 +985,29 @@ def _handle_addon_subscription_updated(db, subscription: dict) -> None:
         return
     status = subscription.get("status")
     active = status in {"active", "trialing"}
-    db.table("tenants").update({
-        "marketing_addon_active": active,
-        "marketing_addon_stripe_sub_id": subscription.get("id"),
-    }).eq("id", tenant_id).execute()
-    logger.info("Tenant %s marketing add-on sub %s -> status=%s (active=%s)",
-                tenant_id, subscription.get("id"), status, active)
+    db.table("tenants").update(
+        {
+            "marketing_addon_active": active,
+            "marketing_addon_stripe_sub_id": subscription.get("id"),
+        }
+    ).eq("id", tenant_id).execute()
+    logger.info(
+        "Tenant %s marketing add-on sub %s -> status=%s (active=%s)",
+        tenant_id,
+        subscription.get("id"),
+        status,
+        active,
+    )
 
 
 def _handle_addon_subscription_deleted(db, subscription: dict) -> None:
     tenant_id = _resolve_tenant_from_subscription(db, subscription)
     if not tenant_id:
         return
-    db.table("tenants").update({
-        "marketing_addon_active": False,
-        "marketing_addon_stripe_sub_id": None,
-    }).eq("id", tenant_id).execute()
+    db.table("tenants").update(
+        {
+            "marketing_addon_active": False,
+            "marketing_addon_stripe_sub_id": None,
+        }
+    ).eq("id", tenant_id).execute()
     logger.info("Tenant %s marketing add-on cancelled", tenant_id)
