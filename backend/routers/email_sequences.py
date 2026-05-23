@@ -1,7 +1,15 @@
-"""Email Sequences endpoints — drip sequence builder with lead enrollment and send processing."""
+"""Email Sequences endpoints — drip sequence builder with lead enrollment and send processing.
+
+Processor + enrollment cores live in:
+- ``backend/services/email_sequence_processor.py``
+- ``backend/services/email_sequence_enrollment.py``
+
+This router stays focused on CRUD + HTTP wiring. The standalone callables
+(``enroll_lead_in_sequences``, ``run_sequence_processor``) are re-exported so
+existing imports from widget_lead, widget_lead_helpers, and main.py keep working.
+"""
 
 import logging
-from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
@@ -9,45 +17,18 @@ from pydantic import BaseModel
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant
-from backend.services.activity import log_activity
-from backend.services.email_sender import (
-    build_unsubscribe_url,
-    render_template,
-    send_email,
+from backend.services.email_sequence_enrollment import (
+    enroll_lead_in_sequence,
+    enroll_lead_in_sequences,
+)
+from backend.services.email_sequence_processor import (
+    process_due_sends,
+    run_sequence_processor,
 )
 
+__all__ = ["router", "enroll_lead_in_sequences", "run_sequence_processor"]
+
 logger = logging.getLogger(__name__)
-
-
-def _increment_runs_total(tenant_id: str, automation_type: str) -> None:
-    """Increment automations.runs_total for (tenant_id, type). Silently swallows errors.
-
-    Mirrors twilio_webhooks._increment_runs_total. No-op when no automation row exists
-    for the tenant — matches missed-call pattern.
-    """
-    try:
-        db = get_service_supabase()
-        result = (
-            db.table("automations")
-            .select("id, runs_total")
-            .eq("tenant_id", tenant_id)
-            .eq("type", automation_type)
-            .limit(1)
-            .execute()
-        )
-        if result.data:
-            row = result.data[0]
-            db.table("automations").update({"runs_total": row["runs_total"] + 1}).eq(
-                "id", row["id"]
-            ).execute()
-    except Exception:
-        logger.warning(
-            "Failed to increment runs_total tenant=%s type=%s",
-            tenant_id,
-            automation_type,
-            exc_info=True,
-        )
-
 
 router = APIRouter(prefix="/api/v1/email-sequences", tags=["email-sequences"])
 
@@ -95,155 +76,6 @@ class SequenceUpdate(BaseModel):
 
 class EnrollRequest(BaseModel):
     lead_id: str
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _enroll_lead(
-    db,
-    sequence_id: str,
-    sequence_steps: list[dict],
-    lead_id: str,
-    tenant_id: str,
-) -> str | None:
-    """Enroll a lead in a sequence and schedule all active steps.
-
-    Uses ON CONFLICT DO NOTHING to silently skip duplicate enrollments.
-    Returns enrollment_id on success or on duplicate (existing id returned).
-    Returns None only on database error.
-    """
-    now = datetime.now(timezone.utc)
-
-    # Upsert enrollment — ON CONFLICT DO NOTHING via ignore_duplicates
-    try:
-        enroll_result = (
-            db.table("email_sequence_enrollments")
-            .upsert(
-                {
-                    "sequence_id": sequence_id,
-                    "lead_id": lead_id,
-                    "tenant_id": tenant_id,
-                    "status": "active",
-                    "current_step": 0,
-                    "enrolled_at": now.isoformat(),
-                },
-                on_conflict="sequence_id,lead_id",
-                ignore_duplicates=True,
-            )
-            .execute()
-        )
-    except Exception:
-        logger.exception(
-            "Failed to upsert enrollment for lead %s in sequence %s",
-            lead_id,
-            sequence_id,
-        )
-        return None
-
-    if not enroll_result.data:
-        # Conflict — lead already enrolled, fetch existing enrollment id
-        try:
-            existing = (
-                db.table("email_sequence_enrollments")
-                .select("id")
-                .eq("sequence_id", sequence_id)
-                .eq("lead_id", lead_id)
-                .limit(1)
-                .execute()
-            )
-            if existing.data:
-                logger.info(
-                    "Lead %s already enrolled in sequence %s (enrollment %s)",
-                    lead_id,
-                    sequence_id,
-                    existing.data[0]["id"],
-                )
-                return existing.data[0]["id"]
-        except Exception:
-            logger.exception("Failed to fetch existing enrollment for lead %s", lead_id)
-        return None
-
-    enrollment_id = enroll_result.data[0]["id"]
-
-    # Schedule a send record for each active step
-    active_steps = [s for s in sequence_steps if s.get("is_active", True)]
-    for step in active_steps:
-        scheduled_for = now + timedelta(
-            days=step.get("delay_days", 0),
-            hours=step.get("delay_hours", 0),
-        )
-        try:
-            db.table("email_sequence_sends").insert(
-                {
-                    "enrollment_id": enrollment_id,
-                    "step_id": step["id"],
-                    "lead_id": lead_id,
-                    "tenant_id": tenant_id,
-                    "status": "pending",
-                    "scheduled_for": scheduled_for.isoformat(),
-                }
-            ).execute()
-        except Exception:
-            logger.exception(
-                "Failed to schedule send for step %s (enrollment %s)",
-                step["id"],
-                enrollment_id,
-            )
-
-    logger.info(
-        "Enrolled lead %s in sequence %s — enrollment %s, %d steps scheduled",
-        lead_id,
-        sequence_id,
-        enrollment_id,
-        len(active_steps),
-    )
-    return enrollment_id
-
-
-async def enroll_lead_in_sequences(tenant_id: str, lead_id: str) -> None:
-    """Enroll a lead in all active 'lead_captured' sequences for this tenant.
-
-    Called from widget_lead.py on new lead creation.
-    """
-    db = get_service_supabase()
-    try:
-        sequences_result = (
-            db.table("email_sequences")
-            .select("id")
-            .eq("tenant_id", tenant_id)
-            .eq("trigger_type", "lead_captured")
-            .eq("is_active", True)
-            .execute()
-        )
-    except Exception:
-        logger.exception(
-            "Failed to query lead_captured sequences for tenant %s", tenant_id
-        )
-        return
-
-    sequences = sequences_result.data or []
-    if not sequences:
-        return
-
-    for seq in sequences:
-        sequence_id = seq["id"]
-        try:
-            steps_result = (
-                db.table("email_sequence_steps")
-                .select("*")
-                .eq("sequence_id", sequence_id)
-                .order("step_order")
-                .execute()
-            )
-            steps = steps_result.data or []
-            _enroll_lead(db, sequence_id, steps, lead_id, tenant_id)
-        except Exception:
-            logger.exception(
-                "Failed to enroll lead %s in sequence %s", lead_id, sequence_id
-            )
 
 
 # ---------------------------------------------------------------------------
@@ -852,7 +684,9 @@ async def enroll_lead(
         logger.exception("Failed to load steps for sequence %s", sequence_id)
         raise HTTPException(status_code=500, detail="Failed to enroll lead")
 
-    enrollment_id = _enroll_lead(db, sequence_id, steps, req.lead_id, tenant_id)
+    enrollment_id = enroll_lead_in_sequence(
+        db, sequence_id, steps, req.lead_id, tenant_id
+    )
     if enrollment_id is None:
         raise HTTPException(
             status_code=500, detail="Failed to enroll lead (database error)"
@@ -877,379 +711,16 @@ async def process_sequences(
 ):
     """Process pending email sequence sends whose scheduled_for <= now().
 
-    Protected by x-internal-key header. Intended to be called by the
-    automation loop or an external cron job.
+    Protected by ``x-internal-key`` header. Intended to be called by the
+    automation loop or an external cron job. All processing logic lives in
+    ``backend.services.email_sequence_processor.process_due_sends``.
     """
     if x_internal_key != settings.api_secret_key:
         raise HTTPException(status_code=401, detail="Invalid internal key")
 
     db = get_service_supabase()
-    now_iso = datetime.now(timezone.utc).isoformat()
-
     try:
-        due_result = (
-            db.table("email_sequence_sends")
-            .select("*")
-            .eq("status", "pending")
-            .lte("scheduled_for", now_iso)
-            .limit(200)
-            .execute()
-        )
-        due_sends = due_result.data or []
+        return await process_due_sends(db)
     except Exception:
-        logger.exception("Failed to query pending email sequence sends")
+        logger.exception("Failed to process due email sequence sends")
         raise HTTPException(status_code=500, detail="Failed to query pending sends")
-
-    processed = 0
-    sent = 0
-    failed = 0
-    skipped = 0
-
-    for send_row in due_sends:
-        send_id = send_row["id"]
-        step_id = send_row["step_id"]
-        lead_id = send_row["lead_id"]
-        tenant_id = send_row["tenant_id"]
-        enrollment_id = send_row["enrollment_id"]
-
-        processed += 1
-
-        # Load step
-        try:
-            step_result = (
-                db.table("email_sequence_steps")
-                .select("subject, body, email_type, step_order, sequence_id")
-                .eq("id", step_id)
-                .limit(1)
-                .execute()
-            )
-            if not step_result.data:
-                logger.warning(
-                    "Step %s not found for send %s — skipping", step_id, send_id
-                )
-                _update_send_status(db, send_id, "skipped", error="step not found")
-                skipped += 1
-                continue
-            step = step_result.data[0]
-        except Exception:
-            logger.exception("Failed to load step %s for send %s", step_id, send_id)
-            _update_send_status(db, send_id, "failed", error="step load error")
-            failed += 1
-            continue
-
-        # Load lead
-        try:
-            lead_result = (
-                db.table("leads")
-                .select("id, name, email, unsubscribed")
-                .eq("id", lead_id)
-                .limit(1)
-                .execute()
-            )
-            if not lead_result.data:
-                logger.warning(
-                    "Lead %s not found for send %s — skipping", lead_id, send_id
-                )
-                _update_send_status(db, send_id, "skipped", error="lead not found")
-                skipped += 1
-                continue
-            lead = lead_result.data[0]
-        except Exception:
-            logger.exception("Failed to load lead %s for send %s", lead_id, send_id)
-            _update_send_status(db, send_id, "failed", error="lead load error")
-            failed += 1
-            continue
-
-        # CAN-SPAM: never send to unsubscribed leads
-        if lead.get("unsubscribed"):
-            logger.info("Lead %s is unsubscribed, skipping send %s", lead_id, send_id)
-            _update_send_status(db, send_id, "skipped", error="unsubscribed")
-            skipped += 1
-            continue
-
-        lead_email = lead.get("email", "")
-        if not lead_email:
-            logger.info("Lead %s has no email, skipping send %s", lead_id, send_id)
-            _update_send_status(db, send_id, "skipped", error="no email address")
-            skipped += 1
-            continue
-
-        # Render template variables before sending
-        try:
-            biz_row = (
-                db.table("tenants")
-                .select("business_name")
-                .eq("id", tenant_id)
-                .limit(1)
-                .execute()
-            )
-            business_name = (
-                (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
-            )
-        except Exception:
-            business_name = ""
-        ctx = {
-            "name": lead.get("name") or "there",
-            "email": lead_email,
-            "business_name": business_name,
-        }
-
-        # Send the email
-        try:
-            unsub_url = build_unsubscribe_url(lead_id, tenant_id)
-            result = await send_email(
-                to=lead_email,
-                subject=render_template(step["subject"], ctx),
-                body_html=render_template(step["body"], ctx),
-                tenant_id=tenant_id,
-                unsubscribe_url=unsub_url,
-                lead_id=lead_id,
-            )
-            if result.get("success"):
-                _update_send_status(
-                    db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat()
-                )
-                sent += 1
-                logger.info(
-                    "Sent sequence email send=%s lead=%s step=%s",
-                    send_id,
-                    lead_id,
-                    step_id,
-                )
-                log_activity(
-                    tenant_id=tenant_id,
-                    activity_type="email_sequence_sent",
-                    description=f"Follow-up email sent to {lead.get('name') or lead_email}",
-                    lead_id=lead_id,
-                    metadata={
-                        "send_id": send_id,
-                        "step_id": step_id,
-                        "step_order": step.get("step_order"),
-                        "sequence_id": step.get("sequence_id"),
-                        "enrollment_id": enrollment_id,
-                    },
-                )
-                _increment_runs_total(tenant_id, "email_sequence")
-            else:
-                err = result.get("detail", "send failed")
-                _update_send_status(db, send_id, "failed", error=err)
-                failed += 1
-                logger.warning(
-                    "Failed to send sequence email send=%s lead=%s: %s",
-                    send_id,
-                    lead_id,
-                    err,
-                )
-        except Exception:
-            logger.exception(
-                "Exception sending sequence email send=%s lead=%s", send_id, lead_id
-            )
-            _update_send_status(db, send_id, "failed", error="send exception")
-            failed += 1
-            continue
-
-        # Check if this was the last step and mark enrollment completed
-        try:
-            _maybe_complete_enrollment(db, enrollment_id, step["sequence_id"])
-        except Exception:
-            logger.warning(
-                "Failed to check enrollment completion for enrollment %s",
-                enrollment_id,
-                exc_info=True,
-            )
-
-    return {
-        "processed": processed,
-        "sent": sent,
-        "failed": failed,
-        "skipped": skipped,
-    }
-
-
-def _update_send_status(
-    db,
-    send_id: str,
-    status: str,
-    error: str = "",
-    sent_at: str = "",
-) -> None:
-    """Helper to update an email_sequence_sends row status."""
-    updates: dict = {"status": status}
-    if error:
-        updates["error"] = error
-    if sent_at:
-        updates["sent_at"] = sent_at
-    try:
-        db.table("email_sequence_sends").update(updates).eq("id", send_id).execute()
-    except Exception:
-        logger.exception("Failed to update send status for send %s", send_id)
-
-
-async def run_sequence_processor() -> dict:
-    """Standalone callable for the automation loop (no HTTP context needed)."""
-    db = get_service_supabase()
-    now_iso = datetime.now(timezone.utc).isoformat()
-    try:
-        due_result = (
-            db.table("email_sequence_sends")
-            .select("*")
-            .eq("status", "pending")
-            .lte("scheduled_for", now_iso)
-            .limit(200)
-            .execute()
-        )
-        due_sends = due_result.data or []
-    except Exception:
-        logger.exception("run_sequence_processor: failed to query pending sends")
-        return {"processed": 0, "sent": 0, "failed": 0, "skipped": 0}
-
-    processed = sent = failed = skipped = 0
-    for send_row in due_sends:
-        send_id = send_row["id"]
-        step_id = send_row["step_id"]
-        lead_id = send_row["lead_id"]
-        tenant_id = send_row["tenant_id"]
-        enrollment_id = send_row["enrollment_id"]
-        processed += 1
-        try:
-            step_result = (
-                db.table("email_sequence_steps")
-                .select("subject, body, email_type, step_order, sequence_id")
-                .eq("id", step_id)
-                .limit(1)
-                .execute()
-            )
-            if not step_result.data:
-                _update_send_status(db, send_id, "skipped", error="step not found")
-                skipped += 1
-                continue
-            step = step_result.data[0]
-        except Exception:
-            _update_send_status(db, send_id, "failed", error="step load error")
-            failed += 1
-            continue
-        try:
-            lead_result = (
-                db.table("leads")
-                .select("id, name, email, unsubscribed")
-                .eq("id", lead_id)
-                .limit(1)
-                .execute()
-            )
-            if not lead_result.data:
-                _update_send_status(db, send_id, "skipped", error="lead not found")
-                skipped += 1
-                continue
-            lead = lead_result.data[0]
-        except Exception:
-            _update_send_status(db, send_id, "failed", error="lead load error")
-            failed += 1
-            continue
-        # CAN-SPAM: never send to unsubscribed leads
-        if lead.get("unsubscribed"):
-            _update_send_status(db, send_id, "skipped", error="unsubscribed")
-            skipped += 1
-            continue
-        lead_email = lead.get("email", "")
-        if not lead_email:
-            _update_send_status(db, send_id, "skipped", error="no email address")
-            skipped += 1
-            continue
-        try:
-            biz_row = (
-                db.table("tenants")
-                .select("business_name")
-                .eq("id", tenant_id)
-                .limit(1)
-                .execute()
-            )
-            _biz = (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
-        except Exception:
-            _biz = ""
-        _ctx = {
-            "name": lead.get("name") or "there",
-            "email": lead_email,
-            "business_name": _biz,
-        }
-        try:
-            result = await send_email(
-                to=lead_email,
-                subject=render_template(step["subject"], _ctx),
-                body_html=render_template(step["body"], _ctx),
-                tenant_id=tenant_id,
-                unsubscribe_url=build_unsubscribe_url(lead_id, tenant_id),
-                lead_id=lead_id,
-            )
-            if result.get("success"):
-                _update_send_status(
-                    db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat()
-                )
-                sent += 1
-                log_activity(
-                    tenant_id=tenant_id,
-                    activity_type="email_sequence_sent",
-                    description=f"Follow-up email sent to {lead.get('name') or lead_email}",
-                    lead_id=lead_id,
-                    metadata={
-                        "send_id": send_id,
-                        "step_id": step_id,
-                        "step_order": step.get("step_order"),
-                        "sequence_id": step.get("sequence_id"),
-                        "enrollment_id": enrollment_id,
-                    },
-                )
-                _increment_runs_total(tenant_id, "email_sequence")
-            else:
-                _update_send_status(
-                    db, send_id, "failed", error=result.get("detail", "send failed")
-                )
-                failed += 1
-        except Exception:
-            logger.exception(
-                "run_sequence_processor: exception sending send=%s", send_id
-            )
-            _update_send_status(db, send_id, "failed", error="send exception")
-            failed += 1
-            continue
-        try:
-            _maybe_complete_enrollment(db, enrollment_id, step["sequence_id"])
-        except Exception:
-            logger.warning(
-                "run_sequence_processor: completion check failed for enrollment %s",
-                enrollment_id,
-                exc_info=True,
-            )
-
-    if processed:
-        logger.info(
-            "run_sequence_processor: processed=%d sent=%d failed=%d skipped=%d",
-            processed,
-            sent,
-            failed,
-            skipped,
-        )
-    return {"processed": processed, "sent": sent, "failed": failed, "skipped": skipped}
-
-
-def _maybe_complete_enrollment(db, enrollment_id: str, sequence_id: str) -> None:
-    """Mark an enrollment as completed if all steps have been sent or skipped."""
-    try:
-        # Count sends that are still pending or being processed
-        remaining = (
-            db.table("email_sequence_sends")
-            .select("id", count="exact")
-            .eq("enrollment_id", enrollment_id)
-            .eq("status", "pending")
-            .execute()
-        )
-        pending_count = remaining.count if remaining.count is not None else 0
-        if pending_count == 0:
-            db.table("email_sequence_enrollments").update(
-                {
-                    "status": "completed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
-                }
-            ).eq("id", enrollment_id).execute()
-            logger.info("Enrollment %s marked as completed", enrollment_id)
-    except Exception:
-        logger.exception("Failed to complete enrollment %s", enrollment_id)
