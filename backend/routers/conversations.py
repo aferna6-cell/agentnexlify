@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.services.auth_service import get_current_tenant as _get_current_tenant
+from backend.services import conversations_service as _conv_svc
 
 logger = logging.getLogger(__name__)
 

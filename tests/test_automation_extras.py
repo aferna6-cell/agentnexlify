@@ -60,7 +60,7 @@ def test_client(mock_settings):
         patch("backend.routers.analytics.insights.get_service_supabase", return_value=db_mock),
         patch("backend.routers.analytics.dashboard.get_service_supabase", return_value=db_mock),
         patch("backend.routers.analytics.operations.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.analytics.control_center.get_service_supabase", return_value=db_mock),
+        patch("backend.services.control_center_service._get_service_supabase", return_value=db_mock),
         patch("backend.routers.analytics.recovery.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_chat.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_config.get_service_supabase", return_value=db_mock),

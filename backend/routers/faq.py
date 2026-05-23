@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.models.schemas import FaqCreateRequest, FaqEntryResponse
 from backend.dependencies import require_role
 from backend.services.auth_service import get_current_tenant as _get_current_tenant
+from backend.services import faq_service as _faq_svc
 
 logger = logging.getLogger(__name__)
 
