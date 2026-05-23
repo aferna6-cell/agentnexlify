@@ -313,8 +313,9 @@ class TestFacebookWebhookProcessEvent:
         with patch(
             "backend.services.facebook_webhook.ingest_channel_message"
         ) as ingest:
-            await facebook_webhook.process_event({})
-            ingest.assert_not_called()
+            result = await facebook_webhook.process_event({})
+            assert result is None
+            assert ingest.call_count == 0
 
     async def test_skips_echo_messages(self):
         payload = {
@@ -334,8 +335,10 @@ class TestFacebookWebhookProcessEvent:
         with patch(
             "backend.services.facebook_webhook.ingest_channel_message"
         ) as ingest:
-            await facebook_webhook.process_event(payload)
-            ingest.assert_not_called()
+            result = await facebook_webhook.process_event(payload)
+            assert result is None
+            assert ingest.call_count == 0
+            assert payload["entry"][0]["messaging"][0]["message"]["is_echo"] is True
 
     async def test_skips_missing_text(self):
         payload = {
@@ -354,8 +357,12 @@ class TestFacebookWebhookProcessEvent:
         with patch(
             "backend.services.facebook_webhook.ingest_channel_message"
         ) as ingest:
-            await facebook_webhook.process_event(payload)
-            ingest.assert_not_called()
+            result = await facebook_webhook.process_event(payload)
+            assert result is None
+            assert ingest.call_count == 0
+            message = payload["entry"][0]["messaging"][0]["message"]
+            assert "text" not in message
+            assert message["attachments"][0]["type"] == "image"
 
     async def test_success_path_calls_ingest(self):
         payload = {
@@ -379,15 +386,16 @@ class TestFacebookWebhookProcessEvent:
                 "tenant_id": "tenant-1",
                 "conversation_id": "conv-1",
             }
-            await facebook_webhook.process_event(payload)
-            ingest.assert_called_once_with(
-                provider="facebook",
-                page_id="page-1",
-                sender_id="psid-1",
-                sender_name=None,
-                text="hi",
-                timestamp_ms=1700000000000,
-            )
+            result = await facebook_webhook.process_event(payload)
+            assert result is None
+            assert ingest.call_count == 1
+            kwargs = ingest.call_args.kwargs
+            assert kwargs["provider"] == "facebook"
+            assert kwargs["page_id"] == "page-1"
+            assert kwargs["sender_id"] == "psid-1"
+            assert kwargs["sender_name"] is None
+            assert kwargs["text"] == "hi"
+            assert kwargs["timestamp_ms"] == 1700000000000
 
     async def test_ingest_exception_does_not_propagate(self):
         payload = {
