@@ -62,8 +62,11 @@ from backend.services.lead_diagnostics import (  # noqa: F401  re-exported for t
 from backend.services.lead_listing import (  # noqa: F401  re-exported for tests
     list_leads_paginated as _list_leads_paginated,
 )
+from backend.services.lead_updates import (  # noqa: F401  re-exported for tests
+    apply_lead_update as _apply_lead_update,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
-from backend.services.tenant_scope import tenant_delete, tenant_select, tenant_update
+from backend.services.tenant_scope import tenant_delete, tenant_select
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -215,29 +218,16 @@ async def update_lead(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     updates = {k: v for k, v in req.model_dump().items() if v is not None}
-    if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
-
     db = get_service_supabase()
-    result = tenant_update(db, "leads", tenant_id, updates).eq("id", lead_id).execute()
-    if not result.data:
+    try:
+        return _apply_lead_update(
+            db, tenant_id, lead_id, updates,
+            fire_event=fire_event_background,
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    except LookupError:
         raise HTTPException(status_code=404, detail="Lead not found")
-
-    fire_event_background(tenant_id, "lead.updated", {
-        "lead_id": lead_id,
-        "updated_fields": list(updates.keys()),
-        **updates,
-    })
-
-    # Fire status-change event when status is explicitly updated
-    if "status" in updates:
-        fire_event_background(tenant_id, "lead.status_changed", {
-            "lead_id": lead_id,
-            "new_status": updates["status"],
-            "source": "leads_update",
-        })
-
-    return result.data[0]
 
 
 @router.delete("/{tenant_id}/{lead_id}", status_code=204)

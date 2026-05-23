@@ -1827,3 +1827,99 @@ def test_collect_lead_capture_diagnostics_count_none_normalizes_to_zero():
     assert out["last_lead_created_at"] is None
     assert out["sample_lead_ids"] == []
     assert out["has_email_leads"] is False
+
+
+# ---------------------------------------------------------------------------
+# lead_updates.apply_lead_update
+# ---------------------------------------------------------------------------
+
+
+def test_apply_lead_update_raises_value_error_when_updates_empty():
+    from backend.services.lead_updates import apply_lead_update
+
+    db = MagicMock()
+    with pytest.raises(ValueError, match="no_updates"):
+        apply_lead_update(db, "tenant-1", "lead-1", {})
+
+
+def test_apply_lead_update_raises_lookup_error_when_no_rows_affected():
+    from backend.services.lead_updates import apply_lead_update
+
+    db = _make_db_returning([])  # update returns no data
+    with pytest.raises(LookupError, match="not_found"):
+        apply_lead_update(db, "tenant-1", "lead-1", {"name": "Alice"})
+
+
+def test_apply_lead_update_returns_updated_row_on_happy_path():
+    from backend.services.lead_updates import apply_lead_update
+
+    row = {"id": "lead-1", "name": "Alice", "status": "contacted"}
+    db = _make_db_returning([row])
+    out = apply_lead_update(db, "tenant-1", "lead-1", {"name": "Alice"})
+    assert out == row
+
+
+def test_apply_lead_update_works_without_fire_event_callback():
+    from backend.services.lead_updates import apply_lead_update
+
+    row = {"id": "lead-1", "status": "won"}
+    db = _make_db_returning([row])
+    # fire_event=None — should not raise
+    out = apply_lead_update(db, "tenant-1", "lead-1", {"status": "won"})
+    assert out == row
+
+
+def test_apply_lead_update_fires_lead_updated_event_with_payload():
+    from backend.services.lead_updates import apply_lead_update
+
+    row = {"id": "lead-1", "name": "Alice"}
+    db = _make_db_returning([row])
+    events = []
+    apply_lead_update(
+        db, "tenant-1", "lead-1", {"name": "Alice", "phone": "555"},
+        fire_event=lambda t, e, p: events.append((t, e, p)),
+    )
+
+    updated = [e for e in events if e[1] == "lead.updated"]
+    assert len(updated) == 1
+    assert updated[0][0] == "tenant-1"
+    payload = updated[0][2]
+    assert payload["lead_id"] == "lead-1"
+    assert set(payload["updated_fields"]) == {"name", "phone"}
+    assert payload["name"] == "Alice"
+    assert payload["phone"] == "555"
+
+
+def test_apply_lead_update_fires_status_changed_event_when_status_in_updates():
+    from backend.services.lead_updates import apply_lead_update
+
+    row = {"id": "lead-1", "status": "won"}
+    db = _make_db_returning([row])
+    events = []
+    apply_lead_update(
+        db, "tenant-1", "lead-1", {"status": "won"},
+        fire_event=lambda t, e, p: events.append((t, e, p)),
+    )
+
+    status_events = [e for e in events if e[1] == "lead.status_changed"]
+    assert len(status_events) == 1
+    assert status_events[0][2] == {
+        "lead_id": "lead-1",
+        "new_status": "won",
+        "source": "leads_update",
+    }
+
+
+def test_apply_lead_update_skips_status_changed_event_when_status_not_in_updates():
+    from backend.services.lead_updates import apply_lead_update
+
+    row = {"id": "lead-1", "name": "Alice"}
+    db = _make_db_returning([row])
+    events = []
+    apply_lead_update(
+        db, "tenant-1", "lead-1", {"name": "Alice"},
+        fire_event=lambda t, e, p: events.append((t, e, p)),
+    )
+
+    status_events = [e for e in events if e[1] == "lead.status_changed"]
+    assert status_events == []
