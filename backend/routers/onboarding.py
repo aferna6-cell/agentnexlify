@@ -35,6 +35,7 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.dependencies import require_role
 from backend.services.llm_runtime import call_claude_messages
+from backend.services import onboarding_ai as _onboarding_ai_mod
 from backend.services.onboarding_ai import (
     AutoKbFaqEntry,
 )
@@ -46,6 +47,9 @@ from backend.services.onboarding_workflow import (
     compute_onboarding_status,
     run_onboarding_complete,
 )
+
+# Test back-compat aliases (Rule 10 — preserve test contract).
+_parse_auto_kb_response = _onboarding_ai_mod.parse_auto_kb_response
 
 logger = logging.getLogger(__name__)
 
