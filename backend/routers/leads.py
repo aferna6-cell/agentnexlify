@@ -50,9 +50,14 @@ from backend.services.lead_assignment import (  # noqa: F401  re-exported for te
 )
 from backend.services.lead_suggestions import (  # noqa: F401  re-exported for tests
     apply_or_dismiss_suggestion as _apply_or_dismiss_suggestion,
+    list_pending_suggestions as _list_pending_suggestions,
+)
+from backend.services.lead_create import (  # noqa: F401  re-exported for tests
+    build_manual_lead_payload as _build_manual_lead_payload,
+    insert_manual_lead as _insert_manual_lead,
 )
 from backend.services.lead_scoring import score_all_leads, score_lead
-from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
+from backend.services.tenant_scope import tenant_delete, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -212,37 +217,27 @@ async def create_lead(
     if not req.name and not req.email and not req.phone:
         raise HTTPException(status_code=400, detail="At least one of name, email, or phone is required")
 
+    payload = _build_manual_lead_payload(
+        tenant_id,
+        name=req.name,
+        email=req.email,
+        phone=req.phone,
+        status=req.status,
+        lead_temperature=req.lead_temperature,
+        areas_of_interest=req.areas_of_interest,
+        deal_value=req.deal_value,
+        expected_close_date=req.expected_close_date,
+    )
     db = get_service_supabase()
-    lead_data = {
-        "client_id": tenant_id,
-        "name": req.name,
-        "email": req.email,
-        "phone": req.phone,
-        "status": req.status or "new",
-        "lead_temperature": req.lead_temperature,
-        "areas_of_interest": req.areas_of_interest,
-        "source": "manual",
-    }
-    if req.deal_value is not None:
-        lead_data["deal_value"] = req.deal_value
-    if req.expected_close_date:
-        lead_data["expected_close_date"] = req.expected_close_date
-
-    # Remove None values
-    lead_data = {k: v for k, v in lead_data.items() if v is not None}
-
-    result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
-    if not result.data:
+    try:
+        return _insert_manual_lead(
+            db, tenant_id, payload,
+            performer_id=claims.get("team_member_id") or claims.get("tenant_id"),
+            performer_name=claims.get("name") or claims.get("email") or "Owner",
+            fire_event=fire_event_background,
+        )
+    except RuntimeError:
         raise HTTPException(status_code=500, detail="Failed to create lead")
-
-    lead = result.data[0]
-    log_activity(tenant_id=tenant_id, lead_id=lead["id"], activity_type="lead_created",
-                 description=f"Lead created manually: {req.name or req.email or req.phone}",
-                 metadata={"performed_by": claims.get("team_member_id") or claims.get("tenant_id"),
-                           "performed_by_name": claims.get("name") or claims.get("email") or "Owner"})
-    fire_event_background(tenant_id, "lead.created", {"lead_id": lead["id"], "name": req.name, "source": "manual"})
-
-    return lead
 
 
 @router.patch("/{tenant_id}/{lead_id}")
@@ -558,14 +553,7 @@ async def list_lead_suggestions(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    result = (
-        tenant_select(db, "activity_log", tenant_id, "id, lead_id, description, metadata, created_at")
-        .eq("activity_type", "lead_suggestion")
-        .order("created_at", desc=True)
-        .limit(50)
-        .execute()
-    )
-    return {"suggestions": result.data or []}
+    return {"suggestions": _list_pending_suggestions(db, tenant_id)}
 
 
 class SuggestionAction(BaseModel):

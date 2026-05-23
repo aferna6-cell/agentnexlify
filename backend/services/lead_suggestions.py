@@ -15,6 +15,27 @@ from backend.services.tenant_scope import tenant_delete, tenant_select, tenant_u
 logger = logging.getLogger(__name__)
 
 VALID_ACTIONS = ("approve", "dismiss")
+DEFAULT_LIST_LIMIT = 50
+
+
+def list_pending_suggestions(
+    db: Any,
+    tenant_id: str,
+    *,
+    limit: int = DEFAULT_LIST_LIMIT,
+) -> list[dict]:
+    """Return the most-recent pending AI lead-update suggestions."""
+    result = (
+        tenant_select(
+            db, "activity_log", tenant_id,
+            "id, lead_id, description, metadata, created_at",
+        )
+        .eq("activity_type", "lead_suggestion")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return result.data or []
 
 
 def apply_or_dismiss_suggestion(

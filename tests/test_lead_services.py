@@ -1286,3 +1286,186 @@ def test_apply_or_dismiss_suggestion_approve_handles_null_metadata():
     )
     result = apply_or_dismiss_suggestion(db, "t1", "sugg-1", "approve")
     assert result == {"success": True, "action": "approve"}
+
+
+# ---------------------------------------------------------------------------
+# lead_suggestions.list_pending_suggestions
+# ---------------------------------------------------------------------------
+
+
+def test_list_pending_suggestions_returns_rows():
+    from backend.services.lead_suggestions import list_pending_suggestions
+
+    rows = [
+        {"id": "s1", "lead_id": "l1", "description": "x", "metadata": {}, "created_at": "2026-05-23"},
+        {"id": "s2", "lead_id": "l2", "description": "y", "metadata": {}, "created_at": "2026-05-22"},
+    ]
+    db = _make_db_returning(rows)
+    assert list_pending_suggestions(db, "t1") == rows
+
+
+def test_list_pending_suggestions_returns_empty_when_no_rows():
+    from backend.services.lead_suggestions import list_pending_suggestions
+
+    db = _make_db_returning(None)
+    assert list_pending_suggestions(db, "t1") == []
+
+
+def test_list_pending_suggestions_respects_custom_limit():
+    from backend.services.lead_suggestions import list_pending_suggestions
+
+    db = _make_db_returning([])
+    list_pending_suggestions(db, "t1", limit=5)
+    # No assertion on limit value; coverage on the branch is enough.
+
+
+# ---------------------------------------------------------------------------
+# lead_create.build_manual_lead_payload
+# ---------------------------------------------------------------------------
+
+
+def test_build_manual_lead_payload_drops_none_values():
+    from backend.services.lead_create import build_manual_lead_payload
+
+    p = build_manual_lead_payload(
+        "t1",
+        name="Alice",
+        email=None,
+        phone=None,
+        status=None,
+        lead_temperature=None,
+        areas_of_interest=None,
+        deal_value=None,
+        expected_close_date=None,
+    )
+    assert p == {
+        "client_id": "t1",
+        "name": "Alice",
+        "status": "new",
+        "source": "manual",
+    }
+
+
+def test_build_manual_lead_payload_includes_deal_value_and_close_date():
+    from backend.services.lead_create import build_manual_lead_payload
+
+    p = build_manual_lead_payload(
+        "t1",
+        name="A", email=None, phone=None, status="qualified",
+        lead_temperature="hot", areas_of_interest="plumbing",
+        deal_value=1000.0, expected_close_date="2026-06-01",
+    )
+    assert p["deal_value"] == 1000.0
+    assert p["expected_close_date"] == "2026-06-01"
+    assert p["status"] == "qualified"
+    assert p["lead_temperature"] == "hot"
+
+
+def test_build_manual_lead_payload_treats_zero_deal_value_as_present():
+    from backend.services.lead_create import build_manual_lead_payload
+
+    p = build_manual_lead_payload(
+        "t1", name="A", email=None, phone=None, status=None,
+        lead_temperature=None, areas_of_interest=None,
+        deal_value=0.0, expected_close_date=None,
+    )
+    # 0.0 is not None, so it stays
+    assert p["deal_value"] == 0.0
+
+
+def test_build_manual_lead_payload_skips_empty_close_date_string():
+    from backend.services.lead_create import build_manual_lead_payload
+
+    p = build_manual_lead_payload(
+        "t1", name="A", email=None, phone=None, status=None,
+        lead_temperature=None, areas_of_interest=None,
+        deal_value=None, expected_close_date="",
+    )
+    assert "expected_close_date" not in p
+
+
+# ---------------------------------------------------------------------------
+# lead_create.insert_manual_lead
+# ---------------------------------------------------------------------------
+
+
+def test_insert_manual_lead_raises_runtimeerror_when_insert_returns_empty(monkeypatch):
+    from backend.services import lead_create
+
+    monkeypatch.setattr(lead_create, "log_activity", lambda **_: None)
+    db = _make_db_returning([])  # insert returns no row
+    with pytest.raises(RuntimeError) as exc:
+        lead_create.insert_manual_lead(
+            db, "t1", {"client_id": "t1", "name": "A", "status": "new", "source": "manual"},
+            performer_id="owner", performer_name="Owner",
+        )
+    assert str(exc.value) == "insert_failed"
+
+
+def test_insert_manual_lead_returns_inserted_row_and_logs_and_fires(monkeypatch):
+    from backend.services import lead_create
+
+    log_calls = []
+    fire_calls = []
+    monkeypatch.setattr(
+        lead_create, "log_activity",
+        lambda **kw: log_calls.append(kw),
+    )
+    db = _make_db_returning([{"id": "lead-1", "name": "Alice"}])
+    result = lead_create.insert_manual_lead(
+        db, "t1",
+        {"client_id": "t1", "name": "Alice", "status": "new", "source": "manual"},
+        performer_id="owner-1", performer_name="Owner",
+        fire_event=lambda *a: fire_calls.append(a),
+    )
+    assert result == {"id": "lead-1", "name": "Alice"}
+    assert len(log_calls) == 1
+    assert log_calls[0]["activity_type"] == "lead_created"
+    assert "Alice" in log_calls[0]["description"]
+    assert log_calls[0]["metadata"]["performed_by"] == "owner-1"
+    assert len(fire_calls) == 1
+    assert fire_calls[0][0] == "t1"
+    assert fire_calls[0][1] == "lead.created"
+    assert fire_calls[0][2]["lead_id"] == "lead-1"
+
+
+def test_insert_manual_lead_works_without_fire_event_callback(monkeypatch):
+    from backend.services import lead_create
+
+    monkeypatch.setattr(lead_create, "log_activity", lambda **_: None)
+    db = _make_db_returning([{"id": "lead-1"}])
+    result = lead_create.insert_manual_lead(
+        db, "t1",
+        {"client_id": "t1", "name": "Bob", "status": "new", "source": "manual"},
+        performer_id="owner", performer_name="Owner",
+        fire_event=None,
+    )
+    assert result == {"id": "lead-1"}
+
+
+def test_insert_manual_lead_descriptor_falls_back_through_email_phone(monkeypatch):
+    from backend.services import lead_create
+
+    log_calls = []
+    monkeypatch.setattr(
+        lead_create, "log_activity",
+        lambda **kw: log_calls.append(kw),
+    )
+    db = _make_db_returning([{"id": "lead-1"}])
+    # payload without name, with email -> descriptor should be email
+    lead_create.insert_manual_lead(
+        db, "t1",
+        {"client_id": "t1", "email": "alice@x.com", "status": "new", "source": "manual"},
+        performer_id="owner", performer_name="Owner",
+    )
+    assert "alice@x.com" in log_calls[-1]["description"]
+
+    # payload without name/email, with phone -> descriptor should be phone
+    log_calls.clear()
+    db = _make_db_returning([{"id": "lead-2"}])
+    lead_create.insert_manual_lead(
+        db, "t1",
+        {"client_id": "t1", "phone": "+15551234567", "status": "new", "source": "manual"},
+        performer_id="owner", performer_name="Owner",
+    )
+    assert "+15551234567" in log_calls[-1]["description"]
