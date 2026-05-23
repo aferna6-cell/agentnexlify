@@ -39,6 +39,11 @@ from backend.services.voice_conversation import (  # noqa: F401  re-exported for
     load_voice_history as _load_voice_history,
     save_voice_message as _save_voice_message,
 )
+from backend.services.inbound_call_handler import (  # noqa: F401  re-exported for tests
+    find_or_create_lead_for_caller as _find_or_create_lead_for_caller,
+    request_twilio_transcription as _request_twilio_transcription,
+    store_inbound_call_record as _store_inbound_call_record,
+)
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.automations import verify_twilio_request
 
@@ -328,63 +333,17 @@ async def handle_recording_complete(request: Request, _sig: None = Depends(verif
     except (ValueError, TypeError):
         duration = 0
 
-    # Create/find lead from caller phone
-    lead_id = None
-    try:
-        existing_lead = (
-            db.table("leads")
-            .select("id")
-            .eq("client_id", tenant_id)
-            .eq("phone", caller)
-            .limit(1)
-            .execute()
-        )
-        if existing_lead.data:
-            lead_id = existing_lead.data[0]["id"]
-        else:
-            # Create new lead
-            new_lead = (
-                db.table("leads")
-                .insert({
-                    "client_id": tenant_id,
-                    "phone": caller,
-                    "status": "new",
-                    "areas_of_interest": "Inbound phone call",
-                })
-                .execute()
-            )
-            if new_lead.data:
-                lead_id = new_lead.data[0]["id"]
-                logger.info("Created lead %s from caller %s for tenant %s", lead_id, caller, tenant_id)
-    except Exception:
-        logger.exception("Failed to create/find lead for caller %s, tenant %s", caller, tenant_id)
-
-    # Store call record
-    # NOTE: For v1, summary is a placeholder. Future enhancement: use a speech-to-text
-    # service (e.g., Twilio intelligence, Deepgram, or Whisper) to transcribe the
-    # recording, then pass the transcript to Claude for summarization.
-    call_data: dict[str, Any] = {
-        "tenant_id": tenant_id,
-        "caller_phone": caller,
-        "called_number": called,
-        "direction": "inbound",
-        "duration_seconds": duration,
-        "status": "completed",
-        "recording_url": recording_url,
-        "twilio_call_sid": call_sid,
-        "summary": "Voicemail recorded. Transcription pending.",
-    }
-    if lead_id:
-        call_data["lead_id"] = lead_id
-
-    call_id = None
-    try:
-        result = db.table("calls").insert(call_data).execute()
-        if result.data:
-            call_id = result.data[0]["id"]
-        logger.info("Stored call record %s for tenant %s", call_id, tenant_id)
-    except Exception:
-        logger.exception("Failed to store call record for SID %s", call_sid)
+    lead_id = _find_or_create_lead_for_caller(db, tenant_id, caller)
+    call_id = _store_inbound_call_record(
+        db,
+        tenant_id=tenant_id,
+        lead_id=lead_id,
+        call_sid=call_sid,
+        caller=caller,
+        called=called,
+        duration=duration,
+        recording_url=recording_url,
+    )
 
     # Log activity
     log_activity(
@@ -433,33 +392,13 @@ async def handle_recording_complete(request: Request, _sig: None = Depends(verif
     if recording_sid and settings.twilio_account_sid and settings.twilio_auth_token:
         base_url = str(request.base_url).rstrip("/")
         transcription_url = f"{base_url}/api/v1/calls/voice/transcription-complete"
-        try:
-            import httpx
-            twilio_api_url = (
-                f"https://api.twilio.com/2010-04-01/Accounts/"
-                f"{settings.twilio_account_sid}/Recordings/"
-                f"{recording_sid}/Transcriptions.json"
-            )
-            async with httpx.AsyncClient(timeout=15.0) as http_client:
-                resp = await http_client.post(
-                    twilio_api_url,
-                    data={"TranscriptionUrl": transcription_url},
-                    auth=(settings.twilio_account_sid, settings.twilio_auth_token),
-                )
-                if resp.status_code in (200, 201):
-                    logger.info(
-                        "Requested Twilio transcription for recording %s (call %s)",
-                        recording_sid, call_sid,
-                    )
-                else:
-                    logger.warning(
-                        "Twilio transcription request failed: status=%d body=%s",
-                        resp.status_code, resp.text[:200],
-                    )
-        except Exception:
-            logger.exception(
-                "Failed to request Twilio transcription for recording %s", recording_sid
-            )
+        await _request_twilio_transcription(
+            recording_sid=recording_sid,
+            transcription_url=transcription_url,
+            account_sid=settings.twilio_account_sid,
+            auth_token=settings.twilio_auth_token,
+            call_sid=call_sid,
+        )
 
     return Response(content="OK", media_type="text/plain")
 
