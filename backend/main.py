@@ -50,6 +50,7 @@ from backend.routers import (
     forms,
     gbp,
     integrations,
+    invoice_item_templates,
     invoices,
     jobs,
     leads,
@@ -816,6 +817,7 @@ app.include_router(ab_tests.router)
 app.include_router(automation_rules.router)
 app.include_router(admin_analytics.router)
 app.include_router(admin_promotions.router)
+app.include_router(invoice_item_templates.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)
 app.include_router(pipeline.router)

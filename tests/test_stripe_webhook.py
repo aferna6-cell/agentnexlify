@@ -1,6 +1,5 @@
 """Tests for Stripe webhook signature verification and event handling."""
 
-import json
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -349,9 +348,9 @@ class TestBillingPlanResolution:
 
 
 class TestInvoiceStripePayments:
-    @patch("backend.routers.invoices.ensure_stripe_configured")
-    @patch("backend.routers.invoices.stripe.Price.create")
-    @patch("backend.routers.invoices.stripe.PaymentLink.create")
+    @patch("backend.services.invoice_payment_links.ensure_stripe_configured")
+    @patch("backend.services.invoice_payment_links.stripe.Price.create")
+    @patch("backend.services.invoice_payment_links.stripe.PaymentLink.create")
     @pytest.mark.asyncio
     async def test_invoice_payment_link_is_limited_to_one_completed_payment(
         self, mock_payment_link_create, mock_price_create, _mock_ensure

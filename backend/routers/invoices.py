@@ -1,10 +1,8 @@
 """Invoicing & Text-to-Pay — create, send, and track invoices with Stripe Payment Links."""
 
-import html as _html
 import logging
 from datetime import datetime, timezone, date
 
-import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -12,10 +10,19 @@ from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
-from backend.services.stripe_service import ensure_stripe_configured
+from backend.services.invoice_calculations import compute_invoice_totals
+from backend.services.invoice_email_template import build_invoice_email_html
+from backend.services.invoice_numbering import get_next_invoice_number
+from backend.services.invoice_payment_links import get_or_create_stripe_payment_link
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
+
+# Re-export private aliases — preserved for any existing test patches and call sites.
+_compute_invoice_totals = compute_invoice_totals
+_get_next_invoice_number = get_next_invoice_number
+_get_or_create_stripe_payment_link = get_or_create_stripe_payment_link
+_build_invoice_email_html = build_invoice_email_html
 
 logger = logging.getLogger(__name__)
 
@@ -65,191 +72,12 @@ class RecordPaymentRequest(BaseModel):
     payment_method: str | None = Field(None, max_length=100)
 
 
-class ItemTemplateCreate(BaseModel):
-    description: str = Field(..., max_length=500)
-    unit_price: float = Field(0.0, ge=0)
-    category: str | None = Field(None, max_length=100)
-
-
-class ItemTemplateUpdate(BaseModel):
-    description: str | None = Field(None, max_length=500)
-    unit_price: float | None = Field(None, ge=0)
-    category: str | None = Field(None, max_length=100)
-    is_active: bool | None = None
-
-
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — extracted to backend.services.invoice_* modules
 # ---------------------------------------------------------------------------
-
-def _compute_invoice_totals(items: list[dict], tax_rate: float) -> tuple[float, float, float]:
-    """Return (subtotal, tax_amount, total) from line items and a tax_rate percentage."""
-    subtotal = round(sum(
-        item.get("quantity", 1) * item.get("unit_price", 0)
-        for item in items
-    ), 2)
-    tax_amount = round(subtotal * (tax_rate / 100), 2)
-    total = round(subtotal + tax_amount, 2)
-    return subtotal, tax_amount, total
-
-
-async def _get_next_invoice_number(db, tenant_id: str, attempt: int = 0) -> str:
-    """Generate a sequential invoice number: INV-{tenant_id[:4].upper()}-{NNN}.
-
-    The `attempt` param offsets the sequence to handle retry on uniqueness conflict.
-    """
-    try:
-        result = (
-            tenant_table(db, "invoices", tenant_id)
-            .select("invoice_number")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if result.data:
-            last_num = result.data[0].get("invoice_number", "INV-XXXX-000")
-            # Extract sequential portion after the last dash
-            parts = last_num.rsplit("-", 1)
-            if len(parts) == 2 and parts[1].isdigit():
-                seq = int(parts[1]) + 1 + attempt
-            else:
-                seq = 1 + attempt
-        else:
-            seq = 1 + attempt
-    except Exception:
-        logger.warning("Could not determine next invoice number for tenant %s", tenant_id, exc_info=True)
-        seq = 1 + attempt
-    prefix = tenant_id[:4].upper()
-    return f"INV-{prefix}-{seq:03d}"
-
-
-async def _get_or_create_stripe_payment_link(invoice_id: str, tenant_id: str, invoice_number: str, total: float) -> str | None:
-    """Create a Stripe Payment Link for the invoice total. Returns the URL or None on failure."""
-    try:
-        ensure_stripe_configured()
-    except RuntimeError:
-        logger.warning("Stripe not configured — cannot create payment link for invoice %s", invoice_id)
-        return None
-
-    metadata = {"invoice_id": invoice_id, "tenant_id": tenant_id}
-    try:
-        price = stripe.Price.create(
-            unit_amount=int(round(total * 100)),  # cents
-            currency="usd",
-            product_data={"name": f"Invoice {invoice_number}"},
-        )
-        payment_link = stripe.PaymentLink.create(
-            line_items=[{"price": price.id, "quantity": 1}],
-            metadata=metadata,
-            payment_intent_data={"metadata": metadata},
-            restrictions={"completed_sessions": {"limit": 1}},
-            inactive_message="This invoice has already been paid. Contact the business if you need help.",
-        )
-        return payment_link.url
-    except stripe.StripeError as e:
-        logger.warning("Stripe error creating payment link for invoice %s: %s", invoice_id, str(e))
-        return None
-    except Exception:
-        logger.exception("Unexpected error creating Stripe payment link for invoice %s", invoice_id)
-        return None
-
-
-def _build_invoice_email_html(invoice: dict, business: dict, lead: dict) -> str:
-    """Build a professional HTML email body for an invoice with payment link."""
-    biz_name = business.get("business_name") or "Your Service Provider"
-    biz_email = business.get("owner_email") or ""
-
-    cust_name = _html.escape(lead.get("name") or "Valued Customer")
-    invoice_number = _html.escape(invoice.get("invoice_number") or "N/A")
-    total = invoice.get("total", 0)
-    due_date = _html.escape(invoice.get("due_date") or "")
-    notes = _html.escape(invoice.get("notes") or "")
-    payment_link = invoice.get("stripe_payment_link") or ""
-    items = invoice.get("items_json") or []
-    subtotal = invoice.get("subtotal", 0)
-    tax_amount = invoice.get("tax_amount", 0)
-
-    due_section = f"<p style='color:#4b5563;'>Due: <strong>{due_date}</strong></p>" if due_date else ""
-    notes_section = f"<p style='color:#4b5563;margin-top:16px;'>{notes}</p>" if notes else ""
-
-    pay_button = ""
-    if payment_link:
-        pay_button = (
-            f"<div style='text-align:center;margin:32px 0;'>"
-            f"<a href='{payment_link}' style='background:#2563eb;color:#ffffff;padding:14px 32px;"
-            f"border-radius:6px;text-decoration:none;font-size:16px;font-weight:600;display:inline-block;'>"
-            f"Pay Now — ${total:,.2f}</a></div>"
-        )
-
-    rows = ""
-    for item in items:
-        desc = item.get("description", "")
-        qty = item.get("quantity", 1)
-        unit_price = item.get("unit_price", 0)
-        line_total = round(qty * unit_price, 2)
-        rows += (
-            f"<tr>"
-            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;'>{desc}</td>"
-            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;'>{qty}</td>"
-            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;'>${unit_price:,.2f}</td>"
-            f"<td style='padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;'>${line_total:,.2f}</td>"
-            f"</tr>"
-        )
-
-    tax_row = ""
-    if tax_amount and tax_amount > 0:
-        tax_row = (
-            f"<tr><td colspan='3' style='text-align:right;padding:4px 12px;color:#6b7280;'>Tax</td>"
-            f"<td style='text-align:right;padding:4px 12px;color:#6b7280;'>${tax_amount:,.2f}</td></tr>"
-        )
-
-    return f"""
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;">
-  <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:28px 32px;border-radius:8px 8px 0 0;">
-    <h1 style="color:#ffffff;margin:0;font-size:22px;">{biz_name}</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:4px 0 0 0;font-size:14px;">Invoice {invoice_number}</p>
-  </div>
-  <div style="background:#ffffff;padding:28px 32px;border:1px solid #e5e7eb;border-top:none;">
-    <p style="color:#374151;font-size:16px;">Hi {cust_name},</p>
-    <p style="color:#4b5563;">Please find your invoice from {biz_name} below.</p>
-    {due_section}
-
-    <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-      <thead>
-        <tr style="background:#f9fafb;">
-          <th style="padding:10px 12px;text-align:left;font-size:12px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Description</th>
-          <th style="padding:10px 12px;text-align:center;font-size:12px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Qty</th>
-          <th style="padding:10px 12px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Unit Price</th>
-          <th style="padding:10px 12px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Total</th>
-        </tr>
-      </thead>
-      <tbody>{rows}</tbody>
-      <tfoot>
-        <tr>
-          <td colspan="3" style="text-align:right;padding:8px 12px;color:#4b5563;border-top:1px solid #e5e7eb;">Subtotal</td>
-          <td style="text-align:right;padding:8px 12px;color:#4b5563;border-top:1px solid #e5e7eb;">${subtotal:,.2f}</td>
-        </tr>
-        {tax_row}
-        <tr>
-          <td colspan="3" style="text-align:right;padding:10px 12px;font-size:16px;font-weight:700;color:#1e3a5f;border-top:2px solid #1e3a5f;">Total Due</td>
-          <td style="text-align:right;padding:10px 12px;font-size:16px;font-weight:700;color:#1e3a5f;border-top:2px solid #1e3a5f;">${total:,.2f}</td>
-        </tr>
-      </tfoot>
-    </table>
-
-    {pay_button}
-    {notes_section}
-
-    <p style="color:#6b7280;font-size:13px;margin-top:24px;">
-      Questions? Contact us at {biz_email}
-    </p>
-  </div>
-  <div style="background:#f9fafb;padding:12px 32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="margin:0;font-size:11px;color:#9ca3af;">Sent via AgentNexLiFy</p>
-  </div>
-</div>
-"""
+# `_compute_invoice_totals`, `_get_next_invoice_number`,
+# `_get_or_create_stripe_payment_link`, and `_build_invoice_email_html` are
+# re-exported above as aliases of the canonical service implementations.
 
 
 # ---------------------------------------------------------------------------
@@ -552,94 +380,10 @@ async def create_invoice(
 
 
 # ---------------------------------------------------------------------------
-# Item Templates (Line Item Library)
-# Must be before /{tenant_id}/{invoice_id} to avoid route shadowing
+# Item Templates — extracted to backend.routers.invoice_item_templates
+# (registered with the same /api/v1/invoices prefix in main.py BEFORE this
+# router to preserve static-before-param ordering)
 # ---------------------------------------------------------------------------
-
-
-@router.get("/{tenant_id}/item-templates")
-async def list_item_templates(
-    tenant_id: str,
-    claims: dict = Depends(_get_current_tenant),
-):
-    """List all item templates for a tenant."""
-    verify_tenant(claims, tenant_id)
-    db = get_service_supabase()
-    result = (
-        tenant_table(db, "invoice_item_templates", tenant_id)
-        .select("*")
-        .eq("tenant_id", tenant_id)
-        .eq("is_active", True)
-        .order("category")
-        .order("sort_order")
-        .execute()
-    )
-    return result.data or []
-
-
-@router.post("/{tenant_id}/item-templates")
-async def create_item_template(
-    tenant_id: str,
-    req: ItemTemplateCreate,
-    claims: dict = Depends(_get_current_tenant),
-):
-    """Create a reusable line item template."""
-    verify_tenant(claims, tenant_id)
-    db = get_service_supabase()
-    result = tenant_table(db, "invoice_item_templates", tenant_id).insert({
-        "tenant_id": tenant_id,
-        "description": req.description,
-        "unit_price": float(req.unit_price),
-        "category": req.category,
-    }).execute()
-    return result.data[0] if result.data else {}
-
-
-@router.put("/{tenant_id}/item-templates/{template_id}")
-async def update_item_template(
-    tenant_id: str,
-    template_id: str,
-    req: ItemTemplateUpdate,
-    claims: dict = Depends(_get_current_tenant),
-):
-    """Update an item template."""
-    verify_tenant(claims, tenant_id)
-    updates = {k: v for k, v in req.model_dump(exclude_none=True).items()}
-    if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-    db = get_service_supabase()
-    result = (
-        tenant_table(db, "invoice_item_templates", tenant_id)
-        .update(updates)
-        .eq("id", template_id)
-        .eq("tenant_id", tenant_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return result.data[0]
-
-
-@router.delete("/{tenant_id}/item-templates/{template_id}")
-async def delete_item_template(
-    tenant_id: str,
-    template_id: str,
-    claims: dict = Depends(_get_current_tenant),
-):
-    """Soft-delete an item template."""
-    verify_tenant(claims, tenant_id)
-    db = get_service_supabase()
-    result = (
-        tenant_table(db, "invoice_item_templates", tenant_id)
-        .update({"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()})
-        .eq("id", template_id)
-        .eq("tenant_id", tenant_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return {"deleted": True}
 
 
 # ---------------------------------------------------------------------------
