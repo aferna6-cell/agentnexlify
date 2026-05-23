@@ -44,6 +44,12 @@ from backend.services.inbound_call_handler import (  # noqa: F401  re-exported f
     request_twilio_transcription as _request_twilio_transcription,
     store_inbound_call_record as _store_inbound_call_record,
 )
+from backend.services.call_transcript import (  # noqa: F401  re-exported for tests
+    build_full_transcript_text as _build_full_transcript_text,
+    find_call_by_twilio_sid as _find_call_by_twilio_sid,
+    merge_call_transcript as _merge_call_transcript,
+    update_call_transcript as _update_call_transcript,
+)
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.automations import verify_twilio_request
 
@@ -458,21 +464,7 @@ async def handle_transcription_complete(
 
     db = get_service_supabase()
 
-    # Find the call record by twilio_call_sid
-    call_record = None
-    try:
-        result = (
-            db.table("calls")
-            .select("id, tenant_id, lead_id, transcript")
-            .eq("twilio_call_sid", call_sid)
-            .limit(1)
-            .execute()
-        )
-        if result.data:
-            call_record = result.data[0]
-    except Exception:
-        logger.exception("Failed to find call record for SID %s", call_sid)
-
+    call_record = _find_call_by_twilio_sid(db, call_sid)
     if not call_record:
         logger.warning(
             "Transcription received for unknown call SID %s (transcription_sid=%s)",
@@ -483,48 +475,19 @@ async def handle_transcription_complete(
     call_id = call_record["id"]
     tenant_id = call_record["tenant_id"]
     lead_id = call_record.get("lead_id")
-
-    # Build the transcript as a JSONB array.
-    # Twilio provides the full transcription as one block of text.
-    # We store it as a structured array for consistency with the schema.
-    transcript_entry: list[dict[str, Any]] = [
-        {
-            "timestamp": 0,
-            "speaker": "caller",
-            "text": transcription_text.strip(),
-        }
-    ]
-
-    # If there is an existing transcript (e.g., from the AI conversation path),
-    # merge it rather than overwriting.
     existing_transcript = call_record.get("transcript") or []
-    if existing_transcript and isinstance(existing_transcript, list):
-        # Append the new transcription entry
-        transcript_entry = existing_transcript + transcript_entry
 
-    # Update the call record with the transcript
-    try:
-        db.table("calls").update({
-            "transcript": transcript_entry,
-            "summary": "Transcription received. AI summary generating...",
-        }).eq("id", call_id).eq("tenant_id", tenant_id).execute()
-        logger.info("Stored transcript for call %s (tenant %s)", call_id, tenant_id)
-    except Exception:
-        logger.exception("Failed to update call %s with transcript", call_id)
+    transcript_entries = _merge_call_transcript(existing_transcript, transcription_text)
+    _update_call_transcript(
+        db,
+        call_id=call_id,
+        tenant_id=tenant_id,
+        transcript=transcript_entries,
+    )
 
-    # Trigger AI summary generation as a background task (Feature 2)
-    # Build the full transcript text for the AI
-    full_transcript_text = transcription_text.strip()
-    if existing_transcript and isinstance(existing_transcript, list):
-        # Include existing transcript entries in the text sent to Claude
-        prior_parts = [
-            f"[{entry.get('speaker', 'unknown')}]: {entry.get('text', '')}"
-            for entry in existing_transcript
-            if entry.get("text")
-        ]
-        if prior_parts:
-            full_transcript_text = "\n".join(prior_parts) + "\n[caller]: " + transcription_text.strip()
-
+    full_transcript_text = _build_full_transcript_text(
+        existing_transcript, transcription_text
+    )
     background_tasks.add_task(
         _generate_call_summary,
         call_id=call_id,
