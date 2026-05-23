@@ -37,6 +37,14 @@ from backend.services.lead_contact import (  # noqa: F401  re-exported for tests
     fetch_business_name as _fetch_business_name,
     fetch_lead_with_channel as _fetch_lead_with_channel,
 )
+from backend.services.lead_ai_summary import (  # noqa: F401  re-exported for tests
+    build_lead_transcript as _build_lead_transcript,
+    fetch_lead_summary_inputs as _fetch_lead_summary_inputs,
+    save_lead_summary as _save_lead_summary,
+)
+from backend.services.lead_bulk_ops import (  # noqa: F401  re-exported for tests
+    apply_bulk_lead_updates as _apply_bulk_lead_updates,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -637,42 +645,20 @@ async def generate_lead_summary(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-
-    # Get the lead's conversation
-    lead = (
-        tenant_select(db, "leads", tenant_id, "conversation_id, name")
-        .eq("id", lead_id)
-        .limit(1)
-        .execute()
-    )
-    if not lead.data:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
-    conv_id = lead.data[0].get("conversation_id")
-    if not conv_id:
-        raise HTTPException(status_code=400, detail="Lead has no linked conversation")
-
-    # Fetch messages
-    conv = (
-        tenant_select(db, "conversations", tenant_id, "messages")
-        .eq("id", conv_id)
-        .limit(1)
-        .execute()
-    )
-    if not conv.data or not conv.data[0].get("messages"):
+    try:
+        messages = _fetch_lead_summary_inputs(db, tenant_id, lead_id)
+    except LookupError as exc:
+        code = str(exc)
+        if code == "not_found":
+            raise HTTPException(status_code=404, detail="Lead not found")
+        if code == "no_conversation":
+            raise HTTPException(status_code=400, detail="Lead has no linked conversation")
+        if code == "too_short":
+            raise HTTPException(status_code=400, detail="Conversation too short to summarize")
         raise HTTPException(status_code=400, detail="No conversation messages found")
 
-    messages = conv.data[0]["messages"]
-    if len(messages) < 2:
-        raise HTTPException(status_code=400, detail="Conversation too short to summarize")
+    transcript = _build_lead_transcript(messages)
 
-    # Build transcript (last 30 messages)
-    transcript = "\n".join(
-        f"{'Visitor' if m['role'] == 'user' else 'Agent'}: {m['content']}"
-        for m in messages[-30:]
-    )
-
-    # Generate AI summary
     try:
         resp = await call_claude_messages(
             operation="leads.generate_summary",
@@ -681,7 +667,7 @@ async def generate_lead_summary(
             temperature=0,
             timeout=15.0,
             system="Summarize this customer conversation in 1-2 sentences. Focus on: what the customer needs, any decisions made, and next steps. Be concise.",
-            messages=[{"role": "user", "content": transcript[:3000]}],
+            messages=[{"role": "user", "content": transcript}],
             metadata={"tenant_id": tenant_id, "lead_id": lead_id, "message_count": len(messages)},
         )
         summary = resp.text.strip()
@@ -689,9 +675,7 @@ async def generate_lead_summary(
         logger.exception("Failed to generate AI summary for lead %s", lead_id)
         raise HTTPException(status_code=502, detail="AI summary generation failed")
 
-    # Save the summary
-    tenant_update(db, "leads", tenant_id, {"conversation_summary": summary}).eq("id", lead_id).execute()
-
+    _save_lead_summary(db, tenant_id, lead_id, summary)
     return {"summary": summary}
 
 
@@ -736,39 +720,14 @@ async def bulk_update_leads(
         raise HTTPException(status_code=400, detail="Nothing to update. Provide status, assigned_to, or tags_add.")
 
     db = get_service_supabase()
-    updated = 0
-    errors = []
-
-    for lead_id in req.lead_ids:
-        try:
-            update_data = {}
-            if req.status:
-                update_data["status"] = req.status
-            if req.assigned_to is not None:
-                update_data["assigned_to"] = req.assigned_to if req.assigned_to else None
-
-            if req.tags_add:
-                # Fetch existing tags and merge
-                existing = tenant_select(db, "leads", tenant_id, "tags").eq("id", lead_id).limit(1).execute()
-                if existing.data:
-                    current_tags = existing.data[0].get("tags") or []
-                    merged = list(set(current_tags + req.tags_add))
-                    update_data["tags"] = merged
-
-            if update_data:
-                result = (
-                    tenant_update(db, "leads", tenant_id, update_data)
-                    .eq("id", lead_id)
-                    .execute()
-                )
-                if result.data:
-                    updated += 1
-                else:
-                    errors.append(lead_id)
-        except Exception as e:
-            logger.warning("Bulk update failed for lead %s: %s", lead_id, str(e))
-            errors.append(lead_id)
-
+    updated, errors = _apply_bulk_lead_updates(
+        db,
+        tenant_id,
+        lead_ids=req.lead_ids,
+        status=req.status,
+        assigned_to=req.assigned_to,
+        tags_add=req.tags_add,
+    )
     return {"updated": updated, "failed": len(errors), "failed_ids": errors}
 
 

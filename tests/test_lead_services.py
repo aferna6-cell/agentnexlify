@@ -804,3 +804,293 @@ def test_auto_promote_new_to_contacted_swallows_exception():
     db.table.side_effect = RuntimeError("db down")
     # Should not raise
     auto_promote_new_to_contacted(db, "t1", "lead-1")
+
+
+# ---------------------------------------------------------------------------
+# lead_ai_summary.fetch_lead_summary_inputs
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_lead_summary_inputs_returns_messages_on_happy_path():
+    from backend.services.lead_ai_summary import fetch_lead_summary_inputs
+
+    messages = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "hello"},
+        {"role": "user", "content": "need help"},
+    ]
+    db = _make_db_returning(
+        [{"conversation_id": "conv-1", "name": "Alice"}],
+        [{"messages": messages}],
+    )
+    assert fetch_lead_summary_inputs(db, "t1", "lead-1") == messages
+
+
+def test_fetch_lead_summary_inputs_raises_not_found_when_lead_missing():
+    from backend.services.lead_ai_summary import fetch_lead_summary_inputs
+
+    db = _make_db_returning([])
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_summary_inputs(db, "t1", "missing")
+    assert str(exc.value) == "not_found"
+
+
+def test_fetch_lead_summary_inputs_raises_no_conversation_when_link_missing():
+    from backend.services.lead_ai_summary import fetch_lead_summary_inputs
+
+    db = _make_db_returning(
+        [{"conversation_id": None, "name": "Alice"}],
+    )
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_summary_inputs(db, "t1", "lead-1")
+    assert str(exc.value) == "no_conversation"
+
+
+def test_fetch_lead_summary_inputs_raises_no_messages_when_conv_empty():
+    from backend.services.lead_ai_summary import fetch_lead_summary_inputs
+
+    db = _make_db_returning(
+        [{"conversation_id": "conv-1", "name": "A"}],
+        [],
+    )
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_summary_inputs(db, "t1", "lead-1")
+    assert str(exc.value) == "no_messages"
+
+
+def test_fetch_lead_summary_inputs_raises_no_messages_when_messages_key_empty():
+    from backend.services.lead_ai_summary import fetch_lead_summary_inputs
+
+    db = _make_db_returning(
+        [{"conversation_id": "conv-1", "name": "A"}],
+        [{"messages": []}],
+    )
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_summary_inputs(db, "t1", "lead-1")
+    assert str(exc.value) == "no_messages"
+
+
+def test_fetch_lead_summary_inputs_raises_too_short_when_single_message():
+    from backend.services.lead_ai_summary import fetch_lead_summary_inputs
+
+    db = _make_db_returning(
+        [{"conversation_id": "conv-1", "name": "A"}],
+        [{"messages": [{"role": "user", "content": "hi"}]}],
+    )
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_summary_inputs(db, "t1", "lead-1")
+    assert str(exc.value) == "too_short"
+
+
+# ---------------------------------------------------------------------------
+# lead_ai_summary.build_lead_transcript
+# ---------------------------------------------------------------------------
+
+
+def test_build_lead_transcript_renders_visitor_and_agent_roles():
+    from backend.services.lead_ai_summary import build_lead_transcript
+
+    messages = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "hello"},
+    ]
+    transcript = build_lead_transcript(messages)
+    assert "Visitor: hi" in transcript
+    assert "Agent: hello" in transcript
+
+
+def test_build_lead_transcript_keeps_only_last_n_messages():
+    from backend.services.lead_ai_summary import build_lead_transcript
+
+    messages = [
+        {"role": "user", "content": f"msg-{i}"} for i in range(50)
+    ]
+    transcript = build_lead_transcript(messages, limit=5)
+    assert "msg-49" in transcript
+    assert "msg-44" not in transcript  # outside last-5 window
+    assert transcript.count("Visitor:") == 5
+
+
+def test_build_lead_transcript_truncates_to_char_limit():
+    from backend.services.lead_ai_summary import build_lead_transcript
+
+    messages = [{"role": "user", "content": "x" * 5000}]
+    transcript = build_lead_transcript(messages, char_limit=100)
+    assert len(transcript) == 100
+
+
+# ---------------------------------------------------------------------------
+# lead_ai_summary.save_lead_summary
+# ---------------------------------------------------------------------------
+
+
+def test_save_lead_summary_writes_summary_to_lead():
+    from backend.services.lead_ai_summary import save_lead_summary
+
+    db = _make_db_returning([])
+    save_lead_summary(db, "t1", "lead-1", "Customer wants quote.")
+    # tenant_update issues one db.table call
+    assert db.table.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# lead_bulk_ops.apply_bulk_lead_updates
+# ---------------------------------------------------------------------------
+
+
+def test_apply_bulk_lead_updates_returns_updated_count_on_success():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    # Each lead-id update: one db.table call returning data=[{...}]
+    db = _make_db_returning([{"id": "lead-1"}], [{"id": "lead-2"}])
+    updated, failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1", "lead-2"],
+        status="contacted",
+    )
+    assert updated == 2
+    assert failed == []
+
+
+def test_apply_bulk_lead_updates_marks_lead_failed_when_no_data_returned():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    db = _make_db_returning([])  # update returns empty data
+    updated, failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1"],
+        status="contacted",
+    )
+    assert updated == 0
+    assert failed == ["lead-1"]
+
+
+def test_apply_bulk_lead_updates_skips_when_payload_empty():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    db = MagicMock()
+    updated, failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1"],
+        # No status / assigned_to / tags_add provided -> empty payload skip
+    )
+    assert updated == 0
+    assert failed == []
+    db.table.assert_not_called()
+
+
+def test_apply_bulk_lead_updates_normalizes_empty_assigned_to_to_null():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    captured: list[dict] = []
+    db = MagicMock()
+
+    def _table(_name):
+        chain = MagicMock()
+        chain.update.return_value = chain
+        chain.eq.return_value = chain
+        chain.execute.return_value = _result([{"id": "lead-1"}])
+
+        def _capture_update(payload):
+            captured.append(payload)
+            return chain
+        chain.update.side_effect = _capture_update
+        return chain
+
+    db.table.side_effect = _table
+
+    apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1"],
+        assigned_to="",  # empty -> should be normalized to None in payload
+    )
+    assert captured == [{"assigned_to": None}]
+
+
+def test_apply_bulk_lead_updates_merges_existing_tags_with_new_tags():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    # Sequence: tag-read returns existing -> update returns success
+    db = _make_db_returning(
+        [{"tags": ["a"]}],
+        [{"id": "lead-1"}],
+    )
+    updated, failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1"],
+        tags_add=["b"],
+    )
+    assert updated == 1
+    assert failed == []
+
+
+def test_apply_bulk_lead_updates_skips_tag_update_when_lead_missing():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    # tag-read returns empty -> no update issued, no failure either since
+    # payload becomes empty after tag-merge skipped
+    db = _make_db_returning([])
+    updated, failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1"],
+        tags_add=["b"],
+    )
+    assert updated == 0
+    assert failed == []
+
+
+def test_apply_bulk_lead_updates_records_failure_when_exception_raised():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    db = MagicMock()
+    db.table.side_effect = RuntimeError("db down")
+    updated, failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1", "lead-2"],
+        status="contacted",
+    )
+    assert updated == 0
+    assert failed == ["lead-1", "lead-2"]
+
+
+def test_apply_bulk_lead_updates_partial_failure_continues_processing():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    call_count = {"n": 0}
+
+    def _table(_name):
+        chain = MagicMock()
+        chain.update.return_value = chain
+        chain.eq.return_value = chain
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            chain.execute.side_effect = RuntimeError("boom")
+        else:
+            chain.execute.return_value = _result([{"id": "lead-2"}])
+        return chain
+
+    db = MagicMock()
+    db.table.side_effect = _table
+
+    updated, failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1", "lead-2"],
+        status="contacted",
+    )
+    assert updated == 1
+    assert failed == ["lead-1"]
+
+
+def test_apply_bulk_lead_updates_handles_lead_with_no_existing_tags():
+    from backend.services.lead_bulk_ops import apply_bulk_lead_updates
+
+    db = _make_db_returning(
+        [{"tags": None}],  # existing tags is null
+        [{"id": "lead-1"}],
+    )
+    updated, _failed = apply_bulk_lead_updates(
+        db, "t1",
+        lead_ids=["lead-1"],
+        tags_add=["new-tag"],
+    )
+    assert updated == 1
