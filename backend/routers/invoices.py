@@ -11,6 +11,7 @@ from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.invoice_calculations import compute_invoice_totals
+from backend.services.invoice_dispatch import dispatch_invoice_channels
 from backend.services.invoice_email_template import build_invoice_email_html
 from backend.services.invoice_numbering import get_next_invoice_number
 from backend.services.invoice_payment_links import get_or_create_stripe_payment_link
@@ -651,63 +652,16 @@ async def send_invoice(
             total=float(invoice.get("total", 0)),
         ) or ""
 
-    # Build enriched invoice dict for email rendering
-    invoice_for_email = {**invoice, "stripe_payment_link": payment_link_url}
-
-    # Send via requested channel(s)
-    email_sent = False
-    sms_sent = False
-    errors: list[str] = []
-
-    if req.method in ("email", "both"):
-        recipient_email = lead.get("email") or ""
-        if not recipient_email:
-            errors.append("No email address on file for this lead")
-        else:
-            subject = f"Invoice {invoice.get('invoice_number', '')} from {business.get('business_name', 'Your Service Provider')}"
-            body_html = _build_invoice_email_html(invoice_for_email, business, lead)
-            try:
-                result = await send_email(
-                    to=recipient_email,
-                    subject=subject,
-                    body_html=body_html,
-                    tenant_id=tenant_id,
-                )
-                if result.get("success"):
-                    email_sent = True
-                else:
-                    errors.append(f"Email failed: {result.get('detail', 'unknown error')}")
-            except Exception:
-                logger.exception("Unexpected error sending invoice email for invoice %s", invoice_id)
-                errors.append("Email delivery failed unexpectedly")
-
-    if req.method in ("sms", "both"):
-        recipient_phone = lead.get("phone") or ""
-        if not recipient_phone:
-            errors.append("No phone number on file for this lead")
-        else:
-            invoice_number = invoice.get("invoice_number", "")
-            total = float(invoice.get("total", 0))
-            biz_name = business.get("business_name") or "Your Service Provider"
-            if payment_link_url:
-                sms_body = (
-                    f"Hi {lead.get('name', 'there')}! Invoice {invoice_number} for ${total:,.2f} "
-                    f"from {biz_name} is ready. Pay online: {payment_link_url}"
-                )
-            else:
-                sms_body = (
-                    f"Hi {lead.get('name', 'there')}! Invoice {invoice_number} for ${total:,.2f} "
-                    f"from {biz_name} is ready. Please contact us to complete payment."
-                )
-            try:
-                ok = await send_sms(to=recipient_phone, body=sms_body)
-                if ok:
-                    sms_sent = True
-                else:
-                    errors.append("SMS delivery failed")
-            except Exception:
-                logger.exception("Unexpected error sending invoice SMS for invoice %s", invoice_id)
-                errors.append("SMS delivery failed unexpectedly")
+    # Send via requested channel(s) — delegated to invoice_dispatch service
+    email_sent, sms_sent, errors = await dispatch_invoice_channels(
+        invoice=invoice,
+        business=business,
+        lead=lead,
+        method=req.method,
+        payment_link_url=payment_link_url,
+        tenant_id=tenant_id,
+        invoice_id=invoice_id,
+    )
 
     # Update invoice record: status, sent_at, sent_via, stripe_payment_link
     update_data: dict = {
