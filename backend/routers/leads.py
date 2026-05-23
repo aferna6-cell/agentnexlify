@@ -23,6 +23,10 @@ from backend.services.lead_csv import (  # noqa: F401  re-exported for tests
     parse_csv_for_import as _parse_csv_for_import,
     serialize_leads_to_csv as _serialize_leads_to_csv,
 )
+from backend.services.lead_dedup import (  # noqa: F401  re-exported for tests
+    apply_lead_merge as _apply_lead_merge,
+    fetch_duplicate_groups as _fetch_duplicate_groups,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -407,42 +411,7 @@ async def find_duplicate_leads(tenant_id: str, claims: dict = Depends(_get_curre
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    result = tenant_select(
-        db,
-        "leads",
-        tenant_id,
-        "id, name, email, phone, status, lead_score, created_at",
-    ).execute()
-    leads = result.data or []
-
-    # Group by email and phone
-    email_groups: dict[str, list] = {}
-    phone_groups: dict[str, list] = {}
-    for lead in leads:
-        email = (lead.get("email") or "").strip().lower()
-        phone = (lead.get("phone") or "").strip()
-        if email:
-            email_groups.setdefault(email, []).append(lead)
-        if phone:
-            phone_groups.setdefault(phone, []).append(lead)
-
-    # Find groups with 2+ leads (true duplicates)
-    duplicate_sets = []
-    seen_ids = set()
-    for key, group in {**email_groups, **phone_groups}.items():
-        if len(group) < 2:
-            continue
-        ids = tuple(sorted(l["id"] for l in group))
-        if ids in seen_ids:
-            continue
-        seen_ids.add(ids)
-        duplicate_sets.append({
-            "match_field": "email" if "@" in key else "phone",
-            "match_value": key,
-            "leads": group,
-        })
-
-    return {"duplicates": duplicate_sets}
+    return {"duplicates": _fetch_duplicate_groups(db, tenant_id)}
 
 
 class MergeLeadsRequest(BaseModel):
@@ -464,61 +433,13 @@ async def merge_leads(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-
-    # Fetch both leads
-    keep_result = tenant_select(db, "leads", tenant_id).eq("id", req.keep_id).limit(1).execute()
-    merge_result = tenant_select(db, "leads", tenant_id).eq("id", req.merge_id).limit(1).execute()
-
-    if not keep_result.data:
-        raise HTTPException(status_code=404, detail="Primary lead not found")
-    if not merge_result.data:
-        raise HTTPException(status_code=404, detail="Merge lead not found")
-
-    keep = keep_result.data[0]
-    merge = merge_result.data[0]
-
-    # Fill in missing fields from merge into keep
-    fillable = ["name", "email", "phone", "lead_type", "areas_of_interest",
-                 "timeline", "budget", "conversation_summary", "next_steps"]
-    updates = {}
-    for field in fillable:
-        if not keep.get(field) and merge.get(field):
-            updates[field] = merge[field]
-
-    # Merge tags (union)
-    keep_tags = keep.get("tags") or []
-    merge_tags = merge.get("tags") or []
-    combined_tags = list(dict.fromkeys(keep_tags + merge_tags))  # Preserve order, dedup
-    if combined_tags != keep_tags:
-        updates["tags"] = combined_tags
-
-    # Keep the higher lead score
-    if (merge.get("lead_score") or 0) > (keep.get("lead_score") or 0):
-        updates["lead_score"] = merge["lead_score"]
-
-    if updates:
-        tenant_update(db, "leads", tenant_id, updates).eq("id", req.keep_id).execute()
-
-    # Reassign appointments from merge to keep
     try:
-        tenant_update(db, "appointments", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
-    except Exception:
-        logger.warning("Failed to reassign appointments during merge", exc_info=True)
-
-    # Reassign activity log entries
-    try:
-        tenant_update(db, "activity_log", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
-    except Exception:
-        logger.warning("Failed to reassign activity_log during merge", exc_info=True)
-
-    # Reassign client notes
-    try:
-        tenant_update(db, "client_notes", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
-    except Exception:
-        logger.warning("Failed to reassign client_notes during merge", exc_info=True)
-
-    # Delete the merged lead
-    tenant_delete(db, "leads", tenant_id).eq("id", req.merge_id).execute()
+        keep, merge, updates = _apply_lead_merge(
+            db, tenant_id, keep_id=req.keep_id, merge_id=req.merge_id
+        )
+    except LookupError as exc:
+        which = "Primary" if str(exc) == "keep" else "Merge"
+        raise HTTPException(status_code=404, detail=f"{which} lead not found")
 
     log_activity(
         tenant_id=tenant_id,
