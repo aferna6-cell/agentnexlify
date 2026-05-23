@@ -509,40 +509,8 @@ async def get_no_show_stats(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-
-    # Get all completed + no_show appointments for rate calculation
-    all_appts = (
-        db.table("appointments")
-        .select("id, status, customer_email, customer_name, lead_id")
-        .eq("tenant_id", tenant_id)
-        .in_("status", ["completed", "no_show"])
-        .execute()
-    )
-    appts = all_appts.data or []
-
-    total = len(appts)
-    no_shows = [a for a in appts if a["status"] == "no_show"]
-    no_show_count = len(no_shows)
-    no_show_rate = round((no_show_count / total * 100) if total > 0 else 0, 1)
-
-    # Find repeat offenders (2+ no-shows by email)
-    email_counts = {}
-    for a in no_shows:
-        email = a.get("customer_email") or a.get("customer_name") or "unknown"
-        email_counts[email] = email_counts.get(email, 0) + 1
-
-    repeat_offenders = [
-        {"customer": email, "no_show_count": count}
-        for email, count in sorted(email_counts.items(), key=lambda x: -x[1])
-        if count >= 2
-    ][:10]  # Top 10
-
-    return {
-        "total_appointments": total,
-        "no_show_count": no_show_count,
-        "no_show_rate": no_show_rate,
-        "repeat_offenders": repeat_offenders,
-    }
+    appts = fetch_no_show_appointments(db, tenant_id)
+    return compute_no_show_stats(appts)
 
 
 @router.get("/{tenant_id}/ical")
@@ -555,12 +523,10 @@ async def ical_feed(
     Businesses can subscribe to this URL in Google Calendar or Apple Calendar
     for a live view of their appointments.
     """
-    from datetime import datetime, timedelta, timezone
     from fastapi.responses import Response as FastAPIResponse
 
     db = get_service_supabase()
 
-    # Validate API key
     wc = (
         db.table("widget_configs")
         .select("tenant_id")
@@ -572,74 +538,11 @@ async def ical_feed(
     if not wc.data:
         raise HTTPException(status_code=403, detail="Invalid API key")
 
-    # Fetch tenant name
     tenant = db.table("tenants").select("business_name").eq("id", tenant_id).limit(1).execute()
     biz_name = (tenant.data[0].get("business_name") or "AgentNexLiFy") if tenant.data else "AgentNexLiFy"
 
-    # Fetch upcoming + recent appointments (last 30 days + next 90 days)
-    cutoff_past = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    cutoff_future = (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()
-
-    appts = (
-        db.table("appointments")
-        .select("id, customer_name, customer_email, customer_phone, start_time, end_time, status, notes")
-        .eq("tenant_id", tenant_id)
-        .neq("status", "cancelled")
-        .gte("start_time", cutoff_past)
-        .lte("start_time", cutoff_future)
-        .order("start_time")
-        .limit(500)
-        .execute()
-    )
-
-    # Build iCal
-    lines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        f"PRODID:-//AgentNexLiFy//{biz_name}//EN",
-        f"X-WR-CALNAME:{biz_name} Appointments",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-    ]
-
-    for appt in (appts.data or []):
-        uid = appt["id"]
-        summary = f"Appointment: {appt.get('customer_name', 'Customer')}"
-        description_parts = []
-        if appt.get("customer_email"):
-            description_parts.append(f"Email: {appt['customer_email']}")
-        if appt.get("customer_phone"):
-            description_parts.append(f"Phone: {appt['customer_phone']}")
-        if appt.get("notes"):
-            description_parts.append(f"Notes: {appt['notes']}")
-        if appt.get("status"):
-            description_parts.append(f"Status: {appt['status']}")
-        description = "\\n".join(description_parts)
-
-        # Format timestamps for iCal (YYYYMMDDTHHMMSSZ)
-        def _to_ical_dt(dt_str):
-            try:
-                dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-                return dt.strftime("%Y%m%dT%H%M%SZ")
-            except Exception:
-                return dt_str.replace("-", "").replace(":", "").replace(" ", "T")[:15] + "Z"
-
-        dtstart = _to_ical_dt(appt["start_time"])
-        dtend = _to_ical_dt(appt["end_time"])
-
-        lines.extend([
-            "BEGIN:VEVENT",
-            f"UID:{uid}@agentnexlify.com",
-            f"DTSTART:{dtstart}",
-            f"DTEND:{dtend}",
-            f"SUMMARY:{summary}",
-            f"DESCRIPTION:{description}",
-            f"STATUS:{'CANCELLED' if appt.get('status') == 'no_show' else 'CONFIRMED'}",
-            "END:VEVENT",
-        ])
-
-    lines.append("END:VCALENDAR")
-    ical_content = "\r\n".join(lines)
+    appts = fetch_ical_appointments(db, tenant_id)
+    ical_content = build_appointments_ical(appts, biz_name)
 
     return FastAPIResponse(
         content=ical_content,
