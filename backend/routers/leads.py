@@ -27,6 +27,10 @@ from backend.services.lead_dedup import (  # noqa: F401  re-exported for tests
     apply_lead_merge as _apply_lead_merge,
     fetch_duplicate_groups as _fetch_duplicate_groups,
 )
+from backend.services.lead_activity import (  # noqa: F401  re-exported for tests
+    fetch_lead_timeline as _fetch_lead_timeline,
+    lead_exists as _lead_exists,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -741,76 +745,10 @@ async def get_lead_activity(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-
-    # Verify lead exists
-    lead = (
-        tenant_select(db, "leads", tenant_id, "id")
-        .eq("id", lead_id)
-        .limit(1)
-        .execute()
-    )
-    if not lead.data:
+    if not _lead_exists(db, tenant_id, lead_id):
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    # Fetch activity log entries for this lead
-    activity = (
-        tenant_select(db, "activity_log", tenant_id, "id, activity_type, description, metadata, created_at")
-        .eq("lead_id", lead_id)
-        .order("created_at", desc=True)
-        .limit(50)
-        .execute()
-    )
-
-    # Also fetch appointments for this lead
-    appointments = (
-        tenant_select(db, "appointments", tenant_id, "id, customer_name, start_time, status, created_at")
-        .eq("lead_id", lead_id)
-        .order("start_time", desc=True)
-        .limit(20)
-        .execute()
-    )
-
-    # Also fetch email events for this lead
-    email_events = (
-        tenant_select(db, "email_events", tenant_id, "id, event_type, details, created_at")
-        .eq("lead_id", lead_id)
-        .order("created_at", desc=True)
-        .limit(20)
-        .execute()
-    )
-
-    # Merge all into a single timeline
-    timeline = []
-
-    for a in (activity.data or []):
-        timeline.append({
-            "type": a.get("activity_type") or "activity",
-            "description": a.get("description") or "",
-            "metadata": a.get("metadata"),
-            "created_at": a["created_at"],
-        })
-
-    for appt in (appointments.data or []):
-        status = appt.get("status") or "scheduled"
-        timeline.append({
-            "type": f"appointment_{status}",
-            "description": f"Appointment ({status}): {appt.get('customer_name') or 'Customer'} at {appt.get('start_time', '')}",
-            "metadata": {"appointment_id": appt["id"]},
-            "created_at": appt["created_at"],
-        })
-
-    for ev in (email_events.data or []):
-        timeline.append({
-            "type": f"email_{ev.get('event_type', 'event')}",
-            "description": f"Email {ev.get('event_type', 'event')}",
-            "metadata": ev.get("details"),
-            "created_at": ev["created_at"],
-        })
-
-    # Sort by date descending
-    timeline.sort(key=lambda x: x.get("created_at") or "", reverse=True)
-
-    return {"timeline": timeline[:100]}
+    return {"timeline": _fetch_lead_timeline(db, tenant_id, lead_id)}
 
 
 class BulkUpdateRequest(BaseModel):
