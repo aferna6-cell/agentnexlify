@@ -10,7 +10,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
-from tests.conftest import MockSupabaseClient, MockSupabaseResponse, MockSupabaseTable
 from backend.config import settings
 
 
@@ -715,9 +714,9 @@ class TestGenerateCallSummary:
     """Unit tests for _generate_call_summary."""
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.call_intelligence.log_activity")
+    @patch("backend.services.call_intelligence.get_service_supabase")
+    @patch("backend.services.call_intelligence.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_parses_json_response(self, mock_call_claude, mock_db, mock_activity):
         """Summary should parse Claude's JSON response and update the call."""
         from backend.routers.calls import _generate_call_summary
@@ -792,8 +791,8 @@ class TestGenerateCallSummary:
         assert activity_kwargs["metadata"]["action_item_count"] == 1
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.call_intelligence.get_service_supabase")
+    @patch("backend.services.call_intelligence.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_skips_empty_transcript(self, mock_call_claude, mock_db):
         """Empty transcript should skip summary generation."""
         from backend.routers.calls import _generate_call_summary
@@ -809,8 +808,8 @@ class TestGenerateCallSummary:
         mock_db.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.call_intelligence.get_service_supabase")
+    @patch("backend.services.call_intelligence.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_skips_whitespace_transcript(self, mock_call_claude, mock_db):
         """Whitespace-only transcript should skip summary generation."""
         from backend.routers.calls import _generate_call_summary
@@ -835,8 +834,8 @@ class TestInsertCallActionItems:
     """Unit tests for _insert_call_action_items."""
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.services.call_intelligence.log_activity")
+    @patch("backend.services.call_intelligence.get_service_supabase")
     async def test_inserts_action_items(self, mock_db, mock_activity):
         """Should insert each action item into action_items table."""
         from backend.routers.calls import _insert_call_action_items
@@ -861,8 +860,8 @@ class TestInsertCallActionItems:
         assert call_args.kwargs["tenant_id"] == "tenant-001"
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.services.call_intelligence.log_activity")
+    @patch("backend.services.call_intelligence.get_service_supabase")
     async def test_skips_empty_items(self, mock_db, mock_activity):
         """Empty item list should not insert anything."""
         from backend.routers.calls import _insert_call_action_items
@@ -880,8 +879,8 @@ class TestInsertCallActionItems:
         mock_activity.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.services.call_intelligence.log_activity")
+    @patch("backend.services.call_intelligence.get_service_supabase")
     async def test_sets_high_priority(self, mock_db, mock_activity):
         """Call action items should always be high priority."""
         from backend.routers.calls import _insert_call_action_items
