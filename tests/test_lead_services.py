@@ -2184,3 +2184,82 @@ def test_validate_csv_upload_rejects_non_utf8():
 
     with pytest.raises(ValueError, match="UTF-8"):
         validate_csv_upload("leads.csv", b"name,email\n\xff\xfeAlice")
+
+
+# ---------- lead_ai_summary.generate_and_save_lead_summary ----------
+
+async def test_generate_and_save_lead_summary_happy_path(monkeypatch):
+    from backend.services import lead_ai_summary
+
+    captured = {}
+
+    def fake_fetch(db, tenant_id, lead_id):
+        captured["fetch"] = (tenant_id, lead_id)
+        return [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "hello"},
+        ]
+
+    async def fake_call(**kwargs):
+        captured["call_kwargs"] = kwargs
+        return SimpleNamespace(text="  customer wants quote next week.  ")
+
+    def fake_save(db, tenant_id, lead_id, summary):
+        captured["save"] = (tenant_id, lead_id, summary)
+
+    monkeypatch.setattr(lead_ai_summary, "fetch_lead_summary_inputs", fake_fetch)
+    monkeypatch.setattr(lead_ai_summary, "call_claude_messages", fake_call)
+    monkeypatch.setattr(lead_ai_summary, "save_lead_summary", fake_save)
+
+    summary = await lead_ai_summary.generate_and_save_lead_summary(
+        db=MagicMock(), tenant_id="tenant-1", lead_id="lead-9"
+    )
+
+    assert summary == "customer wants quote next week."
+    assert captured["fetch"] == ("tenant-1", "lead-9")
+    assert captured["save"] == ("tenant-1", "lead-9", "customer wants quote next week.")
+    assert captured["call_kwargs"]["model"] == "claude-sonnet-4-6"
+    assert captured["call_kwargs"]["operation"] == "leads.generate_summary"
+    assert captured["call_kwargs"]["metadata"]["tenant_id"] == "tenant-1"
+    assert captured["call_kwargs"]["metadata"]["lead_id"] == "lead-9"
+    assert captured["call_kwargs"]["metadata"]["message_count"] == 2
+
+
+async def test_generate_and_save_lead_summary_propagates_lookup_error(monkeypatch):
+    from backend.services import lead_ai_summary
+
+    def fake_fetch(db, tenant_id, lead_id):
+        raise LookupError("not_found")
+
+    monkeypatch.setattr(lead_ai_summary, "fetch_lead_summary_inputs", fake_fetch)
+
+    with pytest.raises(LookupError, match="not_found"):
+        await lead_ai_summary.generate_and_save_lead_summary(
+            db=MagicMock(), tenant_id="tenant-1", lead_id="missing"
+        )
+
+
+async def test_generate_and_save_lead_summary_wraps_llm_failure(monkeypatch):
+    from backend.services import lead_ai_summary
+
+    def fake_fetch(db, tenant_id, lead_id):
+        return [{"role": "user", "content": "x"}, {"role": "assistant", "content": "y"}]
+
+    async def fake_call(**kwargs):
+        raise RuntimeError("anthropic 503")
+
+    saved = []
+
+    def fake_save(db, tenant_id, lead_id, summary):
+        saved.append(summary)
+
+    monkeypatch.setattr(lead_ai_summary, "fetch_lead_summary_inputs", fake_fetch)
+    monkeypatch.setattr(lead_ai_summary, "call_claude_messages", fake_call)
+    monkeypatch.setattr(lead_ai_summary, "save_lead_summary", fake_save)
+
+    with pytest.raises(RuntimeError, match="ai_failed"):
+        await lead_ai_summary.generate_and_save_lead_summary(
+            db=MagicMock(), tenant_id="tenant-1", lead_id="lead-9"
+        )
+
+    assert saved == []  # nothing persisted on failure

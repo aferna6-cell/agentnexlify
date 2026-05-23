@@ -168,7 +168,7 @@ class TestWrapperCentralization:
         assert "#plumbing" in result["hashtags"]
         assert mock_call.await_count == 1
 
-    @patch("backend.routers.leads.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.lead_ai_summary.call_claude_messages", new_callable=AsyncMock)
     @patch("backend.routers.leads.get_service_supabase")
     async def test_lead_summary_uses_runtime_wrapper(self, mock_db, mock_call):
         from backend.routers.leads import generate_lead_summary

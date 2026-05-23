@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
-from backend.services.llm_runtime import call_claude_messages
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
@@ -41,6 +40,7 @@ from backend.services.lead_contact import (  # noqa: F401  re-exported for tests
 from backend.services.lead_ai_summary import (  # noqa: F401  re-exported for tests
     build_lead_transcript as _build_lead_transcript,
     fetch_lead_summary_inputs as _fetch_lead_summary_inputs,
+    generate_and_save_lead_summary as _generate_and_save_lead_summary,
     save_lead_summary as _save_lead_summary,
 )
 from backend.services.lead_bulk_ops import (  # noqa: F401  re-exported for tests
@@ -525,7 +525,7 @@ async def generate_lead_summary(
 
     db = get_service_supabase()
     try:
-        messages = _fetch_lead_summary_inputs(db, tenant_id, lead_id)
+        summary = await _generate_and_save_lead_summary(db, tenant_id, lead_id)
     except LookupError as exc:
         code = str(exc)
         if code == "not_found":
@@ -535,26 +535,8 @@ async def generate_lead_summary(
         if code == "too_short":
             raise HTTPException(status_code=400, detail="Conversation too short to summarize")
         raise HTTPException(status_code=400, detail="No conversation messages found")
-
-    transcript = _build_lead_transcript(messages)
-
-    try:
-        resp = await call_claude_messages(
-            operation="leads.generate_summary",
-            model="claude-sonnet-4-6",
-            max_tokens=150,
-            temperature=0,
-            timeout=15.0,
-            system="Summarize this customer conversation in 1-2 sentences. Focus on: what the customer needs, any decisions made, and next steps. Be concise.",
-            messages=[{"role": "user", "content": transcript}],
-            metadata={"tenant_id": tenant_id, "lead_id": lead_id, "message_count": len(messages)},
-        )
-        summary = resp.text.strip()
-    except Exception:
-        logger.exception("Failed to generate AI summary for lead %s", lead_id)
+    except RuntimeError:
         raise HTTPException(status_code=502, detail="AI summary generation failed")
-
-    _save_lead_summary(db, tenant_id, lead_id, summary)
     return {"summary": summary}
 
 
