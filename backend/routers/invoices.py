@@ -15,6 +15,7 @@ from backend.services.invoice_bulk_send import (
 )
 from backend.services.invoice_calculations import compute_invoice_totals
 from backend.services.invoice_email_template import build_invoice_email_html
+from backend.services.invoice_from_bid import create_invoice_from_bid_for_tenant
 from backend.services.invoice_numbering import get_next_invoice_number
 from backend.services.invoice_payment_links import get_or_create_stripe_payment_link
 from backend.services.invoice_payments_service import (
@@ -161,92 +162,8 @@ async def create_invoice_from_bid(
 ):
     """Create an invoice by copying items and amounts from an accepted bid."""
     verify_tenant(claims, tenant_id)
-
     db = get_service_supabase()
-
-    # Fetch the bid
-    try:
-        bid_result = (
-            tenant_table(db, "bids", tenant_id)
-            .select("*")
-            .eq("id", bid_id)
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch bid %s for invoice creation", bid_id)
-        raise HTTPException(status_code=500, detail="Failed to fetch bid")
-
-    if not bid_result.data:
-        raise HTTPException(status_code=404, detail="Bid not found")
-
-    bid = bid_result.data[0]
-
-    # Only accepted bids can be converted to invoices
-    if bid.get("status") != "accepted":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Bid status is '{bid.get('status')}' — only accepted bids can be converted to invoices",
-        )
-
-    # Prevent duplicate invoice creation from the same bid
-    try:
-        existing_invoice = (
-            tenant_table(db, "invoices", tenant_id)
-            .select("id, invoice_number")
-            .eq("tenant_id", tenant_id)
-            .eq("bid_id", bid_id)
-            .limit(1)
-            .execute()
-        )
-        if existing_invoice.data:
-            raise HTTPException(
-                status_code=409,
-                detail=f"An invoice ({existing_invoice.data[0].get('invoice_number', '')}) already exists for this bid",
-            )
-    except HTTPException:
-        raise
-    except Exception:
-        logger.warning("Could not check for existing invoice from bid %s", bid_id, exc_info=True)
-
-    bid_items_raw = bid.get("items_json") or []
-
-    # Normalize bid items to invoice item format
-    invoice_items = []
-    for item in bid_items_raw:
-        invoice_items.append({
-            "description": item.get("description", ""),
-            "quantity": item.get("quantity", 1),
-            "unit_price": item.get("unit_price", 0),
-        })
-
-    subtotal, tax_amount, total = _compute_invoice_totals(invoice_items, 0.0)
-    invoice_number = await _get_next_invoice_number(db, tenant_id)
-
-    data = {
-        "tenant_id": tenant_id,
-        "bid_id": bid_id,
-        "lead_id": bid.get("lead_id"),
-        "invoice_number": invoice_number,
-        "items_json": invoice_items,
-        "subtotal": subtotal,
-        "tax_rate": 0.0,
-        "tax_amount": tax_amount,
-        "total": total,
-        "status": "draft",
-        "notes": f"Created from bid: {bid.get('title', bid_id)}",
-    }
-
-    try:
-        result = tenant_table(db, "invoices", tenant_id).insert(data).execute()
-    except Exception:
-        logger.exception("Failed to create invoice from bid %s for tenant %s", bid_id, tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to create invoice from bid")
-
-    if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to create invoice from bid")
-    return result.data[0]
+    return await create_invoice_from_bid_for_tenant(db, tenant_id, bid_id)
 
 
 @router.get("/{tenant_id}")
