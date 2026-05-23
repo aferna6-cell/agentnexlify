@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
 from backend.dependencies import _get_current_tenant
-from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
 from backend.services.lead_csv import (  # noqa: F401  re-exported for tests
@@ -350,19 +349,12 @@ async def merge_leads(
 
     db = get_service_supabase()
     try:
-        keep, merge, updates = _apply_lead_merge(
+        _, _, updates = _apply_lead_merge(
             db, tenant_id, keep_id=req.keep_id, merge_id=req.merge_id
         )
     except LookupError as exc:
         which = "Primary" if str(exc) == "keep" else "Merge"
         raise HTTPException(status_code=404, detail=f"{which} lead not found")
-
-    log_activity(
-        tenant_id=tenant_id,
-        activity_type="lead_merged",
-        description=f"Merged lead {merge.get('name', merge.get('email', req.merge_id))} into {keep.get('name', keep.get('email', req.keep_id))}",
-        lead_id=req.keep_id,
-    )
 
     return {"success": True, "kept_id": req.keep_id, "merged_id": req.merge_id, "fields_updated": list(updates.keys())}
 

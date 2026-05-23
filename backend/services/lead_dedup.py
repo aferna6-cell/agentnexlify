@@ -11,6 +11,7 @@ DB helpers accept `db: Any` so test patches at
 import logging
 from typing import Any
 
+from backend.services.activity import log_activity
 from backend.services.tenant_scope import tenant_delete, tenant_select, tenant_update
 
 logger = logging.getLogger(__name__)
@@ -113,8 +114,8 @@ def apply_lead_merge(
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Apply merge logic to two leads. Returns `(keep, merge, updates)`.
 
-    Caller is responsible for raising HTTP 404 when records missing and
-    logging the merge activity.
+    Logs a `lead_merged` activity entry on success. Caller raises HTTP 404
+    when `LookupError("keep"|"merge")` propagates.
     """
     keep_result = tenant_select(db, "leads", tenant_id).eq("id", keep_id).limit(1).execute()
     merge_result = tenant_select(db, "leads", tenant_id).eq("id", merge_id).limit(1).execute()
@@ -133,5 +134,14 @@ def apply_lead_merge(
 
     reassign_lead_references(db, tenant_id, from_id=merge_id, to_id=keep_id)
     tenant_delete(db, "leads", tenant_id).eq("id", merge_id).execute()
+
+    merge_label = merge.get("name") or merge.get("email") or merge_id
+    keep_label = keep.get("name") or keep.get("email") or keep_id
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="lead_merged",
+        description=f"Merged lead {merge_label} into {keep_label}",
+        lead_id=keep_id,
+    )
 
     return keep, merge, updates
