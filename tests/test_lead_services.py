@@ -1636,6 +1636,181 @@ def test_collect_lead_capture_diagnostics_sample_failure_returns_defaults():
     assert out["has_email_leads"] is False
 
 
+# ---------------------------------------------------------------------------
+# lead_listing.list_leads_paginated
+# ---------------------------------------------------------------------------
+
+
+class _ListingChainable:
+    """Records every filter/sort/range/exec call for assertion."""
+
+    def __init__(self, response):
+        self.calls = []
+        self._response = response
+        self.select = self._noop("select")
+        self.eq = self._record("eq")
+        self.is_ = self._record("is_")
+        self.or_ = self._record("or_")
+        self.order = self._record("order")
+        self.range = self._record("range")
+
+    def _record(self, name):
+        def _fn(*args, **kwargs):
+            self.calls.append((name, args, kwargs))
+            return self
+        return _fn
+
+    def _noop(self, name):
+        def _fn(*args, **kwargs):
+            self.calls.append((name, args, kwargs))
+            return self
+        return _fn
+
+    def execute(self):
+        return self._response
+
+
+def _make_listing_db(response):
+    chainable = _ListingChainable(response)
+    db = MagicMock()
+    db.table.return_value = chainable
+    return db, chainable
+
+
+def test_list_leads_paginated_returns_data_total_and_pagination():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, _ = _make_listing_db(
+        SimpleNamespace(data=[{"id": "l1"}, {"id": "l2"}], count=42)
+    )
+    out = list_leads_paginated(
+        db, "tenant-1", page=2, per_page=10,
+    )
+    assert out["leads"] == [{"id": "l1"}, {"id": "l2"}]
+    assert out["total"] == 42
+    assert out["page"] == 2
+    assert out["per_page"] == 10
+    assert out["total_pages"] == 5  # ceil(42 / 10)
+
+
+def test_list_leads_paginated_filters_by_stage():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", stage="contacted")
+
+    eq_calls = [c for c in chain.calls if c[0] == "eq"]
+    assert any(call[1] == ("status", "contacted") for call in eq_calls)
+
+
+def test_list_leads_paginated_filters_unassigned_uses_is_null():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", assigned_to="unassigned")
+
+    is_calls = [c for c in chain.calls if c[0] == "is_"]
+    assert is_calls == [("is_", ("assigned_to", "null"), {})]
+
+
+def test_list_leads_paginated_filters_by_assignee():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", assigned_to="member-99")
+
+    eq_calls = [c for c in chain.calls if c[0] == "eq"]
+    assert any(call[1] == ("assigned_to", "member-99") for call in eq_calls)
+
+
+def test_list_leads_paginated_sanitizes_search_strips_special_chars():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", search="alice'; DROP TABLE--")
+
+    or_calls = [c for c in chain.calls if c[0] == "or_"]
+    assert len(or_calls) == 1
+    arg = or_calls[0][1][0]
+    assert "'" not in arg
+    assert "DROP" in arg  # letters survive sanitization
+    assert "%" in arg  # ilike pattern syntax
+
+
+def test_list_leads_paginated_skips_search_when_sanitized_empty():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", search="'';;")  # all stripped
+
+    or_calls = [c for c in chain.calls if c[0] == "or_"]
+    assert or_calls == []
+
+
+def test_list_leads_paginated_unsafe_sort_falls_back_to_default():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", sort="; DROP TABLE leads;")
+
+    order_calls = [c for c in chain.calls if c[0] == "order"]
+    assert order_calls[0][1] == ("lead_score",)
+
+
+def test_list_leads_paginated_order_asc_when_specified():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", sort="created_at", order="asc")
+
+    order_calls = [c for c in chain.calls if c[0] == "order"]
+    assert order_calls[0][2] == {"desc": False}
+
+
+def test_list_leads_paginated_page_offset_math():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, chain = _make_listing_db(SimpleNamespace(data=[], count=0))
+    list_leads_paginated(db, "tenant-1", page=3, per_page=25)
+
+    range_calls = [c for c in chain.calls if c[0] == "range"]
+    # page 3, per_page 25 => offset 50, end 74
+    assert range_calls[0][1] == (50, 74)
+
+
+def test_list_leads_paginated_total_falls_back_to_len_when_count_none():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, _ = _make_listing_db(
+        SimpleNamespace(data=[{"id": "x"}, {"id": "y"}], count=None)
+    )
+    out = list_leads_paginated(db, "tenant-1")
+    assert out["total"] == 2
+
+
+def test_list_leads_paginated_query_failure_raises_runtimeerror():
+    from backend.services.lead_listing import list_leads_paginated
+
+    chain = _ListingChainable(SimpleNamespace(data=[], count=0))
+    def _exec_fail():
+        raise RuntimeError("supabase 503")
+    chain.execute = _exec_fail
+    db = MagicMock()
+    db.table.return_value = chain
+
+    with pytest.raises(RuntimeError, match="query_failed"):
+        list_leads_paginated(db, "tenant-1")
+
+
+def test_list_leads_paginated_empty_total_returns_one_total_page():
+    from backend.services.lead_listing import list_leads_paginated
+
+    db, _ = _make_listing_db(SimpleNamespace(data=[], count=0))
+    out = list_leads_paginated(db, "tenant-1")
+    assert out["total"] == 0
+    assert out["total_pages"] == 1
+
+
 def test_collect_lead_capture_diagnostics_count_none_normalizes_to_zero():
     from backend.services.lead_diagnostics import collect_lead_capture_diagnostics
 

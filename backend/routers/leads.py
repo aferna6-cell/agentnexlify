@@ -59,6 +59,9 @@ from backend.services.lead_create import (  # noqa: F401  re-exported for tests
 from backend.services.lead_diagnostics import (  # noqa: F401  re-exported for tests
     collect_lead_capture_diagnostics as _collect_lead_capture_diagnostics,
 )
+from backend.services.lead_listing import (  # noqa: F401  re-exported for tests
+    list_leads_paginated as _list_leads_paginated,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -94,57 +97,14 @@ async def get_leads(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    _ALLOWED_SORT = {"lead_score", "created_at", "name", "email", "status", "updated_at"}
-    if sort not in _ALLOWED_SORT:
-        sort = "lead_score"
-
     db = get_service_supabase()
     try:
-        query = tenant_select(
-            db,
-            "leads",
-            tenant_id,
-            "id, client_id, name, email, phone, status, lead_score, lead_temperature, "
-            "areas_of_interest, tags, assigned_to, deal_value, created_at, updated_at, "
-            "enrichment_source",
-            count="exact",
+        return _list_leads_paginated(
+            db, tenant_id,
+            stage=stage, search=search, sort=sort, order=order,
+            assigned_to=assigned_to, page=page, per_page=per_page,
         )
-
-        if stage:
-            query = query.eq("status", stage)
-
-        if assigned_to:
-            if assigned_to == "unassigned":
-                query = query.is_("assigned_to", "null")
-            else:
-                query = query.eq("assigned_to", assigned_to)
-
-        if search:
-            import re
-            safe_search = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
-            if safe_search:
-                query = query.or_(
-                    f"name.ilike.%{safe_search}%,email.ilike.%{safe_search}%,phone.ilike.%{safe_search}%"
-                )
-
-        desc = order.lower() == "desc"
-        query = query.order(sort, desc=desc)
-
-        # Pagination
-        offset = (page - 1) * per_page
-        query = query.range(offset, offset + per_page - 1)
-
-        result = query.execute()
-        total = result.count if result.count is not None else len(result.data or [])
-        return {
-            "leads": result.data or [],
-            "total": total,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": (total + per_page - 1) // per_page if total else 1,
-        }
-    except Exception:
-        logger.warning("Leads query failed for tenant %s", tenant_id, exc_info=True)
+    except RuntimeError:
         raise HTTPException(status_code=503, detail="Leads query failed — please retry")
 
 
