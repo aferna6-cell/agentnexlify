@@ -65,6 +65,9 @@ from backend.services.lead_listing import (  # noqa: F401  re-exported for tests
 from backend.services.lead_updates import (  # noqa: F401  re-exported for tests
     apply_lead_update as _apply_lead_update,
 )
+from backend.services.lead_messaging import (  # noqa: F401  re-exported for tests
+    record_followup_sent as _record_followup_sent,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_select
 from backend.services.webhook_dispatcher import fire_event_background
@@ -284,14 +287,10 @@ async def send_lead_email(
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("detail", "Failed to send email"))
 
-    log_activity(
-        tenant_id=tenant_id,
-        activity_type="email_sent",
-        description=f"Follow-up email sent to {lead.get('name', lead['email'])}: {req.subject}",
-        lead_id=lead_id,
+    _record_followup_sent(
+        db, tenant_id, lead_id,
+        lead=lead, channel="email", subject=req.subject,
     )
-
-    _auto_promote_new_to_contacted(db, tenant_id, lead_id)
     return {"success": True, "detail": "Email sent"}
 
 
@@ -323,14 +322,7 @@ async def send_lead_sms(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to send SMS")
 
-    log_activity(
-        tenant_id=tenant_id,
-        activity_type="sms_sent",
-        description=f"Follow-up SMS sent to {lead.get('name', lead['phone'])}",
-        lead_id=lead_id,
-    )
-
-    _auto_promote_new_to_contacted(db, tenant_id, lead_id)
+    _record_followup_sent(db, tenant_id, lead_id, lead=lead, channel="sms")
     return {"success": True, "detail": "SMS sent"}
 
 

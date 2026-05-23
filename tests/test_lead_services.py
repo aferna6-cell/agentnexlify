@@ -1923,3 +1923,159 @@ def test_apply_lead_update_skips_status_changed_event_when_status_not_in_updates
 
     status_events = [e for e in events if e[1] == "lead.status_changed"]
     assert status_events == []
+
+
+# ---------- lead_messaging.record_followup_sent ----------
+
+def test_record_followup_sent_email_logs_with_subject(monkeypatch):
+    from backend.services import lead_messaging
+
+    activity_calls = []
+    promote_calls = []
+    monkeypatch.setattr(
+        lead_messaging,
+        "log_activity",
+        lambda **kwargs: activity_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        lead_messaging,
+        "auto_promote_new_to_contacted",
+        lambda db, tenant_id, lead_id: promote_calls.append((tenant_id, lead_id)),
+    )
+
+    db = object()
+    lead = {"name": "Alice", "email": "a@example.com"}
+    lead_messaging.record_followup_sent(
+        db, "tenant-1", "lead-1",
+        lead=lead, channel="email", subject="Re: quote",
+    )
+
+    assert len(activity_calls) == 1
+    call = activity_calls[0]
+    assert call["tenant_id"] == "tenant-1"
+    assert call["activity_type"] == "email_sent"
+    assert call["lead_id"] == "lead-1"
+    assert "Alice" in call["description"]
+    assert "Re: quote" in call["description"]
+    assert promote_calls == [("tenant-1", "lead-1")]
+
+
+def test_record_followup_sent_email_without_subject(monkeypatch):
+    from backend.services import lead_messaging
+
+    activity_calls = []
+    monkeypatch.setattr(
+        lead_messaging,
+        "log_activity",
+        lambda **kwargs: activity_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        lead_messaging,
+        "auto_promote_new_to_contacted",
+        lambda *_args, **_kw: None,
+    )
+
+    lead = {"name": "Bob", "email": "b@example.com"}
+    lead_messaging.record_followup_sent(
+        object(), "tenant-1", "lead-1",
+        lead=lead, channel="email",
+    )
+
+    assert len(activity_calls) == 1
+    description = activity_calls[0]["description"]
+    assert "Bob" in description
+    assert ":" not in description
+
+
+def test_record_followup_sent_email_falls_back_to_email_then_lead_id(monkeypatch):
+    from backend.services import lead_messaging
+
+    captured = []
+    monkeypatch.setattr(
+        lead_messaging,
+        "log_activity",
+        lambda **kwargs: captured.append(kwargs),
+    )
+    monkeypatch.setattr(
+        lead_messaging,
+        "auto_promote_new_to_contacted",
+        lambda *_a, **_k: None,
+    )
+
+    # No name -> use email
+    lead_messaging.record_followup_sent(
+        object(), "tenant-1", "lead-1",
+        lead={"email": "noname@example.com"}, channel="email",
+    )
+    assert "noname@example.com" in captured[0]["description"]
+
+    # No name, no email -> fall back to lead_id
+    lead_messaging.record_followup_sent(
+        object(), "tenant-1", "lead-zzz",
+        lead={}, channel="email",
+    )
+    assert "lead-zzz" in captured[1]["description"]
+
+
+def test_record_followup_sent_sms_logs_and_promotes(monkeypatch):
+    from backend.services import lead_messaging
+
+    activity_calls = []
+    promote_calls = []
+    monkeypatch.setattr(
+        lead_messaging,
+        "log_activity",
+        lambda **kwargs: activity_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        lead_messaging,
+        "auto_promote_new_to_contacted",
+        lambda db, tenant_id, lead_id: promote_calls.append((tenant_id, lead_id)),
+    )
+
+    lead = {"name": "Carol", "phone": "+15551234567"}
+    lead_messaging.record_followup_sent(
+        object(), "tenant-2", "lead-2",
+        lead=lead, channel="sms",
+    )
+
+    assert len(activity_calls) == 1
+    call = activity_calls[0]
+    assert call["activity_type"] == "sms_sent"
+    assert call["tenant_id"] == "tenant-2"
+    assert call["lead_id"] == "lead-2"
+    assert "Carol" in call["description"]
+    assert promote_calls == [("tenant-2", "lead-2")]
+
+
+def test_record_followup_sent_sms_falls_back_to_phone(monkeypatch):
+    from backend.services import lead_messaging
+
+    captured = []
+    monkeypatch.setattr(
+        lead_messaging,
+        "log_activity",
+        lambda **kwargs: captured.append(kwargs),
+    )
+    monkeypatch.setattr(
+        lead_messaging,
+        "auto_promote_new_to_contacted",
+        lambda *_a, **_k: None,
+    )
+
+    lead_messaging.record_followup_sent(
+        object(), "tenant-1", "lead-1",
+        lead={"phone": "+15550000000"}, channel="sms",
+    )
+    assert "+15550000000" in captured[0]["description"]
+
+
+def test_record_followup_sent_unknown_channel_raises():
+    from backend.services import lead_messaging
+    import pytest
+
+    with pytest.raises(ValueError, match="unknown channel"):
+        lead_messaging.record_followup_sent(
+            object(), "tenant-1", "lead-1",
+            lead={"name": "X"}, channel="voice",
+        )
