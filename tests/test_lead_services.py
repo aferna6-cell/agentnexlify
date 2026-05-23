@@ -642,3 +642,165 @@ def test_apply_import_batch_records_update_exception():
     )
     assert updated == 0
     assert errors and "update fail" in errors[0]["error"]
+
+
+# ---------------------------------------------------------------------------
+# lead_contact.fetch_lead_with_channel
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_lead_with_channel_email_returns_lead():
+    from backend.services.lead_contact import fetch_lead_with_channel
+
+    db = _make_db_returning(
+        [{"id": "lead-1", "email": "a@x.com", "name": "Alice"}]
+    )
+    lead = fetch_lead_with_channel(db, "t1", "lead-1", "email")
+    assert lead["email"] == "a@x.com"
+    assert lead["name"] == "Alice"
+
+
+def test_fetch_lead_with_channel_phone_returns_lead():
+    from backend.services.lead_contact import fetch_lead_with_channel
+
+    db = _make_db_returning(
+        [{"id": "lead-2", "phone": "+15551234567", "name": "Bob"}]
+    )
+    lead = fetch_lead_with_channel(db, "t1", "lead-2", "phone")
+    assert lead["phone"] == "+15551234567"
+
+
+def test_fetch_lead_with_channel_unknown_channel_raises_value_error():
+    from backend.services.lead_contact import fetch_lead_with_channel
+
+    db = MagicMock()
+    with pytest.raises(ValueError) as exc:
+        fetch_lead_with_channel(db, "t1", "lead-1", "fax")
+    assert "fax" in str(exc.value)
+
+
+def test_fetch_lead_with_channel_missing_lead_raises_not_found():
+    from backend.services.lead_contact import fetch_lead_with_channel
+
+    db = _make_db_returning([])
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_with_channel(db, "t1", "missing", "email")
+    assert str(exc.value) == "not_found"
+
+
+def test_fetch_lead_with_channel_empty_email_raises_no_channel():
+    from backend.services.lead_contact import fetch_lead_with_channel
+
+    db = _make_db_returning(
+        [{"id": "lead-1", "email": None, "name": "Alice"}]
+    )
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_with_channel(db, "t1", "lead-1", "email")
+    assert str(exc.value) == "no_channel"
+
+
+def test_fetch_lead_with_channel_empty_phone_raises_no_channel():
+    from backend.services.lead_contact import fetch_lead_with_channel
+
+    db = _make_db_returning(
+        [{"id": "lead-1", "phone": "", "name": "Bob"}]
+    )
+    with pytest.raises(LookupError) as exc:
+        fetch_lead_with_channel(db, "t1", "lead-1", "phone")
+    assert str(exc.value) == "no_channel"
+
+
+# ---------------------------------------------------------------------------
+# lead_contact.fetch_business_name
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_business_name_returns_tenant_value():
+    from backend.services.lead_contact import fetch_business_name
+
+    db = _make_db_returning([{"business_name": "Acme Plumbing"}])
+    assert fetch_business_name(db, "t1") == "Acme Plumbing"
+
+
+def test_fetch_business_name_returns_default_when_missing():
+    from backend.services.lead_contact import fetch_business_name
+
+    db = _make_db_returning([])
+    assert fetch_business_name(db, "t1") == "Our Team"
+
+
+def test_fetch_business_name_respects_custom_default():
+    from backend.services.lead_contact import fetch_business_name
+
+    db = _make_db_returning([])
+    assert fetch_business_name(db, "t1", default="The Team") == "The Team"
+
+
+# ---------------------------------------------------------------------------
+# lead_contact.build_followup_email_html
+# ---------------------------------------------------------------------------
+
+
+def test_build_followup_email_html_escapes_message_html():
+    from backend.services.lead_contact import build_followup_email_html
+
+    html = build_followup_email_html("<script>x</script>", "Acme")
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
+    assert "— Acme" in html
+
+
+def test_build_followup_email_html_replaces_newlines_with_br():
+    from backend.services.lead_contact import build_followup_email_html
+
+    html = build_followup_email_html("line1\nline2", "Acme")
+    assert "line1<br>line2" in html
+
+
+def test_build_followup_email_html_escapes_business_name():
+    from backend.services.lead_contact import build_followup_email_html
+
+    html = build_followup_email_html("hello", "<b>Acme</b>")
+    assert "<b>Acme</b>" not in html
+    assert "&lt;b&gt;Acme&lt;/b&gt;" in html
+
+
+# ---------------------------------------------------------------------------
+# lead_contact.auto_promote_new_to_contacted
+# ---------------------------------------------------------------------------
+
+
+def test_auto_promote_new_to_contacted_promotes_when_status_new():
+    from backend.services.lead_contact import auto_promote_new_to_contacted
+
+    # First db.table call -> status read; second -> update
+    db = _make_db_returning([{"status": "new"}], [])
+    auto_promote_new_to_contacted(db, "t1", "lead-1")
+    # Two db.table calls expected: select + update
+    assert db.table.call_count == 2
+
+
+def test_auto_promote_new_to_contacted_skips_when_status_not_new():
+    from backend.services.lead_contact import auto_promote_new_to_contacted
+
+    db = _make_db_returning([{"status": "contacted"}])
+    auto_promote_new_to_contacted(db, "t1", "lead-1")
+    # Only the status read; no update issued
+    assert db.table.call_count == 1
+
+
+def test_auto_promote_new_to_contacted_skips_when_no_data():
+    from backend.services.lead_contact import auto_promote_new_to_contacted
+
+    db = _make_db_returning([])
+    auto_promote_new_to_contacted(db, "t1", "missing")
+    assert db.table.call_count == 1
+
+
+def test_auto_promote_new_to_contacted_swallows_exception():
+    from backend.services.lead_contact import auto_promote_new_to_contacted
+
+    db = MagicMock()
+    db.table.side_effect = RuntimeError("db down")
+    # Should not raise
+    auto_promote_new_to_contacted(db, "t1", "lead-1")

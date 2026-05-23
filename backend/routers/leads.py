@@ -31,6 +31,12 @@ from backend.services.lead_activity import (  # noqa: F401  re-exported for test
     fetch_lead_timeline as _fetch_lead_timeline,
     lead_exists as _lead_exists,
 )
+from backend.services.lead_contact import (  # noqa: F401  re-exported for tests
+    auto_promote_new_to_contacted as _auto_promote_new_to_contacted,
+    build_followup_email_html as _build_followup_email_html,
+    fetch_business_name as _fetch_business_name,
+    fetch_lead_with_channel as _fetch_lead_with_channel,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -296,36 +302,15 @@ async def send_lead_email(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    lead_result = (
-        tenant_select(db, "leads", tenant_id, "id, email, name")
-        .eq("id", lead_id)
-        .limit(1)
-        .execute()
-    )
-    if not lead_result.data:
+    try:
+        lead = _fetch_lead_with_channel(db, tenant_id, lead_id, "email")
+    except LookupError as exc:
+        if str(exc) == "no_channel":
+            raise HTTPException(status_code=400, detail="Lead has no email address")
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    lead = lead_result.data[0]
-    if not lead.get("email"):
-        raise HTTPException(status_code=400, detail="Lead has no email address")
-
-    import html as html_mod
-    safe_message = html_mod.escape(req.message).replace("\n", "<br>")
-
-    # Get business name for email context
-    tenant_result = (
-        db.table("tenants")
-        .select("business_name")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    business_name = tenant_result.data[0]["business_name"] if tenant_result.data else "Our Team"
-
-    body_html = (
-        f"<p>{safe_message}</p>"
-        f"<p style='margin-top:16px;color:#666;font-size:0.9em;'>— {html_mod.escape(business_name)}</p>"
-    )
+    business_name = _fetch_business_name(db, tenant_id)
+    body_html = _build_followup_email_html(req.message, business_name)
 
     result = await send_email(
         to=lead["email"],
@@ -337,7 +322,6 @@ async def send_lead_email(
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("detail", "Failed to send email"))
 
-    # Log activity
     log_activity(
         tenant_id=tenant_id,
         activity_type="email_sent",
@@ -345,14 +329,7 @@ async def send_lead_email(
         lead_id=lead_id,
     )
 
-    # Auto-update lead status from "new" to "contacted"
-    try:
-        current = tenant_select(db, "leads", tenant_id, "status").eq("id", lead_id).limit(1).execute()
-        if current.data and current.data[0].get("status") == "new":
-            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq("id", lead_id).execute()
-    except Exception:
-        logger.warning("Failed to auto-update lead status after email", exc_info=True)
-
+    _auto_promote_new_to_contacted(db, tenant_id, lead_id)
     return {"success": True, "detail": "Email sent"}
 
 
@@ -372,18 +349,12 @@ async def send_lead_sms(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    lead_result = (
-        tenant_select(db, "leads", tenant_id, "id, phone, name")
-        .eq("id", lead_id)
-        .limit(1)
-        .execute()
-    )
-    if not lead_result.data:
+    try:
+        lead = _fetch_lead_with_channel(db, tenant_id, lead_id, "phone")
+    except LookupError as exc:
+        if str(exc) == "no_channel":
+            raise HTTPException(status_code=400, detail="Lead has no phone number")
         raise HTTPException(status_code=404, detail="Lead not found")
-
-    lead = lead_result.data[0]
-    if not lead.get("phone"):
-        raise HTTPException(status_code=400, detail="Lead has no phone number")
 
     from backend.services.twilio_service import send_sms
     success = await send_sms(to=lead["phone"], body=req.message)
@@ -397,14 +368,7 @@ async def send_lead_sms(
         lead_id=lead_id,
     )
 
-    # Auto-update lead status from "new" to "contacted"
-    try:
-        current = tenant_select(db, "leads", tenant_id, "status").eq("id", lead_id).limit(1).execute()
-        if current.data and current.data[0].get("status") == "new":
-            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq("id", lead_id).execute()
-    except Exception:
-        logger.warning("Failed to auto-update lead status after SMS", exc_info=True)
-
+    _auto_promote_new_to_contacted(db, tenant_id, lead_id)
     return {"success": True, "detail": "SMS sent"}
 
 
