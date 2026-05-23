@@ -14,7 +14,6 @@ from backend.services.invoice_bulk_send import (
     bulk_send_invoices_for_tenant,
 )
 from backend.services.invoice_calculations import compute_invoice_totals
-from backend.services.invoice_dispatch import dispatch_invoice_channels
 from backend.services.invoice_email_template import build_invoice_email_html
 from backend.services.invoice_numbering import get_next_invoice_number
 from backend.services.invoice_payment_links import get_or_create_stripe_payment_link
@@ -22,6 +21,7 @@ from backend.services.invoice_payments_service import (
     mark_invoice_as_paid,
     record_partial_payment_amount,
 )
+from backend.services.invoice_send import send_invoice_for_tenant
 from backend.services.tenant_scope import tenant_table
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -587,111 +587,8 @@ async def send_invoice(
     via the requested channel(s). Updates status to 'sent'.
     """
     verify_tenant(claims, tenant_id)
-
     db = get_service_supabase()
-
-    # Fetch invoice
-    try:
-        inv_result = (
-            tenant_table(db, "invoices", tenant_id)
-            .select("*")
-            .eq("id", invoice_id)
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch invoice %s for sending", invoice_id)
-        raise HTTPException(status_code=500, detail="Failed to fetch invoice")
-
-    if not inv_result.data:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-    invoice = inv_result.data[0]
-
-    if invoice["status"] in ("paid", "cancelled"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot send an invoice with status '{invoice['status']}'",
-        )
-
-    # Fetch tenant (business) info
-    business: dict = {}
-    try:
-        tenant_result = (
-            tenant_table(db, "tenants", tenant_id)
-            .select("business_name, owner_email, phone")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if tenant_result.data:
-            business = tenant_result.data[0]
-    except Exception:
-        logger.warning("Could not fetch tenant info for invoice send, tenant %s", tenant_id, exc_info=True)
-
-    # Fetch lead contact details — leads table uses client_id
-    lead: dict = {}
-    lead_id = invoice.get("lead_id")
-    if lead_id:
-        try:
-            lead_result = (
-                tenant_table(db, "leads", tenant_id)
-                .select("id, name, email, phone")
-                .eq("id", lead_id)
-                .eq("client_id", tenant_id)
-                .limit(1)
-                .execute()
-            )
-            if lead_result.data:
-                lead = lead_result.data[0]
-        except Exception:
-            logger.warning("Could not fetch lead %s for invoice send", lead_id, exc_info=True)
-
-    # Create Stripe Payment Link if not already present
-    payment_link_url = invoice.get("stripe_payment_link") or ""
-    if not payment_link_url and invoice.get("total", 0) > 0:
-        payment_link_url = await _get_or_create_stripe_payment_link(
-            invoice_id=invoice_id,
-            tenant_id=tenant_id,
-            invoice_number=invoice.get("invoice_number", invoice_id),
-            total=float(invoice.get("total", 0)),
-        ) or ""
-
-    # Send via requested channel(s) — delegated to invoice_dispatch service
-    email_sent, sms_sent, errors = await dispatch_invoice_channels(
-        invoice=invoice,
-        business=business,
-        lead=lead,
-        method=req.method,
-        payment_link_url=payment_link_url,
-        tenant_id=tenant_id,
-        invoice_id=invoice_id,
-    )
-
-    # Update invoice record: status, sent_at, sent_via, stripe_payment_link
-    update_data: dict = {
-        "status": "sent",
-        "sent_at": datetime.now(timezone.utc).isoformat(),
-        "sent_via": req.method,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    if payment_link_url:
-        update_data["stripe_payment_link"] = payment_link_url
-
-    try:
-        tenant_table(db, "invoices", tenant_id).update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
-    except Exception:
-        logger.exception("Failed to update invoice %s status after send", invoice_id)
-        # Don't raise here — the send may have succeeded, we just failed to update status
-
-    return {
-        "sent": True,
-        "email_sent": email_sent,
-        "sms_sent": sms_sent,
-        "payment_link": payment_link_url,
-        "errors": errors,
-    }
+    return await send_invoice_for_tenant(db, tenant_id, invoice_id, req.method)
 
 
 @router.post("/{tenant_id}/{invoice_id}/mark-paid")
