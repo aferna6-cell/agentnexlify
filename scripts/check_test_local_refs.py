@@ -6,7 +6,6 @@ tests that still import or patch deleted modules after a dead-code sweep.
 
 import ast
 import re
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -57,6 +56,23 @@ def _module_file(root: Path, dotted: str) -> Path | None:
 
 def _is_package_path(path: Path) -> bool:
     return path.is_dir() or path.name == "__init__.py"
+
+
+def iter_assigned_names(node: ast.AST):
+    if isinstance(node, ast.Assign):
+        for target in node.targets:
+            yield from iter_assigned_names(target)
+        return
+    if isinstance(node, ast.Name):
+        yield node.id
+        return
+    if isinstance(node, (ast.Tuple, ast.List)):
+        for elt in node.elts:
+            yield from iter_assigned_names(elt)
+        return
+    if isinstance(node, ast.Starred):
+        yield from iter_assigned_names(node.value)
+        return
 
 
 def _module_exports_name(module_path: Path, name: str) -> bool:

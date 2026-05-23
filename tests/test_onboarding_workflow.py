@@ -525,6 +525,8 @@ async def test_apply_ai_content_skips_business_page_when_disabled():
     res.tenant = {"business_page_enabled": False}
     fn = AsyncMock(return_value={"faqs": [], "about_section": "About"})
     await _apply_ai_content(db, "t1", _make_req(), res, fn)
+    assert res.ai_content_generated is True
+    assert res.configured.get("ai_content") is True
     db.table.return_value.update.assert_not_called()
 
 
@@ -540,7 +542,8 @@ def test_seed_welcome_sequence_skips_when_exists():
     db.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
         data=[{"id": 1}]
     )
-    _seed_welcome_sequence(db, "t1", _make_req())
+    result = _seed_welcome_sequence(db, "t1", _make_req())
+    assert result is None
     db.table.return_value.insert.assert_not_called()
 
 
