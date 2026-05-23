@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-22-pm",
-  "total_runs": 30,
+  "last_run": "2026-05-23",
+  "total_runs": 31,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,14 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN and fix contradictory test assertions",
+      "date": "2026-05-23",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 31 winner. c72b535 (run 30 trigger) removed wrong legacy entries but omitted current-price entries. 15000 ($150/mo autopilot) and 25000 ($250/mo professional) absent from AMOUNT_TO_PLAN. GH #181 filed by nightly review 1553bf7 confirms gap. Worse: test_billing_amount_to_plan.py lines 38-44 explicitly assert these keys should NOT exist (issue #81 era expectation) — CI now certifies the broken state as correct. Fix: add 2 dict entries to billing.py AMOUNT_TO_PLAN + update 4 test methods (remove contradictory asserts, add current-price asserts, update test_all_four_current_tiers_present). S-effort, ~15 min, moratorium-safe. Closes GH #181. Implementation sketch: subconscious/runs/2026-05-23/winning-concept.md."
+    },
     {
       "title": "Billing Constants Contract Tests — guard AMOUNT_TO_PLAN + PLAN_TO_STRIPE_PRICE after live billing bug (c72b535)",
       "date": "2026-05-22-pm",
@@ -366,6 +374,13 @@
       "note": "Run 26. Item C (Moratorium Escalation Protocol) done by nightly review 2026-05-20 (2ce31b2). Sprint now A+B+D only (~40 min). moratorium-sprint SKILL.md exists. Debate: Authorize nightly Items A+B KILLED (parallel conflict), pre-commit-guard-add WEAKENED → parking lot. Winner: invoke /moratorium-sprint. If not invoked by run 27: trigger from nightly review scheduled execution."
     },
     {
+      "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN + fix contradictory test",
+      "date": "2026-05-23",
+      "status": "recommended",
+      "run": 31,
+      "note": "Run 31. CRITICAL NEW FINDING: c72b535 removed wrong legacy entries but left out current-price entries for $150 (autopilot) and $250 (professional). test_billing_amount_to_plan.py lines 38-44 explicitly assert these keys should NOT exist — CI certifies the broken state. Fix: billing.py add 15000 + 25000 entries; test file remove contradictory asserts + add current-price assertions. Debate: sprint WEAKENED (8+ recs, no new info), Zapier WEAKENED (moratorium priority), email_sequences split not debated. S-effort, ~15 min, moratorium-safe."
+    },
+    {
       "title": "Governance Escalation: reduce max_pending_approvals 3→2 + create GH milestone 'Moratorium Exit Sprint'",
       "date": "2026-05-16-pm",
       "status": "recommended",
@@ -529,13 +544,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 6,
-    "runs_pending_approval_raw": 6,
-    "runs_pending_approval_note": "After run 28 audit (12→4) + run 29 added (4→5, not implemented) + run 30 adds (5→6). True pending = 6 (runs 4, 20, 21, 28, 29, 30). After /moratorium-sprint (Items A+B+D): pending 6→2 = moratorium exits. GH issue mechanism (runs 21+29) evaluated: 3x recommended without implementation — demoted to parking lot, not frozen.",
+    "runs_pending_approval": 7,
+    "runs_pending_approval_raw": 7,
+    "runs_pending_approval_note": "True pending = 7 (runs 4, 20, 21, 28, 29, 30, 31). After /moratorium-sprint (Items A+B+D): pending 7→2 = moratorium exits. Run 31 winner (GH #181 fix) is moratorium-safe S-effort. GH issue mechanism (runs 21+29) demoted to parking lot, not proposed as winner.",
     "runs_implemented": 7,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 36)",
-    "governance_correction": "Run 30 (2026-05-22-pm): run 29 winner NOT implemented (AI-to-Human Handoff GH issue not created). Production code resumed after 17-day silence (billing fix, local_seo split, OS plan). Run 30 pivots to Billing Constants Contract Tests — first fresh evidence-backed code-health win since run 14. AI-to-Human GH Issue mechanism formally evaluated and demoted (3x recs, spec written, no new info).",
-    "note": "Run 30: production code moving again. Highest-confidence winner since run 14. GH issue mechanism evaluated and shelved until moratorium exits. Sprint still highest-leverage action. Post-moratorium: Zapier security (GH #107, ROI 2.5), AI-to-Human Handoff (customer value, first winner).",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 37)",
+    "governance_correction": "Run 31 (2026-05-23): run 30 winner (billing constants test) partially addressed by nightly review wiring test_billing_amount_to_plan.py to CI, but the test file itself certifies broken state (issue #81-era assertions). GH #181 filed by nightly review confirms c72b535 left out 15000→autopilot and 25000→professional. Run 31 completes the billing fix cycle.",
+    "note": "Run 31: billing fix chain continues. GH #181 is the sharpest remaining gap. Sprint still highest-leverage action for moratorium exit. Post-moratorium: Zapier security (GH #107, ROI 2.5) + AI-to-Human Handoff (customer value, 37d).",
     "escalate": true
   },
   "config": {
