@@ -129,7 +129,7 @@ jobs:
 
       - name: Run backend tests with coverage
         run: |
-          python -m pytest tests backend/tests/test_local_seo_handlers.py -q --cov=backend --cov-report=xml:coverage-python.xml
+          python -m pytest tests backend/tests/test_local_seo_handlers.py backend/tests/test_billing_amount_to_plan.py -q --cov=backend --cov-report=xml:coverage-python.xml
 
       - name: Audit backend Python dependencies
         continue-on-error: true
