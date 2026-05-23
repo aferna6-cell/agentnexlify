@@ -39,12 +39,14 @@ from backend.routers import (
     content,
     content_repurpose,
     conversation_inbox,
+    conversations,
     crawl,
     csat,
     custom_fields,
     documents,
     email_sequences,
     email_templates,
+    faq,
     forms,
     gbp,
     integrations,
@@ -152,7 +154,9 @@ def _build_sha() -> str:
 
 
 def _split_origins(raw_value: str) -> list[str]:
-    origins = [origin.strip() for origin in (raw_value or "").split(",") if origin.strip()]
+    origins = [
+        origin.strip() for origin in (raw_value or "").split(",") if origin.strip()
+    ]
     return origins or ["*"]
 
 
@@ -231,14 +235,18 @@ def _try_acquire_automation_lock(lock_name: str, ttl_seconds: int = 90) -> bool:
     try:
         from backend.models.database import get_service_supabase
 
-        result = get_service_supabase().rpc(
-            "try_acquire_automation_lock",
-            {
-                "p_name": lock_name,
-                "p_owner": _LOCK_OWNER,
-                "p_ttl_seconds": ttl_seconds,
-            },
-        ).execute()
+        result = (
+            get_service_supabase()
+            .rpc(
+                "try_acquire_automation_lock",
+                {
+                    "p_name": lock_name,
+                    "p_owner": _LOCK_OWNER,
+                    "p_ttl_seconds": ttl_seconds,
+                },
+            )
+            .execute()
+        )
         return _coerce_rpc_bool(result.data)
     except Exception:
         if is_production():
@@ -327,7 +335,8 @@ async def _automation_loop():
                         _safe_run("send_csat_surveys", send_csat_surveys),
                         _safe_run("check_new_reviews", check_new_reviews),
                         _safe_run(
-                            "send_invoice_payment_reminders", send_invoice_payment_reminders
+                            "send_invoice_payment_reminders",
+                            send_invoice_payment_reminders,
                         ),
                         _safe_run(
                             "send_aftercare_instructions", send_aftercare_instructions
@@ -336,11 +345,16 @@ async def _automation_loop():
                         _safe_run(
                             "process_scheduled_campaigns", _process_scheduled_campaigns
                         ),
-                        _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
                         _safe_run(
-                            "run_sequence_processor", email_sequences.run_sequence_processor
+                            "recover_stalled_campaigns", _recover_stalled_campaigns
                         ),
-                        _safe_run("schedule_automation_check", schedule_automation_check),
+                        _safe_run(
+                            "run_sequence_processor",
+                            email_sequences.run_sequence_processor,
+                        ),
+                        _safe_run(
+                            "schedule_automation_check", schedule_automation_check
+                        ),
                         _safe_run("process_noshow_recovery", process_noshow_recovery),
                     ]
                 )
@@ -350,7 +364,9 @@ async def _automation_loop():
                 core_tasks.extend(
                     [
                         _safe_run("send_monthly_reports", send_monthly_reports),
-                        _safe_run("process_recurring_invoices", process_recurring_invoices),
+                        _safe_run(
+                            "process_recurring_invoices", process_recurring_invoices
+                        ),
                         _safe_run(
                             "send_weekly_intelligence_briefs",
                             send_weekly_intelligence_briefs,
@@ -633,9 +649,7 @@ def _apply_security_headers(headers: MutableHeaders, path: str) -> None:
         headers["X-Frame-Options"] = "ALLOWALL"
     else:
         headers["X-Frame-Options"] = "DENY"
-        headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
 
 # --- Rate limiting ---
@@ -747,6 +761,8 @@ app.add_middleware(RequestContextMiddleware)
 app.include_router(analytics.router)
 app.include_router(appointments.router)
 app.include_router(auth.router)
+app.include_router(conversations.router)
+app.include_router(faq.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
 app.include_router(clients.router)

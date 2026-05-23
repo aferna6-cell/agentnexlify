@@ -63,7 +63,23 @@ def test_client(mock_settings):
             return_value=db_mock,
         ),
         patch(
-            "backend.services.branding_service._get_service_supabase",
+            "backend.services.industry_faqs._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.widget_config_service._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.faq_service._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.conversations_service._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.dashboard_service._get_service_supabase",
             return_value=db_mock,
         ),
     ]
