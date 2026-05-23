@@ -17,6 +17,7 @@ mutants/
 coverage/
 .coverage
 coverage-*.xml
+coverage.xml
 
 # Agent communication files (ephemeral, per-session)
 .claude/agent-comms/*.md
