@@ -1469,3 +1469,186 @@ def test_insert_manual_lead_descriptor_falls_back_through_email_phone(monkeypatc
         performer_id="owner", performer_name="Owner",
     )
     assert "+15551234567" in log_calls[-1]["description"]
+
+
+# ---------------------------------------------------------------------------
+# lead_diagnostics.collect_lead_capture_diagnostics
+# ---------------------------------------------------------------------------
+
+
+def _diag_result(data=None, count=None):
+    return SimpleNamespace(data=data, count=count)
+
+
+def _diag_chainable(response):
+    m = MagicMock()
+    m.eq.return_value = m
+    m.gte.return_value = m
+    m.order.return_value = m
+    m.limit.return_value = m
+    m.select.return_value = m
+    m.execute.return_value = response
+    return m
+
+
+def _make_diag_db(*responses):
+    iter_responses = iter(responses)
+    db = MagicMock()
+
+    def _table(_name):
+        try:
+            r = next(iter_responses)
+        except StopIteration:
+            r = _diag_result(data=[], count=0)
+        return _diag_chainable(r)
+
+    db.table.side_effect = _table
+    return db
+
+
+def test_collect_lead_capture_diagnostics_happy_path():
+    from backend.services.lead_diagnostics import collect_lead_capture_diagnostics
+
+    db = _make_diag_db(
+        _diag_result(data=[{"id": "l1"}], count=42),  # total
+        _diag_result(data=[{"id": "l1"}], count=5),   # recent 7d
+        _diag_result(  # sample
+            data=[
+                {"id": "l1", "created_at": "2026-05-22T10:00:00Z", "email": "a@b.com", "phone": None},
+                {"id": "l2", "created_at": "2026-05-21T10:00:00Z", "email": None, "phone": "+1555"},
+            ],
+            count=None,
+        ),
+    )
+
+    out = collect_lead_capture_diagnostics(db, "tenant-1")
+
+    assert out["total_leads"] == 42
+    assert out["leads_last_7_days"] == 5
+    assert out["last_lead_created_at"] == "2026-05-22T10:00:00Z"
+    assert out["sample_lead_ids"] == ["l1", "l2"]
+    assert out["has_email_leads"] is True
+
+
+def test_collect_lead_capture_diagnostics_empty_sample_means_no_last_created():
+    from backend.services.lead_diagnostics import collect_lead_capture_diagnostics
+
+    db = _make_diag_db(
+        _diag_result(data=[], count=0),
+        _diag_result(data=[], count=0),
+        _diag_result(data=[], count=None),
+    )
+
+    out = collect_lead_capture_diagnostics(db, "tenant-1")
+
+    assert out["total_leads"] == 0
+    assert out["leads_last_7_days"] == 0
+    assert out["last_lead_created_at"] is None
+    assert out["sample_lead_ids"] == []
+    assert out["has_email_leads"] is False
+
+
+def test_collect_lead_capture_diagnostics_total_count_failure_returns_minus_one():
+    from backend.services.lead_diagnostics import collect_lead_capture_diagnostics
+
+    # First .table() call raises (total count). Other two succeed.
+    db = MagicMock()
+    call_n = {"i": 0}
+
+    def _table(_name):
+        call_n["i"] += 1
+        if call_n["i"] == 1:
+            m = MagicMock()
+            m.select.return_value = m
+            m.eq.return_value = m
+            m.execute.side_effect = RuntimeError("db down")
+            return m
+        return _diag_chainable(
+            _diag_result(data=[], count=0) if call_n["i"] == 2
+            else _diag_result(data=[], count=None)
+        )
+
+    db.table.side_effect = _table
+
+    out = collect_lead_capture_diagnostics(db, "tenant-1")
+
+    assert out["total_leads"] == -1
+    assert out["leads_last_7_days"] == 0
+    assert out["last_lead_created_at"] is None
+
+
+def test_collect_lead_capture_diagnostics_recent_failure_returns_minus_one():
+    from backend.services.lead_diagnostics import collect_lead_capture_diagnostics
+
+    db = MagicMock()
+    call_n = {"i": 0}
+
+    def _table(_name):
+        call_n["i"] += 1
+        if call_n["i"] == 2:  # recent count
+            m = MagicMock()
+            m.select.return_value = m
+            m.eq.return_value = m
+            m.gte.return_value = m
+            m.execute.side_effect = RuntimeError("timeout")
+            return m
+        return _diag_chainable(
+            _diag_result(data=[], count=7) if call_n["i"] == 1
+            else _diag_result(data=[], count=None)
+        )
+
+    db.table.side_effect = _table
+
+    out = collect_lead_capture_diagnostics(db, "tenant-1")
+
+    assert out["total_leads"] == 7
+    assert out["leads_last_7_days"] == -1
+
+
+def test_collect_lead_capture_diagnostics_sample_failure_returns_defaults():
+    from backend.services.lead_diagnostics import collect_lead_capture_diagnostics
+
+    db = MagicMock()
+    call_n = {"i": 0}
+
+    def _table(_name):
+        call_n["i"] += 1
+        if call_n["i"] == 3:  # sample query
+            m = MagicMock()
+            m.select.return_value = m
+            m.eq.return_value = m
+            m.order.return_value = m
+            m.limit.return_value = m
+            m.execute.side_effect = RuntimeError("query blew up")
+            return m
+        return _diag_chainable(
+            _diag_result(data=[], count=10)
+        )
+
+    db.table.side_effect = _table
+
+    out = collect_lead_capture_diagnostics(db, "tenant-1")
+
+    assert out["total_leads"] == 10
+    assert out["leads_last_7_days"] == 10
+    assert out["last_lead_created_at"] is None
+    assert out["sample_lead_ids"] == []
+    assert out["has_email_leads"] is False
+
+
+def test_collect_lead_capture_diagnostics_count_none_normalizes_to_zero():
+    from backend.services.lead_diagnostics import collect_lead_capture_diagnostics
+
+    db = _make_diag_db(
+        _diag_result(data=None, count=None),  # total returns None
+        _diag_result(data=None, count=None),  # recent returns None
+        _diag_result(data=None, count=None),  # sample returns None
+    )
+
+    out = collect_lead_capture_diagnostics(db, "tenant-1")
+
+    assert out["total_leads"] == 0
+    assert out["leads_last_7_days"] == 0
+    assert out["last_lead_created_at"] is None
+    assert out["sample_lead_ids"] == []
+    assert out["has_email_leads"] is False

@@ -56,6 +56,9 @@ from backend.services.lead_create import (  # noqa: F401  re-exported for tests
     build_manual_lead_payload as _build_manual_lead_payload,
     insert_manual_lead as _insert_manual_lead,
 )
+from backend.services.lead_diagnostics import (  # noqa: F401  re-exported for tests
+    collect_lead_capture_diagnostics as _collect_lead_capture_diagnostics,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -693,59 +696,4 @@ async def debug_lead_capture(
         raise HTTPException(status_code=403, detail="Owner or admin access required")
 
     db = get_service_supabase()
-
-    try:
-        # Total leads count
-        total_result = (
-            tenant_select(db, "leads", tenant_id, "id", count="exact")
-            .execute()
-        )
-        total_leads = total_result.count or 0
-    except Exception:
-        logger.error("debug_lead_capture: total count failed for %s", tenant_id, exc_info=True)
-        total_leads = -1
-
-    try:
-        # Leads created in the last 7 days
-        from datetime import datetime, timedelta, timezone
-        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-        recent_result = (
-            tenant_select(db, "leads", tenant_id, "id", count="exact")
-            .gte("created_at", week_ago)
-            .execute()
-        )
-        leads_last_7_days = recent_result.count or 0
-    except Exception:
-        logger.error("debug_lead_capture: recent count failed for %s", tenant_id, exc_info=True)
-        leads_last_7_days = -1
-
-    try:
-        # Most recent lead created_at timestamp
-        latest_result = (
-            tenant_select(db, "leads", tenant_id, "id, created_at, email, phone")
-            .order("created_at", desc=True)
-            .limit(5)
-            .execute()
-        )
-        latest_leads = latest_result.data or []
-        last_lead_created_at = latest_leads[0]["created_at"] if latest_leads else None
-        sample_lead_ids = [l["id"] for l in latest_leads]
-        has_email_leads = any(l.get("email") for l in latest_leads)
-    except Exception:
-        logger.error("debug_lead_capture: sample query failed for %s", tenant_id, exc_info=True)
-        last_lead_created_at = None
-        sample_lead_ids = []
-        has_email_leads = False
-
-    logger.info(
-        "debug_lead_capture: tenant=%s total=%s last_7d=%s last_created=%s",
-        tenant_id, total_leads, leads_last_7_days, last_lead_created_at,
-    )
-
-    return {
-        "total_leads": total_leads,
-        "leads_last_7_days": leads_last_7_days,
-        "last_lead_created_at": last_lead_created_at,
-        "has_email_leads": has_email_leads,
-        "sample_lead_ids": sample_lead_ids,
-    }
+    return _collect_lead_capture_diagnostics(db, tenant_id)
