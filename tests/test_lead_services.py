@@ -2186,6 +2186,33 @@ def test_validate_csv_upload_rejects_non_utf8():
         validate_csv_upload("leads.csv", b"name,email\n\xff\xfeAlice")
 
 
+def test_validate_and_parse_csv_upload_happy_path():
+    from backend.services.lead_csv import validate_and_parse_csv_upload
+
+    content = b"name,email,phone\nAlice,a@x.com,555\n"
+    parsed, errors, col_map = validate_and_parse_csv_upload("leads.csv", content)
+    assert len(parsed) == 1
+    assert col_map["name"] == "name"
+    assert errors == []
+
+
+def test_validate_and_parse_csv_upload_raises_on_no_recognized_columns():
+    from backend.services.lead_csv import validate_and_parse_csv_upload
+    import pytest
+
+    content = b"foo,bar\nv1,v2\n"
+    with pytest.raises(ValueError, match="No recognized columns"):
+        validate_and_parse_csv_upload("leads.csv", content)
+
+
+def test_validate_and_parse_csv_upload_propagates_validate_errors():
+    from backend.services.lead_csv import validate_and_parse_csv_upload
+    import pytest
+
+    with pytest.raises(ValueError, match=".csv"):
+        validate_and_parse_csv_upload("leads.txt", b"name\nAlice\n")
+
+
 # ---------- lead_ai_summary.generate_and_save_lead_summary ----------
 
 async def test_generate_and_save_lead_summary_happy_path(monkeypatch):

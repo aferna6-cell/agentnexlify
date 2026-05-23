@@ -180,6 +180,23 @@ def parse_csv_for_import(
     return parsed_rows, errors, col_map
 
 
+def validate_and_parse_csv_upload(
+    filename: str | None, content: bytes
+) -> tuple[list[tuple[int, dict[str, Any]]], list[dict[str, Any]], dict[str, str]]:
+    """Run upload validation + CSV parse + col-map check as one step.
+
+    Consolidates the three router-side failure paths into one ValueError so
+    the handler stays a thin HTTP wrapper. Returns the same triple as
+    `parse_csv_for_import`.
+    """
+    text = validate_csv_upload(filename, content)
+    parsed_rows, errors, col_map = parse_csv_for_import(text)
+    if not col_map:
+        expected = ", ".join(sorted(set(CSV_FIELD_MAP.values())))
+        raise ValueError(f"No recognized columns. Expected: {expected}")
+    return parsed_rows, errors, col_map
+
+
 def fetch_existing_emails(
     db: Any, tenant_id: str, emails: list[str]
 ) -> dict[str, str]:

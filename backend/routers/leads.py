@@ -14,13 +14,11 @@ from backend.dependencies import _get_current_tenant
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
 from backend.services.lead_csv import (  # noqa: F401  re-exported for tests
-    CSV_FIELD_MAP as _CSV_FIELD_MAP,
     apply_import_batch as _apply_import_batch,
     build_export_query as _build_export_query,
     fetch_existing_emails as _fetch_existing_emails,
-    parse_csv_for_import as _parse_csv_for_import,
     serialize_leads_to_csv as _serialize_leads_to_csv,
-    validate_csv_upload as _validate_csv_upload,
+    validate_and_parse_csv_upload as _validate_and_parse_csv_upload,
 )
 from backend.services.lead_dedup import (  # noqa: F401  re-exported for tests
     apply_lead_merge as _apply_lead_merge,
@@ -396,20 +394,9 @@ async def import_leads_csv(
 
     content = await file.read()
     try:
-        text = _validate_csv_upload(file.filename, content)
+        parsed_rows, errors, _ = _validate_and_parse_csv_upload(file.filename, content)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-
-    try:
-        parsed_rows, errors, col_map = _parse_csv_for_import(text)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    if not col_map:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No recognized columns. Expected: {', '.join(sorted(set(_CSV_FIELD_MAP.values())))}"
-        )
 
     db = get_service_supabase()
     all_emails = [ld.get("email") for _, ld in parsed_rows if ld.get("email")]
