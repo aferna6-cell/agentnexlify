@@ -343,9 +343,13 @@ async def test_zero_total_skips_payment_link_creation():
         payment_link=link_mock,
     )
     with p1, p2, p3:
-        await bulk_send_invoices_for_tenant(MagicMock(), "t1", ["inv1"], "email")
+        out = await bulk_send_invoices_for_tenant(
+            MagicMock(), "t1", ["inv1"], "email"
+        )
 
     link_mock.assert_not_called()
+    assert out["sent"] == 1
+    assert out["failed"] == 0
 
 
 # --- resilience ---
