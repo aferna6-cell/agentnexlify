@@ -19,11 +19,6 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
-from backend.services.llm_runtime import (
-    call_claude_messages,
-    resolve_int_setting,
-    resolve_string_setting,
-)
 from backend.services.twilio_service import send_sms
 from backend.services.twiml_builder import (  # noqa: F401  re-exported for tests
     build_twiml_error as _build_twiml_error,
@@ -36,6 +31,13 @@ from backend.services.call_intelligence import (  # noqa: F401  re-exported for 
     find_tenant_by_phone as _find_tenant_by_phone,
     generate_call_summary as _generate_call_summary,
     insert_call_action_items as _insert_call_action_items,
+)
+from backend.services.voice_conversation import (  # noqa: F401  re-exported for tests
+    build_voice_system_prompt as _build_voice_system_prompt,
+    generate_voice_response as _generate_voice_response,
+    load_voice_business_context as _load_voice_business_context,
+    load_voice_history as _load_voice_history,
+    save_voice_message as _save_voice_message,
 )
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.automations import verify_twilio_request
@@ -233,144 +235,22 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     tenant_id = tenant["id"]
     business_name = tenant.get("business_name") or "our business"
     session_id = f"call_{call_sid}"
-    db = get_service_supabase()
 
-    # Save the caller's message
-    try:
-        db.table("chat_messages").insert({
-            "tenant_id": tenant_id,
-            "session_id": session_id,
-            "role": "user",
-            "content": speech_result,
-        }).execute()
-    except Exception:
-        logger.exception("Failed to save user voice message for call %s", call_sid)
+    _save_voice_message(tenant_id, session_id, "user", speech_result)
+    conversation_messages = _load_voice_history(tenant_id, session_id, speech_result)
+    business_info, faq_text = _load_voice_business_context(tenant_id)
+    system_prompt = _build_voice_system_prompt(business_name, business_info, faq_text)
 
-    # Load conversation history for context
-    conversation_messages: list[dict[str, str]] = []
-    try:
-        history = (
-            db.table("chat_messages")
-            .select("role, content")
-            .eq("tenant_id", tenant_id)
-            .eq("session_id", session_id)
-            .order("created_at", desc=False)
-            .limit(20)
-            .execute()
-        )
-        for msg in history.data or []:
-            conversation_messages.append({
-                "role": msg["role"],
-                "content": msg["content"],
-            })
-    except Exception:
-        logger.exception("Failed to load conversation history for call %s", call_sid)
-        # Fall back to just this message
-        conversation_messages = [{"role": "user", "content": speech_result}]
-
-    voice_history_limit = resolve_int_setting("widget_prompt_history_messages", 8)
-    voice_message_chars = min(resolve_int_setting("widget_prompt_message_chars", 420), 320)
-    compact_voice_history = []
-    for msg in conversation_messages[-voice_history_limit:]:
-        content = (msg.get("content") or "").strip()
-        if len(content) > voice_message_chars:
-            content = content[: voice_message_chars - 3].rstrip() + "..."
-        compact_voice_history.append({
-            "role": msg.get("role") or "user",
-            "content": content,
-        })
-    conversation_messages = compact_voice_history
-
-    # Load business info for system prompt context
-    business_info = ""
-    try:
-        tenant_detail = (
-            db.table("tenants")
-            .select("business_name, business_type, owner_email")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if tenant_detail.data:
-            td = tenant_detail.data[0]
-            business_info = f"Business: {td.get('business_name', '')}. "
-            if td.get("business_type"):
-                business_info += f"Type: {td['business_type']}. "
-    except Exception:
-        logger.warning("Failed to load tenant details for voice AI, tenant %s", tenant_id)
-
-    # Load FAQ for additional context
-    faq_text = ""
-    try:
-        faq_result = (
-            db.table("faq_entries")
-            .select("question, answer")
-            .eq("tenant_id", tenant_id)
-            .limit(resolve_int_setting("widget_prompt_faq_limit", 6))
-            .execute()
-        )
-        if faq_result.data:
-            faq_text = "Frequently Asked Questions:\n" + "\n".join(
-                f"Q: {(f.get('question') or '')[:160]}\nA: {(f.get('answer') or '')[:280]}"
-                for f in faq_result.data
-            )
-    except Exception:
-        logger.warning("Failed to load FAQ for voice AI, tenant %s", tenant_id)
-
-    system_prompt = (
-        f"You are a helpful phone assistant for {business_name}. {business_info}"
-        "You are speaking with a caller on the phone. Keep your responses concise "
-        "and conversational -- ideally 1-3 sentences since this will be spoken aloud. "
-        "Be warm and helpful. If you don't know the answer, offer to have someone "
-        "call them back. Never say you are an AI unless directly asked."
+    ai_response = await _generate_voice_response(
+        tenant_id=tenant_id,
+        call_sid=call_sid,
+        round_num=round_num,
+        system_prompt=system_prompt,
+        messages=conversation_messages,
+        faq_chars=len(faq_text),
     )
-    if faq_text:
-        system_prompt += f"\n\n{faq_text}"
 
-    # Call Claude for AI response
-    ai_response = ""
-    try:
-        llm_result = await call_claude_messages(
-            operation="calls.voice_respond",
-            model=resolve_string_setting("voice_chat_model", "claude-sonnet-4-6"),
-            max_tokens=resolve_int_setting("voice_chat_max_tokens", 160),
-            system=system_prompt,
-            messages=conversation_messages,
-            temperature=0.0,
-            timeout=30.0,
-            metadata={
-                "tenant_id": tenant_id,
-                "call_sid": call_sid,
-                "round": round_num,
-                "history_count": len(conversation_messages),
-                "faq_chars": len(faq_text),
-            },
-        )
-        ai_response = llm_result.text.strip()
-        logger.info(
-            "voice_respond: llm_result call_sid=%s round=%d llm_ms=%d response_chars=%d",
-            call_sid,
-            round_num,
-            llm_result.duration_ms,
-            len(ai_response),
-        )
-    except Exception:
-        logger.exception("Claude API call failed for voice respond, call %s", call_sid)
-        ai_response = (
-            "I'm sorry, I'm having a little trouble right now. "
-            "Let me have someone call you back as soon as possible."
-        )
-
-    # Save the AI response
-    try:
-        db.table("chat_messages").insert({
-            "tenant_id": tenant_id,
-            "session_id": session_id,
-            "role": "assistant",
-            "content": ai_response,
-        }).execute()
-    except Exception:
-        logger.exception("Failed to save AI voice response for call %s", call_sid)
+    _save_voice_message(tenant_id, session_id, "assistant", ai_response)
 
     # Check if we should continue or end the conversation
     if round_num >= _MAX_VOICE_ROUNDS:

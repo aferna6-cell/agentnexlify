@@ -651,8 +651,8 @@ class TestTranscriptionComplete:
 class TestVoiceRespond:
     """Tests for POST /api/v1/calls/voice/respond."""
 
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.services.voice_conversation.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.voice_conversation.get_service_supabase")
     @patch("backend.routers.calls._find_tenant_by_phone")
     def test_voice_respond_uses_llm_runtime(self, mock_find, mock_db, mock_call_claude):
         mock_find.return_value = {
