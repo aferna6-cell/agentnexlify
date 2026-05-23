@@ -45,6 +45,12 @@ from backend.services.lead_ai_summary import (  # noqa: F401  re-exported for te
 from backend.services.lead_bulk_ops import (  # noqa: F401  re-exported for tests
     apply_bulk_lead_updates as _apply_bulk_lead_updates,
 )
+from backend.services.lead_assignment import (  # noqa: F401  re-exported for tests
+    assign_lead_to_member as _assign_lead_to_member,
+)
+from backend.services.lead_suggestions import (  # noqa: F401  re-exported for tests
+    apply_or_dismiss_suggestion as _apply_or_dismiss_suggestion,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -522,47 +528,21 @@ async def assign_lead(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-
-    # Verify team member exists if assigning
-    if req.assigned_to:
-        member = (
-            tenant_select(db, "team_members", tenant_id, "id, name, email")
-            .eq("id", req.assigned_to)
-            .limit(1)
-            .execute()
-        )
-        if not member.data:
-            raise HTTPException(status_code=404, detail="Team member not found")
-
-    result = (
-        tenant_update(db, "leads", tenant_id, {"assigned_to": req.assigned_to})
-        .eq("id", lead_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
-    # Log the assignment with performing user info
-    member_name = member.data[0]["name"] if req.assigned_to and member.data else "nobody"
     performer_id = claims.get("team_member_id") or claims.get("tenant_id")
     performer_name = claims.get("name") or claims.get("email") or "Owner"
     try:
-        log_activity(
-            tenant_id=tenant_id,
-            activity_type="assignment",
-            description=f"Lead assigned to {member_name}",
-            lead_id=lead_id,
-            metadata={
-                "assigned_to": req.assigned_to,
-                "assigned_to_name": member_name,
-                "performed_by": performer_id,
-                "performed_by_name": performer_name,
-            },
+        return _assign_lead_to_member(
+            db,
+            tenant_id,
+            lead_id,
+            assigned_to=req.assigned_to,
+            performer_id=performer_id,
+            performer_name=performer_name,
         )
-    except Exception:
-        logger.warning("Failed to log assignment activity", exc_info=True)
-
-    return result.data[0]
+    except LookupError as exc:
+        if str(exc) == "member":
+            raise HTTPException(status_code=404, detail="Team member not found")
+        raise HTTPException(status_code=404, detail="Lead not found")
 
 
 # --- Lead Update Suggestions ---
@@ -602,36 +582,14 @@ async def handle_suggestion(
     """Approve or dismiss a lead update suggestion."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    if req.action not in ("approve", "dismiss"):
-        raise HTTPException(status_code=400, detail="Action must be 'approve' or 'dismiss'")
 
     db = get_service_supabase()
-
-    # Fetch the suggestion
-    suggestion = (
-        tenant_select(db, "activity_log", tenant_id, "id, lead_id, metadata")
-        .eq("id", suggestion_id)
-        .eq("activity_type", "lead_suggestion")
-        .limit(1)
-        .execute()
-    )
-    if not suggestion.data:
+    try:
+        return _apply_or_dismiss_suggestion(db, tenant_id, suggestion_id, req.action)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Action must be 'approve' or 'dismiss'")
+    except LookupError:
         raise HTTPException(status_code=404, detail="Suggestion not found")
-
-    entry = suggestion.data[0]
-
-    if req.action == "approve":
-        # Apply the suggested updates to the lead
-        suggestions = (entry.get("metadata") or {}).get("suggestions", {})
-        if suggestions and entry.get("lead_id"):
-            updates = {field: s["new"] for field, s in suggestions.items()}
-            tenant_update(db, "leads", tenant_id, updates).eq("id", entry["lead_id"]).execute()
-            logger.info("Approved suggestion %s: updated lead %s with %s", suggestion_id, entry["lead_id"], list(updates.keys()))
-
-    # Delete the suggestion (both approve and dismiss)
-    tenant_delete(db, "activity_log", tenant_id).eq("id", suggestion_id).execute()
-
-    return {"success": True, "action": req.action}
 
 
 @router.post("/{tenant_id}/{lead_id}/generate-summary")

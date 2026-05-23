@@ -1094,3 +1094,195 @@ def test_apply_bulk_lead_updates_handles_lead_with_no_existing_tags():
         tags_add=["new-tag"],
     )
     assert updated == 1
+
+
+# ---------------------------------------------------------------------------
+# lead_assignment.assign_lead_to_member
+# ---------------------------------------------------------------------------
+
+
+def test_assign_lead_to_member_assigns_when_member_exists(monkeypatch):
+    from backend.services import lead_assignment
+
+    db = _make_db_returning(
+        [{"id": "mem-1", "name": "Alice", "email": "a@x.com"}],  # member lookup
+        [{"id": "lead-1", "assigned_to": "mem-1"}],  # lead update
+    )
+    log_calls = []
+    monkeypatch.setattr(
+        lead_assignment, "log_activity",
+        lambda **kw: log_calls.append(kw),
+    )
+    result = lead_assignment.assign_lead_to_member(
+        db, "t1", "lead-1",
+        assigned_to="mem-1",
+        performer_id="owner-1",
+        performer_name="Owner",
+    )
+    assert result == {"id": "lead-1", "assigned_to": "mem-1"}
+    assert len(log_calls) == 1
+    assert log_calls[0]["description"] == "Lead assigned to Alice"
+    assert log_calls[0]["metadata"]["assigned_to"] == "mem-1"
+    assert log_calls[0]["metadata"]["assigned_to_name"] == "Alice"
+    assert log_calls[0]["metadata"]["performed_by"] == "owner-1"
+
+
+def test_assign_lead_to_member_raises_member_when_team_member_missing():
+    from backend.services.lead_assignment import assign_lead_to_member
+
+    db = _make_db_returning([])  # member lookup empty
+    with pytest.raises(LookupError) as exc:
+        assign_lead_to_member(
+            db, "t1", "lead-1",
+            assigned_to="bogus-mem",
+            performer_id="owner-1",
+            performer_name="Owner",
+        )
+    assert str(exc.value) == "member"
+
+
+def test_assign_lead_to_member_raises_lead_when_lead_missing(monkeypatch):
+    from backend.services import lead_assignment
+
+    db = _make_db_returning(
+        [{"id": "mem-1", "name": "Alice", "email": "a@x.com"}],  # member ok
+        [],  # lead update empty -> lead missing
+    )
+    monkeypatch.setattr(lead_assignment, "log_activity", lambda **_: None)
+    with pytest.raises(LookupError) as exc:
+        lead_assignment.assign_lead_to_member(
+            db, "t1", "missing-lead",
+            assigned_to="mem-1",
+            performer_id="owner-1",
+            performer_name="Owner",
+        )
+    assert str(exc.value) == "lead"
+
+
+def test_assign_lead_to_member_unassigns_when_assigned_to_none(monkeypatch):
+    from backend.services import lead_assignment
+
+    db = _make_db_returning([{"id": "lead-1", "assigned_to": None}])
+    log_calls = []
+    monkeypatch.setattr(
+        lead_assignment, "log_activity",
+        lambda **kw: log_calls.append(kw),
+    )
+    result = lead_assignment.assign_lead_to_member(
+        db, "t1", "lead-1",
+        assigned_to=None,
+        performer_id="owner-1",
+        performer_name="Owner",
+    )
+    assert result == {"id": "lead-1", "assigned_to": None}
+    assert log_calls[0]["description"] == "Lead assigned to nobody"
+    assert log_calls[0]["metadata"]["assigned_to"] is None
+    assert log_calls[0]["metadata"]["assigned_to_name"] == "nobody"
+
+
+def test_assign_lead_to_member_swallows_log_activity_exception(monkeypatch):
+    from backend.services import lead_assignment
+
+    db = _make_db_returning(
+        [{"id": "mem-1", "name": "Alice", "email": "a@x.com"}],
+        [{"id": "lead-1", "assigned_to": "mem-1"}],
+    )
+
+    def _boom(**_):
+        raise RuntimeError("log down")
+
+    monkeypatch.setattr(lead_assignment, "log_activity", _boom)
+    # Should NOT raise; logging failure is best-effort
+    result = lead_assignment.assign_lead_to_member(
+        db, "t1", "lead-1",
+        assigned_to="mem-1",
+        performer_id="owner-1",
+        performer_name="Owner",
+    )
+    assert result == {"id": "lead-1", "assigned_to": "mem-1"}
+
+
+# ---------------------------------------------------------------------------
+# lead_suggestions.apply_or_dismiss_suggestion
+# ---------------------------------------------------------------------------
+
+
+def test_apply_or_dismiss_suggestion_rejects_unknown_action():
+    from backend.services.lead_suggestions import apply_or_dismiss_suggestion
+
+    db = MagicMock()
+    with pytest.raises(ValueError):
+        apply_or_dismiss_suggestion(db, "t1", "sugg-1", "garbage")
+
+
+def test_apply_or_dismiss_suggestion_raises_not_found_when_missing():
+    from backend.services.lead_suggestions import apply_or_dismiss_suggestion
+
+    db = _make_db_returning([])  # suggestion lookup empty
+    with pytest.raises(LookupError) as exc:
+        apply_or_dismiss_suggestion(db, "t1", "sugg-1", "approve")
+    assert str(exc.value) == "not_found"
+
+
+def test_apply_or_dismiss_suggestion_dismiss_deletes_without_lead_update():
+    from backend.services.lead_suggestions import apply_or_dismiss_suggestion
+
+    # suggestion fetch returns one row; dismiss path only deletes -> 2 calls total
+    db = _make_db_returning(
+        [{"id": "sugg-1", "lead_id": "lead-1", "metadata": {"suggestions": {"status": {"new": "qualified"}}}}],
+        None,  # delete response
+    )
+    result = apply_or_dismiss_suggestion(db, "t1", "sugg-1", "dismiss")
+    assert result == {"success": True, "action": "dismiss"}
+
+
+def test_apply_or_dismiss_suggestion_approve_applies_updates_and_deletes():
+    from backend.services.lead_suggestions import apply_or_dismiss_suggestion
+
+    # 3 table calls: suggestion-fetch, lead-update, suggestion-delete
+    db = _make_db_returning(
+        [{
+            "id": "sugg-1",
+            "lead_id": "lead-1",
+            "metadata": {"suggestions": {"status": {"new": "qualified"}, "name": {"new": "Bob"}}},
+        }],
+        [{"id": "lead-1"}],  # update response
+        None,  # delete response
+    )
+    result = apply_or_dismiss_suggestion(db, "t1", "sugg-1", "approve")
+    assert result == {"success": True, "action": "approve"}
+
+
+def test_apply_or_dismiss_suggestion_approve_skips_update_when_no_lead_id():
+    from backend.services.lead_suggestions import apply_or_dismiss_suggestion
+
+    # suggestion with no lead_id -> approve path skips update, only deletes
+    db = _make_db_returning(
+        [{"id": "sugg-1", "lead_id": None, "metadata": {"suggestions": {"status": {"new": "qualified"}}}}],
+        None,  # delete response
+    )
+    result = apply_or_dismiss_suggestion(db, "t1", "sugg-1", "approve")
+    assert result == {"success": True, "action": "approve"}
+
+
+def test_apply_or_dismiss_suggestion_approve_skips_update_when_no_suggestions():
+    from backend.services.lead_suggestions import apply_or_dismiss_suggestion
+
+    # suggestion with empty/missing suggestions -> approve path skips update
+    db = _make_db_returning(
+        [{"id": "sugg-1", "lead_id": "lead-1", "metadata": {}}],
+        None,  # delete response
+    )
+    result = apply_or_dismiss_suggestion(db, "t1", "sugg-1", "approve")
+    assert result == {"success": True, "action": "approve"}
+
+
+def test_apply_or_dismiss_suggestion_approve_handles_null_metadata():
+    from backend.services.lead_suggestions import apply_or_dismiss_suggestion
+
+    db = _make_db_returning(
+        [{"id": "sugg-1", "lead_id": "lead-1", "metadata": None}],
+        None,  # delete response
+    )
+    result = apply_or_dismiss_suggestion(db, "t1", "sugg-1", "approve")
+    assert result == {"success": True, "action": "approve"}
