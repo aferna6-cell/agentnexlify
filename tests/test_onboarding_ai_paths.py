@@ -75,3 +75,79 @@ def test_parse_auto_kb_response_falls_back_when_markers_missing():
     assert kb == raw
     assert custom_instructions == ""
     assert faqs == []
+
+
+def test_expand_hours_from_text_parses_day_ranges():
+    from backend.services.onboarding_ai import expand_hours_from_text
+
+    out = expand_hours_from_text("Open Mon-Fri 8am-6pm, Sat 9am-2pm.")
+    assert out["Mon"].lower().startswith("8")
+    assert "Mon" in out and "Tue" in out and "Wed" in out
+    assert "Thu" in out and "Fri" in out and "Sat" in out
+    assert "Sun" not in out
+    assert "9am-2pm".replace(" ", "") in out["Sat"].replace(" ", "")
+
+
+def test_expand_hours_from_text_handles_closed_marker():
+    from backend.services.onboarding_ai import expand_hours_from_text
+
+    out = expand_hours_from_text("Sunday hours: Sun closed.")
+    assert out.get("Sun", "").lower() == "closed"
+
+
+def test_parse_auto_kb_response_extracts_services_block():
+    from backend.services.onboarding_ai import parse_auto_kb_response
+
+    raw = (
+        "===KNOWLEDGE_BASE===\n"
+        "About paragraph here\n"
+        "===CUSTOM_INSTRUCTIONS===\n"
+        "Identity instructions\n"
+        "===SERVICES===\n"
+        "- Drain cleaning\n"
+        "- Water heater repair\n"
+        "* Pipe leaks\n"
+        "===FAQ_START===\n"
+        "Q: Q1?\nA: A1.\nC: cat\n"
+        "===FAQ_END==="
+    )
+    _kb, _ci, _faqs, services, _hours = parse_auto_kb_response(raw)
+    assert services == ["Drain cleaning", "Water heater repair", "Pipe leaks"]
+
+
+def test_parse_auto_kb_response_falls_back_to_kb_services_section():
+    from backend.services.onboarding_ai import parse_auto_kb_response
+
+    raw = (
+        "===KNOWLEDGE_BASE===\n"
+        "## About\nWe do plumbing.\n"
+        "## Services\n"
+        "- Drain cleaning\n"
+        "- Sewer line\n"
+        "===CUSTOM_INSTRUCTIONS===\n"
+        "Be helpful\n"
+        "===FAQ_START===\n"
+        "===FAQ_END==="
+    )
+    _kb, _ci, _faqs, services, _hours = parse_auto_kb_response(raw)
+    assert "Drain cleaning" in services
+    assert "Sewer line" in services
+
+
+def test_parse_auto_kb_response_parses_hours_block():
+    from backend.services.onboarding_ai import parse_auto_kb_response
+
+    raw = (
+        "===KNOWLEDGE_BASE===\nKB\n"
+        "===CUSTOM_INSTRUCTIONS===\nCI\n"
+        "===HOURS===\n"
+        "Mon: 8am-6pm\n"
+        "Tue: 8am-6pm\n"
+        "Sat: closed\n"
+        "===FAQ_START===\n"
+        "===FAQ_END==="
+    )
+    _kb, _ci, _faqs, _services, hours = parse_auto_kb_response(raw)
+    assert hours.get("Mon") == "8am-6pm"
+    assert hours.get("Tue") == "8am-6pm"
+    assert hours.get("Sat") == "closed"
