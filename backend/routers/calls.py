@@ -6,7 +6,6 @@ plus dashboard endpoints for listing, viewing, and aggregating call data.
 """
 
 import logging
-from datetime import datetime, timezone
 from time import perf_counter
 from typing import Any
 from urllib.parse import parse_qs
@@ -49,6 +48,14 @@ from backend.services.call_transcript import (  # noqa: F401  re-exported for te
     find_call_by_twilio_sid as _find_call_by_twilio_sid,
     merge_call_transcript as _merge_call_transcript,
     update_call_transcript as _update_call_transcript,
+)
+from backend.services.call_queries import (  # noqa: F401  re-exported for tests
+    compute_avg_call_duration as _compute_avg_call_duration,
+    count_calls_for_tenant as _count_calls_for_tenant,
+    count_calls_today as _count_calls_today,
+    count_missed_calls as _count_missed_calls,
+    fetch_call_by_id as _fetch_call_by_id,
+    fetch_calls_page as _fetch_calls_page,
 )
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.automations import verify_twilio_request
@@ -518,25 +525,15 @@ async def list_calls(
 
     db = get_service_supabase()
     try:
-        query = (
-            db.table("calls")
-            .select("*", count="exact")
-            .eq("tenant_id", tenant_id)
+        calls, total = _fetch_calls_page(
+            db,
+            tenant_id=tenant_id,
+            status=status,
+            page=page,
+            per_page=per_page,
         )
-
-        if status:
-            query = query.eq("status", status)
-
-        query = query.order("created_at", desc=True)
-
-        offset = (page - 1) * per_page
-        query = query.range(offset, offset + per_page - 1)
-
-        result = query.execute()
-        total = result.count if result.count is not None else len(result.data or [])
-
         return CallListResponse(
-            calls=result.data or [],
+            calls=calls,
             total=total,
             page=page,
             per_page=per_page,
@@ -556,71 +553,12 @@ async def get_call_stats(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-    stats = CallStatsResponse()
-
-    # Total calls
-    try:
-        total_result = (
-            db.table("calls")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .execute()
-        )
-        stats.total_calls = total_result.count if total_result.count is not None else 0
-    except Exception:
-        logger.warning("Failed to count total calls for tenant %s", tenant_id, exc_info=True)
-
-    # Missed calls (no-answer, busy, failed)
-    try:
-        for missed_status in ("no-answer", "busy", "failed"):
-            missed_result = (
-                db.table("calls")
-                .select("id", count="exact")
-                .eq("tenant_id", tenant_id)
-                .eq("status", missed_status)
-                .execute()
-            )
-            count = missed_result.count if missed_result.count is not None else 0
-            stats.missed_calls += count
-    except Exception:
-        logger.warning("Failed to count missed calls for tenant %s", tenant_id, exc_info=True)
-
-    # Average duration (from completed calls with duration > 0)
-    try:
-        duration_result = (
-            db.table("calls")
-            .select("duration_seconds")
-            .eq("tenant_id", tenant_id)
-            .eq("status", "completed")
-            .execute()
-        )
-        durations = [
-            r["duration_seconds"]
-            for r in (duration_result.data or [])
-            if r.get("duration_seconds") and r["duration_seconds"] > 0
-        ]
-        if durations:
-            stats.avg_duration_seconds = round(sum(durations) / len(durations), 1)
-    except Exception:
-        logger.warning("Failed to compute avg duration for tenant %s", tenant_id, exc_info=True)
-
-    # Calls today
-    try:
-        today_start = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        ).isoformat()
-        today_result = (
-            db.table("calls")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", today_start)
-            .execute()
-        )
-        stats.calls_today = today_result.count if today_result.count is not None else 0
-    except Exception:
-        logger.warning("Failed to count today's calls for tenant %s", tenant_id, exc_info=True)
-
-    return stats
+    return CallStatsResponse(
+        total_calls=_count_calls_for_tenant(db, tenant_id),
+        missed_calls=_count_missed_calls(db, tenant_id),
+        avg_duration_seconds=_compute_avg_call_duration(db, tenant_id),
+        calls_today=_count_calls_today(db, tenant_id),
+    )
 
 
 @router.get("/{tenant_id}/{call_id}", response_model=CallOut)
@@ -635,19 +573,11 @@ async def get_call(
 
     db = get_service_supabase()
     try:
-        result = (
-            db.table("calls")
-            .select("*")
-            .eq("id", call_id)
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if not result.data:
-            raise HTTPException(status_code=404, detail="Call not found")
-        return result.data[0]
-    except HTTPException:
-        raise
+        call = _fetch_call_by_id(db, tenant_id=tenant_id, call_id=call_id)
     except Exception:
         logger.exception("Failed to get call %s for tenant %s", call_id, tenant_id)
         raise HTTPException(status_code=500, detail="Failed to retrieve call")
+
+    if call is None:
+        raise HTTPException(status_code=404, detail="Call not found")
+    return call
