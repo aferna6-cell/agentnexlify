@@ -175,3 +175,40 @@ class TestItemTemplates:
             "description": "Drain Cleaning", "unit_price": 200,
         }, headers={"Authorization": f"Bearer {_make_jwt()}"})
         assert resp.status_code == 200
+
+    def test_update_template(self, test_client):
+        client, db = test_client
+        _setup_table_mock(db, {"invoice_item_templates": [{"id": "it1", "description": "Updated", "unit_price": 175}]})
+        resp = client.put("/api/v1/invoices/t1/item-templates/it1", json={
+            "unit_price": 175,
+        }, headers={"Authorization": f"Bearer {_make_jwt()}"})
+        assert resp.status_code == 200
+
+    def test_update_template_no_fields_fails(self, test_client):
+        client, db = test_client
+        _setup_table_mock(db, {"invoice_item_templates": []})
+        resp = client.put("/api/v1/invoices/t1/item-templates/it1", json={},
+                          headers={"Authorization": f"Bearer {_make_jwt()}"})
+        assert resp.status_code == 400
+
+    def test_update_template_not_found(self, test_client):
+        client, db = test_client
+        _setup_table_mock(db, {"invoice_item_templates": []})
+        resp = client.put("/api/v1/invoices/t1/item-templates/missing", json={
+            "unit_price": 99,
+        }, headers={"Authorization": f"Bearer {_make_jwt()}"})
+        assert resp.status_code == 404
+
+    def test_delete_template(self, test_client):
+        client, db = test_client
+        _setup_table_mock(db, {"invoice_item_templates": [{"id": "it1", "is_active": False}]})
+        resp = client.delete("/api/v1/invoices/t1/item-templates/it1",
+                             headers={"Authorization": f"Bearer {_make_jwt()}"})
+        assert resp.status_code == 200
+
+    def test_delete_template_not_found(self, test_client):
+        client, db = test_client
+        _setup_table_mock(db, {"invoice_item_templates": []})
+        resp = client.delete("/api/v1/invoices/t1/item-templates/missing",
+                             headers={"Authorization": f"Bearer {_make_jwt()}"})
+        assert resp.status_code == 404
