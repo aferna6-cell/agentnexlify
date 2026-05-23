@@ -15,6 +15,10 @@ from backend.services.invoice_dispatch import dispatch_invoice_channels
 from backend.services.invoice_email_template import build_invoice_email_html
 from backend.services.invoice_numbering import get_next_invoice_number
 from backend.services.invoice_payment_links import get_or_create_stripe_payment_link
+from backend.services.invoice_payments_service import (
+    mark_invoice_as_paid,
+    record_partial_payment_amount,
+)
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
@@ -697,67 +701,8 @@ async def mark_invoice_paid(
 ):
     """Manually mark an invoice as paid."""
     verify_tenant(claims, tenant_id)
-
     db = get_service_supabase()
-
-    # Verify the invoice belongs to this tenant
-    try:
-        existing_result = (
-            tenant_table(db, "invoices", tenant_id)
-            .select("status")
-            .eq("id", invoice_id)
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch invoice %s for mark-paid", invoice_id)
-        raise HTTPException(status_code=500, detail="Failed to fetch invoice")
-
-    if not existing_result.data:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-    current_status = existing_result.data[0]["status"]
-    if current_status in ("cancelled",):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot mark a '{current_status}' invoice as paid",
-        )
-    if current_status == "paid":
-        raise HTTPException(status_code=400, detail="Invoice is already marked as paid")
-
-    update_data: dict = {
-        "status": "paid",
-        "paid_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    if req.payment_method:
-        update_data["payment_method"] = req.payment_method
-
-    try:
-        result = (
-            tenant_table(db, "invoices", tenant_id)
-            .update(update_data)
-            .eq("id", invoice_id)
-            .eq("tenant_id", tenant_id)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to mark invoice %s as paid for tenant %s", invoice_id, tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to mark invoice as paid")
-
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-    paid_invoice = result.data[0]
-    fire_event_background(tenant_id, "invoice.paid", {
-        "invoice_id": invoice_id,
-        "invoice_number": paid_invoice.get("invoice_number"),
-        "total": paid_invoice.get("total"),
-        "payment_method": req.payment_method,
-        "lead_id": paid_invoice.get("lead_id"),
-    })
-    return paid_invoice
+    return await mark_invoice_as_paid(db, tenant_id, invoice_id, req.payment_method)
 
 
 @router.post("/{tenant_id}/{invoice_id}/record-payment")
@@ -770,39 +715,9 @@ async def record_partial_payment(
     """Record a partial payment against an invoice."""
     verify_tenant(claims, tenant_id)
     db = get_service_supabase()
-
-    # Load current invoice
-    inv = tenant_table(db, "invoices", tenant_id).select("total, amount_paid, status").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
-    if not inv.data:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-    current = inv.data[0]
-    if current["status"] in ("paid", "cancelled"):
-        raise HTTPException(status_code=400, detail=f"Cannot record payment on {current['status']} invoice")
-
-    total = float(current.get("total") or 0)
-    already_paid = float(current.get("amount_paid") or 0)
-    remaining = round(total - already_paid, 2)
-    if req.amount > remaining + 0.01:
-        raise HTTPException(status_code=400, detail=f"Payment amount exceeds remaining balance of ${remaining:.2f}")
-    new_paid = min(round(already_paid + req.amount, 2), total)
-
-    update_data = {
-        "amount_paid": new_paid,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    # Auto-mark as paid if fully covered
-    if new_paid >= total:
-        update_data["status"] = "paid"
-        update_data["paid_at"] = datetime.now(timezone.utc).isoformat()
-        if req.payment_method:
-            update_data["payment_method"] = req.payment_method
-
-    result = tenant_table(db, "invoices", tenant_id).update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to record payment")
-
-    return result.data[0]
+    return await record_partial_payment_amount(
+        db, tenant_id, invoice_id, req.amount, req.payment_method
+    )
 
 
 class BulkSendRequest(BaseModel):
