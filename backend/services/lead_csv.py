@@ -55,6 +55,26 @@ EXPORT_COLUMNS = (
 )
 
 
+_MAX_UPLOAD_BYTES = 2 * 1024 * 1024
+
+
+def validate_csv_upload(filename: str | None, content: bytes) -> str:
+    """Validate a CSV file upload and return its decoded text.
+
+    Checks the extension, size, and encoding before parsing. Raises
+    `ValueError` with a user-safe message for each rejection — router maps
+    to HTTP 400.
+    """
+    if not filename or not filename.lower().endswith(".csv"):
+        raise ValueError("File must be a .csv")
+    if len(content) > _MAX_UPLOAD_BYTES:
+        raise ValueError("File too large (max 2MB)")
+    try:
+        return content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValueError("File must be UTF-8 encoded") from exc
+
+
 def build_export_query(
     db: Any,
     tenant_id: str,

@@ -22,6 +22,7 @@ from backend.services.lead_csv import (  # noqa: F401  re-exported for tests
     fetch_existing_emails as _fetch_existing_emails,
     parse_csv_for_import as _parse_csv_for_import,
     serialize_leads_to_csv as _serialize_leads_to_csv,
+    validate_csv_upload as _validate_csv_upload,
 )
 from backend.services.lead_dedup import (  # noqa: F401  re-exported for tests
     apply_lead_merge as _apply_lead_merge,
@@ -68,8 +69,11 @@ from backend.services.lead_updates import (  # noqa: F401  re-exported for tests
 from backend.services.lead_messaging import (  # noqa: F401  re-exported for tests
     record_followup_sent as _record_followup_sent,
 )
+from backend.services.lead_summary import (  # noqa: F401  re-exported for tests
+    compute_lead_summary as _compute_lead_summary,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
-from backend.services.tenant_scope import tenant_delete, tenant_select
+from backend.services.tenant_scope import tenant_delete
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -122,18 +126,8 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
 
     db = get_service_supabase()
     try:
-        result = tenant_select(db, "leads", tenant_id, "status, lead_score").execute()
-        leads = result.data or []
-        return {
-            "total": len(leads),
-            "new": sum(1 for l in leads if l.get("status") == "new"),
-            "contacted": sum(1 for l in leads if l.get("status") == "contacted"),
-            "appointment_booked": sum(1 for l in leads if l.get("status") == "appointment_booked"),
-            "closed": sum(1 for l in leads if l.get("status") == "closed"),
-            "lost": sum(1 for l in leads if l.get("status") == "lost"),
-        }
-    except Exception:
-        logger.warning("Lead summary query failed for tenant %s", tenant_id, exc_info=True)
+        return _compute_lead_summary(db, tenant_id)
+    except RuntimeError:
         raise HTTPException(status_code=503, detail="Lead summary query failed — please retry")
 
 
@@ -408,17 +402,11 @@ async def import_leads_csv(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must be a .csv")
-
     content = await file.read()
-    if len(content) > 2 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 2MB)")
-
     try:
-        text = content.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
+        text = _validate_csv_upload(file.filename, content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     try:
         parsed_rows, errors, col_map = _parse_csv_for_import(text)

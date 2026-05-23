@@ -2079,3 +2079,108 @@ def test_record_followup_sent_unknown_channel_raises():
             object(), "tenant-1", "lead-1",
             lead={"name": "X"}, channel="voice",
         )
+
+
+# ---------- lead_summary.compute_lead_summary ----------
+
+def test_compute_lead_summary_returns_per_status_counts():
+    from backend.services.lead_summary import compute_lead_summary
+
+    rows = [
+        {"status": "new", "lead_score": 10},
+        {"status": "new", "lead_score": 20},
+        {"status": "contacted", "lead_score": 30},
+        {"status": "appointment_booked", "lead_score": 40},
+        {"status": "closed", "lead_score": 50},
+        {"status": "lost", "lead_score": 60},
+        {"status": "unknown_bucket", "lead_score": 70},  # ignored
+    ]
+    db = _make_db_returning(rows)
+    result = compute_lead_summary(db, "tenant-1")
+
+    assert result == {
+        "total": 7,
+        "new": 2,
+        "contacted": 1,
+        "appointment_booked": 1,
+        "closed": 1,
+        "lost": 1,
+    }
+
+
+def test_compute_lead_summary_handles_empty_result():
+    from backend.services.lead_summary import compute_lead_summary
+
+    db = _make_db_returning([])
+    result = compute_lead_summary(db, "tenant-1")
+    assert result == {
+        "total": 0,
+        "new": 0,
+        "contacted": 0,
+        "appointment_booked": 0,
+        "closed": 0,
+        "lost": 0,
+    }
+
+
+def test_compute_lead_summary_wraps_db_failure():
+    from backend.services.lead_summary import compute_lead_summary
+    import pytest
+
+    class FailingDB:
+        def table(self, _name):
+            raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="query_failed"):
+        compute_lead_summary(FailingDB(), "tenant-1")
+
+
+# ---------- lead_csv.validate_csv_upload ----------
+
+def test_validate_csv_upload_accepts_valid_csv():
+    from backend.services.lead_csv import validate_csv_upload
+
+    text = validate_csv_upload("leads.csv", b"name,email\nAlice,a@x.com\n")
+    assert text == "name,email\nAlice,a@x.com\n"
+
+
+def test_validate_csv_upload_strips_utf8_bom():
+    from backend.services.lead_csv import validate_csv_upload
+
+    bom = b"\xef\xbb\xbfname,email\nAlice,a@x.com\n"
+    text = validate_csv_upload("leads.csv", bom)
+    assert text.startswith("name,email")
+    assert "﻿" not in text
+
+
+def test_validate_csv_upload_rejects_missing_filename():
+    from backend.services.lead_csv import validate_csv_upload
+    import pytest
+
+    with pytest.raises(ValueError, match=".csv"):
+        validate_csv_upload(None, b"x,y")
+
+
+def test_validate_csv_upload_rejects_non_csv_extension():
+    from backend.services.lead_csv import validate_csv_upload
+    import pytest
+
+    with pytest.raises(ValueError, match=".csv"):
+        validate_csv_upload("leads.txt", b"x,y")
+
+
+def test_validate_csv_upload_rejects_oversize():
+    from backend.services.lead_csv import validate_csv_upload
+    import pytest
+
+    big = b"x" * (2 * 1024 * 1024 + 1)
+    with pytest.raises(ValueError, match="too large"):
+        validate_csv_upload("leads.csv", big)
+
+
+def test_validate_csv_upload_rejects_non_utf8():
+    from backend.services.lead_csv import validate_csv_upload
+    import pytest
+
+    with pytest.raises(ValueError, match="UTF-8"):
+        validate_csv_upload("leads.csv", b"name,email\n\xff\xfeAlice")
