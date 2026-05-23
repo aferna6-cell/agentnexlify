@@ -1,8 +1,6 @@
 """Lead management endpoints."""
 
 import asyncio
-import csv
-import io
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
@@ -17,6 +15,14 @@ from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
+from backend.services.lead_csv import (  # noqa: F401  re-exported for tests
+    CSV_FIELD_MAP as _CSV_FIELD_MAP,
+    apply_import_batch as _apply_import_batch,
+    build_export_query as _build_export_query,
+    fetch_existing_emails as _fetch_existing_emails,
+    parse_csv_for_import as _parse_csv_for_import,
+    serialize_leads_to_csv as _serialize_leads_to_csv,
+)
 from backend.services.lead_scoring import score_all_leads, score_lead
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
@@ -524,31 +530,6 @@ async def merge_leads(
     return {"success": True, "kept_id": req.keep_id, "merged_id": req.merge_id, "fields_updated": list(updates.keys())}
 
 
-# CSV column name → DB column name mapping
-_CSV_FIELD_MAP = {
-    "name": "name",
-    "email": "email",
-    "phone": "phone",
-    "stage": "status",
-    "status": "status",
-    "score": "lead_score",
-    "source": "source",
-    "temperature": "lead_temperature",
-    "service interest": "areas_of_interest",
-    "service_interest": "areas_of_interest",
-    "areas_of_interest": "areas_of_interest",
-    "timeline": "timeline",
-    "budget": "budget",
-    "notes": "conversation_summary",
-    "conversation_summary": "conversation_summary",
-    "next_steps": "next_steps",
-    "lead_type": "lead_type",
-}
-
-_VALID_STATUSES = {"new", "contacted", "appointment_booked", "closed", "lost"}
-_MAX_IMPORT_ROWS = 500
-
-
 @router.get("/{tenant_id}/export-csv")
 async def export_leads_csv(
     tenant_id: str,
@@ -562,52 +543,11 @@ async def export_leads_csv(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db = get_service_supabase()
-
-    query = tenant_select(
-        db,
-        "leads",
-        tenant_id,
-        "name, email, phone, status, lead_score, lead_temperature, "
-        "areas_of_interest, tags, conversation_summary, deal_value, "
-        "source, created_at, updated_at",
+    query = _build_export_query(
+        db, tenant_id, stage=stage, search=search, assigned_to=assigned_to
     )
-
-    if stage:
-        query = query.eq("status", stage)
-    if assigned_to:
-        if assigned_to == "unassigned":
-            query = query.is_("assigned_to", "null")
-        else:
-            query = query.eq("assigned_to", assigned_to)
-    if search:
-        import re
-        safe_search = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
-        if safe_search:
-            query = query.or_(
-                f"name.ilike.%{safe_search}%,email.ilike.%{safe_search}%,phone.ilike.%{safe_search}%"
-            )
-
-    query = query.order("created_at", desc=True).limit(5000)
     result = query.execute()
-    leads_data = result.data or []
-
-    # Build CSV
-    output = io.StringIO()
-    fields = [
-        "name", "email", "phone", "status", "lead_score", "lead_temperature",
-        "areas_of_interest", "tags", "conversation_summary", "deal_value",
-        "source", "created_at", "updated_at",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
-    writer.writeheader()
-    for lead in leads_data:
-        # Convert tags array to comma-separated string
-        row = {**lead}
-        if isinstance(row.get("tags"), list):
-            row["tags"] = ", ".join(row["tags"])
-        writer.writerow(row)
-
-    csv_content = output.getvalue()
+    csv_content = _serialize_leads_to_csv(result.data or [])
     return Response(
         content=csv_content,
         media_type="text/csv",
@@ -637,18 +577,10 @@ async def import_leads_csv(
     except UnicodeDecodeError:
         raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
 
-    reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames:
-        raise HTTPException(status_code=400, detail="CSV has no headers")
-
-    # Map CSV headers to DB columns
-    col_map = {}
-    for header in reader.fieldnames:
-        key = header.strip().lower().replace(" ", "_")
-        if key in _CSV_FIELD_MAP:
-            col_map[header] = _CSV_FIELD_MAP[key]
-        elif key.replace("_", " ") in _CSV_FIELD_MAP:
-            col_map[header] = _CSV_FIELD_MAP[key.replace("_", " ")]
+    try:
+        parsed_rows, errors, col_map = _parse_csv_for_import(text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     if not col_map:
         raise HTTPException(
@@ -657,84 +589,17 @@ async def import_leads_csv(
         )
 
     db = get_service_supabase()
-    created = 0
-    updated = 0
-    errors = []
-
-    # Pre-parse all rows and collect emails for batch dedup (avoids N+1 queries)
-    parsed_rows = []
-    for i, row in enumerate(reader, start=2):
-        if i - 1 > _MAX_IMPORT_ROWS:
-            errors.append({"row": i, "error": f"Stopped at {_MAX_IMPORT_ROWS} rows"})
-            break
-
-        lead_data = {}
-        for csv_col, db_col in col_map.items():
-            val = (row.get(csv_col) or "").strip()
-            if val:
-                lead_data[db_col] = val
-
-        if not lead_data.get("email") and not lead_data.get("phone") and not lead_data.get("name"):
-            errors.append({"row": i, "error": "No name, email, or phone"})
-            continue
-
-        if lead_data.get("status") and lead_data["status"] not in _VALID_STATUSES:
-            lead_data["status"] = "new"
-
-        if lead_data.get("lead_score"):
-            try:
-                lead_data["lead_score"] = int(lead_data["lead_score"])
-            except ValueError:
-                del lead_data["lead_score"]
-
-        parsed_rows.append((i, lead_data))
-
-    # Batch-fetch existing leads by email (single query instead of N queries)
     all_emails = [ld.get("email") for _, ld in parsed_rows if ld.get("email")]
-    existing_by_email = {}
-    if all_emails:
-        try:
-            existing_result = (
-                tenant_select(db, "leads", tenant_id, "id, email")
-                .in_("email", list(set(all_emails)))
-                .execute()
-            )
-            for lead in (existing_result.data or []):
-                if lead.get("email"):
-                    existing_by_email[lead["email"].lower()] = lead["id"]
-        except Exception as e:
-            logger.warning("Import batch dedup query failed: %s", e)
+    existing_by_email = _fetch_existing_emails(db, tenant_id, [e for e in all_emails if e])
 
-    # Process rows with dedup lookup from cache
-    for i, lead_data in parsed_rows:
-        email = (lead_data.get("email") or "").lower()
-        if email and email in existing_by_email:
-            updates = {k: v for k, v in lead_data.items() if k != "email"}
-            if updates:
-                try:
-                    tenant_update(db, "leads", tenant_id, updates).eq("id", existing_by_email[email]).execute()
-                except Exception as e:
-                    errors.append({"row": i, "error": str(e)[:100]})
-                    continue
-            updated += 1
-            continue
-
-        # Insert new lead
-        lead_data.setdefault("status", "new")
-        try:
-            result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
-            if result.data:
-                created += 1
-                fire_event_background(tenant_id, "lead.created", {
-                    "lead_id": result.data[0]["id"],
-                    "name": lead_data.get("name"),
-                    "email": lead_data.get("email"),
-                    "source": "csv_import",
-                })
-            else:
-                errors.append({"row": i, "error": "Insert returned no data"})
-        except Exception as e:
-            errors.append({"row": i, "error": str(e)[:100]})
+    created, updated = _apply_import_batch(
+        db,
+        tenant_id,
+        parsed_rows=parsed_rows,
+        existing_by_email=existing_by_email,
+        errors=errors,
+        fire_event=fire_event_background,
+    )
 
     return {
         "created": created,
