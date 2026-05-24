@@ -1,0 +1,29 @@
+{
+  "run": 33,
+  "date": "2026-05-24",
+  "evidence_summary": "GH #181 still open: AMOUNT_TO_PLAN confirmed missing 15000+25000 entries (direct inspection). CI booby-trap confirmed: test_no_wrong_15000_mapping + test_no_wrong_25000_mapping still present (1553bf7 wired these into CI on 2026-05-23). Three commits since issue filed without fix. MASSIVE new evidence: 2174732 god-class refactor (5038+/2064- lines, 13 new services, 5 new test files). Run 32 questions answered: dashboard_service + conversations_service coverage confirmed in test_extracted_services.py (26 matches). faq_service.py (74L) + industry_faqs.py (415L) + widget_config_service.py (62L) have no confirmed coverage. Moratorium Items A/B/D still MISSING day 19+. Pending = 9 (true, after governance audit).",
+  "ideas_count": 5,
+  "winner": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, fix CI-blocking contradictory test methods (third recommendation)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "rejected": [],
+  "weakened": [
+    "/moratorium-sprint — WEAKENED to standing action (9th consecutive rec, no new forcing evidence)",
+    "faq_service + industry_faqs smoke tests — WEAKENED to parking lot (content unverified)"
+  ],
+  "governance_corrections": [
+    "Run 32 questions answered: dashboard_service + conversations_service coverage CONFIRMED in test_extracted_services.py. Strike from parking lot.",
+    "GH #181 NOT implemented (confirmed direct inspection)",
+    "Sprint Items A/B/D all MISSING (confirmed direct check)"
+  ],
+  "moratorium_active": true,
+  "moratorium_day": 19,
+  "moratorium_pending_before": 8,
+  "moratorium_pending_after": 9,
+  "questions_for_next_run": [
+    "Has GH #181 been implemented?",
+    "Has any sprint item (A/B/D) been completed?",
+    "Are faq_service.py + industry_faqs.py logic-heavy or static data?",
+    "Has 2174732 god-class refactor caused any Railway production errors?"
+  ]
+}

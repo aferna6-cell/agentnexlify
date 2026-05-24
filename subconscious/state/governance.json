@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-23-pm",
-  "total_runs": 32,
+  "last_run": "2026-05-24",
+  "total_runs": 33,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,14 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, fix CI-blocking tests (run 33 — third recommendation)",
+      "date": "2026-05-24",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 33 winner. GH #181 still open after three commits (c72b535, 1eaaeec, 2174732) without fix. CI trap confirmed active: test_no_wrong_15000_mapping + test_no_wrong_25000_mapping (lines 38, 42) assert entries MUST NOT exist — these were wired into CI by 1553bf7 on 2026-05-23. 2174732 (massive god-class refactor) landed without fixing. Debate: SURVIVES 3 rounds. All challenges overruled (CI trap is active harm; Check 11 can't substitute; three misses confirm non-obviousness). Fix: billing.py add 15000+25000 entries; test file remove 2 contradictory methods + add 2 current-price methods; update test_all_four_current_tiers_present to use {9900,15000,25000,89900}. Bonus A: Check 11 pre-commit sentinel (~10 min). Bonus B: CLAUDE.md note in §plan prices (~5 min). S-effort ~15 min total. Moratorium-safe. Implementation sketch: subconscious/runs/2026-05-24/winning-concept.md."
+    },
     {
       "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, remove CI-blocking tests (run 32 continuation)",
       "date": "2026-05-23-pm",
@@ -552,13 +560,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 8,
-    "runs_pending_approval_raw": 8,
-    "runs_pending_approval_note": "True pending = 8 (runs 4, 20, 21, 28, 29, 30, 31, 32). After /moratorium-sprint (Items A+B+D): pending 8→3→2 = moratorium exits. Run 32 winner (GH #181 fix continuation) is moratorium-safe S-effort. GH issue mechanism (runs 21+29) stays in parking lot.",
+    "runs_pending_approval": 9,
+    "runs_pending_approval_raw": 9,
+    "runs_pending_approval_note": "True pending = 9 (runs 4, 20, 21, 28, 29, 30, 31, 32, 33). Runs 31+32+33 all recommend same GH #181 fix — count as 3 entries but 1 distinct item. After /moratorium-sprint (Items A+B+D) + governance audit: pending 9→5→2 = moratorium exits. Run 33 winner (GH #181, third rec) is moratorium-safe S-effort. GH issue mechanism (runs 21+29) stays in parking lot.",
     "runs_implemented": 7,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 37)",
-    "governance_correction": "Run 32 (2026-05-23-pm): GH #181 still open after 1eaaeec attempted fix this morning. 1553bf7 added CI trap: test_no_wrong_15000_mapping now blocks correct fix from passing CI. Run 32 re-issues same winner with 4 independent evidence sources. Run 31 active_direction: title updated to reflect run 32 strengthening, status remains pending_approval.",
-    "note": "Run 32: billing fix CI-trap adds urgency. GH #181 sharpest gap. Sprint still highest-leverage for moratorium exit. Post-moratorium: Zapier security (GH #107, ROI 2.5) + AI-to-Human Handoff (customer value, 37d+).",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 38)",
+    "governance_correction": "Run 33 (2026-05-24): Run 32 questions answered — dashboard_service + conversations_service coverage confirmed in test_extracted_services.py (26 matches), strike from parking lot. GH #181 still open (direct inspection confirms 15000+25000 absent). Sprint Items A/B/D all MISSING. New parking lot items: faq_service.py (74L) + industry_faqs.py (415L) + widget_config_service.py (62L) from 2174732 refactor — content verification needed before promoting.",
+    "note": "Run 33: CI booby-trap still active (1553bf7 wired contradictory billing tests into CI). Three consecutive missed commits on same fix. Sprint remains highest-leverage for moratorium exit. Post-moratorium: Zapier security (GH #107, ROI 2.5) + AI-to-Human Handoff (customer value, 38d+).",
     "escalate": true
   },
   "config": {
