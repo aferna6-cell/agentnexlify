@@ -30,21 +30,22 @@ from backend.models.schemas import (
 from backend.services.activity import log_activity  # noqa: F401 — re-exported for test patches
 from backend.services.auth_service import _jwt_secret
 from backend.services.email_sender import send_email  # noqa: F401 — re-exported for test patches
+from backend.services.fraud_guard import (  # noqa: F401 — re-exported for signup_service + google_oauth_service via _auth.<symbol>
+    _record_signup_attempt,
+    check_registration_velocity,
+    is_disposable_email,
+)
 from backend.services.stripe_service import (  # noqa: F401 — re-exported for tests patching backend.routers.auth.<symbol>
     PLAN_PRICES,
     ensure_plan_prices_configured,
     ensure_stripe_configured,
     get_or_create_customer,
 )
-from backend.services.fraud_guard import (
-    check_registration_velocity,
-    is_disposable_email,
-    _record_signup_attempt,
-)
 from backend.services import billing_service as _billing_svc
 from backend.services import dashboard_service as _dash_svc
 from backend.services import google_oauth_service as _google_svc
 from backend.services import password_service as _pwd_svc
+from backend.services import signup_service as _signup_svc
 from backend.services import widget_config_service as _widget_svc
 
 logger = logging.getLogger(__name__)
@@ -149,39 +150,8 @@ from backend.routers.auth_provisioning import (  # noqa: E402, F401
 @router.post("/register", response_model=RegisterResponse)
 @limiter.limit("5/minute")
 async def register(request: Request, req: RegisterRequest):
-    email = req.email.lower().strip()
-    if is_disposable_email(email):
-        raise HTTPException(
-            status_code=400, detail="Disposable email addresses are not allowed."
-        )
-    check_registration_velocity(request, email)
-    tenant_id, api_key = _provision_tenant_account(
-        business_name=req.business_name,
-        owner_name=req.owner_name,
-        email=req.email,
-        password_hash=_hash_password(req.password),
-        industry=req.industry,
-        city=req.city,
-        phone=req.phone,
-        website_url=req.website_url,
-    )
-
-    token = _create_token(
-        tenant_id, req.email, "free", req.business_name, business_type=req.industry
-    )
-
-    await _run_signup_side_effects(
-        email=req.email,
-        owner_name=req.owner_name,
-        tenant_id=tenant_id,
-        business_name=req.business_name,
-        industry=req.industry,
-        city=req.city,
-        website_url=req.website_url,
-    )
-
-    _record_signup_attempt(_get_client_ip_for_fraud(request), email, tenant_id)
-    return RegisterResponse(tenant_id=tenant_id, api_key=api_key, token=token)
+    """New tenant signup."""
+    return await _signup_svc.register(request=request, req=req)
 
 
 def _get_client_ip_for_fraud(request: Request) -> str:
@@ -197,106 +167,8 @@ def _get_client_ip_for_fraud(request: Request) -> str:
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit("5/minute")
 async def login(request: Request, req: LoginRequest):
-    db = get_service_supabase()
-    email = req.email.lower().strip()
-
-    # 1. Check tenants table (owner login)
-    result = (
-        db.table("tenants")
-        .select("id, password_hash, business_name, plan, business_type")
-        .eq("owner_email", email)
-        .limit(1)
-        .execute()
-    )
-    if result.data:
-        tenant = result.data[0]
-        if not tenant.get("password_hash"):
-            # Use dummy hash to prevent timing attacks
-            _verify_password(
-                req.password,
-                bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode(),
-            )
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        if not _verify_password(req.password, tenant["password_hash"]):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-
-        tenant_id = str(tenant["id"])
-        token = _create_token(
-            tenant_id,
-            email,
-            tenant.get("plan") or "free",
-            tenant.get("business_name") or "",
-            business_type=tenant.get("business_type"),
-        )
-        return LoginResponse(
-            tenant_id=tenant_id,
-            token=token,
-            business_name=tenant.get("business_name") or "",
-            plan=tenant.get("plan") or "free",
-        )
-
-    # 2. Check team_members table (team member login)
-    tm_result = (
-        db.table("team_members")
-        .select("id, tenant_id, email, name, role, password_hash, invite_accepted")
-        .eq("email", email)
-        .eq("invite_accepted", True)
-        .limit(1)
-        .execute()
-    )
-    if tm_result.data:
-        member = tm_result.data[0]
-        if not member.get("password_hash"):
-            # Use dummy hash to prevent timing attacks
-            _verify_password(
-                req.password,
-                bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode(),
-            )
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        if not _verify_password(req.password, member["password_hash"]):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-
-        # Fetch tenant info
-        tenant_result = (
-            db.table("tenants")
-            .select("business_name, plan, business_type")
-            .eq("id", member["tenant_id"])
-            .limit(1)
-            .execute()
-        )
-        t = tenant_result.data[0] if tenant_result.data else {}
-        tenant_id = str(member["tenant_id"])
-
-        # Update last_login
-        db.table("team_members").update(
-            {"last_login": datetime.now(timezone.utc).isoformat()}
-        ).eq("id", member["id"]).execute()
-
-        token = _create_token(
-            tenant_id=tenant_id,
-            email=email,
-            plan=t.get("plan") or "free",
-            business_name=t.get("business_name") or "",
-            user_id=str(member["id"]),
-            role=member["role"],
-            is_team_member=True,
-            name=member.get("name"),
-            business_type=t.get("business_type"),
-        )
-        return LoginResponse(
-            tenant_id=tenant_id,
-            token=token,
-            business_name=t.get("business_name") or "",
-            plan=t.get("plan") or "free",
-        )
-
-    # No user found — perform dummy hash to prevent timing attacks
-    # This ensures the response time is similar whether user exists or not
-    _verify_password(
-        req.password,
-        bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode(),
-    )
-    raise HTTPException(status_code=401, detail="Invalid email or password")
+    """Tenant-owner or team-member login."""
+    return await _signup_svc.login(request=request, req=req)
 
 
 @router.get("/google/url")
