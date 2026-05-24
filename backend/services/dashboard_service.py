@@ -1,6 +1,7 @@
-"""Dashboard helpers: trial status, activity feed, knowledge stats."""
+"""Dashboard helpers: trial status, activity feed, knowledge stats, dashboard payload."""
 
 import logging
+
 
 from backend.models.database import get_service_supabase as _get_service_supabase
 
@@ -264,3 +265,199 @@ def get_knowledge_stats(tenant_id: str) -> dict:
         )
 
     return stats
+
+
+def build_dashboard_payload(tenant_id: str, db):
+    """Assemble the dashboard payload for /api/v1/auth/dashboard/{tenant_id}.
+
+    Takes the db handle as a parameter so the caller controls test-time patching.
+    Returns a DashboardResponse pydantic model.
+    """
+    import secrets
+
+    from fastapi import HTTPException
+
+    from backend.models.schemas import DashboardResponse, WidgetConfigDetail
+    from backend.services.business_profiles import (
+        get_dashboard_business_profile,
+        get_widget_defaults,
+    )
+
+    tenant_result = (
+        db.table("tenants")
+        .select(
+            "business_name, business_type, plan, plan_status, conversations_used_this_month, "
+            "monthly_conversation_limit, free_trial_started_at"
+        )
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not tenant_result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    t = tenant_result.data[0]
+    logger.info("Dashboard tenant row loaded for %s", tenant_id)
+
+    widget_result = (
+        db.table("widget_configs")
+        .select(
+            "api_key, bot_name, primary_color, greeting_message, position, branding, is_online, "
+            "offline_message, teaser_message, teaser_delay_seconds, teaser_enabled"
+        )
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    logger.info(
+        "Dashboard widget_configs query for tenant_id=%s found=%s",
+        tenant_id,
+        bool(widget_result.data),
+    )
+
+    if widget_result.data:
+        w = widget_result.data[0]
+        api_key = w["api_key"]
+        widget_config = WidgetConfigDetail(
+            bot_name=w.get("bot_name", ""),
+            primary_color=w.get("primary_color", "#00BFFF"),
+            greeting_message=w.get("greeting_message", "Hi! How can I help you today?"),
+            position=w.get("position", "bottom-right"),
+            branding=w.get("branding") or None,
+            is_online=w.get("is_online", True),
+            offline_message=w.get("offline_message"),
+            teaser_message=w.get("teaser_message"),
+            teaser_delay_seconds=w.get("teaser_delay_seconds") or 3,
+            teaser_enabled=w.get("teaser_enabled", True),
+            enable_ai_fallback=w.get("enable_ai_fallback", False),
+            enable_structured_lead_parser=w.get("enable_structured_lead_parser", False),
+        )
+    else:
+        api_key = f"anx_{secrets.token_urlsafe(32)}"
+        widget_defaults = get_widget_defaults(
+            t.get("business_type"), t.get("business_name")
+        )
+        logger.info("Dashboard auto-creating widget_config for %s", tenant_id)
+        db.table("widget_configs").insert(
+            {
+                "tenant_id": tenant_id,
+                "api_key": api_key,
+                "bot_name": widget_defaults["bot_name"],
+                "primary_color": widget_defaults["primary_color"],
+                "greeting_message": widget_defaults["greeting_message"],
+                "position": widget_defaults["position"],
+                "show_watermark": True,
+            }
+        ).execute()
+        widget_config = WidgetConfigDetail(
+            bot_name=widget_defaults["bot_name"],
+            primary_color=widget_defaults["primary_color"],
+            greeting_message=widget_defaults["greeting_message"],
+            position=widget_defaults["position"],
+        )
+
+    try:
+        leads_result = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("client_id", tenant_id)
+            .execute()
+        )
+        leads_count = leads_result.count or 0
+    except Exception:
+        logger.warning(
+            "Leads count query failed for tenant %s", tenant_id, exc_info=True
+        )
+        leads_count = 0
+
+    try:
+        hot_result = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("client_id", tenant_id)
+            .gte("lead_score", 8)
+            .execute()
+        )
+        hot_leads_count = hot_result.count or 0
+    except Exception:
+        logger.warning(
+            "Hot leads count query failed for tenant %s", tenant_id, exc_info=True
+        )
+        hot_leads_count = 0
+
+    try:
+        faq_result = (
+            db.table("faq_entries")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("is_active", True)
+            .execute()
+        )
+        faq_count = faq_result.count or 0
+    except Exception:
+        logger.warning("FAQ count query failed for tenant %s", tenant_id, exc_info=True)
+        faq_count = 0
+
+    conversations_used = t.get("conversations_used_this_month") or 0
+    try:
+        chat_sessions = (
+            db.table("chat_messages")
+            .select("session_id")
+            .eq("tenant_id", tenant_id)
+            .limit(5000)
+            .execute()
+        )
+        if chat_sessions.data:
+            unique_sessions = len({r["session_id"] for r in chat_sessions.data})
+            conversations_used = max(conversations_used, unique_sessions)
+    except Exception:
+        logger.warning(
+            "chat_messages count failed for tenant %s", tenant_id, exc_info=True
+        )
+
+    missed_calls = 0
+    try:
+        from datetime import datetime, timedelta, timezone as tz
+
+        week_ago = (datetime.now(tz.utc) - timedelta(days=7)).isoformat()
+        mc_result = (
+            db.table("activity_log")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+            .eq("activity_type", "missed_call_textback")
+            .gte("created_at", week_ago)
+            .execute()
+        )
+        missed_calls = mc_result.count or 0
+    except Exception:
+        logger.debug("Missed calls count failed for tenant %s", tenant_id)
+
+    trial = compute_trial_status(t)
+    business_profile = get_dashboard_business_profile(
+        t.get("business_type"), t.get("business_name")
+    )
+
+    response = DashboardResponse(
+        business_name=t.get("business_name") or "",
+        business_type=t.get("business_type"),
+        plan=t.get("plan") or "free",
+        plan_status=t.get("plan_status", "active"),
+        conversations_used_this_month=conversations_used,
+        monthly_conversation_limit=None,
+        widget_api_key=api_key,
+        leads_count=leads_count,
+        widget_config=widget_config,
+        business_profile=business_profile,
+        faq_count=faq_count,
+        has_conversations=conversations_used > 0,
+        hot_leads_count=hot_leads_count,
+        trial_days_remaining=trial["trial_days_remaining"],
+        trial_expired=trial["trial_expired"],
+        missed_calls_this_week=missed_calls,
+    )
+    logger.info(
+        "Dashboard response assembled for %s leads=%s conversations=%s",
+        tenant_id,
+        leads_count,
+        conversations_used,
+    )
+    return response
