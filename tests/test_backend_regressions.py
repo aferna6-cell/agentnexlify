@@ -268,7 +268,8 @@ def test_onboarding_preserves_existing_widget_customizations_when_fields_are_omi
 @pytest.mark.asyncio
 async def test_automation_loop_schedules_recurring_invoices(monkeypatch):
     """Recurring invoices should run in the 30-minute automation tier."""
-    import backend.main as main
+    import asyncio as _asyncio
+    import backend.services.automation_loop as auto_loop
 
     scheduled_names = []
     sleep_calls = 0
@@ -287,14 +288,14 @@ async def test_automation_loop_schedules_recurring_invoices(monkeypatch):
             raise _StopAutomationLoop()
         return None
 
-    monkeypatch.setattr(main, "_safe_run", fake_safe_run)
-    monkeypatch.setattr(main, "_try_acquire_automation_lock", lambda lock_name: True)
-    monkeypatch.setattr(main, "_release_automation_lock", lambda lock_name: None)
-    monkeypatch.setattr(main.asyncio, "gather", fake_gather)
-    monkeypatch.setattr(main.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(auto_loop, "_safe_run", fake_safe_run)
+    monkeypatch.setattr(auto_loop, "_try_acquire_automation_lock", lambda lock_name: True)
+    monkeypatch.setattr(auto_loop, "_release_automation_lock", lambda lock_name: None)
+    monkeypatch.setattr(_asyncio, "gather", fake_gather)
+    monkeypatch.setattr(_asyncio, "sleep", fake_sleep)
 
     with pytest.raises(_StopAutomationLoop):
-        await main._automation_loop()
+        await auto_loop.run_automation_loop()
 
     assert "process_recurring_invoices" in scheduled_names
 
@@ -302,7 +303,8 @@ async def test_automation_loop_schedules_recurring_invoices(monkeypatch):
 @pytest.mark.asyncio
 async def test_automation_loop_skips_work_when_lock_is_not_acquired(monkeypatch):
     """A worker that misses the DB lease must not execute scheduler work."""
-    import backend.main as main
+    import asyncio as _asyncio
+    import backend.services.automation_loop as auto_loop
 
     scheduled_names = []
     sleep_calls = 0
@@ -318,12 +320,12 @@ async def test_automation_loop_skips_work_when_lock_is_not_acquired(monkeypatch)
             raise _StopAutomationLoop()
         return None
 
-    monkeypatch.setattr(main, "_safe_run", fake_safe_run)
-    monkeypatch.setattr(main, "_try_acquire_automation_lock", lambda lock_name: False)
-    monkeypatch.setattr(main, "_release_automation_lock", lambda lock_name: None)
-    monkeypatch.setattr(main.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(auto_loop, "_safe_run", fake_safe_run)
+    monkeypatch.setattr(auto_loop, "_try_acquire_automation_lock", lambda lock_name: False)
+    monkeypatch.setattr(auto_loop, "_release_automation_lock", lambda lock_name: None)
+    monkeypatch.setattr(_asyncio, "sleep", fake_sleep)
 
     with pytest.raises(_StopAutomationLoop):
-        await main._automation_loop()
+        await auto_loop.run_automation_loop()
 
     assert scheduled_names == []

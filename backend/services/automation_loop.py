@@ -263,7 +263,7 @@ async def run_automation_loop():
     import random
 
     await asyncio.sleep(random.uniform(0, 30))  # Stagger workers
-    from backend.services import email_sequences
+    from backend.services import email_sequence_processor as email_sequences
     from backend.services.daily_briefing import send_daily_briefings
     from backend.services.noshow_recovery import process_noshow_recovery
     from backend.services.automation_engine import (
