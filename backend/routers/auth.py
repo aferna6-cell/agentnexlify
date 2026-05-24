@@ -46,6 +46,7 @@ from backend.services import dashboard_service as _dash_svc
 from backend.services import google_oauth_service as _google_svc
 from backend.services import password_service as _pwd_svc
 from backend.services import signup_service as _signup_svc
+from backend.services import tenant_settings_service as _settings_svc
 from backend.services import widget_config_service as _widget_svc
 
 logger = logging.getLogger(__name__)
@@ -294,37 +295,13 @@ async def generate_mcp_key(
     tenant_id: str, claims: dict = Depends(require_role("owner"))
 ):
     """Generate or regenerate an MCP API key for the tenant."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    import secrets as sec
-
-    mcp_key = f"mcp_{sec.token_urlsafe(32)}"
-
-    db = get_service_supabase()
-    result = (
-        db.table("tenants")
-        .update({"mcp_api_key": mcp_key, "mcp_enabled": True})
-        .eq("id", tenant_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    return {"mcp_api_key": mcp_key}
+    return await _settings_svc.generate_mcp_key(tenant_id=tenant_id, claims=claims)
 
 
 @router.delete("/mcp-key/{tenant_id}")
 async def revoke_mcp_key(tenant_id: str, claims: dict = Depends(require_role("owner"))):
     """Revoke the MCP API key."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    db = get_service_supabase()
-    db.table("tenants").update({"mcp_api_key": None, "mcp_enabled": False}).eq(
-        "id", tenant_id
-    ).execute()
-    return {"success": True}
+    return await _settings_svc.revoke_mcp_key(tenant_id=tenant_id, claims=claims)
 
 
 # ── Tenant Settings ──────────────────────────────────────────
@@ -337,61 +314,14 @@ async def update_settings(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Update tenant business info."""
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    body = await request.json()
-    allowed = {
-        "business_name",
-        "business_type",
-        "city",
-        "owner_name",
-        "notification_phone",
-        "sms_notifications_enabled",
-        "google_review_link",
-        "review_request_config",
-        "website_url",
-        "textback_enabled",
-        "textback_message",
-        "textback_quiet_start",
-        "textback_quiet_end",
-        "daily_briefing_enabled",
-        "noshow_recovery_enabled",
-    }
-    updates = {k: v for k, v in body.items() if k in allowed and v is not None}
-    if not updates:
-        raise HTTPException(status_code=400, detail="No valid fields to update")
-
-    db = get_service_supabase()
-    logger.info("update_settings tenant_id=%s fields=%s", tenant_id, sorted(updates))
-    try:
-        result = db.table("tenants").update(updates).eq("id", tenant_id).execute()
-    except Exception:
-        logger.exception("update_settings failed for tenant_id=%s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to update settings")
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-    return result.data[0]
+    return await _settings_svc.update_settings(
+        tenant_id=tenant_id, request=request, claims=claims
+    )
 
 
 @router.get("/tenant/{tenant_id}")
 async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    db = get_service_supabase()
-    result = (
-        db.table("tenants")
-        .select(
-            "id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled"
-        )
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-    return result.data[0]
+    return await _settings_svc.get_tenant(tenant_id=tenant_id, claims=claims)
 
 
 # ── Billing (JWT-authenticated proxies) ──────────────────────
