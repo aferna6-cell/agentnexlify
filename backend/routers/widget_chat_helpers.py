@@ -13,6 +13,7 @@ WARNING: PEP 563 deferred annotations are incompatible with FastAPI — do not
 add a future-annotations import here.
 """
 
+from backend.models.database import get_service_supabase
 from backend.routers.widget_chat_cache import (
     _CHAT_CACHE_TTL,
     _WIDGET_CACHE_TTL,
@@ -71,6 +72,7 @@ __all__ = [
     "_get_or_create_conversation",
     "_get_tenant",
     "_get_widget_config",
+    "get_service_supabase",
     "_invalidate_cache",
     "_load_chat_history",
     "_needs_bid_context",
