@@ -9,7 +9,7 @@ import bcrypt
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
-from jose import JWTError, jwt
+from jose import jwt
 
 from backend.config import settings
 from backend.limiter import limiter
@@ -122,246 +122,28 @@ def _create_token(
 from backend.dependencies import _get_current_tenant, require_role  # noqa: E402
 
 
-def _normalize_paid_plan(plan: str | None) -> str | None:
-    if not plan:
-        return None
-    normalized = plan.lower().strip()
-    return normalized if normalized in PLAN_PRICES else None
+# Google OAuth + paid-plan helpers extracted to auth_google_helpers.py.
+# Re-imported here so existing call sites + test patch points keep working.
+from backend.routers.auth_google_helpers import (  # noqa: E402, F401
+    _decode_google_setup_token,
+    _decode_google_state,
+    _encode_google_setup_token,
+    _encode_google_state,
+    _frontend_redirect,
+    _google_auth_callback_url,
+    _normalize_paid_plan,
+)
 
-
-def _frontend_redirect(
-    path: str, params: dict[str, str | None], *, use_fragment: bool = False
-) -> str:
-    base = settings.frontend_url.rstrip("/")
-    query = urlencode({k: v for k, v in params.items() if v not in (None, "")})
-    if not query:
-        return f"{base}{path}"
-    separator = "#" if use_fragment else "?"
-    return f"{base}{path}{separator}{query}"
-
-
-def _google_auth_callback_url() -> str:
-    base = (settings.api_url or "").rstrip("/")
-    if not base:
-        raise HTTPException(
-            status_code=503, detail="API URL is not configured for Google OAuth"
-        )
-    return f"{base}/api/v1/auth/google/callback"
-
-
-def _encode_google_state(mode: str, plan: str | None = None) -> str:
-    payload = {
-        "type": "google_oauth_state",
-        "mode": mode,
-        "plan": _normalize_paid_plan(plan),
-        "exp": datetime.now(timezone.utc)
-        + timedelta(minutes=_GOOGLE_STATE_EXPIRY_MINUTES),
-    }
-    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
-
-
-def _decode_google_state(state: str) -> dict:
-    try:
-        payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
-    except JWTError as exc:
-        raise HTTPException(
-            status_code=400, detail="Invalid or expired Google OAuth state"
-        ) from exc
-
-    if payload.get("type") != "google_oauth_state":
-        raise HTTPException(status_code=400, detail="Invalid Google OAuth state")
-
-    mode = (payload.get("mode") or "").strip().lower()
-    if mode not in {"login", "signup"}:
-        raise HTTPException(status_code=400, detail="Invalid Google OAuth mode")
-
-    return {
-        "mode": mode,
-        "plan": _normalize_paid_plan(payload.get("plan")),
-    }
-
-
-def _encode_google_setup_token(
-    email: str, owner_name: str, plan: str | None = None
-) -> str:
-    payload = {
-        "type": "google_setup",
-        "email": email.lower().strip(),
-        "owner_name": owner_name.strip(),
-        "plan": _normalize_paid_plan(plan),
-        "exp": datetime.now(timezone.utc) + timedelta(hours=_GOOGLE_SETUP_EXPIRY_HOURS),
-    }
-    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
-
-
-def _decode_google_setup_token(token: str) -> dict:
-    try:
-        payload = jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
-    except JWTError as exc:
-        raise HTTPException(
-            status_code=400, detail="Invalid or expired Google signup token"
-        ) from exc
-
-    if payload.get("type") != "google_setup":
-        raise HTTPException(status_code=400, detail="Invalid Google signup token")
-
-    email = (payload.get("email") or "").lower().strip()
-    owner_name = (payload.get("owner_name") or "").strip()
-    if not email or not owner_name:
-        raise HTTPException(status_code=400, detail="Incomplete Google signup token")
-
-    return {
-        "email": email,
-        "owner_name": owner_name,
-        "plan": _normalize_paid_plan(payload.get("plan")),
-    }
-
-
-def _provision_tenant_account(
-    *,
-    business_name: str,
-    owner_name: str,
-    email: str,
-    password_hash: str,
-    industry: str,
-    city: str,
-    phone: str | None = None,
-    website_url: str | None = None,
-) -> tuple[str, str]:
-    db = get_service_supabase()
-    normalized_email = email.lower().strip()
-
-    existing = (
-        db.table("tenants")
-        .select("id")
-        .eq("owner_email", normalized_email)
-        .limit(1)
-        .execute()
-    )
-    if existing.data:
-        raise HTTPException(status_code=409, detail="Email already registered")
-
-    tenant_data = {
-        "business_name": business_name,
-        "business_type": industry,
-        "owner_email": normalized_email,
-        "owner_name": owner_name,
-        "password_hash": password_hash,
-        "city": city,
-        "plan": "free",
-    }
-    result = db.table("tenants").insert(tenant_data).execute()
-    if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to create account")
-
-    tenant_id = str(result.data[0]["id"])
-
-    extra_fields = {}
-    if website_url:
-        extra_fields["website_url"] = website_url
-    if phone:
-        extra_fields["notification_phone"] = phone
-        extra_fields["sms_notifications_enabled"] = True
-    if extra_fields:
-        try:
-            db.table("tenants").update(extra_fields).eq("id", tenant_id).execute()
-        except Exception:
-            logger.warning(
-                "Failed to save signup fields for new tenant %s",
-                tenant_id,
-                exc_info=True,
-            )
-
-    api_key = f"anx_{secrets.token_urlsafe(32)}"
-    widget_defaults = get_widget_defaults(industry, business_name)
-    try:
-        wc_result = (
-            db.table("widget_configs")
-            .insert(
-                {
-                    "tenant_id": tenant_id,
-                    "api_key": api_key,
-                    "bot_name": widget_defaults["bot_name"],
-                    "primary_color": widget_defaults["primary_color"],
-                    "greeting_message": widget_defaults["greeting_message"],
-                    "position": widget_defaults["position"],
-                    "show_watermark": True,
-                }
-            )
-            .execute()
-        )
-        if not wc_result.data:
-            raise RuntimeError("widget_configs insert returned no data")
-    except Exception:
-        logger.error(
-            "Failed to create widget_configs for tenant %s — rolling back",
-            tenant_id,
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500, detail="Failed to initialize widget configuration"
-        )
-
-    _seed_industry_faqs(tenant_id, industry, business_name, city)
-    return tenant_id, api_key
-
-
-async def _run_signup_side_effects(
-    *,
-    email: str,
-    owner_name: str,
-    tenant_id: str,
-    business_name: str,
-    industry: str,
-    city: str,
-    website_url: str | None = None,
-) -> None:
-    try:
-        await send_email(
-            to=email,
-            subject="Welcome to AgentNexLiFy!",
-            body_html=(
-                f"<h2>Welcome to AgentNexLiFy, {owner_name or 'there'}!</h2>"
-                "<p>Your AI-powered business automation platform is ready to go.</p>"
-                "<p><strong>Here's what to do next:</strong></p>"
-                "<ol>"
-                "<li>Configure your AI assistant with your business info and FAQs</li>"
-                "<li>Customize your chat widget's appearance</li>"
-                "<li>Embed the widget on your website with one line of code</li>"
-                "</ol>"
-                "<p>Your AI assistant will start capturing leads and booking appointments automatically.</p>"
-                f"<p><a href='{settings.frontend_url}/dashboard' style='background:#3b82f6;color:#fff;'"
-                "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
-                "Go to Dashboard &rarr;</a></p>"
-                "<p>&mdash; The AgentNexLiFy Team</p>"
-            ),
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.warning(
-            "Welcome email failed for new tenant %s", tenant_id, exc_info=True
-        )
-
-    if website_url:
-        try:
-            from backend.services.website_crawler import start_crawl
-
-            await start_crawl(tenant_id, website_url)
-        except Exception:
-            logger.warning(
-                "Signup crawl failed for new tenant %s url=%s",
-                tenant_id,
-                website_url,
-                exc_info=True,
-            )
+# Tenant provisioning + signup side effects extracted to auth_provisioning.py.
+from backend.routers.auth_provisioning import (  # noqa: E402, F401
+    _provision_tenant_account,
+    _run_signup_side_effects,
+)
 
 
 # ── Industry FAQ Seeds ───────────────────────────────────────
 # Moved to backend/services/industry_faqs.py
 # Re-exported here for backward compatibility with any direct imports.
-from backend.services.industry_faqs import (
-    _seed_industry_faqs,
-)  # noqa: F401
 
 # ── Endpoints ────────────────────────────────────────────────
 
