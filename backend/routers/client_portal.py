@@ -2,13 +2,8 @@
 
 import logging
 import secrets
-import uuid
-from datetime import datetime, timedelta, timezone
-from urllib.parse import urlparse
 
-import bcrypt
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, UploadFile
-from jose import JWTError, jwt
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from backend.config import settings
@@ -16,17 +11,63 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.dependencies import _get_current_tenant
 from backend.services.tenant_scope import tenant_table
+from backend.services.client_portal.urls import (
+    _PUBLIC_API_BASE_URL,
+    _PUBLIC_PORTAL_FRONTEND_URL,
+    _STALE_FRONTEND_HOSTS,
+    _STALE_FRONTEND_HOST_SUFFIXES,
+    _api_base_url,
+    _jwt_secret,
+    _portal_base_url,
+)
+from backend.services.client_portal.auth import (
+    _CLIENT_JWT_EXPIRE_DAYS,
+    _JWT_ALGORITHM,
+    _create_client_token,
+    _get_current_client,
+    _hash_client_password,
+    _verify_client_password,
+)
+from backend.services.client_portal.photos import (
+    append_photo_url,
+    fetch_record_for_upload,
+    upload_photo_to_storage,
+    validate_and_read_photo,
+)
+from backend.services.client_portal.portal_data import (
+    fetch_appointments,
+    fetch_business,
+    fetch_client_login_enabled,
+    fetch_customer,
+    fetch_documents,
+    fetch_invoices,
+    fetch_service_records,
+    fetch_widget_config,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/portal", tags=["client-portal"])
 
-_PUBLIC_PORTAL_FRONTEND_URL = "https://app.agentnexlify.com"
-_PUBLIC_API_BASE_URL = "https://agentnexlify-production.up.railway.app"
-_JWT_ALGORITHM = "HS256"
-_CLIENT_JWT_EXPIRE_DAYS = 30
-_STALE_FRONTEND_HOSTS = {"agentnexlify.com"}
-_STALE_FRONTEND_HOST_SUFFIXES = (".vercel.app",)
+__all__ = [
+    "router",
+    "settings",
+    "get_supabase",
+    "get_service_supabase",
+    "_portal_base_url",
+    "_api_base_url",
+    "_jwt_secret",
+    "_PUBLIC_PORTAL_FRONTEND_URL",
+    "_PUBLIC_API_BASE_URL",
+    "_STALE_FRONTEND_HOSTS",
+    "_STALE_FRONTEND_HOST_SUFFIXES",
+    "_JWT_ALGORITHM",
+    "_CLIENT_JWT_EXPIRE_DAYS",
+    "_hash_client_password",
+    "_verify_client_password",
+    "_create_client_token",
+    "_get_current_client",
+]
 
 
 def get_supabase():
@@ -37,38 +78,6 @@ def get_supabase():
 def get_service_supabase():
     """Preserve existing call sites while allowing get_supabase() patches to intercept."""
     return get_supabase()
-
-
-def _portal_base_url() -> str:
-    frontend_url = getattr(settings, "frontend_url", "")
-    if not isinstance(frontend_url, str):
-        frontend_url = ""
-    frontend_url = frontend_url.rstrip("/")
-    parsed = urlparse(frontend_url)
-    hostname = parsed.hostname or ""
-    is_local = hostname in {"localhost", "127.0.0.1", "::1"}
-    is_stale_alias = (
-        hostname in _STALE_FRONTEND_HOSTS
-        or any(hostname.endswith(suffix) for suffix in _STALE_FRONTEND_HOST_SUFFIXES)
-    )
-    if parsed.scheme in {"http", "https"} and hostname and not is_local and not is_stale_alias:
-        return f"{frontend_url}/client"
-    return f"{_PUBLIC_PORTAL_FRONTEND_URL}/client"
-
-
-def _api_base_url() -> str:
-    api_url = getattr(settings, "api_url", "")
-    if isinstance(api_url, str) and api_url.strip():
-        return api_url
-    return _PUBLIC_API_BASE_URL
-
-
-def _jwt_secret() -> str:
-    jwt_secret = getattr(settings, "jwt_secret_key", "")
-    if isinstance(jwt_secret, str) and jwt_secret:
-        return jwt_secret
-    api_secret = getattr(settings, "api_secret_key", "")
-    return api_secret if isinstance(api_secret, str) else ""
 
 
 # ── Pydantic models ──────────────────────────────────────────
@@ -230,9 +239,6 @@ async def delete_service_record(
 
 # ── Photo upload for service records ─────────────────────────
 
-_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
-_MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB
-
 
 @router.post("/{tenant_id}/service-records/{record_id}/upload")
 async def upload_service_photo(
@@ -249,77 +255,12 @@ async def upload_service_photo(
     """
     _verify_tenant(claims, tenant_id)
 
-    # Validate file type
-    content_type = file.content_type or ""
-    if content_type not in _ALLOWED_IMAGE_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File type not allowed: {content_type}. Accepted: JPEG, PNG, WebP.",
-        )
-
-    # Read file with size check
-    data = await file.read()
-    if len(data) > _MAX_PHOTO_SIZE:
-        raise HTTPException(status_code=400, detail="File too large (max 10 MB)")
-
+    data, content_type = await validate_and_read_photo(file)
     db = get_service_supabase()
-
-    # Verify the service record exists and belongs to this tenant
-    try:
-        existing = (
-            tenant_table(db, "service_records", tenant_id)
-            .select("id, photos_json")
-            .eq("id", record_id)
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch service record %s for photo upload", record_id)
-        raise HTTPException(status_code=500, detail="Failed to fetch service record")
-
-    if not existing.data:
-        raise HTTPException(status_code=404, detail="Service record not found")
-
-    record = existing.data[0]
+    record = fetch_record_for_upload(db, tenant_id, record_id)
     current_photos = record.get("photos_json") or []
-
-    # Generate unique path in Supabase Storage
-    ext = (file.filename or "photo.jpg").rsplit(".", 1)[-1][:10]
-    unique_name = f"{uuid.uuid4().hex[:12]}.{ext}"
-    path = f"{tenant_id}/{record_id}/{unique_name}"
-
-    try:
-        db.storage.from_("service-photos").upload(
-            path,
-            data,
-            file_options={"content-type": content_type},
-        )
-    except Exception:
-        logger.exception("Photo upload to storage failed for record %s", record_id)
-        raise HTTPException(status_code=500, detail="Photo upload failed")
-
-    # Build public URL
-    public_url = f"{settings.supabase_url}/storage/v1/object/public/service-photos/{path}"
-
-    # Append URL to photos_json array
-    updated_photos = current_photos + [public_url]
-    try:
-        result = (
-            tenant_table(db, "service_records", tenant_id)
-            .update({"photos_json": updated_photos})
-            .eq("id", record_id)
-            .eq("tenant_id", tenant_id)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to update photos_json for record %s", record_id)
-        raise HTTPException(status_code=500, detail="Failed to update service record")
-
-    if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to update service record")
-
-    return result.data[0]
+    public_url = upload_photo_to_storage(db, tenant_id, record_id, file.filename, data, content_type)
+    return append_photo_url(db, tenant_id, record_id, current_photos, public_url)
 
 
 @router.post("/{tenant_id}/portal-link/{lead_id}")
@@ -398,84 +339,11 @@ async def get_portal_data(token: str, request: Request):
     tenant_id = tok["tenant_id"]
     lead_id = tok["lead_id"]
 
-    # Fetch business info
-    try:
-        tenant_result = (
-            tenant_table(db, "tenants", tenant_id)
-            .select("id, business_name, owner_email, city")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch tenant %s for portal", tenant_id)
-        raise HTTPException(status_code=500, detail="Internal error")
-
-    business = tenant_result.data[0] if tenant_result.data else {}
-
-    # Fetch customer (lead) info — leads table uses client_id
-    try:
-        lead_result = (
-            tenant_table(db, "leads", tenant_id)
-            .select("id, name, email, phone")
-            .eq("id", lead_id)
-            .eq("client_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch lead %s for portal", lead_id)
-        raise HTTPException(status_code=500, detail="Internal error")
-
-    customer = lead_result.data[0] if lead_result.data else {}
-
-    # Fetch service records for this lead + tenant (only public-safe columns)
-    try:
-        records_result = (
-            tenant_table(db, "service_records", tenant_id)
-            .select("id, title, description, service_date, photos_json, documents_json, invoice_amount, created_at")
-            .eq("tenant_id", tenant_id)
-            .eq("lead_id", lead_id)
-            .order("service_date", desc=True)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch service records for portal, lead %s", lead_id)
-        raise HTTPException(status_code=500, detail="Internal error")
-
-    service_records = records_result.data or []
-
-    # Check if booking is enabled and fetch widget API key for rebook button
-    rebook_enabled = False
-    widget_api_key = None
-    try:
-        wc_result = (
-            tenant_table(db, "widget_configs", tenant_id)
-            .select("booking_enabled, api_key")
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if wc_result.data:
-            rebook_enabled = bool(wc_result.data[0].get("booking_enabled"))
-            widget_api_key = wc_result.data[0].get("api_key")
-    except Exception:
-        logger.warning("Failed to check widget config for tenant %s", tenant_id)
-
-    # Check if client login is enabled for this tenant
-    client_login_enabled = False
-    try:
-        tenant_full = (
-            tenant_table(db, "tenants", tenant_id)
-            .select("client_login_enabled")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if tenant_full.data:
-            client_login_enabled = bool(tenant_full.data[0].get("client_login_enabled"))
-    except Exception:
-        logger.warning("Failed to check client_login_enabled for tenant %s", tenant_id)
+    business = fetch_business(db, tenant_id)
+    customer = fetch_customer(db, tenant_id, lead_id)
+    service_records = fetch_service_records(db, tenant_id, lead_id)
+    rebook_enabled, widget_api_key = fetch_widget_config(db, tenant_id)
+    client_login_enabled = fetch_client_login_enabled(db, tenant_id)
 
     return {
         "business": business,
@@ -501,39 +369,6 @@ class ClientLoginRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=1, max_length=128)
     business_slug: str = Field(..., min_length=1, max_length=100)
-
-
-def _hash_client_password(plain: str) -> str:
-    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
-
-
-def _verify_client_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
-
-
-def _create_client_token(tenant_id: str, lead_id: str, email: str) -> str:
-    payload = {
-        "tenant_id": tenant_id,
-        "lead_id": lead_id,
-        "email": email,
-        "scope": "client",
-        "exp": datetime.now(timezone.utc) + timedelta(days=_CLIENT_JWT_EXPIRE_DAYS),
-    }
-    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
-
-
-def _get_current_client(authorization: str = Header(...)) -> dict:
-    """Decode and validate a client JWT token."""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-    token = authorization[7:]
-    try:
-        payload = jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    if payload.get("scope") != "client":
-        raise HTTPException(status_code=403, detail="Not a client token")
-    return payload
 
 
 @router.post("/client/register")
@@ -679,120 +514,24 @@ async def client_me(claims: dict = Depends(_get_current_client)):
     tenant_id = claims["tenant_id"]
     lead_id = claims["lead_id"]
 
-    # Fetch business info
-    try:
-        tenant_result = (
-            tenant_table(db, "tenants", tenant_id)
-            .select("id, business_name, owner_email, city, business_slug")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch tenant %s for client portal", tenant_id)
+    business = fetch_business(db, tenant_id, with_slug=True)
+    if not business:
         raise HTTPException(status_code=500, detail="Failed to load portal")
 
-    business = tenant_result.data[0] if tenant_result.data else {}
-
-    # Fetch customer (lead) info — leads table uses client_id
-    try:
-        lead_result = (
-            tenant_table(db, "leads", tenant_id)
-            .select("id, name, email, phone")
-            .eq("id", lead_id)
-            .eq("client_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch lead %s for client portal", lead_id)
-        raise HTTPException(status_code=500, detail="Failed to load portal")
-
-    customer = lead_result.data[0] if lead_result.data else {}
-
-    # Fetch service records (client-facing columns only)
-    try:
-        records_result = (
-            tenant_table(db, "service_records", tenant_id)
-            .select("id, title, description, service_date, photos_json, documents_json, invoice_amount, created_at")
-            .eq("tenant_id", tenant_id)
-            .eq("lead_id", lead_id)
-            .order("service_date", desc=True)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to fetch service records for client %s", lead_id)
-        raise HTTPException(status_code=500, detail="Failed to load portal")
-
-    # Fetch appointments
-    try:
-        appt_result = (
-            tenant_table(db, "appointments", tenant_id)
-            .select("id, customer_name, start_time, end_time, status, notes")
-            .eq("tenant_id", tenant_id)
-            .eq("lead_id", lead_id)
-            .order("start_time", desc=True)
-            .limit(20)
-            .execute()
-        )
-    except Exception:
-        logger.warning("Failed to fetch appointments for client %s", lead_id)
-        appt_result = type("R", (), {"data": []})()
-
-    # Fetch invoices
-    try:
-        inv_result = (
-            tenant_table(db, "invoices", tenant_id)
-            .select("id, invoice_number, items_json, subtotal, tax, total, status, created_at, due_date")
-            .eq("tenant_id", tenant_id)
-            .eq("lead_id", lead_id)
-            .order("created_at", desc=True)
-            .limit(20)
-            .execute()
-        )
-    except Exception:
-        logger.warning("Failed to fetch invoices for client %s", lead_id)
-        inv_result = type("R", (), {"data": []})()
-
-    # Fetch documents
-    try:
-        doc_result = (
-            tenant_table(db, "documents", tenant_id)
-            .select("id, title, status, created_at, signed_at")
-            .eq("tenant_id", tenant_id)
-            .eq("lead_id", lead_id)
-            .order("created_at", desc=True)
-            .limit(20)
-            .execute()
-        )
-    except Exception:
-        logger.warning("Failed to fetch documents for client %s", lead_id)
-        doc_result = type("R", (), {"data": []})()
-
-    # Check rebook status
-    rebook_enabled = False
-    widget_api_key = None
-    try:
-        wc_result = (
-            tenant_table(db, "widget_configs", tenant_id)
-            .select("booking_enabled, api_key")
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if wc_result.data:
-            rebook_enabled = bool(wc_result.data[0].get("booking_enabled"))
-            widget_api_key = wc_result.data[0].get("api_key")
-    except Exception:
-        logger.warning("Failed to check widget config for tenant %s", tenant_id)
+    customer = fetch_customer(db, tenant_id, lead_id)
+    service_records = fetch_service_records(db, tenant_id, lead_id)
+    appointments = fetch_appointments(db, tenant_id, lead_id)
+    invoices = fetch_invoices(db, tenant_id, lead_id)
+    documents = fetch_documents(db, tenant_id, lead_id)
+    rebook_enabled, widget_api_key = fetch_widget_config(db, tenant_id)
 
     return {
         "business": business,
         "customer": customer,
-        "service_records": records_result.data or [],
-        "appointments": appt_result.data or [],
-        "invoices": inv_result.data or [],
-        "documents": doc_result.data or [],
+        "service_records": service_records,
+        "appointments": appointments,
+        "invoices": invoices,
+        "documents": documents,
         "rebook_enabled": rebook_enabled,
         "widget_api_key": widget_api_key,
         "api_base": _api_base_url(),
@@ -827,4 +566,4 @@ async def toggle_client_login(
         raise
     except Exception:
         logger.exception("Failed to toggle client login for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to update setting")
+        raise HTTPException(status_code=500, detail="Failed to toggle client login")
