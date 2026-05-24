@@ -6,7 +6,6 @@ BackgroundTasks get treated as query params, causing 422 errors.
 """
 
 import logging
-import re
 from time import perf_counter
 
 import anthropic
@@ -34,16 +33,12 @@ from backend.routers.widget_chat_helpers import (
     MODEL,
     MAX_TOKENS,
     TEMPERATURE,
-    _CHAT_CACHE_TTL,
     _check_origin,
-    _get_cached,
     _get_or_create_conversation,
     _get_tenant,
     _get_widget_config,
-    _load_chat_history,
     _record_response_metric,
     _save_chat_messages,
-    _set_cache,
 )
 from backend.routers.widget_lead_helpers import (
     _capture_leads_from_session,
@@ -75,6 +70,7 @@ from backend.routers.widget_chat_fallback import (  # noqa: F401, E402
     _run_support_fallback,
 )
 from backend.routers.widget_chat_context_builder import build_chat_context
+from backend.routers.widget_chat_preflight import run_preflight
 
 
 def _chat_rate_limit(key: str) -> str:
@@ -179,288 +175,18 @@ async def widget_chat(
                 exc_info=True,
             )
 
-    # 4b. Check if conversation is in handoff mode (team member handling)
-    handoff_active = False
-    try:
-        conv_tags = (
-            db.table("conversations")
-            .select("tags")
-            .eq("client_id", tenant["id"])
-            .eq("session_id", req.session_id)
-            .limit(1)
-            .execute()
-        )
-        if conv_tags.data:
-            tags = conv_tags.data[0].get("tags") or []
-            handoff_active = "handoff" in tags
-    except Exception:
-        logger.warning(
-            "handoff check failed for session %s", req.session_id, exc_info=True
-        )
-
-    if handoff_active:
-        # Save user message, skip Claude, return waiting message
-        _save_chat_messages(tenant["id"], req.session_id, req.message, None)
-        # Check for any team replies since last user message
-        try:
-            recent = (
-                db.table("chat_messages")
-                .select("content, created_at")
-                .eq("tenant_id", tenant["id"])
-                .eq("session_id", req.session_id)
-                .eq("role", "assistant")
-                .order("created_at", desc=True)
-                .limit(1)
-                .execute()
-            )
-            if recent.data:
-                last_reply = recent.data[0]["content"]
-                # If the last assistant message is NOT the handoff message, it's a team reply
-                if last_reply and "team member" not in last_reply.lower():
-                    return WidgetChatResponse(
-                        response=last_reply,
-                        session_id=req.session_id,
-                        lead_captured=False,
-                        show_watermark=widget.get("show_watermark", True),
-                        handoff=True,
-                    )
-        except Exception:
-            logger.warning(
-                "Failed to fetch latest team reply for session %s",
-                req.session_id,
-                exc_info=True,
-            )
-
-        waiting_msg = "A team member is reviewing your conversation and will respond shortly. Thank you for your patience."
-        _save_chat_messages(tenant["id"], req.session_id, None, waiting_msg)
-        return WidgetChatResponse(
-            response=waiting_msg,
-            session_id=req.session_id,
-            lead_captured=False,
-            show_watermark=widget.get("show_watermark", True),
-            handoff=True,
-        )
-
-    # 4c. Content mode detection — repurpose content instead of chatting
-    _content_mode_keywords = [
-        "repurpose",
-        "content mode",
-        "turn this into",
-        "create content from",
-    ]
-    _yt_pattern = re.compile(r"(?:youtube\.com/watch|youtu\.be/)")
-    _msg_lower = req.message.lower()
-    _content_mode = req.content_mode
-    if not _content_mode:
-        for _kw in _content_mode_keywords:
-            if _kw in _msg_lower:
-                _content_mode = True
-                break
-    if not _content_mode and _yt_pattern.search(req.message):
-        _content_mode = True
-    if not _content_mode and len(req.message) > 500 and "?" not in req.message:
-        _content_mode = True
-
-    if _content_mode:
-        plan = tenant.get("plan") or "free"
-        if plan not in ("professional", "enterprise"):
-            _save_chat_messages(tenant["id"], req.session_id, req.message, None)
-            return WidgetChatResponse(
-                response="Content repurposing is available on Professional and Enterprise plans. Upgrade to unlock this feature!",
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=widget.get("show_watermark", True),
-            )
-        # Determine source type
-        if _yt_pattern.search(req.message):
-            _src_type = "youtube"
-        elif req.message.strip().startswith(("http://", "https://")):
-            _src_type = "url"
-        else:
-            _src_type = "text"
-        # Create repurpose job
-        try:
-            from backend.services.content_repurposer import (
-                extract_source,
-                repurpose as do_repurpose,
-            )
-
-            source = await extract_source(_src_type, req.message.strip())
-            outputs = await do_repurpose(
-                source_content=source["content"],
-                title=source["title"],
-                tenant_id=tenant["id"],
-                tone="professional",
-            )
-            db.table("repurpose_jobs").insert(
-                {
-                    "tenant_id": tenant["id"],
-                    "source_type": _src_type,
-                    "source_url": source["source_url"],
-                    "source_content": source["content"],
-                    "source_title": source["title"],
-                    "outputs": outputs,
-                    "status": "completed",
-                    "created_via": "widget",
-                }
-            ).execute()
-            resp_text = (
-                f"Done! I've repurposed \"{source['title']}\" into:\n\n"
-                "- X/Twitter thread (7-10 tweets)\n"
-                "- LinkedIn carousel\n"
-                "- Email sequence (3-5 emails)\n"
-                "- TikTok/Reels scripts\n"
-                "- Social posts (Facebook, Instagram, Google Business)\n\n"
-                "View and edit your results in the Content Repurpose page on your dashboard."
-            )
-        except Exception as e:
-            logger.error("Content mode repurpose failed: %s", e, exc_info=True)
-            resp_text = "Sorry, I had trouble repurposing that content. Please try again or paste the text directly."
-        _save_chat_messages(tenant["id"], req.session_id, req.message, resp_text)
-        return WidgetChatResponse(
-            response=resp_text,
-            session_id=req.session_id,
-            lead_captured=False,
-            show_watermark=widget.get("show_watermark", True),
-        )
-
-    # 5. Load message history from chat_messages table (last 20 messages)
-    messages = _load_chat_history(tenant["id"], req.session_id)
-    logger.info(
-        "widget_chat: session=%s loaded %d previous messages, first_role=%s",
-        req.session_id,
-        len(messages),
-        messages[0]["role"] if messages else "NONE",
+    # 4b/4c/5/5b/5c. Preflight guards — handoff, content mode, junk/greeting,
+    # null-state. Each may early-exit with a canned response that bypasses
+    # the Claude API. On miss returns (None, messages) for the main pipeline.
+    _preflight_response, messages = await run_preflight(
+        tenant=tenant, widget=widget, req=req, db=db
     )
-
-    # 5b. Spam short-circuit — skip Claude API for junk and repeat greetings
-    _stripped = req.message.strip()
-    _normalized = re.sub(r"[^a-z]", "", _stripped.lower())
-    _is_free = (tenant.get("plan") or "free") == "free"
-    _watermark = True if _is_free else widget.get("show_watermark", True)
-
-    # Single-character or empty messages - never worth a Claude API call
-    if len(_normalized) <= 1 and len(messages) >= 2:
-        _canned_junk = "Could you type out your question? I'm happy to help!"
-        _save_chat_messages(tenant["id"], req.session_id, req.message, _canned_junk)
-        logger.info(
-            "widget_chat: junk_shortcircuit=True session=%s msg=%r (skipped Claude API)",
-            req.session_id,
-            _stripped,
-        )
-        return WidgetChatResponse(
-            response=_canned_junk,
-            session_id=req.session_id,
-            lead_captured=False,
-            show_watermark=_watermark,
-            handoff=False,
-        )
-
-    # Repeat greeting detection
-    _GREETINGS = {"hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hii", "helo"}
-    if _normalized in _GREETINGS:
-        if len(messages) == 0:
-            _biz_name = tenant.get("business_name") or "us"
-            _opening = widget.get("greeting_message") or (
-                f"Hi! Thanks for reaching out to {_biz_name}. How can I help today?"
-            )
-            _save_chat_messages(tenant["id"], req.session_id, req.message, _opening)
-            logger.info(
-                "widget_chat: greeting_shortcircuit=True session=%s first_turn=True (skipped Claude API)",
-                req.session_id,
-            )
-            return WidgetChatResponse(
-                response=_opening,
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=_watermark,
-                handoff=False,
-            )
-
-        # Session already has at least one exchange - this is a repeat greeting
-        _prior_user_greeted = any(
-            m["role"] == "user"
-            and re.sub(r"[^a-z]", "", m.get("content", "").strip().lower())
-            in _GREETINGS
-            for m in messages
-        )
-        if _prior_user_greeted:
-            _biz_name = tenant.get("business_name") or "us"
-            _canned = (
-                f"I'm still here! Is there something specific I can help you with? "
-                f"I can answer questions about {_biz_name} - pricing, services, how to get started, and more."
-            )
-            _save_chat_messages(tenant["id"], req.session_id, req.message, _canned)
-            logger.info(
-                "widget_chat: greeting_shortcircuit=True session=%s (skipped Claude API)",
-                req.session_id,
-            )
-            return WidgetChatResponse(
-                response=_canned,
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=_watermark,
-                handoff=False,
-            )
-
-    # 5c. Null-state guard — if bot has NO grounding at all, show a graceful fallback.
-    # Grounding sources: knowledge_base, custom_instructions, FAQs, or business_type
-    # (business_type alone gives the bot enough vertical context to answer generically).
-    _has_kb = bool((widget.get("knowledge_base") or "").strip())
-    _has_ci = bool((widget.get("custom_instructions") or "").strip())
-    _has_bt = (
-        bool((tenant.get("business_type") or "").strip())
-        and (tenant.get("business_type") or "").lower() != "other"
-    )
-    if not _has_kb and not _has_ci and not _has_bt and len(messages) == 0:
-        # Final check: FAQs count as grounding too. Probe cheaply.
-        _faq_probe_key = f"faq_count:{tenant['id']}"
-        _faq_count = _get_cached(_faq_probe_key, _CHAT_CACHE_TTL)
-        if _faq_count is None:
-            try:
-                _faq_probe = (
-                    get_service_supabase()
-                    .table("faq_entries")
-                    .select("id", count="exact")
-                    .eq("tenant_id", tenant["id"])
-                    .eq("is_active", True)
-                    .limit(1)
-                    .execute()
-                )
-                _faq_count = int(_faq_probe.count or 0)
-            except Exception:
-                logger.warning(
-                    "faq count probe failed for tenant %s", tenant["id"], exc_info=True
-                )
-                _faq_count = 0
-            _set_cache(_faq_probe_key, _faq_count)
-
-        if _faq_count == 0:
-            _biz = tenant.get("business_name") or "our team"
-            _phone = tenant.get("phone") or ""
-            _phone_msg = f" You can also reach us at {_phone}." if _phone else ""
-            _setup_msg = (
-                f"Thanks for reaching out! Our chat assistant is still being set up. "
-                f"In the meantime, please contact {_biz} directly for assistance.{_phone_msg}"
-            )
-            _save_chat_messages(tenant["id"], req.session_id, req.message, _setup_msg)
-            logger.info(
-                "widget_chat: null_state_guard session=%s tenant=%s (no KB, CI, business_type, or FAQs)",
-                req.session_id,
-                tenant["id"],
-            )
-            return WidgetChatResponse(
-                response=_setup_msg,
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=_watermark,
-                handoff=False,
-            )
+    if _preflight_response is not None:
+        return _preflight_response
 
     # 6. Build system prompt with compact, intent-aware context. All
     # tenant-grounding loads + system-prompt assembly live in
     # widget_chat_context_builder.build_chat_context.
-    db = get_service_supabase()
     _ctx = build_chat_context(
         tenant=tenant,
         widget=widget,
