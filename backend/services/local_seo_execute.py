@@ -25,6 +25,13 @@ from backend.services.local_seo_ai import (
     _run_geo_score_ai,
     _run_seo_audit_ai,
 )
+from backend.services.local_seo_execute_helpers import (  # noqa: F401
+    categorize_issues_by_severity,
+    load_competitor_context,
+    load_seo_profile_inputs,
+    resolve_geo_inputs,
+    upsert_keyword_rankings,
+)
 from backend.services.local_seo_scoring import (
     _calculate_completeness,
     _parse_json_object_response,
@@ -127,25 +134,7 @@ async def execute_seo_audit(tenant_id: str) -> Dict[str, Any]:
     categories = audit_result.get("categories", {})
     recommendations_list = audit_result.get("recommendations", [])
 
-    # Categorize issues by severity
-    critical_issues: List[Dict[str, Any]] = []
-    warnings: List[Dict[str, Any]] = []
-    passed_checks: List[Dict[str, Any]] = []
-
-    for cat_name, cat_data in categories.items():
-        if not isinstance(cat_data, dict):
-            continue
-        for issue in cat_data.get("issues", []):
-            if not isinstance(issue, dict):
-                continue
-            issue["category"] = cat_name
-            severity = issue.get("severity", "warning")
-            if severity == "critical":
-                critical_issues.append(issue)
-            elif severity == "warning":
-                warnings.append(issue)
-            elif severity == "passed":
-                passed_checks.append(issue)
+    critical_issues, warnings, passed_checks = categorize_issues_by_severity(categories)
 
     pages_analyzed = pages_found if isinstance(pages_found, int) else len(pages_json)
 
@@ -231,82 +220,7 @@ async def execute_keyword_tracking(
             ai_lookup[item["keyword"].lower()] = item
 
     now = datetime.now(timezone.utc).isoformat()
-    saved_items: List[Dict[str, Any]] = []
-
-    for kw in cleaned_keywords:
-        ai_data = ai_lookup.get(kw, {})
-
-        ranking_data = {
-            "tenant_id": tenant_id,
-            "keyword": kw,
-            "difficulty_score": int(ai_data.get("difficulty_score", 50)),
-            "estimated_position": ai_data.get("estimated_position", "unknown"),
-            "search_volume_estimate": ai_data.get("search_volume_estimate", "unknown"),
-            "recommendations": ai_data.get("recommendations", []),
-            "last_analyzed_at": now,
-        }
-
-        # Upsert: check if keyword already tracked, update or insert
-        try:
-            existing = (
-                db.table("keyword_rankings")
-                .select("id")
-                .eq("tenant_id", tenant_id)
-                .eq("keyword", kw)
-                .limit(1)
-                .execute()
-            )
-            if existing.data:
-                update_data = {
-                    "difficulty_score": ranking_data["difficulty_score"],
-                    "estimated_position": ranking_data["estimated_position"],
-                    "search_volume_estimate": ranking_data["search_volume_estimate"],
-                    "recommendations": ranking_data["recommendations"],
-                    "last_analyzed_at": now,
-                }
-                result = (
-                    db.table("keyword_rankings")
-                    .update(update_data)
-                    .eq("id", existing.data[0]["id"])
-                    .execute()
-                )
-                saved = result.data[0] if result.data else ranking_data
-            else:
-                result = db.table("keyword_rankings").insert(ranking_data).execute()
-                saved = result.data[0] if result.data else ranking_data
-
-            saved_items.append(
-                {
-                    "id": saved.get("id"),
-                    "keyword": kw,
-                    "difficulty_score": saved.get("difficulty_score", 50),
-                    "estimated_position": saved.get("estimated_position"),
-                    "search_volume_estimate": saved.get("search_volume_estimate"),
-                    "recommendations": saved.get("recommendations", []),
-                    "last_analyzed_at": saved.get("last_analyzed_at"),
-                }
-            )
-        except Exception:
-            logger.error(
-                "Failed to save keyword ranking for '%s', tenant %s",
-                kw,
-                tenant_id,
-                exc_info=True,
-            )
-            # Still include the keyword with AI data even if DB save fails
-            saved_items.append(
-                {
-                    "id": None,
-                    "keyword": kw,
-                    "difficulty_score": ranking_data["difficulty_score"],
-                    "estimated_position": ranking_data["estimated_position"],
-                    "search_volume_estimate": ranking_data["search_volume_estimate"],
-                    "recommendations": ranking_data["recommendations"],
-                    "last_analyzed_at": now,
-                }
-            )
-
-    return saved_items
+    return upsert_keyword_rankings(db, tenant_id, cleaned_keywords, ai_lookup, now)
 
 
 async def execute_competitor_analysis(
@@ -319,37 +233,10 @@ async def execute_competitor_analysis(
     """
     db = get_service_supabase()
 
-    # Get business context
-    tenant_result = (
-        db.table("tenants")
-        .select("business_name, business_type, city, website_url")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not tenant_result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    tenant = tenant_result.data[0]
+    tenant, your_score = load_competitor_context(db, tenant_id)
     business_name = tenant.get("business_name") or "Your business"
     business_type = tenant.get("business_type") or "business"
     city = tenant.get("city") or ""
-
-    # Latest SEO audit score (optional context for the prompt)
-    your_score = None
-    try:
-        audit_result = (
-            db.table("seo_audits")
-            .select("overall_score, categories")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if audit_result.data:
-            your_score = audit_result.data[0].get("overall_score")
-    except Exception:
-        logger.warning("Failed to fetch SEO audit for competitor analysis")
 
     competitors_text = "\n".join(f"- {c}" for c in competitors)
     location_context = f" in {city}" if city else ""
@@ -420,80 +307,9 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
     """Compute SEO completeness, generate keywords, upsert seo_profiles."""
     db = get_service_supabase()
 
-    try:
-        tenant_result = (
-            db.table("tenants")
-            .select("business_name, business_type, city, website_url")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error(
-            "Failed to load tenant %s for SEO analysis", tenant_id, exc_info=True
-        )
-        raise HTTPException(status_code=500, detail="Failed to load tenant data")
-
-    if not tenant_result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    tenant = tenant_result.data[0]
-
-    widget_config = None
-    try:
-        wc_result = (
-            db.table("widget_configs")
-            .select("greeting_message, booking_enabled")
-            .eq("tenant_id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-        if wc_result.data:
-            widget_config = wc_result.data[0]
-    except Exception:
-        logger.warning(
-            "Failed to load widget config for tenant %s", tenant_id, exc_info=True
-        )
-
-    faq_count = 0
-    try:
-        faq_result = (
-            db.table("faq_entries")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .execute()
-        )
-        faq_count = faq_result.count or 0
-    except Exception:
-        logger.warning("Failed to count FAQs for tenant %s", tenant_id, exc_info=True)
-
-    review_count = 0
-    try:
-        review_result = (
-            db.table("reviews")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .execute()
-        )
-        review_count = review_result.count or 0
-    except Exception:
-        logger.warning(
-            "Failed to count reviews for tenant %s", tenant_id, exc_info=True
-        )
-
-    content_count = 0
-    try:
-        content_result = (
-            db.table("content_items")
-            .select("id", count="exact")
-            .eq("tenant_id", tenant_id)
-            .execute()
-        )
-        content_count = content_result.count or 0
-    except Exception:
-        logger.warning(
-            "Failed to count content items for tenant %s", tenant_id, exc_info=True
-        )
+    tenant, widget_config, faq_count, review_count, content_count = (
+        load_seo_profile_inputs(db, tenant_id)
+    )
 
     score, missing, recommendations = _calculate_completeness(
         tenant,
@@ -568,54 +384,9 @@ async def execute_geo_score(
     """Calculate GEO visibility score using Claude AI; persist to geo_scores."""
     db = get_service_supabase()
 
-    try:
-        tenant_result = (
-            db.table("tenants")
-            .select("business_name, business_type, city, website_url")
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error(
-            "Failed to load tenant %s for GEO scoring", tenant_id, exc_info=True
-        )
-        raise HTTPException(status_code=500, detail="Failed to load tenant data")
-
-    if not tenant_result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    tenant = tenant_result.data[0]
-
-    business_name = business_name or tenant.get("business_name") or "Unknown Business"
-    business_type = business_type or tenant.get("business_type") or "local business"
-    city = city or tenant.get("city") or "unknown"
-    website_url = website_url or tenant.get("website_url") or ""
-
-    if not business_name or business_name == "Unknown Business":
-        raise HTTPException(
-            status_code=400,
-            detail="Business name is required. Set it in your profile or provide it in the request.",
-        )
-
-    extracted_text = None
-    try:
-        crawl_result = (
-            db.table("website_content")
-            .select("extracted_text")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if crawl_result.data:
-            extracted_text = crawl_result.data[0].get("extracted_text")
-    except Exception:
-        logger.warning(
-            "Failed to load website content for GEO scoring, tenant %s",
-            tenant_id,
-            exc_info=True,
-        )
+    business_name, business_type, city, website_url, extracted_text = resolve_geo_inputs(
+        db, tenant_id, business_name, business_type, city, website_url
+    )
 
     geo_result = await _run_geo_score_ai(
         business_name,
