@@ -4,7 +4,7 @@ Extracted from widget_chat_helpers.py (god class split 2026-05-24).
 Re-exported via widget_chat_helpers so existing imports continue to resolve.
 
 WARNING: PEP 563 deferred annotations are incompatible with FastAPI — do not add
-`from __future__ import annotations` here.
+a future-annotations import here.
 """
 
 import logging

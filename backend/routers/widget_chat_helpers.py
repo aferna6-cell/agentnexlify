@@ -10,7 +10,7 @@ and existing call sites (widget_chat.py, widget_config.py, widget_lead.py,
 twilio_webhooks.py, widget_lead_helpers.py).
 
 WARNING: PEP 563 deferred annotations are incompatible with FastAPI — do not
-add `from __future__ import annotations` here.
+add a future-annotations import here.
 """
 
 from backend.routers.widget_chat_cache import (

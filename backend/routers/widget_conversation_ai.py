@@ -5,7 +5,7 @@ Re-exported via widget_lead_helpers for backward compatibility with existing
 test patches (e.g. `patch("backend.routers.widget_lead_helpers._extract_tags_from_conversation")`).
 
 WARNING: PEP 563 deferred annotations are incompatible with FastAPI — do not add
-`from __future__ import annotations` here.
+a future-annotations import here.
 """
 
 import json
