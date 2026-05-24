@@ -30,7 +30,7 @@ from backend.models.schemas import (
 )
 from backend.services.activity import log_activity  # noqa: F401 — re-exported for test patches
 from backend.services.auth_service import _jwt_secret
-from backend.services.email_sender import send_email
+from backend.services.email_sender import send_email  # noqa: F401 — re-exported for test patches
 from backend.services.stripe_service import (  # noqa: F401 — re-exported for tests patching backend.routers.auth.<symbol>
     PLAN_PRICES,
     ensure_plan_prices_configured,
@@ -44,6 +44,7 @@ from backend.services.fraud_guard import (
 )
 from backend.services import billing_service as _billing_svc
 from backend.services import dashboard_service as _dash_svc
+from backend.services import password_service as _pwd_svc
 from backend.services import widget_config_service as _widget_svc
 
 logger = logging.getLogger(__name__)
@@ -480,75 +481,7 @@ async def google_register(request: Request, req: GoogleRegisterRequest):
 async def forgot_password(request: Request):
     """Send password reset email."""
     body = await request.json()
-    email = (body.get("email") or "").lower().strip()
-    if not email:
-        raise HTTPException(status_code=400, detail="Email required")
-
-    db = get_service_supabase()
-    # Check tenants table for the email
-    try:
-        result = (
-            db.table("tenants")
-            .select("id, owner_email, owner_name, business_name")
-            .eq("owner_email", email)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error(
-            "DB error during forgot-password lookup for %s", email, exc_info=True
-        )
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-    if not result.data:
-        # Don't reveal whether email exists
-        return {"message": "If that email exists, a reset link has been sent."}
-
-    tenant = result.data[0]
-    tenant_id = str(tenant["id"])
-
-    # Generate reset token (expires in 1 hour)
-    reset_token = secrets.token_urlsafe(32)
-    expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
-
-    # Store hashed token in tenant record (compare hashes on redemption)
-    import hashlib as _hashlib
-
-    hashed_token = _hashlib.sha256(reset_token.encode()).hexdigest()
-    try:
-        db.table("tenants").update(
-            {
-                "reset_token": hashed_token,
-                "reset_token_expires": expires_at,
-            }
-        ).eq("id", tenant_id).execute()
-    except Exception:
-        logger.error(
-            "Failed to store reset token for tenant %s", tenant_id, exc_info=True
-        )
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-    # Send reset email
-    reset_url = f"{settings.frontend_url}/reset-password?token={reset_token}"
-    try:
-        await send_email(
-            to=email,
-            subject="Reset your AgentNexLiFy password",
-            body_html=(
-                f"<p>Hi {tenant.get('owner_name', 'there')},</p>"
-                "<p>Click the link below to reset your password. This link expires in 1 hour.</p>"
-                f'<p><a href="{reset_url}" style="background:#3B82F6;color:white;'
-                'padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">'
-                "Reset Password</a></p>"
-                "<p>If you didn't request this, you can safely ignore this email.</p>"
-                "<p>- The AgentNexLiFy Team</p>"
-            ),
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.warning("Failed to send reset email to %s", email, exc_info=True)
-
-    return {"message": "If that email exists, a reset link has been sent."}
+    return await _pwd_svc.forgot_password(email=body.get("email") or "")
 
 
 @router.post("/reset-password")
@@ -556,61 +489,10 @@ async def forgot_password(request: Request):
 async def reset_password(request: Request):
     """Reset password using token."""
     body = await request.json()
-    token = (body.get("token") or "").strip()
-    new_password = body.get("password", "")
-
-    if not token or not new_password:
-        raise HTTPException(status_code=400, detail="Token and password required")
-    if len(new_password) < 8:
-        raise HTTPException(
-            status_code=400, detail="Password must be at least 8 characters"
-        )
-
-    db = get_service_supabase()
-    # Hash the incoming token to match stored hash
-    import hashlib as _hashlib
-
-    hashed_token = _hashlib.sha256(token.encode()).hexdigest()
-    try:
-        result = (
-            db.table("tenants")
-            .select("id, reset_token_expires")
-            .eq("reset_token", hashed_token)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.error("DB error during reset-password token lookup", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-    if not result.data:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
-
-    tenant = result.data[0]
-    expires = tenant.get("reset_token_expires")
-    if expires:
-        exp_dt = datetime.fromisoformat(expires.replace("Z", "+00:00"))
-        if datetime.now(timezone.utc) > exp_dt:
-            raise HTTPException(status_code=400, detail="Reset link has expired")
-
-    # Update password and clear token
-    hashed = _hash_password(new_password)
-    try:
-        db.table("tenants").update(
-            {
-                "password_hash": hashed,
-                "reset_token": None,
-                "reset_token_expires": None,
-            }
-        ).eq("id", str(tenant["id"])).execute()
-    except Exception:
-        logger.error(
-            "Failed to update password for tenant %s", tenant["id"], exc_info=True
-        )
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-    logger.info("Password reset completed for tenant %s", tenant["id"])
-    return {"message": "Password reset successfully"}
+    return _pwd_svc.reset_password(
+        token=body.get("token") or "",
+        new_password=body.get("password", ""),
+    )
 
 
 @router.get("/me", response_model=MeResponse)
