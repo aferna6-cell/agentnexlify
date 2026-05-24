@@ -11,7 +11,6 @@ os.environ["TESTING"] = "1"
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
@@ -448,7 +447,7 @@ class TestSmartLists:
 
 class TestBids:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.bids.get_service_supabase")
+    @patch("backend.routers.bids_static.get_service_supabase")
     def test_list_bids(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -460,7 +459,7 @@ class TestBids:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.bids.get_service_supabase")
+    @patch("backend.routers.bids_static.get_service_supabase")
     def test_create_bid(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
