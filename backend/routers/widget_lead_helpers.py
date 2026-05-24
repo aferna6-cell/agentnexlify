@@ -1,6 +1,10 @@
-"""Widget lead helpers: extraction, enrichment, capture, notifications.
+"""Widget lead helpers: extraction, capture, enrichment orchestration.
 
 Extracted from the widget_helpers.py god class (1,673 lines → split 2026-04-18).
+Further split 2026-05-24 — conversation AI helpers moved to
+widget_conversation_ai.py, owner notifications moved to
+widget_lead_notifications.py.
+
 Callers: widget_chat.py, widget_lead.py.
 
 Multi-tenant invariant: leads table uses `client_id` (NOT tenant_id) and
@@ -11,18 +15,23 @@ It breaks FastAPI's parameter introspection — Pydantic body models and
 BackgroundTasks get treated as query params, causing 422 errors.
 """
 
-import json
 import logging
 import re
 from typing import Any
 
-import anthropic
-
 from backend.models.database import get_service_supabase
+from backend.routers.widget_conversation_ai import (
+    SYSTEM_TAGS,
+    _categorize_conversation,
+    _extract_action_items,
+    _extract_tags_from_conversation,
+)
+from backend.routers.widget_lead_notifications import (
+    _send_new_lead_email_notification,
+    _send_new_lead_sms_notification,
+)
 from backend.services.activity import log_activity
-from backend.services.email_sender import send_email
 from backend.services.lead_scoring import score_lead_background
-from backend.services.llm_runtime import call_claude_messages_sync
 from backend.services.tenant_scope import tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -30,6 +39,22 @@ logger = logging.getLogger(__name__)
 
 # AI model constant (mirrors widget_chat_helpers.MODEL for leaf callers that only import this module)
 MODEL = "claude-sonnet-4-6"
+
+# Re-exports so unused-import linters stay quiet and downstream patches keep working.
+__all__ = [
+    "MODEL",
+    "SYSTEM_TAGS",
+    "_build_conversation_summary",
+    "_capture_leads_from_session",
+    "_categorize_conversation",
+    "_enrich_lead_from_message",
+    "_extract_action_items",
+    "_extract_lead_info",
+    "_extract_service_interest",
+    "_extract_tags_from_conversation",
+    "_send_new_lead_email_notification",
+    "_send_new_lead_sms_notification",
+]
 
 # ---------------------------------------------------------------------------
 # Lead extraction patterns
@@ -52,11 +77,6 @@ PHONE_RE = re.compile(
     r"[-.\s]?\d{2,4}"              # number group 3
     r"(?:[-.\s]?\d{1,4})?"         # optional group 4 (longer intl numbers)
 )
-
-SYSTEM_TAGS = [
-    "New Lead", "Pricing Question", "Complaint",
-    "Appointment Request", "Urgent", "Follow-up Needed",
-]
 
 # Map managed-agent schema field → live `leads` table column.
 # Fields the agent returns but we don't merge: source (set at lead creation).
@@ -140,198 +160,6 @@ def _build_conversation_summary(messages: list[dict[str, str]]) -> str | None:
     if last and last != first:
         return f"{first} ... {last}"
     return first if len(first) > 20 else None
-
-
-def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]:
-    """Use Claude to extract auto-tags from conversation messages.
-
-    Returns a list of short tags like "interested in: kitchen remodel",
-    "budget: high", "timeline: urgent", "service: plumbing".
-    """
-    if not messages or len(messages) < 2:
-        return []
-
-    transcript_lines = []
-    for msg in messages[-20:]:
-        role = "Visitor" if msg["role"] == "user" else "Agent"
-        transcript_lines.append(f"{role}: {msg['content']}")
-    transcript = "\n".join(transcript_lines)
-
-    try:
-        resp = call_claude_messages_sync(
-            operation="widget.extract_tags",
-            model=MODEL,
-            max_tokens=200,
-            temperature=0,
-            system=(
-                "Extract business-relevant tags from this chat conversation between a visitor and a business AI assistant. "
-                "Return ONLY a JSON array of short tag strings. Tags should capture: "
-                "service interests (e.g. 'interested in: kitchen remodel'), "
-                "budget level (e.g. 'budget: high'), "
-                "timeline urgency (e.g. 'timeline: urgent', 'timeline: 3 months'), "
-                "and any other business-relevant signals (e.g. 'returning customer', 'referred by friend'). "
-                "If no meaningful tags can be extracted, return []. Max 5 tags. Keep each tag under 40 chars."
-            ),
-            messages=[{"role": "user", "content": transcript}],
-            timeout=30.0,
-            metadata={"message_count": len(messages)},
-        )
-        raw = resp.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        tags = json.loads(raw)
-        if isinstance(tags, list):
-            return [str(t)[:40] for t in tags if isinstance(t, str)][:5]
-    except json.JSONDecodeError:
-        logger.warning("tag_extraction: Claude returned non-JSON response")
-    except anthropic.APIError as e:
-        logger.error("tag_extraction: Claude API error — %s", e)
-    except Exception:
-        logger.warning("tag_extraction: unexpected failure", exc_info=True)
-    return []
-
-
-def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dict]) -> None:
-    """Background task: AI auto-categorize conversation into preset business tags."""
-    if not messages or len(messages) < 3:
-        return
-
-    db = get_service_supabase()
-    try:
-        tag_defs = (
-            tenant_select(db, "tenant_tag_definitions", tenant_id, "tag_name")
-            .eq("is_enabled", True)
-            .execute()
-        )
-        available_tags = [t["tag_name"] for t in (tag_defs.data or [])]
-    except Exception:
-        available_tags = SYSTEM_TAGS
-
-    if not available_tags:
-        available_tags = SYSTEM_TAGS
-
-    transcript_lines = []
-    for msg in messages[-20:]:
-        role = "Visitor" if msg["role"] == "user" else "Agent"
-        transcript_lines.append(f"{role}: {msg['content']}")
-    transcript = "\n".join(transcript_lines)
-
-    try:
-        resp = call_claude_messages_sync(
-            operation="widget.categorize_conversation",
-            model=MODEL,
-            max_tokens=100,
-            temperature=0,
-            system=(
-                "Categorize this chat conversation into 1-3 tags from this list ONLY:\n"
-                + ", ".join(available_tags)
-                + "\n\nReturn ONLY a JSON array of matching tag names. "
-                "If none match, return []. Use exact tag names from the list."
-            ),
-            messages=[{"role": "user", "content": transcript}],
-            timeout=30.0,
-            metadata={"tenant_id": tenant_id, "session_id": session_id, "tag_count": len(available_tags)},
-        )
-        raw = resp.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        tags = json.loads(raw)
-        if not isinstance(tags, list) or not tags:
-            return
-
-        valid_tags = [t for t in tags if isinstance(t, str) and t in available_tags][:3]
-        if not valid_tags:
-            return
-
-        conv = (
-            tenant_select(db, "conversations", tenant_id, "tags")
-            .eq("session_id", session_id)
-            .limit(1)
-            .execute()
-        )
-        existing = []
-        if conv.data:
-            existing = conv.data[0].get("tags") or []
-
-        merged = list(set(existing + valid_tags))
-        tenant_update(db, "conversations", tenant_id, {"tags": merged}).eq(
-            "session_id", session_id
-        ).execute()
-
-    except json.JSONDecodeError:
-        logger.warning("conversation_categorize: non-JSON response")
-    except anthropic.APIError as e:
-        logger.warning("conversation_categorize: API error — %s", e)
-    except Exception:
-        logger.warning("conversation_categorize: unexpected failure", exc_info=True)
-
-
-def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict]) -> None:
-    """Background task: AI extracts actionable items from conversation."""
-    if not messages or len(messages) < 4:
-        return
-
-    transcript_lines = []
-    for msg in messages[-20:]:
-        role = "Visitor" if msg["role"] == "user" else "Agent"
-        transcript_lines.append(f"{role}: {msg['content']}")
-    transcript = "\n".join(transcript_lines)
-
-    try:
-        resp = call_claude_messages_sync(
-            operation="widget.extract_action_items",
-            model=MODEL,
-            max_tokens=300,
-            temperature=0,
-            system=(
-                "Extract actionable items from this business chat conversation. "
-                "Action items are things the business needs to DO: send a quote, "
-                "schedule a follow-up, prepare a document, call someone back, etc.\n\n"
-                "Return ONLY a JSON array of objects with these fields:\n"
-                '- "description": what needs to be done (max 100 chars)\n'
-                '- "priority": "low", "medium", or "high"\n'
-                '- "due_hint": natural language due date if mentioned, or null\n\n'
-                "If no action items exist, return []. Max 3 items."
-            ),
-            messages=[{"role": "user", "content": transcript}],
-            timeout=30.0,
-            metadata={"tenant_id": tenant_id, "session_id": session_id, "message_count": len(messages)},
-        )
-        raw = resp.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        items = json.loads(raw)
-        if not isinstance(items, list) or not items:
-            return
-
-        db = get_service_supabase()
-
-        conv = (
-            tenant_select(db, "conversations", tenant_id, "id")
-            .eq("session_id", session_id)
-            .limit(1)
-            .execute()
-        )
-        conv_id = conv.data[0]["id"] if conv.data else None
-
-        for item in items[:3]:
-            if not isinstance(item, dict) or not item.get("description"):
-                continue
-            data: dict[str, Any] = {
-                "tenant_id": tenant_id,
-                "description": str(item["description"])[:500],
-                "priority": item.get("priority", "medium") if item.get("priority") in ("low", "medium", "high") else "medium",
-            }
-            if conv_id:
-                data["conversation_id"] = conv_id
-            tenant_insert(db, "action_items", tenant_id, data).execute()
-
-    except json.JSONDecodeError:
-        logger.warning("action_item_extract: non-JSON response")
-    except anthropic.APIError as e:
-        logger.warning("action_item_extract: API error — %s", e)
-    except Exception:
-        logger.warning("action_item_extract: unexpected failure", exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -581,105 +409,6 @@ async def _capture_leads_from_session(
 
     except Exception:
         logger.error("lead_capture FAILED: session=%s tenant=%s", session_id, tenant_id, exc_info=True)
-
-
-async def _send_new_lead_sms_notification(
-    tenant_id: str, lead_name: str, lead_info: dict[str, str]
-) -> None:
-    """Send SMS notification to tenant owner when a new lead is captured."""
-    logger.info("SMS_FUNCTION: entered function tenant=%s lead=%s", tenant_id, lead_name)
-    logger.info(
-        "sms_notification: starting for tenant=%s lead=%s info_keys=%s",
-        tenant_id, lead_name, list(lead_info.keys()),
-    )
-    db = get_service_supabase()
-    result = (
-        db.table("tenants")
-        .select("notification_phone, sms_notifications_enabled, business_name")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        logger.warning("sms_notification: no tenant found for id=%s", tenant_id)
-        return
-    tenant = result.data[0]
-    sms_enabled = tenant.get("sms_notifications_enabled")
-    phone = tenant.get("notification_phone")
-    logger.info(
-        "sms_notification: tenant=%s sms_enabled=%s phone=%s",
-        tenant_id, sms_enabled, phone,
-    )
-    if not sms_enabled or not phone:
-        logger.info("sms_notification: skipping — sms_enabled=%s phone=%s", sms_enabled, phone)
-        return
-
-    contact = lead_info.get("email") or lead_info.get("phone") or "no contact info"
-    body = f"New lead for {tenant.get('business_name', 'your business')}: {lead_name} ({contact})"
-    logger.info("sms_notification: sending to=%s body_len=%d", phone, len(body))
-
-    try:
-        from backend.services.twilio_service import send_sms
-        await send_sms(to=phone, body=body)
-        logger.info("sms_notification: sent successfully for tenant=%s", tenant_id)
-    except Exception:
-        logger.error("sms_notification: FAILED to send for tenant=%s", tenant_id, exc_info=True)
-
-
-async def _send_new_lead_email_notification(
-    tenant_id: str, lead_name: str, lead_info: dict[str, str]
-) -> None:
-    """Send email notification to tenant owner when a new lead is captured."""
-    import html as html_mod
-
-    db = get_service_supabase()
-    result = (
-        db.table("tenants")
-        .select("owner_email, business_name")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        return
-    tenant = result.data[0]
-    owner_email = tenant.get("owner_email")
-    if not owner_email:
-        return
-
-    raw_business_name = tenant.get("business_name") or "your business"
-    business_name = html_mod.escape(raw_business_name)
-    safe_name = html_mod.escape(lead_name)
-    safe_email = html_mod.escape(lead_info.get("email") or "not provided")
-    safe_phone = html_mod.escape(lead_info.get("phone") or "not provided")
-
-    body_html = (
-        f"<h2>New lead for {business_name}</h2>"
-        f"<p>A new lead was just captured from your chat widget:</p>"
-        f"<table style='border-collapse:collapse;margin:16px 0;'>"
-        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Name</td>"
-        f"<td style='padding:4px 0;'>{safe_name}</td></tr>"
-        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Email</td>"
-        f"<td style='padding:4px 0;'>{safe_email}</td></tr>"
-        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Phone</td>"
-        f"<td style='padding:4px 0;'>{safe_phone}</td></tr>"
-        f"</table>"
-        f"<p>Log in to your dashboard to view and follow up with this lead.</p>"
-        f"<p>— The AgentNexLiFy Team</p>"
-    )
-
-    try:
-        await send_email(
-            to=owner_email,
-            subject=f"New lead for {raw_business_name}: {lead_name}",
-            body_html=body_html,
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.error(
-            "email_notification: FAILED for tenant=%s lead=%s",
-            tenant_id, lead_name, exc_info=True,
-        )
 
 
 # ---------------------------------------------------------------------------
