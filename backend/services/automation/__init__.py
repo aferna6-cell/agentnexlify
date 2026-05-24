@@ -35,15 +35,19 @@ from backend.services.automation.scheduled_jobs import (
     send_birthday_greetings,
     process_recurring_invoices,
 )
-from backend.services.automation.rule_engine import (
+from backend.services.automation.triggers import (
     evaluate_trigger,
     _evaluate_conditions,
     _get_nested_field,
     _parse_utc_datetime,
     _scheduled_rule_already_fired,
+)
+from backend.services.automation.rule_engine import (
     execute_automation_rule,
     _execute_action,
     _send_campaign_for_rule,
+)
+from backend.services.automation.trigger_dispatch import (
     check_lead_captured_triggers,
     check_tag_triggers,
     check_form_submission_triggers,

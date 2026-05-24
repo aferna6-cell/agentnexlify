@@ -17,9 +17,32 @@ from backend.services.automation.scheduled_jobs import (
     send_weekly_intelligence_briefs, send_weekly_digest, send_birthday_greetings,
     process_recurring_invoices,
 )
-from backend.services.automation.rule_engine import (
+from backend.services.automation.triggers import (
     evaluate_trigger, _evaluate_conditions, _get_nested_field, _parse_utc_datetime,
-    _scheduled_rule_already_fired, execute_automation_rule, _execute_action,
-    _send_campaign_for_rule, check_lead_captured_triggers, check_tag_triggers,
+    _scheduled_rule_already_fired,
+)
+from backend.services.automation.rule_engine import (
+    execute_automation_rule, _execute_action, _send_campaign_for_rule,
+)
+from backend.services.automation.trigger_dispatch import (
+    check_lead_captured_triggers, check_tag_triggers,
     check_form_submission_triggers, check_appointment_triggers, schedule_automation_check,
 )
+
+__all__ = [
+    "get_service_supabase",
+    "_AFTERCARE_TEMPLATES", "_REBOOK_INTERVALS", "_REMINDER_EXTRAS", "_ONBOARDING_STEPS",
+    "BATCH_LIMIT", "VALID_TRIGGER_EVENTS", "trigger_sequence",
+    "process_pending_steps", "execute_step", "_generate_ai_email", "_advance_execution",
+    "_get_reminder_extras", "check_no_response_leads", "send_appointment_reminders",
+    "send_rebook_suggestions", "send_aftercare_instructions", "send_pending_review_requests",
+    "_send_review_followups", "send_monthly_reports", "send_portal_links", "send_csat_surveys",
+    "check_new_reviews", "send_onboarding_emails", "send_invoice_payment_reminders",
+    "send_weekly_intelligence_briefs", "send_weekly_digest", "send_birthday_greetings",
+    "process_recurring_invoices",
+    "evaluate_trigger", "_evaluate_conditions", "_get_nested_field", "_parse_utc_datetime",
+    "_scheduled_rule_already_fired",
+    "execute_automation_rule", "_execute_action", "_send_campaign_for_rule",
+    "check_lead_captured_triggers", "check_tag_triggers",
+    "check_form_submission_triggers", "check_appointment_triggers", "schedule_automation_check",
+]
