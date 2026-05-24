@@ -395,47 +395,7 @@ from backend.services.dashboard_service import (  # noqa: F401
 
 @router.get("/trial-status/{tenant_id}", response_model=TrialStatusResponse)
 async def trial_status(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
-    if claims["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    db = get_service_supabase()
-    result = (
-        db.table("tenants")
-        .select("plan, free_trial_started_at, created_at")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    tenant = result.data[0]
-    trial = _compute_trial_status(tenant)
-    trial_started = tenant.get("free_trial_started_at")
-
-    trial_expires = None
-    if trial_started and trial["trial_days_remaining"] is not None:
-        from datetime import datetime, timezone, timedelta
-
-        if isinstance(trial_started, str):
-            ts = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
-        else:
-            ts = trial_started
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
-        trial_expires = (ts + timedelta(days=FREE_TRIAL_DAYS)).isoformat()
-
-    return TrialStatusResponse(
-        plan=tenant.get("plan") or "free",
-        trial_started=(
-            trial_started
-            if isinstance(trial_started, str)
-            else (trial_started.isoformat() if trial_started else None)
-        ),
-        trial_expires=trial_expires,
-        days_remaining=trial["trial_days_remaining"],
-        is_expired=trial["trial_expired"],
-    )
+    return _dash_svc.get_trial_status(tenant_id, claims)
 
 
 # ---------------------------------------------------------------------------

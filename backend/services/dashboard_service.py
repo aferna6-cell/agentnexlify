@@ -1,9 +1,12 @@
 """Dashboard helpers: trial status, activity feed, knowledge stats, dashboard payload."""
 
 import logging
+from datetime import datetime, timedelta, timezone
 
+from fastapi import HTTPException
 
 from backend.models.database import get_service_supabase as _get_service_supabase
+from backend.models.schemas import TrialStatusResponse
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,49 @@ def compute_trial_status(tenant: dict) -> dict:
 
 
 _compute_trial_status = compute_trial_status
+
+
+def get_trial_status(tenant_id: str, claims: dict) -> TrialStatusResponse:
+    """Return TrialStatusResponse for a tenant after authz check."""
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = _get_db()
+    result = (
+        db.table("tenants")
+        .select("plan, free_trial_started_at, created_at")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant = result.data[0]
+    trial = _compute_trial_status(tenant)
+    trial_started = tenant.get("free_trial_started_at")
+
+    trial_expires = None
+    if trial_started and trial["trial_days_remaining"] is not None:
+        if isinstance(trial_started, str):
+            ts = datetime.fromisoformat(trial_started.replace("Z", "+00:00"))
+        else:
+            ts = trial_started
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        trial_expires = (ts + timedelta(days=FREE_TRIAL_DAYS)).isoformat()
+
+    return TrialStatusResponse(
+        plan=tenant.get("plan") or "free",
+        trial_started=(
+            trial_started
+            if isinstance(trial_started, str)
+            else (trial_started.isoformat() if trial_started else None)
+        ),
+        trial_expires=trial_expires,
+        days_remaining=trial["trial_days_remaining"],
+        is_expired=trial["trial_expired"],
+    )
 
 
 def get_activity(tenant_id: str) -> dict:
