@@ -1,7 +1,7 @@
 # Nightly Commit Review — 2026-05-19
 
-Generated: 2026-05-19 UTC  
-Window: last 24 hours  
+Generated: 2026-05-19 UTC
+Window: last 24 hours
 Commits reviewed: 7
 
 ---

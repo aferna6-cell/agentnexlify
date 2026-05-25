@@ -19,16 +19,17 @@ Critical rules:
   - Webhook POST must return 200 within 5 seconds or Facebook retries
   - All except blocks must log errors before handling
   - HMAC-SHA256 signature validation on every inbound webhook POST
+
+Service modules:
+  - backend/services/facebook_oauth.py    — state JWTs, Graph API client
+  - backend/services/facebook_webhook.py  — sig verify + event processor
 """
 
-import hashlib
-import hmac
 import json
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from pydantic import BaseModel
@@ -37,16 +38,12 @@ from backend.config import settings
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
-from backend.services import os_inbound_bridge
+from backend.services import facebook_oauth, facebook_webhook, os_inbound_bridge
 from backend.services.channel_manager import ingest_channel_message
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/channels/facebook", tags=["channels"])
-
-# Facebook Graph API version used for all API calls
-_FB_API_VERSION = "v19.0"
-_FB_GRAPH_BASE = f"https://graph.facebook.com/{_FB_API_VERSION}"
 
 
 # ---------------------------------------------------------------------------
@@ -61,81 +58,9 @@ class FacebookStatusResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Agent OS bridge helpers (signature verification + OAuth state helpers
+# live in backend.services.facebook_webhook / facebook_oauth).
 # ---------------------------------------------------------------------------
-
-
-_JWT_ALGORITHM = "HS256"
-_STATE_TOKEN_EXPIRY_MINUTES = 10
-
-
-def _jwt_secret() -> str:
-    jwt_secret = getattr(settings, "jwt_secret_key", "")
-    if isinstance(jwt_secret, str) and jwt_secret:
-        return jwt_secret
-    api_secret = getattr(settings, "api_secret_key", "")
-    return api_secret if isinstance(api_secret, str) else ""
-
-
-def _encode_oauth_state(tenant_id: str, nonce: str) -> str:
-    """Create a short-lived signed JWT encoding the tenant_id for OAuth state."""
-    from jose import jwt
-
-    payload = {
-        "tenant_id": tenant_id,
-        "nonce": nonce,
-        "provider": "facebook",
-        "exp": datetime.now(timezone.utc)
-        + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
-    }
-    return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
-
-
-def _decode_oauth_state(state: str) -> tuple[str, str]:
-    """Validate the OAuth state token and return (tenant_id, nonce)."""
-    from jose import JWTError, jwt
-
-    try:
-        payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
-        tenant_id = payload.get("tenant_id")
-        nonce = payload.get("nonce")
-        if not tenant_id:
-            raise HTTPException(
-                status_code=400, detail="Invalid state: missing tenant_id"
-            )
-        if not nonce:
-            raise HTTPException(status_code=400, detail="Invalid state: missing nonce")
-        if payload.get("provider") != "facebook":
-            raise HTTPException(status_code=400, detail="Invalid state provider")
-        return tenant_id, nonce
-    except JWTError as exc:
-        raise HTTPException(
-            status_code=400, detail="Invalid or expired state parameter"
-        ) from exc
-
-
-def _verify_fb_signature(raw_body: bytes, signature_header: str | None) -> bool:
-    """Validate X-Hub-Signature-256 HMAC to confirm the request came from Facebook.
-
-    Returns True when the signature matches, False otherwise.
-    An absent or malformed header is treated as invalid.
-    """
-    app_secret = getattr(settings, "facebook_app_secret", "")
-    if not app_secret:
-        # Cannot validate without the secret — fail closed.
-        logger.warning("facebook_app_secret not configured; rejecting inbound webhook")
-        return False
-
-    if not signature_header or not signature_header.startswith("sha256="):
-        return False
-
-    expected = hmac.new(
-        app_secret.encode(),
-        raw_body,
-        hashlib.sha256,
-    ).hexdigest()
-    received = signature_header[len("sha256=") :]
-    return hmac.compare_digest(expected, received)
 
 
 async def _process_fb_webhook_event(payload: dict) -> None:
@@ -286,20 +211,16 @@ async def facebook_webhook_inbound(
 ):
     """Receive inbound messages from Facebook Messenger.
 
-    Facebook expects a 200 response within 5 seconds. We validate the
-    HMAC-SHA256 signature, then hand off processing to a background task
-    and return 200 immediately.
+    Validates HMAC-SHA256 signature, hands off processing to a background
+    task, and returns 200 immediately so Facebook does not retry.
     """
     raw_body = await request.body()
     signature = request.headers.get("X-Hub-Signature-256")
 
-    if not _verify_fb_signature(raw_body, signature):
+    if not facebook_webhook.verify_signature(raw_body, signature):
         logger.warning(
             "Facebook webhook: invalid or missing X-Hub-Signature-256 — rejecting request"
         )
-        # Return 403 to signal rejection. Facebook treats non-200 as failure and
-        # may retry or disable the webhook if persistent. This is intentional —
-        # unsigned requests should never be processed.
         raise HTTPException(status_code=403, detail="Invalid webhook signature")
 
     try:
@@ -308,7 +229,6 @@ async def facebook_webhook_inbound(
         logger.exception("Facebook webhook: failed to parse JSON body")
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
-    # Return 200 immediately; process events in the background
     background_tasks.add_task(_process_fb_webhook_event, payload)
     return {"ok": True}
 
@@ -323,14 +243,12 @@ async def facebook_oauth_callback(
     """Handle Facebook OAuth callback.
 
     Steps:
-      1. Exchange short-lived user access code for a user access token.
-      2. Fetch the list of pages the user manages.
-      3. Store the first page's long-lived page access token in the
-         integrations table (provider='facebook').
-      4. Subscribe the page to webhook events.
-      5. Redirect to the frontend integrations page.
-
-    The 'state' parameter carries the tenant_id (set in get_facebook_auth_url).
+      1. Validate the state nonce against oauth_states.
+      2. Exchange code for a user access token.
+      3. Fetch the list of Pages the user manages.
+      4. Upsert the first Page's long-lived access token in integrations.
+      5. Subscribe the Page to webhook events.
+      6. Redirect to the frontend integrations page.
     """
     if error:
         logger.warning(
@@ -343,7 +261,7 @@ async def facebook_oauth_callback(
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing code or state parameter")
 
-    tenant_id, nonce = _decode_oauth_state(state)
+    tenant_id, nonce = facebook_oauth.decode_state(state)
     db = get_service_supabase()
     try:
         state_row = (
@@ -382,21 +300,13 @@ async def facebook_oauth_callback(
 
     redirect_uri = f"{settings.api_url}/api/v1/channels/facebook/callback"
 
-    # Step 1: Exchange code for a short-lived user access token
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            token_resp = await client.get(
-                f"{_FB_GRAPH_BASE}/oauth/access_token",
-                params={
-                    "client_id": app_id,
-                    "client_secret": app_secret,
-                    "redirect_uri": redirect_uri,
-                    "code": code,
-                },
-            )
-            token_resp.raise_for_status()
-            token_data = token_resp.json()
-            user_access_token: str = token_data["access_token"]
+        user_access_token = await facebook_oauth.exchange_code_for_user_token(
+            app_id,
+            app_secret,
+            redirect_uri,
+            code,
+        )
     except Exception:
         logger.exception(
             "Facebook OAuth: token exchange failed for tenant %s", tenant_id
@@ -405,25 +315,14 @@ async def facebook_oauth_callback(
             status_code=502, detail="Failed to exchange authorization code"
         )
 
-    # Step 2: Fetch the pages the user manages to get page access tokens
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            pages_resp = await client.get(
-                f"{_FB_GRAPH_BASE}/me/accounts",
-                params={
-                    "access_token": user_access_token,
-                    "fields": "id,name,access_token",
-                },
-            )
-            pages_resp.raise_for_status()
-            pages_data = pages_resp.json()
+        pages = await facebook_oauth.fetch_managed_pages(user_access_token)
     except Exception:
         logger.exception(
             "Facebook OAuth: failed to fetch pages for tenant %s", tenant_id
         )
         raise HTTPException(status_code=502, detail="Failed to fetch Facebook Pages")
 
-    pages = pages_data.get("data", [])
     if not pages:
         logger.warning("Facebook OAuth: tenant %s has no managed pages", tenant_id)
         raise HTTPException(
@@ -440,7 +339,6 @@ async def facebook_oauth_callback(
     page_name: str = page.get("name", "")
     page_access_token: str = page["access_token"]
 
-    # Step 3: Store in integrations table (upsert pattern from gbp.py)
     try:
         existing = (
             db.table("integrations")
@@ -454,7 +352,7 @@ async def facebook_oauth_callback(
             "tenant_id": tenant_id,
             "provider": "facebook",
             "access_token": page_access_token,
-            "refresh_token": None,  # Facebook page tokens are long-lived, no refresh token
+            "refresh_token": None,
             "metadata": {
                 "page_id": page_id,
                 "page_name": page_name,
@@ -477,31 +375,24 @@ async def facebook_oauth_callback(
             status_code=500, detail="Failed to save Facebook integration"
         )
 
-    # Step 4: Subscribe the page to webhook events (best-effort — token is saved regardless)
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            sub_resp = await client.post(
-                f"{_FB_GRAPH_BASE}/{page_id}/subscribed_apps",
-                params={
-                    "access_token": page_access_token,
-                    "subscribed_fields": "messages,messaging_postbacks",
-                },
+        status_code, body_snippet = await facebook_oauth.subscribe_page(
+            page_id, page_access_token
+        )
+        if status_code != 200:
+            logger.warning(
+                "Facebook OAuth: page webhook subscription returned %s for tenant %s: %s",
+                status_code,
+                tenant_id,
+                body_snippet,
             )
-            if sub_resp.status_code != 200:
-                logger.warning(
-                    "Facebook OAuth: page webhook subscription returned %s for tenant %s: %s",
-                    sub_resp.status_code,
-                    tenant_id,
-                    sub_resp.text[:500],
-                )
-            else:
-                logger.info(
-                    "Facebook OAuth: page %s subscribed to webhooks for tenant %s",
-                    page_id,
-                    tenant_id,
-                )
+        else:
+            logger.info(
+                "Facebook OAuth: page %s subscribed to webhooks for tenant %s",
+                page_id,
+                tenant_id,
+            )
     except Exception:
-        # Non-fatal: the token is saved; the operator can retry subscription
         logger.warning(
             "Facebook OAuth: webhook subscription failed for tenant %s page %s",
             tenant_id,
@@ -509,7 +400,6 @@ async def facebook_oauth_callback(
             exc_info=True,
         )
 
-    # Step 5: Redirect to frontend integrations page
     return RedirectResponse(url=f"{settings.frontend_url}/?facebook_connected=true")
 
 
@@ -539,12 +429,11 @@ async def get_facebook_auth_url(
         )
 
     redirect_uri = f"{settings.api_url}/api/v1/channels/facebook/callback"
-    scopes = "pages_messaging,pages_manage_metadata"
     nonce = secrets.token_urlsafe(32)
-    state = _encode_oauth_state(tenant_id, nonce)
+    state = facebook_oauth.encode_state(tenant_id, nonce)
 
     expires_at = datetime.now(timezone.utc) + timedelta(
-        minutes=_STATE_TOKEN_EXPIRY_MINUTES
+        minutes=facebook_oauth.STATE_TOKEN_EXPIRY_MINUTES
     )
     db = get_service_supabase()
     try:
@@ -564,14 +453,7 @@ async def get_facebook_auth_url(
             status_code=500, detail="Failed to initialize Facebook OAuth"
         )
 
-    auth_url = (
-        f"https://www.facebook.com/dialog/oauth"
-        f"?client_id={app_id}"
-        f"&redirect_uri={redirect_uri}"
-        f"&state={state}"
-        f"&scope={scopes}"
-        f"&response_type=code"
-    )
+    auth_url = facebook_oauth.build_auth_url(app_id, redirect_uri, state)
     return {"auth_url": auth_url}
 
 
@@ -622,7 +504,6 @@ async def facebook_disconnect(
 
     db = get_service_supabase()
 
-    # Fetch the current integration to get page_id and page_access_token
     try:
         result = (
             db.table("integrations")
@@ -646,36 +527,32 @@ async def facebook_disconnect(
     meta = row.get("metadata") or {}
     page_id: str = meta.get("page_id", "")
 
-    # Attempt to unsubscribe the page from webhook events (best-effort)
     if page_id and page_access_token:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                unsub_resp = await client.delete(
-                    f"{_FB_GRAPH_BASE}/{page_id}/subscribed_apps",
-                    params={"access_token": page_access_token},
+            status_code, body_snippet = await facebook_oauth.unsubscribe_page(
+                page_id,
+                page_access_token,
+            )
+            if status_code != 200:
+                logger.warning(
+                    "Facebook disconnect: unsubscribe returned %s for tenant %s: %s",
+                    status_code,
+                    tenant_id,
+                    body_snippet,
                 )
-                if unsub_resp.status_code != 200:
-                    logger.warning(
-                        "Facebook disconnect: unsubscribe returned %s for tenant %s: %s",
-                        unsub_resp.status_code,
-                        tenant_id,
-                        unsub_resp.text[:500],
-                    )
-                else:
-                    logger.info(
-                        "Facebook disconnect: page %s unsubscribed for tenant %s",
-                        page_id,
-                        tenant_id,
-                    )
+            else:
+                logger.info(
+                    "Facebook disconnect: page %s unsubscribed for tenant %s",
+                    page_id,
+                    tenant_id,
+                )
         except Exception:
-            # Non-fatal: delete the DB row regardless of unsubscription failure
             logger.warning(
                 "Facebook disconnect: webhook unsubscription failed for tenant %s",
                 tenant_id,
                 exc_info=True,
             )
 
-    # Delete the integration record
     try:
         db.table("integrations").delete().eq("id", row["id"]).execute()
     except Exception:

@@ -1,0 +1,40 @@
+{
+  "run": 31,
+  "date": "2026-05-23",
+  "moratorium_active": true,
+  "moratorium_day": 18,
+  "pending_before": 6,
+  "pending_after": 7,
+  "winner": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN + fix contradictory test",
+  "winner_category": "code_health",
+  "winner_effort": "S (~15 min)",
+  "confidence": "HIGH",
+  "ideas_count": 5,
+  "debate_verdicts": {
+    "Fix GH #181 + contradictory test": "SURVIVES → WINNER",
+    "Invoke /moratorium-sprint": "WEAKENED → standing action (8+ recs, no new info)",
+    "Zapier plan_status enforcement": "WEAKENED → parking lot (promote run 32 post-moratorium)",
+    "email_sequences.py split": "not debated (M-effort, parking lot)",
+    "Test coverage only": "not debated (subsumed by winner)"
+  },
+  "key_findings": [
+    "c72b535 (run 30 trigger) removed wrong mappings but omitted 15000→autopilot and 25000→professional from AMOUNT_TO_PLAN",
+    "test_billing_amount_to_plan.py lines 38-44 actively assert these keys should NOT exist — CI certifies broken state",
+    "nightly review (1553bf7) wired broken test to CI without catching the contradictory assertions",
+    "god-class-refactor_plan.md created with 54 targets, local_seo split done as template",
+    "GH #181 filed by nightly review — live billing gap confirmed"
+  ],
+  "governance_corrections": [],
+  "artifacts": [
+    "subconscious/runs/2026-05-23/ideas/ideas.md",
+    "subconscious/runs/2026-05-23/debate/debate-log.md",
+    "subconscious/runs/2026-05-23/winning-concept.md",
+    "subconscious/runs/2026-05-23/improvement-backlog.md",
+    "subconscious/runs/2026-05-23/run-summary.json"
+  ],
+  "questions_for_next_run": [
+    "Was GH #181 fixed (15000 + 25000 added to AMOUNT_TO_PLAN, test updated)?",
+    "Has /moratorium-sprint been invoked? If yes: moratorium exits, first winners = Zapier security + AI-to-Human Handoff.",
+    "If sprint still not invoked by run 32: evaluate mechanism redesign (not another repeat winner)."
+  ]
+}

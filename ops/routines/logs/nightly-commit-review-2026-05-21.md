@@ -1,10 +1,10 @@
 # Nightly Commit Review — 2026-05-21
 
-**Run time:** 2026-05-21 UTC  
-**Commits reviewed:** 4 (all LOW — docs/state/subconscious/ops)  
-**Production bugs found:** 0  
-**LOW fixes applied:** 0  
-**MEDIUM/HIGH issues filed:** 0 net (GH #175 filed then self-retracted same run — false alarm)  
+**Run time:** 2026-05-21 UTC
+**Commits reviewed:** 4 (all LOW — docs/state/subconscious/ops)
+**Production bugs found:** 0
+**LOW fixes applied:** 0
+**MEDIUM/HIGH issues filed:** 0 net (GH #175 filed then self-retracted same run — false alarm)
 **Moratorium escalation:** fired → comment on GH #169
 
 ---
@@ -56,10 +56,10 @@ Additive skill update only. No production code.
 
 ## Moratorium Status
 
-**Moratorium active:** YES (since run 15, 2026-05-08)  
-**Pending governance items:** 12 in `subconscious/state/governance.json`  
-**Implementation-blocking items (sprint scope):** 3 — Items A, B, D  
-**Oldest pending:** Run 4 (2026-04-16) — 35 days  
+**Moratorium active:** YES (since run 15, 2026-05-08)
+**Pending governance items:** 12 in `subconscious/state/governance.json`
+**Implementation-blocking items (sprint scope):** 3 — Items A, B, D
+**Oldest pending:** Run 4 (2026-04-16) — 35 days
 
 Conditions met for escalation: `N_pending (12) > 3` AND `oldest_age (35d) > 14d` → **escalation fired**.
 

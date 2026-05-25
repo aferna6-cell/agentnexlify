@@ -441,20 +441,25 @@ New feature: skills support `effort` frontmatter to override model thinking effo
 4. ✅ Add MCP token audit command (`/mcp-audit`)
 5. ☐ Try `/voice` for next code review session (manual)
 
-## Implementation Status (Updated 2026-04-08)
+## Implementation Status (Updated 2026-05-22)
 
 | Phase | Status | What Shipped |
 |-------|--------|-------------|
-| 1. CLAUDE.md Diet | ✅ Done | 539→99 lines. 9 rules files with path scoping. |
+| 1. CLAUDE.md Diet | ✅ Done | 539→<200 lines. Rules files with path scoping. |
 | 2. Headless CI | ✅ Done | PR review (Haiku) + security scan (Sonnet) workflows. Needs ANTHROPIC_API_KEY secret. |
-| 3. Rules Buildout | ✅ Done | 10 rules files total (9 new + 1 existing). All path-scoped. |
+| 3. Rules Buildout | ✅ Done | 40+ rules files, all path-scoped or intentionally always-load. |
 | 4. Agent Teams | ✅ Done | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` enabled. |
-| 5. Channels | ⏭️ Skipped | Needs Telegram bot token. |
-| 6. Plugins | ⏭️ Deferred | High effort, week 4. |
+| 5. Channels | 🚫 Blocked | Needs a Telegram bot token (external credential). Cannot complete from a code session. |
+| 6.1 Standards Plugin | ✅ Done | `.claude-plugin/` — plugin.json, marketplace.json, 3 skills, 1 agent, 1 hook. |
+| 6.2 Vertical Industry Plugin | ⏭️ Deferred | Product feature, not a Claude-config gap. Needs a product spec + grill-me pass before build (new agent definitions are a hard-stop per `daily-skills.md`). |
 | 7. Hook Improvements | ✅ Done | PostCompact + WorktreeRemove hooks added. |
-| 8. Misc | ✅ Partial | MCP audit command, CLAUDE.local.md. Voice/effort frontmatter pending. |
+| 8.1 Voice Mode | 🚫 Blocked | Manual `/voice` toggle — cannot enable from a non-interactive code session. |
+| 8.5 Skill Effort Frontmatter | ✅ Done | All 82 skills carry `effort:` frontmatter (high/medium/low). |
+| 8 (other) | ✅ Done | MCP audit command, CLAUDE.local.md, structured CI output, independent review instances. |
+
+**Remaining work is external-credential-gated only** (Phase 5 Telegram token, Phase 8.1 interactive `/voice`) or a deferred product feature (Phase 6.2). No code-session-completable items remain.
 
 ---
 
 *Generated from audit of Claude Code platform features against AgentNexLiFy codebase configuration.*
-*Last updated: 2026-04-08*
+*Last updated: 2026-05-22*

@@ -39,12 +39,14 @@ from backend.routers import (
     content,
     content_repurpose,
     conversation_inbox,
+    conversations,
     crawl,
     csat,
     custom_fields,
     documents,
     email_sequences,
     email_templates,
+    faq,
     forms,
     gbp,
     integrations,
@@ -772,6 +774,8 @@ app.add_middleware(RequestContextMiddleware)
 app.include_router(analytics.router)
 app.include_router(appointments.router)
 app.include_router(auth.router)
+app.include_router(conversations.router)
+app.include_router(faq.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
 app.include_router(clients.router)

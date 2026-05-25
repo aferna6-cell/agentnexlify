@@ -1,0 +1,40 @@
+{
+  "run": 32,
+  "date": "2026-05-23-pm",
+  "evidence_summary": "2174732 (largest commit in weeks): god-class refactor branding_service/control_center/channels_facebook/pipeline/social_media — 5038 additions, 2064 deletions, 13 new service files, 5 new test files (2221 lines). 1eaaeec: 'Fix billing AMOUNT_TO_PLAN' landed but still missing 15000 (autopilot/$150) and 25000 (professional/$250). 1553bf7: nightly review wired test_billing_amount_to_plan.py into CI — now two tests actively assert 15000/25000 should NOT exist, blocking any correct fix from passing CI. GH #181 still open. Moratorium day 18, Items A/B/D MISSING, pending=7.",
+  "ideas_count": 5,
+  "top_3_debated": [
+    "GH #181 Billing Fix (run 31 continuation, stronger evidence)",
+    "dashboard_service.py + conversations_service.py coverage gap",
+    "Invoke /moratorium-sprint"
+  ],
+  "winner": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, remove CI-blocking contradictory tests",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "debate_verdicts": {
+    "GH #181 Billing Fix": "SURVIVES → WINNER (3 rounds: new evidence from 1eaaeec failure + 1553bf7 CI trap; moratorium-safe; S-effort)",
+    "dashboard_service.py coverage": "WEAKENED → parking lot (speculative — needs test_extracted_services.py verification first)",
+    "/moratorium-sprint": "WEAKENED → standing action (8th consecutive recommendation; bottleneck is commitment not info; standing directive not winner)"
+  },
+  "rejected": [],
+  "weakened_to_parking": [
+    "dashboard_service.py + conversations_service.py coverage",
+    "/moratorium-sprint (standing, not winner)"
+  ],
+  "moratorium_active": true,
+  "moratorium_day": 18,
+  "pending_before": 7,
+  "pending_after": 8,
+  "key_new_evidence": [
+    "1eaaeec failed billing fix: removed wrong entries but omitted 15000 and 25000 (confirms non-obviousness)",
+    "1553bf7 wired contradictory tests into CI: test_no_wrong_15000_mapping now blocks any correct fix",
+    "2174732 god-class refactor: dashboard_service.py and conversations_service.py created without confirmed test coverage",
+    "AMOUNT_TO_PLAN direct inspection: 9900 + 89900 present, 15000 + 25000 absent"
+  ],
+  "questions_for_next_run": [
+    "Does test_extracted_services.py cover dashboard_service.py and conversations_service.py?",
+    "Has GH #181 been implemented (grep 15000 billing.py)?",
+    "Has any sprint item (A/B/D) been completed?"
+  ],
+  "bonus_action": "Pre-commit billing sentinel (Check 11) — implement alongside GH #181 fix, ~10 min extra"
+}

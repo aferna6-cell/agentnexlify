@@ -17,6 +17,8 @@ mutants/
 coverage/
 .coverage
 coverage-python.xml
+coverage-*.xml
+coverage.xml
 
 # Agent communication files (ephemeral, per-session)
 .claude/agent-comms/*.md
@@ -62,8 +64,9 @@ knowledge-base/_embeddings_*.json
 knowledge-base/.obsidian-sync-state.json
 CLAUDE.local.md
 
-# OpenClaw migration — contains secrets
-.openclaw-migration/morpheus/polymarket-bot-.env
+# pytest temp output (basetemp / cache — never commit)
+pytest-of-*/
+.pytest_cache/
 
 # autoskills installs mirror dirs for each supported IDE. We only use
 # Claude Code, so only .agents/ (canonical storage) + .claude/skills/
@@ -74,8 +77,6 @@ CLAUDE.local.md
 .continue/
 .junie/
 .kiro/
-.openclaw-migration/openclaw.env
-.openclaw-migration/morpheus/morpheus-sync-.env.example
 
 # Obsidian local vault config (when repo opened as Obsidian vault)
 .obsidian/

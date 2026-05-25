@@ -1,6 +1,7 @@
 """Tests for selective retry adoption in non-latency-critical AI paths."""
 
 import os
+
 os.environ["TESTING"] = "1"
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,15 +16,31 @@ async def test_generate_ai_email_uses_single_retry(mock_call):
 
     mock_call.return_value = MagicMock(text="Hello there")
     db = MagicMock()
-    faq_table = MagicMock(); faq_table.select.return_value = faq_table; faq_table.eq.return_value = faq_table; faq_table.execute.return_value = MagicMock(data=[])
-    conv_table = MagicMock(); conv_table.select.return_value = conv_table; conv_table.eq.return_value = conv_table; conv_table.order.return_value = conv_table; conv_table.limit.return_value = conv_table; conv_table.execute.return_value = MagicMock(data=[])
-    leads_table = MagicMock(); leads_table.select.return_value = leads_table; leads_table.eq.return_value = leads_table; leads_table.limit.return_value = leads_table; leads_table.execute.return_value = MagicMock(data=[{"name": "Aidan"}])
+    faq_table = MagicMock()
+    faq_table.select.return_value = faq_table
+    faq_table.eq.return_value = faq_table
+    faq_table.execute.return_value = MagicMock(data=[])
+    conv_table = MagicMock()
+    conv_table.select.return_value = conv_table
+    conv_table.eq.return_value = conv_table
+    conv_table.order.return_value = conv_table
+    conv_table.limit.return_value = conv_table
+    conv_table.execute.return_value = MagicMock(data=[])
+    leads_table = MagicMock()
+    leads_table.select.return_value = leads_table
+    leads_table.eq.return_value = leads_table
+    leads_table.limit.return_value = leads_table
+    leads_table.execute.return_value = MagicMock(data=[{"name": "Aidan"}])
 
     def table(name):
-        if name == "faq_entries": return faq_table
-        if name == "chat_messages": return conv_table
-        if name == "leads": return leads_table
+        if name == "faq_entries":
+            return faq_table
+        if name == "chat_messages":
+            return conv_table
+        if name == "leads":
+            return leads_table
         raise AssertionError(name)
+
     db.table.side_effect = table
 
     body = await _generate_ai_email(db, "tenant-1", "lead-1", "Test Biz", None)
@@ -33,14 +50,18 @@ async def test_generate_ai_email_uses_single_retry(mock_call):
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.local_seo.settings")
-@patch("backend.routers.local_seo.call_claude_messages", new_callable=AsyncMock)
+@patch("backend.services.local_seo_ai.settings")
+@patch("backend.services.local_seo_ai.call_claude_messages", new_callable=AsyncMock)
 async def test_run_geo_score_ai_uses_single_retry(mock_call, mock_settings):
-    from backend.routers.local_seo import _run_geo_score_ai
+    from backend.services.local_seo_ai import _run_geo_score_ai
 
     mock_settings.anthropic_api_key = "test-key"
-    mock_call.return_value = MagicMock(text='{"overall_score": 42, "platform_scores": {}, "visibility_factors": [], "recommendations": []}')
-    result = await _run_geo_score_ai("Test Biz", "plumbing", "Miami", "https://example.com")
+    mock_call.return_value = MagicMock(
+        text='{"overall_score": 42, "platform_scores": {}, "visibility_factors": [], "recommendations": []}'
+    )
+    result = await _run_geo_score_ai(
+        "Test Biz", "plumbing", "Miami", "https://example.com"
+    )
 
     assert result["overall_score"] == 42
     assert mock_call.await_args.kwargs["max_retries"] == 1
@@ -49,11 +70,16 @@ async def test_run_geo_score_ai_uses_single_retry(mock_call, mock_settings):
 def test_content_repurposer_sync_path_uses_single_retry():
     from backend.services.content_repurposer import repurpose
 
-    with patch("backend.services.content_repurposer.call_claude_messages_sync") as mock_call:
+    with patch(
+        "backend.services.content_repurposer.call_claude_messages_sync"
+    ) as mock_call:
         mock_call.return_value = MagicMock(text='{"x_thread": []}')
 
         import asyncio
-        result = asyncio.run(repurpose("source", "title", "tenant-1", formats=["x_thread"]))
+
+        result = asyncio.run(
+            repurpose("source", "title", "tenant-1", formats=["x_thread"])
+        )
 
         assert result == {"x_thread": []}
         assert mock_call.call_args.kwargs["max_retries"] == 1

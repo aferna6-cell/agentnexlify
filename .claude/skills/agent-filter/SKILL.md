@@ -1,5 +1,6 @@
 ---
 name: agent-filter
+effort: low
 description: 5-test signal-vs-noise filter for AI agent ecosystem adoption. Load when user proposes adopting a new agent framework, library, protocol, model, or tool. Triggers on "should we use X", "thinking about adopting X", "X just launched, should we look at it", "is X worth it", "evaluate X", or any framework/library/tool name not already in the project stack.
 origin: knowledge-base/raw/ai-llm/agent-field-filter-2026-04-30.md
 version: 1.0.0

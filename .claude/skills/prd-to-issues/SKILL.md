@@ -1,5 +1,6 @@
 ---
 name: prd-to-issues
+effort: medium
 description: Break a PRD into independently grabbable GitHub issues with vertical slices, blocking relationships, and labels. Output via gh issue create. Load when user says "issues from PRD", "backlog from spec", "gh issues for feature", "create tickets from PRD".
 origin: https://github.com/mattpocock/skills/tree/main/prd-to-issues
 version: 1.0.0

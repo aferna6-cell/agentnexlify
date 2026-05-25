@@ -47,18 +47,48 @@ def test_client(mock_settings):
         patch("backend.models.database.get_supabase", return_value=db_mock),
         patch("backend.routers.auth.get_service_supabase", return_value=db_mock),
         patch("backend.routers.auth.settings", mock_settings),
+        patch(
+            "backend.services.fraud_guard.get_service_supabase", return_value=db_mock
+        ),
         patch("backend.routers.widget_chat.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.widget_config.get_service_supabase", return_value=db_mock),
+        patch(
+            "backend.routers.widget_config.get_service_supabase", return_value=db_mock
+        ),
         patch("backend.routers.widget_lead.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.widget_booking.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.widget_chat_helpers.get_service_supabase", return_value=db_mock),
-        patch("backend.services.branding_service._get_service_supabase", return_value=db_mock),
+        patch(
+            "backend.routers.widget_booking.get_service_supabase", return_value=db_mock
+        ),
+        patch(
+            "backend.routers.widget_chat_helpers.get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.industry_faqs._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.widget_config_service._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.faq_service._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.conversations_service._get_service_supabase",
+            return_value=db_mock,
+        ),
+        patch(
+            "backend.services.dashboard_service._get_service_supabase",
+            return_value=db_mock,
+        ),
     ]
     for p in patches:
         p.start()
 
     from backend.main import app
     from fastapi.testclient import TestClient
+
     client = TestClient(app)
 
     yield client, db_mock
@@ -90,9 +120,25 @@ def _setup_table_mock(db_mock, table_responses):
             current_data = data
 
         # Make all chainable methods return the same mock
-        for method in ["select", "insert", "update", "delete", "eq", "neq",
-                       "gte", "lte", "gt", "lt", "limit", "order", "ilike",
-                       "in_", "is_", "or_", "contains"]:
+        for method in [
+            "select",
+            "insert",
+            "update",
+            "delete",
+            "eq",
+            "neq",
+            "gte",
+            "lte",
+            "gt",
+            "lt",
+            "limit",
+            "order",
+            "ilike",
+            "in_",
+            "is_",
+            "or_",
+            "contains",
+        ]:
             getattr(table, method).return_value = table
 
         # Execute returns the data
@@ -113,18 +159,24 @@ class TestRegister:
         """Signing up with an existing email should return 409."""
         client, db_mock = test_client
 
-        _setup_table_mock(db_mock, {
-            "tenants": [{"id": "existing-tenant"}],  # duplicate check finds a match
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [{"id": "existing-tenant"}],  # duplicate check finds a match
+            },
+        )
 
-        response = client.post("/api/v1/auth/register", json={
-            "email": "existing@example.com",
-            "password": "TestPass123!",
-            "business_name": "Test Business",
-            "owner_name": "Test Owner",
-            "industry": "plumbing",
-            "city": "New York",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "existing@example.com",
+                "password": "TestPass123!",
+                "business_name": "Test Business",
+                "owner_name": "Test Owner",
+                "industry": "plumbing",
+                "city": "New York",
+            },
+        )
         assert response.status_code == 409
         assert "already registered" in response.json()["detail"].lower()
 
@@ -133,22 +185,35 @@ class TestRegister:
         client, db_mock = test_client
 
         # First call (duplicate check) returns empty, second call (insert) returns new tenant
-        _setup_table_mock(db_mock, {
-            "tenants": [
-                [],  # first call: no duplicate
-                [{"id": "new-tenant-001", "business_name": "Test Biz", "owner_email": "new@example.com", "plan": "free"}],  # second call: insert result
-            ],
-            "widget_configs": [{"id": "wc-001"}],  # widget config insert
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    [],  # first call: no duplicate
+                    [
+                        {
+                            "id": "new-tenant-001",
+                            "business_name": "Test Biz",
+                            "owner_email": "new@example.com",
+                            "plan": "free",
+                        }
+                    ],  # second call: insert result
+                ],
+                "widget_configs": [{"id": "wc-001"}],  # widget config insert
+            },
+        )
 
-        response = client.post("/api/v1/auth/register", json={
-            "email": "new@example.com",
-            "password": "TestPass123!",
-            "business_name": "Test Biz",
-            "owner_name": "Test Owner",
-            "industry": "plumbing",
-            "city": "New York",
-        })
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "new@example.com",
+                "password": "TestPass123!",
+                "business_name": "Test Biz",
+                "owner_name": "Test Owner",
+                "industry": "plumbing",
+                "city": "New York",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "token" in data
@@ -164,15 +229,21 @@ class TestLogin:
         """Login with non-existent email should return 401."""
         client, db_mock = test_client
 
-        _setup_table_mock(db_mock, {
-            "tenants": [],
-            "team_members": [],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [],
+                "team_members": [],
+            },
+        )
 
-        response = client.post("/api/v1/auth/login", json={
-            "email": "nonexistent@example.com",
-            "password": "WrongPass123",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "nonexistent@example.com",
+                "password": "WrongPass123",
+            },
+        )
         assert response.status_code == 401
         assert "invalid" in response.json()["detail"].lower()
 
@@ -180,43 +251,61 @@ class TestLogin:
         """Login with correct email but wrong password should return 401."""
         client, db_mock = test_client
         import bcrypt
+
         correct_hash = bcrypt.hashpw(b"CorrectPass123", bcrypt.gensalt()).decode()
 
-        _setup_table_mock(db_mock, {
-            "tenants": [{
-                "id": "tenant-001",
-                "password_hash": correct_hash,
-                "business_name": "Test Biz",
-                "plan": "free",
-            }],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    {
+                        "id": "tenant-001",
+                        "password_hash": correct_hash,
+                        "business_name": "Test Biz",
+                        "plan": "free",
+                    }
+                ],
+            },
+        )
 
-        response = client.post("/api/v1/auth/login", json={
-            "email": "test@example.com",
-            "password": "WrongPass123",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "test@example.com",
+                "password": "WrongPass123",
+            },
+        )
         assert response.status_code == 401
 
     def test_successful_login(self, test_client):
         """Login with correct credentials should return token."""
         client, db_mock = test_client
         import bcrypt
+
         password = "CorrectPass123!"
         hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-        _setup_table_mock(db_mock, {
-            "tenants": [{
-                "id": "tenant-001",
-                "password_hash": hashed,
-                "business_name": "Test Business",
-                "plan": "growth",
-            }],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    {
+                        "id": "tenant-001",
+                        "password_hash": hashed,
+                        "business_name": "Test Business",
+                        "plan": "growth",
+                    }
+                ],
+            },
+        )
 
-        response = client.post("/api/v1/auth/login", json={
-            "email": "test@example.com",
-            "password": password,
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "test@example.com",
+                "password": password,
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "token" in data
@@ -228,43 +317,62 @@ class TestLogin:
         """Tenant without password_hash (legacy) should get 401."""
         client, db_mock = test_client
 
-        _setup_table_mock(db_mock, {
-            "tenants": [{
-                "id": "tenant-001",
-                "password_hash": None,
-                "business_name": "Legacy Biz",
-                "plan": "free",
-            }],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    {
+                        "id": "tenant-001",
+                        "password_hash": None,
+                        "business_name": "Legacy Biz",
+                        "plan": "free",
+                    }
+                ],
+            },
+        )
 
-        response = client.post("/api/v1/auth/login", json={
-            "email": "legacy@example.com",
-            "password": "anything",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "legacy@example.com",
+                "password": "anything",
+            },
+        )
         assert response.status_code == 401
 
 
 class TestPasswordReset:
     """Test forgot/reset password flows."""
 
-    @patch("backend.routers.auth.secrets.token_urlsafe", return_value="fixed-reset-token")
+    @patch(
+        "backend.routers.auth.secrets.token_urlsafe", return_value="fixed-reset-token"
+    )
     @patch("backend.routers.auth.send_email", new_callable=AsyncMock)
-    def test_forgot_password_existing_email_sends_reset_link(self, mock_send_email, _mock_token, test_client):
+    def test_forgot_password_existing_email_sends_reset_link(
+        self, mock_send_email, _mock_token, test_client
+    ):
         client, db_mock = test_client
 
-        _setup_table_mock(db_mock, {
-            "tenants": [
-                [{
-                    "id": "tenant-001",
-                    "owner_email": "owner@example.com",
-                    "owner_name": "Owner",
-                    "business_name": "Test Business",
-                }],
-                [],
-            ],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    [
+                        {
+                            "id": "tenant-001",
+                            "owner_email": "owner@example.com",
+                            "owner_name": "Owner",
+                            "business_name": "Test Business",
+                        }
+                    ],
+                    [],
+                ],
+            },
+        )
 
-        response = client.post("/api/v1/auth/forgot-password", json={"email": "owner@example.com"})
+        response = client.post(
+            "/api/v1/auth/forgot-password", json={"email": "owner@example.com"}
+        )
 
         assert response.status_code == 200
         assert "reset link has been sent" in response.json()["message"].lower()
@@ -274,12 +382,16 @@ class TestPasswordReset:
         assert "fixed-reset-token" in kwargs["body_html"]
 
     @patch("backend.routers.auth.send_email", new_callable=AsyncMock)
-    def test_forgot_password_unknown_email_returns_generic_message(self, mock_send_email, test_client):
+    def test_forgot_password_unknown_email_returns_generic_message(
+        self, mock_send_email, test_client
+    ):
         client, db_mock = test_client
 
         _setup_table_mock(db_mock, {"tenants": []})
 
-        response = client.post("/api/v1/auth/forgot-password", json={"email": "missing@example.com"})
+        response = client.post(
+            "/api/v1/auth/forgot-password", json={"email": "missing@example.com"}
+        )
 
         assert response.status_code == 200
         assert "reset link has been sent" in response.json()["message"].lower()
@@ -305,10 +417,16 @@ class TestPasswordReset:
         for method in ["select", "update", "eq", "limit"]:
             getattr(tenant_table, method).return_value = tenant_table
         tenant_table.execute.side_effect = [
-            MagicMock(data=[{
-                "id": "tenant-001",
-                "reset_token_expires": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
-            }]),
+            MagicMock(
+                data=[
+                    {
+                        "id": "tenant-001",
+                        "reset_token_expires": (
+                            datetime.now(timezone.utc) + timedelta(hours=1)
+                        ).isoformat(),
+                    }
+                ]
+            ),
             MagicMock(data=[]),
         ]
 
@@ -341,23 +459,35 @@ class TestBillingCheckout:
     @patch("backend.routers.auth.stripe.checkout.Session.create")
     @patch("backend.routers.auth.get_or_create_customer")
     def test_billing_checkout_returns_checkout_url(
-        self, mock_customer, mock_create_session, mock_ensure_stripe, mock_ensure_prices, test_client
+        self,
+        mock_customer,
+        mock_create_session,
+        mock_ensure_stripe,
+        mock_ensure_prices,
+        test_client,
     ):
         client, db_mock = test_client
         token = _make_auth_token()
 
-        _setup_table_mock(db_mock, {
-            "tenants": [{
-                "id": "tenant-001",
-                "owner_email": "owner@example.com",
-                "business_name": "Test Business",
-            }],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    {
+                        "id": "tenant-001",
+                        "owner_email": "owner@example.com",
+                        "business_name": "Test Business",
+                    }
+                ],
+            },
+        )
 
         mock_ensure_stripe.return_value = None
         mock_ensure_prices.return_value = {"monthly": "price_growth_monthly"}
         mock_customer.return_value = MagicMock(id="cus_123")
-        mock_create_session.return_value = MagicMock(url="https://checkout.stripe.test/session_123")
+        mock_create_session.return_value = MagicMock(
+            url="https://checkout.stripe.test/session_123"
+        )
 
         response = client.post(
             "/api/v1/auth/billing/checkout",
@@ -366,7 +496,10 @@ class TestBillingCheckout:
         )
 
         assert response.status_code == 200
-        assert response.json()["checkout_url"] == "https://checkout.stripe.test/session_123"
+        assert (
+            response.json()["checkout_url"]
+            == "https://checkout.stripe.test/session_123"
+        )
         mock_create_session.assert_called_once()
 
     def test_billing_checkout_rejects_invalid_plan(self, test_client):
@@ -400,12 +533,16 @@ class TestGoogleOAuth:
         params = parse_qs(parsed.query)
         assert parsed.netloc == "accounts.google.com"
         assert params["client_id"] == ["google-client-id"]
-        assert params["redirect_uri"] == ["https://api.example.com/api/v1/auth/google/callback"]
+        assert params["redirect_uri"] == [
+            "https://api.example.com/api/v1/auth/google/callback"
+        ]
         assert params["scope"] == ["openid email profile"]
         assert "state" in params
 
     @patch("backend.routers.auth.httpx.AsyncClient")
-    def test_google_callback_existing_owner_redirects_to_dashboard(self, mock_async_client, test_client, mock_settings):
+    def test_google_callback_existing_owner_redirects_to_dashboard(
+        self, mock_async_client, test_client, mock_settings
+    ):
         client, db_mock = test_client
         mock_settings.google_client_id = "google-client-id"
         mock_settings.google_client_secret = "google-client-secret"
@@ -416,14 +553,19 @@ class TestGoogleOAuth:
 
         state = _encode_google_state("login")
 
-        _setup_table_mock(db_mock, {
-            "tenants": [{
-                "id": "tenant-001",
-                "business_name": "Test Business",
-                "plan": "growth",
-                "business_type": "plumbing",
-            }],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    {
+                        "id": "tenant-001",
+                        "business_name": "Test Business",
+                        "plan": "growth",
+                        "business_type": "plumbing",
+                    }
+                ],
+            },
+        )
 
         token_response = MagicMock()
         token_response.raise_for_status.return_value = None
@@ -465,20 +607,33 @@ class TestGoogleOAuth:
             plan="growth",
         )
 
-        _setup_table_mock(db_mock, {
-            "tenants": [
-                [],
-                [{"id": "tenant-google-001", "business_name": "Google Biz", "owner_email": "owner@example.com", "plan": "free"}],
-            ],
-            "widget_configs": [{"id": "wc-001"}],
-        })
+        _setup_table_mock(
+            db_mock,
+            {
+                "tenants": [
+                    [],
+                    [
+                        {
+                            "id": "tenant-google-001",
+                            "business_name": "Google Biz",
+                            "owner_email": "owner@example.com",
+                            "plan": "free",
+                        }
+                    ],
+                ],
+                "widget_configs": [{"id": "wc-001"}],
+            },
+        )
 
-        response = client.post("/api/v1/auth/google-register", json={
-            "setup_token": setup_token,
-            "business_name": "Google Biz",
-            "industry": "hvac",
-            "city": "Austin",
-        })
+        response = client.post(
+            "/api/v1/auth/google-register",
+            json={
+                "setup_token": setup_token,
+                "business_name": "Google Biz",
+                "industry": "hvac",
+                "city": "Austin",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()

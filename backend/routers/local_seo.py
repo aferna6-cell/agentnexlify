@@ -1,6 +1,7 @@
 """Local SEO Tools endpoints — profile completeness, SEO audit, GEO scoring, keyword tracking.
 
-Route bodies delegate to backend.services.local_seo_handlers (Phases 2 + 4).
+Route bodies delegate to backend.services.local_seo_execute (write/compute)
+and backend.services.local_seo_fetch (read).
 Pydantic models live in backend.models.local_seo (Phase 3).
 """
 
@@ -22,12 +23,14 @@ from backend.models.local_seo import (
     SEOProfileResponse,
 )
 from backend.services.addon_gate import require_marketing_addon
-from backend.services.local_seo_handlers import (
+from backend.services.local_seo_execute import (
     execute_analyze_seo_profile,
     execute_competitor_analysis,
     execute_geo_score,
     execute_keyword_tracking,
     execute_seo_audit,
+)
+from backend.services.local_seo_fetch import (
     fetch_audit_history,
     fetch_dashboard_widget,
     fetch_keyword_rankings,

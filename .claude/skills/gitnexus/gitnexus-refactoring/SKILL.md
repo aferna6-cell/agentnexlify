@@ -1,5 +1,6 @@
 ---
 name: gitnexus-refactoring
+effort: high
 description: Safely rename, extract, split, move, or restructure code using GitNexus impact mapping and automated rename tools. Use when user says 'rename this function', 'extract this into a module', 'refactor this class', 'move this to a separate file', 'split this service', 'safe refactoring', or asks about gitnexus refactoring.
 version: 1.0.0
 origin: claude

@@ -1,5 +1,6 @@
 ---
 name: seo-audit-marketing
+effort: medium
 description: On-page + local SEO audit workflow for tenant business sites. Load when editing backend/routers/local_seo.py, building SEO reports for tenants, or diagnosing organic traffic issues in the marketing addon.
 origin: coreyhaines31/marketingskills (adapted)
 version: 1.0.0
