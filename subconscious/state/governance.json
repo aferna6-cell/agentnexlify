@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-23-pm",
-  "total_runs": 32,
+  "last_run": "2026-05-25-pm",
+  "total_runs": 33,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,14 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Create god-class-splitter skill — .claude/skills/god-class-splitter/SKILL.md (run 33 winner)",
+      "date": "2026-05-25-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "workflow",
+      "note": "Run 33 winner. Skill discovery 2026-05-25 proposed it with 3+ occurrences in 7 days (3555645 local_seo split, 2174732 PR #180 5-file split, follow-up commits 5f2cd2b+4afb3cf). 54 files remaining in god-class-refactor_plan.md (29 backend + 25 frontend). Two follow-up commits required after every split this week — Step 10 checklist item ('verify no stale importers') would prevent both. Nightly review precedent: can autonomously create skill files (7985fbb moratorium-sprint, 2ce31b2 escalation protocol). LOW-risk additive. Implementation sketch: subconscious/runs/2026-05-25-pm/winning-concept.md §Steps 1-2. Bonus: update improve-architecture SKILL.md with execution handoff (~5 min, Step 3 of sketch). Run 34 governance signal: GH #181 MUST be implemented or governance mandate fires (4-consecutive-run threshold)."
+    },
     {
       "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, remove CI-blocking tests (run 32 continuation)",
       "date": "2026-05-23-pm",
@@ -382,6 +390,13 @@
       "note": "Run 26. Item C (Moratorium Escalation Protocol) done by nightly review 2026-05-20 (2ce31b2). Sprint now A+B+D only (~40 min). moratorium-sprint SKILL.md exists. Debate: Authorize nightly Items A+B KILLED (parallel conflict), pre-commit-guard-add WEAKENED → parking lot. Winner: invoke /moratorium-sprint. If not invoked by run 27: trigger from nightly review scheduled execution."
     },
     {
+      "title": "Create god-class-splitter skill (.claude/skills/god-class-splitter/SKILL.md)",
+      "date": "2026-05-25-pm",
+      "status": "recommended",
+      "run": 33,
+      "note": "Run 33 winner. Skill discovery 2026-05-25 proposed with 3+ occurrences this week (local_seo split 3555645, PR #180 2174732, follow-up commits 5f2cd2b+4afb3cf). 54 files remain in god-class-refactor_plan.md. Execution arm for improve-architecture. Prevents post-split test-repair follow-up commits (step 10 checklist). Nightly review can autonomously create (precedent: 7985fbb, 2ce31b2). Debate: god-class-splitter SURVIVES 3 rounds → WINNER; GH #181 SURVIVES → runner-up with run 34 escalation; billing-constant-guard WEAKENED → parking lot."
+    },
+    {
       "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN + fix contradictory test",
       "date": "2026-05-23",
       "status": "recommended",
@@ -549,16 +564,28 @@
       "date": "2026-05-11",
       "roi": 1.8,
       "note": "Added run 16. When moratorium active + oldest pending > 14 days, nightly-commit-review.sh auto-creates GH comment on oldest pending issue linking winning-concept.md. Closes feedback loop between recommendation and implementation. Consider if run 17 has same winner again."
+    },
+    {
+      "title": "Create billing-constant-guard skill (.claude/skills/billing-constant-guard/SKILL.md)",
+      "date": "2026-05-25-pm",
+      "roi": 2.1,
+      "note": "Added run 33 (WEAKENED in debate). Skill discovery 2026-05-25 documented triple-fix pattern (c72b535 + 1eaaeec + 1553bf7 + 3 subconscious runs). 10-step checklist including CLAUDE.md plan price cross-reference + inverted-test check. Promote to winner after GH #181 is fixed and god-class-splitter is implemented."
+    },
+    {
+      "title": "Create post-split-test-repair skill (.claude/skills/post-split-test-repair/SKILL.md)",
+      "date": "2026-05-25-pm",
+      "roi": 1.9,
+      "note": "Added run 33. Skill discovery 2026-05-25: 8-step checklist for repointing stale @patch targets and imports after module splits. 2 occurrences this week (5f2cd2b + 4afb3cf). 15-20 min saved per split. May be sub-step of god-class-splitter or standalone. Promote after god-class-splitter is used once in practice."
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 8,
-    "runs_pending_approval_raw": 8,
-    "runs_pending_approval_note": "True pending = 8 (runs 4, 20, 21, 28, 29, 30, 31, 32). After /moratorium-sprint (Items A+B+D): pending 8→3→2 = moratorium exits. Run 32 winner (GH #181 fix continuation) is moratorium-safe S-effort. GH issue mechanism (runs 21+29) stays in parking lot.",
+    "runs_pending_approval": 9,
+    "runs_pending_approval_raw": 9,
+    "runs_pending_approval_note": "True pending = 9 (runs 4, 20, 21, 28, 29, 30, 31, 32, 33). After /moratorium-sprint (Items A+B+D): pending 9→4→2 = moratorium exits. Run 33 winner (god-class-splitter skill) is LOW-risk additive, nightly review can implement autonomously. GH #181 (runs 31+32) is moratorium-safe S-effort human action. RUN 34 GOVERNANCE SIGNAL: GH #181 4-consecutive-run threshold fires if still unimplemented.",
     "runs_implemented": 7,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 37)",
-    "governance_correction": "Run 32 (2026-05-23-pm): GH #181 still open after 1eaaeec attempted fix this morning. 1553bf7 added CI trap: test_no_wrong_15000_mapping now blocks correct fix from passing CI. Run 32 re-issues same winner with 4 independent evidence sources. Run 31 active_direction: title updated to reflect run 32 strengthening, status remains pending_approval.",
-    "note": "Run 32: billing fix CI-trap adds urgency. GH #181 sharpest gap. Sprint still highest-leverage for moratorium exit. Post-moratorium: Zapier security (GH #107, ROI 2.5) + AI-to-Human Handoff (customer value, 37d+).",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 39)",
+    "governance_correction": "Run 33 (2026-05-25-pm): god-class-splitter skill creation wins on fresh skill discovery evidence (2026-05-25 report). GH #181 demoted to standing action / parking lot with run 34 escalation signal. PR #180 (god-class refactor) landed 2026-05-23 — first major production activity in weeks. Items A/B/D still MISSING (moratorium day 20+).",
+    "note": "Run 33: god-class-splitter skill addresses long-tail workflow gap (54 files remaining). GH #181 is still most urgent human action — 3 consecutive recs, run 34 mandate pending. Sprint (moratorium-sprint) remains standing highest-leverage action. Post-moratorium: Zapier security (GH #107, ROI 2.5) + AI-to-Human Handoff (customer value, 39d+).",
     "escalate": true
   },
   "config": {
