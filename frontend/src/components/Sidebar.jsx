@@ -350,6 +350,14 @@ const allNavItems = [
     roles: ["owner", "admin"],
   },
   {
+    key: "inbound_channels",
+    icon: (
+      <Icon d="M4 4h16v12H5.17L4 17.17V4zm0-2a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4z" />
+    ),
+    label: "Inbound Channels",
+    roles: ["owner", "admin"],
+  },
+  {
     key: "support",
     icon: (
       <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" />
@@ -435,6 +443,7 @@ const NAV_GROUPS = [
       "integrations",
       "mcp_setup",
       "settings",
+      "inbound_channels",
       "support",
     ],
   },

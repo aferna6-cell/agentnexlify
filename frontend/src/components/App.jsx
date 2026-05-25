@@ -71,6 +71,9 @@ const WidgetPage = lazy(() => import("../pages/WidgetPage"));
 const FaqManagerPage = lazy(() => import("../pages/FaqManagerPage"));
 const BillingPage = lazy(() => import("../pages/BillingPage"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage"));
+const SettingsInboundChannels = lazy(
+  () => import("../pages/SettingsInboundChannels"),
+);
 const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
 const AgentControlCenterPage = lazy(
@@ -142,6 +145,7 @@ const pages = {
   billing: BillingPage,
   integrations: IntegrationsPage,
   settings: SettingsPage,
+  inbound_channels: SettingsInboundChannels,
   business_page: BusinessPageSettings,
   reviews: ReviewsPage,
   content_studio: ContentStudioPage,
@@ -202,6 +206,7 @@ const PAGE_TO_PATH = {
   billing: "/dashboard/billing",
   integrations: "/dashboard/integrations",
   settings: "/dashboard/settings",
+  inbound_channels: "/dashboard/inbound-channels",
   business_page: "/dashboard/business-page",
   reviews: "/dashboard/reviews",
   content_studio: "/dashboard/content-studio",
