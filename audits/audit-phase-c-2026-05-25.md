@@ -293,3 +293,60 @@ The 30 "confirmed-REMOVE" rows are NOT confirmed. They are UNCERTAIN pending re-
 ### Status — 2026-05-25
 
 Phase C deletions: **BLOCKED on re-audit**. PR #177 Phase C box stays unchecked. The Agent OS P0–P4 build + Group A inbound + tests + e2e loop work IS shipped; Phase C is the only remaining plan section, and it correctly stays as "report produced, deletion deferred to a future re-audited session" per the plan's own operating rule.
+
+---
+
+## RE-AUDIT FINDINGS — 2026-05-25 (in-session, post-invalidation)
+
+Re-audit performed with `grep -rln` per candidate + ref-by-ref triage using 6-bucket classification: stale-comment / registry / CI-workflow / active-spec-or-state-dir / cycle-ref / frozen-historical-log.
+
+### CONFIRMED-REMOVE (only cycle refs + frozen historical refs)
+
+| Candidate | Refs | Required patch |
+|---|---|---|
+| `AUDIT_RESULTS.md` | plan + audit (cycle) | none |
+| `CLEANUP_REPORT.md` | plan + audit (cycle) | none |
+| `CODEBASE-AUDIT-2026-03-25.md` | plan + audit (cycle) + `docs/daily-logs/2026-03-25.md` (frozen historical) | none |
+| `DEBUGGING_SESSION_REPORT.md` | plan + audit (cycle) | none |
+| `FULL_AUDIT.md` | plan + audit (cycle) | none |
+| `PRE_LAUNCH_AUDIT.md` | plan + audit (cycle) | none |
+| `marketing-addon-activation_plan.md` | plan + audit (cycle) | none |
+| `ops-automation-surfacing_plan.md` | plan + audit (cycle) | none |
+| `post-audit-remediation_plan.md` | cycle + frozen-historical-log + frozen audit | none |
+| `handoff-2026-04-16-post-analytics-split.md` | self-ref + cycle | none |
+| `audit-architecture-2026-04-25.md` | cycle ref only | none |
+| `audit-architecture-2026-04-19.md` | cycle ref only | none |
+| `audit-architecture-2026-04-27.md` | 0 refs (TRUE zero) | none |
+| `audit-architecture-2026-04-29.md` | 0 refs (TRUE zero) | none |
+| `audit-health-2026-04-20.md` | 0 refs (TRUE zero) | none |
+| `audit-architecture-2026-04-16.md` | cycle + frozen historical logs | none |
+| `audit-architecture-2026-04-18.md` | cycle + frozen historical brainstorm runs | none |
+| `buddy` skill | `.ai/manifest.json` (registry) + frozen historical | patch `.ai/manifest.json` to drop entry |
+
+### BLOCKED (active refs in code, specs, rules, scripts, state dirs)
+
+| Candidate | Blocking ref | Decision |
+|---|---|---|
+| `kevin-mode` skill | `.claude/rules/personality.md:110` + `.claude/rules/caveman-mode.md:33` actively reference it as a toggle persona | KEEP — toggle is active |
+| `nodejs-backend-patterns` skill | `.agents/skills/nodejs-backend-patterns/SKILL.md` is a parallel skill copy | KEEP — mirror is live |
+| `nodejs-best-practices` skill | `.agents/skills/nodejs-best-practices/SKILL.md` mirror | KEEP — mirror is live |
+| `obsidian-sync` skill | `specs/claudeopedia_spec.md:702-735` documents it as the sync mechanism | KEEP — active spec |
+| `kairos` skill | `scripts/kairos/{autodream.py,monitor.py,daemon.sh}` active runtime | KEEP — active scripts |
+| `subconscious` skill | `subconscious/runs/*` daily run dirs + state + governance.json | KEEP — active system |
+| `last30days` skill | `specs/claudeopedia_spec.md:228-245` full skill section + `memory-tiered-retrieval.md:65` | KEEP — active spec + rule |
+| `lead-parser-replacement_plan.md` | `.claude/rules/fill-instructions-before-guessing.md:42` cites it as the teaching example for the rule | KEEP — rule teaching ref |
+| `onboarding-v2_plan.md` | `subconscious/state/governance.json:392` active governance log entry | KEEP — active state |
+| `onboarding-v2_issues.md` | `scripts/post_onboarding_v2_phase1_issues.sh` active shell script | KEEP — active script |
+
+### UNCERTAIN (need user verdict)
+
+| Candidate | Refs | Question |
+|---|---|---|
+| `GEMINI.md` | `.ai/README.md:25` (registry row) + `.github/workflows/agent-config-security.yml:15,35` (CI watch path) + `docs/AGENT_SYSTEM_PLAN.md:63` (historical doc listing tool mirrors) | Does AgentNexLiFy still want Gemini CLI compatibility, or remove the file + drop registry/CI watch row + rewrite historical doc? |
+| `docs/IMPLEMENTATION_SUMMARY_2026-04-05.md` | cycle + frozen `.openclaw-migration/memory/2026-04-05.md` | REMOVABLE (resolved 2026-05-25) — move to CONFIRMED-REMOVE |
+
+### Plan vs reality — old "confirmed-REMOVE" reduced 30 → 18 truly-removable + 10 BLOCKED + 2 UNCERTAIN
+
+Truly-removable rows = 6 root .md + 2 plans + 1 plan-variant + 7 audits + 1 skill (buddy) = 17 unambiguously-removable files via one patch to `.ai/manifest.json` (for buddy) and one straight `git rm` commit per category.
+
+The 10 BLOCKED rows are NOT half-migration risks because the plan rule §C explicitly says "audit produces a report; deletion is a separate step." Leaving BLOCKED candidates in place is honoring rule §C, not violating it.
