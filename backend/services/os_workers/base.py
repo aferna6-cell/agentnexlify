@@ -32,6 +32,7 @@ class WorkerContext:
     user_message: str
     deliverable_title: str
     thought: list[dict] = field(default_factory=list)
+    tools: WorkerTools | None = None
 
     def step(self, label: str, detail: str = "") -> None:
         """Append a progress step and persist the thought process to the run."""
