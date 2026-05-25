@@ -1,0 +1,41 @@
+{
+  "run": 33,
+  "date": "2026-05-25",
+  "mode": "moratorium_third_consecutive",
+  "evidence_sources_checked": [
+    "git_log_3d",
+    "nightly_review_2026-05-25",
+    "billing.py_grep",
+    "test_billing_amount_to_plan.py_direct_read",
+    "pre-commit_hook_grep",
+    "filesystem_checks_A_B_D",
+    "check_project_invariants_live_run",
+    "customer-gaps.md",
+    "auth.py_wc_-l",
+    "god-class-refactor_plan.md_status"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Fix GH #181 (billing + tests)": "SURVIVES → WINNER",
+    "auth.py god-class refactor": "WEAKENED → parking lot (post-moratorium HIGH priority)",
+    "Invoke /moratorium-sprint": "WEAKENED → standing action, commitment bottleneck confirmed"
+  },
+  "winner": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, remove CI-blocking contradictory tests",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "effort": "S (~15 min)",
+  "moratorium_active": true,
+  "moratorium_day": 20,
+  "pending_before": 8,
+  "pending_after": 9,
+  "key_new_evidence": "PR #180 god-class refactor merged cleanly (135 new tests). auth.py at 1590 lines = next refactor target post-moratorium. GH #181 still open (3rd consecutive run). Nightly review deferred to human approval.",
+  "run_34_mandate": "If GH #181 unimplemented: switch to nightly-review autonomous fix (LOW-risk additive billing.py dict + LOW-risk test hygiene). Governance precedent fires at 4 consecutive same-winner.",
+  "artifacts": [
+    "subconscious/runs/2026-05-25/ideas/ideas.md",
+    "subconscious/runs/2026-05-25/debate/debate-log.md",
+    "subconscious/runs/2026-05-25/winning-concept.md",
+    "subconscious/runs/2026-05-25/improvement-backlog.md",
+    "subconscious/runs/2026-05-25/run-summary.json"
+  ]
+}
