@@ -228,17 +228,29 @@ Audit steps:
 - CLAUDE.md updated: skill count, any removed-file references.
 - Branch ready to merge to `main` with no obsolete code carried over.
 
-### Status — 2026-05-25 (audit invalidation)
+### Status — 2026-05-25 (DONE)
 
-- C1–C4 candidate tables: PRODUCED (`audits/audit-phase-c-2026-05-25.md`)
-  but **confirmation invalidated** post-audit. Every "0 refs" row
-  actually has live refs (registry files, CI workflows, migration
-  comments, sibling specs, state dirs, toggle docs). See audit addendum.
-- Removal commits: BLOCKED on re-audit with corrected `grep -rln`
-  methodology + per-ref triage + user verdict on UNCERTAIN-after-triage.
-- Per operating rule §C ("Audit produces a report; deletion is a separate
-  step. No file is removed until its candidate row is confirmed."):
-  no file deleted in this branch. Re-audit + deletions are a separate
-  future session with explicit user gate.
+- C1–C4 candidate tables: PRODUCED (`audits/audit-phase-c-2026-05-25.md`).
+- Re-audit + per-ref triage completed (audit addendum "RE-AUDIT FINDINGS").
+  Initial "0 refs" methodology too narrow — found 10 BLOCKED rows with
+  active refs in registry files, CI workflows, migration comments,
+  sibling specs, state dirs, toggle docs.
+- Final outcome: **18 files removed across 4 commits**, **10 BLOCKED rows
+  kept** (documented in audit addendum).
+- Removal commits on this branch:
+  - `80dc695d` C2 root .md (7 files + 4 ref patches: `.ai/manifest.json`,
+    `.ai/README.md`, `.github/workflows/agent-config-security.yml`,
+    `docs/AGENT_SYSTEM_PLAN.md`)
+  - `b5fc7135` C2 stale doc + 7 superseded audits (8 files)
+  - `5e27a13a` C3 shipped/dropped plan files (4 files)
+  - `f519a5fd` C1 buddy skill (1 file)
+- BLOCKED rows kept (do not re-attempt deletion in future sessions):
+  - C1 skills with active refs: `kevin-mode`, `nodejs-*` mirrors,
+    `obsidian-sync`, `kairos`, `subconscious`, `last30days`
+  - Plans referenced by sibling specs: `lead-parser-replacement_plan`,
+    `onboarding-v2_plan`, `onboarding-v2_issues`
+- Verify: `npm run check:quick` ran; em-dash failures pre-existing in
+  unrelated files (`os-inbound.js`, `SettingsInboundChannels.jsx`) — not
+  introduced by Phase C deletions.
 - The rest of the plan (P0–P4 workers, Group A inbound, tests, e2e loop)
-  IS shipped on this branch and PR.
+  shipped earlier on this branch and PR.
