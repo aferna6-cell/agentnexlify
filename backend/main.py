@@ -94,6 +94,7 @@ from backend.routers import (
     os_memory,
     os_backlog,
     os_usage,
+    os_inbound,
 )
 
 # --- JSON logging ---
@@ -837,6 +838,7 @@ app.include_router(os_deliverables.router)
 app.include_router(os_memory.router)
 app.include_router(os_backlog.router)
 app.include_router(os_usage.router)
+app.include_router(os_inbound.router)
 
 
 # --- Static files (widget) ---
