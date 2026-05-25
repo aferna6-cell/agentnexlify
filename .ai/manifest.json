@@ -91,7 +91,11 @@
     "routing_policy": "docs/AGENT_ROUTING.md",
     "routing_eval_command": "npm run eval:agent-routing",
     "risky_label_rule": "Issues labeled ai-risky require premium human-reviewed routing and must not be dispatched autonomously.",
-    "approved_claude_models": ["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5-20251001"],
+    "approved_claude_models": [
+      "claude-sonnet-4-6",
+      "claude-opus-4-7",
+      "claude-haiku-4-5-20251001"
+    ],
     "advisor_uncertainty_rule": "When Sonnet or Haiku confidence drops below 80%, evidence conflicts, or the path is high-stakes, request an Opus 4.7 advisor brief before execution instead of guessing."
   },
   "agents": {
@@ -127,11 +131,7 @@
       "build-error-resolver",
       "pr-test-analyzer"
     ],
-    "experimental": [
-      "gan-planner",
-      "gan-generator",
-      "gan-evaluator"
-    ],
+    "experimental": ["gan-planner", "gan-generator", "gan-evaluator"],
     "files": [
       ".claude/agents/a11y-architect.md",
       ".claude/agents/architect.md",
@@ -205,7 +205,6 @@
       "location": ".claude/skills/",
       "skills": [
         "ai-feature-pattern",
-        "buddy",
         "build-loop",
         "challenge-assumptions",
         "coding-standards",
@@ -262,25 +261,15 @@
     },
     "repo": {
       "location": "skills/",
-      "skills": [
-        "llm-council"
-      ]
+      "skills": ["llm-council"]
     },
     "generated": {
       "location": "skills/generated/",
-      "skills": [
-        "caveman",
-        "diagram-it",
-        "nano-this",
-        "ver-it",
-        "vis-it"
-      ]
+      "skills": ["caveman", "diagram-it", "nano-this", "ver-it", "vis-it"]
     },
     "notes": {
       "default_orchestration": "coordinator",
-      "experimental": [
-        "build-loop"
-      ]
+      "experimental": ["build-loop"]
     }
   },
   "workflows": {

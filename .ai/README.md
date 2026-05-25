@@ -22,7 +22,6 @@ Each AI tool has its own configuration file at the repo root:
 |------|------|
 | `CLAUDE.md` | Claude Code (most comprehensive) |
 | `AGENTS.md` | OpenAI Codex / general agents |
-| `GEMINI.md` | Google Gemini CLI |
 | `.github/copilot-instructions.md` | GitHub Copilot |
 | `.cursorrules` | Cursor AI |
 | `.windsurfrules` | Windsurf / Codeium |
