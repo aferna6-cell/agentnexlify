@@ -88,26 +88,37 @@ Bridge widget, email, SMS, Facebook inbound messages into `os_threads` + `os_mes
 
 **Commit checkpoint:** "feat(agent-os): inbound bridge owner-only toggle API"
 
-### Phase 4 — Email bridge (Postmark, signature-verified webhook)
+### Phase 4 — Email bridge (Postmark + Mailgun, signature-verified webhook) ✅ DONE
 
-**4.1 Email signature verification helper — `backend/services/inbound_email_verify.py`**
-- `verify_postmark(request) -> bool` — HMAC-SHA256 over body using `POSTMARK_WEBHOOK_SECRET` env
-- `verify_mailgun(request) -> bool` — Mailgun signature scheme (timestamp + token + key)
-- Provider dispatch: `verify(provider, request) -> bool`
+**4.1 Email signature verification helper — `backend/services/inbound_email_verify.py`** ✅
+- `verify_postmark(body, signature_header, secret) -> bool` — HMAC-SHA256 over raw body bytes, base64 compare
+- `verify_mailgun(timestamp, token, signature, signing_key, now=None) -> bool` — hex HMAC over `timestamp+token`, 5-min replay window (`now` injectable for tests)
+- `is_auto_reply(headers) -> bool` — RFC 3834 + provider quirks (Auto-Submitted / Precedence / X-Autoreply / X-Autorespond / X-Mailer)
 
-**4.2 `bridge_email` impl + `POST /api/v1/os/inbound/email/{provider}` route**
-- Webhook handler verifies sig first → 401 on mismatch
-- Resolve tenant by inbound email address (lookup table — query `tenant_integrations.config->>'email_inbound_address'`); 404 if unmapped
-- Detect `auto_reply` via headers (`Auto-Submitted`, `Precedence: bulk/auto_reply`, `X-Autoreply`)
-- Append `os_message` with `inbound_kind='auto_reply'` or `'normal'`
-- Trigger orchestrator background processing
+**4.2 `bridge_email` route — `POST /api/v1/os/inbound/email/{provider}`** ✅
+- `provider` is `Literal["postmark", "mailgun"]` — unknown providers 422 at path-param validation
+- Reads raw body BEFORE parsing so HMAC binds to the bytes the provider signed
+- Postmark: JSON body, header `X-Postmark-Webhook-Hmac`
+- Mailgun: form-encoded, `timestamp+token+signature` triplet
+- Tenant resolved via `os_inbound_bridge.resolve_tenant_by_inbound_email` (cross-tenant lookup on `tenant_integrations.config_jsonb->>'email_inbound_address'`); 404 when unmapped
+- Auto-reply detection via `inbound_email_verify.is_auto_reply` → `inbound_kind='auto_reply'`
+- Dispatches `bridge_email` via `BackgroundTasks` (5s webhook retry budget); inner wrapper `_bridge_email_safe` swallows exceptions so provider sees 200
 
-**4.3 Test — `tests/test_os_inbound_email.py`**
-- Postmark sig pass → 200, thread + message created
-- Postmark sig fail → 401
-- Unmapped sender → 404, no thread
-- Auto-reply detection sets `inbound_kind='auto_reply'`
-- Subject line + sender email captured in `source_metadata`
+**Files shipped:**
+- `backend/services/inbound_email_parser.py` — Postmark / Mailgun → normalized `ParsedEmail` dict
+- `backend/services/os_inbound_bridge.py` — added `resolve_tenant_by_inbound_email`
+- `backend/routers/os_inbound.py` — webhook route + signature dispatch helpers
+- `backend/config.py` — `postmark_webhook_secret`, `mailgun_signing_key`
+
+**4.3 Test — `tests/test_os_inbound_email.py`** ✅
+- Postmark valid sig → 200, bridge scheduled with parsed args (sender, subject, provider)
+- Postmark invalid sig / missing secret → 401, no task scheduled
+- Postmark unmapped recipient → 404
+- Postmark `Auto-Submitted: auto-replied` header → `inbound_kind='auto_reply'`
+- Postmark missing Message-ID → 400
+- Mailgun valid sig → 200
+- Mailgun invalid sig / missing signing key / stale timestamp (>5min) → 401
+- Unknown provider (`sendgrid`) → 422 (Literal path-param validation)
 
 **Commit checkpoint:** "feat(agent-os): email inbound bridge (Postmark + Mailgun)"
 

@@ -133,6 +133,39 @@ def is_bridge_enabled(db: Any, client_id: str, source: BridgeSource) -> bool:
     return bool(cfg.get(f"{source}_enabled", False))
 
 
+def resolve_tenant_by_inbound_email(db: Any, recipient: str) -> str | None:
+    """Cross-tenant lookup: which client owns this inbound email address?
+
+    Inbound email webhooks arrive without a tenant claim — we identify
+    the tenant by the recipient address configured in the bridge config.
+    Must bypass ``tenant_table`` scoping (we don't know the client_id
+    yet — that's what we're resolving). Returns the matching
+    ``client_id`` or ``None`` when no tenant owns this address.
+
+    The match is case-insensitive on the local-part+domain — providers
+    normalize differently and tenants paste addresses with mixed case.
+    """
+    if not recipient:
+        return None
+    needle = recipient.strip().lower()
+    if not needle:
+        return None
+
+    result = (
+        db.table("tenant_integrations")
+        .select("client_id, config_jsonb")
+        .eq("provider", _BRIDGE_PROVIDER)
+        .execute()
+    )
+    rows = result.data or []
+    for row in rows:
+        cfg = row.get("config_jsonb") or {}
+        addr = (cfg.get("email_inbound_address") or "").strip().lower()
+        if addr and addr == needle:
+            return row.get("client_id")
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Bridge entry points (Phase 1.2 skeletons — wired in later phases)
 # ---------------------------------------------------------------------------

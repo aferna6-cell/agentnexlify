@@ -1,4 +1,3 @@
-
 import logging
 import os
 
@@ -48,6 +47,13 @@ class Settings(BaseSettings):
 
     resend_api_key: str = ""
     sentry_dsn: str = ""
+
+    # Inbound email webhooks (Agent OS connectors — Phase 4).
+    # Postmark: HMAC-SHA256 over raw body using this secret, sent as
+    # X-Postmark-Webhook-Hmac. Mailgun: HMAC-SHA256 over timestamp+token
+    # using the signing key configured in the Mailgun control panel.
+    postmark_webhook_secret: str = ""
+    mailgun_signing_key: str = ""
 
     widget_allowed_origins: str = "*"
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
@@ -115,12 +121,16 @@ def is_production() -> bool:
         os.environ.get("RAILWAY_ENVIRONMENT"),
         os.environ.get("VERCEL_ENV"),
     )
-    return any((value or "").strip().lower() in {"prod", "production"} for value in candidates)
+    return any(
+        (value or "").strip().lower() in {"prod", "production"} for value in candidates
+    )
 
 
 def _is_weak_secret(value: str | None) -> bool:
     value = (value or "").strip()
-    return not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
+    return (
+        not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
+    )
 
 
 def _production_secret_failures(
