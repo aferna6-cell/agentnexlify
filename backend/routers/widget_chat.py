@@ -29,6 +29,7 @@ from backend.services.llm_runtime import (
     resolve_int_setting,
     resolve_string_setting,
 )
+from backend.services.os_inbound_bridge import bridge_widget, is_bridge_enabled
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.widget_chat_helpers import (
     MODEL,
@@ -294,6 +295,7 @@ def _chat_rate_limit(key: str) -> str:
     """
     try:
         from backend.routers.widget_chat_helpers import _get_widget_config, _get_tenant
+
         widget = _get_widget_config(key)
         tenant = _get_tenant(widget["tenant_id"])
         plan = tenant.get("plan", "free") or "free"
@@ -1160,7 +1162,33 @@ async def widget_chat(
         )
 
     # 10. Save user + assistant messages to chat_messages table
-    _save_chat_messages(tenant["id"], req.session_id, req.message, assistant_text)
+    saved_rows = _save_chat_messages(
+        tenant["id"], req.session_id, req.message, assistant_text
+    )
+
+    # 10b. Bridge user-side message into the Agent OS inbox (background, opt-in
+    # per tenant). The bridge dedup-anchors on chat_messages.id so retries from
+    # this same request are idempotent. Skipped silently when toggle is off or
+    # the user row didn't insert.
+    user_row = next(
+        (r for r in saved_rows if r.get("role") == "user"),
+        None,
+    )
+    if user_row and req.message:
+        try:
+            db_for_bridge = get_service_supabase()
+            if is_bridge_enabled(db_for_bridge, tenant["id"], "widget"):
+                background_tasks.add_task(
+                    bridge_widget,
+                    db_for_bridge,
+                    tenant["id"],
+                    conversation_id,
+                    str(user_row["id"]),
+                    req.message,
+                    {"session_id": req.session_id},
+                )
+        except Exception:
+            logger.warning("os_bridge: widget bridge scheduling failed", exc_info=True)
 
     # Fire conversation.message webhook
     fire_event_background(
