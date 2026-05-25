@@ -1,18 +1,24 @@
-"""Agent OS deliverables — P0.
+"""Agent OS deliverables — P0 + Group B action wiring.
 
 A deliverable is the approval-gated draft a worker run produces. It lives
 on os_agent_runs.deliverable (JSONB) — no separate table in P0, addressed
 by run_id. The owner edits it while pending, then approves or rejects.
+
+On approve, if the deliverable's parent ``os_agent_runs.action_type`` is
+set and matches a registered handler in ``backend/services/os_actions/``,
+the handler is scheduled via FastAPI BackgroundTasks. The run row is
+written to ``os_action_runs`` and linked back via ``action_run_id``.
 """
 
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
+from backend.services.os_actions import all_actions, get_action, run_action
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -54,6 +60,11 @@ def _require_pending(run: dict) -> dict:
     return deliverable
 
 
+def _is_owner(claims: dict) -> bool:
+    role = claims.get("role") or ""
+    return role.lower() == "owner"
+
+
 @router.patch("/deliverables/{run_id}")
 async def edit_deliverable(
     run_id: str,
@@ -81,14 +92,76 @@ async def edit_deliverable(
 
 
 @router.post("/deliverables/{run_id}/approve")
-async def approve_deliverable(run_id: str, claims: dict = Depends(_get_current_tenant)):
+async def approve_deliverable(
+    run_id: str,
+    background: BackgroundTasks,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Approve a deliverable and schedule its action handler (if any).
+
+    If the parent agent_run has an ``action_type`` matching a registered
+    handler, an ``os_action_runs`` row is created with ``status='queued'``
+    and the handler is scheduled via BackgroundTasks. If no action_type is
+    set, the deliverable is approved with no side effect (display-only).
+    """
     client_id = claims["tenant_id"]
     db = get_service_supabase()
     run = _load_run(db, client_id, run_id)
     _require_pending(run)
+
+    action_type = run.get("action_type")
+    action_run_id: str | None = None
+
+    if action_type:
+        handler = get_action(action_type)
+        if handler is None:
+            logger.warning(
+                "approve_deliverable: unknown action_type=%s run_id=%s",
+                action_type,
+                run_id,
+            )
+        else:
+            existing_succeeded = (
+                tenant_table(db, "os_action_runs", client_id)
+                .select("id")
+                .eq("deliverable_id", run_id)
+                .eq("action_type", action_type)
+                .eq("status", "succeeded")
+                .limit(1)
+                .execute()
+            )
+            if existing_succeeded.data:
+                action_run_id = existing_succeeded.data[0]["id"]
+            else:
+                insert_payload = {
+                    "client_id": client_id,
+                    "deliverable_id": run_id,
+                    "action_type": action_type,
+                    "status": "queued",
+                    "request_payload": {},
+                }
+                created = (
+                    tenant_table(db, "os_action_runs", client_id)
+                    .insert(insert_payload)
+                    .execute()
+                )
+                if created.data:
+                    action_run_id = created.data[0]["id"]
+                    background.add_task(
+                        run_action,
+                        action_run_id,
+                        client_id,
+                        run_id,
+                        action_type,
+                    )
+
+    update_fields = {"deliverable_status": "approved", "updated_at": _now()}
+    if action_run_id:
+        update_fields["action_run_id"] = action_run_id
+
     updated = (
         tenant_table(db, "os_agent_runs", client_id)
-        .update({"deliverable_status": "approved", "updated_at": _now()})
+        .update(update_fields)
         .eq("id", run_id)
         .execute()
     )
@@ -108,3 +181,104 @@ async def reject_deliverable(run_id: str, claims: dict = Depends(_get_current_te
         .execute()
     )
     return updated.data[0]
+
+
+@router.get("/action-runs/{action_run_id}")
+async def get_action_run(
+    action_run_id: str, claims: dict = Depends(_get_current_tenant)
+):
+    """Return one action run for status polling in the UI."""
+    client_id = claims["tenant_id"]
+    db = get_service_supabase()
+    result = (
+        tenant_table(db, "os_action_runs", client_id)
+        .select("*")
+        .eq("id", action_run_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Action run not found")
+    return result.data[0]
+
+
+@router.post("/action-runs/{action_run_id}/retry")
+async def retry_action_run(
+    action_run_id: str,
+    background: BackgroundTasks,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Owner-only: retry a failed action run.
+
+    Reuses the deliverable + action_type but creates a NEW os_action_runs row
+    so the prior attempt's history is preserved.
+    """
+    if not _is_owner(claims):
+        raise HTTPException(status_code=403, detail="Owner role required")
+
+    client_id = claims["tenant_id"]
+    db = get_service_supabase()
+    existing = (
+        tenant_table(db, "os_action_runs", client_id)
+        .select("*")
+        .eq("id", action_run_id)
+        .limit(1)
+        .execute()
+    )
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Action run not found")
+    row = existing.data[0]
+    if row.get("status") != "failed":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot retry action in status={row.get('status')}",
+        )
+
+    action_type = row["action_type"]
+    deliverable_id = row["deliverable_id"]
+    if get_action(action_type) is None:
+        raise HTTPException(
+            status_code=400, detail=f"Unknown action_type {action_type}"
+        )
+
+    created = (
+        tenant_table(db, "os_action_runs", client_id)
+        .insert(
+            {
+                "client_id": client_id,
+                "deliverable_id": deliverable_id,
+                "action_type": action_type,
+                "status": "queued",
+                "request_payload": {},
+            }
+        )
+        .execute()
+    )
+    new_action_run_id = created.data[0]["id"]
+    background.add_task(
+        run_action, new_action_run_id, client_id, deliverable_id, action_type
+    )
+
+    tenant_table(db, "os_agent_runs", client_id).update(
+        {"action_run_id": new_action_run_id, "updated_at": _now()}
+    ).eq("id", deliverable_id).execute()
+
+    return created.data[0]
+
+
+@router.get("/actions/registered")
+async def list_registered_actions(
+    _claims: dict = Depends(_get_current_tenant),
+):
+    """Debug/UI helper — list registered action handlers."""
+    return {
+        "actions": [
+            {
+                "name": spec.name,
+                "worker": spec.worker,
+                "description": spec.description,
+                "required_connectors": spec.required_connectors,
+            }
+            for spec in all_actions().values()
+        ]
+    }

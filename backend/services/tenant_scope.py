@@ -24,6 +24,8 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_memory_entries": "client_id",
     "os_backlog_requests": "client_id",
     "os_tenant_usage": "client_id",
+    "os_action_runs": "client_id",
+    "os_sync_state": "client_id",
 }
 
 
