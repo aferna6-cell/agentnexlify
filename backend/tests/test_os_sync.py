@@ -251,3 +251,290 @@ def test_leads_summarize_includes_status_and_temperature():
     assert "status=qualified" in text
     assert "temperature=hot" in text
     assert "score=87" in text
+
+
+# ---------------------------------------------------------------------------
+# appointments SPEC contract
+# ---------------------------------------------------------------------------
+
+
+def test_registry_includes_appointments():
+    syncs = all_syncs()
+    assert "appointments" in syncs
+    spec = syncs["appointments"]
+    assert isinstance(spec, SyncSpec)
+    assert callable(spec.run)
+    assert spec.required_connectors == []
+
+
+def test_appointments_spec_metadata():
+    from backend.services.os_sync.appointments import SPEC
+
+    assert SPEC.name == "appointments"
+    assert isinstance(SPEC, SyncSpec)
+    assert callable(SPEC.run)
+    assert SPEC.required_connectors == []
+
+
+def test_appointments_summarize_handles_minimal_row():
+    from backend.services.os_sync.appointments import _summarize_appointment
+
+    text = _summarize_appointment({"id": "x"})
+    assert "Unnamed customer" in text
+
+
+def test_appointments_summarize_includes_all_fields():
+    from backend.services.os_sync.appointments import _summarize_appointment
+
+    text = _summarize_appointment(
+        {
+            "id": "x",
+            "customer_name": "Alice",
+            "customer_email": "a@b.com",
+            "customer_phone": "+15551234",
+            "start_time": "2026-06-01T15:00:00+00:00",
+            "status": "booked",
+            "service_type": "haircut",
+            "notes": "long hair, trim only",
+        }
+    )
+    assert "Alice" in text
+    assert "service=haircut" in text
+    assert "start=2026-06-01T15:00:00+00:00" in text
+    assert "status=booked" in text
+    assert "email=a@b.com" in text
+    assert "phone=+15551234" in text
+    assert "long hair" in text
+
+
+# ---------------------------------------------------------------------------
+# kb SPEC contract
+# ---------------------------------------------------------------------------
+
+
+def test_registry_includes_kb():
+    syncs = all_syncs()
+    assert "kb" in syncs
+    spec = syncs["kb"]
+    assert isinstance(spec, SyncSpec)
+    assert callable(spec.run)
+    assert spec.required_connectors == []
+
+
+def test_kb_spec_metadata():
+    from backend.services.os_sync.kb import SPEC
+
+    assert SPEC.name == "kb"
+    assert isinstance(SPEC, SyncSpec)
+    assert callable(SPEC.run)
+    assert SPEC.required_connectors == []
+
+
+def test_kb_split_into_chunks_empty_input():
+    from backend.services.os_sync.kb import _split_into_chunks
+
+    assert _split_into_chunks("") == []
+    assert _split_into_chunks("   \n\n   ") == []
+
+
+def test_kb_split_into_chunks_small_input_returns_single_chunk():
+    from backend.services.os_sync.kb import _split_into_chunks
+
+    chunks = _split_into_chunks("Para one.\n\nPara two.")
+    assert len(chunks) == 1
+    assert "Para one." in chunks[0]
+    assert "Para two." in chunks[0]
+
+
+def test_kb_split_into_chunks_oversized_paragraph_splits():
+    from backend.services.os_sync.kb import _split_into_chunks, _CHUNK_MAX_CHARS
+
+    big = "Sentence. " * 400  # ~4000 chars, single paragraph
+    assert len(big) > _CHUNK_MAX_CHARS
+    chunks = _split_into_chunks(big)
+    assert len(chunks) >= 2
+    for c in chunks:
+        assert c.strip()
+
+
+def test_kb_hash_content_is_deterministic():
+    from backend.services.os_sync.kb import _hash_content
+
+    a = _hash_content("alpha", "beta")
+    b = _hash_content("alpha", "beta")
+    assert a == b
+    c = _hash_content("alpha", "gamma")
+    assert a != c
+
+
+def test_kb_hash_content_separator_prevents_collision():
+    from backend.services.os_sync.kb import _hash_content
+
+    # "ab" + "" should NOT collide with "a" + "b" because of separator
+    a = _hash_content("ab", "")
+    b = _hash_content("a", "b")
+    assert a != b
+
+
+# ---------------------------------------------------------------------------
+# conversations SPEC contract
+# ---------------------------------------------------------------------------
+
+
+def test_registry_includes_conversations():
+    syncs = all_syncs()
+    assert "conversations" in syncs
+    spec = syncs["conversations"]
+    assert isinstance(spec, SyncSpec)
+    assert callable(spec.run)
+    assert spec.required_connectors == []
+
+
+def test_conversations_spec_metadata():
+    from backend.services.os_sync.conversations import SPEC
+
+    assert SPEC.name == "conversations"
+    assert isinstance(SPEC, SyncSpec)
+    assert callable(SPEC.run)
+    assert SPEC.required_connectors == []
+
+
+def test_conversations_group_by_session_groups_correctly():
+    from backend.services.os_sync.conversations import _group_by_session
+
+    rows = [
+        {"session_id": "s1", "role": "user", "content": "hi"},
+        {"session_id": "s1", "role": "assistant", "content": "hello"},
+        {"session_id": "s2", "role": "user", "content": "hey"},
+    ]
+    grouped = _group_by_session(rows)
+    assert set(grouped.keys()) == {"s1", "s2"}
+    assert len(grouped["s1"]) == 2
+    assert len(grouped["s2"]) == 1
+
+
+def test_conversations_group_by_session_skips_missing_session_id():
+    from backend.services.os_sync.conversations import _group_by_session
+
+    rows = [
+        {"session_id": None, "role": "user", "content": "orphan"},
+        {"session_id": "s1", "role": "user", "content": "hi"},
+    ]
+    grouped = _group_by_session(rows)
+    assert list(grouped.keys()) == ["s1"]
+
+
+def test_conversations_render_transcript_skips_empty_content():
+    from backend.services.os_sync.conversations import _render_transcript
+
+    text = _render_transcript(
+        [
+            {"role": "user", "content": ""},
+            {"role": "assistant", "content": "  "},
+            {"role": "user", "content": "hello"},
+        ]
+    )
+    assert text == "user: hello"
+
+
+def test_conversations_render_transcript_respects_char_budget():
+    from backend.services.os_sync.conversations import (
+        _render_transcript,
+        _MAX_SUMMARY_INPUT_CHARS,
+    )
+
+    long_content = "x" * 500
+    msgs = [{"role": "user", "content": long_content} for _ in range(50)]
+    text = _render_transcript(msgs)
+    assert len(text) <= _MAX_SUMMARY_INPUT_CHARS + 100  # rough headroom
+
+
+def test_conversations_render_transcript_uses_default_role_when_missing():
+    from backend.services.os_sync.conversations import _render_transcript
+
+    text = _render_transcript([{"role": "", "content": "hi"}])
+    assert "user: hi" in text
+
+
+# ---------------------------------------------------------------------------
+# google_calendar SPEC contract
+# ---------------------------------------------------------------------------
+
+
+def test_registry_includes_google_calendar():
+    syncs = all_syncs()
+    assert "google_calendar" in syncs
+    spec = syncs["google_calendar"]
+    assert isinstance(spec, SyncSpec)
+    assert callable(spec.run)
+    assert spec.required_connectors == ["google_calendar"]
+
+
+def test_google_calendar_spec_metadata():
+    from backend.services.os_sync.google_calendar import SPEC
+
+    assert SPEC.name == "google_calendar"
+    assert isinstance(SPEC, SyncSpec)
+    assert callable(SPEC.run)
+    assert SPEC.required_connectors == ["google_calendar"]
+
+
+def test_google_calendar_summarize_handles_minimal_event():
+    from backend.services.os_sync.google_calendar import _summarize_event
+
+    text = _summarize_event({})
+    assert "Untitled event" in text
+
+
+def test_google_calendar_summarize_includes_all_fields():
+    from backend.services.os_sync.google_calendar import _summarize_event
+
+    text = _summarize_event(
+        {
+            "id": "evt-1",
+            "summary": "Team sync",
+            "start": {"dateTime": "2026-06-01T15:00:00Z"},
+            "end": {"dateTime": "2026-06-01T15:30:00Z"},
+            "location": "Zoom",
+            "status": "tentative",
+            "attendees": [
+                {"email": "a@b.com"},
+                {"email": "c@d.com"},
+            ],
+            "description": "weekly standup",
+        }
+    )
+    assert "Team sync" in text
+    assert "start=2026-06-01T15:00:00Z" in text
+    assert "end=2026-06-01T15:30:00Z" in text
+    assert "location=Zoom" in text
+    assert "status=tentative" in text
+    assert "a@b.com" in text
+    assert "c@d.com" in text
+    assert "weekly standup" in text
+
+
+def test_google_calendar_summarize_omits_confirmed_status():
+    from backend.services.os_sync.google_calendar import _summarize_event
+
+    text = _summarize_event(
+        {
+            "summary": "Meeting",
+            "status": "confirmed",
+        }
+    )
+    assert "status=" not in text
+
+
+def test_google_calendar_summarize_uses_all_day_date_when_no_dateTime():
+    from backend.services.os_sync.google_calendar import _summarize_event
+
+    text = _summarize_event(
+        {
+            "summary": "Holiday",
+            "start": {"date": "2026-07-04"},
+            "end": {"date": "2026-07-05"},
+        }
+    )
+    assert "start=2026-07-04" in text
+    assert "end=2026-07-05" in text
