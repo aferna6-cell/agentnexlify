@@ -112,8 +112,10 @@ class TestGetBridgeConfig:
         finally:
             client.close()
 
-        # 401 or 403 — either is acceptable rejection
-        assert resp.status_code in (401, 403), resp.text
+        # 401/403/422 — project convention for "unauthenticated rejection"
+        # (matches test_tenant_isolation.py + test_managed_agents.py). 422 comes
+        # from FastAPI's required-Header validation in get_current_tenant.
+        assert resp.status_code in (401, 403, 422), resp.text
 
 
 # ---------------------------------------------------------------------------
