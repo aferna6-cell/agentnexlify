@@ -2,10 +2,11 @@
 
 Turns a small-business owner's request into an approval-gated draft follow-up
 message (or short sequence) to re-engage a prospect who has not converted.
-Produces reviewable text only — no email sending, no database reads beyond the
-progress steps already handled by WorkerContext.step().
+Grounds the draft in real lead data via ``ctx.tools`` — stale leads + tenant
+profile, read-only, tenant-scoped.
 """
 
+import json
 import logging
 
 from backend.services.llm_runtime import call_claude_messages
@@ -30,16 +31,75 @@ _SYSTEM_PROMPT = (
     "- Give a clear, gentle next step (e.g. book a call, reply to this message).\n"
     "- Keep the tone helpful and conversational, never pushy or salesy.\n"
     "- For a sequence, label each touch (e.g. Touch 1 — Day 1, Touch 2 — Day 3).\n"
+    "- When stale-lead data is included, prefer leads with `areas_of_interest` "
+    "and `conversation_summary` set; ignore leads with status 'closed' or "
+    "'unsubscribed'.\n"
     "- Output the message body in markdown.\n"
     "- Do not include a preamble or meta-commentary such as 'Here is your draft'.\n"
     "- Do not include a subject line unless the owner asked for one."
 )
 
 
+_LEAD_BRIEF_KEYS = (
+    "id",
+    "name",
+    "email",
+    "phone",
+    "status",
+    "source",
+    "areas_of_interest",
+    "conversation_summary",
+    "updated_at",
+)
+
+_PROFILE_KEYS = (
+    "business_name",
+    "business_type",
+    "services_offered",
+    "owner_name",
+)
+
+
+def _lead_brief(leads: list[dict]) -> list[dict]:
+    return [
+        {key: lead.get(key) for key in _LEAD_BRIEF_KEYS if lead.get(key) is not None}
+        for lead in leads[:10]
+    ]
+
+
+def _profile_brief(profile: dict) -> dict:
+    return {key: profile.get(key) for key in _PROFILE_KEYS if profile.get(key)}
+
+
 async def _run(ctx: WorkerContext) -> WorkerResult:
     title = ctx.deliverable_title or "Lead Follow-Up"
 
     ctx.step("Reviewing the lead", "Preparing a personalised follow-up draft.")
+
+    stale: list[dict] = []
+    profile: dict = {}
+    if ctx.tools is not None:
+        ctx.step(
+            "Loading stale leads",
+            "Pulling leads with no touch in the last 14 days.",
+        )
+        stale = await ctx.tools.stale_leads(days_since_last_touch=14, limit=10)
+        ctx.step("Loading business profile", "For voice and offering context.")
+        profile = await ctx.tools.tenant_profile()
+
+    lead_brief = _lead_brief(stale)
+    profile_brief = _profile_brief(profile)
+
+    user_content_parts = [f"Owner request:\n{ctx.user_message}"]
+    if profile_brief:
+        user_content_parts.append(
+            "Business profile:\n" + json.dumps(profile_brief, default=str)
+        )
+    if lead_brief:
+        user_content_parts.append(
+            "Stale leads (oldest touch first):\n" + json.dumps(lead_brief, default=str)
+        )
+    user_content = "\n\n".join(user_content_parts)
 
     body: str
     try:
@@ -48,7 +108,7 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             model="claude-sonnet-4-6",
             max_tokens=1500,
             system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": ctx.user_message}],
+            messages=[{"role": "user", "content": user_content}],
             metadata={"client_id": ctx.client_id},
         )
         body = result.text.strip()

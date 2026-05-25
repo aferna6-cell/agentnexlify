@@ -11,8 +11,12 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from backend.services.tenant_scope import tenant_table
+
+if TYPE_CHECKING:
+    from backend.services.os_workers.tools import WorkerTools
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +36,7 @@ class WorkerContext:
     user_message: str
     deliverable_title: str
     thought: list[dict] = field(default_factory=list)
-    tools: WorkerTools | None = None
+    tools: "WorkerTools | None" = None
 
     def step(self, label: str, detail: str = "") -> None:
         """Append a progress step and persist the thought process to the run."""

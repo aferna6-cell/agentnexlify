@@ -2,11 +2,12 @@
 
 Turns a small-business owner's request into an approval-gated draft reply that
 the owner can review and then send to a customer who wants to book, reschedule,
-or cancel an appointment, or needs a booking confirmation/summary. Draft-only:
-no calendar integration, no database queries beyond ``ctx.step`` progress
-tracking.
+or cancel an appointment, or needs a booking confirmation/summary. Grounds the
+draft in real tenant data (business hours, services, recent widget chats) via
+``ctx.tools`` — read-only, tenant-scoped.
 """
 
+import json
 import logging
 
 from backend.services.llm_runtime import call_claude_messages
@@ -27,12 +28,44 @@ customer. The message should handle the customer's request — booking a new \
 appointment, rescheduling or cancelling an existing one, or providing a booking \
 confirmation or summary.
 
+Use the business profile (hours, services, business name) supplied in the user \
+message to make the draft specific and accurate. If recent customer chats are \
+included, reference them only when directly relevant.
+
 If the request is incomplete (missing preferred date/time or service type), include \
 a polite question asking for the missing detail.
 
 Output only the message body in markdown. Do not include a preamble, subject line, \
 or any phrase like "here is your draft" — start directly with the message content.\
 """
+
+
+_PROFILE_KEYS = (
+    "business_name",
+    "business_type",
+    "timezone",
+    "business_hours",
+    "services_offered",
+    "owner_name",
+)
+
+
+def _profile_brief(profile: dict) -> dict:
+    return {key: profile.get(key) for key in _PROFILE_KEYS if profile.get(key)}
+
+
+def _conversations_brief(convos: list[dict]) -> list[dict]:
+    brief: list[dict] = []
+    for row in convos[:5]:
+        brief.append(
+            {
+                "session_id": row.get("session_id"),
+                "customer_name": row.get("customer_name"),
+                "needs_handoff": row.get("needs_handoff"),
+                "updated_at": row.get("updated_at"),
+            }
+        )
+    return brief
 
 
 async def _run(ctx: WorkerContext) -> WorkerResult:
@@ -43,6 +76,29 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
         f"Preparing a draft reply for: {ctx.user_message[:120]}",
     )
 
+    profile: dict = {}
+    recent_convos: list[dict] = []
+    if ctx.tools is not None:
+        ctx.step("Loading business profile", "Hours, services, timezone.")
+        profile = await ctx.tools.tenant_profile()
+        ctx.step("Loading recent chats", "Last 7 days of widget conversations.")
+        recent_convos = await ctx.tools.recent_widget_conversations(days=7, limit=5)
+
+    profile_brief = _profile_brief(profile)
+    convo_brief = _conversations_brief(recent_convos)
+
+    user_content_parts = [f"Owner request:\n{ctx.user_message}"]
+    if profile_brief:
+        user_content_parts.append(
+            "Business profile:\n" + json.dumps(profile_brief, default=str)
+        )
+    if convo_brief:
+        user_content_parts.append(
+            "Recent widget conversations (most recent first):\n"
+            + json.dumps(convo_brief, default=str)
+        )
+    user_content = "\n\n".join(user_content_parts)
+
     body: str
     try:
         response = await call_claude_messages(
@@ -50,7 +106,7 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             model="claude-sonnet-4-6",
             max_tokens=1500,
             system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": ctx.user_message}],
+            messages=[{"role": "user", "content": user_content}],
             metadata={"client_id": ctx.client_id},
         )
         body = response.text.strip()

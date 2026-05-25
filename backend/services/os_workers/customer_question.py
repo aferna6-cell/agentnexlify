@@ -2,11 +2,12 @@
 
 The orchestrator routes here when a small-business owner needs a written reply
 to a question a customer has asked about the business (hours, services, pricing,
-policies, etc.). This worker calls Claude to produce a clear, friendly answer
-draft that the owner can review and then send.  No database queries are made;
-the only side effect is ctx.step() calls (which persist thought progress).
+policies, etc.). Grounds the answer in the tenant's widget knowledge base +
+business profile + orchestrator memory via ``ctx.tools`` — read-only, tenant-
+scoped. No outbound side effects beyond ``ctx.step`` progress.
 """
 
+import json
 import logging
 
 from backend.services.llm_runtime import call_claude_messages
@@ -22,13 +23,53 @@ _DESCRIPTION = (
 )
 
 _SYSTEM_PROMPT = (
-    "You are a professional business communication assistant helping a small-business "
-    "owner draft a reply to a customer question. Write a clear, friendly, and accurate "
-    "answer that the owner can review and then send directly to the customer. "
-    "Output only the answer body in markdown — no preamble such as 'Here is your draft', "
-    "no sign-off, no subject line. If the question cannot be answered from the context "
-    "provided, write a polite placeholder that the owner can fill in with real details."
+    "You are a professional business communication assistant helping a "
+    "small-business owner draft a reply to a customer question. Write a clear, "
+    "friendly, and accurate answer that the owner can review and then send "
+    "directly to the customer.\n\n"
+    "Ground every factual claim (hours, services, pricing, policies) in the "
+    "Knowledge base or Business profile supplied below. If the answer is not "
+    "covered there, write a polite placeholder the owner can fill in — never "
+    "invent specifics.\n\n"
+    "Output only the answer body in markdown — no preamble such as 'Here is "
+    "your draft', no sign-off, no subject line."
 )
+
+
+_PROFILE_KEYS = (
+    "business_name",
+    "business_type",
+    "timezone",
+    "business_hours",
+    "services_offered",
+    "owner_name",
+)
+
+_KB_CHAR_BUDGET = 6000
+_MEMORY_HITS = 4
+
+
+def _profile_brief(profile: dict) -> dict:
+    return {key: profile.get(key) for key in _PROFILE_KEYS if profile.get(key)}
+
+
+def _truncate(text: str, budget: int) -> str:
+    if len(text) <= budget:
+        return text
+    return text[:budget] + "\n…[truncated]"
+
+
+def _memory_brief(hits: list[dict]) -> list[dict]:
+    brief: list[dict] = []
+    for hit in hits[:_MEMORY_HITS]:
+        brief.append(
+            {
+                "summary": hit.get("summary"),
+                "content": hit.get("content"),
+                "kind": hit.get("kind"),
+            }
+        )
+    return brief
 
 
 async def _run(ctx: WorkerContext) -> WorkerResult:
@@ -39,6 +80,35 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
         f"Preparing a draft answer for: {ctx.user_message[:120]}",
     )
 
+    kb_text = ""
+    profile: dict = {}
+    memory_hits: list[dict] = []
+    if ctx.tools is not None:
+        ctx.step("Loading knowledge base", "Widget KB + business profile.")
+        profile = await ctx.tools.tenant_profile()
+        kb_text = str(profile.get("knowledge_base") or "")
+        ctx.step("Searching memory", "Durable facts relevant to the question.")
+        memory_hits = await ctx.tools.search_memory(
+            ctx.user_message, match_count=_MEMORY_HITS
+        )
+
+    profile_brief = _profile_brief(profile)
+    memory_brief = _memory_brief(memory_hits)
+    kb_trimmed = _truncate(kb_text, _KB_CHAR_BUDGET) if kb_text else ""
+
+    user_content_parts = [f"Customer question / owner request:\n{ctx.user_message}"]
+    if profile_brief:
+        user_content_parts.append(
+            "Business profile:\n" + json.dumps(profile_brief, default=str)
+        )
+    if kb_trimmed:
+        user_content_parts.append("Knowledge base:\n" + kb_trimmed)
+    if memory_brief:
+        user_content_parts.append(
+            "Relevant memory:\n" + json.dumps(memory_brief, default=str)
+        )
+    user_content = "\n\n".join(user_content_parts)
+
     body: str
     try:
         result = await call_claude_messages(
@@ -46,7 +116,7 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             model="claude-sonnet-4-6",
             max_tokens=1500,
             system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": ctx.user_message}],
+            messages=[{"role": "user", "content": user_content}],
             metadata={"client_id": ctx.client_id},
         )
         body = result.text.strip()

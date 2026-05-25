@@ -379,4 +379,11 @@ Migration 013 cleared conversation limits. All plans now have unlimited conversa
 **Decision:** Replace static Stripe checkout links with dynamic server-side Checkout Session creation.
 **Why:** Static test links were found on production, breaking the revenue pipeline. Dynamic sessions allow plan selection, coupon codes, trial periods, and proper webhook handling. The existing `/api/v1/auth/billing/checkout` endpoint is the canonical checkout flow.
 
+---
+
+### ADR-2026-05-25-001: Agent OS Workers Become Tool-Using, Not Prompt-Only
+**Date:** 2026-05-25
+**Decision:** Every OS worker run gets a `WorkerTools` handle on `WorkerContext.tools`. Workers ground drafts in real tenant data via read-only methods (`recent_leads`, `stale_leads`, `widget_conversation`, `tenant_profile`, `widget_knowledge_base`, `search_memory`, `appointments_between`, `lead_by_id`, `recent_widget_conversations`). Writes stay out — those are approval-gated through action connectors (Group B). `WorkerTools` is a `frozen=True` dataclass: `client_id` is captured once in `run_worker` and a buggy worker cannot swap scope mid-run. All DB calls go through `tenant_scope` helpers (`tenant_select`, `tenant_table`) — never raw SQL — so the `client_id` (leads, conversations) vs `tenant_id` (appointments, chat_messages) split is enforced in one place.
+**Why:** Original orchestrator → worker design was prompt-shaped: workers received only `user_message` and called Claude blind. The tenant chat use case ("tenant tells chatbot what it wants, orchestrator spins an agent") requires workers to see the same business info the widget agent sees — KB, hours, services, recent conversations, durable memory. Tool-using workers close that gap without touching the auto-discovery registry or the run_worker harness. First three rewrites: `booking` uses `tenant_profile` + `recent_widget_conversations`; `lead_nurture` uses `stale_leads` + `tenant_profile`; `customer_question` uses `widget_knowledge_base` + `search_memory` + `tenant_profile`. Spec: `specs/agent-os-worker-tools_spec.md`.
+
 _Add new decisions when significant architectural choices are made._

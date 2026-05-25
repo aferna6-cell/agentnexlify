@@ -19,6 +19,7 @@ from backend.services.os_workers.base import (
     WorkerSpec,
     now_iso,
 )
+from backend.services.os_workers.tools import WorkerTools
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,7 @@ async def run_worker(
             user_message=user_message,
             deliverable_title=deliverable_title or "Draft",
             thought=thought,
+            tools=WorkerTools(db=db, client_id=client_id),
         )
         runs.update({"status": "running", "updated_at": now_iso()}).eq(
             "id", run_id
@@ -161,6 +163,7 @@ __all__ = [
     "WorkerContext",
     "WorkerResult",
     "WorkerSpec",
+    "WorkerTools",
     "all_workers",
     "worker_descriptions",
     "get_worker",
