@@ -227,3 +227,18 @@ Audit steps:
 - No dangling references (`grep` + `check_plan_drift.py` clean).
 - CLAUDE.md updated: skill count, any removed-file references.
 - Branch ready to merge to `main` with no obsolete code carried over.
+
+### Status — 2026-05-25 (audit invalidation)
+
+- C1–C4 candidate tables: PRODUCED (`audits/audit-phase-c-2026-05-25.md`)
+  but **confirmation invalidated** post-audit. Every "0 refs" row
+  actually has live refs (registry files, CI workflows, migration
+  comments, sibling specs, state dirs, toggle docs). See audit addendum.
+- Removal commits: BLOCKED on re-audit with corrected `grep -rln`
+  methodology + per-ref triage + user verdict on UNCERTAIN-after-triage.
+- Per operating rule §C ("Audit produces a report; deletion is a separate
+  step. No file is removed until its candidate row is confirmed."):
+  no file deleted in this branch. Re-audit + deletions are a separate
+  future session with explicit user gate.
+- The rest of the plan (P0–P4 workers, Group A inbound, tests, e2e loop)
+  IS shipped on this branch and PR.

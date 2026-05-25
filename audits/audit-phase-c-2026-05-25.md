@@ -224,3 +224,72 @@ To execute deletions:
 6. Update `CLAUDE.md` skill/file counts.
 7. Update `plans/agent-os-p0_plan.md` to mark Phase C as DONE.
 8. PR #177 ready for merge to `main`.
+
+---
+
+## ADDENDUM — Audit invalidation (2026-05-25, post-audit)
+
+When the deletion executor attempted to action C1/C2/C3 confirmed-REMOVE rows, a pre-deletion `grep -rln` sweep found that **every confirmed-REMOVE row has live references** in active code, specs, CI workflows, or other plans. The audit's "0 refs" column is **wrong on a methodological level**.
+
+### Evidence (sampled rows)
+
+| Candidate | Audit said | Actual ref count | Sample ref |
+|---|---|---|---|
+| `kevin-mode` skill | 0 | 2 (live invocation paths) | `.claude/rules/personality.md:110` + `.claude/rules/caveman-mode.md:33` ("kevin mode" toggle) |
+| `last30days` skill | 0 | 5+ | `memory-tiered-retrieval.md:65` + full spec in `specs/claudeopedia_spec.md` + `planning/specs/claudeopedia_spec.md` |
+| `obsidian-sync` skill | 0 | 3+ | `claudeopedia_spec.md:702-735` (full active spec) |
+| `kairos` skill | 0 | 2+ | `docs/kairos/` directory of live state |
+| `subconscious` skill | 0 | 6+ | `subconscious/` directory of live state + governance.json |
+| `nodejs-backend-patterns` skill | 0 | mirror at `.agents/skills/nodejs-backend-patterns/` | actual duplicate |
+| `GEMINI.md` | confirmed-REMOVE | 6 refs | `.ai/README.md:25` (registry), `.github/workflows/agent-config-security.yml:15,35` (CI watch), `docs/AGENT_SYSTEM_PLAN.md:63` |
+| `audit-architecture-2026-04-16.md` | confirmed-REMOVE | 5 refs | cited from later audits + plans |
+| `audit-architecture-2026-04-18.md` | confirmed-REMOVE | 7 refs | cited from later audits + plans |
+| `audit-health-2026-04-20.md` | confirmed-REMOVE | audited 0 — but plan + other audits self-cite | check before action |
+| `lead-parser-replacement_plan.md` | confirmed-REMOVE | 7 refs | `migrations/103_*.sql:4`, `backend/routers/widget_chat.py:1230`, `backend/tests/test_lead_enrichment.py:11` (production code citing the plan in comments) |
+| `onboarding-v2_plan.md` | confirmed-REMOVE | 10 refs | morning-digest logs + subconscious governance state + sibling `onboarding-v2_issues.md` |
+| `post-audit-remediation_plan.md` | confirmed-REMOVE | 3 refs | active citations from elsewhere |
+
+### Methodology gap
+
+The audit's "0 refs" column appears to have been generated either without `grep -rln` verification or with a too-narrow search scope (excluding subconscious/, docs/, migration comments, CI workflows, registry files).
+
+### Operating-rule conclusion
+
+Per `plans/agent-os-p0_plan.md:131-132`: **"No file is removed until its candidate row is confirmed."**
+Per `.claude/rules/fill-instructions-before-guessing.md`: when an instruction (audit) contradicts code reality, **STOP. Fix the instruction first.**
+
+The 30 "confirmed-REMOVE" rows are NOT confirmed. They are UNCERTAIN pending re-audit with corrected `grep -rln` methodology + per-ref triage:
+
+- **Comment-only refs in code** (e.g. `lead-parser-replacement_plan.md` cited from migration comment) → can delete plan after rewriting the comment to cite the spec only.
+- **Registry refs** (`.ai/README.md`, `skills-lock.json`) → registry must be updated before/with deletion.
+- **CI workflow refs** (`.github/workflows/agent-config-security.yml`) → workflow path-watch list must be updated before deletion.
+- **Active spec refs** (`claudeopedia_spec.md` referencing `obsidian-sync` + `last30days`) → must decide spec fate first; deleting skill orphans the spec.
+- **Active state-dir refs** (`subconscious/`, `docs/kairos/`) → those skills are not orphans; they're part of live workflows.
+- **Toggle-doc refs** (`personality.md`, `caveman-mode.md` referencing `kevin-mode`) → rules must be updated before deletion.
+
+### Updated Phase C done-criteria status
+
+| Criterion | Status |
+|---|---|
+| C1–C4 candidate tables produced and confirmed | ❌ Confirmation invalidated — audit methodology broken. Re-audit needed. |
+| Four removal commits (one per category) | ⬜ BLOCKED on re-audit + per-ref triage + user verdict on UNCERTAIN |
+| No dangling references | ✅ Currently zero dangling refs (because nothing deleted yet) |
+| CLAUDE.md updated | ⬜ |
+| Branch ready to merge to `main` with no obsolete code | ⬜ |
+
+### Re-audit work needed (separate session)
+
+1. For each candidate, run `grep -rln --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=_archive --exclude="audit-phase-c-2026-05-25.md" -e "<basename>" .` and inspect every ref.
+2. Classify each ref:
+   - **Stale comment in code** → editable, deletion can proceed after rewrite
+   - **Registry entry** → registry must be patched in same commit
+   - **CI workflow watch path** → workflow patched in same commit
+   - **Active spec or state dir** → blocking — candidate is NOT removable
+   - **Cycle ref** (another removed file referencing this one) → both go together
+3. Reclassify candidate as CONFIRMED-REMOVE only when all refs fall in the "editable" bucket.
+4. Issue user-facing verdict via `AskUserQuestion` for all candidates remaining UNCERTAIN.
+5. Then execute the 4-commit deletion sequence with reference-patching included in each commit.
+
+### Status — 2026-05-25
+
+Phase C deletions: **BLOCKED on re-audit**. PR #177 Phase C box stays unchecked. The Agent OS P0–P4 build + Group A inbound + tests + e2e loop work IS shipped; Phase C is the only remaining plan section, and it correctly stays as "report produced, deletion deferred to a future re-audited session" per the plan's own operating rule.
