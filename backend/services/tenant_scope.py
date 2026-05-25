@@ -17,6 +17,7 @@ _TENANT_COLUMN_OVERRIDES = {
     "conversations": "client_id",
     "leads": "client_id",
     "tenants": "id",
+    "tenant_integrations": "client_id",
     "os_threads": "client_id",
     "os_messages": "client_id",
     "os_agent_runs": "client_id",

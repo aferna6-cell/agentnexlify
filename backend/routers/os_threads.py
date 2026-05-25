@@ -8,18 +8,22 @@ orchestrator, which routes the message one of three ways:
   - backlog:  an os_backlog_requests row is created for an owner decision
 
 client_id is always the JWT tenant_id — never trust a path/body value.
+
+Per-turn orchestration (history fetch + orchestrate + persist) lives in
+``backend.services.os_thread_runner`` so inbound bridges (widget, email,
+SMS, Facebook) share the same pipeline. This router owns thread/message
+CRUD and the rate-limit gate; the runner owns the orchestrator turn.
 """
 
 import logging
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
-from backend.services import orchestrator, os_workers, usage_meter
-from backend.services.email_sender import send_email
+from backend.services import usage_meter
+from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -33,10 +37,6 @@ class ThreadCreateRequest(BaseModel):
 
 class MessageCreateRequest(BaseModel):
     content: str = Field(min_length=1, max_length=8000)
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 @router.post("/threads", status_code=201)
@@ -107,98 +107,17 @@ async def post_message(
         )
 
     user_content = req.content.strip()
-    history = (
-        tenant_table(db, "os_messages", client_id)
-        .select("role, content")
-        .eq("thread_id", thread_id)
-        .order("created_at", desc=False)
-        .execute()
-    ).data or []
-
-    messages_tbl = tenant_table(db, "os_messages", client_id)
     user_message = (
-        messages_tbl.insert(
-            {"thread_id": thread_id, "role": "user", "content": user_content}
-        )
+        tenant_table(db, "os_messages", client_id)
+        .insert({"thread_id": thread_id, "role": "user", "content": user_content})
         .execute()
         .data[0]
     )
     usage_meter.record_message(db, client_id)
 
-    decision = await orchestrator.orchestrate(
-        db, client_id, user_content, history=history
+    return await process_user_turn(
+        db, client_id, thread_id, user_message, background_tasks
     )
-    if decision.memory_writes:
-        await orchestrator.record_memory_writes(
-            db, client_id, decision.memory_writes, source=f"thread:{thread_id}"
-        )
-
-    agent_runs: list[dict] = []
-    if decision.action == "delegate":
-        run = (
-            tenant_table(db, "os_agent_runs", client_id)
-            .insert(
-                {
-                    "thread_id": thread_id,
-                    "agent_name": decision.agent_name,
-                    "status": "queued",
-                    "thought_process": decision.thought_process,
-                }
-            )
-            .execute()
-            .data[0]
-        )
-        agent_runs.append(run)
-        assistant_message = (
-            messages_tbl.insert(
-                {
-                    "thread_id": thread_id,
-                    "role": "assistant",
-                    "content": decision.reply,
-                    "agent_run_id": run["id"],
-                }
-            )
-            .execute()
-            .data[0]
-        )
-        background_tasks.add_task(
-            os_workers.run_worker,
-            run["id"],
-            client_id,
-            thread_id,
-            decision.agent_name,
-            user_content,
-            decision.deliverable_title or "Draft",
-        )
-    elif decision.action == "backlog":
-        _create_backlog(db, client_id, thread_id, user_content, decision)
-        assistant_message = (
-            messages_tbl.insert(
-                {"thread_id": thread_id, "role": "assistant", "content": decision.reply}
-            )
-            .execute()
-            .data[0]
-        )
-        await _notify_owner_no_fit(db, client_id, user_content, decision)
-    else:  # answer
-        assistant_message = (
-            messages_tbl.insert(
-                {"thread_id": thread_id, "role": "assistant", "content": decision.reply}
-            )
-            .execute()
-            .data[0]
-        )
-
-    tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
-        "id", thread_id
-    ).execute()
-
-    return {
-        "user_message": user_message,
-        "assistant_message": assistant_message,
-        "action": decision.action,
-        "agent_runs": agent_runs,
-    }
 
 
 def _load_thread(db, client_id: str, thread_id: str) -> dict:
@@ -212,47 +131,3 @@ def _load_thread(db, client_id: str, thread_id: str) -> dict:
     if not result.data:
         raise HTTPException(status_code=404, detail="Thread not found")
     return result.data[0]
-
-
-def _create_backlog(
-    db, client_id: str, thread_id: str, user_content: str, decision
-) -> None:
-    tenant_table(db, "os_backlog_requests", client_id).insert(
-        {
-            "thread_id": thread_id,
-            "summary": (decision.deliverable_title or user_content)[:200],
-            "detail": user_content,
-            "reason": decision.reason or "No available worker agent fits.",
-        }
-    ).execute()
-
-
-async def _notify_owner_no_fit(db, client_id: str, user_content: str, decision) -> None:
-    """Best-effort owner email when a request lands in the no-fit backlog."""
-    try:
-        tenant = (
-            db.table("tenants")
-            .select("owner_email, business_name")
-            .eq("id", client_id)
-            .limit(1)
-            .execute()
-        )
-        if not tenant.data or not tenant.data[0].get("owner_email"):
-            return
-        owner_email = tenant.data[0]["owner_email"]
-        business = tenant.data[0].get("business_name") or "your business"
-        await send_email(
-            to=owner_email,
-            subject="Agent OS: a request needs your decision",
-            body_html=(
-                f"<p>A request for {business} could not be handled by any "
-                f"current worker agent and was parked in the backlog.</p>"
-                f"<p><strong>Request:</strong> {user_content}</p>"
-                f"<p><strong>Why no fit:</strong> "
-                f"{decision.reason or 'No worker agent matches this task.'}</p>"
-                "<p>Review it in the Agent OS backlog to build, defer, or drop it.</p>"
-            ),
-            tenant_id=client_id,
-        )
-    except Exception:
-        logger.warning("no-fit owner notification failed", exc_info=True)

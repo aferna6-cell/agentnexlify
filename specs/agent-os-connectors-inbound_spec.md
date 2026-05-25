@@ -117,9 +117,14 @@ One new migration (next free number = 124 at build time, verify with
     FB user ID) for the orchestrator to read
   - UNIQUE `(client_id, source, source_thread_id) WHERE source_thread_id IS NOT NULL`
     — bridge dedup key
-- One new ALTER on `os_messages`:
+- ALTERs on `os_messages`:
   - `inbound_kind TEXT NULL` — `auto_reply | normal | system_notice`, populated
     by bridges, NULL for owner-typed messages
+  - `source_ref TEXT NULL` — set by bridges to
+    `"<source>:<provider_message_id>"` for replay protection; NULL for
+    owner-typed messages. UNIQUE partial index on `(client_id, source_ref)
+    WHERE source_ref IS NOT NULL` enforces the dedup invariant from
+    §Security.
 
 Per-tenant bridge toggles live in `tenant_integrations` as JSON config under
 `integration_type='os_inbound_bridges'`:
