@@ -133,6 +133,41 @@ def is_bridge_enabled(db: Any, client_id: str, source: BridgeSource) -> bool:
     return bool(cfg.get(f"{source}_enabled", False))
 
 
+def resolve_tenant_by_inbound_phone(db: Any, to_number: str) -> str | None:
+    """Cross-tenant lookup: which client owns this Twilio inbound number?
+
+    Same shape as ``resolve_tenant_by_inbound_email`` but matches against
+    ``tenants.notification_phone`` — the field every provisioned tenant
+    populates when setting up Twilio. Phone matching is normalized to
+    last-10-digits because Twilio sends E.164 (``+15551234567``) while
+    tenants sometimes save the friendly form (``(555) 123-4567``).
+    """
+    if not to_number:
+        return None
+    needle = _normalize_phone(to_number)
+    if not needle:
+        return None
+
+    result = (
+        db.table("tenants")
+        .select("id, notification_phone")
+        .not_.is_("notification_phone", "null")
+        .execute()
+    )
+    rows = result.data or []
+    for row in rows:
+        stored = _normalize_phone(row.get("notification_phone") or "")
+        if stored and stored == needle:
+            return row.get("id")
+    return None
+
+
+def _normalize_phone(raw: str) -> str:
+    """Strip to last-10-digits for cross-format phone matching."""
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
 def resolve_tenant_by_inbound_email(db: Any, recipient: str) -> str | None:
     """Cross-tenant lookup: which client owns this inbound email address?
 

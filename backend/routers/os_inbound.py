@@ -1,23 +1,28 @@
 """Agent OS inbound bridges — owner-gated toggle + inbound webhooks.
 
-Two surfaces:
+Three surfaces:
   - Tenant-facing config: GET ``/bridge-config`` (any role),
     POST ``/bridge-toggle`` (owner-only).
-  - Provider-facing webhooks: POST ``/email/{provider}`` (Postmark,
-    Mailgun). Signature-verified, tenant resolved by recipient address.
+  - Email webhooks: POST ``/email/{provider}`` (Postmark, Mailgun).
+    Signature-verified, tenant resolved by recipient address.
+  - SMS webhook: POST ``/sms`` (Twilio). Signature-verified, tenant
+    resolved by ``To`` number, STOP keyword flips ``leads.unsubscribed``.
 
-Both backed by ``backend.services.os_inbound_bridge``. Webhooks dispatch
-into ``bridge_email`` via ``BackgroundTasks`` so signed-webhook senders
-get a fast 200 (5s retry budget).
+Backed by ``backend.services.os_inbound_bridge``. Webhooks dispatch into
+``bridge_email`` / ``bridge_sms`` via ``BackgroundTasks`` so signed-webhook
+senders get a fast 200/200-TwiML (5s retry budget).
 
 Spec: ``specs/agent-os-connectors-inbound_spec.md``
-Plan: ``plans/agent-os-connectors-inbound_plan.md`` Phase 3 + 4
+Plan: ``plans/agent-os-connectors-inbound_plan.md`` Phase 3 + 4 + 5
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Any, Literal
+from urllib.parse import unquote_plus
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from backend.config import settings
@@ -26,6 +31,7 @@ from backend.models.database import get_service_supabase
 from backend.services import (
     inbound_email_parser,
     inbound_email_verify,
+    inbound_sms_verify,
     os_inbound_bridge,
 )
 
@@ -36,6 +42,10 @@ router = APIRouter(prefix="/api/v1/os/inbound", tags=["agent-os"])
 
 BridgeSource = Literal["widget", "email", "sms", "facebook"]
 EmailProvider = Literal["postmark", "mailgun"]
+
+# Empty TwiML — tells Twilio we acknowledge but don't reply via TwiML.
+# Outbound replies (if any) go through the orchestrator + outbound channel.
+_EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response/>'
 
 
 class BridgeToggleRequest(BaseModel):
@@ -214,6 +224,196 @@ async def _bridge_email_safe(
     except Exception:
         logger.exception(
             "bridge_email failed: client_id=%s provider_message_id=%s",
+            client_id,
+            provider_message_id,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Inbound SMS webhook (Phase 5.1)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/sms")
+async def inbound_sms_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> PlainTextResponse:
+    """Receive an inbound SMS from Twilio.
+
+    Order is load-bearing — sig verify BEFORE any branching on form fields.
+    Twilio waits 5s before retrying; bridge runs in ``BackgroundTasks`` so
+    we return TwiML immediately.
+
+    Flow:
+      1. Read raw body, parse form params.
+      2. Verify Twilio signature (URL + sorted form params, HMAC-SHA1).
+         403 on mismatch — Twilio gets the error and stops retrying.
+      3. Resolve tenant by ``To`` number → 404 if no tenant owns it.
+      4. STOP keyword (case-insensitive equality) → flip
+         ``leads.unsubscribed = true`` for any lead with this phone in
+         the resolved client, and dispatch as ``system_notice`` so the
+         orchestrator skips an automated reply.
+      5. Enqueue ``bridge_sms`` on ``BackgroundTasks``.
+      6. Return empty TwiML (Twilio expects ``application/xml``).
+    """
+    body = await request.body()
+    form = _parse_twilio_form(body)
+
+    url = str(request.url)
+    signature = request.headers.get("X-Twilio-Signature", "")
+    auth_token = settings.twilio_auth_token
+    if not auth_token:
+        logger.warning("twilio sms webhook hit without TWILIO_AUTH_TOKEN configured")
+        raise HTTPException(status_code=403, detail="Twilio signature unverifiable")
+    if not inbound_sms_verify.verify_twilio(url, form, signature, auth_token):
+        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
+
+    to_number = form.get("To", "")
+    from_number = form.get("From", "")
+    body_text = form.get("Body", "")
+    message_sid = form.get("MessageSid", "")
+    if not to_number or not message_sid:
+        raise HTTPException(status_code=400, detail="Missing To or MessageSid")
+
+    db = get_service_supabase()
+    client_id = os_inbound_bridge.resolve_tenant_by_inbound_phone(db, to_number)
+    if not client_id:
+        # Twilio retries 11x over ~24h on non-2xx — 404 stops the retry storm
+        # without leaking which numbers we own.
+        raise HTTPException(status_code=404, detail="Unknown destination number")
+
+    is_stop = inbound_sms_verify.is_stop_keyword(body_text)
+    inbound_kind = "system_notice" if is_stop else "normal"
+
+    if is_stop and from_number:
+        _flip_lead_unsubscribed(db, client_id, from_number)
+
+    sender_metadata = {
+        "from": from_number,
+        "to": to_number,
+        "provider": "twilio",
+        "stop_keyword": is_stop,
+    }
+
+    background_tasks.add_task(
+        _bridge_sms_safe,
+        client_id=client_id,
+        sms_thread_id=f"{from_number}:{to_number}",
+        provider_message_id=message_sid,
+        user_content=body_text,
+        sender_metadata=sender_metadata,
+        inbound_kind=inbound_kind,
+    )
+
+    return PlainTextResponse(_EMPTY_TWIML, media_type="application/xml")
+
+
+def _parse_twilio_form(body: bytes) -> dict[str, str]:
+    """Parse ``application/x-www-form-urlencoded`` body into a dict.
+
+    Twilio sig is HMAC over URL + sorted POST params — the form values
+    used in the HMAC must match what Twilio sent (URL-decoded).
+    """
+    out: dict[str, str] = {}
+    if not body:
+        return out
+    try:
+        decoded = body.decode("utf-8")
+    except UnicodeDecodeError:
+        return out
+    for pair in decoded.split("&"):
+        if "=" not in pair:
+            continue
+        k, v = pair.split("=", 1)
+        out[unquote_plus(k)] = unquote_plus(v)
+    return out
+
+
+def _flip_lead_unsubscribed(db: Any, client_id: str, from_phone: str) -> None:
+    """Flip ``leads.unsubscribed = true`` for matching phone in this client.
+
+    Phone matching uses last-10-digits because Twilio sends E.164 and
+    leads can be stored in any user-entered format. Automation
+    orchestrator (``orchestrator.py``) and rule engine
+    (``rule_engine.py``) both gate outreach on this flag, so flipping
+    it here is sufficient to stop further messages.
+    """
+    try:
+        needle = _last_10_digits(from_phone)
+        if not needle:
+            return
+        result = (
+            db.table("leads")
+            .select("id, phone")
+            .eq("client_id", client_id)
+            .not_.is_("phone", "null")
+            .execute()
+        )
+        rows = result.data or []
+        matched_ids = [
+            r["id"]
+            for r in rows
+            if r.get("phone") and _last_10_digits(r["phone"]) == needle
+        ]
+        if not matched_ids:
+            return
+        now_iso = datetime.now(timezone.utc).isoformat()
+        (
+            db.table("leads")
+            .update({"unsubscribed": True, "unsubscribed_at": now_iso})
+            .in_("id", matched_ids)
+            .execute()
+        )
+        logger.info(
+            "sms STOP keyword flipped unsubscribed on %d leads client=%s",
+            len(matched_ids),
+            client_id,
+        )
+    except Exception:
+        # STOP handling is best-effort — we already accepted the message
+        # and Twilio carrier-level STOP also fires. Don't crash on DB blips.
+        logger.exception(
+            "_flip_lead_unsubscribed failed client=%s phone=%s",
+            client_id,
+            from_phone,
+        )
+
+
+def _last_10_digits(raw: str) -> str:
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+async def _bridge_sms_safe(
+    *,
+    client_id: str,
+    sms_thread_id: str,
+    provider_message_id: str,
+    user_content: str,
+    sender_metadata: dict[str, Any],
+    inbound_kind: str,
+) -> None:
+    """BackgroundTasks wrapper: never let bridge errors escape the task.
+
+    TwiML already returned — raising would surface as unhandled exception
+    in worker logs with no retry path. ``source_ref`` idempotency lets
+    Twilio safely re-deliver if it ever does retry.
+    """
+    try:
+        db = get_service_supabase()
+        await os_inbound_bridge.bridge_sms(
+            db=db,
+            client_id=client_id,
+            sms_thread_id=sms_thread_id,
+            provider_message_id=provider_message_id,
+            user_content=user_content,
+            sender_metadata=sender_metadata,
+            inbound_kind=inbound_kind,  # type: ignore[arg-type]
+        )
+    except Exception:
+        logger.exception(
+            "bridge_sms failed: client_id=%s provider_message_id=%s",
             client_id,
             provider_message_id,
         )

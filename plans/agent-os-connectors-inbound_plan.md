@@ -125,17 +125,20 @@ Bridge widget, email, SMS, Facebook inbound messages into `os_threads` + `os_mes
 ### Phase 5 — SMS bridge (Twilio webhook)
 
 **5.1 `bridge_sms` impl + `POST /api/v1/os/inbound/sms` route**
-- Twilio signature verification via `twilio.request_validator.RequestValidator`
-- Resolve tenant by `To` phone number (lookup table — see existing Twilio config)
-- Special handling: body matches `STOP|UNSUBSCRIBE|CANCEL` (case-insensitive) → also flip `leads.do_not_contact = true` for any lead with this phone
-- Append `os_message` with `inbound_kind='normal'`
-- Return TwiML empty response (Twilio expects XML); do NOT block
+- Twilio signature verification (HMAC-SHA1 of URL + sorted form params — matches existing `twilio_webhooks._verify_twilio_signature` shape)
+- Resolve tenant by `To` phone number via `tenants.notification_phone` (existing column; same pattern as `_find_tenant_by_phone` in `twilio_webhooks.py`)
+- Special handling: body matches `STOP|UNSUBSCRIBE|CANCEL` (case-insensitive) → flip `leads.unsubscribed = true` (migration 021 column, already gated by automation orchestrator + rule_engine) for any lead with this phone in the resolved client
+- Append `os_message` with `inbound_kind='normal'` (or `'system_notice'` for STOP keyword so orchestrator skips reply)
+- Return TwiML empty `<Response/>` (Twilio expects XML); do NOT block — bridge dispatched via `BackgroundTasks`
+
+**Note on `do_not_contact`:** earlier plan text referenced `leads.do_not_contact` — that column never existed. Real column is `leads.unsubscribed` (migration 021_lead_unsubscribe.sql). Already respected by `backend/services/automation/orchestrator.py:117` + `rule_engine.py:368`. No migration needed.
 
 **5.2 Test — `tests/test_os_inbound_sms.py`**
-- Valid Twilio sig → 200 + thread/message
-- Invalid sig → 401
-- STOP message → `leads.do_not_contact` flipped + `os_message` posted
+- Valid Twilio sig → 200 + bridge task scheduled
+- Invalid sig → 403 (matches existing Twilio webhook 403 pattern, not 401)
+- STOP message → `leads.unsubscribed` flipped + `os_message` posted with `inbound_kind='system_notice'`
 - Unknown `To` number → 404
+- Missing auth token → 403
 
 **Commit checkpoint:** "feat(agent-os): SMS inbound bridge (Twilio + STOP keyword)"
 
