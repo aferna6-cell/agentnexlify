@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-26",
-  "total_runs": 34,
+  "last_run": "2026-05-26-pm",
+  "total_runs": 35,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,6 +16,14 @@
   },
   "active_directions": [
     {
+      "title": "Invoke /god-class-splitter on email_sequences.py — split 1255L into email_crud + email_enrollment + email_processor (run 35 winner)",
+      "date": "2026-05-26-pm",
+      "confidence": "MEDIUM",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 35 winner. Governance pivot at 5-consecutive-run GH #181 threshold. email_sequences.py confirmed 1255L with 3 independent concerns (CRUD/enrollment/processor). GH #112/#113 N+1 issues (2026-05-02) become simpler post-split. god-class-splitter SKILL.md ready (e848b87). First production use of new skill. Critical standing action: GH #181 billing fix (~15 min, human required) before starting split. See subconscious/runs/2026-05-26-pm/winning-concept.md."
+    },
+    {
       "title": "Create god-class-splitter skill — .claude/skills/god-class-splitter/SKILL.md (run 33 winner)",
       "date": "2026-05-25-pm",
       "confidence": "HIGH",
@@ -27,7 +35,7 @@
       "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, remove CI-blocking contradictory tests (run 34 winner)",
       "date": "2026-05-26",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "critical_standing_action",
       "category": "code_health",
       "note": "Run 34 winner. Governance mandate fires (4-consecutive-run threshold set in run 33). Direct inspection confirms: billing.py AMOUNT_TO_PLAN missing 15000→autopilot and 25000→professional. test_billing_amount_to_plan.py:38-44 actively certifies the broken state with backwards issue-#81-era assertions. Two failed fix attempts (c72b535, 1eaaeec) confirm the non-obvious nature. CI blocks correct fixes. Fix: billing.py add 2 dict entries; test file remove 2 contradictory methods, add 2 current-price methods, update test_all_four_current_tiers_present to use {9900,15000,25000,89900}. S-effort ~15 min. Bonus action: invoke /moratorium-sprint after fix (~40 min). Implementation sketch: subconscious/runs/2026-05-26/winning-concept.md."
     },
@@ -412,6 +420,13 @@
       "note": "Run 34 winner. Governance mandate fires (4-consecutive-run threshold). billing.py:264 missing 15000 + 25000. test_billing_amount_to_plan.py:38-44 backwards assertions certify broken state. Two failed attempts (c72b535, 1eaaeec). CI blocks correct fixes via 1553bf7. Debate: GH #181 SURVIVES 3 rounds → WINNER; /moratorium-sprint WEAKENED (standing action); email_sequences split WEAKENED (wrong timing). Bonus: /moratorium-sprint after fix."
     },
     {
+      "title": "Invoke /god-class-splitter on email_sequences.py — split 1255L into email_crud + email_enrollment + email_processor",
+      "date": "2026-05-26-pm",
+      "status": "recommended",
+      "run": 35,
+      "note": "Run 35 winner. Governance pivot at 5-consecutive GH #181 threshold. GH #181 moved to critical_standing_action + rejected_paths (recommendation loop exhausted). email_sequences.py confirmed 1255L, 3 clean concerns. god-class-splitter SKILL.md ready (e848b87). First production use. GH #112/#113 N+1 easier post-split. Debate: email_sequences split SURVIVES 3 rounds → WINNER; billing-constant-guard Check 11 SURVIVES (weakened) → parking lot promoted; PR #182 review KILLED (operational). Confidence MEDIUM (2h human execution, first skill use)."
+    },
+    {
       "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN + fix contradictory test",
       "date": "2026-05-23",
       "status": "recommended",
@@ -427,6 +442,12 @@
     }
   ],
   "rejected_paths": [
+    {
+      "title": "GH #181 Fix AMOUNT_TO_PLAN as subconscious winner — recommendation loop exhausted at 5 consecutive runs",
+      "reason": "Recommended runs 31/32/34/35 (4 as primary winner, 5th as CRITICAL) without implementation. Mechanism is broken: GH #181 requires human action on MEDIUM-risk billing code (15 min, S-effort). No new evidence exists to justify a 6th recommendation. Future runs: GH #181 remains a critical_standing_action in active_directions but is barred from being chosen as the subconscious winner again unless (a) human explicitly implements it (closes the item) or (b) new evidence emerges about why it keeps being skipped.",
+      "date": "2026-05-26-pm",
+      "times_rejected": 1
+    },
     {
       "title": "Build AI-to-human handoff feature (full implementation)",
       "reason": "Full implementation too large for atomic recommendation. Narrow explicit-trigger-only v1 is acceptable.",
@@ -581,10 +602,10 @@
       "note": "Added run 16. When moratorium active + oldest pending > 14 days, nightly-commit-review.sh auto-creates GH comment on oldest pending issue linking winning-concept.md. Closes feedback loop between recommendation and implementation. Consider if run 17 has same winner again."
     },
     {
-      "title": "Create billing-constant-guard skill (.claude/skills/billing-constant-guard/SKILL.md)",
-      "date": "2026-05-25-pm",
+      "title": "Wire billing-constant-guard as pre-commit Check 11 (10 lines bash)",
+      "date": "2026-05-26-pm",
       "roi": 2.1,
-      "note": "Added run 33 (WEAKENED in debate). Skill discovery 2026-05-25 documented triple-fix pattern (c72b535 + 1eaaeec + 1553bf7 + 3 subconscious runs). 10-step checklist including CLAUDE.md plan price cross-reference + inverted-test check. Promote to winner after GH #181 is fixed and god-class-splitter is implemented."
+      "note": "PROMOTED in run 35 debate (SURVIVES weakened — autonomously executable by nightly review, LOW-risk additive bash). Add to scripts/hooks/pre-commit: validate AMOUNT_TO_PLAN contains {9900,15000,25000,89900}, FAIL if any missing. Execute AFTER GH #181 fix. Nightly review scope (similar to Check 9 added by 72f8204). Also create .claude/skills/billing-constant-guard/SKILL.md after Check 11 is wired."
     },
     {
       "title": "Create post-split-test-repair skill (.claude/skills/post-split-test-repair/SKILL.md)",
@@ -594,13 +615,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 9,
-    "runs_pending_approval_raw": 9,
-    "runs_pending_approval_note": "Run 33 (god-class-splitter) implemented by nightly e848b87 → pending 9→8. Run 34 winner (GH #181 fix) added → 8+1=9. True pending = 9 (runs 4, 20, 21, 28, 29, 30, 31+32 as one GH#181 rec, 34). Note: run 31 is subsumed by run 32 (same fix, more detailed). After /moratorium-sprint (Items A+B+D) + GH #181 fix: pending would drop significantly toward moratorium exit (≤2). GH #181 run 34 winner is S-effort human action ~15 min. RUN 35 GOVERNANCE SIGNAL: if GH #181 still unimplemented at run 35, 5-consecutive-run threshold exceeded — escalate to critical.",
+    "runs_pending_approval": 10,
+    "runs_pending_approval_raw": 10,
+    "runs_pending_approval_note": "Run 35 adds 1 (email_sequences split) → 10. GH #181 moved to critical_standing_action (not a new pending item — already counted). True actionable pending: runs 4, 20, 21, 28, 29, 30 (billing constants test), GH#181 critical_standing_action, 35 (email_sequences split). After GH #181 fix + /moratorium-sprint (Items A+B+D) + email_sequences split: pending drops significantly toward moratorium exit (≤2). GH #181 recommendation loop HALTED at run 35 (5-consecutive, rejected_paths entry added).",
     "runs_implemented": 8,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 40)",
-    "governance_correction": "Run 34 (2026-05-26): Run 33 status corrected to implemented (e848b87 nightly review). god-class-splitter SKILL.md confirmed live. GH #181 governance mandate fires — winner switches from skill-creation to billing fix. run 34 adds 1 new pending item (GH #181 fourth rec). Moratorium day 21+. Items A/B/D still MISSING.",
-    "note": "Run 34: governance mandate fires for GH #181 (4-consecutive-run threshold). S-effort ~15 min. After fix: bonus action is /moratorium-sprint (Items A+B+D, ~40 min). Post-moratorium first queue: Zapier security (GH #107, ROI 2.5), then email_sequences.py split (first /god-class-splitter production use). AI-to-Human Handoff v1 (run 4, 40+ days, Critical) remains oldest pending customer-value item.",
+    "governance_correction": "Run 35 (2026-05-26-pm): GH #181 recommendation loop exhausted at 5-consecutive — moved to critical_standing_action + rejected_paths. email_sequences.py split added as run 35 winner. god-class-splitter skill (run 33) confirmed implemented (e848b87). Moratorium day 22+. Items A/B/D still MISSING.",
+    "note": "Run 35: governance pivot at 5-consecutive GH #181 threshold. Winner: /god-class-splitter email_sequences.py (~2h, human). Critical standing action: GH #181 fix (~15 min, do first). Post-moratorium queue: Zapier security (GH #107, ROI 2.5), billing-constant-guard Check 11. AI-to-Human Handoff v1 (run 4, 40+ days) remains oldest pending customer-value item.",
     "escalate": true
   },
   "config": {
