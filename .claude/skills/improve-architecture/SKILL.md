@@ -174,7 +174,7 @@ Save report to `audits/audit-architecture-YYYY-MM-DD.md`.
 
 Hand critical/high items to:
 - Schema drift → `schema-guard` skill
-- God classes → `compound-engineering` with explicit split plan
+- God classes → `god-class-splitter` skill for execution (CRITICAL files: invoke immediately, note split axis in `plans/god-class-refactor_plan.md`)
 - Dead code → `dead-code-sweep` skill
 - Dependencies → `dependency-auditor` skill
 - Performance → targeted Sonnet execution with the specific query
