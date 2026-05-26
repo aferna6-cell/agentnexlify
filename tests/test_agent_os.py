@@ -816,7 +816,7 @@ class TestThreadsRouter:
         llm = '{"action": "backlog", "reply": "No fit", "reason": "no agent"}'
         sender = AsyncMock()
         with patched_db(fake), patched_orchestrator(llm), patch(
-            "backend.routers.os_threads.send_email", sender
+            "backend.services.os_thread_runner.send_email", sender
         ):
             resp = client.post(
                 "/api/v1/os/threads/thread-001/messages",
