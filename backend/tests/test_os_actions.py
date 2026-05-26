@@ -301,6 +301,87 @@ def test_email_send_records_resend_failure_as_failed():
 
 
 # ---------------------------------------------------------------------------
+# sms.send — handler contract
+# ---------------------------------------------------------------------------
+
+
+def test_registry_includes_sms_send():
+    actions = all_actions()
+    assert "sms.send" in actions
+    spec = actions["sms.send"]
+    assert isinstance(spec, ActionSpec)
+    assert spec.worker == "lead_nurture"
+    assert spec.required_connectors == []
+    assert callable(spec.run)
+
+
+def test_sms_send_rejects_empty_body():
+    from backend.services.os_actions.sms import _run
+
+    result = asyncio.run(_run(_action_ctx({"body": ""})))
+    assert result.status == "failed"
+    assert "empty body" in (result.error_detail or {}).get("message", "")
+
+
+def test_sms_send_rejects_missing_recipient():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"error": "missing recipient"})
+    with patch.object(sms_action, "_extract_sms_payload", extractor):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Hi there"})))
+    assert result.status == "failed"
+    assert "missing recipient" in (result.error_detail or {}).get("message", "")
+
+
+def test_sms_send_rejects_invalid_phone_format():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "555-1234", "body": "Hello"})
+    with patch.object(sms_action, "_extract_sms_payload", extractor):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Hi there"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "validate"
+
+
+def test_sms_send_rejects_empty_payload_body():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "+15555550123", "body": ""})
+    with patch.object(sms_action, "_extract_sms_payload", extractor):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft"})))
+    assert result.status == "failed"
+    assert "empty sms body" in (result.error_detail or {}).get("message", "")
+
+
+def test_sms_send_sends_via_twilio_on_valid_payload():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
+    sender = AsyncMock(return_value=True)
+    with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
+        sms_action, "send_sms", sender
+    ):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "succeeded"
+    assert result.request_payload["to"] == "+15555550123"
+    assert result.response_payload["detail"] == "sent"
+    sender.assert_awaited_once()
+
+
+def test_sms_send_records_twilio_failure_as_failed():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
+    sender = AsyncMock(return_value=False)
+    with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
+        sms_action, "send_sms", sender
+    ):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "twilio"
+
+
+# ---------------------------------------------------------------------------
 # widget.message — handler contract
 # ---------------------------------------------------------------------------
 
@@ -629,9 +710,7 @@ def test_e2e_approve_dispatches_action_and_marks_succeeded():
 
     with patch(
         "backend.services.os_actions.get_service_supabase", return_value=db
-    ), patch(
-        "backend.services.os_actions.get_action", return_value=stub_handler
-    ):
+    ), patch("backend.services.os_actions.get_action", return_value=stub_handler):
         asyncio.run(run_action(_ACTION_RUN, _CLIENT_A, _DELIV, "email.send"))
 
     # Handler received a fully populated ActionContext
@@ -679,9 +758,7 @@ def test_e2e_handler_failure_records_failed_status_with_error_detail():
 
     with patch(
         "backend.services.os_actions.get_service_supabase", return_value=db
-    ), patch(
-        "backend.services.os_actions.get_action", return_value=stub_handler
-    ):
+    ), patch("backend.services.os_actions.get_action", return_value=stub_handler):
         asyncio.run(run_action(_ACTION_RUN, _CLIENT_A, _DELIV, "email.send"))
 
     update_calls = [c.args[0] for c in builder.update.call_args_list]
@@ -714,9 +791,7 @@ def test_e2e_handler_returns_failed_result_preserves_error_detail():
 
     with patch(
         "backend.services.os_actions.get_service_supabase", return_value=db
-    ), patch(
-        "backend.services.os_actions.get_action", return_value=stub_handler
-    ):
+    ), patch("backend.services.os_actions.get_action", return_value=stub_handler):
         asyncio.run(run_action(_ACTION_RUN, _CLIENT_A, _DELIV, "email.send"))
 
     update_calls = [c.args[0] for c in builder.update.call_args_list]
@@ -733,9 +808,7 @@ def test_e2e_missing_deliverable_records_failed():
     stub_handler.run = AsyncMock(return_value=ActionResult(status="succeeded"))
     with patch(
         "backend.services.os_actions.get_service_supabase", return_value=db
-    ), patch(
-        "backend.services.os_actions.get_action", return_value=stub_handler
-    ):
+    ), patch("backend.services.os_actions.get_action", return_value=stub_handler):
         asyncio.run(run_action(_ACTION_RUN, _CLIENT_A, _DELIV, "email.send"))
 
     update_calls = [c.args[0] for c in builder.update.call_args_list]
