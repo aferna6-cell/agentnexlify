@@ -713,6 +713,50 @@ class TestRunWorker:
 
 
 # ===========================================================================
+# lead_nurture worker — runtime channel routing (1:N action mapping)
+# ===========================================================================
+
+
+class TestLeadNurtureChannelRouting:
+    """Owner request picks the action_type at worker runtime.
+
+    lead_nurture is a 1:N worker — three registered handlers consume its
+    deliverable: ``email.send``, ``sms.send``, and ``crm.contact_upsert``.
+    The worker chooses one per run; the default keeps the existing
+    email-led follow-up behavior.
+    """
+
+    def test_defaults_to_email_when_no_channel_directive(self):
+        from backend.services.os_workers.lead_nurture import _choose_action_type
+
+        assert _choose_action_type("Follow up with Jane about her quote") == (
+            "email.send"
+        )
+        assert _choose_action_type("") == "email.send"
+
+    def test_explicit_sms_request_routes_to_sms_send(self):
+        from backend.services.os_workers.lead_nurture import _choose_action_type
+
+        assert _choose_action_type("Text this lead about pricing") == "sms.send"
+        assert _choose_action_type("Send an SMS reminder") == "sms.send"
+        assert _choose_action_type("Reach out via text") == "sms.send"
+
+    def test_explicit_crm_note_request_routes_to_crm_upsert(self):
+        from backend.services.os_workers.lead_nurture import _choose_action_type
+
+        assert _choose_action_type("Log a note that they're still thinking") == (
+            "crm.contact_upsert"
+        )
+        assert _choose_action_type("Add a CRM note for Jane") == "crm.contact_upsert"
+
+    def test_email_directive_beats_other_channels(self):
+        from backend.services.os_workers.lead_nurture import _choose_action_type
+
+        assert _choose_action_type("Email Jane and also text her") == "email.send"
+        assert _choose_action_type("Send an email reminder") == "email.send"
+
+
+# ===========================================================================
 # tenant_scope (os_* additions)
 # ===========================================================================
 

@@ -8,11 +8,45 @@ profile, read-only, tenant-scoped.
 
 import json
 import logging
+import re
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_workers.base import WorkerContext, WorkerResult, WorkerSpec
 
 logger = logging.getLogger(__name__)
+
+# Channel routing — owner request picks which Group B handler fires on approve.
+# Email is the default: it's the workflow this worker's prompt was tuned for
+# and the safest channel (no SMS opt-in regulation, less intrusive than CRM
+# auto-upsert). Explicit email beats other directives so "email Jane and text
+# her" still routes to email.send.
+_EMAIL_RE = re.compile(r"\b(email|e-mail)\b", re.IGNORECASE)
+_SMS_RE = re.compile(
+    r"\b(sms|text\s+(this|the|them|him|her|that)|via\s+text|send\s+a\s+text)\b",
+    re.IGNORECASE,
+)
+_CRM_RE = re.compile(
+    r"\b(crm|log\s+(a\s+)?note|add\s+(a\s+)?note|leave\s+(a\s+)?note)\b",
+    re.IGNORECASE,
+)
+
+
+def _choose_action_type(user_message: str) -> str:
+    """Pick the Group B action handler for this follow-up draft.
+
+    Defaults to ``email.send``. Owner directives override: explicit email wins
+    over sms/crm; otherwise sms wins over crm; otherwise crm wins over the
+    default.
+    """
+    msg = user_message or ""
+    if _EMAIL_RE.search(msg):
+        return "email.send"
+    if _SMS_RE.search(msg):
+        return "sms.send"
+    if _CRM_RE.search(msg):
+        return "crm.contact_upsert"
+    return "email.send"
+
 
 _DESCRIPTION = (
     "Drafts a warm, low-pressure follow-up message or short 2-3 touch follow-up "
@@ -131,12 +165,15 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             "Follow-up draft ready — Claude unavailable, edit before sending.",
         )
 
+    action_type = _choose_action_type(ctx.user_message)
+
     return WorkerResult(
         deliverable={"title": title, "format": "markdown", "body": body},
         summary=(
             f"Your follow-up draft '{title}' is ready for review in the side panel. "
             "Edit as needed, then approve to use it."
         ),
+        action_type=action_type,
     )
 
 
