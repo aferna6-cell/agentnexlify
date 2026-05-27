@@ -44,6 +44,26 @@ const ROLE_META = {
   },
 };
 
+// Source badge metadata for the thread rail. 'chat' = owner-typed
+// orchestrator task (no badge shown). The other four are inbound
+// customer-facing channels surfaced through os_inbound_bridge.
+const SOURCE_META = {
+  chat: { label: "Owner", color: "var(--text-muted)", show: false },
+  widget: { label: "Widget", color: "#22c55e", show: true },
+  email: { label: "Email", color: "#3b82f6", show: true },
+  sms: { label: "SMS", color: "#a855f7", show: true },
+  facebook: { label: "Facebook", color: "#0ea5e9", show: true },
+};
+
+const SOURCE_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "chat", label: "Owner" },
+  { key: "widget", label: "Widget" },
+  { key: "email", label: "Email" },
+  { key: "sms", label: "SMS" },
+  { key: "facebook", label: "Facebook" },
+];
+
 export default function AgentOS() {
   const { token } = useAuth();
 
@@ -55,6 +75,7 @@ export default function AgentOS() {
 
   const [composer, setComposer] = useState("");
   const [sending, setSending] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState(null);
@@ -67,6 +88,10 @@ export default function AgentOS() {
   const hasInFlight = runs.some(
     (r) => r.status === "queued" || r.status === "running",
   );
+  const visibleThreads =
+    sourceFilter === "all"
+      ? threads
+      : threads.filter((t) => (t.source || "chat") === sourceFilter);
 
   const refreshUsage = useCallback(() => {
     if (!token) return;
@@ -235,6 +260,42 @@ export default function AgentOS() {
             New task
           </button>
         </div>
+        <div
+          role="toolbar"
+          aria-label="Filter threads by source"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 4,
+            padding: "8px 8px 4px",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          {SOURCE_FILTERS.map((f) => {
+            const active = f.key === sourceFilter;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setSourceFilter(f.key)}
+                aria-pressed={active}
+                style={{
+                  border: "1px solid var(--border)",
+                  borderRadius: 6,
+                  padding: "3px 8px",
+                  fontSize: "0.72rem",
+                  fontWeight: active ? 600 : 500,
+                  background: active ? "var(--accent-dim)" : "transparent",
+                  color: active
+                    ? "var(--text-primary)"
+                    : "var(--text-secondary)",
+                  cursor: "pointer",
+                }}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 8 }}>
           {loadingThreads ? (
             <div
@@ -257,9 +318,22 @@ export default function AgentOS() {
             >
               No tasks yet. Start one to hand work to the orchestrator.
             </div>
+          ) : visibleThreads.length === 0 ? (
+            <div
+              style={{
+                padding: 12,
+                fontSize: "0.8rem",
+                color: "var(--text-muted)",
+                lineHeight: 1.5,
+              }}
+            >
+              No threads match this source filter.
+            </div>
           ) : (
-            threads.map((t) => {
+            visibleThreads.map((t) => {
               const active = t.id === activeThreadId;
+              const sourceKey = t.source || "chat";
+              const sourceMeta = SOURCE_META[sourceKey] || SOURCE_META.chat;
               return (
                 <button
                   key={t.id}
@@ -291,9 +365,39 @@ export default function AgentOS() {
                     {t.title || "Untitled task"}
                   </div>
                   <div
-                    style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
+                    style={{
+                      marginTop: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
                   >
-                    {relTime(t.updated_at || t.created_at)}
+                    {sourceMeta.show && (
+                      <span
+                        data-testid={`thread-source-${t.id}`}
+                        style={{
+                          fontSize: "0.62rem",
+                          fontWeight: 600,
+                          letterSpacing: "0.02em",
+                          textTransform: "uppercase",
+                          color: sourceMeta.color,
+                          border: `1px solid ${sourceMeta.color}`,
+                          borderRadius: 4,
+                          padding: "1px 5px",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {sourceMeta.label}
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {relTime(t.updated_at || t.created_at)}
+                    </span>
                   </div>
                 </button>
               );

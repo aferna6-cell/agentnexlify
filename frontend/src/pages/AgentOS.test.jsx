@@ -214,6 +214,74 @@ describe("AgentOS shell", () => {
     );
   });
 
+  it("shows a source badge for inbound threads but not owner-typed threads", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      {
+        id: "tw",
+        title: "Widget visitor",
+        source: "widget",
+        created_at: NOW,
+      },
+      { id: "tc", title: "Owner task", source: "chat", created_at: NOW },
+    ]);
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Widget visitor")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("thread-source-tw")).toHaveTextContent("Widget");
+    expect(screen.queryByTestId("thread-source-tc")).not.toBeInTheDocument();
+  });
+
+  it("filters the thread rail by source pill", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "tw", title: "Widget chat", source: "widget", created_at: NOW },
+      { id: "tc", title: "Owner only", source: "chat", created_at: NOW },
+    ]);
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Widget chat")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Owner only")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Widget" }));
+    await waitFor(() =>
+      expect(screen.queryByText("Owner only")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Widget chat")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() =>
+      expect(screen.getByText("Owner only")).toBeInTheDocument(),
+    );
+  });
+
+  it("shows an empty-filter message when no thread matches", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "tc", title: "Owner only", source: "chat", created_at: NOW },
+    ]);
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Owner only")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Email" }));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/No threads match this source filter/i),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("treats threads without a source field as owner-typed", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "t1", title: "Legacy thread", created_at: NOW },
+    ]);
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Legacy thread")).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("thread-source-t1")).not.toBeInTheDocument();
+  });
+
   it("opens the deliverable panel from a draft review button", async () => {
     listOsThreads.mockResolvedValueOnce([
       { id: "t1", title: "Task one", created_at: NOW },
