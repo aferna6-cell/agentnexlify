@@ -135,6 +135,7 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             f'Booking draft ready: "{title}". '
             "Review it in the side panel, then approve or reject."
         ),
+        action_type="calendar.event.create",
     )
 
 

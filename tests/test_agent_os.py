@@ -652,6 +652,52 @@ class TestRunWorker:
         run = fake.store["os_agent_runs"][0]
         assert run["deliverable_status"] == "pending_approval"
 
+    async def test_run_worker_persists_action_type_from_worker_result(self):
+        """Worker that returns ``action_type`` must persist it to ``os_agent_runs``.
+
+        Without this, Group B action handlers stay dead — ``approve_deliverable``
+        reads ``run.action_type`` to decide whether to fire a registered handler.
+        """
+        fake = FakeSupabase()
+        _seed_run(fake, "run-001")
+        fake_spec = os_workers.WorkerSpec(
+            name="booking",
+            description="test",
+            run=AsyncMock(
+                return_value=os_workers.WorkerResult(
+                    deliverable={"title": "Booking Reply", "body": "x"},
+                    summary="ready",
+                    action_type="calendar.event.create",
+                )
+            ),
+        )
+        with patch(
+            "backend.services.os_workers.get_service_supabase", return_value=fake
+        ), patch("backend.services.os_workers.get_worker", return_value=fake_spec):
+            await os_workers.run_worker(
+                "run-001", _TENANT, "thread-001", "booking", "do it", "My Draft"
+            )
+        run = fake.store["os_agent_runs"][0]
+        assert run["status"] == "succeeded"
+        assert run["action_type"] == "calendar.event.create"
+
+    async def test_run_worker_skips_action_type_when_worker_omits_it(self):
+        """Workers that omit ``action_type`` must not write the column.
+
+        Preserves existing behavior for catch-all workers (generalist) that have
+        no registered action handler.
+        """
+        fake = FakeSupabase()
+        _seed_run(fake, "run-001")
+        with patch(
+            "backend.services.os_workers.get_service_supabase", return_value=fake
+        ):
+            await os_workers.run_worker(
+                "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
+            )
+        run = fake.store["os_agent_runs"][0]
+        assert run.get("action_type") is None
+
     async def test_record_memory_writes_persists_entries(self):
         fake = FakeSupabase()
         with patch(

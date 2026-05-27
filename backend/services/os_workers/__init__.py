@@ -150,16 +150,18 @@ async def run_worker(
                 "Tenant has os_auto_send_enabled=TRUE — deliverable marked approved without owner review.",
             )
 
-        runs.update(
-            {
-                "status": "succeeded",
-                "thought_process": ctx.thought,
-                "deliverable": deliverable,
-                "deliverable_status": deliverable_status,
-                "completed_at": now_iso(),
-                "updated_at": now_iso(),
-            }
-        ).eq("id", run_id).execute()
+        update_payload: dict = {
+            "status": "succeeded",
+            "thought_process": ctx.thought,
+            "deliverable": deliverable,
+            "deliverable_status": deliverable_status,
+            "completed_at": now_iso(),
+            "updated_at": now_iso(),
+        }
+        if result.action_type:
+            update_payload["action_type"] = result.action_type
+
+        runs.update(update_payload).eq("id", run_id).execute()
 
         tenant_table(db, "os_messages", client_id).insert(
             {

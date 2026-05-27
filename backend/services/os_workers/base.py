@@ -65,11 +65,17 @@ class WorkerResult:
 
     ``deliverable`` is a dict with ``title``, ``format`` and ``body`` keys.
     ``run_worker`` fills ``title``/``format`` defaults if a worker omits them.
+
+    ``action_type`` — when set, ``run_worker`` writes it to ``os_agent_runs``
+    so ``approve_deliverable`` can fire the matching Group B action handler
+    registered in ``backend/services/os_actions/``. Workers without a side
+    effect (e.g. ``generalist``) leave it None.
     """
 
     deliverable: dict
     summary: str
     memory_writes: list[dict] = field(default_factory=list)
+    action_type: str | None = None
 
 
 WorkerRun = Callable[[WorkerContext], Awaitable[WorkerResult]]
