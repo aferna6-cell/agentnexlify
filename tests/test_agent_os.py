@@ -1802,3 +1802,141 @@ class TestCalendarActionDispatch:
         assert result.error_detail is not None
         assert result.error_detail["provider"] == "m365_calendar"
         assert result.error_detail["stage"] == "m365_calendar_create"
+
+
+# ===========================================================================
+# M365 OAuth router — tenant connects Microsoft 365 calendar
+# ===========================================================================
+
+
+class TestM365OAuthRoutes:
+    """OAuth flow for Microsoft 365.
+
+    Mirrors Google OAuth shape. State JWT carries tenant_id across the
+    public callback (browser arrives via Azure AD redirect, not from SPA).
+    """
+
+    def test_m365_auth_returns_authorization_url(self):
+        with patch(
+            "backend.routers.integrations.m365_calendar.build_authorization_url",
+            return_value="https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x&state=signed-state",
+        ) as build_url:
+            resp = client.get("/api/v1/integrations/m365/auth", headers=_auth())
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "auth_url" in body
+        assert "login.microsoftonline.com" in body["auth_url"]
+        build_url.assert_called_once()
+
+    def test_m365_auth_requires_authentication(self):
+        resp = client.get("/api/v1/integrations/m365/auth")
+        # 422 from FastAPI's missing-header validator; 401/403 from auth dep.
+        assert resp.status_code in (401, 403, 422)
+
+    def test_m365_callback_exchanges_code_and_saves_integration(self):
+        from backend.routers.integrations import _encode_state
+
+        state = _encode_state(_TENANT)
+        token_payload = {
+            "access_token": "graph-access-token",
+            "refresh_token": "graph-refresh-token",
+            "expires_in": 3600,
+            "token_type": "Bearer",
+        }
+
+        with patch(
+            "backend.routers.integrations.m365_calendar.exchange_code",
+            return_value=token_payload,
+        ) as exchange, patch(
+            "backend.routers.integrations._fetch_m365_profile",
+            return_value={"email": "user@contoso.com", "calendar_name": "User Name"},
+        ), patch(
+            "backend.routers.integrations.m365_calendar.save_integration"
+        ) as save:
+            resp = client.get(
+                f"/api/v1/integrations/m365/callback?code=auth-code-123&state={state}",
+                follow_redirects=False,
+            )
+
+        exchange.assert_called_once()
+        save.assert_called_once()
+        saved_kwargs = save.call_args.kwargs
+        assert saved_kwargs["tenant_id"] == _TENANT
+        assert saved_kwargs["access_token"] == "graph-access-token"
+        assert saved_kwargs["refresh_token"] == "graph-refresh-token"
+        assert saved_kwargs["metadata"]["email"] == "user@contoso.com"
+        # 200 fallback HTML when no frontend_url; 307 redirect otherwise.
+        assert resp.status_code in (200, 307)
+
+    def test_m365_callback_rejects_missing_refresh_token(self):
+        """Without offline_access scope we cannot refresh past 1h. Refuse to persist."""
+        from backend.routers.integrations import _encode_state
+
+        state = _encode_state(_TENANT)
+        # No refresh_token in response.
+        token_payload = {
+            "access_token": "graph-access-token",
+            "expires_in": 3600,
+        }
+
+        with patch(
+            "backend.routers.integrations.m365_calendar.exchange_code",
+            return_value=token_payload,
+        ), patch("backend.routers.integrations.m365_calendar.save_integration") as save:
+            resp = client.get(
+                f"/api/v1/integrations/m365/callback?code=auth-code-123&state={state}",
+                follow_redirects=False,
+            )
+
+        assert resp.status_code == 400
+        assert "offline_access" in resp.json()["detail"]
+        save.assert_not_called()
+
+    def test_m365_callback_rejects_invalid_state(self):
+        with patch(
+            "backend.routers.integrations.m365_calendar.exchange_code"
+        ) as exchange:
+            resp = client.get(
+                "/api/v1/integrations/m365/callback?code=auth-code&state=tampered-jwt",
+                follow_redirects=False,
+            )
+        assert resp.status_code == 400
+        exchange.assert_not_called()
+
+    def test_m365_status_returns_disconnected_when_no_integration(self):
+        with patch(
+            "backend.routers.integrations.m365_calendar.get_integration",
+            return_value=None,
+        ):
+            resp = client.get("/api/v1/integrations/m365/status", headers=_auth())
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body == {"connected": False, "email": None, "calendar_name": None}
+
+    def test_m365_status_returns_connected_with_metadata(self):
+        with patch(
+            "backend.routers.integrations.m365_calendar.get_integration",
+            return_value={
+                "id": "i1",
+                "provider": "m365_calendar",
+                "metadata": {
+                    "email": "user@contoso.com",
+                    "calendar_name": "User Name",
+                },
+            },
+        ):
+            resp = client.get("/api/v1/integrations/m365/status", headers=_auth())
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["connected"] is True
+        assert body["email"] == "user@contoso.com"
+        assert body["calendar_name"] == "User Name"
+
+    def test_m365_disconnect_calls_delete_integration(self):
+        with patch(
+            "backend.routers.integrations.m365_calendar.delete_integration"
+        ) as delete:
+            resp = client.delete("/api/v1/integrations/m365", headers=_auth())
+        assert resp.status_code == 200
+        assert resp.json() == {"status": "disconnected"}
+        delete.assert_called_once_with(_TENANT)
