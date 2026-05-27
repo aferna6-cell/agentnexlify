@@ -283,9 +283,9 @@ Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
                 f"{insights_html}"
             )
         body_html += (
-            f"<p style='margin-top:24px;color:#374151;'>View your full dashboard at "
-            f"<a href='https://app.agentnexlify.com' style='color:#3b82f6;'>app.agentnexlify.com</a></p>"
-            f"<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p></div>"
+            "<p style='margin-top:24px;color:#374151;'>View your full dashboard at "
+            "<a href='https://app.agentnexlify.com' style='color:#3b82f6;'>app.agentnexlify.com</a></p>"
+            "<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p></div>"
         )
 
         try:
@@ -531,8 +531,8 @@ async def send_birthday_greetings() -> int:
         leads = (
             db.table("leads")
             .select("id, client_id, name, email, date_of_birth")
-            .not_.is_("date_of_birth", "null")
-            .not_.is_("email", "null")
+            .filter("date_of_birth", "not.is", "null")
+            .filter("email", "not.is", "null")
             .limit(BATCH_LIMIT)
             .execute()
         )
@@ -649,7 +649,7 @@ async def process_recurring_invoices() -> int:
             )
             .eq("is_recurring", True)
             .lte("next_invoice_date", today_str)
-            .not_.is_("next_invoice_date", "null")
+            .filter("next_invoice_date", "not.is", "null")
             .neq("status", "cancelled")
             .limit(BATCH_LIMIT)
             .execute()

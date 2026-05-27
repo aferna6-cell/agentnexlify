@@ -30,8 +30,13 @@ def _admin_secret() -> str:
 def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
     """Verify the caller has the platform admin secret."""
     import hmac as _hmac
+
     admin_secret = _admin_secret()
-    if not admin_secret or not x_api_secret or not _hmac.compare_digest(x_api_secret, admin_secret):
+    if (
+        not admin_secret
+        or not x_api_secret
+        or not _hmac.compare_digest(x_api_secret, admin_secret)
+    ):
         raise HTTPException(status_code=401, detail="Invalid admin secret")
 
 
@@ -40,7 +45,9 @@ def _verify_admin_secret(x_api_secret: str | None = Header(None)) -> None:
 
 @router.get("/overview")
 @limiter.limit("10/minute")
-async def get_platform_overview(request: Request, x_api_secret: str | None = Header(None)):
+async def get_platform_overview(
+    request: Request, x_api_secret: str | None = Header(None)
+):
     """Get platform-wide overview: total tenants, active subscriptions, MRR."""
     _verify_admin_secret(x_api_secret)
 
@@ -61,8 +68,7 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
             .execute()
         )
         active_paid = [
-            t for t in active_result.data or []
-            if t.get("stripe_subscription_id")
+            t for t in active_result.data or [] if t.get("stripe_subscription_id")
         ]
         active_count = len(active_paid)
 
@@ -73,9 +79,11 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
             plan_breakdown[plan] = plan_breakdown.get(plan, 0) + 1
 
         # This month's new signups
-        month_start = datetime.now(timezone.utc).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        ).isoformat()
+        month_start = (
+            datetime.now(timezone.utc)
+            .replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            .isoformat()
+        )
         new_this_month = (
             db.table("tenants")
             .select("id", count="exact")
@@ -103,7 +111,7 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
                 .select("id", count="exact")
                 .eq("plan", "free")
                 .eq("plan_status", "active")
-                .not_.is_("free_trial_started_at", "null")
+                .filter("free_trial_started_at", "not.is", "null")
                 .execute()
             ).count or 0
         except Exception:
@@ -115,14 +123,16 @@ async def get_platform_overview(request: Request, x_api_secret: str | None = Hea
             promoted = (
                 db.table("admin_promotions")
                 .select("tenant_id")
-                .not_.is_("tenant_id", "null")
+                .filter("tenant_id", "not.is", "null")
                 .execute()
             )
-            promoted_count = len({
-                row.get("tenant_id")
-                for row in (promoted.data or [])
-                if row.get("tenant_id")
-            })
+            promoted_count = len(
+                {
+                    row.get("tenant_id")
+                    for row in (promoted.data or [])
+                    if row.get("tenant_id")
+                }
+            )
         except Exception:
             logger.warning("Failed to fetch promoted tenants count", exc_info=True)
 
@@ -180,7 +190,9 @@ async def get_monthly_growth(
         while m <= 0:
             m += 12
             y -= 1
-        start_month = now.replace(year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+        start_month = now.replace(
+            year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0
+        )
 
         # New signups per month
         signups_result = (
@@ -351,7 +363,9 @@ async def get_weekly_growth(
             "daily_data": [daily_data[k] for k in sorted(daily_data.keys())],
             "this_week_signups": this_week_signups,
             "this_week_paid": sum(d["paid"] for d in daily_data.values()),
-            "this_week_revenue_cents": sum(d["revenue_cents"] for d in daily_data.values()),
+            "this_week_revenue_cents": sum(
+                d["revenue_cents"] for d in daily_data.values()
+            ),
             "active_paid_subscriptions": active_count,
             "week_delta": week_delta,
             "week_delta_pct": week_delta_pct,
@@ -379,11 +393,7 @@ async def get_plan_distribution(
     try:
         db = get_service_supabase()
 
-        result = (
-            db.table("tenants")
-            .select("plan, plan_status")
-            .execute()
-        )
+        result = db.table("tenants").select("plan, plan_status").execute()
         tenants = result.data or []
 
         plan_counts: dict[str, dict[str, int]] = {}
@@ -398,14 +408,18 @@ async def get_plan_distribution(
         distribution = []
         for plan, counts in sorted(plan_counts.items()):
             total_plan = sum(counts.values())
-            distribution.append({
-                "plan": plan,
-                "active": counts.get("active", 0),
-                "cancelled": counts.get("cancelled", 0),
-                "paused": counts.get("paused", 0),
-                "total": total_plan,
-                "percentage": round(total_plan / total * 100, 1) if total > 0 else 0,
-            })
+            distribution.append(
+                {
+                    "plan": plan,
+                    "active": counts.get("active", 0),
+                    "cancelled": counts.get("cancelled", 0),
+                    "paused": counts.get("paused", 0),
+                    "total": total_plan,
+                    "percentage": (
+                        round(total_plan / total * 100, 1) if total > 0 else 0
+                    ),
+                }
+            )
 
         return {
             "total_tenants": total,
@@ -442,7 +456,9 @@ async def get_revenue_trends(
         while m <= 0:
             m += 12
             y -= 1
-        start_month = now.replace(year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+        start_month = now.replace(
+            year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0
+        )
 
         result = (
             db.table("platform_monthly_revenue")
@@ -468,9 +484,9 @@ async def get_revenue_trends(
         try:
             db = get_service_supabase()
             now = datetime.now(timezone.utc)
-            start_month = (now.replace(day=1) - timedelta(days=30 * (months - 1))).replace(
-                day=1, hour=0, minute=0, second=0, microsecond=0
-            )
+            start_month = (
+                now.replace(day=1) - timedelta(days=30 * (months - 1))
+            ).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             return await _calculate_live_revenue(db, start_month, now, months)
         except Exception:
             return {"revenue_trends": [], "source": "unavailable"}
@@ -502,9 +518,7 @@ async def _calculate_live_revenue(db, start_month, now, months):
         month_revenue_cents = 0
         month_subscriptions = 0
         new_signups = sum(
-            1
-            for t in paid_tenants
-            if t.get("created_at", "")[:7] == month_key
+            1 for t in paid_tenants if t.get("created_at", "")[:7] == month_key
         )
 
         for t in paid_tenants:
@@ -566,7 +580,10 @@ async def get_promoted_businesses(
 
     except Exception:
         # Table may not exist until migration is applied
-        return {"promotions": [], "note": "Apply migration 089 to enable promotion tracking"}
+        return {
+            "promotions": [],
+            "note": "Apply migration 089 to enable promotion tracking",
+        }
 
 
 # --- Tenant List (Admin View) ---
@@ -613,11 +630,7 @@ async def list_all_tenants(
                 )
             )
 
-        query = (
-            query
-            .order("created_at", desc=True)
-            .range(offset, offset + limit - 1)
-        )
+        query = query.order("created_at", desc=True).range(offset, offset + limit - 1)
 
         result = query.execute()
         tenants = result.data or []
@@ -647,11 +660,7 @@ async def get_industry_breakdown(
     try:
         db = get_service_supabase()
 
-        result = (
-            db.table("tenants")
-            .select("business_type, plan")
-            .execute()
-        )
+        result = db.table("tenants").select("business_type, plan").execute()
         tenants = result.data or []
 
         industry_counts: dict[str, dict[str, int]] = {}
@@ -670,11 +679,11 @@ async def get_industry_breakdown(
             {
                 "industry": industry,
                 **counts,
-                "paid_percentage": round(
-                    counts["paid"] / counts["total"] * 100, 1
-                )
-                if counts["total"] > 0
-                else 0,
+                "paid_percentage": (
+                    round(counts["paid"] / counts["total"] * 100, 1)
+                    if counts["total"] > 0
+                    else 0
+                ),
             }
             for industry, counts in sorted(
                 industry_counts.items(), key=lambda x: x[1]["total"], reverse=True

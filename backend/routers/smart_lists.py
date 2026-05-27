@@ -22,6 +22,7 @@ router = APIRouter(prefix="/api/v1/smart-lists", tags=["smart-lists"])
 # Pydantic models
 # ---------------------------------------------------------------------------
 
+
 class SmartListCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=1000)
@@ -37,6 +38,7 @@ class SmartListUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 # Filter engine
 # ---------------------------------------------------------------------------
+
 
 def _apply_filters(query, filters: dict):
     """Translate filter_json rules into Supabase PostgREST query chains.
@@ -105,16 +107,17 @@ def _apply_filters(query, filters: dict):
 
     # has_email — email IS NOT NULL
     if filters.get("has_email") is True:
-        query = query.not_.is_("email", "null")
+        query = query.filter("email", "not.is", "null")
 
     # has_phone — phone IS NOT NULL
     if filters.get("has_phone") is True:
-        query = query.not_.is_("phone", "null")
+        query = query.filter("phone", "not.is", "null")
 
     # search — ILIKE on name, email, phone (uses or_ filter)
     search = filters.get("search")
     if search and isinstance(search, str) and search.strip():
         import re
+
         term = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
         if term:
             query = query.or_(
@@ -124,7 +127,13 @@ def _apply_filters(query, filters: dict):
     return query
 
 
-def _execute_smart_list_query(tenant_id: str, filter_json: dict, db, select_cols: str = "*", count_only: bool = False):
+def _execute_smart_list_query(
+    tenant_id: str,
+    filter_json: dict,
+    db,
+    select_cols: str = "*",
+    count_only: bool = False,
+):
     """Build and execute a leads query for a smart list's filters.
 
     Args:
@@ -140,7 +149,11 @@ def _execute_smart_list_query(tenant_id: str, filter_json: dict, db, select_cols
     if count_only:
         query = db.table("leads").select("id", count="exact").eq("client_id", tenant_id)
     else:
-        query = db.table("leads").select(select_cols, count="exact").eq("client_id", tenant_id)
+        query = (
+            db.table("leads")
+            .select(select_cols, count="exact")
+            .eq("client_id", tenant_id)
+        )
 
     query = _apply_filters(query, filter_json)
 
@@ -160,6 +173,7 @@ def _execute_smart_list_query(tenant_id: str, filter_json: dict, db, select_cols
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{tenant_id}")
 async def list_smart_lists(
@@ -199,9 +213,15 @@ async def create_smart_list(
     # Compute initial cached lead count
     cached_count = 0
     try:
-        _, cached_count = _execute_smart_list_query(tenant_id, req.filter_json, db, count_only=True)
+        _, cached_count = _execute_smart_list_query(
+            tenant_id, req.filter_json, db, count_only=True
+        )
     except Exception:
-        logger.warning("Could not compute initial lead count for new smart list, tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Could not compute initial lead count for new smart list, tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
 
     now = datetime.now(timezone.utc).isoformat()
     data = {
@@ -254,11 +274,17 @@ async def update_smart_list(
     # If filter changed, refresh the cached count
     if req.filter_json is not None:
         try:
-            _, new_count = _execute_smart_list_query(tenant_id, req.filter_json, db, count_only=True)
+            _, new_count = _execute_smart_list_query(
+                tenant_id, req.filter_json, db, count_only=True
+            )
             updates["cached_lead_count"] = new_count
             updates["last_refreshed_at"] = updates["updated_at"]
         except Exception:
-            logger.warning("Could not refresh lead count during smart list update, list %s", list_id, exc_info=True)
+            logger.warning(
+                "Could not refresh lead count during smart list update, list %s",
+                list_id,
+                exc_info=True,
+            )
 
     try:
         result = (
@@ -269,7 +295,9 @@ async def update_smart_list(
             .execute()
         )
     except Exception:
-        logger.exception("Failed to update smart list %s for tenant %s", list_id, tenant_id)
+        logger.exception(
+            "Failed to update smart list %s for tenant %s", list_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to update smart list")
 
     if not result.data:
@@ -307,12 +335,18 @@ async def delete_smart_list(
         raise HTTPException(status_code=404, detail="Smart list not found")
 
     if existing.data[0].get("is_default"):
-        raise HTTPException(status_code=400, detail="Cannot delete a default smart list")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete a default smart list"
+        )
 
     try:
-        db.table("smart_lists").delete().eq("id", list_id).eq("tenant_id", tenant_id).execute()
+        db.table("smart_lists").delete().eq("id", list_id).eq(
+            "tenant_id", tenant_id
+        ).execute()
     except Exception:
-        logger.exception("Failed to delete smart list %s for tenant %s", list_id, tenant_id)
+        logger.exception(
+            "Failed to delete smart list %s for tenant %s", list_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to delete smart list")
 
     return {"deleted": True}
@@ -368,7 +402,11 @@ async def get_smart_list_leads(
         query = query.range(offset, offset + limit - 1)
         result = query.execute()
     except Exception:
-        logger.exception("Failed to execute smart list %s leads query for tenant %s", list_id, tenant_id)
+        logger.exception(
+            "Failed to execute smart list %s leads query for tenant %s",
+            list_id,
+            tenant_id,
+        )
         raise HTTPException(status_code=500, detail="Failed to query leads")
 
     leads = result.data or []
@@ -415,7 +453,9 @@ async def refresh_smart_list(
 
     # Count matching leads
     try:
-        _, new_count = _execute_smart_list_query(tenant_id, filter_json, db, count_only=True)
+        _, new_count = _execute_smart_list_query(
+            tenant_id, filter_json, db, count_only=True
+        )
     except Exception:
         logger.exception("Failed to count leads for smart list %s refresh", list_id)
         raise HTTPException(status_code=500, detail="Failed to count matching leads")
@@ -425,11 +465,13 @@ async def refresh_smart_list(
     try:
         update_result = (
             db.table("smart_lists")
-            .update({
-                "cached_lead_count": new_count,
-                "last_refreshed_at": now,
-                "updated_at": now,
-            })
+            .update(
+                {
+                    "cached_lead_count": new_count,
+                    "last_refreshed_at": now,
+                    "updated_at": now,
+                }
+            )
             .eq("id", list_id)
             .eq("tenant_id", tenant_id)
             .execute()
@@ -483,11 +525,7 @@ async def export_smart_list(
             "areas_of_interest, tags, assigned_to, deal_value, expected_close_date, "
             "created_at, updated_at"
         )
-        query = (
-            db.table("leads")
-            .select(select_cols)
-            .eq("client_id", tenant_id)
-        )
+        query = db.table("leads").select(select_cols).eq("client_id", tenant_id)
         query = _apply_filters(query, filter_json)
         query = query.order("created_at", desc=True)
         query = query.limit(5000)
@@ -500,9 +538,20 @@ async def export_smart_list(
 
     # Build CSV in memory
     csv_columns = [
-        "id", "name", "email", "phone", "status", "lead_score",
-        "lead_temperature", "areas_of_interest", "tags", "assigned_to",
-        "deal_value", "expected_close_date", "created_at", "updated_at",
+        "id",
+        "name",
+        "email",
+        "phone",
+        "status",
+        "lead_score",
+        "lead_temperature",
+        "areas_of_interest",
+        "tags",
+        "assigned_to",
+        "deal_value",
+        "expected_close_date",
+        "created_at",
+        "updated_at",
     ]
 
     output = io.StringIO()
@@ -520,7 +569,11 @@ async def export_smart_list(
     output.close()
 
     # Sanitize list name for filename
-    safe_name = "".join(c if c.isalnum() or c in ("-", "_", " ") else "" for c in list_name).strip().replace(" ", "-")
+    safe_name = (
+        "".join(c if c.isalnum() or c in ("-", "_", " ") else "" for c in list_name)
+        .strip()
+        .replace(" ", "-")
+    )
     if not safe_name:
         safe_name = "smart-list"
     filename = f"{safe_name}-leads-export.csv"

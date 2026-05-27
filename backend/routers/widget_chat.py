@@ -720,7 +720,7 @@ async def widget_chat(
                 .select("correction")
                 .eq("tenant_id", tid)
                 .eq("rating", "thumbs_down")
-                .not_.is_("correction", "null")
+                .filter("correction", "not.is", "null")
                 .order("created_at", desc=True)
                 .limit(20)
                 .execute()

@@ -209,7 +209,7 @@ def resolve_tenant_by_inbound_phone(db: Any, to_number: str) -> str | None:
     result = (
         db.table("tenants")
         .select("id, notification_phone")
-        .not_.is_("notification_phone", "null")
+        .filter("notification_phone", "not.is", "null")
         .execute()
     )
     rows = result.data or []
