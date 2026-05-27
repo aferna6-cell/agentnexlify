@@ -83,19 +83,26 @@ async def send_messenger_reply(
         "messaging_type": "RESPONSE",
         "message": {"text": content},
     }
-    params = {"access_token": page["page_access_token"]}
+    # Bearer-header auth (not access_token query param): keeps the page
+    # token out of the request URL so httpx URL-bearing exceptions, proxy
+    # logs, and traceback frames don't leak it. Graph API accepts either.
+    headers = {"Authorization": f"Bearer {page['page_access_token']}"}
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(url, params=params, json=api_body)
+            resp = await client.post(url, headers=headers, json=api_body)
     except Exception as exc:
+        # No exc_info: traceback frames can include the bound httpx request
+        # object (which would only matter if we ever passed the token as a
+        # query param — defense-in-depth even now that we use headers).
+        # Detail = exception class name, never the message string.
         logger.warning(
-            "facebook_messenger: HTTP error tenant_id=%s psid=%s",
+            "facebook_messenger: HTTP error tenant_id=%s psid=%s exc_type=%s",
             tenant_id,
             recipient_psid,
-            exc_info=True,
+            type(exc).__name__,
         )
-        return {"success": False, "detail": f"http_error:{str(exc)[:160]}"}
+        return {"success": False, "detail": f"http_error:{type(exc).__name__}"}
 
     if resp.status_code >= 400:
         snippet = (resp.text or "")[:300]
