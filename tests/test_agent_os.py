@@ -885,19 +885,6 @@ class TestOutboundMirrorWidget:
         assert result["status"] == "skipped:no_channel"
         assert sb.store.get("chat_messages", []) == []
 
-    async def test_facebook_skips_until_outbound_send_lands(self):
-        from backend.services.os_outbound_mirror import mirror_assistant_message
-
-        sb = FakeSupabase()
-        result = await mirror_assistant_message(
-            sb,
-            _TENANT,
-            self._thread(source="facebook", session_id="ignored"),
-            self._assistant(),
-        )
-        assert result["status"] == "skipped:outbound_not_implemented"
-        assert sb.store.get("chat_messages", []) == []
-
     async def test_mirror_is_idempotent_on_replay(self):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
@@ -1354,6 +1341,192 @@ class TestOutboundMirrorEmail:
         )
         assert result["status"] == "mirrored"
         assert captured["in_reply_to"] == ""
+
+
+class TestOutboundMirrorFacebook:
+    """OS assistant replies on facebook-sourced threads must DM the customer.
+
+    Customer DM'd the Page → FB webhook bridged into OS → orchestrator
+    answered → assistant_message lives in os_messages. Without phase-2
+    outbound the customer never sees the OS reply on Messenger.
+
+    Mirror contract for Facebook:
+    - facebook source + ``sender_id`` (PSID) in metadata + non-empty content
+      → call FB Send API via send_messenger_reply; return ``mirrored`` with
+      provider=messenger + message_id.
+    - missing PSID → ``skipped:no_session``.
+    - empty/whitespace content → ``skipped:empty_content``.
+    - send_messenger_reply returns ``success=False`` → ``error:facebook_send:<detail>``
+      (no_page when token missing, http_<status>:<body> when API rejects).
+    - send_messenger_reply raises → ``error:facebook_send:<exc>``.
+    """
+
+    def _fb_thread(
+        self,
+        *,
+        psid: str | None = "psid-cust-123",
+        page_id: str = "page-tenant-1",
+    ) -> dict:
+        meta: dict[str, Any] = {"provider": "facebook", "page_id": page_id}
+        if psid is not None:
+            meta["sender_id"] = psid
+        return {
+            "id": "thread-fb-1",
+            "source": "facebook",
+            "source_metadata": meta,
+            "source_thread_id": f"{page_id}:{psid}" if psid else page_id,
+        }
+
+    def _assistant(self, content: str = "Hi! Yes we're open Saturday 9-5.") -> dict:
+        return {
+            "id": "os-msg-fb-1",
+            "thread_id": "thread-fb-1",
+            "role": "assistant",
+            "content": content,
+        }
+
+    async def test_facebook_sends_via_messenger_send_api_on_success(self, monkeypatch):
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        captured: dict[str, Any] = {}
+
+        async def fake_send(*, tenant_id, recipient_psid, content):
+            captured["tenant_id"] = tenant_id
+            captured["recipient_psid"] = recipient_psid
+            captured["content"] = content
+            return {
+                "success": True,
+                "message_id": "mid_fb_abc",
+                "recipient_id": recipient_psid,
+            }
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", fake_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._fb_thread(),
+            self._assistant(),
+        )
+        assert result["status"] == "mirrored"
+        assert result["provider"] == "messenger"
+        assert result["message_id"] == "mid_fb_abc"
+        assert captured["tenant_id"] == _TENANT
+        assert captured["recipient_psid"] == "psid-cust-123"
+        assert captured["content"] == "Hi! Yes we're open Saturday 9-5."
+
+    async def test_facebook_accepts_legacy_psid_key_in_metadata(self, monkeypatch):
+        """Older threads may store the PSID under ``psid`` instead of ``sender_id``."""
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        captured: dict[str, Any] = {}
+
+        async def fake_send(*, tenant_id, recipient_psid, content):
+            captured["recipient_psid"] = recipient_psid
+            return {"success": True, "message_id": "mid_legacy"}
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", fake_send)
+
+        thread = {
+            "id": "thread-fb-legacy",
+            "source": "facebook",
+            "source_metadata": {"psid": "psid-legacy-9"},
+        }
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, thread, self._assistant()
+        )
+        assert result["status"] == "mirrored"
+        assert captured["recipient_psid"] == "psid-legacy-9"
+
+    async def test_facebook_missing_psid_is_skipped(self, monkeypatch):
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        async def should_not_call(**kwargs):
+            raise AssertionError("messenger send called without recipient PSID")
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", should_not_call)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, self._fb_thread(psid=None), self._assistant()
+        )
+        assert result["status"] == "skipped:no_session"
+
+    async def test_facebook_empty_content_is_skipped(self, monkeypatch):
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        async def should_not_call(**kwargs):
+            raise AssertionError("messenger send called with empty content")
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", should_not_call)
+
+        for blank in ["", "   ", "\n\t  \n"]:
+            result = await mod.mirror_assistant_message(
+                FakeSupabase(),
+                _TENANT,
+                self._fb_thread(),
+                self._assistant(content=blank),
+            )
+            assert (
+                result["status"] == "skipped:empty_content"
+            ), f"expected empty_content skip for {blank!r}, got {result['status']}"
+
+    async def test_facebook_no_page_token_returns_error(self, monkeypatch):
+        """send_messenger_reply returns success=False, detail=no_page when token missing."""
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        async def fake_send(*, tenant_id, recipient_psid, content):
+            return {"success": False, "detail": "no_page"}
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", fake_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, self._fb_thread(), self._assistant()
+        )
+        assert result["status"].startswith("error:facebook_send:")
+        assert "no_page" in result["status"]
+
+    async def test_facebook_http_error_returns_error_with_status_code(
+        self, monkeypatch
+    ):
+        """FB Send API returns 400 → mirror surfaces http_<status>:<body>."""
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        async def fake_send(*, tenant_id, recipient_psid, content):
+            return {
+                "success": False,
+                "detail": "http_400:(#100) Invalid parameter recipient.id",
+            }
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", fake_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, self._fb_thread(), self._assistant()
+        )
+        assert result["status"].startswith("error:facebook_send:")
+        assert "http_400" in result["status"]
+        assert "Invalid parameter" in result["status"]
+
+    async def test_facebook_send_exception_returns_error(self, monkeypatch):
+        """send_messenger_reply raises → mirror catches and returns error."""
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        async def fake_send(*, tenant_id, recipient_psid, content):
+            raise RuntimeError("network down")
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", fake_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, self._fb_thread(), self._assistant()
+        )
+        assert result["status"].startswith("error:facebook_send:")
+        assert "network down" in result["status"]
 
 
 class TestThreadRunnerMirrorIntegration:

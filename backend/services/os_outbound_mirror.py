@@ -8,12 +8,12 @@ hop the customer never sees the OS reply.
 Phase 1 (shipped): widget threads → ``chat_messages`` (DB write only —
 the widget polls ``chat_messages`` already).
 
-Phase 2 (this module, SMS + email shipped): outbound SMS via tenant's
-Twilio subaccount (preferred) with fallback to the platform pool, plus
-outbound email via Resend with ``In-Reply-To`` / ``References`` headers
-threaded against the original inbound message id. Facebook still returns
-``skipped:outbound_not_implemented`` until its phase-2 outbound sender
-lands.
+Phase 2 (this module, SMS + email + Facebook shipped): outbound SMS via
+tenant's Twilio subaccount (preferred) with fallback to the platform
+pool; outbound email via Resend with ``In-Reply-To`` / ``References``
+headers threaded against the original inbound message id; outbound
+Messenger replies via the FB Send API ``messaging_type=RESPONSE`` to the
+PSID captured at inbound ingestion.
 
 Idempotency: the widget mirror tags ``chat_messages`` rows with
 ``os_message_id``; a replay finds the existing row and reports
@@ -61,7 +61,7 @@ async def mirror_assistant_message(
           - ``skipped:no_session`` — channel source but no recipient identifier
           - ``skipped:empty_content`` — assistant reply was blank
           - ``skipped:stop_keyword`` — recipient sent STOP; outbound suppressed
-          - ``skipped:outbound_not_implemented`` — email/facebook (phase 2 pending)
+          - ``skipped:outbound_not_implemented`` — unknown channel source
           - ``skipped:already_mirrored`` — widget replay of an already-mirrored OS message
           - ``error:<reason>`` — DB failure, provider failure, or unexpected exception
     """
@@ -77,6 +77,9 @@ async def mirror_assistant_message(
 
     if source == "email":
         return await _mirror_email(client_id, thread, assistant_message)
+
+    if source == "facebook":
+        return await _mirror_facebook(client_id, thread, assistant_message)
 
     return {"status": "skipped:outbound_not_implemented"}
 
@@ -277,3 +280,62 @@ async def _mirror_email(
             exc_info=True,
         )
         return {"status": f"error:email_send:{str(exc)[:200]}"}
+
+
+async def _mirror_facebook(
+    client_id: str,
+    thread: dict,
+    assistant_message: dict,
+) -> dict:
+    """Send the OS reply as a Messenger DM via the FB Send API.
+
+    Recipient PSID is read from the thread's ``source_metadata.sender_id``
+    (captured during inbound ingestion by
+    ``channels_facebook._bridge_facebook_safe``). ``messaging_type`` is
+    ``RESPONSE`` — reserved for replies inside the 24h standard messaging
+    window.
+    """
+    meta = thread.get("source_metadata") or {}
+    if not isinstance(meta, dict):
+        return {"status": "skipped:no_session"}
+
+    recipient_psid = meta.get("sender_id") or meta.get("psid")
+    if not recipient_psid:
+        return {"status": "skipped:no_session"}
+
+    content = (assistant_message.get("content") or "").strip()
+    if not content:
+        return {"status": "skipped:empty_content"}
+
+    try:
+        from backend.services.facebook_messenger import send_messenger_reply
+    except Exception as exc:
+        logger.warning(
+            "os_outbound_mirror: facebook_messenger import failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+        return {"status": f"error:facebook_send:import:{str(exc)[:160]}"}
+
+    try:
+        result = await send_messenger_reply(
+            tenant_id=client_id,
+            recipient_psid=recipient_psid,
+            content=content,
+        )
+        if result.get("success"):
+            return {
+                "status": "mirrored",
+                "provider": "messenger",
+                "message_id": result.get("message_id", ""),
+            }
+        detail = (result.get("detail") or "messenger reported failure")[:200]
+        return {"status": f"error:facebook_send:{detail}"}
+    except Exception as exc:
+        logger.warning(
+            "os_outbound_mirror: facebook send failed client_id=%s os_msg=%s",
+            client_id,
+            assistant_message.get("id"),
+            exc_info=True,
+        )
+        return {"status": f"error:facebook_send:{str(exc)[:200]}"}
