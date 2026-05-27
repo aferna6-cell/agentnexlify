@@ -8,10 +8,12 @@ hop the customer never sees the OS reply.
 Phase 1 (shipped): widget threads → ``chat_messages`` (DB write only —
 the widget polls ``chat_messages`` already).
 
-Phase 2 (this module, SMS shipped): outbound SMS via tenant's Twilio
-subaccount (preferred) with fallback to the platform pool. Email and
-Facebook still return ``skipped:outbound_not_implemented`` until their
-phase-2 outbound senders land.
+Phase 2 (this module, SMS + email shipped): outbound SMS via tenant's
+Twilio subaccount (preferred) with fallback to the platform pool, plus
+outbound email via Resend with ``In-Reply-To`` / ``References`` headers
+threaded against the original inbound message id. Facebook still returns
+``skipped:outbound_not_implemented`` until its phase-2 outbound sender
+lands.
 
 Idempotency: the widget mirror tags ``chat_messages`` rows with
 ``os_message_id``; a replay finds the existing row and reports
@@ -72,6 +74,9 @@ async def mirror_assistant_message(
 
     if source == "sms":
         return await _mirror_sms(client_id, thread, assistant_message)
+
+    if source == "email":
+        return await _mirror_email(client_id, thread, assistant_message)
 
     return {"status": "skipped:outbound_not_implemented"}
 
@@ -196,3 +201,79 @@ async def _mirror_sms(
             exc_info=True,
         )
         return {"status": f"error:sms_send:{str(exc)[:200]}"}
+
+
+async def _mirror_email(
+    client_id: str,
+    thread: dict,
+    assistant_message: dict,
+) -> dict:
+    """Send the OS reply as a threaded email via Resend.
+
+    Threading: ``In-Reply-To`` and ``References`` are set from the
+    originating inbound message id (stored on the thread row as
+    ``source_thread_id``). The customer's mail client groups the reply
+    with the original inbound thread.
+
+    Subject: prepends ``Re: `` when the inbound subject doesn't already
+    start with one (case-insensitive). Empty inbound subject falls back
+    to ``Re: your message``.
+    """
+    meta = thread.get("source_metadata") or {}
+    if not isinstance(meta, dict):
+        return {"status": "skipped:no_session"}
+
+    to_addr = meta.get("from") or meta.get("sender_email")
+    if not to_addr:
+        return {"status": "skipped:no_session"}
+
+    content = (assistant_message.get("content") or "").strip()
+    if not content:
+        return {"status": "skipped:empty_content"}
+
+    inbound_subject = (meta.get("subject") or "").strip()
+    if inbound_subject:
+        subject = (
+            inbound_subject
+            if inbound_subject.lower().startswith("re:")
+            else f"Re: {inbound_subject}"
+        )
+    else:
+        subject = "Re: your message"
+
+    in_reply_to = thread.get("source_thread_id") or ""
+
+    try:
+        from backend.services.email_sender import send_email_reply
+    except Exception as exc:
+        logger.warning(
+            "os_outbound_mirror: email_sender import failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+        return {"status": f"error:email_send:import:{str(exc)[:160]}"}
+
+    try:
+        result = await send_email_reply(
+            to=to_addr,
+            subject=subject,
+            body_text=content,
+            tenant_id=client_id,
+            in_reply_to=in_reply_to,
+        )
+        if result.get("success"):
+            return {
+                "status": "mirrored",
+                "provider": "resend",
+                "resend_id": result.get("resend_id", ""),
+            }
+        detail = (result.get("detail") or "resend reported failure")[:200]
+        return {"status": f"error:email_send:{detail}"}
+    except Exception as exc:
+        logger.warning(
+            "os_outbound_mirror: email send failed client_id=%s os_msg=%s",
+            client_id,
+            assistant_message.get("id"),
+            exc_info=True,
+        )
+        return {"status": f"error:email_send:{str(exc)[:200]}"}

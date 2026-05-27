@@ -885,15 +885,14 @@ class TestOutboundMirrorWidget:
         assert result["status"] == "skipped:no_channel"
         assert sb.store.get("chat_messages", []) == []
 
-    @pytest.mark.parametrize("source", ["email", "facebook"])
-    async def test_email_and_facebook_skip_until_outbound_send_lands(self, source):
+    async def test_facebook_skips_until_outbound_send_lands(self):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
         sb = FakeSupabase()
         result = await mirror_assistant_message(
             sb,
             _TENANT,
-            self._thread(source=source, session_id="ignored"),
+            self._thread(source="facebook", session_id="ignored"),
             self._assistant(),
         )
         assert result["status"] == "skipped:outbound_not_implemented"
@@ -1120,6 +1119,241 @@ class TestOutboundMirrorSMS:
             FakeSupabase(), _TENANT, self._sms_thread(), self._assistant(content="   ")
         )
         assert result["status"] == "skipped:empty_content"
+
+
+class TestOutboundMirrorEmail:
+    """OS assistant replies on email-sourced threads must dispatch outbound email.
+
+    Customer emailed in → Postmark/Mailgun inbound webhook bridged into OS →
+    orchestrator answered → assistant_message lives in os_messages. Without
+    phase-2 outbound the customer never sees the OS reply on their inbox.
+
+    Mirror contract for email:
+    - email source + recipient address in metadata + non-empty content →
+      call Resend via send_email_reply with Re:-prefixed subject and
+      In-Reply-To header threading against source_thread_id; return
+      ``mirrored`` with provider=resend on success.
+    - existing ``Re:`` prefix on inbound subject must NOT be doubled
+      (case-insensitive idempotent).
+    - empty inbound subject → fallback ``Re: your message``.
+    - email source + missing ``from`` address → ``skipped:no_session``.
+    - email source + empty assistant content → ``skipped:empty_content``.
+    - Resend transport returns ``success=False`` → ``error:email_send:<detail>``.
+    """
+
+    def _email_thread(
+        self,
+        *,
+        from_addr: str | None = "customer@example.com",
+        subject: str | None = "Question about pricing",
+        source_thread_id: str | None = "<orig-message-id@mail.example.com>",
+    ) -> dict:
+        meta: dict[str, Any] = {"provider": "postmark"}
+        if from_addr is not None:
+            meta["from"] = from_addr
+        if subject is not None:
+            meta["subject"] = subject
+        return {
+            "id": "thread-email-1",
+            "source": "email",
+            "source_metadata": meta,
+            "source_thread_id": source_thread_id,
+        }
+
+    def _assistant(self, content: str = "Pricing starts at $99/mo.") -> dict:
+        return {
+            "id": "os-msg-email-1",
+            "thread_id": "thread-email-1",
+            "role": "assistant",
+            "content": content,
+        }
+
+    async def test_email_sends_with_re_prefix_when_inbound_subject_lacks_one(
+        self, monkeypatch
+    ):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        captured: dict[str, Any] = {}
+
+        async def fake_reply(
+            *, to, subject, body_text, tenant_id, in_reply_to="", references=""
+        ):
+            captured["to"] = to
+            captured["subject"] = subject
+            captured["body_text"] = body_text
+            captured["tenant_id"] = tenant_id
+            captured["in_reply_to"] = in_reply_to
+            captured["references"] = references
+            return {"success": True, "detail": "sent", "resend_id": "rsnd_abc"}
+
+        monkeypatch.setattr(email_sender, "send_email_reply", fake_reply)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(subject="Question about pricing"),
+            self._assistant("Pricing starts at $99/mo."),
+        )
+        assert result["status"] == "mirrored"
+        assert result["provider"] == "resend"
+        assert result["resend_id"] == "rsnd_abc"
+        assert captured["to"] == "customer@example.com"
+        assert captured["subject"] == "Re: Question about pricing"
+        assert captured["body_text"] == "Pricing starts at $99/mo."
+        assert captured["tenant_id"] == _TENANT
+        assert captured["in_reply_to"] == "<orig-message-id@mail.example.com>"
+
+    async def test_email_does_not_double_prefix_existing_re(self, monkeypatch):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        captured: dict[str, Any] = {}
+
+        async def fake_reply(
+            *, to, subject, body_text, tenant_id, in_reply_to="", references=""
+        ):
+            captured["subject"] = subject
+            return {"success": True, "detail": "sent", "resend_id": "rsnd_xyz"}
+
+        monkeypatch.setattr(email_sender, "send_email_reply", fake_reply)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(subject="Re: Question about pricing"),
+            self._assistant(),
+        )
+        assert result["status"] == "mirrored"
+        assert captured["subject"] == "Re: Question about pricing"
+
+        # lowercase + mixed case variants — all idempotent
+        for inbound in ("re: lowercase", "RE: SHOUTING", "Re:no-space-after"):
+            captured.clear()
+            result = await mod.mirror_assistant_message(
+                FakeSupabase(),
+                _TENANT,
+                self._email_thread(subject=inbound),
+                self._assistant(),
+            )
+            assert result["status"] == "mirrored"
+            assert (
+                captured["subject"] == inbound
+            ), f"existing Re: prefix lost or doubled for {inbound!r}"
+
+    async def test_email_uses_fallback_subject_when_inbound_subject_missing(
+        self, monkeypatch
+    ):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        captured: dict[str, Any] = {}
+
+        async def fake_reply(
+            *, to, subject, body_text, tenant_id, in_reply_to="", references=""
+        ):
+            captured["subject"] = subject
+            return {"success": True, "detail": "sent", "resend_id": "rsnd_def"}
+
+        monkeypatch.setattr(email_sender, "send_email_reply", fake_reply)
+
+        # Empty string subject
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(subject=""),
+            self._assistant(),
+        )
+        assert result["status"] == "mirrored"
+        assert captured["subject"] == "Re: your message"
+
+        # Whitespace-only subject
+        captured.clear()
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(subject="   "),
+            self._assistant(),
+        )
+        assert result["status"] == "mirrored"
+        assert captured["subject"] == "Re: your message"
+
+    async def test_email_missing_recipient_is_skipped(self, monkeypatch):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        async def should_not_call(*args, **kwargs):
+            raise AssertionError("send_email_reply called without recipient address")
+
+        monkeypatch.setattr(email_sender, "send_email_reply", should_not_call)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(from_addr=None),
+            self._assistant(),
+        )
+        assert result["status"] == "skipped:no_session"
+
+    async def test_email_empty_content_is_skipped(self, monkeypatch):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        async def should_not_call(*args, **kwargs):
+            raise AssertionError("send_email_reply called with empty body")
+
+        monkeypatch.setattr(email_sender, "send_email_reply", should_not_call)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(),
+            self._assistant(content="   "),
+        )
+        assert result["status"] == "skipped:empty_content"
+
+    async def test_email_send_failure_returns_error(self, monkeypatch):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        async def failing_reply(**kwargs):
+            return {"success": False, "detail": "resend HTTP 422: invalid To"}
+
+        monkeypatch.setattr(email_sender, "send_email_reply", failing_reply)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(),
+            self._assistant(),
+        )
+        assert result["status"].startswith("error:email_send:")
+        assert "invalid To" in result["status"]
+
+    async def test_email_in_reply_to_falls_back_to_empty_when_missing(
+        self, monkeypatch
+    ):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        captured: dict[str, Any] = {}
+
+        async def fake_reply(
+            *, to, subject, body_text, tenant_id, in_reply_to="", references=""
+        ):
+            captured["in_reply_to"] = in_reply_to
+            return {"success": True, "detail": "sent", "resend_id": "rsnd_ghi"}
+
+        monkeypatch.setattr(email_sender, "send_email_reply", fake_reply)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._email_thread(source_thread_id=None),
+            self._assistant(),
+        )
+        assert result["status"] == "mirrored"
+        assert captured["in_reply_to"] == ""
 
 
 class TestThreadRunnerMirrorIntegration:

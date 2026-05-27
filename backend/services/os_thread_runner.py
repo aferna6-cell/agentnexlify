@@ -179,7 +179,7 @@ async def _mirror_to_channel(
     try:
         thread_resp = (
             tenant_table(db, "os_threads", client_id)
-            .select("id, source, source_metadata")
+            .select("id, source, source_metadata, source_thread_id")
             .eq("id", thread_id)
             .limit(1)
             .execute()
