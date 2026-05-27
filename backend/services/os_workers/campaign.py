@@ -9,11 +9,39 @@ messages are sent — draft-only; the only DB side effect is ctx.step() calls
 """
 
 import logging
+import re
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_workers.base import WorkerContext, WorkerResult, WorkerSpec
 
 logger = logging.getLogger(__name__)
+
+# Channel routing — owner request picks which Group B handler fires on approve.
+# GBP is the default: universal SMB reach (no follower base required), helps
+# local SEO, and is the safest channel (no auth-fragile social tokens). Explicit
+# Instagram beats Facebook beats GBP so "post to instagram and facebook" routes
+# to instagram.
+_INSTAGRAM_RE = re.compile(r"\b(instagram|ig)\b", re.IGNORECASE)
+_FACEBOOK_RE = re.compile(r"\b(facebook|fb)\b", re.IGNORECASE)
+_GBP_RE = re.compile(r"\b(gbp|google\s+business)\b", re.IGNORECASE)
+
+
+def _choose_action_type(user_message: str) -> str:
+    """Pick the Group B action handler for this campaign draft.
+
+    Defaults to ``gbp.post``. Owner directives override: explicit Instagram wins
+    over facebook/gbp; otherwise facebook wins over gbp; otherwise gbp wins over
+    the default.
+    """
+    msg = user_message or ""
+    if _INSTAGRAM_RE.search(msg):
+        return "social.instagram.post"
+    if _FACEBOOK_RE.search(msg):
+        return "social.facebook.post"
+    if _GBP_RE.search(msg):
+        return "gbp.post"
+    return "gbp.post"
+
 
 _DESCRIPTION = (
     "Route here when the owner wants to create a marketing campaign, promotion, "
@@ -69,12 +97,15 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
         )
         ctx.step("Draft prepared (fallback)", "Deterministic fallback draft ready.")
 
+    action_type = _choose_action_type(ctx.user_message)
+
     return WorkerResult(
         deliverable={"title": title, "format": "markdown", "body": body},
         summary=(
             f"Campaign draft ready: “{title}”. "
             "Review it in the side panel, then approve or reject."
         ),
+        action_type=action_type,
     )
 
 

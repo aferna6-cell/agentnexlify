@@ -757,6 +757,49 @@ class TestLeadNurtureChannelRouting:
 
 
 # ===========================================================================
+# campaign worker — runtime channel routing (1:N action mapping)
+# ===========================================================================
+
+
+class TestCampaignChannelRouting:
+    """Owner request picks the social action at worker runtime.
+
+    campaign is a 1:N worker — three registered handlers consume its
+    deliverable: ``gbp.post``, ``social.instagram.post``,
+    ``social.facebook.post``. Default is GBP (universal SMB reach, no
+    follower base, helps local SEO). Explicit channel directives win.
+    """
+
+    def test_defaults_to_gbp_when_no_channel_directive(self):
+        from backend.services.os_workers.campaign import _choose_action_type
+
+        assert _choose_action_type("Draft a summer sale campaign") == "gbp.post"
+        assert _choose_action_type("") == "gbp.post"
+
+    def test_instagram_directive_routes_to_instagram(self):
+        from backend.services.os_workers.campaign import _choose_action_type
+
+        assert _choose_action_type("Post to Instagram for our sale") == (
+            "social.instagram.post"
+        )
+        assert _choose_action_type("Make an IG post") == "social.instagram.post"
+
+    def test_facebook_directive_routes_to_facebook(self):
+        from backend.services.os_workers.campaign import _choose_action_type
+
+        assert _choose_action_type("Post on Facebook about the event") == (
+            "social.facebook.post"
+        )
+        assert _choose_action_type("Write a FB post") == "social.facebook.post"
+
+    def test_gbp_directive_routes_to_gbp(self):
+        from backend.services.os_workers.campaign import _choose_action_type
+
+        assert _choose_action_type("Create a Google Business post") == "gbp.post"
+        assert _choose_action_type("Draft a GBP update") == "gbp.post"
+
+
+# ===========================================================================
 # tenant_scope (os_* additions)
 # ===========================================================================
 
