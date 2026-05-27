@@ -1,5 +1,5 @@
 /**
- * Integration API functions (Google Calendar, Facebook Messenger).
+ * Integration API functions (Google Calendar, Microsoft 365, HubSpot, Facebook).
  */
 import { request } from "./_client";
 
@@ -29,6 +29,20 @@ export function startM365CalendarAuth(tenantId, token) {
 
 export function disconnectM365Calendar(tenantId, token) {
   return request(`/api/v1/integrations/m365`, { method: "DELETE", token });
+}
+
+// --- HubSpot ---
+
+export function fetchHubSpotStatus(tenantId, token) {
+  return request(`/api/v1/integrations/hubspot/status`, { token });
+}
+
+export function startHubSpotAuth(tenantId, token) {
+  return request(`/api/v1/integrations/hubspot/auth`, { token });
+}
+
+export function disconnectHubSpot(tenantId, token) {
+  return request(`/api/v1/integrations/hubspot`, { method: "DELETE", token });
 }
 
 // --- Facebook Messenger ---

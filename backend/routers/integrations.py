@@ -17,7 +17,7 @@ from jose import JWTError, jwt
 
 from backend.config import settings
 from backend.dependencies import _get_current_tenant
-from backend.services import m365_calendar
+from backend.services import hubspot_tenant, m365_calendar
 from backend.services.google_calendar import (
     delete_integration,
     exchange_code,
@@ -397,7 +397,9 @@ async def hubspot_callback(
         ) from exc
 
     if settings.frontend_url:
-        return RedirectResponse(url=f"{settings.frontend_url}/#integrations")
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/?hubspot=connected#integrations"
+        )
 
     return HTMLResponse(
         content=(

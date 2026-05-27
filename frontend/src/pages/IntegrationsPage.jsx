@@ -16,6 +16,9 @@ import {
   fetchM365CalendarStatus,
   startM365CalendarAuth,
   disconnectM365Calendar,
+  fetchHubSpotStatus,
+  startHubSpotAuth,
+  disconnectHubSpot,
   fetchFacebookStatus,
   getFacebookAuthUrl,
   disconnectFacebook,
@@ -66,6 +69,34 @@ function FacebookIcon({ size = 40 }) {
         d="M33 24h-6v-4c0-1.1.9-2 2-2h4v-6h-4c-4.4 0-8 3.6-8 8v4h-4v6h4v14h6V30h4l2-6z"
         fill="#fff"
       />
+    </svg>
+  );
+}
+
+/* ── Inline SVG: HubSpot sprocket logo ── */
+function HubSpotIcon({ size = 40 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect width="48" height="48" rx="8" fill="#FF7A59" />
+      <circle cx="32" cy="32" r="6" fill="#fff" />
+      <circle cx="32" cy="32" r="3" fill="#FF7A59" />
+      <circle
+        cx="32"
+        cy="14"
+        r="3.5"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="2"
+      />
+      <rect x="31" y="17.5" width="2" height="9" fill="#fff" />
+      <rect x="14" y="22" width="14" height="2" fill="#fff" />
+      <rect x="14" y="22" width="2" height="14" fill="#fff" />
     </svg>
   );
 }
@@ -549,6 +580,165 @@ function M365CalendarSection({ token }) {
   );
 }
 
+/* ── HubSpot Section ── */
+function HubSpotSection({ token }) {
+  const { user } = useAuth();
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadStatus = useCallback(async () => {
+    if (!user?.tenantId) return;
+    setLoading(true);
+    try {
+      const data = await fetchHubSpotStatus(user.tenantId, token);
+      setStatus(data);
+    } catch (err) {
+      console.error("Failed to load HubSpot status", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.tenantId, token]);
+
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    setError(null);
+    try {
+      const data = await startHubSpotAuth(user.tenantId, token);
+      if (data.auth_url) window.location.href = data.auth_url;
+    } catch (err) {
+      const msg =
+        err?.message && err.message.includes("503")
+          ? "HubSpot OAuth not configured on this server."
+          : "Failed to start HubSpot authorization.";
+      setError(msg);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirmDisconnect) {
+      setConfirmDisconnect(true);
+      return;
+    }
+    setDisconnecting(true);
+    setError(null);
+    try {
+      await disconnectHubSpot(user.tenantId, token);
+      setConfirmDisconnect(false);
+      await loadStatus();
+    } catch (err) {
+      setError("Failed to disconnect.");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const connected = status?.connected;
+
+  return (
+    <div style={{ ...gcStyles.card, marginTop: "1rem" }}>
+      <div style={gcStyles.cardTop}>
+        <div style={gcStyles.iconWrap}>
+          <HubSpotIcon size={40} />
+        </div>
+        <div style={gcStyles.cardInfo}>
+          <div style={gcStyles.cardTitle}>
+            HubSpot CRM
+            {connected && (
+              <span style={gcStyles.connectedBadge}>Connected</span>
+            )}
+          </div>
+          <div style={gcStyles.cardDesc}>
+            Push leads captured by the Agent OS into your HubSpot contacts.
+            Internal CRM continues to capture every lead either way.
+          </div>
+        </div>
+      </div>
+      {loading && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            color: "var(--text-muted)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          Checking connection status...
+        </div>
+      )}
+      {!loading && connected && (
+        <div style={gcStyles.details}>
+          {status?.portal_id && (
+            <div style={gcStyles.detailRow}>
+              <span style={gcStyles.detailLabel}>Portal</span>
+              <span style={gcStyles.detailValue}>{status.portal_id}</span>
+            </div>
+          )}
+          {status?.hub_domain && (
+            <div style={{ ...gcStyles.detailRow, marginTop: "0.375rem" }}>
+              <span style={gcStyles.detailLabel}>Domain</span>
+              <span style={gcStyles.detailValue}>{status.hub_domain}</span>
+            </div>
+          )}
+          {status?.user && (
+            <div style={{ ...gcStyles.detailRow, marginTop: "0.375rem" }}>
+              <span style={gcStyles.detailLabel}>User</span>
+              <span style={gcStyles.detailValue}>{status.user}</span>
+            </div>
+          )}
+        </div>
+      )}
+      {error && (
+        <div className="error-banner" style={{ marginTop: "0.75rem" }}>
+          {error}
+        </div>
+      )}
+      <div style={gcStyles.cardActions}>
+        {!loading && connected ? (
+          <button
+            className="btn-danger"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+          >
+            {disconnecting
+              ? "Disconnecting..."
+              : confirmDisconnect
+                ? "Confirm disconnect?"
+                : "Disconnect"}
+          </button>
+        ) : (
+          !loading && (
+            <button
+              className="btn-primary"
+              onClick={handleConnect}
+              disabled={connecting}
+            >
+              {connecting ? "Connecting..." : "Connect HubSpot"}
+            </button>
+          )
+        )}
+        {!loading && connected && confirmDisconnect && (
+          <button
+            className="btn-secondary"
+            onClick={() => setConfirmDisconnect(false)}
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Page ── */
 export default function IntegrationsPage({ onNavigate }) {
   const { user, token } = useAuth();
@@ -585,6 +775,14 @@ export default function IntegrationsPage({ onNavigate }) {
       setToast("Microsoft 365 Calendar connected successfully!");
       const url = new URL(window.location);
       url.searchParams.delete("m365");
+      window.history.replaceState({}, "", url.pathname + url.search);
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    if (params.get("hubspot") === "connected") {
+      setToast("HubSpot connected successfully!");
+      const url = new URL(window.location);
+      url.searchParams.delete("hubspot");
       window.history.replaceState({}, "", url.pathname + url.search);
       const timer = setTimeout(() => setToast(null), 5000);
       return () => clearTimeout(timer);
@@ -771,6 +969,7 @@ export default function IntegrationsPage({ onNavigate }) {
         <>
           <GoogleCalendarSection token={token} />
           <M365CalendarSection token={token} />
+          <HubSpotSection token={token} />
           <FacebookMessengerSection token={token} />
         </>
       )}
