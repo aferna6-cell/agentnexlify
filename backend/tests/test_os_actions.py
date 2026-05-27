@@ -606,11 +606,14 @@ def test_crm_upsert_inserts_when_no_existing_match():
     ctx = _action_ctx({"body": "approved msg"}, db=db)
     with patch.object(crm_action, "_extract_contact", extractor), patch.object(
         crm_action, "_find_existing", finder
-    ), patch.object(crm_action, "tenant_insert", inserter):
+    ), patch.object(crm_action, "tenant_insert", inserter), patch.object(
+        crm_action, "hubspot_is_connected", return_value=False
+    ):
         result = asyncio.run(crm_action._run(ctx))
     assert result.status == "succeeded"
     assert result.response_payload["operation"] == "inserted"
     assert result.response_payload["lead_id"] == "lead-99"
+    assert "hubspot_push" not in result.response_payload
 
 
 def test_crm_upsert_updates_when_existing_match():
@@ -642,11 +645,14 @@ def test_crm_upsert_updates_when_existing_match():
     ctx = _action_ctx({"body": "approved msg"}, db=db)
     with patch.object(crm_action, "_extract_contact", extractor), patch.object(
         crm_action, "_find_existing", finder
-    ), patch.object(crm_action, "tenant_update", updater):
+    ), patch.object(crm_action, "tenant_update", updater), patch.object(
+        crm_action, "hubspot_is_connected", return_value=False
+    ):
         result = asyncio.run(crm_action._run(ctx))
     assert result.status == "succeeded"
     assert result.response_payload["operation"] == "updated"
     assert result.response_payload["lead_id"] == "lead-existing"
+    assert "hubspot_push" not in result.response_payload
 
 
 def test_crm_upsert_rejects_invalid_email_format():
@@ -665,6 +671,164 @@ def test_crm_upsert_rejects_invalid_email_format():
         result = asyncio.run(crm_action._run(_action_ctx({"body": "x"})))
     assert result.status == "failed"
     assert "invalid email" in (result.error_detail or {}).get("message", "")
+
+
+def test_crm_upsert_pushes_to_hubspot_when_connected():
+    """When tenant has HubSpot connected, push contact to HubSpot after internal upsert."""
+    from backend.services.os_actions import crm as crm_action
+
+    db = MagicMock()
+    extractor = AsyncMock(
+        return_value={
+            "name": "Eve Customer",
+            "email": "eve@example.com",
+            "phone": None,
+            "notes": "interested in autopilot",
+            "areas_of_interest": ["autopilot"],
+        }
+    )
+    finder = MagicMock(return_value=None)
+    insert_builder = MagicMock()
+    insert_builder.execute.return_value = SimpleNamespace(data=[{"id": "lead-555"}])
+    inserter = MagicMock(return_value=insert_builder)
+    hubspot_push = AsyncMock(
+        return_value={
+            "success": True,
+            "detail": "created",
+            "contact_id": "hs-12345",
+            "operation": "created",
+        }
+    )
+    ctx = _action_ctx({"body": "approved"}, db=db)
+    with patch.object(crm_action, "_extract_contact", extractor), patch.object(
+        crm_action, "_find_existing", finder
+    ), patch.object(crm_action, "tenant_insert", inserter), patch.object(
+        crm_action, "hubspot_is_connected", return_value=True
+    ), patch.object(
+        crm_action, "hubspot_upsert_contact", hubspot_push
+    ):
+        result = asyncio.run(crm_action._run(ctx))
+    assert result.status == "succeeded"
+    assert result.response_payload["lead_id"] == "lead-555"
+    assert result.response_payload["operation"] == "inserted"
+    assert result.response_payload["hubspot_contact_id"] == "hs-12345"
+    assert result.response_payload["hubspot_push"]["success"] is True
+    hubspot_push.assert_awaited_once()
+
+
+def test_crm_upsert_hard_fails_when_hubspot_push_fails():
+    """If HubSpot push fails, whole action fails — but lead_id preserved in response."""
+    from backend.services.os_actions import crm as crm_action
+
+    db = MagicMock()
+    extractor = AsyncMock(
+        return_value={
+            "name": "Frank",
+            "email": "frank@example.com",
+            "phone": None,
+            "notes": "wants demo",
+            "areas_of_interest": None,
+        }
+    )
+    finder = MagicMock(return_value=None)
+    insert_builder = MagicMock()
+    insert_builder.execute.return_value = SimpleNamespace(data=[{"id": "lead-666"}])
+    inserter = MagicMock(return_value=insert_builder)
+    hubspot_push = AsyncMock(
+        return_value={"success": False, "detail": "HubSpot auth error: 401"}
+    )
+    ctx = _action_ctx({"body": "approved"}, db=db)
+    with patch.object(crm_action, "_extract_contact", extractor), patch.object(
+        crm_action, "_find_existing", finder
+    ), patch.object(crm_action, "tenant_insert", inserter), patch.object(
+        crm_action, "hubspot_is_connected", return_value=True
+    ), patch.object(
+        crm_action, "hubspot_upsert_contact", hubspot_push
+    ):
+        result = asyncio.run(crm_action._run(ctx))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "hubspot_push"
+    assert "auth error" in (result.error_detail or {}).get("message", "")
+    # Lead was created internally — preserve lead_id for observability.
+    assert result.response_payload["lead_id"] == "lead-666"
+    assert result.response_payload["operation"] == "inserted"
+    assert result.response_payload["hubspot_push"]["success"] is False
+
+
+def test_crm_upsert_skips_hubspot_when_not_connected():
+    """When HubSpot not connected, internal upsert only — no hubspot fields in response."""
+    from backend.services.os_actions import crm as crm_action
+
+    db = MagicMock()
+    extractor = AsyncMock(
+        return_value={
+            "name": "Gina",
+            "email": "gina@example.com",
+            "phone": None,
+            "notes": None,
+            "areas_of_interest": None,
+        }
+    )
+    finder = MagicMock(return_value=None)
+    insert_builder = MagicMock()
+    insert_builder.execute.return_value = SimpleNamespace(data=[{"id": "lead-777"}])
+    inserter = MagicMock(return_value=insert_builder)
+    hubspot_push = AsyncMock(
+        return_value={"success": True, "detail": "should not be called"}
+    )
+    ctx = _action_ctx({"body": "approved"}, db=db)
+    with patch.object(crm_action, "_extract_contact", extractor), patch.object(
+        crm_action, "_find_existing", finder
+    ), patch.object(crm_action, "tenant_insert", inserter), patch.object(
+        crm_action, "hubspot_is_connected", return_value=False
+    ), patch.object(
+        crm_action, "hubspot_upsert_contact", hubspot_push
+    ):
+        result = asyncio.run(crm_action._run(ctx))
+    assert result.status == "succeeded"
+    assert result.response_payload["lead_id"] == "lead-777"
+    assert "hubspot_push" not in result.response_payload
+    assert "hubspot_contact_id" not in result.response_payload
+    hubspot_push.assert_not_awaited()
+
+
+def test_crm_upsert_falls_back_when_hubspot_lookup_raises():
+    """If hubspot_is_connected raises, treat as not-connected — internal flow intact."""
+    from backend.services.os_actions import crm as crm_action
+
+    db = MagicMock()
+    extractor = AsyncMock(
+        return_value={
+            "name": "Hank",
+            "email": "hank@example.com",
+            "phone": None,
+            "notes": None,
+            "areas_of_interest": None,
+        }
+    )
+    finder = MagicMock(return_value=None)
+    insert_builder = MagicMock()
+    insert_builder.execute.return_value = SimpleNamespace(data=[{"id": "lead-888"}])
+    inserter = MagicMock(return_value=insert_builder)
+    hubspot_push = AsyncMock(return_value={"success": True})
+
+    def _connected_raises(_tenant_id):
+        raise RuntimeError("supabase down")
+
+    ctx = _action_ctx({"body": "approved"}, db=db)
+    with patch.object(crm_action, "_extract_contact", extractor), patch.object(
+        crm_action, "_find_existing", finder
+    ), patch.object(crm_action, "tenant_insert", inserter), patch.object(
+        crm_action, "hubspot_is_connected", side_effect=_connected_raises
+    ), patch.object(
+        crm_action, "hubspot_upsert_contact", hubspot_push
+    ):
+        result = asyncio.run(crm_action._run(ctx))
+    # Safe fallback: internal lead intact, no hubspot push attempted.
+    assert result.status == "succeeded"
+    assert result.response_payload["lead_id"] == "lead-888"
+    assert "hubspot_push" not in result.response_payload
+    hubspot_push.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

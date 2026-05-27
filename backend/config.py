@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     m365_redirect_uri: str = ""
     m365_tenant_id: str = "common"
 
+    # HubSpot OAuth — CRM write-back for contact upserts via Group B actions.
+    # Scopes are space-separated: `crm.objects.contacts.read
+    # crm.objects.contacts.write oauth`. The redirect URI must match the
+    # value registered in the HubSpot app config exactly.
+    hubspot_client_id: str = ""
+    hubspot_client_secret: str = ""
+    hubspot_redirect_uri: str = ""
+
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
     voyage_api_key: str = ""

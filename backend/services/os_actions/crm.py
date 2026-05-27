@@ -11,9 +11,14 @@ import json
 import logging
 import re
 
+from backend.services.hubspot_tenant import is_connected as hubspot_is_connected
+from backend.services.hubspot_tenant import upsert_contact as hubspot_upsert_contact
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_actions.base import ActionContext, ActionResult, ActionSpec
 from backend.services.tenant_scope import tenant_insert, tenant_select, tenant_update
+
+# Re-export for test patching (`patch.object(crm, "hubspot_is_connected", ...)`).
+__all__ = ["hubspot_is_connected", "hubspot_upsert_contact", "SPEC"]
 
 logger = logging.getLogger(__name__)
 
@@ -209,10 +214,55 @@ async def _run(ctx: ActionContext) -> ActionResult:
             error_detail={"stage": "upsert", "message": str(e)[:300]},
         )
 
+    response_payload: dict = {"lead_id": lead_id, "operation": operation}
+
+    # ── HubSpot runtime dispatch ─────────────────────────────────
+    # If the tenant has connected HubSpot, ALSO push the contact to HubSpot.
+    # Hard-fail the whole action on push failure — internal lead_id stays in
+    # response_payload for observability, owner sees clear error, forces fix.
+    try:
+        hubspot_connected = hubspot_is_connected(ctx.client_id)
+    except Exception:
+        logger.warning(
+            "os_action_crm: hubspot_is_connected check failed client_id=%s",
+            ctx.client_id,
+            exc_info=True,
+        )
+        hubspot_connected = False
+
+    if hubspot_connected:
+        try:
+            hubspot_result = await hubspot_upsert_contact(
+                tenant_id=ctx.client_id, payload=request_payload
+            )
+        except Exception as e:
+            logger.exception(
+                "os_action_crm: hubspot push raised client_id=%s", ctx.client_id
+            )
+            hubspot_result = {
+                "success": False,
+                "detail": f"unexpected exception: {str(e)[:200]}",
+            }
+
+        response_payload["hubspot_push"] = hubspot_result
+        if not hubspot_result.get("success"):
+            return ActionResult(
+                status="failed",
+                request_payload=request_payload,
+                response_payload=response_payload,
+                error_detail={
+                    "stage": "hubspot_push",
+                    "message": str(
+                        hubspot_result.get("detail") or "hubspot push failed"
+                    )[:300],
+                },
+            )
+        response_payload["hubspot_contact_id"] = hubspot_result.get("contact_id")
+
     return ActionResult(
         status="succeeded",
         request_payload=request_payload,
-        response_payload={"lead_id": lead_id, "operation": operation},
+        response_payload=response_payload,
     )
 
 

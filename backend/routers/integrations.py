@@ -320,3 +320,128 @@ async def m365_disconnect(claims: dict = Depends(_get_current_tenant)):
         ) from exc
 
     return {"status": "disconnected"}
+
+
+# ── HubSpot CRM ──────────────────────────────────────────────
+
+
+@router.get("/hubspot/auth")
+async def hubspot_auth(claims: dict = Depends(_get_current_tenant)):
+    """Generate HubSpot OAuth authorization URL."""
+    tenant_id: str = claims["tenant_id"]
+    if not (
+        settings.hubspot_client_id
+        and settings.hubspot_client_secret
+        and settings.hubspot_redirect_uri
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="HubSpot OAuth not configured on this deployment",
+        )
+    state = _encode_state(tenant_id)
+    redirect_uri = settings.hubspot_redirect_uri
+    auth_url = hubspot_tenant.build_authorization_url(redirect_uri, state)
+    return {"auth_url": auth_url}
+
+
+@router.get("/hubspot/callback")
+async def hubspot_callback(
+    code: str = Query(..., description="Authorization code from HubSpot"),
+    state: str = Query(..., description="Signed state token encoding tenant_id"),
+):
+    """Handle HubSpot OAuth callback.
+
+    Public route — browser arrives via redirect from HubSpot, not from the SPA.
+    Tenant identity is recovered from the signed ``state`` token.
+    """
+    tenant_id = _decode_state(state)
+    redirect_uri = settings.hubspot_redirect_uri
+
+    try:
+        tokens = hubspot_tenant.exchange_code(code, redirect_uri)
+    except Exception as exc:
+        logger.exception("hubspot: code exchange failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=400, detail="Failed to exchange authorization code"
+        ) from exc
+
+    access_token = tokens.get("access_token") or ""
+    refresh_token = tokens.get("refresh_token") or ""
+    if not access_token or not refresh_token:
+        # HubSpot OAuth always returns both — missing refresh_token means we
+        # cannot keep the integration alive past the ~30 min access TTL.
+        raise HTTPException(
+            status_code=400,
+            detail="Authorization missing tokens — retry the connect flow",
+        )
+
+    expires_in = int(tokens.get("expires_in") or 1800)
+    token_expiry = (
+        datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+    ).isoformat()
+
+    metadata = hubspot_tenant.fetch_profile(access_token)
+
+    try:
+        hubspot_tenant.save_integration(
+            tenant_id=tenant_id,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_expiry=token_expiry,
+            metadata=metadata,
+        )
+    except Exception as exc:
+        logger.exception("hubspot: save integration failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=500, detail="Failed to save integration"
+        ) from exc
+
+    if settings.frontend_url:
+        return RedirectResponse(url=f"{settings.frontend_url}/#integrations")
+
+    return HTMLResponse(
+        content=(
+            "<html><body style='font-family:sans-serif;text-align:center;padding:4rem'>"
+            "<h2>Connected!</h2><p>HubSpot has been linked. You can close this window.</p>"
+            "</body></html>"
+        ),
+    )
+
+
+@router.get("/hubspot/status")
+async def hubspot_status(claims: dict = Depends(_get_current_tenant)):
+    """Check whether the tenant has a connected HubSpot integration."""
+    tenant_id: str = claims["tenant_id"]
+    integration = hubspot_tenant.get_integration(tenant_id)
+
+    if not integration:
+        return {
+            "connected": False,
+            "portal_id": None,
+            "hub_domain": None,
+            "user": None,
+        }
+
+    meta = integration.get("metadata") or {}
+    return {
+        "connected": True,
+        "portal_id": meta.get("portal_id"),
+        "hub_domain": meta.get("hub_domain"),
+        "user": meta.get("user"),
+    }
+
+
+@router.delete("/hubspot")
+async def hubspot_disconnect(claims: dict = Depends(_get_current_tenant)):
+    """Remove the HubSpot integration for the tenant."""
+    tenant_id: str = claims["tenant_id"]
+
+    try:
+        hubspot_tenant.delete_integration(tenant_id)
+    except Exception as exc:
+        logger.exception("hubspot: disconnect failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=500, detail="Failed to disconnect integration"
+        ) from exc
+
+    return {"status": "disconnected"}
