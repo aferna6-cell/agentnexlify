@@ -800,6 +800,182 @@ class TestCampaignChannelRouting:
 
 
 # ===========================================================================
+# Group C: bi-directional mirror (OS assistant → legacy channel store)
+# ===========================================================================
+
+
+class TestOutboundMirrorWidget:
+    """OS assistant replies on widget-sourced threads must land in chat_messages.
+
+    Customer typed in widget → bridge_widget pushed into OS → orchestrator
+    answered → assistant_message lives in os_messages. But the widget reads
+    from chat_messages, not os_messages. So without the outbound mirror the
+    customer never sees the OS reply.
+
+    Mirror contract:
+    - widget source + session_id in metadata → insert chat_messages row,
+      tag with os_message_id for idempotency, return ``mirrored``.
+    - widget source missing session_id → ``skipped:no_session``.
+    - owner thread (no source) → ``skipped:no_channel``.
+    - sms/email/facebook → ``skipped:outbound_not_implemented``
+      (those need actual provider sends, not just a DB write).
+    - duplicate call with same os_message_id → only one chat_messages row.
+    - DB exception → ``error:<reason>``, no raise.
+    """
+
+    def _thread(self, *, source: str | None, session_id: str | None = None) -> dict:
+        meta = {"session_id": session_id} if session_id is not None else None
+        return {
+            "id": "thread-1",
+            "source": source,
+            "source_metadata": meta,
+        }
+
+    def _assistant(self, content: str = "Hello there") -> dict:
+        return {
+            "id": "os-msg-1",
+            "thread_id": "thread-1",
+            "role": "assistant",
+            "content": content,
+        }
+
+    def test_widget_thread_mirrors_to_chat_messages(self):
+        from backend.services.os_outbound_mirror import mirror_assistant_message
+
+        sb = FakeSupabase()
+        result = mirror_assistant_message(
+            sb,
+            _TENANT,
+            self._thread(source="widget", session_id="session-abc"),
+            self._assistant("Hi! How can I help?"),
+        )
+        assert result["status"] == "mirrored"
+        rows = sb.store.get("chat_messages", [])
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["tenant_id"] == _TENANT
+        assert row["session_id"] == "session-abc"
+        assert row["role"] == "assistant"
+        assert row["content"] == "Hi! How can I help?"
+        assert row["os_message_id"] == "os-msg-1"
+
+    def test_widget_thread_missing_session_id_is_skipped(self):
+        from backend.services.os_outbound_mirror import mirror_assistant_message
+
+        sb = FakeSupabase()
+        result = mirror_assistant_message(
+            sb,
+            _TENANT,
+            self._thread(source="widget", session_id=None),
+            self._assistant(),
+        )
+        assert result["status"] == "skipped:no_session"
+        assert sb.store.get("chat_messages", []) == []
+
+    def test_owner_thread_with_no_source_is_skipped(self):
+        from backend.services.os_outbound_mirror import mirror_assistant_message
+
+        sb = FakeSupabase()
+        result = mirror_assistant_message(
+            sb,
+            _TENANT,
+            self._thread(source=None),
+            self._assistant(),
+        )
+        assert result["status"] == "skipped:no_channel"
+        assert sb.store.get("chat_messages", []) == []
+
+    @pytest.mark.parametrize("source", ["sms", "email", "facebook"])
+    def test_non_widget_channels_skip_until_outbound_send_lands(self, source):
+        from backend.services.os_outbound_mirror import mirror_assistant_message
+
+        sb = FakeSupabase()
+        result = mirror_assistant_message(
+            sb,
+            _TENANT,
+            self._thread(source=source, session_id="ignored"),
+            self._assistant(),
+        )
+        assert result["status"] == "skipped:outbound_not_implemented"
+        assert sb.store.get("chat_messages", []) == []
+
+    def test_mirror_is_idempotent_on_replay(self):
+        from backend.services.os_outbound_mirror import mirror_assistant_message
+
+        sb = FakeSupabase()
+        thread = self._thread(source="widget", session_id="session-abc")
+        assistant = self._assistant("Idempotent reply")
+
+        first = mirror_assistant_message(sb, _TENANT, thread, assistant)
+        second = mirror_assistant_message(sb, _TENANT, thread, assistant)
+
+        assert first["status"] == "mirrored"
+        assert second["status"] == "skipped:already_mirrored"
+        assert len(sb.store.get("chat_messages", [])) == 1
+
+    def test_db_failure_returns_error_status(self):
+        from backend.services.os_outbound_mirror import mirror_assistant_message
+
+        sb = FakeSupabase()
+        sb.raise_on.add(("chat_messages", "insert"))
+        result = mirror_assistant_message(
+            sb,
+            _TENANT,
+            self._thread(source="widget", session_id="session-abc"),
+            self._assistant(),
+        )
+        assert result["status"].startswith("error:")
+        assert sb.store.get("chat_messages", []) == []
+
+
+class TestThreadRunnerMirrorIntegration:
+    """Runner wiring: widget-sourced thread → assistant reply mirrors to chat_messages."""
+
+    def test_widget_sourced_thread_mirrors_assistant_answer(self):
+        fake = FakeSupabase()
+        fake.seed(
+            "os_threads",
+            {
+                "id": "thread-widget-1",
+                "client_id": _TENANT,
+                "source": "widget",
+                "source_metadata": {"session_id": "sess-xyz"},
+                "title": "Widget chat",
+                "updated_at": "2026-05-01T00:00:00+00:00",
+            },
+        )
+        with patched_db(fake), patched_orchestrator(
+            '{"action": "answer", "reply": "Hi from OS"}'
+        ):
+            resp = client.post(
+                "/api/v1/os/threads/thread-widget-1/messages",
+                json={"content": "customer message"},
+                headers=_auth(),
+            )
+        assert resp.status_code == 201
+        chat_rows = fake.store.get("chat_messages", [])
+        assert len(chat_rows) == 1
+        assert chat_rows[0]["session_id"] == "sess-xyz"
+        assert chat_rows[0]["role"] == "assistant"
+        assert chat_rows[0]["content"] == "Hi from OS"
+        assert chat_rows[0]["os_message_id"] == resp.json()["assistant_message"]["id"]
+
+    def test_owner_sourced_thread_does_not_mirror(self):
+        fake = FakeSupabase()
+        _seed_thread(fake)
+        with patched_db(fake), patched_orchestrator(
+            '{"action": "answer", "reply": "owner reply"}'
+        ):
+            resp = client.post(
+                "/api/v1/os/threads/thread-001/messages",
+                json={"content": "hi"},
+                headers=_auth(),
+            )
+        assert resp.status_code == 201
+        assert fake.store.get("chat_messages", []) == []
+
+
+# ===========================================================================
 # tenant_scope (os_* additions)
 # ===========================================================================
 

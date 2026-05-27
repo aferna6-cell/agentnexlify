@@ -28,6 +28,7 @@ from fastapi import BackgroundTasks
 
 from backend.services import orchestrator, os_workers
 from backend.services.email_sender import send_email
+from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -151,6 +152,8 @@ async def process_user_turn(
             .data[0]
         )
 
+    _mirror_to_channel(db, client_id, thread_id, assistant_message)
+
     tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
         "id", thread_id
     ).execute()
@@ -161,6 +164,47 @@ async def process_user_turn(
         "action": decision.action,
         "agent_runs": agent_runs,
     }
+
+
+def _mirror_to_channel(
+    db, client_id: str, thread_id: str, assistant_message: dict
+) -> None:
+    """Best-effort Group C bi-directional sync.
+
+    Reads the thread's inbound source (widget/email/sms/facebook) and mirrors
+    the assistant reply back into the originating channel store so the
+    customer actually sees it. Never raises — OS reply is already persisted
+    in os_messages regardless of mirror outcome.
+    """
+    try:
+        thread_resp = (
+            tenant_table(db, "os_threads", client_id)
+            .select("id, source, source_metadata")
+            .eq("id", thread_id)
+            .limit(1)
+            .execute()
+        )
+        thread_rows = getattr(thread_resp, "data", None) or []
+        if not thread_rows:
+            return
+        result = mirror_assistant_message(
+            db, client_id, thread_rows[0], assistant_message
+        )
+        status = result.get("status", "")
+        if status.startswith("error:"):
+            logger.warning(
+                "os_outbound_mirror: client_id=%s thread=%s status=%s",
+                client_id,
+                thread_id,
+                status,
+            )
+    except Exception:
+        logger.warning(
+            "os_outbound_mirror: unexpected failure client_id=%s thread=%s",
+            client_id,
+            thread_id,
+            exc_info=True,
+        )
 
 
 def _create_backlog(
