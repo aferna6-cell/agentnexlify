@@ -152,7 +152,7 @@ async def process_user_turn(
             .data[0]
         )
 
-    _mirror_to_channel(db, client_id, thread_id, assistant_message)
+    await _mirror_to_channel(db, client_id, thread_id, assistant_message)
 
     tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
         "id", thread_id
@@ -166,7 +166,7 @@ async def process_user_turn(
     }
 
 
-def _mirror_to_channel(
+async def _mirror_to_channel(
     db, client_id: str, thread_id: str, assistant_message: dict
 ) -> None:
     """Best-effort Group C bi-directional sync.
@@ -187,7 +187,7 @@ def _mirror_to_channel(
         thread_rows = getattr(thread_resp, "data", None) or []
         if not thread_rows:
             return
-        result = mirror_assistant_message(
+        result = await mirror_assistant_message(
             db, client_id, thread_rows[0], assistant_message
         )
         status = result.get("status", "")

@@ -839,11 +839,11 @@ class TestOutboundMirrorWidget:
             "content": content,
         }
 
-    def test_widget_thread_mirrors_to_chat_messages(self):
+    async def test_widget_thread_mirrors_to_chat_messages(self):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
         sb = FakeSupabase()
-        result = mirror_assistant_message(
+        result = await mirror_assistant_message(
             sb,
             _TENANT,
             self._thread(source="widget", session_id="session-abc"),
@@ -859,11 +859,11 @@ class TestOutboundMirrorWidget:
         assert row["content"] == "Hi! How can I help?"
         assert row["os_message_id"] == "os-msg-1"
 
-    def test_widget_thread_missing_session_id_is_skipped(self):
+    async def test_widget_thread_missing_session_id_is_skipped(self):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
         sb = FakeSupabase()
-        result = mirror_assistant_message(
+        result = await mirror_assistant_message(
             sb,
             _TENANT,
             self._thread(source="widget", session_id=None),
@@ -872,11 +872,11 @@ class TestOutboundMirrorWidget:
         assert result["status"] == "skipped:no_session"
         assert sb.store.get("chat_messages", []) == []
 
-    def test_owner_thread_with_no_source_is_skipped(self):
+    async def test_owner_thread_with_no_source_is_skipped(self):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
         sb = FakeSupabase()
-        result = mirror_assistant_message(
+        result = await mirror_assistant_message(
             sb,
             _TENANT,
             self._thread(source=None),
@@ -885,12 +885,12 @@ class TestOutboundMirrorWidget:
         assert result["status"] == "skipped:no_channel"
         assert sb.store.get("chat_messages", []) == []
 
-    @pytest.mark.parametrize("source", ["sms", "email", "facebook"])
-    def test_non_widget_channels_skip_until_outbound_send_lands(self, source):
+    @pytest.mark.parametrize("source", ["email", "facebook"])
+    async def test_email_and_facebook_skip_until_outbound_send_lands(self, source):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
         sb = FakeSupabase()
-        result = mirror_assistant_message(
+        result = await mirror_assistant_message(
             sb,
             _TENANT,
             self._thread(source=source, session_id="ignored"),
@@ -899,26 +899,26 @@ class TestOutboundMirrorWidget:
         assert result["status"] == "skipped:outbound_not_implemented"
         assert sb.store.get("chat_messages", []) == []
 
-    def test_mirror_is_idempotent_on_replay(self):
+    async def test_mirror_is_idempotent_on_replay(self):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
         sb = FakeSupabase()
         thread = self._thread(source="widget", session_id="session-abc")
         assistant = self._assistant("Idempotent reply")
 
-        first = mirror_assistant_message(sb, _TENANT, thread, assistant)
-        second = mirror_assistant_message(sb, _TENANT, thread, assistant)
+        first = await mirror_assistant_message(sb, _TENANT, thread, assistant)
+        second = await mirror_assistant_message(sb, _TENANT, thread, assistant)
 
         assert first["status"] == "mirrored"
         assert second["status"] == "skipped:already_mirrored"
         assert len(sb.store.get("chat_messages", [])) == 1
 
-    def test_db_failure_returns_error_status(self):
+    async def test_db_failure_returns_error_status(self):
         from backend.services.os_outbound_mirror import mirror_assistant_message
 
         sb = FakeSupabase()
         sb.raise_on.add(("chat_messages", "insert"))
-        result = mirror_assistant_message(
+        result = await mirror_assistant_message(
             sb,
             _TENANT,
             self._thread(source="widget", session_id="session-abc"),
@@ -926,6 +926,200 @@ class TestOutboundMirrorWidget:
         )
         assert result["status"].startswith("error:")
         assert sb.store.get("chat_messages", []) == []
+
+
+class TestOutboundMirrorSMS:
+    """OS assistant replies on sms-sourced threads must dispatch outbound SMS.
+
+    Customer texted in → twilio webhook bridged into OS → orchestrator
+    answered → assistant_message lives in os_messages. Without phase-2
+    outbound send the customer never sees the OS reply.
+
+    Mirror contract for SMS:
+    - sms source + recipient phone in metadata + non-empty content
+      → call Twilio (BYO if connected, else platform pool), return
+      ``mirrored`` with provider tag on success.
+    - sms source + ``stop_keyword=True`` in metadata → ``skipped:stop_keyword``
+      (TCPA: never send to unsubscribed numbers).
+    - sms source + missing ``from`` phone → ``skipped:no_session``.
+    - sms source + empty assistant content → ``skipped:empty_content``.
+    - twilio transport returns ``success=False`` → ``error:sms_send:<detail>``.
+    """
+
+    def _sms_thread(
+        self,
+        *,
+        from_phone: str | None = "+15551234567",
+        to_phone: str = "+15559990000",
+        stop_keyword: bool = False,
+    ) -> dict:
+        meta: dict[str, Any] = {"provider": "twilio"}
+        if from_phone is not None:
+            meta["from"] = from_phone
+        meta["to"] = to_phone
+        if stop_keyword:
+            meta["stop_keyword"] = True
+        return {
+            "id": "thread-sms-1",
+            "source": "sms",
+            "source_metadata": meta,
+        }
+
+    def _assistant(self, content: str = "Booked 2pm Tuesday") -> dict:
+        return {
+            "id": "os-msg-sms-1",
+            "thread_id": "thread-sms-1",
+            "role": "assistant",
+            "content": content,
+        }
+
+    async def test_sms_sends_via_byo_when_connected(self, monkeypatch):
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_tenant as twilio_tenant
+
+        captured: dict[str, Any] = {}
+
+        async def fake_byo_send(*, tenant_id, to, body):
+            captured["tenant_id"] = tenant_id
+            captured["to"] = to
+            captured["body"] = body
+            return {"success": True, "detail": "sent", "message_sid": "SMxxx"}
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", fake_byo_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._sms_thread(),
+            self._assistant("Booked 2pm Tuesday"),
+        )
+        assert result["status"] == "mirrored"
+        assert result["provider"] == "twilio_byo"
+        assert result["message_sid"] == "SMxxx"
+        assert captured == {
+            "tenant_id": _TENANT,
+            "to": "+15551234567",
+            "body": "Booked 2pm Tuesday",
+        }
+
+    async def test_sms_falls_back_to_platform_when_no_byo(self, monkeypatch):
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_service as twilio_service
+        import backend.services.twilio_tenant as twilio_tenant
+
+        captured: dict[str, Any] = {}
+
+        async def fake_platform_send(to, body, from_number=None):
+            captured["to"] = to
+            captured["body"] = body
+            return True
+
+        async def should_not_call(**kwargs):
+            raise AssertionError("BYO sender called but BYO is disconnected")
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: False)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", should_not_call)
+        monkeypatch.setattr(twilio_service, "send_sms", fake_platform_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._sms_thread(from_phone="+15557654321"),
+            self._assistant("Platform path reply"),
+        )
+        assert result["status"] == "mirrored"
+        assert result["provider"] == "twilio_platform"
+        assert captured == {"to": "+15557654321", "body": "Platform path reply"}
+
+    async def test_sms_byo_failure_returns_error(self, monkeypatch):
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def fake_byo_send(*, tenant_id, to, body):
+            return {"success": False, "detail": "twilio HTTP 400: invalid To"}
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", fake_byo_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, self._sms_thread(), self._assistant()
+        )
+        assert result["status"].startswith("error:sms_send:")
+        assert "invalid To" in result["status"]
+
+    async def test_sms_platform_failure_returns_error(self, monkeypatch):
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_service as twilio_service
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def fake_platform_send(to, body, from_number=None):
+            return False
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: False)
+        monkeypatch.setattr(twilio_service, "send_sms", fake_platform_send)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, self._sms_thread(), self._assistant()
+        )
+        assert result["status"] == "error:sms_send:platform_send_failed"
+
+    async def test_sms_stop_keyword_suppresses_outbound(self, monkeypatch):
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_service as twilio_service
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def should_not_call(*args, **kwargs):
+            raise AssertionError("outbound called on stop_keyword thread")
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", should_not_call)
+        monkeypatch.setattr(twilio_service, "send_sms", should_not_call)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._sms_thread(stop_keyword=True),
+            self._assistant(),
+        )
+        assert result["status"] == "skipped:stop_keyword"
+
+    async def test_sms_missing_from_phone_is_skipped(self, monkeypatch):
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_service as twilio_service
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def should_not_call(*args, **kwargs):
+            raise AssertionError("outbound called without recipient phone")
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", should_not_call)
+        monkeypatch.setattr(twilio_service, "send_sms", should_not_call)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(),
+            _TENANT,
+            self._sms_thread(from_phone=None),
+            self._assistant(),
+        )
+        assert result["status"] == "skipped:no_session"
+
+    async def test_sms_empty_content_is_skipped(self, monkeypatch):
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_service as twilio_service
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def should_not_call(*args, **kwargs):
+            raise AssertionError("outbound called with empty content")
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", should_not_call)
+        monkeypatch.setattr(twilio_service, "send_sms", should_not_call)
+
+        result = await mod.mirror_assistant_message(
+            FakeSupabase(), _TENANT, self._sms_thread(), self._assistant(content="   ")
+        )
+        assert result["status"] == "skipped:empty_content"
 
 
 class TestThreadRunnerMirrorIntegration:
