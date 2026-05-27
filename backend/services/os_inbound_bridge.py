@@ -133,6 +133,64 @@ def is_bridge_enabled(db: Any, client_id: str, source: BridgeSource) -> bool:
     return bool(cfg.get(f"{source}_enabled", False))
 
 
+_CONFIG_FIELDS = {"email_inbound_address", "email_provider"}
+_EMAIL_PROVIDERS = {"postmark", "mailgun"}
+
+
+def set_bridge_config(
+    db: Any, client_id: str, updates: dict[str, Any]
+) -> dict[str, Any]:
+    """Upsert non-toggle config fields (email_inbound_address, email_provider).
+
+    Only whitelisted fields in ``_CONFIG_FIELDS`` are accepted — unknown
+    keys raise ``ValueError`` to keep the JSONB column from drifting.
+    Email addresses are normalized to lowercase + stripped so the
+    ``resolve_tenant_by_inbound_email`` comparison stays consistent
+    regardless of how tenants paste the value. ``None`` clears a field.
+
+    Returns the post-update merged config.
+    """
+    unknown = set(updates) - _CONFIG_FIELDS
+    if unknown:
+        raise ValueError(f"Unknown bridge config fields: {sorted(unknown)}")
+
+    if "email_provider" in updates:
+        prov = updates["email_provider"]
+        if prov is not None and prov not in _EMAIL_PROVIDERS:
+            raise ValueError(
+                f"email_provider must be one of {sorted(_EMAIL_PROVIDERS)} or null"
+            )
+
+    current = get_bridge_config(db, client_id)
+    for key, value in updates.items():
+        if key == "email_inbound_address" and isinstance(value, str):
+            value = value.strip().lower() or None
+        current[key] = value
+
+    existing = (
+        tenant_table(db, "tenant_integrations", client_id)
+        .select("id")
+        .eq("provider", _BRIDGE_PROVIDER)
+        .limit(1)
+        .execute()
+    ).data or []
+
+    if existing:
+        tenant_table(db, "tenant_integrations", client_id).update(
+            {"config_jsonb": current, "enabled": True}
+        ).eq("id", existing[0]["id"]).execute()
+    else:
+        tenant_table(db, "tenant_integrations", client_id).insert(
+            {
+                "provider": _BRIDGE_PROVIDER,
+                "config_jsonb": current,
+                "enabled": True,
+            }
+        ).execute()
+
+    return current
+
+
 def resolve_tenant_by_inbound_phone(db: Any, to_number: str) -> str | None:
     """Cross-tenant lookup: which client owns this Twilio inbound number?
 

@@ -53,6 +53,17 @@ class BridgeToggleRequest(BaseModel):
     enabled: bool
 
 
+class BridgeConfigRequest(BaseModel):
+    """Partial bridge config update — set non-toggle fields.
+
+    All fields optional; only included keys are written. Use ``None`` to
+    clear a field (e.g. unset ``email_inbound_address`` when rotating).
+    """
+
+    email_inbound_address: str | None = None
+    email_provider: EmailProvider | None = None
+
+
 @router.get("/bridge-config")
 async def get_bridge_config(
     claims: dict = Depends(_get_current_tenant),
@@ -82,6 +93,38 @@ async def set_bridge_toggle(
     client_id = claims["tenant_id"]
     db = get_service_supabase()
     return os_inbound_bridge.set_bridge_toggle(db, client_id, req.source, req.enabled)
+
+
+@router.post("/bridge-config")
+async def set_bridge_config(
+    req: BridgeConfigRequest,
+    claims: dict = Depends(require_role("owner")),
+) -> dict[str, Any]:
+    """Set non-toggle bridge config fields (email_inbound_address, email_provider).
+
+    Owner-only — same gating as ``bridge-toggle`` since changing the
+    inbound address re-routes which tenant claims a given recipient.
+
+    Only includes fields the client explicitly sent in the request body
+    (using ``model_fields_set``) so callers can patch one field at a time
+    without clobbering the other. A field with value ``None`` is honored
+    as an explicit clear (different from "field absent").
+    """
+    client_id = claims["tenant_id"]
+    db = get_service_supabase()
+
+    updates: dict[str, Any] = {
+        field: getattr(req, field) for field in req.model_fields_set
+    }
+    if not updates:
+        # Nothing to change — return current state so the UI can refresh
+        # without a separate GET round-trip.
+        return os_inbound_bridge.get_bridge_config(db, client_id)
+
+    try:
+        return os_inbound_bridge.set_bridge_config(db, client_id, updates)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

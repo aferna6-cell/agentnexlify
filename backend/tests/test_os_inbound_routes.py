@@ -300,3 +300,176 @@ class TestPostThenGet:
             client.close()
 
         assert after.json()["sms_enabled"] is True
+
+
+# ---------------------------------------------------------------------------
+# POST /bridge-config (non-toggle config setter)
+# ---------------------------------------------------------------------------
+
+
+class TestPostBridgeConfig:
+    def test_owner_can_set_email_inbound_address(self, monkeypatch):
+        captured: dict = {}
+
+        def _fake_set_bridge_config(db, client_id, updates):
+            captured["args"] = (client_id, dict(updates))
+            return {
+                "widget_enabled": True,
+                "email_enabled": False,
+                "sms_enabled": False,
+                "facebook_enabled": False,
+                "email_provider": "postmark",
+                "email_inbound_address": updates.get("email_inbound_address"),
+            }
+
+        from backend.services import os_inbound_bridge
+
+        monkeypatch.setattr(
+            os_inbound_bridge, "set_bridge_config", _fake_set_bridge_config
+        )
+
+        client = _make_client()
+        try:
+            resp = client.post(
+                "/api/v1/os/inbound/bridge-config",
+                headers=_owner_headers(),
+                json={
+                    "email_inbound_address": "support@tenant.example",
+                    "email_provider": "postmark",
+                },
+            )
+        finally:
+            client.close()
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["email_provider"] == "postmark"
+        assert captured["args"][0] == _CLIENT_ID
+        assert captured["args"][1] == {
+            "email_inbound_address": "support@tenant.example",
+            "email_provider": "postmark",
+        }
+
+    def test_partial_update_only_includes_sent_fields(self, monkeypatch):
+        """model_fields_set must filter out fields the client did NOT send.
+
+        Otherwise a caller patching only ``email_provider`` would
+        accidentally clear ``email_inbound_address`` because the absent
+        field defaults to ``None``.
+        """
+        captured: dict = {}
+
+        def _fake_set_bridge_config(db, client_id, updates):
+            captured["updates"] = dict(updates)
+            return {"email_provider": updates.get("email_provider")}
+
+        from backend.services import os_inbound_bridge
+
+        monkeypatch.setattr(
+            os_inbound_bridge, "set_bridge_config", _fake_set_bridge_config
+        )
+
+        client = _make_client()
+        try:
+            resp = client.post(
+                "/api/v1/os/inbound/bridge-config",
+                headers=_owner_headers(),
+                json={"email_provider": "mailgun"},
+            )
+        finally:
+            client.close()
+
+        assert resp.status_code == 200, resp.text
+        assert captured["updates"] == {"email_provider": "mailgun"}
+        assert "email_inbound_address" not in captured["updates"]
+
+    def test_non_owner_gets_403(self, monkeypatch):
+        call_log: list = []
+        from backend.services import os_inbound_bridge
+
+        monkeypatch.setattr(
+            os_inbound_bridge,
+            "set_bridge_config",
+            lambda *a, **k: call_log.append((a, k)) or {},
+        )
+
+        client = _make_client()
+        try:
+            resp = client.post(
+                "/api/v1/os/inbound/bridge-config",
+                headers=_member_headers(),
+                json={"email_inbound_address": "x@y.com"},
+            )
+        finally:
+            client.close()
+
+        assert resp.status_code == 403, resp.text
+        assert call_log == [], "service must not run when role check fails"
+
+    def test_invalid_provider_returns_422(self):
+        """Pydantic Literal rejects unknown providers before service runs."""
+        client = _make_client()
+        try:
+            resp = client.post(
+                "/api/v1/os/inbound/bridge-config",
+                headers=_owner_headers(),
+                json={"email_provider": "sendgrid"},
+            )
+        finally:
+            client.close()
+
+        assert resp.status_code == 422, resp.text
+
+    def test_empty_body_returns_current_config(self, monkeypatch):
+        """No fields sent → endpoint returns current config (no-op write)."""
+        from backend.services import os_inbound_bridge
+
+        monkeypatch.setattr(
+            os_inbound_bridge,
+            "get_bridge_config",
+            lambda db, client_id: {"email_inbound_address": "existing@x.com"},
+        )
+
+        called = {"set": 0}
+
+        def _fake_set(*args, **kwargs):
+            called["set"] += 1
+            return {}
+
+        monkeypatch.setattr(os_inbound_bridge, "set_bridge_config", _fake_set)
+
+        client = _make_client()
+        try:
+            resp = client.post(
+                "/api/v1/os/inbound/bridge-config",
+                headers=_owner_headers(),
+                json={},
+            )
+        finally:
+            client.close()
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["email_inbound_address"] == "existing@x.com"
+        assert called["set"] == 0, "no-op body must not invoke setter"
+
+    def test_service_validation_error_returns_400(self, monkeypatch):
+        """ValueError from service (unknown field/bad provider) → 400."""
+        from backend.services import os_inbound_bridge
+
+        def _raise_value_error(db, client_id, updates):
+            raise ValueError("Unknown bridge config fields: ['rogue']")
+
+        monkeypatch.setattr(os_inbound_bridge, "set_bridge_config", _raise_value_error)
+
+        client = _make_client()
+        try:
+            resp = client.post(
+                "/api/v1/os/inbound/bridge-config",
+                headers=_owner_headers(),
+                json={"email_inbound_address": "x@y.com"},
+            )
+        finally:
+            client.close()
+
+        assert resp.status_code == 400, resp.text
+        assert "Unknown bridge config fields" in resp.json()["detail"]

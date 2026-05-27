@@ -22,6 +22,9 @@ import {
   fetchFacebookStatus,
   getFacebookAuthUrl,
   disconnectFacebook,
+  fetchBridgeConfig,
+  toggleBridge,
+  saveBridgeConfig,
 } from "../utils/api/integrations";
 import SkeletonLoader from "../components/SkeletonLoader";
 
@@ -739,6 +742,307 @@ function HubSpotSection({ token }) {
   );
 }
 
+/* ── Agent OS Inbound Bridges Section ── */
+const BRIDGE_SOURCES = [
+  {
+    key: "widget_enabled",
+    source: "widget",
+    label: "Widget chat",
+    desc: "Embedded chat on tenant sites. Default on.",
+  },
+  {
+    key: "email_enabled",
+    source: "email",
+    label: "Email inbound",
+    desc: "Postmark or Mailgun webhook posts inbound replies.",
+  },
+  {
+    key: "sms_enabled",
+    source: "sms",
+    label: "SMS inbound",
+    desc: "Twilio webhook posts inbound texts.",
+  },
+  {
+    key: "facebook_enabled",
+    source: "facebook",
+    label: "Facebook DM inbound",
+    desc: "Messenger webhook posts inbound DMs.",
+  },
+];
+
+function InboundBridgesSection({ token }) {
+  const [config, setConfig] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [savingToggle, setSavingToggle] = useState(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [error, setError] = useState(null);
+  const [emailAddress, setEmailAddress] = useState("");
+  const [emailProvider, setEmailProvider] = useState("");
+
+  const loadConfig = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchBridgeConfig(token);
+      setConfig(data);
+      setEmailAddress(data?.email_inbound_address || "");
+      setEmailProvider(data?.email_provider || "");
+    } catch (err) {
+      console.error("Failed to load bridge config", err);
+      setError("Failed to load bridge config.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
+
+  const handleToggle = async (source, key) => {
+    if (!config) return;
+    const next = !(config[key] ?? true);
+    setSavingToggle(source);
+    setError(null);
+    try {
+      const updated = await toggleBridge(source, next, token);
+      setConfig(updated);
+    } catch (err) {
+      console.error("Toggle failed", err);
+      setError(`Failed to toggle ${source}.`);
+    } finally {
+      setSavingToggle(null);
+    }
+  };
+
+  const dirty =
+    (config?.email_inbound_address || "") !==
+      emailAddress.trim().toLowerCase() ||
+    (config?.email_provider || "") !== emailProvider;
+
+  const handleSaveEmailConfig = async () => {
+    setSavingConfig(true);
+    setError(null);
+    try {
+      const updates = {};
+      const normalizedAddr = emailAddress.trim().toLowerCase();
+      if ((config?.email_inbound_address || "") !== normalizedAddr) {
+        updates.email_inbound_address = normalizedAddr || null;
+      }
+      if ((config?.email_provider || "") !== emailProvider) {
+        updates.email_provider = emailProvider || null;
+      }
+      if (Object.keys(updates).length === 0) {
+        setSavingConfig(false);
+        return;
+      }
+      const updated = await saveBridgeConfig(updates, token);
+      setConfig(updated);
+      setEmailAddress(updated?.email_inbound_address || "");
+      setEmailProvider(updated?.email_provider || "");
+    } catch (err) {
+      console.error("Save failed", err);
+      const msg =
+        err?.message && err.message.includes("400")
+          ? "Invalid email provider. Use postmark or mailgun."
+          : "Failed to save email bridge config.";
+      setError(msg);
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  return (
+    <div style={{ ...gcStyles.card, marginBottom: "1rem" }}>
+      <div style={gcStyles.cardTop}>
+        <div style={gcStyles.cardInfo}>
+          <div style={gcStyles.cardTitle}>Agent OS Inbound Bridges</div>
+          <div style={gcStyles.cardDesc}>
+            Per-source switches and email routing for the unified Agent OS
+            inbound pipeline. Disable a source to stop the OS reading messages
+            from that channel without removing the integration itself.
+          </div>
+        </div>
+      </div>
+
+      {loading && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            color: "var(--text-muted)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          Loading bridge config...
+        </div>
+      )}
+
+      {!loading && config && (
+        <>
+          <div style={{ marginTop: "1.25rem" }}>
+            {BRIDGE_SOURCES.map(({ key, source, label, desc }) => {
+              const enabled = config[key] ?? true;
+              const isSaving = savingToggle === source;
+              return (
+                <div
+                  key={source}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.75rem 0",
+                    borderBottom: "1px solid var(--border)",
+                    gap: "1rem",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: 600,
+                        color: "var(--text-primary)",
+                        marginBottom: "0.125rem",
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {desc}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(source, key)}
+                    disabled={isSaving}
+                    style={{
+                      flexShrink: 0,
+                      minWidth: 92,
+                      padding: "0.375rem 0.875rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border)",
+                      cursor: isSaving ? "default" : "pointer",
+                      background: enabled
+                        ? "var(--green-dim)"
+                        : "var(--bg-secondary)",
+                      color: enabled ? "var(--green)" : "var(--text-muted)",
+                    }}
+                  >
+                    {isSaving ? "..." : enabled ? "Enabled" : "Disabled"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ ...gcStyles.details, marginTop: "1.25rem" }}>
+            <div
+              style={{
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              Email inbound routing
+            </div>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                marginBottom: "0.875rem",
+                lineHeight: 1.5,
+              }}
+            >
+              Inbound address must match the Reply-To we send on outbound mail.
+              Provider sets which webhook handler verifies the signature.
+            </div>
+
+            <div style={{ marginBottom: "0.75rem" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                Inbound address
+              </label>
+              <input
+                type="email"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                placeholder="replies@tenant.example.com"
+                style={{
+                  width: "100%",
+                  padding: "0.5rem 0.75rem",
+                  fontSize: "0.8125rem",
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--text-primary)",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "0.75rem" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                Provider
+              </label>
+              <select
+                value={emailProvider}
+                onChange={(e) => setEmailProvider(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.5rem 0.75rem",
+                  fontSize: "0.8125rem",
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <option value="">— Not set —</option>
+                <option value="postmark">Postmark</option>
+                <option value="mailgun">Mailgun</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleSaveEmailConfig}
+              disabled={!dirty || savingConfig}
+              style={{ fontSize: "0.8125rem" }}
+            >
+              {savingConfig ? "Saving..." : "Save email config"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {error && (
+        <div className="error-banner" style={{ marginTop: "0.75rem" }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Main Page ── */
 export default function IntegrationsPage({ onNavigate }) {
   const { user, token } = useAuth();
@@ -967,6 +1271,7 @@ export default function IntegrationsPage({ onNavigate }) {
       {/* Services Tab */}
       {activeTab === "services" && (
         <>
+          <InboundBridgesSection token={token} />
           <GoogleCalendarSection token={token} />
           <M365CalendarSection token={token} />
           <HubSpotSection token={token} />

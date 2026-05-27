@@ -61,3 +61,25 @@ export function disconnectFacebook(tenantId, token) {
     token,
   });
 }
+
+// --- Agent OS Inbound Bridges ---
+
+export function fetchBridgeConfig(token) {
+  return request(`/api/v1/os/inbound/bridge-config`, { token });
+}
+
+export function toggleBridge(source, enabled, token) {
+  return request(`/api/v1/os/inbound/bridge-toggle`, {
+    method: "POST",
+    token,
+    body: { source, enabled },
+  });
+}
+
+export function saveBridgeConfig(updates, token) {
+  return request(`/api/v1/os/inbound/bridge-config`, {
+    method: "POST",
+    token,
+    body: updates,
+  });
+}
