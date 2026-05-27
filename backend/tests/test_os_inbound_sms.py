@@ -222,6 +222,9 @@ class TestTwilioInboundSMS:
             def is_(self, *_a, **_kw):
                 return self
 
+            def filter(self, *_a, **_kw):
+                return self
+
             def in_(self, col, ids):
                 update_calls.append({"op": "in_", "col": col, "ids": ids})
                 return self

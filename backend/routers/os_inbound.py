@@ -390,7 +390,7 @@ def _flip_lead_unsubscribed(db: Any, client_id: str, from_phone: str) -> None:
             db.table("leads")
             .select("id, phone")
             .eq("client_id", client_id)
-            .not_.is_("phone", "null")
+            .filter("phone", "not.is", "null")
             .execute()
         )
         rows = result.data or []

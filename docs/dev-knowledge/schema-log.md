@@ -1022,4 +1022,4 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 
 **Backend wiring:** `backend/services/os_outbound_mirror.py::_outbound_log_already_sent` + `_outbound_log_record` helpers; `_mirror_sms`, `_mirror_email`, `_mirror_facebook` each gained pre-check + post-insert calls; dispatcher threads `db` through. Tests: `tests/test_agent_os.py::TestOutboundMirrorIdempotency` (9 cases — replay skip per channel, channel-scope correctness, success records row, pre-check DB failure falls through, post-insert DB failure preserves mirrored).
 
-**Applied:** PENDING — apply via Supabase MCP `apply_migration` before deploy. Not a local-dev blocker; tests use `FakeSupabase`.
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 8 columns match schema, 3 indexes present (`os_outbound_log_pkey`, `os_outbound_log_dedup_uniq`, `os_outbound_log_client_sent_idx`), RLS enabled, `os_outbound_log_deny_public` policy in place.
