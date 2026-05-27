@@ -65,6 +65,38 @@ def _is_owner(claims: dict) -> bool:
     return role.lower() == "owner"
 
 
+@router.get("/deliverables/pending")
+async def list_pending_deliverables(claims: dict = Depends(_get_current_tenant)):
+    """Return all runs with deliverable_status='pending_approval' for this tenant.
+
+    Powers the sidebar approval badge — operators see pending drafts from any
+    page. Returns count + lightweight summary items (no full deliverable body)
+    so the badge poll stays cheap.
+    """
+    client_id = claims["tenant_id"]
+    db = get_service_supabase()
+    result = (
+        tenant_table(db, "os_agent_runs", client_id)
+        .select("*")
+        .eq("deliverable_status", "pending_approval")
+        .order("updated_at", desc=True)
+        .execute()
+    )
+    items = []
+    for row in result.data or []:
+        deliverable = row.get("deliverable") or {}
+        items.append(
+            {
+                "run_id": row.get("id"),
+                "title": deliverable.get("title", ""),
+                "thread_id": row.get("thread_id"),
+                "created_at": row.get("created_at"),
+                "updated_at": row.get("updated_at"),
+            }
+        )
+    return {"count": len(items), "items": items}
+
+
 @router.patch("/deliverables/{run_id}")
 async def edit_deliverable(
     run_id: str,

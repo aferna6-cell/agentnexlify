@@ -540,7 +540,12 @@ const CloseIcon = () => (
   </svg>
 );
 
-export default function Sidebar({ currentPage, onNavigate, plan }) {
+export default function Sidebar({
+  currentPage,
+  onNavigate,
+  plan,
+  pendingApprovalCount = 0,
+}) {
   const { user, logout } = useAuth();
   const activePlan = plan || user?.plan || "free";
   const userRole = user?.role || "owner";
@@ -639,16 +644,44 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
                   <ChevronIcon expanded={isExpanded} />
                 </div>
                 {isExpanded &&
-                  groupItems.map((item) => (
-                    <div
-                      key={item.key}
-                      className={`nav-item${currentPage === item.key ? " active" : ""}`}
-                      onClick={() => handleNavClick(item.key)}
-                    >
-                      <span className="nav-item-icon">{item.icon}</span>
-                      <span className="nav-item-label">{item.label}</span>
-                    </div>
-                  ))}
+                  groupItems.map((item) => {
+                    const badge =
+                      item.key === "agent_os" && pendingApprovalCount > 0
+                        ? pendingApprovalCount
+                        : 0;
+                    return (
+                      <div
+                        key={item.key}
+                        className={`nav-item${currentPage === item.key ? " active" : ""}`}
+                        onClick={() => handleNavClick(item.key)}
+                      >
+                        <span className="nav-item-icon">{item.icon}</span>
+                        <span className="nav-item-label">{item.label}</span>
+                        {badge > 0 && (
+                          <span
+                            className="nav-item-badge"
+                            title={`${badge} pending approval${badge === 1 ? "" : "s"}`}
+                            style={{
+                              marginLeft: "auto",
+                              minWidth: 20,
+                              height: 20,
+                              padding: "0 6px",
+                              borderRadius: 10,
+                              background: "var(--accent)",
+                              color: "var(--bg)",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {badge > 99 ? "99+" : badge}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             );
           })}

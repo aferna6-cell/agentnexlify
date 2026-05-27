@@ -1045,6 +1045,51 @@ class TestDeliverablesRouter:
             )
         assert resp.status_code == 409
 
+    def test_pending_deliverables_returns_only_pending(self):
+        fake = FakeSupabase()
+        _seed_thread(fake)
+        _seed_deliverable_run(fake, run_id="run-pending-1")
+        _seed_deliverable_run(fake, run_id="run-pending-2")
+        _seed_deliverable_run(fake, run_id="run-approved", status="approved")
+        _seed_deliverable_run(fake, run_id="run-rejected", status="rejected")
+        with patched_db(fake):
+            resp = client.get("/api/v1/os/deliverables/pending", headers=_auth())
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["count"] == 2
+        run_ids = {item["run_id"] for item in body["items"]}
+        assert run_ids == {"run-pending-1", "run-pending-2"}
+        for item in body["items"]:
+            assert item["title"] == "Draft"
+            assert item["thread_id"] == "thread-001"
+
+    def test_pending_deliverables_empty(self):
+        fake = FakeSupabase()
+        with patched_db(fake):
+            resp = client.get("/api/v1/os/deliverables/pending", headers=_auth())
+        assert resp.status_code == 200
+        assert resp.json() == {"count": 0, "items": []}
+
+    def test_pending_deliverables_scoped_to_tenant(self):
+        fake = FakeSupabase()
+        _seed_thread(fake)
+        _seed_deliverable_run(fake, run_id="run-mine")
+        # Seed a deliverable for a DIFFERENT tenant — must not leak.
+        _seed_run(
+            fake,
+            "run-other-tenant",
+            tenant="tenant-other",
+            status="succeeded",
+            deliverable={"title": "Leak", "body": "x"},
+            deliverable_status="pending_approval",
+        )
+        with patched_db(fake):
+            resp = client.get("/api/v1/os/deliverables/pending", headers=_auth())
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["count"] == 1
+        assert body["items"][0]["run_id"] == "run-mine"
+
 
 # ===========================================================================
 # os_memory router

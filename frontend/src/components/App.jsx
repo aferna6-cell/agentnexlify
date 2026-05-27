@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
+import { fetchOsPendingDeliverables } from "../utils/api/os";
 import LoginPage from "./LoginPage";
 import MarketingAddonUpsell, {
   MARKETING_ADDON_GATED_KEYS,
@@ -316,6 +317,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [activePlan, setActivePlan] = useState(null);
   const [trialData, setTrialData] = useState(null);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
 
   useEffect(() => {
     if (!user?.tenantId || !token) return;
@@ -332,6 +334,29 @@ export default function App() {
       setTrialData(null);
     }
   }, [activePlan]);
+
+  // Poll pending Agent OS approvals every 30s so the sidebar badge stays
+  // current from any page. Cheap GET — count + lightweight summary only.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const refresh = () => {
+      fetchOsPendingDeliverables(token)
+        .then((res) => {
+          if (cancelled) return;
+          setPendingApprovalCount(res?.count ?? 0);
+        })
+        .catch(() => {
+          // Silent — badge just stays at last known value
+        });
+    };
+    refresh();
+    const id = setInterval(refresh, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [token]);
 
   // Sync page state with browser back/forward buttons
   useEffect(() => {
@@ -376,6 +401,7 @@ export default function App() {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         plan={activePlan}
+        pendingApprovalCount={pendingApprovalCount}
       />
       <div
         style={{

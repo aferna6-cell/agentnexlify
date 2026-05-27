@@ -69,6 +69,10 @@ export function rejectOsDeliverable(token, runId) {
   });
 }
 
+export function fetchOsPendingDeliverables(token) {
+  return request("/api/v1/os/deliverables/pending", { token });
+}
+
 // --- Memory ---
 
 export function listOsMemory(token) {
