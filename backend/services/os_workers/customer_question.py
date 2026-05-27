@@ -141,6 +141,7 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             f"Answer draft ready: “{title}”. "
             "Review it in the side panel, then approve or reject."
         ),
+        action_type="widget.message",
     )
 
 
