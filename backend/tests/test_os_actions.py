@@ -273,11 +273,13 @@ def test_email_send_sends_via_resend_on_valid_payload():
     sender = AsyncMock(return_value={"success": True, "resend_id": "re_123"})
     with patch.object(email_action, "_extract_email_payload", extractor), patch.object(
         email_action, "send_email", sender
-    ):
+    ), patch.object(email_action, "m365_is_connected", return_value=False):
         result = asyncio.run(email_action._run(_action_ctx({"body": "Draft body"})))
     assert result.status == "succeeded"
     assert result.request_payload["to"] == "alice@example.com"
+    assert result.request_payload.get("provider") == "resend"
     assert result.response_payload["resend_id"] == "re_123"
+    assert result.response_payload.get("provider") == "resend"
     sender.assert_awaited_once()
 
 
@@ -294,10 +296,83 @@ def test_email_send_records_resend_failure_as_failed():
     sender = AsyncMock(return_value={"success": False, "detail": "no api key"})
     with patch.object(email_action, "_extract_email_payload", extractor), patch.object(
         email_action, "send_email", sender
-    ):
+    ), patch.object(email_action, "m365_is_connected", return_value=False):
         result = asyncio.run(email_action._run(_action_ctx({"body": "Draft body"})))
     assert result.status == "failed"
     assert (result.error_detail or {}).get("stage") == "resend"
+
+
+def test_email_send_dispatches_to_m365_when_connected():
+    from backend.services.os_actions import email as email_action
+
+    extractor = AsyncMock(
+        return_value={
+            "to": "alice@example.com",
+            "subject": "Following up",
+            "body_html": "<p>Hello Alice</p>",
+        }
+    )
+    graph_sender = AsyncMock(
+        return_value={"success": True, "detail": "sent", "message_id": "req-abc"}
+    )
+    resend_sender = AsyncMock(return_value={"success": True, "resend_id": "re_xxx"})
+    with patch.object(email_action, "_extract_email_payload", extractor), patch.object(
+        email_action, "m365_is_connected", return_value=True
+    ), patch.object(
+        email_action, "m365_send_email_via_graph", graph_sender
+    ), patch.object(
+        email_action, "send_email", resend_sender
+    ):
+        result = asyncio.run(email_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "succeeded"
+    assert result.request_payload.get("provider") == "m365"
+    assert result.response_payload.get("provider") == "m365"
+    assert result.response_payload.get("message_id") == "req-abc"
+    graph_sender.assert_awaited_once()
+    resend_sender.assert_not_awaited()
+
+
+def test_email_send_records_m365_failure_as_failed():
+    from backend.services.os_actions import email as email_action
+
+    extractor = AsyncMock(
+        return_value={
+            "to": "alice@example.com",
+            "subject": "Following up",
+            "body_html": "<p>Hello</p>",
+        }
+    )
+    graph_sender = AsyncMock(
+        return_value={"success": False, "detail": "auth error (HTTP 401)"}
+    )
+    with patch.object(email_action, "_extract_email_payload", extractor), patch.object(
+        email_action, "m365_is_connected", return_value=True
+    ), patch.object(email_action, "m365_send_email_via_graph", graph_sender):
+        result = asyncio.run(email_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "m365"
+    assert "auth error" in (result.error_detail or {}).get("message", "")
+
+
+def test_email_send_falls_back_to_resend_when_m365_lookup_raises():
+    from backend.services.os_actions import email as email_action
+
+    extractor = AsyncMock(
+        return_value={
+            "to": "alice@example.com",
+            "subject": "Following up",
+            "body_html": "<p>Hello</p>",
+        }
+    )
+    bad_lookup = MagicMock(side_effect=RuntimeError("supabase boom"))
+    sender = AsyncMock(return_value={"success": True, "resend_id": "re_fb"})
+    with patch.object(email_action, "_extract_email_payload", extractor), patch.object(
+        email_action, "m365_is_connected", bad_lookup
+    ), patch.object(email_action, "send_email", sender):
+        result = asyncio.run(email_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "succeeded"
+    assert result.request_payload.get("provider") == "resend"
+    sender.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
