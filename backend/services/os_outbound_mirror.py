@@ -17,10 +17,11 @@ PSID captured at inbound ingestion.
 
 Idempotency: the widget mirror tags ``chat_messages`` rows with
 ``os_message_id``; a replay finds the existing row and reports
-``skipped:already_mirrored``. SMS outbound has no DB mirror row — the
-runner calls this function exactly once per orchestrator turn, so
-in-process idempotency is the caller's responsibility. Cross-process
-replay protection for SMS is a phase-3 concern (`os_outbound_log`).
+``skipped:already_mirrored``. SMS / email / Facebook (phase 3) use the
+``os_outbound_log`` table keyed on ``(client_id, os_message_id,
+channel)`` — the mirror SELECTs before sending and INSERTs after a
+successful send. A cross-process replay hits the existing row and
+returns ``skipped:already_mirrored`` without re-sending.
 
 Failure semantics: NEVER raise. Mirror is best-effort; the OS reply is
 already persisted in ``os_messages``. A failed mirror returns
@@ -73,15 +74,82 @@ async def mirror_assistant_message(
         return _mirror_widget(db, client_id, thread, assistant_message)
 
     if source == "sms":
-        return await _mirror_sms(client_id, thread, assistant_message)
+        return await _mirror_sms(db, client_id, thread, assistant_message)
 
     if source == "email":
-        return await _mirror_email(client_id, thread, assistant_message)
+        return await _mirror_email(db, client_id, thread, assistant_message)
 
     if source == "facebook":
-        return await _mirror_facebook(client_id, thread, assistant_message)
+        return await _mirror_facebook(db, client_id, thread, assistant_message)
 
     return {"status": "skipped:outbound_not_implemented"}
+
+
+def _outbound_log_already_sent(
+    db: Any, client_id: str, os_msg_id: str, channel: str
+) -> bool:
+    """Pre-check ``os_outbound_log`` for an existing send on this channel.
+
+    Defensive: any DB failure on the pre-check returns False so the mirror
+    falls through to send. Rather risk a rare duplicate than block the
+    customer's reply when the dedup table is unreachable.
+    """
+    try:
+        result = (
+            tenant_table(db, "os_outbound_log", client_id)
+            .select("id")
+            .eq("os_message_id", os_msg_id)
+            .eq("channel", channel)
+            .limit(1)
+            .execute()
+        )
+        return bool(getattr(result, "data", None))
+    except Exception:
+        logger.warning(
+            "os_outbound_mirror: outbound_log pre-check failed channel=%s "
+            "client_id=%s os_msg=%s — proceeding with send",
+            channel,
+            client_id,
+            os_msg_id,
+            exc_info=True,
+        )
+        return False
+
+
+def _outbound_log_record(
+    db: Any,
+    client_id: str,
+    os_msg_id: str,
+    channel: str,
+    provider: str,
+    provider_message_id: str,
+) -> None:
+    """Record a successful send in ``os_outbound_log``.
+
+    Best-effort: DB failure is logged and swallowed — the OS reply was
+    already delivered to the customer; failing the mirror call here would
+    be misleading.
+    """
+    try:
+        tenant_table(db, "os_outbound_log", client_id).insert(
+            {
+                "os_message_id": os_msg_id,
+                "channel": channel,
+                "provider": provider,
+                "provider_message_id": provider_message_id or "",
+                "status": "sent",
+            }
+        ).execute()
+    except Exception:
+        logger.warning(
+            "os_outbound_mirror: outbound_log insert failed channel=%s "
+            "client_id=%s os_msg=%s provider=%s",
+            channel,
+            client_id,
+            os_msg_id,
+            provider,
+            exc_info=True,
+        )
 
 
 def _mirror_widget(
@@ -131,6 +199,7 @@ def _mirror_widget(
 
 
 async def _mirror_sms(
+    db: Any,
     client_id: str,
     thread: dict,
     assistant_message: dict,
@@ -150,6 +219,13 @@ async def _mirror_sms(
     content = (assistant_message.get("content") or "").strip()
     if not content:
         return {"status": "skipped:empty_content"}
+
+    os_msg_id = assistant_message.get("id")
+    if not os_msg_id:
+        return {"status": "error:missing_os_message_id"}
+
+    if _outbound_log_already_sent(db, client_id, os_msg_id, "sms"):
+        return {"status": "skipped:already_mirrored"}
 
     # Lazy imports keep the mirror module decoupled from Twilio at import
     # time — tests that don't exercise SMS never trigger settings/httpx
@@ -184,16 +260,21 @@ async def _mirror_sms(
                 tenant_id=client_id, to=to_phone, body=content
             )
             if result.get("success"):
+                message_sid = result.get("message_sid", "")
+                _outbound_log_record(
+                    db, client_id, os_msg_id, "sms", "twilio_byo", message_sid
+                )
                 return {
                     "status": "mirrored",
                     "provider": "twilio_byo",
-                    "message_sid": result.get("message_sid", ""),
+                    "message_sid": message_sid,
                 }
             detail = (result.get("detail") or "byo send reported failure")[:200]
             return {"status": f"error:sms_send:{detail}"}
 
         sent = await send_sms_platform(to=to_phone, body=content)
         if sent:
+            _outbound_log_record(db, client_id, os_msg_id, "sms", "twilio_platform", "")
             return {"status": "mirrored", "provider": "twilio_platform"}
         return {"status": "error:sms_send:platform_send_failed"}
     except Exception as exc:
@@ -207,6 +288,7 @@ async def _mirror_sms(
 
 
 async def _mirror_email(
+    db: Any,
     client_id: str,
     thread: dict,
     assistant_message: dict,
@@ -233,6 +315,13 @@ async def _mirror_email(
     content = (assistant_message.get("content") or "").strip()
     if not content:
         return {"status": "skipped:empty_content"}
+
+    os_msg_id = assistant_message.get("id")
+    if not os_msg_id:
+        return {"status": "error:missing_os_message_id"}
+
+    if _outbound_log_already_sent(db, client_id, os_msg_id, "email"):
+        return {"status": "skipped:already_mirrored"}
 
     inbound_subject = (meta.get("subject") or "").strip()
     if inbound_subject:
@@ -265,10 +354,12 @@ async def _mirror_email(
             in_reply_to=in_reply_to,
         )
         if result.get("success"):
+            resend_id = result.get("resend_id", "")
+            _outbound_log_record(db, client_id, os_msg_id, "email", "resend", resend_id)
             return {
                 "status": "mirrored",
                 "provider": "resend",
-                "resend_id": result.get("resend_id", ""),
+                "resend_id": resend_id,
             }
         detail = (result.get("detail") or "resend reported failure")[:200]
         return {"status": f"error:email_send:{detail}"}
@@ -283,6 +374,7 @@ async def _mirror_email(
 
 
 async def _mirror_facebook(
+    db: Any,
     client_id: str,
     thread: dict,
     assistant_message: dict,
@@ -307,6 +399,13 @@ async def _mirror_facebook(
     if not content:
         return {"status": "skipped:empty_content"}
 
+    os_msg_id = assistant_message.get("id")
+    if not os_msg_id:
+        return {"status": "error:missing_os_message_id"}
+
+    if _outbound_log_already_sent(db, client_id, os_msg_id, "facebook"):
+        return {"status": "skipped:already_mirrored"}
+
     try:
         from backend.services.facebook_messenger import send_messenger_reply
     except Exception as exc:
@@ -324,10 +423,14 @@ async def _mirror_facebook(
             content=content,
         )
         if result.get("success"):
+            message_id = result.get("message_id", "")
+            _outbound_log_record(
+                db, client_id, os_msg_id, "facebook", "messenger", message_id
+            )
             return {
                 "status": "mirrored",
                 "provider": "messenger",
-                "message_id": result.get("message_id", ""),
+                "message_id": message_id,
             }
         detail = (result.get("detail") or "messenger reported failure")[:200]
         return {"status": f"error:facebook_send:{detail}"}

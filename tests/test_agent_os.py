@@ -1529,6 +1529,295 @@ class TestOutboundMirrorFacebook:
         assert "network down" in result["status"]
 
 
+class TestOutboundMirrorIdempotency:
+    """Group C Phase 3: cross-process replay protection via os_outbound_log.
+
+    SMS / email / Facebook mirrors all check ``os_outbound_log`` keyed on
+    ``(client_id, os_message_id, channel)`` BEFORE sending and INSERT a
+    row AFTER a successful send. A replay of the same OS message on the
+    same channel must return ``skipped:already_mirrored`` without calling
+    the transport.
+
+    Failure semantics:
+    - Pre-check DB error → fall through to send (rather risk a rare
+      duplicate than block the customer's reply).
+    - Post-insert DB error → swallow; the customer already received the
+      reply, returning ``error:`` would be misleading.
+    """
+
+    def _sms_thread(self) -> dict:
+        return {
+            "id": "thread-sms-idem",
+            "source": "sms",
+            "source_metadata": {
+                "provider": "twilio",
+                "from": "+15551234567",
+                "to": "+15559990000",
+            },
+        }
+
+    def _email_thread(self) -> dict:
+        return {
+            "id": "thread-email-idem",
+            "source": "email",
+            "source_metadata": {
+                "provider": "resend",
+                "from": "cust@example.com",
+                "subject": "Booking question",
+            },
+            "source_thread_id": "<inbound-msg-id@example.com>",
+        }
+
+    def _fb_thread(self) -> dict:
+        return {
+            "id": "thread-fb-idem",
+            "source": "facebook",
+            "source_metadata": {"provider": "facebook", "sender_id": "psid-cust-1"},
+            "source_thread_id": "page-1:psid-cust-1",
+        }
+
+    def _assistant(self, msg_id: str, content: str = "Reply body") -> dict:
+        return {
+            "id": msg_id,
+            "thread_id": "x",
+            "role": "assistant",
+            "content": content,
+        }
+
+    async def test_sms_replay_skips_when_outbound_log_has_row(self, monkeypatch):
+        """Pre-seeded os_outbound_log row → no transport call, skip status."""
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_service as twilio_service
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def should_not_call(*args, **kwargs):
+            raise AssertionError("transport called despite outbound_log hit")
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", should_not_call)
+        monkeypatch.setattr(twilio_service, "send_sms", should_not_call)
+
+        fake = FakeSupabase()
+        fake.seed(
+            "os_outbound_log",
+            {
+                "client_id": _TENANT,
+                "os_message_id": "os-msg-sms-replay",
+                "channel": "sms",
+                "provider": "twilio_byo",
+                "provider_message_id": "SM-prev",
+                "status": "sent",
+            },
+        )
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._sms_thread(), self._assistant("os-msg-sms-replay")
+        )
+        assert result["status"] == "skipped:already_mirrored"
+        assert len(fake.store.get("os_outbound_log", [])) == 1
+
+    async def test_email_replay_skips_when_outbound_log_has_row(self, monkeypatch):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        async def should_not_call(**kwargs):
+            raise AssertionError("resend called despite outbound_log hit")
+
+        monkeypatch.setattr(email_sender, "send_email_reply", should_not_call)
+
+        fake = FakeSupabase()
+        fake.seed(
+            "os_outbound_log",
+            {
+                "client_id": _TENANT,
+                "os_message_id": "os-msg-email-replay",
+                "channel": "email",
+                "provider": "resend",
+                "provider_message_id": "re-prev",
+                "status": "sent",
+            },
+        )
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._email_thread(), self._assistant("os-msg-email-replay")
+        )
+        assert result["status"] == "skipped:already_mirrored"
+
+    async def test_facebook_replay_skips_when_outbound_log_has_row(self, monkeypatch):
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        async def should_not_call(**kwargs):
+            raise AssertionError("messenger called despite outbound_log hit")
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", should_not_call)
+
+        fake = FakeSupabase()
+        fake.seed(
+            "os_outbound_log",
+            {
+                "client_id": _TENANT,
+                "os_message_id": "os-msg-fb-replay",
+                "channel": "facebook",
+                "provider": "messenger",
+                "provider_message_id": "mid-prev",
+                "status": "sent",
+            },
+        )
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._fb_thread(), self._assistant("os-msg-fb-replay")
+        )
+        assert result["status"] == "skipped:already_mirrored"
+
+    async def test_sms_replay_uses_channel_scope_not_global(self, monkeypatch):
+        """Same os_message_id on a different channel must NOT trigger skip.
+
+        Future fan-out (e.g. simultaneous SMS + email mirror of the same OS
+        reply) must dispatch both channels. The dedup key includes channel.
+        """
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_tenant as twilio_tenant
+
+        send_called: dict[str, bool] = {"hit": False}
+
+        async def fake_byo_send(*, tenant_id, to, body):
+            send_called["hit"] = True
+            return {"success": True, "detail": "sent", "message_sid": "SMnew"}
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", fake_byo_send)
+
+        fake = FakeSupabase()
+        fake.seed(
+            "os_outbound_log",
+            {
+                "client_id": _TENANT,
+                "os_message_id": "os-msg-multi-channel",
+                "channel": "email",
+                "provider": "resend",
+                "provider_message_id": "re-x",
+                "status": "sent",
+            },
+        )
+        result = await mod.mirror_assistant_message(
+            fake,
+            _TENANT,
+            self._sms_thread(),
+            self._assistant("os-msg-multi-channel"),
+        )
+        assert result["status"] == "mirrored"
+        assert send_called["hit"] is True
+
+    async def test_sms_success_records_outbound_log_row(self, monkeypatch):
+        """First-time send writes the dedup row with provider + sid."""
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def fake_byo_send(*, tenant_id, to, body):
+            return {"success": True, "detail": "sent", "message_sid": "SMabc123"}
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", fake_byo_send)
+
+        fake = FakeSupabase()
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._sms_thread(), self._assistant("os-msg-sms-new")
+        )
+        assert result["status"] == "mirrored"
+        rows = fake.store.get("os_outbound_log", [])
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["client_id"] == _TENANT
+        assert row["os_message_id"] == "os-msg-sms-new"
+        assert row["channel"] == "sms"
+        assert row["provider"] == "twilio_byo"
+        assert row["provider_message_id"] == "SMabc123"
+        assert row["status"] == "sent"
+
+    async def test_email_success_records_outbound_log_row(self, monkeypatch):
+        import backend.services.email_sender as email_sender
+        import backend.services.os_outbound_mirror as mod
+
+        async def fake_send(**kwargs):
+            return {"success": True, "resend_id": "re_xyz789"}
+
+        monkeypatch.setattr(email_sender, "send_email_reply", fake_send)
+
+        fake = FakeSupabase()
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._email_thread(), self._assistant("os-msg-email-new")
+        )
+        assert result["status"] == "mirrored"
+        rows = fake.store.get("os_outbound_log", [])
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["os_message_id"] == "os-msg-email-new"
+        assert row["channel"] == "email"
+        assert row["provider"] == "resend"
+        assert row["provider_message_id"] == "re_xyz789"
+
+    async def test_facebook_success_records_outbound_log_row(self, monkeypatch):
+        import backend.services.facebook_messenger as fb_messenger
+        import backend.services.os_outbound_mirror as mod
+
+        async def fake_send(*, tenant_id, recipient_psid, content):
+            return {"success": True, "message_id": "mid_fb_new"}
+
+        monkeypatch.setattr(fb_messenger, "send_messenger_reply", fake_send)
+
+        fake = FakeSupabase()
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._fb_thread(), self._assistant("os-msg-fb-new")
+        )
+        assert result["status"] == "mirrored"
+        rows = fake.store.get("os_outbound_log", [])
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["os_message_id"] == "os-msg-fb-new"
+        assert row["channel"] == "facebook"
+        assert row["provider"] == "messenger"
+        assert row["provider_message_id"] == "mid_fb_new"
+
+    async def test_sms_pre_check_db_failure_falls_through_to_send(self, monkeypatch):
+        """Defensive: dedup DB unreachable on SELECT → still send the reply.
+
+        Better to risk a rare duplicate than to drop the customer's reply
+        because the dedup table is down.
+        """
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def fake_byo_send(*, tenant_id, to, body):
+            return {"success": True, "detail": "sent", "message_sid": "SMok"}
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", fake_byo_send)
+
+        fake = FakeSupabase()
+        fake.raise_on.add(("os_outbound_log", "select"))
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._sms_thread(), self._assistant("os-msg-sms-precheck")
+        )
+        assert result["status"] == "mirrored"
+
+    async def test_sms_post_insert_db_failure_keeps_mirrored_status(self, monkeypatch):
+        """Customer already got the reply; failed dedup insert must not flip to error."""
+        import backend.services.os_outbound_mirror as mod
+        import backend.services.twilio_tenant as twilio_tenant
+
+        async def fake_byo_send(*, tenant_id, to, body):
+            return {"success": True, "detail": "sent", "message_sid": "SMok"}
+
+        monkeypatch.setattr(twilio_tenant, "is_connected", lambda tid: True)
+        monkeypatch.setattr(twilio_tenant, "send_sms_via_tenant", fake_byo_send)
+
+        fake = FakeSupabase()
+        fake.raise_on.add(("os_outbound_log", "insert"))
+        result = await mod.mirror_assistant_message(
+            fake, _TENANT, self._sms_thread(), self._assistant("os-msg-sms-postins")
+        )
+        assert result["status"] == "mirrored"
+        assert result["provider"] == "twilio_byo"
+
+
 class TestThreadRunnerMirrorIntegration:
     """Runner wiring: widget-sourced thread → assistant reply mirrors to chat_messages."""
 

@@ -26,6 +26,7 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_tenant_usage": "client_id",
     "os_action_runs": "client_id",
     "os_sync_state": "client_id",
+    "os_outbound_log": "client_id",
 }
 
 

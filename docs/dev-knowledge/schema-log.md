@@ -1001,3 +1001,25 @@ Adds `tenants.os_auto_send_enabled BOOLEAN NOT NULL DEFAULT FALSE`. When FALSE (
 **Backend wiring:** `backend/services/os_workers/__init__.py::_tenant_auto_send_enabled()` reads the flag; `run_worker` branches between `approved` and `pending_approval`. Settings endpoint `PUT /api/v1/auth/settings/{tenant_id}` accepts `os_auto_send_enabled`; `GET /api/v1/auth/tenant/{tenant_id}` returns it. Frontend toggle in `MessagingSettingsCards::AgentOSAutoSendCard`.
 
 **Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+### 129 — chat_messages.os_message_id (Group C Mirror Tag)
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds `chat_messages.os_message_id UUID NULL`. Widget OS reply mirror tags each `chat_messages` row with the originating `os_messages.id` so replay is detectable. Partial unique index `chat_messages_os_message_id_uniq ON (tenant_id, os_message_id) WHERE os_message_id IS NOT NULL` enforces dedup only on mirrored rows; legacy pre-mirror rows stay unconstrained.
+
+**Backend wiring:** `backend/services/os_outbound_mirror.py::_mirror_widget` pre-checks `chat_messages` by `(tenant_id, os_message_id)` before insert. Idempotent across the 4 Uvicorn workers in prod.
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+### 130 — os_outbound_log (Group C Phase 3, Cross-Process Replay Protection)
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID NOT NULL`, `os_message_id UUID NOT NULL REFERENCES os_messages ON DELETE CASCADE`, `channel TEXT` (`sms | email | facebook`), `provider TEXT` (`twilio_byo | twilio_platform | resend | messenger`), `provider_message_id TEXT DEFAULT ''`, `status TEXT DEFAULT 'sent'`, `sent_at TIMESTAMPTZ DEFAULT now()`. Unique index `os_outbound_log_dedup_uniq ON (client_id, os_message_id, channel)` is the replay-protection lookup; `os_outbound_log_client_sent_idx ON (client_id, sent_at DESC)` for operational queries. RLS enabled + `os_outbound_log_deny_public` policy (service-role only). Tenant column is `client_id` (override registered in `tenant_scope._TENANT_COLUMN_OVERRIDES`).
+
+**Why:** widget mirror is idempotent via `chat_messages.os_message_id` (migration 129) but SMS / email / Facebook had no cross-process guard. With 4 Uvicorn workers, a runner re-fire on the same `os_messages` row would re-send the same SMS / email / FB DM. `os_outbound_log` is the dedup anchor: pre-check by `(client_id, os_message_id, channel)` before sending, post-insert after a successful send. Channel-scoped key supports future fan-out (simultaneous SMS + email mirror of one OS reply).
+
+**Failure semantics:** best-effort. Pre-check DB error falls through to send (rare duplicate beats blocking the customer's reply); post-insert DB error keeps `mirrored` status (customer already got the reply).
+
+**Backend wiring:** `backend/services/os_outbound_mirror.py::_outbound_log_already_sent` + `_outbound_log_record` helpers; `_mirror_sms`, `_mirror_email`, `_mirror_facebook` each gained pre-check + post-insert calls; dispatcher threads `db` through. Tests: `tests/test_agent_os.py::TestOutboundMirrorIdempotency` (9 cases — replay skip per channel, channel-scope correctness, success records row, pre-check DB failure falls through, post-insert DB failure preserves mirrored).
+
+**Applied:** PENDING — apply via Supabase MCP `apply_migration` before deploy. Not a local-dev blocker; tests use `FakeSupabase`.
