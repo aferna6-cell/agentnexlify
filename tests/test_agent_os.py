@@ -1606,3 +1606,199 @@ class TestBacklogRouter:
                 headers=_auth(role="staff"),
             )
         assert resp.status_code == 403
+
+
+# ===========================================================================
+# calendar.event.create — runtime provider dispatch (Google vs M365)
+# ===========================================================================
+
+
+class TestCalendarActionDispatch:
+    """Single action_type dispatches to whichever provider the tenant connected.
+
+    Booking worker emits one ``calendar.event.create`` action_type regardless
+    of provider. Dispatch lives inside the handler so the worker stays
+    provider-agnostic and tenants can swap providers without worker changes.
+    """
+
+    @staticmethod
+    def _ctx() -> "object":
+        from backend.services.os_actions.base import ActionContext
+
+        return ActionContext(
+            db=None,
+            client_id=_TENANT,
+            deliverable_id="del-1",
+            action_run_id="run-1",
+            action_type="calendar.event.create",
+            deliverable={"body": "Book 30 min with Jane next Tuesday at 3pm UTC"},
+            agent_run={"thread_id": "t-1"},
+        )
+
+    @staticmethod
+    def _extracted_payload() -> dict:
+        return {
+            "summary": "Booking with Jane",
+            "start_utc": "2026-06-09T15:00:00+00:00",
+            "end_utc": "2026-06-09T15:30:00+00:00",
+            "attendee_email": "jane@example.com",
+            "description": "discovery call",
+        }
+
+    @pytest.mark.asyncio
+    async def test_dispatches_to_google_when_google_integration_present(self):
+        from backend.services.os_actions import calendar as calendar_action
+
+        ctx = self._ctx()
+        with patch.object(
+            calendar_action,
+            "_extract_event_payload",
+            AsyncMock(return_value=self._extracted_payload()),
+        ), patch.object(
+            calendar_action.google_calendar,
+            "get_integration",
+            return_value={"id": "i1", "provider": "google_calendar"},
+        ), patch.object(
+            calendar_action.m365_calendar,
+            "get_integration",
+            return_value=None,
+        ), patch.object(
+            calendar_action.google_calendar,
+            "create_calendar_event",
+            return_value="google-event-123",
+        ) as google_create, patch.object(
+            calendar_action.m365_calendar,
+            "create_calendar_event",
+            return_value="m365-event-999",
+        ) as m365_create:
+            result = await calendar_action._run(ctx)
+
+        assert result.status == "succeeded"
+        assert result.response_payload["provider"] == "google_calendar"
+        assert result.response_payload["event_id"] == "google-event-123"
+        google_create.assert_called_once()
+        m365_create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_dispatches_to_m365_when_only_m365_connected(self):
+        from backend.services.os_actions import calendar as calendar_action
+
+        ctx = self._ctx()
+        with patch.object(
+            calendar_action,
+            "_extract_event_payload",
+            AsyncMock(return_value=self._extracted_payload()),
+        ), patch.object(
+            calendar_action.google_calendar,
+            "get_integration",
+            return_value=None,
+        ), patch.object(
+            calendar_action.m365_calendar,
+            "get_integration",
+            return_value={"id": "i2", "provider": "m365_calendar"},
+        ), patch.object(
+            calendar_action.google_calendar,
+            "create_calendar_event",
+            return_value="google-event-123",
+        ) as google_create, patch.object(
+            calendar_action.m365_calendar,
+            "create_calendar_event",
+            return_value="m365-event-999",
+        ) as m365_create:
+            result = await calendar_action._run(ctx)
+
+        assert result.status == "succeeded"
+        assert result.response_payload["provider"] == "m365_calendar"
+        assert result.response_payload["event_id"] == "m365-event-999"
+        m365_create.assert_called_once()
+        google_create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_prefers_google_when_both_providers_connected(self):
+        """Stable order — Google wins when both connected.
+
+        Preserves behavior for existing google-connected tenants; M365 only
+        activates for tenants that have ONLY m365_calendar.
+        """
+        from backend.services.os_actions import calendar as calendar_action
+
+        ctx = self._ctx()
+        with patch.object(
+            calendar_action,
+            "_extract_event_payload",
+            AsyncMock(return_value=self._extracted_payload()),
+        ), patch.object(
+            calendar_action.google_calendar,
+            "get_integration",
+            return_value={"id": "i1", "provider": "google_calendar"},
+        ), patch.object(
+            calendar_action.m365_calendar,
+            "get_integration",
+            return_value={"id": "i2", "provider": "m365_calendar"},
+        ), patch.object(
+            calendar_action.google_calendar,
+            "create_calendar_event",
+            return_value="google-event-123",
+        ) as google_create, patch.object(
+            calendar_action.m365_calendar,
+            "create_calendar_event",
+            return_value="m365-event-999",
+        ) as m365_create:
+            result = await calendar_action._run(ctx)
+
+        assert result.response_payload["provider"] == "google_calendar"
+        google_create.assert_called_once()
+        m365_create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_fails_when_no_calendar_provider_connected(self):
+        from backend.services.os_actions import calendar as calendar_action
+
+        ctx = self._ctx()
+        with patch.object(
+            calendar_action,
+            "_extract_event_payload",
+            AsyncMock(return_value=self._extracted_payload()),
+        ), patch.object(
+            calendar_action.google_calendar,
+            "get_integration",
+            return_value=None,
+        ), patch.object(
+            calendar_action.m365_calendar,
+            "get_integration",
+            return_value=None,
+        ):
+            result = await calendar_action._run(ctx)
+
+        assert result.status == "failed"
+        assert result.error_detail is not None
+        assert result.error_detail["stage"] == "connector"
+
+    @pytest.mark.asyncio
+    async def test_m365_create_failure_surfaces_provider_in_error(self):
+        from backend.services.os_actions import calendar as calendar_action
+
+        ctx = self._ctx()
+        with patch.object(
+            calendar_action,
+            "_extract_event_payload",
+            AsyncMock(return_value=self._extracted_payload()),
+        ), patch.object(
+            calendar_action.google_calendar,
+            "get_integration",
+            return_value=None,
+        ), patch.object(
+            calendar_action.m365_calendar,
+            "get_integration",
+            return_value={"id": "i2", "provider": "m365_calendar"},
+        ), patch.object(
+            calendar_action.m365_calendar,
+            "create_calendar_event",
+            return_value=None,
+        ):
+            result = await calendar_action._run(ctx)
+
+        assert result.status == "failed"
+        assert result.error_detail is not None
+        assert result.error_detail["provider"] == "m365_calendar"
+        assert result.error_detail["stage"] == "m365_calendar_create"

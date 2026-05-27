@@ -76,6 +76,16 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = ""
 
+    # Microsoft 365 / Azure AD OAuth — calendar + mail send scopes.
+    # `m365_tenant_id` is the Azure AD tenant ("common" for multi-tenant +
+    # personal accounts, "organizations" for work/school only, or a specific
+    # tenant GUID for single-tenant). Defaults to "common" so any M365 user
+    # can connect.
+    m365_client_id: str = ""
+    m365_client_secret: str = ""
+    m365_redirect_uri: str = ""
+    m365_tenant_id: str = "common"
+
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
     voyage_api_key: str = ""

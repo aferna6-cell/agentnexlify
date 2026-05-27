@@ -2,12 +2,19 @@
 
 Fires after a booking deliverable is approved. Extracts a structured event
 payload (summary, start_utc, end_utc, attendee_email, description) from the
-approved deliverable via a cheap Haiku call, then creates a Google Calendar
-event using the tenant's stored OAuth credentials.
+approved deliverable via a cheap Haiku call, then creates a calendar event
+using whichever provider the tenant has connected.
 
-Required connectors: ``google_calendar``. If the tenant has no Google
-Calendar integration the run is marked ``failed`` with a clear error_detail
-so the UI can prompt the owner to connect.
+Runtime dispatch: looks up ``integrations`` row for this tenant. Prefers
+``google_calendar`` if connected; otherwise falls back to ``m365_calendar``
+(Outlook). If neither is connected, the run is marked ``failed`` with a
+clear error_detail so the UI can prompt the owner to connect one.
+
+Why dispatch lives here instead of forking action_types: the booking worker
+stays provider-agnostic (one ``calendar.event.create`` emit point) and the
+tenant can swap providers without changing worker code. The price is a
+small dispatch branch — far less code than maintaining a second worker
+emit path.
 """
 
 import asyncio
@@ -16,7 +23,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 
-from backend.services import google_calendar
+from backend.services import google_calendar, m365_calendar
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_actions.base import ActionContext, ActionResult, ActionSpec
 
@@ -134,35 +141,55 @@ async def _run(ctx: ActionContext) -> ActionResult:
         "description": description,
     }
 
-    integration = google_calendar.get_integration(ctx.client_id)
-    if not integration:
+    provider = _pick_provider(ctx.client_id)
+    if provider is None:
         return ActionResult(
             status="failed",
             request_payload=request_payload,
             error_detail={
                 "stage": "connector",
-                "message": "google_calendar not connected for this tenant",
+                "message": (
+                    "no calendar provider connected for this tenant — "
+                    "connect google_calendar or m365_calendar"
+                ),
             },
         )
 
     try:
-        event_id = await asyncio.to_thread(
-            google_calendar.create_calendar_event,
-            ctx.client_id,
-            summary,
-            start_utc,
-            end_utc,
-            attendee_email,
-            description,
-        )
+        if provider == "google_calendar":
+            event_id = await asyncio.to_thread(
+                google_calendar.create_calendar_event,
+                ctx.client_id,
+                summary,
+                start_utc,
+                end_utc,
+                attendee_email,
+                description,
+            )
+        else:  # m365_calendar
+            event_id = await asyncio.to_thread(
+                m365_calendar.create_calendar_event,
+                ctx.client_id,
+                summary,
+                start_utc,
+                end_utc,
+                attendee_email,
+                description,
+            )
     except Exception as e:
         logger.exception(
-            "os_action_calendar: gcal create failed client_id=%s", ctx.client_id
+            "os_action_calendar: %s create failed client_id=%s",
+            provider,
+            ctx.client_id,
         )
         return ActionResult(
             status="failed",
             request_payload=request_payload,
-            error_detail={"stage": "gcal_create", "message": str(e)[:300]},
+            error_detail={
+                "stage": f"{provider}_create",
+                "message": str(e)[:300],
+                "provider": provider,
+            },
         )
 
     if not event_id:
@@ -170,22 +197,60 @@ async def _run(ctx: ActionContext) -> ActionResult:
             status="failed",
             request_payload=request_payload,
             error_detail={
-                "stage": "gcal_create",
-                "message": "Google Calendar returned no event id (auth or API error)",
+                "stage": f"{provider}_create",
+                "message": (f"{provider} returned no event id (auth or API error)"),
+                "provider": provider,
             },
         )
 
     return ActionResult(
         status="succeeded",
         request_payload=request_payload,
-        response_payload={"event_id": event_id, "calendar": "primary"},
+        response_payload={
+            "event_id": event_id,
+            "calendar": "primary",
+            "provider": provider,
+        },
     )
+
+
+def _pick_provider(client_id: str) -> str | None:
+    """Return the calendar provider name to dispatch on, or None.
+
+    Preference order: ``google_calendar`` -> ``m365_calendar``. Stable order
+    keeps existing google-connected tenants behaving exactly as before
+    (zero migration cost). M365 only activates for tenants that have ONLY
+    m365_calendar connected.
+    """
+    try:
+        if google_calendar.get_integration(client_id):
+            return "google_calendar"
+    except Exception:
+        logger.warning(
+            "os_action_calendar: google_calendar lookup failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+    try:
+        if m365_calendar.get_integration(client_id):
+            return "m365_calendar"
+    except Exception:
+        logger.warning(
+            "os_action_calendar: m365_calendar lookup failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+    return None
 
 
 SPEC = ActionSpec(
     name="calendar.event.create",
     worker="booking",
     run=_run,
-    required_connectors=["google_calendar"],
-    description="Create a Google Calendar event from an approved booking deliverable.",
+    required_connectors=["google_calendar", "m365_calendar"],
+    description=(
+        "Create a calendar event from an approved booking deliverable. "
+        "Dispatches to Google Calendar or Microsoft 365 / Outlook based on "
+        "the tenant's connected integration."
+    ),
 )
