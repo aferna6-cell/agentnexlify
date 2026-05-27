@@ -256,8 +256,7 @@ class TestTwilioInboundSMS:
                 return getattr(self._q, attr)
 
         mock_supabase.table.side_effect = lambda name: _Chain(name)
-        # `_Chain.not_` is a method, but the route does `.not_.is_(...)` —
-        # chain `not_` returns the same query object so `.is_` is callable.
+        # Route uses `.filter("col", "not.is", "null")` — PostgREST native NOT IS NULL syntax.
 
         form = _form_payload(body="STOP")
         sig = _twilio_sig(_WEBHOOK_URL, form)

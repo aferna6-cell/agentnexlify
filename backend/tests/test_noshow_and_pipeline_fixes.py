@@ -229,7 +229,7 @@ class TestNoshowRecoveryUnsubscribeDefaultDeny:
                 chain.select.return_value.eq.return_value.is_.return_value.limit.return_value.execute.return_value = (
                     appt_query
                 )
-                chain.select.return_value.eq.return_value.not_.is_.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = MagicMock(
+                chain.select.return_value.eq.return_value.filter.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = MagicMock(
                     data=[]
                 )
                 chain.update.return_value.eq.return_value.execute.return_value = (
