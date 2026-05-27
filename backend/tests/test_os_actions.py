@@ -434,12 +434,14 @@ def test_sms_send_sends_via_twilio_on_valid_payload():
     extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
     sender = AsyncMock(return_value=True)
     with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
-        sms_action, "send_sms", sender
-    ):
+        sms_action, "twilio_is_connected", return_value=False
+    ), patch.object(sms_action, "send_sms", sender):
         result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
     assert result.status == "succeeded"
     assert result.request_payload["to"] == "+15555550123"
+    assert result.request_payload["provider"] == "twilio_platform"
     assert result.response_payload["detail"] == "sent"
+    assert result.response_payload["provider"] == "twilio_platform"
     sender.assert_awaited_once()
 
 
@@ -449,11 +451,61 @@ def test_sms_send_records_twilio_failure_as_failed():
     extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
     sender = AsyncMock(return_value=False)
     with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
-        sms_action, "send_sms", sender
-    ):
+        sms_action, "twilio_is_connected", return_value=False
+    ), patch.object(sms_action, "send_sms", sender):
         result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
     assert result.status == "failed"
     assert (result.error_detail or {}).get("stage") == "twilio"
+
+
+def test_sms_send_dispatches_to_twilio_byo_when_connected():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
+    byo_sender = AsyncMock(
+        return_value={"success": True, "detail": "sent", "message_sid": "SMabc123"}
+    )
+    with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
+        sms_action, "twilio_is_connected", return_value=True
+    ), patch.object(sms_action, "send_sms_via_tenant", byo_sender):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "succeeded"
+    assert result.request_payload["provider"] == "twilio_byo"
+    assert result.response_payload["provider"] == "twilio_byo"
+    assert result.response_payload["message_sid"] == "SMabc123"
+    byo_sender.assert_awaited_once()
+
+
+def test_sms_send_records_twilio_byo_failure_as_failed():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
+    byo_sender = AsyncMock(
+        return_value={"success": False, "detail": "auth error (HTTP 401)"}
+    )
+    with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
+        sms_action, "twilio_is_connected", return_value=True
+    ), patch.object(sms_action, "send_sms_via_tenant", byo_sender):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "twilio_byo"
+    assert "auth error" in (result.error_detail or {}).get("message", "")
+
+
+def test_sms_send_falls_back_to_platform_when_byo_lookup_raises():
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
+    sender = AsyncMock(return_value=True)
+    raising_lookup = MagicMock(side_effect=RuntimeError("supabase boom"))
+    with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
+        sms_action, "twilio_is_connected", raising_lookup
+    ), patch.object(sms_action, "send_sms", sender):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "succeeded"
+    assert result.request_payload["provider"] == "twilio_platform"
+    assert result.response_payload["provider"] == "twilio_platform"
+    sender.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

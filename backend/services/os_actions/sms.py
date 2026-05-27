@@ -2,13 +2,19 @@
 
 Fires after a lead-nurture or booking deliverable that should reach the
 recipient by SMS is approved. Extracts a structured SMS payload (to, body)
-from the approved deliverable via a cheap Haiku call, then sends through
-the existing Twilio pipeline in ``backend.services.twilio_service``.
+from the approved deliverable via a cheap Haiku call, then dispatches to
+the right Twilio account for this tenant:
 
-Required connectors: none — Twilio is platform-wide via
-``TWILIO_ACCOUNT_SID`` / ``TWILIO_AUTH_TOKEN`` / ``TWILIO_PHONE_NUMBER``.
-If credentials are missing, ``send_sms`` returns False and this handler
-records a failed run with that detail.
+* Tenant has a ``twilio_byo`` integration row -> ``twilio_tenant
+  .send_sms_via_tenant`` (per-tenant Twilio subaccount + phone, 10DLC /
+  branded-sender setup).
+* Otherwise -> the platform-wide pool via ``twilio_service.send_sms``
+  (shared ``TWILIO_ACCOUNT_SID`` / ``TWILIO_AUTH_TOKEN`` /
+  ``TWILIO_PHONE_NUMBER`` env vars).
+
+Mirrors the runtime-dispatch shape of ``email.send`` (M365 vs Resend) and
+``calendar.event.create`` (M365 vs Google): single ``sms.send`` action
+type, provider chosen per-run based on the tenant's integration row.
 """
 
 import json
@@ -18,6 +24,8 @@ import re
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_actions.base import ActionContext, ActionResult, ActionSpec
 from backend.services.twilio_service import send_sms
+from backend.services.twilio_tenant import is_connected as twilio_is_connected
+from backend.services.twilio_tenant import send_sms_via_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +77,102 @@ async def _extract_sms_payload(body: str, client_id: str) -> dict:
     return _parse_json_block(response.text) or {}
 
 
+def _pick_provider(client_id: str) -> str:
+    """Return the Twilio provider to dispatch on for this tenant.
+
+    Preference order: ``twilio_byo`` -> ``twilio_platform``. BYO is per-tenant
+    (own subaccount, branded sender, 10DLC compliance); platform is the shared
+    pool. Stable order keeps existing platform-only tenants behaving exactly
+    as before.
+    """
+    try:
+        if twilio_is_connected(client_id):
+            return "twilio_byo"
+    except Exception:
+        logger.warning(
+            "os_action_sms: twilio_byo connectivity lookup failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+    return "twilio_platform"
+
+
+async def _send_via_twilio_byo(
+    client_id: str,
+    to: str,
+    sms_body: str,
+    request_payload: dict,
+) -> ActionResult:
+    try:
+        result = await send_sms_via_tenant(
+            tenant_id=client_id,
+            to=to,
+            body=sms_body,
+        )
+    except Exception as e:
+        logger.exception(
+            "os_action_sms: twilio_byo send raised client_id=%s", client_id
+        )
+        return ActionResult(
+            status="failed",
+            request_payload=request_payload,
+            error_detail={"stage": "twilio_byo", "message": str(e)[:300]},
+        )
+
+    if not result.get("success"):
+        return ActionResult(
+            status="failed",
+            request_payload=request_payload,
+            error_detail={
+                "stage": "twilio_byo",
+                "message": result.get("detail") or "twilio_byo send reported failure",
+            },
+        )
+
+    return ActionResult(
+        status="succeeded",
+        request_payload=request_payload,
+        response_payload={
+            "provider": "twilio_byo",
+            "message_sid": result.get("message_sid", ""),
+            "detail": result.get("detail", "sent"),
+        },
+    )
+
+
+async def _send_via_twilio_platform(
+    client_id: str,
+    to: str,
+    sms_body: str,
+    request_payload: dict,
+) -> ActionResult:
+    try:
+        sent = await send_sms(to=to, body=sms_body)
+    except Exception as e:
+        logger.exception("os_action_sms: send_sms raised client_id=%s", client_id)
+        return ActionResult(
+            status="failed",
+            request_payload=request_payload,
+            error_detail={"stage": "twilio", "message": str(e)[:300]},
+        )
+
+    if not sent:
+        return ActionResult(
+            status="failed",
+            request_payload=request_payload,
+            error_detail={
+                "stage": "twilio",
+                "message": "send_sms reported failure (credentials missing or Twilio error)",
+            },
+        )
+
+    return ActionResult(
+        status="succeeded",
+        request_payload=request_payload,
+        response_payload={"provider": "twilio_platform", "detail": "sent"},
+    )
+
+
 async def _run(ctx: ActionContext) -> ActionResult:
     body = (ctx.deliverable.get("body") or "").strip()
     if not body:
@@ -116,33 +220,12 @@ async def _run(ctx: ActionContext) -> ActionResult:
             error_detail={"stage": "validate", "message": "empty sms body"},
         )
 
-    request_payload = {"to": to, "body": sms_body}
+    provider = _pick_provider(ctx.client_id)
+    request_payload = {"to": to, "body": sms_body, "provider": provider}
 
-    try:
-        sent = await send_sms(to=to, body=sms_body)
-    except Exception as e:
-        logger.exception("os_action_sms: send_sms raised client_id=%s", ctx.client_id)
-        return ActionResult(
-            status="failed",
-            request_payload=request_payload,
-            error_detail={"stage": "twilio", "message": str(e)[:300]},
-        )
-
-    if not sent:
-        return ActionResult(
-            status="failed",
-            request_payload=request_payload,
-            error_detail={
-                "stage": "twilio",
-                "message": "send_sms reported failure (credentials missing or Twilio error)",
-            },
-        )
-
-    return ActionResult(
-        status="succeeded",
-        request_payload=request_payload,
-        response_payload={"detail": "sent"},
-    )
+    if provider == "twilio_byo":
+        return await _send_via_twilio_byo(ctx.client_id, to, sms_body, request_payload)
+    return await _send_via_twilio_platform(ctx.client_id, to, sms_body, request_payload)
 
 
 SPEC = ActionSpec(
@@ -150,5 +233,9 @@ SPEC = ActionSpec(
     worker="lead_nurture",
     run=_run,
     required_connectors=[],
-    description="Send a follow-up SMS via Twilio from an approved deliverable.",
+    description=(
+        "Send a follow-up SMS from an approved deliverable. Dispatches to the "
+        "tenant's own Twilio subaccount when twilio_byo integration exists; "
+        "otherwise falls back to the platform Twilio pool."
+    ),
 )
