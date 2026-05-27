@@ -1,8 +1,15 @@
-"""Google Calendar OAuth integration endpoints."""
+"""Calendar OAuth integration endpoints — Google + Microsoft 365.
+
+Both providers write to the same ``integrations`` table tagged with
+``provider`` (``google_calendar`` / ``m365_calendar``). The booking action
+handler at ``backend/services/os_actions/calendar.py`` dispatches at runtime
+between the two based on which row is present.
+"""
 
 import logging
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -10,6 +17,7 @@ from jose import JWTError, jwt
 
 from backend.config import settings
 from backend.dependencies import _get_current_tenant
+from backend.services import hubspot_tenant, m365_calendar
 from backend.services.google_calendar import (
     delete_integration,
     exchange_code,
@@ -43,7 +51,8 @@ def _encode_state(tenant_id: str) -> str:
     """Create a short-lived signed JWT encoding the tenant_id for OAuth state."""
     payload = {
         "tenant_id": tenant_id,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
+        "exp": datetime.now(timezone.utc)
+        + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
     }
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
@@ -54,10 +63,14 @@ def _decode_state(state: str) -> str:
         payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
         tenant_id = payload.get("tenant_id")
         if not tenant_id:
-            raise HTTPException(status_code=400, detail="Invalid state: missing tenant_id")
+            raise HTTPException(
+                status_code=400, detail="Invalid state: missing tenant_id"
+            )
         return tenant_id
     except JWTError as exc:
-        raise HTTPException(status_code=400, detail="Invalid or expired state parameter") from exc
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired state parameter"
+        ) from exc
 
 
 # ── Endpoints ─────────────────────────────────────────────────
@@ -90,8 +103,12 @@ async def google_callback(
     try:
         creds = exchange_code(code, redirect_uri)
     except Exception as exc:
-        logger.exception("Failed to exchange Google OAuth code for tenant %s", tenant_id)
-        raise HTTPException(status_code=400, detail="Failed to exchange authorization code") from exc
+        logger.exception(
+            "Failed to exchange Google OAuth code for tenant %s", tenant_id
+        )
+        raise HTTPException(
+            status_code=400, detail="Failed to exchange authorization code"
+        ) from exc
 
     # Fetch calendar email for display
     metadata = {}
@@ -103,7 +120,9 @@ async def google_callback(
         metadata["email"] = cal.get("id", "")
         metadata["calendar_name"] = cal.get("summary", "Primary")
     except Exception:
-        logger.warning("Could not fetch calendar info for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Could not fetch calendar info for tenant %s", tenant_id, exc_info=True
+        )
 
     try:
         save_integration(
@@ -114,8 +133,12 @@ async def google_callback(
             metadata=metadata,
         )
     except Exception as exc:
-        logger.exception("Failed to save Google Calendar integration for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to save integration") from exc
+        logger.exception(
+            "Failed to save Google Calendar integration for tenant %s", tenant_id
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to save integration"
+        ) from exc
 
     # Redirect to frontend integrations page
     if settings.frontend_url:
@@ -155,7 +178,272 @@ async def google_disconnect(claims: dict = Depends(_get_current_tenant)):
     try:
         delete_integration(tenant_id)
     except Exception as exc:
-        logger.exception("Failed to delete Google Calendar integration for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to disconnect integration") from exc
+        logger.exception(
+            "Failed to delete Google Calendar integration for tenant %s", tenant_id
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to disconnect integration"
+        ) from exc
+
+    return {"status": "disconnected"}
+
+
+# ── Microsoft 365 / Outlook ──────────────────────────────────
+
+
+def _fetch_m365_profile(access_token: str) -> dict:
+    """Fetch user email + display name from Microsoft Graph for display metadata.
+
+    Best-effort. Returns ``{}`` on failure rather than raising — connection
+    still succeeds without it.
+    """
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(
+                "https://graph.microsoft.com/v1.0/me",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+            return {
+                "email": data.get("mail") or data.get("userPrincipalName") or "",
+                "calendar_name": data.get("displayName") or "Primary",
+            }
+    except Exception:
+        logger.warning("m365: profile fetch failed", exc_info=True)
+        return {}
+
+
+@router.get("/m365/auth")
+async def m365_auth(claims: dict = Depends(_get_current_tenant)):
+    """Generate Microsoft 365 OAuth authorization URL."""
+    tenant_id: str = claims["tenant_id"]
+    state = _encode_state(tenant_id)
+    redirect_uri = settings.m365_redirect_uri
+    auth_url = m365_calendar.build_authorization_url(redirect_uri, state)
+    return {"auth_url": auth_url}
+
+
+@router.get("/m365/callback")
+async def m365_callback(
+    code: str = Query(..., description="Authorization code from Microsoft"),
+    state: str = Query(..., description="Signed state token encoding tenant_id"),
+):
+    """Handle Microsoft 365 OAuth callback.
+
+    Public route — browser arrives via redirect from Azure AD, not from the SPA.
+    Tenant identity is recovered from the signed ``state`` token, not from a
+    session cookie or Authorization header.
+    """
+    tenant_id = _decode_state(state)
+    redirect_uri = settings.m365_redirect_uri
+
+    try:
+        tokens = m365_calendar.exchange_code(code, redirect_uri)
+    except Exception as exc:
+        logger.exception("m365: code exchange failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=400, detail="Failed to exchange authorization code"
+        ) from exc
+
+    access_token = tokens.get("access_token") or ""
+    refresh_token = tokens.get("refresh_token") or ""
+    if not access_token or not refresh_token:
+        # Without a refresh token we cannot keep the integration alive past
+        # the access-token TTL (~1 hour) — refuse to persist a half-broken row.
+        raise HTTPException(
+            status_code=400,
+            detail="Authorization missing tokens — re-consent with offline_access scope",
+        )
+
+    expires_in = int(tokens.get("expires_in") or 3600)
+    token_expiry = (
+        datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+    ).isoformat()
+
+    metadata = _fetch_m365_profile(access_token)
+
+    try:
+        m365_calendar.save_integration(
+            tenant_id=tenant_id,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_expiry=token_expiry,
+            metadata=metadata,
+        )
+    except Exception as exc:
+        logger.exception("m365: save integration failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=500, detail="Failed to save integration"
+        ) from exc
+
+    if settings.frontend_url:
+        return RedirectResponse(url=f"{settings.frontend_url}/#integrations")
+
+    return HTMLResponse(
+        content=(
+            "<html><body style='font-family:sans-serif;text-align:center;padding:4rem'>"
+            "<h2>Connected!</h2><p>Microsoft 365 has been linked. You can close this window.</p>"
+            "</body></html>"
+        ),
+    )
+
+
+@router.get("/m365/status")
+async def m365_status(claims: dict = Depends(_get_current_tenant)):
+    """Check whether the tenant has a connected Microsoft 365 integration."""
+    tenant_id: str = claims["tenant_id"]
+    integration = m365_calendar.get_integration(tenant_id)
+
+    if not integration:
+        return {"connected": False, "email": None, "calendar_name": None}
+
+    meta = integration.get("metadata") or {}
+    return {
+        "connected": True,
+        "email": meta.get("email"),
+        "calendar_name": meta.get("calendar_name"),
+    }
+
+
+@router.delete("/m365")
+async def m365_disconnect(claims: dict = Depends(_get_current_tenant)):
+    """Remove the Microsoft 365 integration for the tenant."""
+    tenant_id: str = claims["tenant_id"]
+
+    try:
+        m365_calendar.delete_integration(tenant_id)
+    except Exception as exc:
+        logger.exception("m365: disconnect failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=500, detail="Failed to disconnect integration"
+        ) from exc
+
+    return {"status": "disconnected"}
+
+
+# ── HubSpot CRM ──────────────────────────────────────────────
+
+
+@router.get("/hubspot/auth")
+async def hubspot_auth(claims: dict = Depends(_get_current_tenant)):
+    """Generate HubSpot OAuth authorization URL."""
+    tenant_id: str = claims["tenant_id"]
+    if not (
+        settings.hubspot_client_id
+        and settings.hubspot_client_secret
+        and settings.hubspot_redirect_uri
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="HubSpot OAuth not configured on this deployment",
+        )
+    state = _encode_state(tenant_id)
+    redirect_uri = settings.hubspot_redirect_uri
+    auth_url = hubspot_tenant.build_authorization_url(redirect_uri, state)
+    return {"auth_url": auth_url}
+
+
+@router.get("/hubspot/callback")
+async def hubspot_callback(
+    code: str = Query(..., description="Authorization code from HubSpot"),
+    state: str = Query(..., description="Signed state token encoding tenant_id"),
+):
+    """Handle HubSpot OAuth callback.
+
+    Public route — browser arrives via redirect from HubSpot, not from the SPA.
+    Tenant identity is recovered from the signed ``state`` token.
+    """
+    tenant_id = _decode_state(state)
+    redirect_uri = settings.hubspot_redirect_uri
+
+    try:
+        tokens = hubspot_tenant.exchange_code(code, redirect_uri)
+    except Exception as exc:
+        logger.exception("hubspot: code exchange failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=400, detail="Failed to exchange authorization code"
+        ) from exc
+
+    access_token = tokens.get("access_token") or ""
+    refresh_token = tokens.get("refresh_token") or ""
+    if not access_token or not refresh_token:
+        # HubSpot OAuth always returns both — missing refresh_token means we
+        # cannot keep the integration alive past the ~30 min access TTL.
+        raise HTTPException(
+            status_code=400,
+            detail="Authorization missing tokens — retry the connect flow",
+        )
+
+    expires_in = int(tokens.get("expires_in") or 1800)
+    token_expiry = (
+        datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+    ).isoformat()
+
+    metadata = hubspot_tenant.fetch_profile(access_token)
+
+    try:
+        hubspot_tenant.save_integration(
+            tenant_id=tenant_id,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_expiry=token_expiry,
+            metadata=metadata,
+        )
+    except Exception as exc:
+        logger.exception("hubspot: save integration failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=500, detail="Failed to save integration"
+        ) from exc
+
+    if settings.frontend_url:
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/?hubspot=connected#integrations"
+        )
+
+    return HTMLResponse(
+        content=(
+            "<html><body style='font-family:sans-serif;text-align:center;padding:4rem'>"
+            "<h2>Connected!</h2><p>HubSpot has been linked. You can close this window.</p>"
+            "</body></html>"
+        ),
+    )
+
+
+@router.get("/hubspot/status")
+async def hubspot_status(claims: dict = Depends(_get_current_tenant)):
+    """Check whether the tenant has a connected HubSpot integration."""
+    tenant_id: str = claims["tenant_id"]
+    integration = hubspot_tenant.get_integration(tenant_id)
+
+    if not integration:
+        return {
+            "connected": False,
+            "portal_id": None,
+            "hub_domain": None,
+            "user": None,
+        }
+
+    meta = integration.get("metadata") or {}
+    return {
+        "connected": True,
+        "portal_id": meta.get("portal_id"),
+        "hub_domain": meta.get("hub_domain"),
+        "user": meta.get("user"),
+    }
+
+
+@router.delete("/hubspot")
+async def hubspot_disconnect(claims: dict = Depends(_get_current_tenant)):
+    """Remove the HubSpot integration for the tenant."""
+    tenant_id: str = claims["tenant_id"]
+
+    try:
+        hubspot_tenant.delete_integration(tenant_id)
+    except Exception as exc:
+        logger.exception("hubspot: disconnect failed for tenant %s", tenant_id)
+        raise HTTPException(
+            status_code=500, detail="Failed to disconnect integration"
+        ) from exc
 
     return {"status": "disconnected"}

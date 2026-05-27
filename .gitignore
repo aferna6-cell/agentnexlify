@@ -16,6 +16,7 @@ output/
 mutants/
 coverage/
 .coverage
+coverage-python.xml
 coverage-*.xml
 coverage.xml
 

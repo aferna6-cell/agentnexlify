@@ -16,8 +16,6 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
-from backend.services.idempotency import check_and_record, record_response
-from backend.services.llm_runtime import call_claude_messages
 from backend.services.twilio_service import format_textback_message, send_sms
 
 logger = logging.getLogger(__name__)
@@ -52,6 +50,7 @@ def _verify_twilio_signature(request: Request, body: bytes) -> bool:
     try:
         params = dict(x.split("=", 1) for x in body.decode().split("&") if "=" in x)
         from urllib.parse import unquote_plus
+
         params = {k: unquote_plus(v) for k, v in params.items()}
     except Exception:
         params = {}
@@ -62,6 +61,7 @@ def _verify_twilio_signature(request: Request, body: bytes) -> bool:
         hashlib.sha1,
     ).digest()
     import base64
+
     expected_b64 = base64.b64encode(expected).decode()
     return hmac.compare_digest(signature, expected_b64)
 
@@ -71,17 +71,21 @@ def _find_tenant_by_phone(phone: str) -> dict | None:
     db = get_service_supabase()
     result = (
         db.table("tenants")
-        .select("id, business_name, notification_phone, sms_notifications_enabled, plan, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end")
+        .select(
+            "id, business_name, notification_phone, sms_notifications_enabled, plan, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end"
+        )
         .eq("sms_notifications_enabled", True)
         .limit(50)
         .execute()
     )
-    for tenant in (result.data or []):
+    for tenant in result.data or []:
         if tenant.get("notification_phone"):
             # Normalize for comparison (strip spaces, dashes)
             norm_tenant = tenant["notification_phone"].replace(" ", "").replace("-", "")
             norm_phone = phone.replace(" ", "").replace("-", "")
-            if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(norm_tenant[-10:]):
+            if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(
+                norm_tenant[-10:]
+            ):
                 return tenant
     return None
 
@@ -176,9 +180,9 @@ def _increment_runs_total(tenant_id: str, automation_type: str) -> None:
         )
         if result.data:
             row = result.data[0]
-            db.table("automations").update(
-                {"runs_total": row["runs_total"] + 1}
-            ).eq("id", row["id"]).execute()
+            db.table("automations").update({"runs_total": row["runs_total"] + 1}).eq(
+                "id", row["id"]
+            ).execute()
     except Exception:
         logger.warning(
             "Failed to increment runs_total tenant=%s type=%s",
@@ -230,6 +234,7 @@ async def handle_missed_call(request: Request):
     # Parse form data
     try:
         from urllib.parse import parse_qs
+
         params = {k: v[0] for k, v in parse_qs(body.decode()).items()}
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
@@ -284,7 +289,8 @@ async def handle_missed_call(request: Request):
         return PlainTextResponse("OK")
     if not automation.get("is_enabled", False):
         logger.info(
-            "missed_call_textback automation disabled for tenant %s, skipping", tenant_id
+            "missed_call_textback automation disabled for tenant %s, skipping",
+            tenant_id,
         )
         return PlainTextResponse("OK")
 
@@ -307,7 +313,9 @@ async def handle_missed_call(request: Request):
                     )
                     return PlainTextResponse("OK")
             elif qs <= hour_now < qe:
-                logger.info("Quiet hours active for tenant %s, skipping text-back", tenant_id)
+                logger.info(
+                    "Quiet hours active for tenant %s, skipping text-back", tenant_id
+                )
                 return PlainTextResponse("OK")
         except ValueError:
             pass  # Malformed quiet hours, proceed with text-back
@@ -373,13 +381,17 @@ async def handle_missed_call(request: Request):
         # Create/update lead from caller phone (existing behavior preserved)
         if not existing_lead:
             db = get_service_supabase()
-            db.table("leads").insert({
-                "client_id": tenant_id,
-                "phone": caller,
-                "status": "new",
-                "areas_of_interest": "missed call — text-back sent",
-            }).execute()
-            logger.info("Created lead from missed call: %s for tenant %s", caller, tenant_id)
+            db.table("leads").insert(
+                {
+                    "client_id": tenant_id,
+                    "phone": caller,
+                    "status": "new",
+                    "areas_of_interest": "missed call — text-back sent",
+                }
+            ).execute()
+            logger.info(
+                "Created lead from missed call: %s for tenant %s", caller, tenant_id
+            )
 
     else:
         # Phase 1: log warning only. Phase 4 will add pending_automations retry queue.
@@ -405,125 +417,41 @@ async def handle_missed_call(request: Request):
 @router.post("/sms-reply")
 @limiter.limit("60/minute")
 async def handle_inbound_sms(request: Request):
-    """Twilio messaging webhook — handles inbound SMS replies.
+    """DEPRECATED — migrated to ``POST /api/v1/os/inbound/sms``.
 
-    When a caller replies to a text-back, route the message to the
-    AI chat engine and send the AI's response back via SMS.
+    Returns 410 Gone after signature verification. Tenants must update
+    their Twilio Messaging webhook URL to point at
+    ``/api/v1/os/inbound/sms`` so inbound SMS flows through the Agent OS
+    (``os_messages`` + orchestrator) instead of the legacy
+    ``chat_messages`` AI-reply path.
+
+    Signature verification stays in place so the deprecation surface is
+    not exposed to forged probes. Every hit is logged with caller +
+    destination numbers for operational visibility into which tenants
+    still need to migrate.
     """
     body = await request.body()
 
-    # Verify Twilio signature to prevent forged requests
     if not _verify_twilio_signature(request, body):
         logger.warning("Twilio signature verification failed for sms-reply webhook")
         raise HTTPException(status_code=403, detail="Invalid Twilio signature")
 
     try:
         from urllib.parse import parse_qs
+
         params = {k: v[0] for k, v in parse_qs(body.decode()).items()}
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body")
+        params = {}
 
-    from_number = params.get("From", "")
-    to_number = params.get("To", "")
-    message_body = params.get("Body", "").strip()
-    message_sid = params.get("MessageSid", "")
-
-    if not from_number or not message_body:
-        return PlainTextResponse("OK")
-
-    # Idempotency: skip Twilio redeliveries using MessageSid
-    if message_sid:
-        db_idem = get_service_supabase()
-        is_new, _cached = await check_and_record(db_idem, "twilio", message_sid)
-        if not is_new:
-            logger.info("Twilio duplicate MessageSid=%s — skipping", message_sid)
-            return PlainTextResponse("OK")
-
-    logger.info("Inbound SMS from %s: %s", from_number, message_body[:100])
-
-    # Find tenant
-    tenant = _find_tenant_by_phone(to_number)
-    if not tenant:
-        logger.warning("Inbound SMS to %s — no matching tenant", to_number)
-        return PlainTextResponse("OK")
-
-    tenant_id = tenant["id"]
-    db = get_service_supabase()
-
-    # Use phone number as session ID for SMS conversations
-    session_id = f"sms_{from_number.replace('+', '').replace(' ', '')}"
-
-    # Save inbound message
-    db.table("chat_messages").insert({
-        "tenant_id": tenant_id,
-        "session_id": session_id,
-        "role": "user",
-        "content": message_body,
-    }).execute()
-
-    # Generate AI response using the same chat engine
-    try:
-        from backend.routers.widget_chat_helpers import _build_system_prompt, _load_chat_history
-
-        # Load context
-        history = _load_chat_history(tenant_id, session_id, limit=10)
-        faq_data = []
-        try:
-            faq_result = db.table("faq_entries").select("question, answer").eq("tenant_id", tenant_id).eq("is_active", True).execute()
-            faq_data = faq_result.data or []
-        except Exception:
-            logger.warning("FAQ load failed for SMS reply, tenant %s", tenant_id, exc_info=True)
-
-        system_prompt = _build_system_prompt(tenant, faq_data)
-
-        # Build messages for Claude
-        messages = [{"role": m["role"], "content": m["content"]} for m in history]
-        messages.append({"role": "user", "content": message_body})
-
-        resp = await call_claude_messages(
-            operation="twilio.sms_reply",
-            model="claude-sonnet-4-6",
-            max_tokens=300,
-            timeout=30.0,
-            system=system_prompt + "\n\nIMPORTANT: This conversation is via SMS. Keep responses SHORT (under 160 characters if possible). Be concise.",
-            messages=messages,
-            metadata={"tenant_id": tenant_id, "session_id": session_id, "channel": "sms", "message_chars": len(message_body)},
-        )
-        ai_response = resp.text.strip()
-
-        # Truncate for SMS
-        if len(ai_response) > 1500:
-            ai_response = ai_response[:1497] + "..."
-
-    except Exception:
-        logger.exception("AI response generation failed for SMS from %s", from_number)
-        ai_response = f"Thanks for your message! Someone from {tenant.get('business_name', 'our team')} will get back to you shortly."
-
-    # Save AI response
-    db.table("chat_messages").insert({
-        "tenant_id": tenant_id,
-        "session_id": session_id,
-        "role": "assistant",
-        "content": ai_response,
-    }).execute()
-
-    # Send AI response via SMS
-    await send_sms(to=from_number, body=ai_response)
-
-    # Log activity
-    log_activity(
-        tenant_id=tenant_id,
-        activity_type="sms_conversation",
-        description=f"SMS from {from_number}: {message_body[:50]}",
-        metadata={"phone": from_number, "session_id": session_id},
+    logger.warning(
+        "LEGACY /api/v1/twilio/sms-reply hit — tenant must migrate to "
+        "/api/v1/os/inbound/sms (from=%s to=%s sid=%s)",
+        params.get("From", ""),
+        params.get("To", ""),
+        params.get("MessageSid", ""),
     )
 
-    # Record idempotency response so replays return immediately
-    if message_sid:
-        try:
-            sms_db = get_service_supabase()
-            await record_response(sms_db, f"twilio:{message_sid}", 200, {"status": "ok"})
-        except Exception:
-            logger.warning("Failed to record Twilio idempotency response for %s", message_sid, exc_info=True)
-
-    return PlainTextResponse("OK")
+    raise HTTPException(
+        status_code=410,
+        detail="Endpoint migrated to /api/v1/os/inbound/sms",
+    )

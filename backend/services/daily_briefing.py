@@ -63,7 +63,7 @@ async def send_daily_briefings() -> int:
             )
             .eq("daily_briefing_enabled", True)
             .eq("sms_notifications_enabled", True)
-            .not_.is_("notification_phone", "null")
+            .filter("notification_phone", "not.is", "null")
             .limit(BATCH_LIMIT)
             .execute()
         )
@@ -94,7 +94,11 @@ async def send_daily_briefings() -> int:
             if dedup.data:
                 continue  # Already sent today
         except Exception:
-            logger.debug("Briefing dedup check failed for %s, proceeding", tenant_id, exc_info=True)
+            logger.debug(
+                "Briefing dedup check failed for %s, proceeding",
+                tenant_id,
+                exc_info=True,
+            )
 
         # Determine timezone from business_hours config
         tz_name = "America/New_York"
@@ -128,7 +132,9 @@ async def send_daily_briefings() -> int:
         try:
             briefing = await _build_briefing(db, tenant_id, tz_name, now)
         except Exception:
-            logger.warning("Failed to build briefing for tenant %s", tenant_id, exc_info=True)
+            logger.warning(
+                "Failed to build briefing for tenant %s", tenant_id, exc_info=True
+            )
             continue
 
         # Compose SMS
@@ -141,21 +147,23 @@ async def send_daily_briefings() -> int:
                 increment_sms_count(tenant_id)
                 sent += 1
                 # Log for dedup
-                db.table("activity_log").insert({
-                    "tenant_id": tenant_id,
-                    "action": "daily_briefing_sent",
-                    "description": f"Daily briefing SMS sent to {phone}",
-                }).execute()
+                db.table("activity_log").insert(
+                    {
+                        "tenant_id": tenant_id,
+                        "action": "daily_briefing_sent",
+                        "description": f"Daily briefing SMS sent to {phone}",
+                    }
+                ).execute()
                 logger.info("Daily briefing sent to tenant %s", tenant_id)
         except Exception:
-            logger.exception("Failed to send daily briefing SMS to tenant %s", tenant_id)
+            logger.exception(
+                "Failed to send daily briefing SMS to tenant %s", tenant_id
+            )
 
     return sent
 
 
-async def _build_briefing(
-    db, tenant_id: str, tz_name: str, now: datetime
-) -> dict:
+async def _build_briefing(db, tenant_id: str, tz_name: str, now: datetime) -> dict:
     """Gather metrics for the briefing: leads, appointments, tasks, reviews."""
     yesterday = (now - timedelta(hours=24)).isoformat()
     try:
@@ -176,7 +184,9 @@ async def _build_briefing(
             .gte("created_at", yesterday)
             .execute()
         )
-        briefing["new_leads"] = leads.count if leads.count is not None else len(leads.data or [])
+        briefing["new_leads"] = (
+            leads.count if leads.count is not None else len(leads.data or [])
+        )
     except Exception:
         briefing["new_leads"] = 0
 
@@ -205,7 +215,9 @@ async def _build_briefing(
             .eq("status", "pending")
             .execute()
         )
-        briefing["pending_actions"] = actions.count if actions.count is not None else len(actions.data or [])
+        briefing["pending_actions"] = (
+            actions.count if actions.count is not None else len(actions.data or [])
+        )
     except Exception:
         briefing["pending_actions"] = 0
 
@@ -218,7 +230,9 @@ async def _build_briefing(
             .eq("is_read", False)
             .execute()
         )
-        briefing["unread_convos"] = convos.count if convos.count is not None else len(convos.data or [])
+        briefing["unread_convos"] = (
+            convos.count if convos.count is not None else len(convos.data or [])
+        )
     except Exception:
         briefing["unread_convos"] = 0
 

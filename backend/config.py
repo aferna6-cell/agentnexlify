@@ -1,4 +1,3 @@
-
 import logging
 import os
 
@@ -49,6 +48,13 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     sentry_dsn: str = ""
 
+    # Inbound email webhooks (Agent OS connectors — Phase 4).
+    # Postmark: HMAC-SHA256 over raw body using this secret, sent as
+    # X-Postmark-Webhook-Hmac. Mailgun: HMAC-SHA256 over timestamp+token
+    # using the signing key configured in the Mailgun control panel.
+    postmark_webhook_secret: str = ""
+    mailgun_signing_key: str = ""
+
     widget_allowed_origins: str = "*"
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
     # so all workers share the same key, but it is NOT secure for production use.
@@ -69,6 +75,24 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = ""
+
+    # Microsoft 365 / Azure AD OAuth — calendar + mail send scopes.
+    # `m365_tenant_id` is the Azure AD tenant ("common" for multi-tenant +
+    # personal accounts, "organizations" for work/school only, or a specific
+    # tenant GUID for single-tenant). Defaults to "common" so any M365 user
+    # can connect.
+    m365_client_id: str = ""
+    m365_client_secret: str = ""
+    m365_redirect_uri: str = ""
+    m365_tenant_id: str = "common"
+
+    # HubSpot OAuth — CRM write-back for contact upserts via Group B actions.
+    # Scopes are space-separated: `crm.objects.contacts.read
+    # crm.objects.contacts.write oauth`. The redirect URI must match the
+    # value registered in the HubSpot app config exactly.
+    hubspot_client_id: str = ""
+    hubspot_client_secret: str = ""
+    hubspot_redirect_uri: str = ""
 
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
@@ -115,12 +139,16 @@ def is_production() -> bool:
         os.environ.get("RAILWAY_ENVIRONMENT"),
         os.environ.get("VERCEL_ENV"),
     )
-    return any((value or "").strip().lower() in {"prod", "production"} for value in candidates)
+    return any(
+        (value or "").strip().lower() in {"prod", "production"} for value in candidates
+    )
 
 
 def _is_weak_secret(value: str | None) -> bool:
     value = (value or "").strip()
-    return not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
+    return (
+        not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
+    )
 
 
 def _production_secret_failures(

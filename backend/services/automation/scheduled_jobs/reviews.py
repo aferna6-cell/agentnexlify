@@ -1,4 +1,5 @@
 """Scheduled jobs — review-related automations."""
+
 import html
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -31,7 +32,7 @@ async def _send_review_followups(
                 "id, tenant_id, customer_name, customer_email, customer_phone, lead_id, review_request_sent_at"
             )
             .eq("status", "completed")
-            .not_.is_("review_request_sent_at", "null")
+            .filter("review_request_sent_at", "not.is", "null")
             .lte("review_request_sent_at", followup_cutoff.isoformat())
             .limit(BATCH_LIMIT)
             .execute()
@@ -122,7 +123,11 @@ async def _send_review_followups(
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                logger.debug("Failed to check unsubscribe status for lead %s, proceeding (fail-open)", lead_id, exc_info=True)
+                logger.debug(
+                    "Failed to check unsubscribe status for lead %s, proceeding (fail-open)",
+                    lead_id,
+                    exc_info=True,
+                )
 
         followup_sent = False
 
@@ -312,7 +317,11 @@ async def send_pending_review_requests() -> int:
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                logger.debug("Failed to check unsubscribe status for lead %s, proceeding (fail-open)", lead_id, exc_info=True)
+                logger.debug(
+                    "Failed to check unsubscribe status for lead %s, proceeding (fail-open)",
+                    lead_id,
+                    exc_info=True,
+                )
 
         # Send email review request
         if method in ("email", "both") and appt.get("customer_email"):
@@ -438,7 +447,9 @@ async def send_csat_surveys() -> int:
             if existing.count and existing.count > 0:
                 continue
         except Exception:
-            logger.warning("Dedup check failed in follow-up review trigger", exc_info=True)
+            logger.warning(
+                "Dedup check failed in follow-up review trigger", exc_info=True
+            )
             continue
 
         # Get business name

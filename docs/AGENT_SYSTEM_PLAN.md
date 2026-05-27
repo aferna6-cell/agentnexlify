@@ -60,7 +60,7 @@ It should not try to duplicate the full repo brain.
 
 ### Supporting but non-canonical
 - `AGENTS.md`
-- tool-specific instruction mirrors (`GEMINI.md`, Copilot instructions, etc.)
+- tool-specific instruction mirrors (Copilot instructions, etc.)
 
 ### Experimental / optional
 - GAN agents

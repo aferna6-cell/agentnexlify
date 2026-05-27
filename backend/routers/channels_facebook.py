@@ -38,7 +38,8 @@ from backend.config import settings
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
-from backend.services import facebook_oauth, facebook_webhook
+from backend.services import facebook_oauth, facebook_webhook, os_inbound_bridge
+from backend.services.channel_manager import ingest_channel_message
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,117 @@ class FacebookStatusResponse(BaseModel):
     connected: bool
     page_name: str | None = None
     page_id: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Agent OS bridge helpers (signature verification + OAuth state helpers
+# live in backend.services.facebook_webhook / facebook_oauth).
+# ---------------------------------------------------------------------------
+
+
+async def _process_fb_webhook_event(payload: dict) -> None:
+    """Parse messaging events and store via channel_manager.
+
+    Facebook sends a list of 'entry' objects; each entry can contain multiple
+    'messaging' events. We only handle 'message' events (not echoes, postbacks,
+    read receipts) for now.
+
+    Runs as a BackgroundTasks callback so the HTTP response returns 200
+    immediately — Facebook will retry if it receives any non-200.
+    """
+    entries = payload.get("entry", [])
+    for entry in entries:
+        page_id: str = str(entry.get("id", ""))
+        for event in entry.get("messaging", []):
+            message_obj = event.get("message", {})
+
+            # Skip echoes (messages sent by the page itself)
+            if message_obj.get("is_echo"):
+                continue
+
+            sender_psid: str = str(event.get("sender", {}).get("id", ""))
+            text: str = message_obj.get("text", "")
+            timestamp_ms: int | None = event.get("timestamp")
+
+            if not sender_psid or not text:
+                # Non-text message (sticker, attachment, etc.) — skip for now
+                continue
+
+            try:
+                result = ingest_channel_message(
+                    provider="facebook",
+                    page_id=page_id,
+                    sender_id=sender_psid,
+                    sender_name=None,  # Name requires a separate Graph API call
+                    text=text,
+                    timestamp_ms=timestamp_ms,
+                )
+            except Exception:
+                logger.exception(
+                    "channel_manager.ingest_channel_message failed for page=%s sender=%s",
+                    page_id,
+                    sender_psid,
+                )
+                continue
+
+            if result:
+                logger.info(
+                    "Facebook message ingested: tenant=%s conversation=%s",
+                    result.get("tenant_id"),
+                    result.get("conversation_id"),
+                )
+                # Plug-in: bridge into Agent OS (Phase 6). Fail-open so FB's
+                # 5s retry budget is never blocked by OS-layer errors. Bridge
+                # gated by tenant-level toggle (`facebook_enabled`).
+                client_id = result.get("tenant_id")
+                fb_message_id = message_obj.get("mid") or ""
+                if client_id and fb_message_id:
+                    await _bridge_facebook_safe(
+                        client_id=client_id,
+                        page_id=page_id,
+                        sender_psid=sender_psid,
+                        message_id=fb_message_id,
+                        text=text,
+                        timestamp_ms=timestamp_ms,
+                    )
+
+
+async def _bridge_facebook_safe(
+    *,
+    client_id: str,
+    page_id: str,
+    sender_psid: str,
+    message_id: str,
+    text: str,
+    timestamp_ms: int | None,
+) -> None:
+    """Bridge FB message into Agent OS — never raise into caller.
+
+    Already running inside a BackgroundTasks callback so HTTP 200 went
+    out before this runs. Idempotency on ``source_ref='facebook:{mid}'``
+    means FB retries are safe.
+    """
+    try:
+        db = get_service_supabase()
+        if not os_inbound_bridge.is_bridge_enabled(db, client_id, "facebook"):
+            return
+        await os_inbound_bridge.bridge_facebook(
+            db=db,
+            client_id=client_id,
+            fb_thread_id=f"{page_id}:{sender_psid}",
+            provider_message_id=message_id,
+            user_content=text,
+            sender_metadata={
+                "sender_id": sender_psid,
+                "page_id": page_id,
+                "provider": "facebook",
+                "timestamp_ms": timestamp_ms,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "bridge_facebook failed: client_id=%s mid=%s", client_id, message_id
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +188,9 @@ async def facebook_webhook_verify(
     expected_token = getattr(settings, "facebook_verify_token", "")
     if not expected_token:
         logger.error("facebook_verify_token is not configured in settings")
-        raise HTTPException(status_code=503, detail="Facebook integration not configured")
+        raise HTTPException(
+            status_code=503, detail="Facebook integration not configured"
+        )
 
     if hub_mode == "subscribe" and hub_verify_token == expected_token:
         logger.info("Facebook webhook verification succeeded")
@@ -115,7 +229,7 @@ async def facebook_webhook_inbound(
         logger.exception("Facebook webhook: failed to parse JSON body")
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
-    background_tasks.add_task(facebook_webhook.process_event, payload)
+    background_tasks.add_task(_process_fb_webhook_event, payload)
     return {"ok": True}
 
 
@@ -162,14 +276,18 @@ async def facebook_oauth_callback(
             .execute()
         )
         if not state_row.data:
-            raise HTTPException(status_code=400, detail="Invalid or already used state parameter")
-        db.table("oauth_states").update({
-            "consumed_at": datetime.now(timezone.utc).isoformat()
-        }).eq("provider", "facebook").eq("nonce", nonce).execute()
+            raise HTTPException(
+                status_code=400, detail="Invalid or already used state parameter"
+            )
+        db.table("oauth_states").update(
+            {"consumed_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("provider", "facebook").eq("nonce", nonce).execute()
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Facebook OAuth: state validation failed for tenant %s", tenant_id)
+        logger.exception(
+            "Facebook OAuth: state validation failed for tenant %s", tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to validate OAuth state")
 
     app_id = getattr(settings, "facebook_app_id", "")
@@ -184,13 +302,18 @@ async def facebook_oauth_callback(
 
     try:
         user_access_token = await facebook_oauth.exchange_code_for_user_token(
-            app_id, app_secret, redirect_uri, code,
+            app_id,
+            app_secret,
+            redirect_uri,
+            code,
         )
     except Exception:
         logger.exception(
             "Facebook OAuth: token exchange failed for tenant %s", tenant_id
         )
-        raise HTTPException(status_code=502, detail="Failed to exchange authorization code")
+        raise HTTPException(
+            status_code=502, detail="Failed to exchange authorization code"
+        )
 
     try:
         pages = await facebook_oauth.fetch_managed_pages(user_access_token)
@@ -239,17 +362,23 @@ async def facebook_oauth_callback(
             },
         }
         if existing.data:
-            db.table("integrations").update(integration_data).eq("id", existing.data[0]["id"]).execute()
+            db.table("integrations").update(integration_data).eq(
+                "id", existing.data[0]["id"]
+            ).execute()
         else:
             db.table("integrations").insert(integration_data).execute()
     except Exception:
         logger.exception(
             "Facebook OAuth: failed to save integration for tenant %s", tenant_id
         )
-        raise HTTPException(status_code=500, detail="Failed to save Facebook integration")
+        raise HTTPException(
+            status_code=500, detail="Failed to save Facebook integration"
+        )
 
     try:
-        status_code, body_snippet = await facebook_oauth.subscribe_page(page_id, page_access_token)
+        status_code, body_snippet = await facebook_oauth.subscribe_page(
+            page_id, page_access_token
+        )
         if status_code != 200:
             logger.warning(
                 "Facebook OAuth: page webhook subscription returned %s for tenant %s: %s",
@@ -308,15 +437,21 @@ async def get_facebook_auth_url(
     )
     db = get_service_supabase()
     try:
-        db.table("oauth_states").insert({
-            "provider": "facebook",
-            "tenant_id": tenant_id,
-            "nonce": nonce,
-            "expires_at": expires_at.isoformat(),
-        }).execute()
+        db.table("oauth_states").insert(
+            {
+                "provider": "facebook",
+                "tenant_id": tenant_id,
+                "nonce": nonce,
+                "expires_at": expires_at.isoformat(),
+            }
+        ).execute()
     except Exception:
-        logger.exception("Facebook OAuth: failed to persist state for tenant %s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to initialize Facebook OAuth")
+        logger.exception(
+            "Facebook OAuth: failed to persist state for tenant %s", tenant_id
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to initialize Facebook OAuth"
+        )
 
     auth_url = facebook_oauth.build_auth_url(app_id, redirect_uri, state)
     return {"auth_url": auth_url}
@@ -395,7 +530,8 @@ async def facebook_disconnect(
     if page_id and page_access_token:
         try:
             status_code, body_snippet = await facebook_oauth.unsubscribe_page(
-                page_id, page_access_token,
+                page_id,
+                page_access_token,
             )
             if status_code != 200:
                 logger.warning(

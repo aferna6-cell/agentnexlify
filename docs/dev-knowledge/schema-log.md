@@ -970,3 +970,56 @@ Adds `zapier_api_keys` table backing Issue #58 — Zapier API key auth + tier ga
 **RLS:** service_role only (backend CRUD endpoints handle tenant scoping).
 **Conventions:** `client_id` (matches leads/conversations convention).
 **Applied:** YES — confirmed via PR #91 squash-merge.
+
+
+### 118-123 — Agent OS P0 Foundation
+**Date:** 2026-05-21
+**Branch:** claude/agent-os-grill-resume-cHznV
+Six tables backing the Agent OS overhaul P0 (chat-first orchestrator). Spec: `specs/agent-os-overhaul_spec.md`. Plan: `plans/agent-os-p0_plan.md`. Every new table carries the `os_` prefix and is `client_id`-scoped (matches leads/conversations).
+
+**Tables:**
+- `118 os_threads` — task-conversation threads. `id`, `client_id`, `title`, `created_by`, `status` (active|archived), timestamps. Index `(client_id, status)`.
+- `119 os_messages` — thread messages. `id`, `client_id`, `thread_id` FK→os_threads ON DELETE CASCADE, `role` (user|assistant|agent|system), `content`, `agent_run_id`, `created_at`. Index `(thread_id, created_at)`.
+- `120 os_agent_runs` — worker-agent invocations (async). `id`, `client_id`, `thread_id` FK CASCADE, `agent_name`, `status` (queued|running|succeeded|failed), `thought_process` JSONB, `deliverable` JSONB (approval-gated draft, no separate table in P0), `deliverable_status` (pending_approval|approved|rejected), `error_detail`, `bug_reported_at`, timestamps, `completed_at`. Index `(client_id, status)`.
+- `121 os_memory_entries` — semantic memory. `id`, `client_id`, `kind` (fact|preference|decision|conversation_summary), `content`, `embedding vector(512)` (voyage-3-lite), `source`, `created_by`, `is_pinned`, timestamps. HNSW cosine index on `embedding`. Also creates `match_os_memory(p_client_id, p_query_embedding, p_match_count)` SQL function for client-scoped ANN search. Karpathy graph layer (os_memory_nodes/edges) deferred past P0.
+- `122 os_backlog_requests` — no-fit backlog. `id`, `client_id`, `thread_id` FK→os_threads ON DELETE SET NULL, `summary`, `detail`, `reason`, `status` (open|accepted|declined|deferred), `decided_by`, `decision_note`, `created_at`, `decided_at`. Index `(client_id, status)`.
+- `123 os_tenant_usage` — per-tenant usage metering. `id`, `client_id`, `cycle_start` DATE, `agent_runs`, `messages`, `input_tokens`, `output_tokens`, timestamps. UNIQUE `(client_id, cycle_start)`. Index `(client_id, cycle_start DESC)`.
+
+**Extension:** 121 runs `CREATE EXTENSION IF NOT EXISTS vector`.
+**RLS:** deny-public on all 6 tables (`FOR ALL TO public USING (false) WITH CHECK (false)` — matches migration 116 pattern). Backend uses the service-role client (bypasses RLS); app-layer tenant scoping via `tenant_scope.py`.
+**Conventions:** `client_id` on every table (registered in `_TENANT_COLUMN_OVERRIDES` in `backend/services/tenant_scope.py`).
+**Applied:** YES — confirmed 2026-05-21 via Supabase MCP `list_tables` (all 6 tables present, RLS enabled, project `pxserpybmajixqrmzaly`).
+
+
+### 128 — Per-Tenant Agent OS Auto-Send Toggle
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds `tenants.os_auto_send_enabled BOOLEAN NOT NULL DEFAULT FALSE`. When FALSE (default), every Agent OS worker deliverable lands as `pending_approval` and waits for owner review. When TRUE, worker deliverables are marked `approved` directly at worker-success time — skipping the owner review gate. Action-handler firing is decided separately by `os_agent_runs.action_type` (migration 126); this flag only controls the approval gate.
+
+**Risk:** stale prompt + wired action handler + `auto_send=TRUE` → customer-facing action fires with zero human review. Default OFF; owner-gated toggle on the Settings page.
+
+**Backend wiring:** `backend/services/os_workers/__init__.py::_tenant_auto_send_enabled()` reads the flag; `run_worker` branches between `approved` and `pending_approval`. Settings endpoint `PUT /api/v1/auth/settings/{tenant_id}` accepts `os_auto_send_enabled`; `GET /api/v1/auth/tenant/{tenant_id}` returns it. Frontend toggle in `MessagingSettingsCards::AgentOSAutoSendCard`.
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+### 129 — chat_messages.os_message_id (Group C Mirror Tag)
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds `chat_messages.os_message_id UUID NULL`. Widget OS reply mirror tags each `chat_messages` row with the originating `os_messages.id` so replay is detectable. Partial unique index `chat_messages_os_message_id_uniq ON (tenant_id, os_message_id) WHERE os_message_id IS NOT NULL` enforces dedup only on mirrored rows; legacy pre-mirror rows stay unconstrained.
+
+**Backend wiring:** `backend/services/os_outbound_mirror.py::_mirror_widget` pre-checks `chat_messages` by `(tenant_id, os_message_id)` before insert. Idempotent across the 4 Uvicorn workers in prod.
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+### 130 — os_outbound_log (Group C Phase 3, Cross-Process Replay Protection)
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID NOT NULL`, `os_message_id UUID NOT NULL REFERENCES os_messages ON DELETE CASCADE`, `channel TEXT` (`sms | email | facebook`), `provider TEXT` (`twilio_byo | twilio_platform | resend | messenger`), `provider_message_id TEXT DEFAULT ''`, `status TEXT DEFAULT 'sent'`, `sent_at TIMESTAMPTZ DEFAULT now()`. Unique index `os_outbound_log_dedup_uniq ON (client_id, os_message_id, channel)` is the replay-protection lookup; `os_outbound_log_client_sent_idx ON (client_id, sent_at DESC)` for operational queries. RLS enabled + `os_outbound_log_deny_public` policy (service-role only). Tenant column is `client_id` (override registered in `tenant_scope._TENANT_COLUMN_OVERRIDES`).
+
+**Why:** widget mirror is idempotent via `chat_messages.os_message_id` (migration 129) but SMS / email / Facebook had no cross-process guard. With 4 Uvicorn workers, a runner re-fire on the same `os_messages` row would re-send the same SMS / email / FB DM. `os_outbound_log` is the dedup anchor: pre-check by `(client_id, os_message_id, channel)` before sending, post-insert after a successful send. Channel-scoped key supports future fan-out (simultaneous SMS + email mirror of one OS reply).
+
+**Failure semantics:** best-effort. Pre-check DB error falls through to send (rare duplicate beats blocking the customer's reply); post-insert DB error keeps `mirrored` status (customer already got the reply).
+
+**Backend wiring:** `backend/services/os_outbound_mirror.py::_outbound_log_already_sent` + `_outbound_log_record` helpers; `_mirror_sms`, `_mirror_email`, `_mirror_facebook` each gained pre-check + post-insert calls; dispatcher threads `db` through. Tests: `tests/test_agent_os.py::TestOutboundMirrorIdempotency` (9 cases — replay skip per channel, channel-scope correctness, success records row, pre-check DB failure falls through, post-insert DB failure preserves mirrored).
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 8 columns match schema, 3 indexes present (`os_outbound_log_pkey`, `os_outbound_log_dedup_uniq`, `os_outbound_log_client_sent_idx`), RLS enabled, `os_outbound_log_deny_public` policy in place.

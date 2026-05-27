@@ -5,12 +5,12 @@ twilio_webhooks, channels_facebook, gbp, automations, booking_page.
 """
 
 import os
+
 os.environ["TESTING"] = "1"
 
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
@@ -56,7 +56,14 @@ class TestEmailSequences:
         db = _mock_db()
         mock_db.return_value = db
         db.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = MagicMock(
-            data=[{"id": "seq1", "name": "Welcome Series", "trigger_type": "lead_captured", "is_active": True}]
+            data=[
+                {
+                    "id": "seq1",
+                    "name": "Welcome Series",
+                    "trigger_type": "lead_captured",
+                    "is_active": True,
+                }
+            ]
         )
         resp = client.get("/api/v1/email-sequences", headers=_auth())
         assert resp.status_code == 200
@@ -146,7 +153,11 @@ class TestResendWebhooks:
         resp = client.post(
             "/api/v1/webhooks/resend",
             json={"type": "email.bounced", "data": {"to": ["test@example.com"]}},
-            headers={"svix-signature": "v1,invalid", "svix-id": "msg1", "svix-timestamp": "12345"},
+            headers={
+                "svix-signature": "v1,invalid",
+                "svix-id": "msg1",
+                "svix-timestamp": "12345",
+            },
         )
         assert resp.status_code == 401
 
@@ -171,7 +182,11 @@ class TestTwilioWebhooks:
         mock_db.return_value = db
         resp = client.post(
             "/api/v1/twilio/missed-call",
-            data={"From": "+15551234567", "To": "+15559876543", "CallStatus": "no-answer"},
+            data={
+                "From": "+15551234567",
+                "To": "+15559876543",
+                "CallStatus": "no-answer",
+            },
         )
         # Should fail signature verification, return TwiML error, or 422 (validation)
         assert resp.status_code in (200, 400, 403, 422, 500)
@@ -185,6 +200,22 @@ class TestTwilioWebhooks:
             data={"From": "+15551234567", "To": "+15559876543", "Body": "Yes"},
         )
         assert resp.status_code in (200, 400, 403, 500)
+
+    @patch("backend.routers.twilio_webhooks._verify_twilio_signature")
+    def test_sms_reply_deprecated_returns_410(self, mock_verify):
+        """Legacy /sms-reply endpoint is gone — migrated to /api/v1/os/inbound/sms."""
+        mock_verify.return_value = True
+        resp = client.post(
+            "/api/v1/twilio/sms-reply",
+            data={
+                "From": "+15551234567",
+                "To": "+15559876543",
+                "Body": "Yes",
+                "MessageSid": "SM_deprecated_test",
+            },
+        )
+        assert resp.status_code == 410
+        assert "os/inbound/sms" in resp.json().get("detail", "")
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +260,9 @@ class TestChannelsFacebook:
         # No integration found — return disconnected
         result = MagicMock()
         result.data = []
-        db.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = result
+        db.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            result
+        )
         resp = client.get(
             "/api/v1/channels/facebook/tenant-001/status",
             headers=_auth(),
@@ -251,7 +284,9 @@ class TestGBP:
         mock_db.return_value = db
         result = MagicMock()
         result.data = None
-        db.table.return_value.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = result
+        db.table.return_value.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = (
+            result
+        )
         resp = client.get("/api/v1/gbp/tenant-001/status", headers=_auth())
         assert resp.status_code == 200
 

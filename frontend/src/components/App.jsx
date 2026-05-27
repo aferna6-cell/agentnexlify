@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
+import { fetchOsPendingDeliverables } from "../utils/api/os";
 import LoginPage from "./LoginPage";
 import MarketingAddonUpsell, {
   MARKETING_ADDON_GATED_KEYS,
@@ -71,11 +72,15 @@ const WidgetPage = lazy(() => import("../pages/WidgetPage"));
 const FaqManagerPage = lazy(() => import("../pages/FaqManagerPage"));
 const BillingPage = lazy(() => import("../pages/BillingPage"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage"));
+const SettingsInboundChannels = lazy(
+  () => import("../pages/SettingsInboundChannels"),
+);
 const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
 const AgentControlCenterPage = lazy(
   () => import("../pages/AgentControlCenterPage"),
 );
+const AgentOS = lazy(() => import("../pages/AgentOS"));
 const TeamPage = lazy(() => import("../pages/TeamPage"));
 const BusinessPageSettings = lazy(
   () => import("../pages/BusinessPageSettings"),
@@ -127,6 +132,7 @@ const pages = {
   dashboard: Dashboard,
   analytics: AnalyticsPage,
   control_center: AgentControlCenterPage,
+  agent_os: AgentOS,
   leads: LeadsPage,
   clients: ClientList,
   client_profile: ClientProfile,
@@ -140,6 +146,7 @@ const pages = {
   billing: BillingPage,
   integrations: IntegrationsPage,
   settings: SettingsPage,
+  inbound_channels: SettingsInboundChannels,
   business_page: BusinessPageSettings,
   reviews: ReviewsPage,
   content_studio: ContentStudioPage,
@@ -184,6 +191,7 @@ const PAGE_TO_PATH = {
   dashboard: "/dashboard",
   analytics: "/dashboard/analytics",
   control_center: "/dashboard/agent-control",
+  agent_os: "/dashboard/agent-os",
   leads: "/dashboard/leads",
   clients: "/dashboard/clients",
   client_profile: "/dashboard/client-profile",
@@ -199,6 +207,7 @@ const PAGE_TO_PATH = {
   billing: "/dashboard/billing",
   integrations: "/dashboard/integrations",
   settings: "/dashboard/settings",
+  inbound_channels: "/dashboard/inbound-channels",
   business_page: "/dashboard/business-page",
   reviews: "/dashboard/reviews",
   content_studio: "/dashboard/content-studio",
@@ -308,6 +317,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [activePlan, setActivePlan] = useState(null);
   const [trialData, setTrialData] = useState(null);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
 
   useEffect(() => {
     if (!user?.tenantId || !token) return;
@@ -324,6 +334,29 @@ export default function App() {
       setTrialData(null);
     }
   }, [activePlan]);
+
+  // Poll pending Agent OS approvals every 30s so the sidebar badge stays
+  // current from any page. Cheap GET — count + lightweight summary only.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const refresh = () => {
+      fetchOsPendingDeliverables(token)
+        .then((res) => {
+          if (cancelled) return;
+          setPendingApprovalCount(res?.count ?? 0);
+        })
+        .catch(() => {
+          // Silent — badge just stays at last known value
+        });
+    };
+    refresh();
+    const id = setInterval(refresh, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [token]);
 
   // Sync page state with browser back/forward buttons
   useEffect(() => {
@@ -360,8 +393,7 @@ export default function App() {
   // Marketing Suite add-on gate - block 7 pages when tenant lacks the add-on.
   // Backend enforces via addon_gate dependency; this is the UI half (answer #5 = C).
   const marketingAddonGated =
-    MARKETING_ADDON_GATED_KEYS.has(currentPage) &&
-    !user.marketing_addon_active;
+    MARKETING_ADDON_GATED_KEYS.has(currentPage) && !user.marketing_addon_active;
 
   return (
     <div className="app">
@@ -369,6 +401,7 @@ export default function App() {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         plan={activePlan}
+        pendingApprovalCount={pendingApprovalCount}
       />
       <div
         style={{

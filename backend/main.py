@@ -90,6 +90,14 @@ from backend.routers import (
     admin_analytics,
     admin_promotions,
     zapier,
+    os_threads,
+    os_agent_runs,
+    os_deliverables,
+    os_memory,
+    os_backlog,
+    os_usage,
+    os_inbound,
+    os_sync as os_sync_router,
 )
 
 # --- JSON logging ---
@@ -305,6 +313,7 @@ async def _automation_loop():
         send_aftercare_instructions,
         schedule_automation_check,
     )
+    from backend.services.os_sync import run_due_syncs as _os_sync_tick
 
     tick = 0
     while True:
@@ -358,6 +367,10 @@ async def _automation_loop():
                         _safe_run("process_noshow_recovery", process_noshow_recovery),
                     ]
                 )
+
+            # Every 15 min: Agent OS data sync (leads + future sources)
+            if tick % 15 == 0:
+                core_tasks.append(_safe_run("os_sync_tick", _os_sync_tick))
 
             # Every 30 min: heavy/infrequent tasks
             if tick % 30 == 0:
@@ -829,6 +842,14 @@ app.include_router(waitlist.router)
 app.include_router(wizard_analytics.router)
 app.include_router(content_repurpose.router)
 app.include_router(zapier.router)
+app.include_router(os_threads.router)
+app.include_router(os_agent_runs.router)
+app.include_router(os_deliverables.router)
+app.include_router(os_memory.router)
+app.include_router(os_backlog.router)
+app.include_router(os_usage.router)
+app.include_router(os_inbound.router)
+app.include_router(os_sync_router.router)
 
 
 # --- Static files (widget) ---

@@ -10,9 +10,6 @@ import asyncio
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Bug #70 — noshow_recovery._send_noshow_followups lazy-loads tenant
 # ---------------------------------------------------------------------------
@@ -67,13 +64,21 @@ class TestNoshowFollowupTenantCache:
             chain = MagicMock()
             if table_name == "appointments":
                 # First call = the follow-up query; any later calls = update/check
-                chain.select.return_value.eq.return_value.not_.is_.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = followup_query
+                chain.select.return_value.eq.return_value.filter.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = (
+                    followup_query
+                )
                 # rebooked check + mark followup
-                chain.update.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+                chain.update.return_value.eq.return_value.execute.return_value = (
+                    MagicMock(data=[])
+                )
             elif table_name == "tenants":
-                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = tenant_query
+                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+                    tenant_query
+                )
             else:
-                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
+                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                    data=[]
+                )
             return chain
 
         db = MagicMock()
@@ -82,17 +87,23 @@ class TestNoshowFollowupTenantCache:
         # Stub SMS/email so we don't actually send
         with (
             patch.object(noshow_recovery, "send_sms", new=AsyncMock(return_value=True)),
-            patch.object(noshow_recovery, "send_email", new=AsyncMock(return_value={"success": True})),
+            patch.object(
+                noshow_recovery,
+                "send_email",
+                new=AsyncMock(return_value={"success": True}),
+            ),
             patch.object(noshow_recovery, "check_sms_rate_limit", return_value=True),
             patch.object(noshow_recovery, "increment_sms_count"),
-            patch.object(noshow_recovery, "build_unsubscribe_url", return_value="https://unsub.test"),
+            patch.object(
+                noshow_recovery,
+                "build_unsubscribe_url",
+                return_value="https://unsub.test",
+            ),
         ):
             cache: dict[str, dict | None] = {}  # starts EMPTY — the bug case
             now = datetime.now(timezone.utc)
 
-            sent = asyncio.run(
-                noshow_recovery._send_noshow_followups(db, now, cache)
-            )
+            sent = asyncio.run(noshow_recovery._send_noshow_followups(db, now, cache))
 
             # The tenant must have been fetched and cached
             assert tenant_id in cache, (
@@ -128,10 +139,16 @@ class TestNoshowFollowupTenantCache:
         def table_side_effect(table_name):
             chain = MagicMock()
             if table_name == "appointments":
-                chain.select.return_value.eq.return_value.not_.is_.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = followup_query
-                chain.update.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+                chain.select.return_value.eq.return_value.filter.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = (
+                    followup_query
+                )
+                chain.update.return_value.eq.return_value.execute.return_value = (
+                    MagicMock(data=[])
+                )
             else:
-                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
+                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                    data=[]
+                )
             return chain
 
         db = MagicMock()
@@ -145,14 +162,20 @@ class TestNoshowFollowupTenantCache:
             patch.object(noshow_recovery, "send_email", new=send_email_mock),
             patch.object(noshow_recovery, "check_sms_rate_limit", return_value=True),
             patch.object(noshow_recovery, "increment_sms_count"),
-            patch.object(noshow_recovery, "build_unsubscribe_url", return_value="https://unsub.test"),
+            patch.object(
+                noshow_recovery,
+                "build_unsubscribe_url",
+                return_value="https://unsub.test",
+            ),
         ):
             # IMPORTANT: pre-populate cache so we're NOT testing the lazy-load
             # path. This isolates the toggle-off defense-in-depth check.
             cache: dict[str, dict | None] = {tenant_id: tenant_row}
             sent = asyncio.run(
                 noshow_recovery._send_noshow_followups(
-                    db, datetime.now(timezone.utc), cache,
+                    db,
+                    datetime.now(timezone.utc),
+                    cache,
                 )
             )
 
@@ -203,18 +226,30 @@ class TestNoshowRecoveryUnsubscribeDefaultDeny:
         def table_side_effect(name):
             chain = MagicMock()
             if name == "appointments":
-                chain.select.return_value.eq.return_value.is_.return_value.limit.return_value.execute.return_value = appt_query
-                chain.select.return_value.eq.return_value.not_.is_.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
-                chain.update.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+                chain.select.return_value.eq.return_value.is_.return_value.limit.return_value.execute.return_value = (
+                    appt_query
+                )
+                chain.select.return_value.eq.return_value.filter.return_value.is_.return_value.lte.return_value.limit.return_value.execute.return_value = MagicMock(
+                    data=[]
+                )
+                chain.update.return_value.eq.return_value.execute.return_value = (
+                    MagicMock(data=[])
+                )
             elif name == "tenants":
-                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = tenant_query
+                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+                    tenant_query
+                )
             elif name == "leads":
                 # Raise on unsubscribe lookup — forces default-deny path
-                chain.select.return_value.eq.return_value.limit.return_value.execute.side_effect = RuntimeError("supabase down")
+                chain.select.return_value.eq.return_value.limit.return_value.execute.side_effect = RuntimeError(
+                    "supabase down"
+                )
             elif name == "activity_log":
                 chain.insert.return_value.execute.return_value = MagicMock(data=[])
             else:
-                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
+                chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                    data=[]
+                )
             return chain
 
         db = MagicMock()
@@ -229,7 +264,11 @@ class TestNoshowRecoveryUnsubscribeDefaultDeny:
             patch.object(noshow_recovery, "send_email", new=send_email_mock),
             patch.object(noshow_recovery, "check_sms_rate_limit", return_value=True),
             patch.object(noshow_recovery, "increment_sms_count"),
-            patch.object(noshow_recovery, "build_unsubscribe_url", return_value="https://unsub.test"),
+            patch.object(
+                noshow_recovery,
+                "build_unsubscribe_url",
+                return_value="https://unsub.test",
+            ),
             patch.object(noshow_recovery, "fire_event_background"),
         ):
             sent = asyncio.run(noshow_recovery.process_noshow_recovery())
@@ -274,7 +313,9 @@ class TestPipelineNotifyTeamEscaping:
         with patch.object(pipeline_automations, "send_email", new=fake_send_email):
             asyncio.run(
                 pipeline_automations._execute_notify_team_action(
-                    action, lead, tenant,
+                    action,
+                    lead,
+                    tenant,
                     new_stage="closed <won>",
                     old_stage="qualified & ready",
                 )
@@ -292,8 +333,8 @@ class TestPipelineNotifyTeamEscaping:
 
         # Entity-escaped versions must appear
         assert "&lt;img src=x onerror=alert(1)&gt;" in body
-        assert "&lt;b&gt;closed&lt;/b&gt;" in body          # message escaped
-        assert "qualified &amp; ready" in body              # old_stage escaped
-        assert "closed &lt;won&gt;" in body                 # new_stage escaped
-        assert "Acme &lt;Corp&gt;" in subject               # business_name escaped
-        assert "&lt;img src=x" in subject                   # lead name escaped in subject too
+        assert "&lt;b&gt;closed&lt;/b&gt;" in body  # message escaped
+        assert "qualified &amp; ready" in body  # old_stage escaped
+        assert "closed &lt;won&gt;" in body  # new_stage escaped
+        assert "Acme &lt;Corp&gt;" in subject  # business_name escaped
+        assert "&lt;img src=x" in subject  # lead name escaped in subject too

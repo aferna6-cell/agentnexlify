@@ -8,6 +8,7 @@ import {
   WebsiteScannerCard,
 } from "./BusinessSettingsCards";
 import {
+  AgentOSAutoSendCard,
   AutoReviewRequestsCard,
   DailyBriefingCard,
   GoogleReviewLinkCard,
@@ -16,10 +17,7 @@ import {
   SmsNotificationsCard,
 } from "./MessagingSettingsCards";
 import PhoneProvisioningCard from "./PhoneProvisioningCard";
-import {
-  ConversationTagsCard,
-  CustomFieldsCard,
-} from "./TagsAndFieldsCards";
+import { ConversationTagsCard, CustomFieldsCard } from "./TagsAndFieldsCards";
 import {
   AiKnowledgeSourcesCard,
   AiResponseFeedbackCard,
@@ -74,6 +72,7 @@ export default function SettingsPageContent(props) {
       <AutoReviewRequestsCard {...formProps} {...saveProps} />
       <DailyBriefingCard {...formProps} {...saveProps} />
       <NoShowRecoveryCard {...formProps} {...saveProps} />
+      <AgentOSAutoSendCard {...formProps} {...saveProps} />
       <MissedCallTextBackCard {...formProps} {...saveProps} />
       <PhoneProvisioningCard
         provisionedPhone={props.provisionedPhone}
@@ -91,7 +90,10 @@ export default function SettingsPageContent(props) {
         handleProvision={props.handleProvision}
         handleReleasePhone={props.handleReleasePhone}
       />
-      <BookingPageCard apiBase={props.apiBase} businessSlug={props.businessSlug} />
+      <BookingPageCard
+        apiBase={props.apiBase}
+        businessSlug={props.businessSlug}
+      />
       <QuickLinksCard onNavigate={props.onNavigate} />
       <ConversationTagsCard
         tagDefs={props.tagDefs}
