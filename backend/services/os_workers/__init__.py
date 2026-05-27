@@ -28,6 +28,31 @@ _REGISTRY: dict[str, WorkerSpec] = {}
 _DISCOVERED = False
 
 
+def _tenant_auto_send_enabled(db, client_id: str) -> bool:
+    """Read per-tenant Agent OS auto-send toggle. Defaults to False on error.
+
+    See migration 128_tenants_os_auto_send.sql. When TRUE, worker deliverables
+    skip the owner approval gate and start as ``approved`` directly.
+    """
+    try:
+        result = (
+            db.table("tenants")
+            .select("os_auto_send_enabled")
+            .eq("id", client_id)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return bool(result.data[0].get("os_auto_send_enabled"))
+    except Exception:
+        logger.warning(
+            "os worker could not read auto-send flag client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+    return False
+
+
 def _discover() -> None:
     """Import every worker module once and collect its ``SPEC``."""
     global _DISCOVERED
@@ -116,12 +141,21 @@ async def run_worker(
         deliverable = dict(result.deliverable)
         deliverable.setdefault("title", ctx.deliverable_title)
         deliverable.setdefault("format", "markdown")
+
+        auto_send = _tenant_auto_send_enabled(db, client_id)
+        deliverable_status = "approved" if auto_send else "pending_approval"
+        if auto_send:
+            ctx.step(
+                "Auto-send enabled",
+                "Tenant has os_auto_send_enabled=TRUE — deliverable marked approved without owner review.",
+            )
+
         runs.update(
             {
                 "status": "succeeded",
                 "thought_process": ctx.thought,
                 "deliverable": deliverable,
-                "deliverable_status": "pending_approval",
+                "deliverable_status": deliverable_status,
                 "completed_at": now_iso(),
                 "updated_at": now_iso(),
             }

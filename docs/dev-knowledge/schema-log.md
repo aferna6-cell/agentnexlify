@@ -989,3 +989,15 @@ Six tables backing the Agent OS overhaul P0 (chat-first orchestrator). Spec: `sp
 **RLS:** deny-public on all 6 tables (`FOR ALL TO public USING (false) WITH CHECK (false)` — matches migration 116 pattern). Backend uses the service-role client (bypasses RLS); app-layer tenant scoping via `tenant_scope.py`.
 **Conventions:** `client_id` on every table (registered in `_TENANT_COLUMN_OVERRIDES` in `backend/services/tenant_scope.py`).
 **Applied:** YES — confirmed 2026-05-21 via Supabase MCP `list_tables` (all 6 tables present, RLS enabled, project `pxserpybmajixqrmzaly`).
+
+
+### 128 — Per-Tenant Agent OS Auto-Send Toggle
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds `tenants.os_auto_send_enabled BOOLEAN NOT NULL DEFAULT FALSE`. When FALSE (default), every Agent OS worker deliverable lands as `pending_approval` and waits for owner review. When TRUE, worker deliverables are marked `approved` directly at worker-success time — skipping the owner review gate. Action-handler firing is decided separately by `os_agent_runs.action_type` (migration 126); this flag only controls the approval gate.
+
+**Risk:** stale prompt + wired action handler + `auto_send=TRUE` → customer-facing action fires with zero human review. Default OFF; owner-gated toggle on the Settings page.
+
+**Backend wiring:** `backend/services/os_workers/__init__.py::_tenant_auto_send_enabled()` reads the flag; `run_worker` branches between `approved` and `pending_approval`. Settings endpoint `PUT /api/v1/auth/settings/{tenant_id}` accepts `os_auto_send_enabled`; `GET /api/v1/auth/tenant/{tenant_id}` returns it. Frontend toggle in `MessagingSettingsCards::AgentOSAutoSendCard`.
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).

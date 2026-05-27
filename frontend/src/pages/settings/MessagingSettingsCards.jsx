@@ -246,6 +246,45 @@ export function NoShowRecoveryCard({
   );
 }
 
+export function AgentOSAutoSendCard({
+  form,
+  setForm,
+  setSaved,
+  handleSave,
+  saving,
+  saved,
+}) {
+  return (
+    <div className="settings-card">
+      <h3>Agent OS Auto-Send</h3>
+      <p className="settings-card-desc">
+        When OFF (default), every Agent OS worker deliverable waits for your
+        approval before any customer-facing action fires. When ON, deliverables
+        are auto-approved as soon as the worker completes — no review gate. Only
+        turn ON once you trust the workers and prompts.
+      </p>
+      <CheckboxSettingRow
+        id="os-auto-send-toggle"
+        checked={form.os_auto_send_enabled}
+        onChange={(e) => {
+          setForm((f) => ({
+            ...f,
+            os_auto_send_enabled: e.target.checked,
+          }));
+          setSaved(false);
+        }}
+        label="Skip approval — auto-send worker deliverables"
+      />
+      <SaveButton
+        saving={saving}
+        saved={saved}
+        onSave={handleSave}
+        style={{ marginTop: "0.75rem" }}
+      />
+    </div>
+  );
+}
+
 export function MissedCallTextBackCard({
   form,
   setForm,
@@ -278,7 +317,9 @@ export function MissedCallTextBackCard({
             <label>Greeting Message</label>
             <textarea
               value={form.textback_message}
-              onChange={(e) => updateTextBack({ textback_message: e.target.value })}
+              onChange={(e) =>
+                updateTextBack({ textback_message: e.target.value })
+              }
               rows={3}
               style={textareaStyle}
               placeholder="Hi! Sorry we missed your call..."
@@ -300,7 +341,9 @@ export function MissedCallTextBackCard({
               Missed calls during quiet hours will be texted when quiet hours
               end.
             </p>
-            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            <div
+              style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}
+            >
               <QuietHourInput
                 label="Start"
                 value={form.textback_quiet_start}
@@ -314,7 +357,9 @@ export function MissedCallTextBackCard({
               <QuietHourInput
                 label="End"
                 value={form.textback_quiet_end}
-                onChange={(value) => updateTextBack({ textback_quiet_end: value })}
+                onChange={(value) =>
+                  updateTextBack({ textback_quiet_end: value })
+                }
               />
             </div>
           </div>

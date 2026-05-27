@@ -625,6 +625,33 @@ class TestRunWorker:
             )
         assert fake.store["os_agent_runs"][0]["status"] == "failed"
 
+    async def test_run_worker_auto_send_marks_approved(self):
+        fake = FakeSupabase()
+        _seed_run(fake, "run-001")
+        fake.seed("tenants", {"id": _TENANT, "os_auto_send_enabled": True})
+        with patch(
+            "backend.services.os_workers.get_service_supabase", return_value=fake
+        ):
+            await os_workers.run_worker(
+                "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
+            )
+        run = fake.store["os_agent_runs"][0]
+        assert run["status"] == "succeeded"
+        assert run["deliverable_status"] == "approved"
+
+    async def test_run_worker_auto_send_default_off(self):
+        fake = FakeSupabase()
+        _seed_run(fake, "run-001")
+        fake.seed("tenants", {"id": _TENANT, "os_auto_send_enabled": False})
+        with patch(
+            "backend.services.os_workers.get_service_supabase", return_value=fake
+        ):
+            await os_workers.run_worker(
+                "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
+            )
+        run = fake.store["os_agent_runs"][0]
+        assert run["deliverable_status"] == "pending_approval"
+
     async def test_record_memory_writes_persists_entries(self):
         fake = FakeSupabase()
         with patch(
