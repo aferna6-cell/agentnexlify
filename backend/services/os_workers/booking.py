@@ -12,6 +12,11 @@ import logging
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_workers.base import WorkerContext, WorkerResult, WorkerSpec
+from backend.services.os_workers.profile import (
+    PLACEHOLDER_INSTRUCTION,
+    format_business_profile_block,
+    profile_trace_step,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +41,9 @@ If the request is incomplete (missing preferred date/time or service type), incl
 a polite question asking for the missing detail.
 
 Output only the message body in markdown. Do not include a preamble, subject line, \
-or any phrase like "here is your draft" — start directly with the message content.\
-"""
+or any phrase like "here is your draft" — start directly with the message content.
+
+""" + PLACEHOLDER_INSTRUCTION
 
 
 _PROFILE_KEYS = (
@@ -79,15 +85,20 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
     profile: dict = {}
     recent_convos: list[dict] = []
     if ctx.tools is not None:
-        ctx.step("Loading business profile", "Hours, services, timezone.")
         profile = await ctx.tools.tenant_profile()
+        trace_label, trace_detail = profile_trace_step(profile)
+        ctx.step(trace_label, trace_detail)
         ctx.step("Loading recent chats", "Last 7 days of widget conversations.")
         recent_convos = await ctx.tools.recent_widget_conversations(days=7, limit=5)
 
+    profile_block = format_business_profile_block(profile)
     profile_brief = _profile_brief(profile)
     convo_brief = _conversations_brief(recent_convos)
 
-    user_content_parts = [f"Owner request:\n{ctx.user_message}"]
+    user_content_parts: list[str] = []
+    if profile_block:
+        user_content_parts.append(profile_block)
+    user_content_parts.append(f"Owner request:\n{ctx.user_message}")
     if profile_brief:
         user_content_parts.append(
             "Business profile:\n" + json.dumps(profile_brief, default=str)

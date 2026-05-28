@@ -43,7 +43,8 @@ _APPT_COLUMNS = (
 )
 _TENANT_COLUMNS = (
     "id, business_name, business_type, plan, owner_email, owner_name, "
-    "notification_phone, timezone, business_hours, services_offered"
+    "notification_phone, business_phone, timezone, business_hours, "
+    "services_offered, city, website_url"
 )
 
 

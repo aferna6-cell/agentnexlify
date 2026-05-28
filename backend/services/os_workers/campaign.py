@@ -13,6 +13,11 @@ import re
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_workers.base import WorkerContext, WorkerResult, WorkerSpec
+from backend.services.os_workers.profile import (
+    PLACEHOLDER_INSTRUCTION,
+    format_business_profile_block,
+    profile_trace_step,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +64,8 @@ _SYSTEM_PROMPT = (
     "- A short social-post variant (1–3 sentences) when it adds value\n\n"
     "Write the full draft in markdown. Do not add a preamble such as "
     "'Here is your draft' or 'I've written'. Output only the campaign body "
-    "so the owner can paste it directly into their email or social tools."
+    "so the owner can paste it directly into their email or social tools.\n\n"
+    + PLACEHOLDER_INSTRUCTION
 )
 
 
@@ -71,6 +77,20 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
         f"Drafting campaign copy for: {ctx.user_message[:120]}",
     )
 
+    profile: dict = {}
+    if ctx.tools is not None:
+        profile = await ctx.tools.tenant_profile()
+        trace_label, trace_detail = profile_trace_step(profile)
+        ctx.step(trace_label, trace_detail)
+
+    profile_block = format_business_profile_block(profile)
+
+    user_content_parts: list[str] = []
+    if profile_block:
+        user_content_parts.append(profile_block)
+    user_content_parts.append(f"Owner request:\n{ctx.user_message}")
+    user_content = "\n\n".join(user_content_parts)
+
     body: str
     try:
         result = await call_claude_messages(
@@ -78,7 +98,7 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             model="claude-sonnet-4-6",
             max_tokens=2000,
             system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": ctx.user_message}],
+            messages=[{"role": "user", "content": user_content}],
             metadata={"client_id": ctx.client_id},
         )
         body = result.text.strip()

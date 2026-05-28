@@ -12,6 +12,11 @@ import re
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_workers.base import WorkerContext, WorkerResult, WorkerSpec
+from backend.services.os_workers.profile import (
+    PLACEHOLDER_INSTRUCTION,
+    format_business_profile_block,
+    profile_trace_step,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +75,8 @@ _SYSTEM_PROMPT = (
     "'unsubscribed'.\n"
     "- Output the message body in markdown.\n"
     "- Do not include a preamble or meta-commentary such as 'Here is your draft'.\n"
-    "- Do not include a subject line unless the owner asked for one."
+    "- Do not include a subject line unless the owner asked for one.\n\n"
+    + PLACEHOLDER_INSTRUCTION
 )
 
 
@@ -118,13 +124,18 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
             "Pulling leads with no touch in the last 14 days.",
         )
         stale = await ctx.tools.stale_leads(days_since_last_touch=14, limit=10)
-        ctx.step("Loading business profile", "For voice and offering context.")
         profile = await ctx.tools.tenant_profile()
+        trace_label, trace_detail = profile_trace_step(profile)
+        ctx.step(trace_label, trace_detail)
 
     lead_brief = _lead_brief(stale)
+    profile_block = format_business_profile_block(profile)
     profile_brief = _profile_brief(profile)
 
-    user_content_parts = [f"Owner request:\n{ctx.user_message}"]
+    user_content_parts: list[str] = []
+    if profile_block:
+        user_content_parts.append(profile_block)
+    user_content_parts.append(f"Owner request:\n{ctx.user_message}")
     if profile_brief:
         user_content_parts.append(
             "Business profile:\n" + json.dumps(profile_brief, default=str)

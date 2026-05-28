@@ -12,6 +12,11 @@ import logging
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_workers.base import WorkerContext, WorkerResult, WorkerSpec
+from backend.services.os_workers.profile import (
+    PLACEHOLDER_INSTRUCTION,
+    format_business_profile_block,
+    profile_trace_step,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +37,7 @@ _SYSTEM_PROMPT = (
     "covered there, write a polite placeholder the owner can fill in — never "
     "invent specifics.\n\n"
     "Output only the answer body in markdown — no preamble such as 'Here is "
-    "your draft', no sign-off, no subject line."
+    "your draft', no sign-off, no subject line.\n\n" + PLACEHOLDER_INSTRUCTION
 )
 
 
@@ -84,19 +89,25 @@ async def _run(ctx: WorkerContext) -> WorkerResult:
     profile: dict = {}
     memory_hits: list[dict] = []
     if ctx.tools is not None:
-        ctx.step("Loading knowledge base", "Widget KB + business profile.")
         profile = await ctx.tools.tenant_profile()
         kb_text = str(profile.get("knowledge_base") or "")
+        trace_label, trace_detail = profile_trace_step(profile)
+        ctx.step(trace_label, trace_detail)
+        ctx.step("Loading knowledge base", "Widget KB for tenant-specific facts.")
         ctx.step("Searching memory", "Durable facts relevant to the question.")
         memory_hits = await ctx.tools.search_memory(
             ctx.user_message, match_count=_MEMORY_HITS
         )
 
+    profile_block = format_business_profile_block(profile)
     profile_brief = _profile_brief(profile)
     memory_brief = _memory_brief(memory_hits)
     kb_trimmed = _truncate(kb_text, _KB_CHAR_BUDGET) if kb_text else ""
 
-    user_content_parts = [f"Customer question / owner request:\n{ctx.user_message}"]
+    user_content_parts: list[str] = []
+    if profile_block:
+        user_content_parts.append(profile_block)
+    user_content_parts.append(f"Customer question / owner request:\n{ctx.user_message}")
     if profile_brief:
         user_content_parts.append(
             "Business profile:\n" + json.dumps(profile_brief, default=str)
