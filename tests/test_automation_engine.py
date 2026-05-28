@@ -16,8 +16,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
@@ -32,9 +30,21 @@ def _make_db_mock():
     db = MagicMock()
     table = MagicMock()
     for method in (
-        "select", "insert", "update", "delete",
-        "eq", "neq", "gte", "lte", "gt", "lt",
-        "limit", "order", "in_", "is_", "not_",
+        "select",
+        "insert",
+        "update",
+        "delete",
+        "eq",
+        "neq",
+        "gte",
+        "lte",
+        "gt",
+        "lt",
+        "limit",
+        "order",
+        "in_",
+        "is_",
+        "not_",
     ):
         getattr(table, method).return_value = table
     table.execute.return_value = MagicMock(data=[], count=0)
@@ -55,7 +65,9 @@ _KNOWN_TUESDAY = datetime(2026, 3, 17, 12, 0, tzinfo=timezone.utc)  # weekday() 
 class TestProcessPendingSteps:
     """Tests for process_pending_steps()."""
 
-    @patch("backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock
+    )
     @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_happy_path_one_due_execution(self, mock_get_db, mock_execute_step):
         """One due execution → execute_step called once → returns 1."""
@@ -68,7 +80,9 @@ class TestProcessPendingSteps:
         result = await process_pending_steps()
 
         assert result == 1
-        mock_execute_step.assert_awaited_once_with("exec-001", execution_data={"id": "exec-001"})
+        mock_execute_step.assert_awaited_once_with(
+            "exec-001", execution_data={"id": "exec-001"}
+        )
 
     @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_no_pending_steps_returns_zero(self, mock_get_db):
@@ -82,9 +96,13 @@ class TestProcessPendingSteps:
         result = await process_pending_steps()
         assert result == 0
 
-    @patch("backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock
+    )
     @patch("backend.services.automation.orchestrator.get_service_supabase")
-    async def test_multiple_executions_all_processed(self, mock_get_db, mock_execute_step):
+    async def test_multiple_executions_all_processed(
+        self, mock_get_db, mock_execute_step
+    ):
         """Three due executions → execute_step called three times → returns 3."""
         db, table = _make_db_mock()
         mock_get_db.return_value = db
@@ -99,7 +117,9 @@ class TestProcessPendingSteps:
         assert result == 3
         assert mock_execute_step.await_count == 3
 
-    @patch("backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.orchestrator.execute_step", new_callable=AsyncMock
+    )
     @patch("backend.services.automation.orchestrator.get_service_supabase")
     async def test_failed_execute_step_does_not_block_others(
         self, mock_get_db, mock_execute_step
@@ -140,8 +160,17 @@ class TestTriggerSequence:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -175,8 +204,17 @@ class TestTriggerSequence:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -214,8 +252,17 @@ class TestTriggerSequence:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
             t.execute.return_value = MagicMock(data=[])
@@ -243,8 +290,17 @@ class TestTriggerSequence:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -259,7 +315,7 @@ class TestTriggerSequence:
             elif name == "automation_executions":
                 # Simulate UNIQUE constraint violation on insert
                 t.execute.side_effect = Exception(
-                    'duplicate key value violates unique constraint'
+                    "duplicate key value violates unique constraint"
                 )
             else:
                 t.execute.return_value = MagicMock(data=[])
@@ -281,8 +337,14 @@ class TestTriggerSequence:
 class TestSendInvoicePaymentReminders:
     """Tests for send_invoice_payment_reminders()."""
 
-    @patch("backend.services.automation.scheduled.billing_jobs.send_sms", new_callable=AsyncMock)
-    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled.billing_jobs.send_sms",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "backend.services.automation.scheduled.billing_jobs.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_overdue_invoice_marked_overdue_and_email_sent(
         self, mock_get_db, mock_send_email, mock_send_sms
@@ -310,8 +372,17 @@ class TestSendInvoicePaymentReminders:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -331,7 +402,10 @@ class TestSendInvoicePaymentReminders:
 
         # Patch log_activity so it does not attempt real DB calls
         with patch("backend.services.activity.log_activity", create=True):
-            from backend.services.automation_engine import send_invoice_payment_reminders
+            from backend.services.automation_engine import (
+                send_invoice_payment_reminders,
+            )
+
             result = await send_invoice_payment_reminders()
 
         assert result >= 1
@@ -339,8 +413,14 @@ class TestSendInvoicePaymentReminders:
         call_kwargs = mock_send_email.call_args.kwargs
         assert "overdue" in call_kwargs.get("subject", "").lower()
 
-    @patch("backend.services.automation.scheduled.billing_jobs.send_sms", new_callable=AsyncMock)
-    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled.billing_jobs.send_sms",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "backend.services.automation.scheduled.billing_jobs.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_due_tomorrow_sends_reminder(
         self, mock_get_db, mock_send_email, mock_send_sms
@@ -368,8 +448,17 @@ class TestSendInvoicePaymentReminders:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -388,7 +477,10 @@ class TestSendInvoicePaymentReminders:
         db.table.side_effect = table_side_effect
 
         with patch("backend.services.activity.log_activity", create=True):
-            from backend.services.automation_engine import send_invoice_payment_reminders
+            from backend.services.automation_engine import (
+                send_invoice_payment_reminders,
+            )
+
             result = await send_invoice_payment_reminders()
 
         assert result >= 1
@@ -396,7 +488,10 @@ class TestSendInvoicePaymentReminders:
         call_kwargs = mock_send_email.call_args.kwargs
         assert "tomorrow" in call_kwargs.get("subject", "").lower()
 
-    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled.billing_jobs.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_already_reminded_today_skips(self, mock_get_db, mock_send_email):
         """activity_log dedup hit for today → email NOT sent → returns 0."""
@@ -419,8 +514,17 @@ class TestSendInvoicePaymentReminders:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -442,7 +546,10 @@ class TestSendInvoicePaymentReminders:
         assert result == 0
         mock_send_email.assert_not_awaited()
 
-    @patch("backend.services.automation.scheduled.billing_jobs.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled.billing_jobs.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled.billing_jobs.get_service_supabase")
     async def test_invoice_with_no_lead_id_skips_gracefully(
         self, mock_get_db, mock_send_email
@@ -467,8 +574,17 @@ class TestSendInvoicePaymentReminders:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -500,7 +616,10 @@ class TestSendWeeklyIntelligenceBriefs:
     Setting anthropic_api_key to an empty string skips the AI generation block.
     """
 
-    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled_jobs_ext.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_tuesday_returns_zero_immediately(self, mock_get_db, mock_send_email):
         """Non-Monday weekday → returns 0, no email sent.
@@ -513,7 +632,9 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt:
+        with patch(
+            "backend.services.automation.scheduled_jobs_ext.datetime"
+        ) as mock_dt:
             mock_dt.now.return_value = _KNOWN_TUESDAY
             mock_dt.fromisoformat = datetime.fromisoformat
             result = await send_weekly_intelligence_briefs()
@@ -521,7 +642,10 @@ class TestSendWeeklyIntelligenceBriefs:
         assert result == 0
         mock_send_email.assert_not_awaited()
 
-    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled_jobs_ext.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_monday_paid_tenant_sends_brief(self, mock_get_db, mock_send_email):
         """Monday + paid tenant + no dedup hit → email sent → returns 1."""
@@ -541,8 +665,17 @@ class TestSendWeeklyIntelligenceBriefs:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -558,9 +691,11 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt, \
-             patch("backend.config.settings") as mock_settings, \
-             patch("backend.services.activity.log_activity"):
+        with patch(
+            "backend.services.automation.scheduled_jobs_ext.datetime"
+        ) as mock_dt, patch("backend.config.settings") as mock_settings, patch(
+            "backend.services.activity.log_activity"
+        ):
             mock_dt.now.return_value = _KNOWN_MONDAY
             mock_dt.fromisoformat = datetime.fromisoformat
             # Empty key → AI block is skipped (`if app_settings.anthropic_api_key:`)
@@ -572,7 +707,10 @@ class TestSendWeeklyIntelligenceBriefs:
         call_kwargs = mock_send_email.call_args.kwargs
         assert "My Biz" in call_kwargs.get("subject", "")
 
-    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled_jobs_ext.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_already_sent_this_week_skips(self, mock_get_db, mock_send_email):
         """Monday but dedup hit in activity_log → returns 0, no email sent."""
@@ -591,8 +729,17 @@ class TestSendWeeklyIntelligenceBriefs:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -600,7 +747,9 @@ class TestSendWeeklyIntelligenceBriefs:
                 t.execute.return_value = MagicMock(data=[paid_tenant])
             elif name == "activity_log":
                 # Dedup hit — already sent this week
-                t.execute.return_value = MagicMock(data=[{"id": "log-brief-1"}], count=1)
+                t.execute.return_value = MagicMock(
+                    data=[{"id": "log-brief-1"}], count=1
+                )
             else:
                 t.execute.return_value = MagicMock(data=[], count=0)
             return t
@@ -609,8 +758,9 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt, \
-             patch("backend.config.settings") as mock_settings:
+        with patch(
+            "backend.services.automation.scheduled_jobs_ext.datetime"
+        ) as mock_dt, patch("backend.config.settings") as mock_settings:
             mock_dt.now.return_value = _KNOWN_MONDAY
             mock_dt.fromisoformat = datetime.fromisoformat
             mock_settings.anthropic_api_key = ""
@@ -619,7 +769,10 @@ class TestSendWeeklyIntelligenceBriefs:
         assert result == 0
         mock_send_email.assert_not_awaited()
 
-    @patch("backend.services.automation.scheduled_jobs_ext.send_email", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled_jobs_ext.send_email",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
     async def test_free_plan_tenant_skipped(self, mock_get_db, mock_send_email):
         """Free-plan tenants are excluded by .neq('plan', 'free') at the DB level.
@@ -634,8 +787,9 @@ class TestSendWeeklyIntelligenceBriefs:
 
         from backend.services.automation_engine import send_weekly_intelligence_briefs
 
-        with patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt, \
-             patch("backend.config.settings") as mock_settings:
+        with patch(
+            "backend.services.automation.scheduled_jobs_ext.datetime"
+        ) as mock_dt, patch("backend.config.settings") as mock_settings:
             mock_dt.now.return_value = _KNOWN_MONDAY
             mock_dt.fromisoformat = datetime.fromisoformat
             mock_settings.anthropic_api_key = ""
@@ -695,6 +849,9 @@ class _RecurringInvoiceQuery:
     def is_(self, *args, **kwargs):
         return self
 
+    def filter(self, *args, **kwargs):
+        return self
+
     def execute(self):
         self.state["operations"].append((self.kind, self.payload))
         response = self.state["responses"].pop(0)
@@ -720,7 +877,9 @@ class TestProcessRecurringInvoices:
 
     @patch("backend.services.automation.scheduled_jobs_ext.fire_event_background")
     @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
-    async def test_claim_lost_skips_duplicate_child_invoice(self, mock_get_db, mock_fire_event):
+    async def test_claim_lost_skips_duplicate_child_invoice(
+        self, mock_get_db, mock_fire_event
+    ):
         """If another worker advances the parent first, no duplicate child invoice is created."""
         parent = {
             "id": "inv-parent-001",
@@ -747,12 +906,18 @@ class TestProcessRecurringInvoices:
         result = await process_recurring_invoices()
 
         assert result == 0
-        assert [kind for kind, _ in state["operations"]] == ["select", "count_select", "update"]
+        assert [kind for kind, _ in state["operations"]] == [
+            "select",
+            "count_select",
+            "update",
+        ]
         mock_fire_event.assert_not_called()
 
     @patch("backend.services.automation.scheduled_jobs_ext.fire_event_background")
     @patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase")
-    async def test_insert_failure_rolls_back_parent_claim(self, mock_get_db, mock_fire_event):
+    async def test_insert_failure_rolls_back_parent_claim(
+        self, mock_get_db, mock_fire_event
+    ):
         """If child invoice creation fails after the claim, next_invoice_date is restored."""
         parent = {
             "id": "inv-parent-002",
@@ -781,7 +946,9 @@ class TestProcessRecurringInvoices:
         result = await process_recurring_invoices()
 
         assert result == 0
-        update_payloads = [payload for kind, payload in state["operations"] if kind == "update"]
+        update_payloads = [
+            payload for kind, payload in state["operations"] if kind == "update"
+        ]
         assert len(update_payloads) == 2
         assert update_payloads[0] == {"next_invoice_date": "2026-05-01"}
         assert update_payloads[1] == {"next_invoice_date": "2026-04-01"}
@@ -814,8 +981,17 @@ class TestCheckNoResponseLeads:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -829,7 +1005,11 @@ class TestCheckNoResponseLeads:
             elif name == "automation_steps":
                 t.execute.return_value = MagicMock(
                     data=[
-                        {"sequence_id": "seq-nr-001", "step_order": 1, "delay_minutes": 0}
+                        {
+                            "sequence_id": "seq-nr-001",
+                            "step_order": 1,
+                            "delay_minutes": 0,
+                        }
                     ]
                 )
             elif name == "automation_executions":
@@ -847,7 +1027,10 @@ class TestCheckNoResponseLeads:
 
         assert result == 1
 
-    @patch("backend.services.automation.scheduled.lead_checks.trigger_sequence", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled.lead_checks.trigger_sequence",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled.lead_checks.get_service_supabase")
     async def test_lead_with_recent_message_skips(self, mock_get_db, mock_trigger):
         """Lead has a message within the last 24h → skip, trigger_sequence NOT called."""
@@ -869,8 +1052,17 @@ class TestCheckNoResponseLeads:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -899,8 +1091,10 @@ class TestCheckNoResponseLeads:
         assert result == 0
         mock_trigger.assert_not_awaited()
 
-
-    @patch("backend.services.automation.scheduled.lead_checks.trigger_sequence", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled.lead_checks.trigger_sequence",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled.lead_checks.get_service_supabase")
     async def test_already_enrolled_in_progress_execution_skips(
         self, mock_get_db, mock_trigger
@@ -928,8 +1122,17 @@ class TestCheckNoResponseLeads:
         def table_side_effect(name):
             t = MagicMock()
             for method in (
-                "select", "insert", "update", "eq", "neq",
-                "in_", "is_", "gte", "lte", "limit", "order",
+                "select",
+                "insert",
+                "update",
+                "eq",
+                "neq",
+                "in_",
+                "is_",
+                "gte",
+                "lte",
+                "limit",
+                "order",
             ):
                 getattr(t, method).return_value = t
 
@@ -958,8 +1161,10 @@ class TestCheckNoResponseLeads:
         assert result == 0
         mock_trigger.assert_not_awaited()
 
-
-    @patch("backend.services.automation.scheduled.lead_checks.trigger_sequence", new_callable=AsyncMock)
+    @patch(
+        "backend.services.automation.scheduled.lead_checks.trigger_sequence",
+        new_callable=AsyncMock,
+    )
     @patch("backend.services.automation.scheduled.lead_checks.get_service_supabase")
     async def test_no_candidate_leads_returns_zero(self, mock_get_db, mock_trigger):
         """No new leads older than 24h returns 0 and does not trigger a sequence."""
@@ -983,9 +1188,21 @@ class TestCheckNoResponseLeads:
 def _chain_table(result=None):
     table = MagicMock()
     for method in (
-        "select", "insert", "update", "delete",
-        "eq", "neq", "gte", "lte", "gt", "lt",
-        "limit", "order", "in_", "is_", "not_",
+        "select",
+        "insert",
+        "update",
+        "delete",
+        "eq",
+        "neq",
+        "gte",
+        "lte",
+        "gt",
+        "lt",
+        "limit",
+        "order",
+        "in_",
+        "is_",
+        "not_",
     ):
         getattr(table, method).return_value = table
     table.execute.return_value = result or MagicMock(data=[])
