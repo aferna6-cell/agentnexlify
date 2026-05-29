@@ -245,6 +245,28 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
+# Check 11: Billing constant guard
+echo -n "Check 11: Billing constant guard... "
+BILLING_FILE="backend/routers/billing.py"
+if [ -f "$BILLING_FILE" ]; then
+    REQUIRED_AMOUNTS=(9900 15000 25000 89900)
+    MISSING_AMOUNTS=()
+    for amt in "${REQUIRED_AMOUNTS[@]}"; do
+        if ! grep -qP "^\s+${amt}:" "$BILLING_FILE"; then
+            MISSING_AMOUNTS+=("$amt")
+        fi
+    done
+    if [ ${#MISSING_AMOUNTS[@]} -gt 0 ]; then
+        echo -e "${YELLOW}WARNING${NC}"
+        echo "  AMOUNT_TO_PLAN in $BILLING_FILE missing entries: ${MISSING_AMOUNTS[*]}"
+        echo "  Expected: 9900 (growth), 15000 (autopilot), 25000 (professional), 89900 (enterprise)"
+        echo "  Fix: backend/routers/billing.py — see GH #181"
+        WARNINGS=$((WARNINGS + 1))
+    else
+        echo -e "${GREEN}OK${NC}"
+    fi
+fi
+
 if [ $ERRORS -gt 0 ]; then
     echo -e "${RED}COMMIT BLOCKED: $ERRORS critical issue(s) found.${NC}"
     echo "Fix the issues above before committing."
