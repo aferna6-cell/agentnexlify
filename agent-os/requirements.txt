@@ -1,0 +1,14 @@
+# Agent OS runtime + demo deps. Install with: pip install -r requirements.txt
+#
+# The demo runs fully offline (deterministic provider). Set ANTHROPIC_API_KEY
+# and `pip install anthropic` to upgrade drafts to live Claude output.
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.6
+
+# Tests (httpx backs Starlette's TestClient used in tests/test_api.py).
+pytest>=8.0
+httpx>=0.27
+
+# Optional — live drafting. Uncomment to enable Claude-backed output.
+# anthropic>=0.40

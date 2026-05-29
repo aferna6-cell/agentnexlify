@@ -1,0 +1,42 @@
+name: agent-os-ci
+
+# Scoped to the agent-os subtree so this workflow only runs when Agent OS
+# changes, not on every push to the wider AgentNexLiFy repo.
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "agent-os/**"
+  pull_request:
+    paths:
+      - "agent-os/**"
+
+defaults:
+  run:
+    working-directory: agent-os
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Importing agent_os.agents runs static schema + rule validation on every
+      # agent — a rule-violating agent fails this import before tests even run.
+      - name: Registry gate (import-time rule validation)
+        run: python -c "import agent_os; print(f'{len(agent_os.REGISTRY)} agents registered, all rule-clean')"
+
+      - name: Run tests
+        run: python -m pytest -q

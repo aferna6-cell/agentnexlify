@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agent OS</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #131a23;
+    --panel-2: #18212c;
+    --border: #243140;
+    --text: #e6edf3;
+    --muted: #8b9aab;
+    --accent: #5db0ff;
+    --good: #3fb950;
+    --warn: #e3b341;
+    --bad: #f85149;
+    --chip: #1f2a36;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); }
+  header {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .3px; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .badge {
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .badge.live { color: var(--good); border-color: #1f4d2b; }
+  .wrap {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 20px;
+    padding: 22px 28px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  @media (max-width: 920px) { .wrap { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .panel h2 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--muted);
+  }
+  textarea {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font: inherit;
+    resize: vertical;
+    min-height: 70px;
+  }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    background: var(--accent);
+    color: #04121f;
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-weight: 400;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .chip {
+    background: var(--chip);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12.5px;
+    color: var(--text);
+    cursor: pointer;
+    max-width: 100%;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .decision { display: grid; gap: 6px; }
+  .decision .line { color: var(--muted); font-size: 13px; }
+  .decision .agent { font-size: 17px; font-weight: 700; }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    border-radius: 6px;
+    padding: 2px 7px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .tag.spec { background: #14304a; color: var(--accent); }
+  .tag.short { background: #3a2330; color: #ff9ec4; }
+  .tag.gen { background: #2a2433; color: #c9a9ff; }
+  .tag.bucket { background: #1f3326; color: var(--good); }
+  .conf { font-variant-numeric: tabular-nums; }
+  .draft {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 14px;
+    white-space: pre-wrap;
+    font-size: 14px;
+  }
+  .draft.flagged { border-left-color: var(--bad); }
+  .draft .head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .pill { font-size: 11px; border-radius: 999px; padding: 2px 9px; border: 1px solid var(--border); color: var(--muted); }
+  .pill.chan { color: var(--accent); border-color: #234; }
+  .pill.flag { color: var(--bad); border-color: #5a2; border-color: #532; }
+  .pill.approve { color: var(--warn); }
+  .pill.noapprove { color: var(--good); }
+  .draft .title { font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .orch { margin-top: 12px; }
+  .orch .item { color: var(--warn); font-size: 13px; padding: 6px 0; border-top: 1px dashed var(--border); }
+  .trace { margin-top: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  .trace .step { padding: 2px 0; color: var(--muted); }
+  .trace .step.loaded { color: var(--text); }
+  .trace .mark { display: inline-block; width: 16px; }
+  .trace .mark.y { color: var(--good); }
+  .trace .mark.n { color: var(--muted); }
+  .bucket-grp { margin-bottom: 14px; }
+  .bucket-grp .label { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--accent); margin-bottom: 6px; }
+  .agent {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: var(--panel-2);
+  }
+  .agent .name { font-weight: 600; font-size: 13.5px; }
+  .agent .meta { color: var(--muted); font-size: 11.5px; }
+  .agent .purpose { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .cf { color: var(--good); }
+  .empty { color: var(--muted); font-size: 13px; font-style: italic; }
+  .log .entry { font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--border); color: var(--muted); }
+  .log .entry b { color: var(--text); font-weight: 600; }
+  pre.listing { white-space: pre-wrap; font-size: 13px; color: var(--text); margin: 0; }
+  .err { color: var(--bad); font-size: 13px; margin-top: 10px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tabs .tab { font-size: 12px; padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; }
+  .tabs .tab.active { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Agent OS</h1>
+  <span class="sub">orchestrator + worker agents for small-business automation</span>
+  <span class="badge" id="provider">connecting…</span>
+  <span class="badge" id="counts"></span>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: ask + result -->
+  <div>
+    <div class="panel">
+      <h2>Owner ask</h2>
+      <textarea id="ask" placeholder="e.g. Text Carlos asking for a Google review after his oil change."></textarea>
+      <div class="row">
+        <button id="route">Route &amp; draft</button>
+        <button class="ghost" id="clear">Clear</button>
+      </div>
+      <div class="chips" id="samples"></div>
+      <div class="err" id="error"></div>
+    </div>
+
+    <div class="panel" id="result-panel" style="display:none">
+      <h2>Result</h2>
+      <div id="result"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: agents / wishlist / log -->
+  <div>
+    <div class="panel">
+      <div class="tabs">
+        <div class="tab active" data-tab="agents">Agents</div>
+        <div class="tab" data-tab="wishlist">Wishlist</div>
+        <div class="tab" data-tab="log">Routing log</div>
+      </div>
+      <div id="tab-agents"></div>
+      <div id="tab-wishlist" style="display:none"></div>
+      <div id="tab-log" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = ""; // same origin
+const $ = (id) => document.getElementById(id);
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+async function getJSON(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(path + " -> " + r.status);
+  return r.json();
+}
+async function postJSON(path, body) {
+  const r = await fetch(API + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || (path + " -> " + r.status));
+  return data;
+}
+
+async function loadHealth() {
+  try {
+    const h = await getJSON("/api/health");
+    const p = $("provider");
+    if (h.provider === "anthropic" && h.provider_available) {
+      p.textContent = "LLM: Anthropic (live)";
+      p.classList.add("live");
+    } else {
+      p.textContent = "LLM: deterministic (offline)";
+    }
+    $("counts").textContent = h.agent_count + " agents · " + h.bucket_count + " buckets";
+  } catch (e) {
+    $("provider").textContent = "API offline";
+  }
+}
+
+async function loadSamples() {
+  try {
+    const samples = await getJSON("/api/samples");
+    const box = $("samples");
+    box.innerHTML = "";
+    samples.forEach((s) => {
+      const c = document.createElement("div");
+      c.className = "chip";
+      c.textContent = s.text.length > 64 ? s.text.slice(0, 61) + "…" : s.text;
+      c.title = s.text;
+      c.onclick = () => { $("ask").value = s.text; route(s.params); };
+      box.appendChild(c);
+    });
+  } catch (e) {}
+}
+
+async function loadAgents() {
+  try {
+    const groups = await getJSON("/api/agents");
+    const el = $("tab-agents");
+    el.innerHTML = "";
+    groups.forEach((g) => {
+      const grp = document.createElement("div");
+      grp.className = "bucket-grp";
+      grp.innerHTML = '<div class="label">' + esc(g.label) + "</div>";
+      g.agents.forEach((a) => {
+        const cf = a.is_customer_facing ? '<span class="cf">customer-facing</span> · ' : "";
+        grp.innerHTML +=
+          '<div class="agent"><div class="name">' + esc(a.display_name) +
+          '</div><div class="meta">' + cf + esc(a.channel) + " · " + esc(a.status) +
+          " · " + esc(a.build_priority) +
+          '</div><div class="purpose">' + esc(a.purpose) + "</div></div>";
+      });
+      el.appendChild(grp);
+    });
+  } catch (e) {}
+}
+
+async function loadWishlist() {
+  const el = $("tab-wishlist");
+  try {
+    const items = await getJSON("/api/wishlist");
+    if (!items.length) { el.innerHTML = '<div class="empty">No unmet asks yet — every ask found an owner.</div>'; return; }
+    el.innerHTML = items.map((i) =>
+      '<div class="agent"><div class="name">“' + esc(i.ask_text) + '”</div><div class="meta">closest: ' +
+      esc(i.closest_agent_id || "none") + " @ " + i.closest_score.toFixed(2) + "</div></div>"
+    ).join("");
+  } catch (e) { el.innerHTML = '<div class="empty">—</div>'; }
+}
+
+async function loadLog() {
+  const el = $("tab-log");
+  try {
+    const entries = await getJSON("/api/log");
+    if (!entries.length) { el.innerHTML = '<div class="empty">No decisions recorded yet.</div>'; return; }
+    el.innerHTML = '<div class="log">' + entries.map((d) => {
+      const who = d.is_bucket_query ? "bucket query" : (d.agent_id || (d.needs_owner_choice ? "owner choice" : "—"));
+      return '<div class="entry"><b>' + esc(who) + "</b> · " + d.confidence.toFixed(2) +
+        "<br>" + esc(d.ask_text) + "</div>";
+    }).join("") + "</div>";
+  } catch (e) { el.innerHTML = '<div class="empty">—</div>'; }
+}
+
+function renderTrace(steps) {
+  return '<div class="trace">' + steps.map((s) => {
+    const mark = s.loaded ? '<span class="mark y">✓</span>' : '<span class="mark n">○</span>';
+    return '<div class="step ' + (s.loaded ? "loaded" : "") + '">' + mark + esc(s.name) + ": " + esc(s.detail) + "</div>";
+  }).join("") + "</div>";
+}
+
+function renderResult(data) {
+  const d = data.decision, r = data.result;
+  let html = '<div class="decision">';
+
+  if (d.is_bucket_query) {
+    html += '<div class="agent">Bucket query <span class="tag bucket">no agent run</span></div>';
+    html += '<pre class="listing">' + esc(d.bucket_listing || "") + "</pre></div>";
+    return html;
+  }
+
+  if (d.needs_owner_choice) {
+    html += '<div class="agent">Ambiguous — owner must choose</div>';
+    html += '<div class="line">' + esc(d.choice_prompt || "") + "</div></div>";
+    return html;
+  }
+
+  let tag = "";
+  if (d.short_circuited) tag = '<span class="tag short">short-circuit</span>';
+  else if (d.used_specialty_rule) tag = '<span class="tag spec">specialty rule</span>';
+  else if (d.is_generalist) tag = '<span class="tag gen">generalist fallback</span>';
+
+  html += '<div class="agent">' + esc(d.agent_display_name || d.agent_id) + tag +
+    ' <span class="conf" style="color:var(--muted);font-size:13px">conf ' + d.confidence.toFixed(2) + "</span></div>";
+  html += '<div class="line">' + esc(d.reason) + "</div>";
+  if (d.channel_override) html += '<div class="line">channel inferred: ' + esc(d.channel_override) + "</div>";
+  if (d.runner_up_id) html += '<div class="line">runner-up: ' + esc(d.runner_up_id) + " (" + d.runner_up_confidence.toFixed(2) + ")</div>";
+  html += "</div>";
+
+  if (r) {
+    if (!r.has_draft) {
+      html += '<div class="draft"><div class="title">No draft</div>service surfaced a reason instead of inventing content.</div>';
+    } else {
+      const cls = r.flagged ? "draft flagged" : "draft";
+      html += '<div class="' + cls + '">';
+      html += '<div class="head">';
+      html += '<span class="pill chan">' + esc(r.channel) + "</span>";
+      html += '<span class="pill ' + (r.requires_approval ? "approve" : "noapprove") + '">' +
+        (r.requires_approval ? "needs approval" : "no approval needed") + "</span>";
+      if (r.flagged) html += '<span class="pill flag">⚠ flagged</span>';
+      html += "</div>";
+      if (r.title) html += '<div class="title">' + esc(r.title) + "</div>";
+      html += esc(r.body);
+      html += "</div>";
+    }
+    if (r.orchestrator_messages && r.orchestrator_messages.length) {
+      html += '<div class="orch"><h2>Orchestrator chat (owner-only)</h2>';
+      r.orchestrator_messages.forEach((m) => { html += '<div class="item">• ' + esc(m) + "</div>"; });
+      html += "</div>";
+    }
+    if (r.trace && r.trace.length) {
+      html += '<div class="orch"><h2>Reasoning trace (✓ loaded · ○ not loaded)</h2>' + renderTrace(r.trace) + "</div>";
+    }
+  }
+  return html;
+}
+
+async function route(params) {
+  const text = $("ask").value.trim();
+  $("error").textContent = "";
+  if (!text) { $("error").textContent = "Type an ask first."; return; }
+  $("route").disabled = true;
+  try {
+    const data = await postJSON("/api/route", { text, params: params || {} });
+    $("result-panel").style.display = "";
+    $("result").innerHTML = renderResult(data);
+    await Promise.all([loadWishlist(), loadLog()]);
+  } catch (e) {
+    $("error").textContent = e.message;
+  } finally {
+    $("route").disabled = false;
+  }
+}
+
+// tabs
+document.querySelectorAll(".tab").forEach((t) => {
+  t.onclick = () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+    t.classList.add("active");
+    ["agents", "wishlist", "log"].forEach((name) => {
+      $("tab-" + name).style.display = name === t.dataset.tab ? "" : "none";
+    });
+  };
+});
+
+$("route").onclick = () => route();
+$("clear").onclick = () => { $("ask").value = ""; $("result-panel").style.display = "none"; $("error").textContent = ""; };
+$("ask").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) route(); });
+
+loadHealth();
+loadSamples();
+loadAgents();
+loadWishlist();
+loadLog();
+</script>
+</body>
+</html>
