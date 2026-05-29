@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-29",
-  "total_runs": 39,
+  "last_run": "2026-05-29-pm",
+  "total_runs": 40,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,14 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Fix nightly-commit-review SKILL.md — add .claude/skills/*/SKILL.md creation to LOW-risk autonomous scope when winning-concept.md has AUTONOMOUS-EXECUTABLE label (run 40 winner)",
+      "date": "2026-05-29-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "workflow",
+      "note": "Run 40 winner. ROOT CAUSE IDENTIFIED: dc5ef8e (nightly 2026-05-28) explicitly labeled run 36 SKILL.md winner 'docs only, skipped' — nightly-commit-review SKILL.md scopes autonomous fixes to code changes only. post-split-test-repair SKILL.md MISSING 2 cycles (runs 36+39). Fix: add ~10 lines to nightly-commit-review SKILL.md specifying that pure new .claude/skills/*/SKILL.md files are LOW-risk autonomous when AUTONOMOUS-EXECUTABLE label present. Systemic: fixes channel for all 54 remaining god-class splits. Bonus Action: create post-split-test-repair SKILL.md now in this session (5 min, pre-written content in subconscious/runs/2026-05-29/winning-concept.md). Debate: SURVIVES 3 rounds. Idea 2 (SKILL.md human-execute) WEAKENED→bonus. Idea 3 (/moratorium-sprint) WEAKENED→standing action. See subconscious/runs/2026-05-29-pm/winning-concept.md."
+    },
     {
       "title": "Create post-split-test-repair SKILL.md (.claude/skills/post-split-test-repair/SKILL.md) — 8-step checklist for repointing stale @patch targets and imports after god-class splits (run 39 winner)",
       "date": "2026-05-29",
@@ -452,6 +460,13 @@
       "note": "Run 34 winner. Governance mandate fires (4-consecutive-run threshold). billing.py:264 missing 15000 + 25000. test_billing_amount_to_plan.py:38-44 backwards assertions certify broken state. Two failed attempts (c72b535, 1eaaeec). CI blocks correct fixes via 1553bf7. Debate: GH #181 SURVIVES 3 rounds → WINNER; /moratorium-sprint WEAKENED (standing action); email_sequences split WEAKENED (wrong timing). Bonus: /moratorium-sprint after fix."
     },
     {
+      "title": "Fix nightly-commit-review SKILL.md — SKILL.md creation in autonomous scope",
+      "date": "2026-05-29-pm",
+      "status": "recommended",
+      "run": 40,
+      "note": "Run 40 winner. Root cause identified: dc5ef8e explicitly labeled run 36 SKILL.md winner 'docs only, skipped'. Fix nightly-commit-review SKILL.md to include new .claude/skills/*/SKILL.md creation as LOW-risk autonomous when AUTONOMOUS-EXECUTABLE label present. Bonus Action: create post-split-test-repair SKILL.md in this session (5 min, pre-written). Debate: channel fix SURVIVES 3 rounds → WINNER. Human-execute framing WEAKENED → bonus. /moratorium-sprint WEAKENED → standing action."
+    },
+    {
       "title": "Create post-split-test-repair SKILL.md (.claude/skills/post-split-test-repair/SKILL.md) — unblocks email_sequences.py split",
       "date": "2026-05-29",
       "status": "recommended",
@@ -668,13 +683,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 12,
-    "runs_pending_approval_raw": 12,
-    "runs_pending_approval_note": "Run 39 governance correction: run 37 (billing-constant-guard Check 11) status pending_approval → implemented (061582c 2026-05-29). Count 13→12. Run 39 adds 1 (post-split-test-repair SKILL.md — AUTONOMOUS-EXECUTABLE, likely implemented next nightly cycle). Autonomous channel CONFIRMED active (061582c Check 11). Moratorium day 26+. True human-required pending: runs 4/38 (AI-to-Human Handoff, same item), runs 20, 21, 28, 29, 30, 35 (email_sequences split), GH#181 critical_standing_action, Items A/B/D. After post-split-test-repair SKILL.md (auto) + email_sequences split + GH #181 + /moratorium-sprint (Items A+B+D): pending drops toward moratorium exit (≤ 2).",
+    "runs_pending_approval": 13,
+    "runs_pending_approval_raw": 13,
+    "runs_pending_approval_note": "Run 40 adds 1 (fix nightly-commit-review SKILL.md — autonomous channel root cause fix). No governance corrections this run. Moratorium day 26+. AUTONOMOUS CHANNEL STATUS: BROKEN for pure .md creation (dc5ef8e 'docs only' behavioral evidence). Works for bash/python code changes. Run 40 winner addresses root cause. Bonus Action: create post-split-test-repair SKILL.md in session (5 min, pre-written). True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20, 21, 28, 29, 30, 35 (email_sequences split), GH#181 critical_standing_action, Items A/B/D.",
     "runs_implemented": 9,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 43 — also run 38 winner)",
-    "governance_correction": "Run 39 (2026-05-29): billing-constant-guard Check 11 (run 37 winner) IMPLEMENTED by nightly review 061582c. Autonomous channel restored (broke runs 36+37, now confirmed active). Run 39 winner: post-split-test-repair SKILL.md (AUTONOMOUS-EXECUTABLE, unblocks email_sequences.py split). Nightly review explicitly aware (Standing Actions #5 in log 2026-05-29).",
-    "note": "Run 39: post-split-test-repair SKILL.md is autonomous winner. After nightly creates it: email_sequences split (~2h, human). Critical standing: GH #181 (~15 min, human). Primary human task: AI-to-Human Handoff v1 (~1 day). Sprint: Items A/B/D (~40 min). Post-moratorium queue: Zapier security (GH #107, ROI 2.5).",
+    "governance_correction": "Run 40 (2026-05-29-pm): No new governance corrections. Winner: fix nightly-commit-review SKILL.md to scope SKILL.md creation as LOW-risk autonomous. Root cause identified from dc5ef8e 'docs only, skipped' behavioral evidence. Bonus Action: create post-split-test-repair SKILL.md in this session (5 min, content pre-written).",
+    "note": "Run 40: autonomous channel root cause fix is winner. Sequence: fix nightly SKILL.md (~15 min) + create post-split-test-repair SKILL.md (5 min bonus) → email_sequences split (~2h) → GH #181 (~15 min) → AI-to-Human Handoff v1 (~1 day) → /moratorium-sprint (~40 min). Post-moratorium queue: Zapier security (GH #107, ROI 2.5).",
     "escalate": true
   },
   "config": {
