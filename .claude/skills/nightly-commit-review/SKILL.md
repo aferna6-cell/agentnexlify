@@ -62,6 +62,7 @@ Only commits in last 24h. Skip merge commits.
 - Missing error context in log messages
 - Obvious off-by-one in test assertions (NOT in production logic)
 - Doc inconsistencies with code
+- **New `.claude/skills/*/SKILL.md` creation** when the most recent `subconscious/runs/*/winning-concept.md` contains the text `AUTONOMOUS-EXECUTABLE` and the winning concept describes creating a skill file. Execute directly — do not classify as "docs only" and skip.
 
 ### MEDIUM — Open GH issue, DO NOT fix autonomously
 - Logic bugs in production code paths
