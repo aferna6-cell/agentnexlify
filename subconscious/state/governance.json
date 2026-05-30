@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-05-29-pm",
-  "total_runs": 40,
+  "last_run": "2026-05-30",
+  "total_runs": 41,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,20 +16,28 @@
   },
   "active_directions": [
     {
+      "title": "Invoke /god-class-splitter on email_sequences.py — split 1255L into email_crud + email_enrollment + email_processor (run 41 winner)",
+      "date": "2026-05-30",
+      "confidence": "MEDIUM",
+      "status": "pending_approval",
+      "category": "code_health",
+      "note": "Run 41 winner. NEWLY UNBLOCKED: d481799 (nightly 2026-05-30) created post-split-test-repair SKILL.md — final prerequisite met for first time. Both run 39 (post-split-test-repair SKILL.md) and run 40 (fix nightly channel) implemented by d481799. email_sequences.py confirmed 1255L, 17 functions, 3 clean concerns (CRUD/enrollment/processor). god-class-splitter SKILL.md ready (e848b87). /post-split-test-repair ready (d481799). Existing active_direction run 35 — execution resolves pending item not adds new one. Critical standing action: GH #181 billing fix (~15 min, human required) before starting split. Debate: email_sequences split SURVIVES 3 rounds → WINNER. AUTONOMOUS-EXECUTABLE labels A+D WEAKENED → parking lot (governance grey area). AI-to-Human Handoff WEAKENED → standing action (no new evidence since run 38). See subconscious/runs/2026-05-30/winning-concept.md."
+    },
+    {
       "title": "Fix nightly-commit-review SKILL.md — add .claude/skills/*/SKILL.md creation to LOW-risk autonomous scope when winning-concept.md has AUTONOMOUS-EXECUTABLE label (run 40 winner)",
       "date": "2026-05-29-pm",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "implemented",
       "category": "workflow",
-      "note": "Run 40 winner. ROOT CAUSE IDENTIFIED: dc5ef8e (nightly 2026-05-28) explicitly labeled run 36 SKILL.md winner 'docs only, skipped' — nightly-commit-review SKILL.md scopes autonomous fixes to code changes only. post-split-test-repair SKILL.md MISSING 2 cycles (runs 36+39). Fix: add ~10 lines to nightly-commit-review SKILL.md specifying that pure new .claude/skills/*/SKILL.md files are LOW-risk autonomous when AUTONOMOUS-EXECUTABLE label present. Systemic: fixes channel for all 54 remaining god-class splits. Bonus Action: create post-split-test-repair SKILL.md now in this session (5 min, pre-written content in subconscious/runs/2026-05-29/winning-concept.md). Debate: SURVIVES 3 rounds. Idea 2 (SKILL.md human-execute) WEAKENED→bonus. Idea 3 (/moratorium-sprint) WEAKENED→standing action. See subconscious/runs/2026-05-29-pm/winning-concept.md."
+      "note": "Run 40 winner. IMPLEMENTED by nightly review d481799 (2026-05-30) — nightly-commit-review SKILL.md updated to include SKILL.md creation in LOW-risk autonomous scope AND post-split-test-repair SKILL.md created. ccf0c8e also cross-referenced post-split-test-repair in god-class-splitter step 10.5. 6th autonomous nightly implementation. Governance correction applied run 41. See subconscious/runs/2026-05-29-pm/winning-concept.md."
     },
     {
       "title": "Create post-split-test-repair SKILL.md (.claude/skills/post-split-test-repair/SKILL.md) — 8-step checklist for repointing stale @patch targets and imports after god-class splits (run 39 winner)",
       "date": "2026-05-29",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "implemented",
       "category": "workflow",
-      "note": "Run 39 winner. AUTONOMOUS-EXECUTABLE: nightly review should implement directly (pure new .md file, LOW-risk). Evidence: 3 test-repair commits confirm 100% recurrence rate (5f2cd2b + 4afb3cf local_seo split, bca2082 API cleanup migration). 061582c (nightly 2026-05-29) confirms autonomous channel active (Check 11 implemented). Nightly log 2026-05-29 explicitly lists this item in Standing Actions #5. Prior pattern: 3/3 SKILL.md items with explicit AUTONOMOUS-EXECUTABLE label were implemented by nightly review (7985fbb, 2ce31b2, e848b87). Unblocks email_sequences.py split (run 35 winner, 1255L). Governance correction applied this run: run 37 billing-constant-guard Check 11 status pending_approval → implemented (061582c). See subconscious/runs/2026-05-29/winning-concept.md."
+      "note": "Run 39 winner. IMPLEMENTED by nightly review d481799 (2026-05-30) — .claude/skills/post-split-test-repair/SKILL.md created (75 lines). ccf0c8e also cross-referenced in god-class-splitter step 10.5. 5th autonomous nightly implementation. Governance correction applied run 41. Unblocks email_sequences.py split (run 41 winner). See subconscious/runs/2026-05-29/winning-concept.md."
     },
     {
       "title": "AI-to-Human Handoff v1 — implement via Agent OS outbound infrastructure (os_outbound_mirror.py): detect trigger in widget_chat.py, write handoff_requests table, notify owner via SMS/email (run 38 winner)",
@@ -683,13 +691,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 13,
-    "runs_pending_approval_raw": 13,
-    "runs_pending_approval_note": "Run 40 adds 1 (fix nightly-commit-review SKILL.md — autonomous channel root cause fix). No governance corrections this run. Moratorium day 26+. AUTONOMOUS CHANNEL STATUS: BROKEN for pure .md creation (dc5ef8e 'docs only' behavioral evidence). Works for bash/python code changes. Run 40 winner addresses root cause. Bonus Action: create post-split-test-repair SKILL.md in session (5 min, pre-written). True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20, 21, 28, 29, 30, 35 (email_sequences split), GH#181 critical_standing_action, Items A/B/D.",
-    "runs_implemented": 9,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 43 — also run 38 winner)",
-    "governance_correction": "Run 40 (2026-05-29-pm): No new governance corrections. Winner: fix nightly-commit-review SKILL.md to scope SKILL.md creation as LOW-risk autonomous. Root cause identified from dc5ef8e 'docs only, skipped' behavioral evidence. Bonus Action: create post-split-test-repair SKILL.md in this session (5 min, content pre-written).",
-    "note": "Run 40: autonomous channel root cause fix is winner. Sequence: fix nightly SKILL.md (~15 min) + create post-split-test-repair SKILL.md (5 min bonus) → email_sequences split (~2h) → GH #181 (~15 min) → AI-to-Human Handoff v1 (~1 day) → /moratorium-sprint (~40 min). Post-moratorium queue: Zapier security (GH #107, ROI 2.5).",
+    "runs_pending_approval": 12,
+    "runs_pending_approval_raw": 12,
+    "runs_pending_approval_note": "Run 41: governance corrections applied — runs 39+40 marked implemented (d481799 nightly 2026-05-30). Net change: -2 pending, +1 (run 41 winner). Moratorium day 27+. AUTONOMOUS CHANNEL STATUS: RESTORED (d481799 confirmed SKILL.md creation works). True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20, 21, 28, 29, 30, 35/41 (email_sequences split), GH#181 critical_standing_action, Items A/B/D.",
+    "runs_implemented": 11,
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 44)",
+    "governance_correction": "Run 41 (2026-05-30): Run 39 (post-split-test-repair SKILL.md) pending_approval → implemented (d481799). Run 40 (fix nightly-commit-review SKILL.md) pending_approval → implemented (d481799). runs_implemented 9→11. AUTONOMOUS CHANNEL CONFIRMED RESTORED for SKILL.md creation.",
+    "note": "Run 41: email_sequences.py split is winner — newly unblocked by d481799. All prerequisites met (god-class-splitter SKILL.md + post-split-test-repair SKILL.md). Sequence: GH #181 (~15 min, human required, do first) → email_sequences split (~2h) → /moratorium-sprint (~40 min) → AI-to-Human Handoff v1 (~1 day). Post-moratorium queue: Zapier security (GH #107, ROI 2.5).",
     "escalate": true
   },
   "config": {
