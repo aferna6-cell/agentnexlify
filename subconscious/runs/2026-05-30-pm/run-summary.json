@@ -1,0 +1,42 @@
+{
+  "run": 42,
+  "date": "2026-05-30-pm",
+  "mode": "moratorium_human_present",
+  "evidence_summary": "email_sequences.py 1255L confirmed (unchanged from run 41). All prerequisites met as of d481799 (2026-05-30 nightly): god-class-splitter SKILL.md (e848b87) + post-split-test-repair SKILL.md (d481799). GH #181 still broken: billing.py:263 AMOUNT_TO_PLAN missing 15000→autopilot + 25000→professional; test_billing_amount_to_plan.py:40-44 backwards assertions; Check 11 fires WARNING as daily reminder. Moratorium Items A/B/D ALL MISSING. GH #193 created by nightly (13 pending, 44d oldest, moratorium now publicly escalated in GitHub). auth.py = 1591L (largest router). Human present in interactive session.",
+  "ideas_count": 5,
+  "top_3_debated": [
+    "Invoke /god-class-splitter on email_sequences.py (human present)",
+    "AUTONOMOUS-EXECUTABLE Item A (check_project_invariants pre-commit)",
+    "AUTONOMOUS-EXECUTABLE Item D (lead-qualifier-eval.yml)"
+  ],
+  "debate_verdicts": {
+    "email_sequences_split_human_present": "SURVIVES → WINNER (3 rounds, human present, prerequisites just cleared 24h ago, not a stale re-recommendation)",
+    "autonomous_item_a_precommit": "WEAKENED → parking lot (nightly scope extension to pre-commit required; spec written for nightly pickup)",
+    "autonomous_item_d_ci_yaml": "WEAKENED → parking lot (2-step prerequisite: nightly scope extension to .github/workflows/ needed first)"
+  },
+  "winner": "GH #181 fix (~15 min) then /god-class-splitter on email_sequences.py (~2h) — human present in session",
+  "winner_category": "code_health",
+  "confidence": "MEDIUM",
+  "new_evidence_vs_run_41": [
+    "GH #193 created by nightly (moratorium escalation now publicly visible in GitHub)",
+    "Human present in interactive session — highest-probability execution window",
+    "061582c precedent (Check 11 added autonomously) strengthens Item A parking lot spec",
+    "Run 42 = first evening session since prerequisites cleared — same-day urgency signal"
+  ],
+  "moratorium_active": true,
+  "moratorium_day": 27,
+  "pending_before": 13,
+  "pending_after": 14,
+  "governance_corrections": [],
+  "parking_lot_additions": [
+    "AUTONOMOUS Item A spec (check_project_invariants pre-commit, 9 lines, nightly pickup pending scope extension)",
+    "AUTONOMOUS Item D spec (lead-qualifier-eval.yml, nightly pickup pending scope extension)"
+  ],
+  "questions_for_next_run": [
+    "Was GH #181 billing fix implemented?",
+    "Was email_sequences.py split executed?",
+    "Were moratorium Items A/B/D executed?",
+    "Is the moratorium now lifted?",
+    "Was nightly-commit-review SKILL.md extended to pre-commit additions and .github/workflows/ YAML?"
+  ]
+}
