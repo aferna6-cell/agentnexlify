@@ -57,6 +57,8 @@ grep -rn "backend.services.old_module" .
 ```
 If results appear, fix them before committing. This step is mandatory — it is the step that prevents every follow-up commit from PR #180 and the local_seo split.
 
+**Step 10.5.** Run `.claude/skills/post-split-test-repair/SKILL.md` — repoint stale `@patch` targets and test imports for the split module. 100% recurrence rate: every split generates stale-patch repair commits without this step.
+
 **Step 11.** Write `tests/test_extracted_<module>.py` smoke tests covering the new module's public surface. Minimum 5 test functions covering key endpoints and pure functions.
 
 **Step 12.** Commit atomically:
