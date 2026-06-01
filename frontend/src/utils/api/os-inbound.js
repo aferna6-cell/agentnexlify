@@ -1,9 +1,9 @@
 /**
- * Agent OS — Inbound bridge config API.
+ * Agent OS - Inbound bridge config API.
  *
  * Endpoints owned by backend/routers/os_inbound.py:
- *   GET  /api/v1/os/inbound/bridge-config  — any role
- *   POST /api/v1/os/inbound/bridge-toggle  — owner-only
+ *   GET  /api/v1/os/inbound/bridge-config  - any role
+ *   POST /api/v1/os/inbound/bridge-toggle  - owner-only
  */
 
 import { request } from "./_client";

@@ -336,7 +336,7 @@ export default function App() {
   }, [activePlan]);
 
   // Poll pending Agent OS approvals every 30s so the sidebar badge stays
-  // current from any page. Cheap GET — count + lightweight summary only.
+  // current from any page. Cheap GET - count + lightweight summary only.
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -347,7 +347,7 @@ export default function App() {
           setPendingApprovalCount(res?.count ?? 0);
         })
         .catch(() => {
-          // Silent — badge just stays at last known value
+          // Silent - badge just stays at last known value
         });
     };
     refresh();
