@@ -63,6 +63,19 @@ Only commits in last 24h. Skip merge commits.
 - Obvious off-by-one in test assertions (NOT in production logic)
 - Doc inconsistencies with code
 - **New `.claude/skills/*/SKILL.md` creation** when the most recent `subconscious/runs/*/winning-concept.md` contains the text `AUTONOMOUS-EXECUTABLE` and the winning concept describes creating a skill file. Execute directly — do not classify as "docs only" and skip.
+- **Bash additions to `scripts/hooks/pre-commit`** when `subconscious/state/governance.json` has a matching `active_directions[]` entry where `"autonomous_executable": true` and the most recent `subconscious/runs/*/winning-concept.md` contains `AUTONOMOUS-EXECUTABLE`. Execute the patch in the winning concept directly — commit to main as `ci(pre-commit): <description from winning concept>`. **Pre-condition required**: run the script being wired first — if it exits non-zero, the item is blocked; log the blocker and open a MEDIUM issue instead of wiring.
+
+  **Current pending item (Item A):** Wire `check_project_invariants.py` as pre-commit Check 10. Status: `pending_autonomous`. Blocked 2026-06-01: script fails on em-dash violations in UI copy. Execute when script passes clean.
+
+  Patch (add before `exit 0` at end of `scripts/hooks/pre-commit`):
+  ```bash
+  # Check 10 — project invariants (client_id, status, areas_of_interest)
+  if command -v python3 &>/dev/null; then
+    python3 scripts/check_project_invariants.py || { echo "❌ Pre-commit: check_project_invariants.py failed"; exit 1; }
+  fi
+  ```
+  Commit: `ci(pre-commit): wire check_project_invariants.py as Check 10`
+  After commit: update `governance.json` active_directions Item A status → `implemented`.
 
 ### MEDIUM — Open GH issue, DO NOT fix autonomously
 - Logic bugs in production code paths
