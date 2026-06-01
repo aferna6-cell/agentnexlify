@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-01",
-  "total_runs": 44,
+  "last_run": "2026-06-01-pm",
+  "total_runs": 45,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,13 +16,21 @@
   },
   "active_directions": [
     {
+      "title": "Execute scope fix + Item A wiring as single human-committed step — scope em-dash check to skip .jsx/.tsx + add Check 10 to pre-commit (run 45 winner)",
+      "date": "2026-06-01-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "workflow",
+      "note": "Run 45 winner. HUMAN-EXECUTE (not autonomous). Run 44 AUTONOMOUS-EXECUTABLE label was incorrect — nightly confirmed Python script edits outside its scope (0 executions across 3 cycles). Re-framed as human-execute: (1) edit check_project_invariants.py check_website_copy_avoids_em_dashes() to skip .jsx/.tsx, (2) add Check 10 block to scripts/hooks/pre-commit. Total ~10 min. Closes GH #194. Implements run 8 (day 37) + run 22 (day 15). After commit: Item A status → implemented, moratorium pending 14→13. Implementation sketch: subconscious/runs/2026-06-01-pm/winning-concept.md."
+    },
+    {
       "title": "Scope check_project_invariants.py em-dash check to skip .jsx/.tsx — 3-line fix unblocks Item A autonomous execution (run 44 winner)",
       "date": "2026-06-01",
       "confidence": "HIGH",
-      "status": "pending_approval",
-      "autonomous_executable": true,
+      "status": "superseded",
+      "autonomous_executable": false,
       "category": "workflow",
-      "note": "Run 44 winner. AUTONOMOUS-EXECUTABLE. Nightly 2026-06-01 (4226ef4) implemented run 43 winner — SKILL.md now covers pre-commit bash additions. Item A still blocked: check_project_invariants.py fails exit 1 on 5 JSX em-dash violations (IntegrationsPage.jsx:1018, SettingsInboundChannels.jsx:220-221, MessagingSettingsCards.jsx:263/276). These are intentional UI copy. Scope fix: add .jsx + .tsx to em-dash check exclusions in scripts/check_project_invariants.py. After fix: script passes all 6 checks → nightly 2026-06-02 executes Item A inline patch → pre-commit Check 10 lands. Closes GH #194. Implementation sketch: subconscious/runs/2026-06-01/winning-concept.md."
+      "note": "Run 44 winner. SUPERSEDED by run 45. AUTONOMOUS-EXECUTABLE label was incorrect — nightly confirmed Python script edits outside its scope. Run 45 re-frames as human-execute and bundles scope fix + Item A wiring into single commit (~10 min). Implementation sketch: subconscious/runs/2026-06-01/winning-concept.md."
     },
     {
       "title": "Extend AUTONOMOUS-EXECUTABLE scope in nightly-commit-review SKILL.md to cover pre-commit bash additions — enables Item A (check_project_invariants, 29-day pending) to execute autonomously tonight (run 43 winner)",
@@ -717,13 +725,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 14,
-    "runs_pending_approval_raw": 14,
-    "runs_pending_approval_note": "Run 44: +1 new winner (scope fix). Run 43 winner IMPLEMENTED (4226ef4 nightly 2026-06-01). Moratorium day 30. AUTONOMOUS CHANNEL STATUS: Run 44 winner is AUTONOMOUS-EXECUTABLE (Python script edit, LOW-risk). If nightly 2026-06-02 executes: Item A (Check 10) lands + GH #194 closes. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action, Item B (widget sync guard).",
+    "runs_pending_approval": 15,
+    "runs_pending_approval_raw": 15,
+    "runs_pending_approval_note": "Run 45: +1 new winner (scope fix + Item A wiring, human-execute). Run 44 AUTONOMOUS-EXECUTABLE label corrected: nightly confirmed Python script edits outside autonomous scope. Run 45 re-frames as human-execute (~10 min). Moratorium day 31. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action, Item B (widget sync guard), Item A+D (scope fix + CI eval). Run 45 winner execution drops pending 15→13 (Items A+D both close after one commit).",
     "runs_implemented": 12,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 46)",
-    "governance_correction": "Run 44 (2026-06-01): Run 43 winner status: pending_approval → implemented (4226ef4 nightly 2026-06-01 extended SKILL.md autonomous scope). runs_implemented: 11→12.",
-    "note": "Run 44: scope fix is the last mile for Item A. Path: run 44 scope fix → nightly 2026-06-02 executes Item A → Check 10 in pre-commit → run 45 adds Item D → human Item B → moratorium exit at 2 pending.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 47)",
+    "governance_correction": "Run 45 (2026-06-01-pm): Run 44 autonomous_executable corrected to false — nightly confirmed Python script edits outside scope. Run 44 status: pending_approval → superseded. Run 45 winner: scope fix + Item A wiring, human-execute.",
+    "note": "Run 45: human executes scope fix + Check 10 in one commit (~10 min) → Item A confirmed → run 46 adds Item D to autonomous scope → human Item B + GH #181 → moratorium exit at 2 pending.",
     "escalate": true
   },
   "config": {
