@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-02",
-  "total_runs": 46,
+  "last_run": "2026-06-02-pm",
+  "total_runs": 47,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,12 +16,21 @@
   },
   "active_directions": [
     {
+      "title": "Item D AUTONOMOUS-EXECUTABLE — extend nightly scope to CI YAML creation + inline lead-qualifier-eval.yml patch (run 47 winner)",
+      "date": "2026-06-02-pm",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "category": "operational",
+      "note": "Run 47 winner. AUTONOMOUS-EXECUTABLE. Run 46 mandate fires: Item A not executed (em-dash check still fails JSX/TSX, no Check 10 in pre-commit — confirmed). Mandate: extend nightly-commit-review SKILL.md to cover .github/workflows/*.yml creation when autonomous_executable: true + include inline file content. Item D (run 14, subsumed_in_sprint) de-coupled per run 42 pattern. Implementation sketch: subconscious/runs/2026-06-02-pm/winning-concept.md §Steps 1-3. Inline lead-qualifier-eval.yml patch included. Nightly executes 2026-06-03 at 2:37 AM. RUN 48 MANDATE: if lead-qualifier-eval.yml not created by nightly 2026-06-03 → diagnose scope gap + run 48 winner fixes the execution chain. Bonus A: GH #181 billing.py path now known (backend/routers/billing.py) — add 15000+25000 to AMOUNT_TO_PLAN, ~15 min human. Bonus B: Item A still available as 10-min human (Bonus B in winning-concept.md)."
+    },
+    {
       "title": "Execute Item A in this interactive session — scope em-dash check to skip .jsx/.tsx + wire Check 10 to pre-commit (run 46 winner)",
       "date": "2026-06-02",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "category": "workflow / code_health",
-      "note": "Run 46 winner. HUMAN-EXECUTE (not autonomous). 4th consecutive re-recommendation of Item A. Forcing function: human present in interactive session + nightly 2026-06-02 aligned. Implementation sketch unchanged: subconscious/runs/2026-06-01-pm/winning-concept.md §Steps 1-4. (1) Add _skip_ui_copy set + continue guard in check_project_invariants.py check_website_copy_avoids_em_dashes(). (2) Verify exit 0. (3) Add Check 10 block to scripts/hooks/pre-commit before Check 11. (4) Commit. ~10 min. Closes GH #194. Implements run 8 (day 37) + run 22 (day 15). RUN 47 MANDATE: if Item A not executed this session, run 47 winner MUST switch to Item D AUTONOMOUS-EXECUTABLE (extend nightly scope to .github/workflows/*.yml creation). Bonus A: investigate billing.py location (find backend/ -name '*billing*' + grep -rn AMOUNT_TO_PLAN) — file not found at expected path, may resolve GH #181 as already fixed or reveal correct target path."
+      "note": "Run 46 winner. SUPERSEDED by run 47 (mandate fires). Item A not executed in run 46 session — confirmed by check_project_invariants.py EXIT 1 + no Check 10 in pre-commit. Run 47 mandate fires: winner switches to Item D AUTONOMOUS-EXECUTABLE. Item A remains valid as Bonus B in run 47 winning-concept.md. Implementation sketch: subconscious/runs/2026-06-01-pm/winning-concept.md §Steps 1-4."
     },
     {
       "title": "Execute scope fix + Item A wiring as single human-committed step — scope em-dash check to skip .jsx/.tsx + add Check 10 to pre-commit (run 45 winner)",
@@ -125,8 +134,9 @@
       "date": "2026-05-26",
       "confidence": "HIGH",
       "status": "critical_standing_action",
+      "billing_py_path": "backend/routers/billing.py",
       "category": "code_health",
-      "note": "Run 34 winner. Governance mandate fires (4-consecutive-run threshold set in run 33). Direct inspection confirms: billing.py AMOUNT_TO_PLAN missing 15000→autopilot and 25000→professional. test_billing_amount_to_plan.py:38-44 actively certifies the broken state with backwards issue-#81-era assertions. Two failed fix attempts (c72b535, 1eaaeec) confirm the non-obvious nature. CI blocks correct fixes. Fix: billing.py add 2 dict entries; test file remove 2 contradictory methods, add 2 current-price methods, update test_all_four_current_tiers_present to use {9900,15000,25000,89900}. S-effort ~15 min. Bonus action: invoke /moratorium-sprint after fix (~40 min). Implementation sketch: subconscious/runs/2026-05-26/winning-concept.md."
+      "note": "Run 34 winner. BILLING.PY PATH RESOLVED (run 47, 2026-06-02-pm): file is at backend/routers/billing.py (NOT backend/services/billing.py — prior path was wrong post-god-class refactor PR #180). AMOUNT_TO_PLAN at line 263 confirmed missing 15000→autopilot ($150/mo) and 25000→professional ($250/mo). Two prior failed fix attempts (c72b535, 1eaaeec) likely targeted wrong path. PR #183 (draft, 9 days) needs path update before merging. Fix: backend/routers/billing.py add {15000: 'autopilot', 25000: 'professional'} to AMOUNT_TO_PLAN dict (line 263); test file remove contradictory 'no_wrong_15000/25000_mapping' methods, add current-price assertions, update test_all_four_current_tiers_present to use {9900,15000,25000,89900}. S-effort ~15 min human. Implementation sketch: subconscious/runs/2026-05-26/winning-concept.md (update path references to routers/ not services/)."
     },
     {
       "title": "Fix GH #181 — Add 15000→autopilot + 25000→professional to AMOUNT_TO_PLAN, remove CI-blocking tests (run 32 continuation)",
@@ -261,9 +271,10 @@
       "title": "Wire golden eval harness to CI",
       "date": "2026-05-05",
       "confidence": "HIGH",
-      "status": "subsumed_in_sprint",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
       "category": "operational",
-      "note": "Run 14 winner. First post-moratorium recommendation. Create .github/workflows/lead-qualifier-eval.yml (Monday cron + PR trigger). Add LEAD_QUALIFIER_AGENT_ID GH Secret. Closes Issue #110. Harness already passes locally (backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json, added 7854ede). Onboarding V2 sprint active — new risk vector for silent regression. S-effort. Run 15: promoted as Bonus B alongside run 7 winner — implement together in 1 hour to drop pending 4→1."
+      "note": "Run 14 winner. DE-COUPLED FROM SPRINT by run 47 (2026-06-02-pm). Autonomous path: nightly-commit-review SKILL.md extended to cover .github/workflows/*.yml creation. Inline lead-qualifier-eval.yml patch in subconscious/runs/2026-06-02-pm/winning-concept.md §Step 3. Create .github/workflows/lead-qualifier-eval.yml (Monday cron + PR trigger on eval changes, continue-on-error: true). Closes Issue #110. Harness: backend/tests/evals/test_lead_qualifier_golden.py + lead_qualifier_golden.json (7854ede). Secrets needed: ANTHROPIC_API_KEY (exists), SUPABASE_URL, SUPABASE_SERVICE_KEY."
     },
     {
       "title": "JS Silent Catch Guard — Check 10 (corrected from Check 9)",
@@ -733,14 +744,14 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 15,
-    "runs_pending_approval_raw": 15,
-    "runs_pending_approval_note": "Run 46: +1 new winner (Item A execution, human-execute, same as run 45). Run 45 superseded. Moratorium day 32. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action (billing.py path unknown — investigate before fix), Item B (widget sync guard), Item A (scope fix + Check 10), Item D (CI eval). Run 46 winner execution drops pending 15→13.",
+    "runs_pending_approval": 16,
+    "runs_pending_approval_raw": 16,
+    "runs_pending_approval_note": "Run 47: +1 new winner (Item D AUTONOMOUS-EXECUTABLE, nightly channel). Run 46 superseded. Moratorium day 32. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action (billing.py PATH NOW KNOWN: backend/routers/billing.py — ~15 min human), Item B (widget sync guard), Item A (scope fix + Check 10 — 10 min human), Item D (CI eval — pending_autonomous). Nightly execution of Item D drops pending 16→15.",
     "runs_implemented": 12,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 47)",
-    "governance_correction": "Run 46 (2026-06-02): Run 45 status pending_approval → superseded. billing.py not found at expected path — location unknown post-god-class-refactor, investigate with find+grep before any GH #181 fix.",
-    "new_finding": "billing.py not found at backend/services/billing.py — grep exits with no output. PR #180 (god-class refactor, 13 new service files) may have moved billing constants. All GH #181 implementation sketches reference this path. Run find backend/ -name '*billing*' before next fix attempt.",
-    "note": "Run 46 mandate: human executes Item A (~10 min) this session → run 47 adds Item D to autonomous scope → human Item B + GH #181 (after path investigation) → moratorium exit at 2 pending. If Item A NOT done: run 47 winner = Item D AUTONOMOUS-EXECUTABLE (mechanism switch binding).",
+    "governance_correction": "Run 47 (2026-06-02-pm): Run 46 status pending_approval → superseded. CRITICAL NEW FINDING: billing.py confirmed at backend/routers/billing.py (NOT backend/services/billing.py). All prior GH #181 fix attempts (c72b535, 1eaaeec, PR #183) targeted wrong path. AMOUNT_TO_PLAN missing 15000:'autopilot' and 25000:'professional'. Item A mandate fires (5 consecutive fails) — run 47 winner switches to Item D AUTONOMOUS-EXECUTABLE.",
+    "new_finding": "billing.py IS at backend/routers/billing.py. AMOUNT_TO_PLAN dict at line ~263 missing 15000 (autopilot, $150/mo) and 25000 (professional, $250/mo). Fix: add both entries + update test assertions in backend/tests/test_billing_amount_to_plan.py. PR #183 description references wrong path — update to backend/routers/billing.py. GH #181 is now unblocked. ~15 min human S-effort.",
+    "note": "Run 47 mandate: nightly 2026-06-03 creates .github/workflows/lead-qualifier-eval.yml (Item D AUTONOMOUS-EXECUTABLE). If NOT created: run 48 winner = diagnose nightly log OR direct human execution. Human bonuses available any session: Item A (10 min) + GH #181 billing fix (15 min). Moratorium exit path: Item D (nightly) + Item A + Item B + GH #181 = 4 closures → pending 12.",
     "escalate": true
   },
   "config": {
