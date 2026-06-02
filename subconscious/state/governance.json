@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-01-pm",
-  "total_runs": 45,
+  "last_run": "2026-06-02",
+  "total_runs": 46,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,12 +16,20 @@
   },
   "active_directions": [
     {
+      "title": "Execute Item A in this interactive session — scope em-dash check to skip .jsx/.tsx + wire Check 10 to pre-commit (run 46 winner)",
+      "date": "2026-06-02",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "workflow / code_health",
+      "note": "Run 46 winner. HUMAN-EXECUTE (not autonomous). 4th consecutive re-recommendation of Item A. Forcing function: human present in interactive session + nightly 2026-06-02 aligned. Implementation sketch unchanged: subconscious/runs/2026-06-01-pm/winning-concept.md §Steps 1-4. (1) Add _skip_ui_copy set + continue guard in check_project_invariants.py check_website_copy_avoids_em_dashes(). (2) Verify exit 0. (3) Add Check 10 block to scripts/hooks/pre-commit before Check 11. (4) Commit. ~10 min. Closes GH #194. Implements run 8 (day 37) + run 22 (day 15). RUN 47 MANDATE: if Item A not executed this session, run 47 winner MUST switch to Item D AUTONOMOUS-EXECUTABLE (extend nightly scope to .github/workflows/*.yml creation). Bonus A: investigate billing.py location (find backend/ -name '*billing*' + grep -rn AMOUNT_TO_PLAN) — file not found at expected path, may resolve GH #181 as already fixed or reveal correct target path."
+    },
+    {
       "title": "Execute scope fix + Item A wiring as single human-committed step — scope em-dash check to skip .jsx/.tsx + add Check 10 to pre-commit (run 45 winner)",
       "date": "2026-06-01-pm",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "category": "workflow",
-      "note": "Run 45 winner. HUMAN-EXECUTE (not autonomous). Run 44 AUTONOMOUS-EXECUTABLE label was incorrect — nightly confirmed Python script edits outside its scope (0 executions across 3 cycles). Re-framed as human-execute: (1) edit check_project_invariants.py check_website_copy_avoids_em_dashes() to skip .jsx/.tsx, (2) add Check 10 block to scripts/hooks/pre-commit. Total ~10 min. Closes GH #194. Implements run 8 (day 37) + run 22 (day 15). After commit: Item A status → implemented, moratorium pending 14→13. Implementation sketch: subconscious/runs/2026-06-01-pm/winning-concept.md."
+      "note": "Run 45 winner. SUPERSEDED by run 46 (same recommendation, stronger forcing function). Run 46 re-recommends as final human-execution path with run 47 mandate if unimplemented. Implementation sketch: subconscious/runs/2026-06-01-pm/winning-concept.md."
     },
     {
       "title": "Scope check_project_invariants.py em-dash check to skip .jsx/.tsx — 3-line fix unblocks Item A autonomous execution (run 44 winner)",
@@ -727,11 +735,12 @@
   "implementation_lag_warning": {
     "runs_pending_approval": 15,
     "runs_pending_approval_raw": 15,
-    "runs_pending_approval_note": "Run 45: +1 new winner (scope fix + Item A wiring, human-execute). Run 44 AUTONOMOUS-EXECUTABLE label corrected: nightly confirmed Python script edits outside autonomous scope. Run 45 re-frames as human-execute (~10 min). Moratorium day 31. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action, Item B (widget sync guard), Item A+D (scope fix + CI eval). Run 45 winner execution drops pending 15→13 (Items A+D both close after one commit).",
+    "runs_pending_approval_note": "Run 46: +1 new winner (Item A execution, human-execute, same as run 45). Run 45 superseded. Moratorium day 32. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action (billing.py path unknown — investigate before fix), Item B (widget sync guard), Item A (scope fix + Check 10), Item D (CI eval). Run 46 winner execution drops pending 15→13.",
     "runs_implemented": 12,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 47)",
-    "governance_correction": "Run 45 (2026-06-01-pm): Run 44 autonomous_executable corrected to false — nightly confirmed Python script edits outside scope. Run 44 status: pending_approval → superseded. Run 45 winner: scope fix + Item A wiring, human-execute.",
-    "note": "Run 45: human executes scope fix + Check 10 in one commit (~10 min) → Item A confirmed → run 46 adds Item D to autonomous scope → human Item B + GH #181 → moratorium exit at 2 pending.",
+    "governance_correction": "Run 46 (2026-06-02): Run 45 status pending_approval → superseded. billing.py not found at expected path — location unknown post-god-class-refactor, investigate with find+grep before any GH #181 fix.",
+    "new_finding": "billing.py not found at backend/services/billing.py — grep exits with no output. PR #180 (god-class refactor, 13 new service files) may have moved billing constants. All GH #181 implementation sketches reference this path. Run find backend/ -name '*billing*' before next fix attempt.",
+    "note": "Run 46 mandate: human executes Item A (~10 min) this session → run 47 adds Item D to autonomous scope → human Item B + GH #181 (after path investigation) → moratorium exit at 2 pending. If Item A NOT done: run 47 winner = Item D AUTONOMOUS-EXECUTABLE (mechanism switch binding).",
     "escalate": true
   },
   "config": {
