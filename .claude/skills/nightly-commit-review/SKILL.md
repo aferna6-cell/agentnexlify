@@ -64,6 +64,7 @@ Only commits in last 24h. Skip merge commits.
 - Doc inconsistencies with code
 - **New `.claude/skills/*/SKILL.md` creation** when the most recent `subconscious/runs/*/winning-concept.md` contains the text `AUTONOMOUS-EXECUTABLE` and the winning concept describes creating a skill file. Execute directly — do not classify as "docs only" and skip.
 - **Bash additions to `scripts/hooks/pre-commit`** when `subconscious/state/governance.json` has a matching `active_directions[]` entry where `"autonomous_executable": true` and the most recent `subconscious/runs/*/winning-concept.md` contains `AUTONOMOUS-EXECUTABLE`. Execute the patch in the winning concept directly — commit to main as `ci(pre-commit): <description from winning concept>`. **Pre-condition required**: run the script being wired first — if it exits non-zero, the item is blocked; log the blocker and open a MEDIUM issue instead of wiring.
+- **New `.github/workflows/*.yml` files** when the most recent `subconscious/runs/*/winning-concept.md` has `AUTONOMOUS-EXECUTABLE` label AND provides the inline file content verbatim. Apply the inline content exactly as written. Commit as `ci(eval): add <filename> [auto-nightly-YYYY-MM-DD]`. After commit: update `governance.json` matching `active_directions` entry status → `implemented`.
 
   **Current pending item (Item A):** Wire `check_project_invariants.py` as pre-commit Check 10. Status: `pending_autonomous`. Blocked 2026-06-01: script fails on em-dash violations in UI copy. Execute when script passes clean.
 

@@ -1,0 +1,28 @@
+name: Lead Qualifier Eval
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Monday 9 AM UTC
+  pull_request:
+    paths:
+      - "backend/services/lead_qualifier.py"
+      - "backend/tests/evals/lead_qualifier_golden.json"
+      - "backend/tests/evals/test_lead_qualifier_golden.py"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    continue-on-error: true # eval failures are warnings, not blockers
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install backend deps
+        run: pip install -r backend/requirements.txt
+      - name: Run lead qualifier golden eval
+        run: python -m pytest backend/tests/evals/test_lead_qualifier_golden.py -v --tb=short
