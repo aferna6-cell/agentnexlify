@@ -1,0 +1,39 @@
+{
+  "run": 49,
+  "date": "2026-06-03-pm",
+  "mode": "moratorium_mechanism_change",
+  "evidence_summary": "Item D implemented nightly 42992fa (lead-qualifier-eval.yml). Zero production code commits since June 1. Run 48 winner (Items A+B, human-execute) NOT implemented — 2nd consecutive identical rec without action. Nightly ran June 1-3 and logged em-dash violations as 'recommendation to human' not autonomous fix. Root cause: SKILL.md scope covers pre-commit bash + CI YAML but NOT JSX content em-dash fixes explicitly. 5 exact violations confirmed: IntegrationsPage:1018, SettingsInboundChannels:220-221, MessagingSettingsCards:263/276. Moratorium day 34, 15 pending.",
+  "ideas_count": 5,
+  "top_3_debated": [
+    "Extend nightly SKILL.md + apply em-dash patches (AUTONOMOUS-EXECUTABLE)",
+    "Items A+B combined human-execute",
+    "AI-to-Human Handoff v1"
+  ],
+  "winner": "Extend nightly-commit-review SKILL.md autonomous scope to cover JSX em-dash fixes + apply 5 inline patches (AUTONOMOUS-EXECUTABLE)",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "mechanism_change": "Switches Item A from human-execute (runs 48, 45, 46) to nightly-autonomous via SKILL.md scope extension. Same pattern as runs 40, 43, 47.",
+  "rejected": [
+    "AI-to-Human Handoff v1 — 7+ recs without implementation, moratorium active, no new forcing function"
+  ],
+  "weakened": [
+    "Items A+B human-execute — dominated by Idea 1 for Item A; Item B survives as Bonus A",
+    "email_sequences split — active_direction, wrong timing pre-moratorium-exit"
+  ],
+  "moratorium_active": true,
+  "moratorium_day": 34,
+  "pending_before": 15,
+  "pending_after": 16,
+  "governance_corrections": [
+    "Run 48 (Items A+B) confirmed pending_approval — still unimplemented"
+  ],
+  "key_insight": "SKILL.md scope extension is the proven autonomous mechanism (runs 40/43/47). Run 49 applies it to JSX em-dash fixes. If nightly executes tonight: em-dashes fixed → check_project_invariants exits 0 → Check 10 auto-wires tomorrow night. 2-night cascade vs indefinite human-execute stall.",
+  "questions_for_next_run": [
+    "Did nightly fix 5 JSX em-dashes? (git log for em-dash commit)",
+    "Did check_project_invariants.py exit 0?",
+    "Did Check 10 auto-wire (scripts/hooks/pre-commit)?",
+    "Was Item B (widget sync guard) created as Bonus A?",
+    "Was GH #181 billing fix applied?",
+    "How many pending moratorium items remain?"
+  ]
+}
