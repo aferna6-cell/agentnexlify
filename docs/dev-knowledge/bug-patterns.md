@@ -2377,3 +2377,22 @@ https://claude.ai/code/session_01NxHKhvY7nvZQdKLguG5mHS
 **Author:** Claude
 **Files Changed:** frontend/src/pages/AdminAnalyticsPage.jsx,scripts/hooks/pre-commit
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: replace em dashes with hyphens in UI copy (personality.md rule)
+
+Fixes 5 em-dash violations in JSX UI strings so check_project_invariants.py
+exits 0. Unblocks autonomous Check 10 wiring at 2:37 AM cadence.
+
+Files: IntegrationsPage.jsx:1018, SettingsInboundChannels.jsx:220-221,
+MessagingSettingsCards.jsx:263/276.
+
+ops: nightly-commit-review 2026-06-05
+
+https://claude.ai/code/session_01Pq5RE4T8AuCMyBgP4np8pQ
+**Date:** 2026-06-05
+**Commit:** 8db33df
+**Author:** Claude
+**Files Changed:** frontend/src/pages/IntegrationsPage.jsx,frontend/src/pages/SettingsInboundChannels.jsx,frontend/src/pages/settings/MessagingSettingsCards.jsx,ops/routines/logs/nightly-commit-review-2026-06-05.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
