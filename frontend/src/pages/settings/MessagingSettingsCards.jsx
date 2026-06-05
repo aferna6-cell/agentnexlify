@@ -260,7 +260,7 @@ export function AgentOSAutoSendCard({
       <p className="settings-card-desc">
         When OFF (default), every Agent OS worker deliverable waits for your
         approval before any customer-facing action fires. When ON, deliverables
-        are auto-approved as soon as the worker completes — no review gate. Only
+        are auto-approved as soon as the worker completes - no review gate. Only
         turn ON once you trust the workers and prompts.
       </p>
       <CheckboxSettingRow
@@ -273,7 +273,7 @@ export function AgentOSAutoSendCard({
           }));
           setSaved(false);
         }}
-        label="Skip approval — auto-send worker deliverables"
+        label="Skip approval - auto-send worker deliverables"
       />
       <SaveButton
         saving={saving}

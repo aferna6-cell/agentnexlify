@@ -1015,7 +1015,7 @@ function InboundBridgesSection({ token }) {
                   color: "var(--text-primary)",
                 }}
               >
-                <option value="">— Not set —</option>
+                <option value="">- Not set -</option>
                 <option value="postmark">Postmark</option>
                 <option value="mailgun">Mailgun</option>
               </select>

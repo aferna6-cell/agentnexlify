@@ -217,8 +217,8 @@ export default function SettingsInboundChannels() {
                       {busy
                         ? "Saving…"
                         : enabled
-                          ? "Active — messages routing to inbox"
-                          : "Disabled — bridge skipped"}
+                          ? "Active - messages routing to inbox"
+                          : "Disabled - bridge skipped"}
                     </div>
                   </div>
                   <ToggleSwitch
