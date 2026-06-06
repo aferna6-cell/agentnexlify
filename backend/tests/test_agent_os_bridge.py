@@ -68,3 +68,53 @@ def test_status_map_collapses_demo_statuses():
     assert bridge._STATUS_MAP["completed"] == "succeeded"
     assert bridge._STATUS_MAP["no_draft"] == "succeeded"
     assert bridge._STATUS_MAP["failed"] == "failed"
+
+
+def test_map_routing_decision_row_snake_cases_and_links_run():
+    row = bridge.map_routing_decision_row(
+        {
+            "ask": "draft a quote",
+            "classifier": "heuristic",
+            "decision": "routed",
+            "chosenAgent": "sales",
+            "confidence": 0.82,
+            "alternates": [{"agentId": "marketing", "confidence": 0.3}],
+            "accepted": None,
+        },
+        run_id="run-1",
+    )
+    assert row == {
+        "run_id": "run-1",
+        "ask": "draft a quote",
+        "classifier": "heuristic",
+        "decision": "routed",
+        "chosen_agent": "sales",
+        "confidence": 0.82,
+        "alternates": [{"agentId": "marketing", "confidence": 0.3}],
+        "accepted": None,
+        "changed_to": None,
+    }
+
+
+def test_map_model_call_row_snake_cases_tokens_and_cost():
+    row = bridge.map_model_call_row(
+        {
+            "purpose": "draft",
+            "model": "claude-sonnet-4-6",
+            "inputTokens": 120,
+            "outputTokens": 340,
+            "costUsd": 0.0051,
+            "ok": True,
+        },
+        run_id=None,
+    )
+    assert row == {
+        "run_id": None,
+        "purpose": "draft",
+        "model": "claude-sonnet-4-6",
+        "input_tokens": 120,
+        "output_tokens": 340,
+        "cost_usd": 0.0051,
+        "ok": True,
+        "error": None,
+    }

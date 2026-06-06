@@ -284,6 +284,13 @@ def persist_orchestration(
         tenant_table(db, "os_messages", client_id).insert(message_row).execute().data[0]
     )
 
+    # Telemetry (routing decisions + model-call cost ledger) is best-effort:
+    # a failure here never breaks the owner's turn.
+    try:
+        _persist_telemetry(db, client_id, agent_run_id, record)
+    except Exception:
+        logger.warning("agent_os_bridge: telemetry persist failed", exc_info=True)
+
     tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
         "id", thread_id
     ).execute()
@@ -294,3 +301,53 @@ def persist_orchestration(
         "status": result.get("status"),
         "agent_id": result.get("agentId"),
     }
+
+
+def map_routing_decision_row(decision: dict, run_id: str | None) -> dict:
+    """RunRecordBundle decision -> os_routing_decision row (no client_id/id)."""
+    return {
+        "run_id": run_id,
+        "ask": decision.get("ask") or "",
+        "classifier": decision.get("classifier") or "heuristic",
+        "decision": decision.get("decision") or "",
+        "chosen_agent": decision.get("chosenAgent") or "",
+        "confidence": decision.get("confidence") or 0,
+        "alternates": decision.get("alternates"),
+        "accepted": decision.get("accepted"),
+        "changed_to": decision.get("changedTo"),
+    }
+
+
+def map_model_call_row(call: dict, run_id: str | None) -> dict:
+    """RunRecordBundle model call -> os_model_call_log row (no client_id/id)."""
+    return {
+        "run_id": run_id,
+        "purpose": call.get("purpose") or "other",
+        "model": call.get("model") or "",
+        "input_tokens": call.get("inputTokens") or 0,
+        "output_tokens": call.get("outputTokens") or 0,
+        "cost_usd": call.get("costUsd") or 0,
+        "ok": call.get("ok", True),
+        "error": call.get("error"),
+    }
+
+
+def _persist_telemetry(
+    db: Any, client_id: str, agent_run_id: str | None, record: dict
+) -> None:
+    """Write the run record's routing decisions + model-call logs to os_*.
+
+    All rows share the turn's single persisted agent_run_id (or None for
+    answer/decline turns). client_id is injected by tenant_insert.
+    """
+    decisions = record.get("decisions") or []
+    if decisions:
+        tenant_table(db, "os_routing_decision", client_id).insert(
+            [map_routing_decision_row(d, agent_run_id) for d in decisions]
+        ).execute()
+
+    calls = record.get("modelCalls") or []
+    if calls:
+        tenant_table(db, "os_model_call_log", client_id).insert(
+            [map_model_call_row(c, agent_run_id) for c in calls]
+        ).execute()
