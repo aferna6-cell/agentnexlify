@@ -87,3 +87,52 @@ def run_agent_sync(
             exc_info=True,
         )
         return None
+
+
+# Orchestration runs the vendored Agent OS engine, which may call Sonnet for a
+# draft — give it more headroom than a single agent-service /agents/:name/run.
+_DEFAULT_ORCHESTRATE_TIMEOUT_S: float = 90.0
+
+
+def orchestrate_sync(
+    account_id: str,
+    ask: str,
+    context: dict[str, Any],
+    *,
+    force_agent_id: str | None = None,
+    timeout: float = _DEFAULT_ORCHESTRATE_TIMEOUT_S,
+) -> dict[str, Any] | None:
+    """Call agent-service POST /orchestrate. Returns None when not configured.
+
+    agent-service is pure compute: it runs the engine over the SharedContext we
+    pass and returns ``{"result": HandleResult, "record": RunRecordBundle}`` for
+    the caller to persist. Returns None on unconfigured URL, HTTP error, or
+    timeout so callers can surface a clear "engine unavailable" state.
+
+    Must be called from a threadpool — this is blocking.
+    """
+    if not _AGENT_SERVICE_URL:
+        return None
+
+    endpoint = f"{_AGENT_SERVICE_URL}/orchestrate"
+    body: dict[str, Any] = {"accountId": account_id, "ask": ask, "context": context}
+    if force_agent_id:
+        body["forceAgentId"] = force_agent_id
+    try:
+        resp = httpx.post(endpoint, json=body, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.TimeoutException:
+        logger.warning("agent_sdk_client: timeout calling %s", endpoint)
+        return None
+    except httpx.HTTPStatusError as exc:
+        logger.warning(
+            "agent_sdk_client: HTTP %s from %s: %s",
+            exc.response.status_code,
+            endpoint,
+            exc.response.text[:200],
+        )
+        return None
+    except Exception:
+        logger.warning("agent_sdk_client: error calling %s", endpoint, exc_info=True)
+        return None

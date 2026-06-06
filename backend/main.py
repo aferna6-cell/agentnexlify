@@ -91,6 +91,7 @@ from backend.routers import (
     admin_promotions,
     zapier,
     os_threads,
+    os_orchestrate,
     os_agent_runs,
     os_deliverables,
     os_memory,
@@ -843,6 +844,7 @@ app.include_router(wizard_analytics.router)
 app.include_router(content_repurpose.router)
 app.include_router(zapier.router)
 app.include_router(os_threads.router)
+app.include_router(os_orchestrate.router)
 app.include_router(os_agent_runs.router)
 app.include_router(os_deliverables.router)
 app.include_router(os_memory.router)
