@@ -1,0 +1,78 @@
+{
+  "run": 52,
+  "date": "2026-06-06",
+  "winner": "Fix nightly scope gap: add 3 scope bullets to nightly-commit-review SKILL.md (additive SKILL.md modification + bash scripts + pre-push additions) + Item B inline content block",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "moratorium_active": true,
+  "moratorium_day": 37,
+  "pending_before": 15,
+  "pending_after": 16,
+  "ideas": [
+    {
+      "rank": 1,
+      "title": "Fix nightly scope gap — add additive SKILL.md modification bullet + bash scripts + pre-push bullets + Item B inline block",
+      "verdict": "WINNER",
+      "debate_rounds": 3,
+      "key_evidence": "Root cause confirmed: nightly SKILL.md line 65 says 'creation' only. Run 50 AUTONOMOUS-EXECUTABLE blocked 44 days by this gap. 3/3 prior scope extensions (runs 40/43/47) delivered in next cycle."
+    },
+    {
+      "rank": 2,
+      "title": "Merge PR #183 (run 51 1-day follow-up)",
+      "verdict": "WEAKENED → Bonus Action",
+      "debate_rounds": 3,
+      "reason": "Standing action from run 51, no new evidence. Valid 10-min human action. Not a new systemic insight."
+    },
+    {
+      "rank": 3,
+      "title": "AI-to-Human Handoff v1 via Agent OS",
+      "verdict": "WEAKENED → Parking Lot",
+      "debate_rounds": 3,
+      "reason": "No new evidence since run 38 (9 days). Moratorium still active. Promote after moratorium exits (pending ≤ 2)."
+    },
+    {
+      "rank": 4,
+      "title": "email_sequences.py split via /god-class-splitter",
+      "verdict": "Parking Lot (not debated)",
+      "reason": "Blocked by GH #181 prerequisite. Run 41 winner still valid. Invoke after PR #183 merged."
+    },
+    {
+      "rank": 5,
+      "title": "Governance audit — consolidate superseded items",
+      "verdict": "Parking Lot (not debated)",
+      "reason": "Worth 10 min in next run's Phase 6. May reveal moratorium already-effectively-exited after Items A+B+PR#183."
+    }
+  ],
+  "evidence_digest": [
+    "check_project_invariants exits 0 — Item A Check 10 pre-condition met, auto-wires tonight",
+    "Item B (check-widget-sync.sh) MISSING 44 days — scope gap confirmed at nightly SKILL.md line 65",
+    "PR #183 12-day draft, morning digest confirmed merge path, CI gate guards merge",
+    "Moratorium day 37, 15 pending before run (many superseded)"
+  ],
+  "bonus_action": "Merge PR #183 (~10 min): review diff, verify CI green, gh pr merge 183 --squash. Closes GH #181 (50+ days), unblocks email_sequences split.",
+  "governance_corrections": [
+    "run 50 entry: status pending_autonomous → superseded",
+    "run 50 entry: autonomous_executable true → false",
+    "total_runs: 51 → 52",
+    "last_run: 2026-06-05-pm → 2026-06-06",
+    "implementation_lag_warning: runs_pending 15 → 16"
+  ],
+  "questions_for_next_run": [
+    "Did nightly 2026-06-07 execute Item B (check-widget-sync.sh + pre-push wiring + CLAUDE.md fix)?",
+    "Was PR #183 merged? Is GH #181 closed?",
+    "After Items A+B + PR #183: true pending count? Does moratorium exit?",
+    "Are runs 21/28/29/35 superseded in governance.json? What does true pending look like after governance audit?",
+    "Is email_sequences.py split now unblocked and ready for next winner slot?"
+  ],
+  "files_written": [
+    "subconscious/runs/2026-06-06/ideas/ideas.md",
+    "subconscious/runs/2026-06-06/debate/debate-log.md",
+    "subconscious/runs/2026-06-06/winning-concept.md",
+    "subconscious/runs/2026-06-06/improvement-backlog.md",
+    "subconscious/runs/2026-06-06/run-summary.json"
+  ],
+  "state_updated": [
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl"
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-05-pm",
-  "total_runs": 51,
+  "last_run": "2026-06-06",
+  "total_runs": 52,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,6 +16,14 @@
   },
   "active_directions": [
     {
+      "title": "Fix nightly scope gap: add 3 scope bullets to nightly-commit-review SKILL.md (SKILL.md modification + bash scripts + pre-push) + Item B inline block (run 52 winner)",
+      "date": "2026-06-06",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "category": "workflow",
+      "note": "Run 52 winner. Human action required (~15 min). NOT autonomous — cannot self-extend scope to SKILL.md modification (structural catch-22). Root cause of 44-day Item B gap: nightly SKILL.md line 65 covers SKILL.md *creation* only, not *modification*. Step 1: open .claude/skills/nightly-commit-review/SKILL.md, find LOW-risk scope section (~line 68). Insert 3 bullets: (a) additive text additions to existing SKILL.md, (b) new bash scripts in scripts/ directory, (c) additive changes to scripts/hooks/pre-push. Step 2: add Item B inline content block (check-widget-sync.sh verbatim + pre-push wiring + CLAUDE.md Invariant #4 fix). Step 3: commit. Nightly 2026-06-07 at 2:37 AM auto-executes Item B. 3/3 prior scope extensions (runs 40/43/47) delivered in next nightly. Bonus: merge PR #183 (~10 min). Implementation sketch: subconscious/runs/2026-06-06/winning-concept.md. Supersedes run 50 entry (pending_autonomous path blocked by this scope gap)."
+    },
+    {
       "title": "Verify and merge PR #183 — close GH #181 (billing.py AMOUNT_TO_PLAN missing 15000→autopilot + 25000→professional) via existing 12-day draft PR (run 51 winner)",
       "date": "2026-06-05-pm",
       "confidence": "MEDIUM-HIGH",
@@ -27,10 +35,10 @@
       "title": "Extend nightly scope + mark Item B AUTONOMOUS-EXECUTABLE (check-widget-sync.sh + pre-push wire + CLAUDE.md fix) (run 50 winner)",
       "date": "2026-06-05",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
-      "autonomous_executable": true,
+      "status": "superseded",
+      "autonomous_executable": false,
       "category": "code_health / workflow",
-      "note": "Run 50 winner. AUTONOMOUS-EXECUTABLE. Extend nightly-commit-review SKILL.md to cover scripts/ directory new file creation + pre-push hook additions. Add Item B block to SKILL.md with full check-widget-sync.sh content + pre-push patch + CLAUDE.md Invariant #4 fix. Update governance.json run 7/15 Item B to pending_autonomous. Nightly applies SKILL.md scope extension AND executes Item B in same cycle. 43-day gap (run 7/15 subsumed_in_sprint). Implementation sketch: subconscious/runs/2026-06-05/winning-concept.md."
+      "note": "Run 50 winner. SUPERSEDED by run 52 (2026-06-06). Run 52 confirmed root cause: nightly SKILL.md scope at line 65 covers *creation* only, not *modification* — this is why AUTONOMOUS-EXECUTABLE was blocked (structural catch-22). Run 52 path: human applies 3 scope bullets + Item B inline block (~15 min), then nightly 2026-06-07 executes Item B. Implementation sketch: subconscious/runs/2026-06-06/winning-concept.md."
     },
     {
       "title": "Fix exactly 5 JSX em-dash violations in UI copy (~2 min) \u2014 unblocks autonomous Check 10 wiring tonight (run 49 winner)",
@@ -784,13 +792,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 15,
-    "runs_pending_approval_raw": 15,
-    "runs_pending_approval_note": "Run 51 (2026-06-05-pm): No governance corrections this run. Pending +1 (run 51 winner added). runs_pending 14\u219215. Moratorium day 36. Items A+B queued for tonight's nightly (2:37 AM). Item A auto-wires Check 10 (pre-condition met since run 49). Item B (check-widget-sync.sh) executes via run 50 AUTONOMOUS-EXECUTABLE scope extension. Run 51 winner: verify + merge PR #183 (~10 min, human). Fastest moratorium exit: Items A+B auto-close tonight \u2192 PR #183 merge (~10 min human) = ~10 min human action. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action (run 51 winner path: merge PR #183).",
+    "runs_pending_approval": 16,
+    "runs_pending_approval_raw": 16,
+    "runs_pending_approval_note": "Run 52 (2026-06-06): Pending +1 (run 52 winner added). runs_pending 15\u219216. Governance correction: run 50 status pending_autonomous \u2192 superseded (run 52 supersedes with human-apply path). Moratorium day 37. Item A confirmed auto-wired via tonight's nightly (2:37 AM) \u2014 pre-condition met. Item B (check-widget-sync.sh, 44 days) blocked by SKILL.md scope gap: run 52 winner = human adds 3 scope bullets + Item B inline block, nightly 2026-06-07 executes. Bonus: merge PR #183 (~10 min). True human-required pending: run 4/38 (AI-to-Human Handoff), run 20/21/28/29/30/35/41 (moratorium sprint + email split), GH#181 critical_standing_action (run 51/52 bonus path: merge PR #183).",
     "runs_implemented": 14,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 51)",
-    "governance_correction": "Run 51 (2026-06-05-pm): No corrections. Run 50 winner still pending_autonomous (Items A+B for tonight's nightly).",
-    "note": "Moratorium exit path: Items A+B autonomous tonight \u2192 PR #183 merge (~10 min, human) \u2192 email_sequences split (unblocked) \u2192 pending drops \u2192 moratorium exit threshold review. Run 51 PM winner is the fastest remaining human-required moratorium-exit action.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 52)",
+    "governance_correction": "Run 52 (2026-06-06): run 50 entry status pending_autonomous \u2192 superseded. autonomous_executable: true \u2192 false. Root cause confirmed: nightly SKILL.md scope gap blocked AUTONOMOUS-EXECUTABLE for 44 days.",
+    "note": "Moratorium exit path: human applies run 52 SKILL.md edit (~15 min) \u2192 nightly 2026-06-07 executes Item B \u2192 merge PR #183 (~10 min) \u2192 email_sequences split unblocked \u2192 pending drops \u2192 moratorium exit threshold review. Run 52 winner is the correct structural fix; bonus action PR #183 merge is the fastest remaining human-required moratorium-exit action.",
     "escalate": true
   },
   "config": {
