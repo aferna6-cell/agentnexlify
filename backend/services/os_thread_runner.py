@@ -25,8 +25,14 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import BackgroundTasks
+from fastapi.concurrency import run_in_threadpool
 
-from backend.services import orchestrator, os_workers
+from backend.services import (
+    agent_os_bridge,
+    agent_sdk_client,
+    orchestrator,
+    os_workers,
+)
 from backend.services.email_sender import send_email
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
@@ -58,6 +64,18 @@ async def process_user_turn(
     BackgroundTasks instance.
     """
     user_content = user_message_row["content"]
+
+    # Prefer the Agent OS engine (the vendored demo framework in agent-service)
+    # when configured. Falls back to the legacy Python orchestrator below on any
+    # failure or when AGENT_SERVICE_URL is unset, so the chat shell AND every
+    # inbound bridge (widget/email/SMS/Facebook) never break mid-cutover — no
+    # half-migration. Delete the legacy path only once the engine is proven live.
+    if agent_sdk_client.is_configured():
+        engine_result = await _run_via_engine(
+            db, client_id, thread_id, user_message_row
+        )
+        if engine_result is not None:
+            return engine_result
 
     history_rows = (
         tenant_table(db, "os_messages", client_id)
@@ -163,6 +181,39 @@ async def process_user_turn(
         "assistant_message": assistant_message,
         "action": decision.action,
         "agent_runs": agent_runs,
+    }
+
+
+async def _run_via_engine(
+    db, client_id: str, thread_id: str, user_message_row: dict
+) -> dict | None:
+    """Route one turn through the agent-service engine.
+
+    Assembles the tenant's SharedContext from Supabase, runs the engine, and
+    persists the returned record into os_*. Returns None to signal the caller
+    to fall back to the legacy orchestrator (engine unconfigured or the HTTP
+    call failed) — so a transient agent-service outage degrades gracefully
+    instead of dropping the turn. Mirrors the reply back to inbound channels,
+    same as the legacy path.
+    """
+    user_content = user_message_row["content"]
+    context = agent_os_bridge.assemble_shared_context(db, client_id)
+    out = await run_in_threadpool(
+        agent_sdk_client.orchestrate_sync, client_id, user_content, context
+    )
+    if out is None:
+        return None
+
+    persisted = agent_os_bridge.persist_orchestration(db, client_id, thread_id, out)
+    assistant_message = persisted.get("assistant_message")
+    if assistant_message:
+        await _mirror_to_channel(db, client_id, thread_id, assistant_message)
+    agent_run = persisted.get("agent_run")
+    return {
+        "user_message": user_message_row,
+        "assistant_message": assistant_message,
+        "action": "delegate" if agent_run else "answer",
+        "agent_runs": [agent_run] if agent_run else [],
     }
 
 
