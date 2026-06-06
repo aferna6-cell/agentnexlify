@@ -1,0 +1,36 @@
+{
+  "run": 52,
+  "date": "2026-06-06-pm",
+  "winner": "Add post-fix re-scan to nightly-commit-review SKILL.md — execute pending_autonomous items unblocked mid-cycle",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "ideas_count": 5,
+  "top_3_debated": [
+    "Add post-fix re-scan to nightly SKILL.md",
+    "Merge PR #183 (billing fix, run 51 winner)",
+    "Tag GH #107 Zapier as ai-ready"
+  ],
+  "debate_verdicts": {
+    "Post-fix re-scan to nightly SKILL.md": "SURVIVES → WINNER",
+    "Merge PR #183": "WEAKENED → bonus action (already run 51 active_direction)",
+    "Tag GH #107 Zapier": "WEAKENED → parking lot"
+  },
+  "evidence_summary": "Nightly 2026-06-05 (8db33df) applied run 49 em-dash fix, verified check_project_invariants exits 0, but did NOT wire Check 10 (Item A, pending_autonomous since run 22). Root cause: nightly scans pending_autonomous pre-conditions BEFORE applying fixes — structural ordering gap. billing.py still missing 15000/25000 (GH #181). check-widget-sync.sh MISSING 43 days. No production feature commits 5+ days. Moratorium day 37. 15 pending.",
+  "governance_corrections": [],
+  "moratorium_active": true,
+  "moratorium_day": 37,
+  "pending_before": 15,
+  "pending_after": 16,
+  "key_finding": "Nightly autonomous channel has a structural ordering gap: pre-condition scan runs before fixes, so a fix that unblocks a pending_autonomous item is never acted upon in the same cycle. Tonight's fresh nightly will likely apply Item A independently, but the gap persists for all future fix-then-unblock sequences. Winner fixes this with one additive SKILL.md bullet.",
+  "bonus_actions": [
+    "Merge PR #183 — GH #181 billing fix (~10 min human, closes moratorium exit chain)",
+    "Tag GH #107 as ai-ready (~2 min, routes Zapier security fix to issue-to-pr-loop)"
+  ],
+  "questions_for_next_run": [
+    "Did nightly 2026-06-06 apply run 52 winner AND cascade-wire Item A (Check 10)?",
+    "Was run 50 Item B scope block already present? Did check-widget-sync.sh execute?",
+    "Was PR #183 merged by human? Is GH #181 closed?",
+    "True pending count after tonight's autonomous actions?"
+  ]
+}
