@@ -15,7 +15,7 @@ import {
   listOsThreads,
   createOsThread,
   fetchOsThreadMessages,
-  postOsMessage,
+  orchestrateOsTurn,
   fetchOsUsage,
 } from "../utils/api/os";
 import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
@@ -187,14 +187,18 @@ export default function AgentOS() {
         setActiveThreadId(thread.id);
         threadId = thread.id;
       }
-      const result = await postOsMessage(token, threadId, content);
+      const result = await orchestrateOsTurn(token, threadId, content);
       setMessages((prev) => [
         ...prev,
         result.user_message,
         result.assistant_message,
       ]);
-      if (result.agent_runs?.length) {
-        setRuns((prev) => [...prev, ...result.agent_runs]);
+      // The engine runs one agent per turn (agent_run, singular); tolerate the
+      // legacy agent_runs array shape too.
+      const newRuns =
+        result.agent_runs ?? (result.agent_run ? [result.agent_run] : []);
+      if (newRuns.length) {
+        setRuns((prev) => [...prev, ...newRuns]);
       }
       setComposer("");
       refreshUsage();
@@ -202,6 +206,8 @@ export default function AgentOS() {
       if (err.status === 429) {
         setError("Monthly agent-run cap reached for this billing cycle.");
         refreshUsage();
+      } else if (err.status === 503) {
+        setError("Agent OS engine is not connected yet — try again shortly.");
       } else {
         setError(err.message || "Failed to send message");
       }

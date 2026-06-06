@@ -32,6 +32,16 @@ export function postOsMessage(token, threadId, content) {
   });
 }
 
+// Orchestrate one turn through the Agent OS engine (the vendored demo
+// framework). Inserts the user message, runs the engine over the tenant's
+// SharedContext, and persists the result. Returns
+// { user_message, assistant_message, agent_run, status, agent_id }.
+export function orchestrateOsTurn(token, threadId, content, forceAgentId) {
+  const body = { thread_id: threadId, content };
+  if (forceAgentId) body.force_agent_id = forceAgentId;
+  return request("/api/v1/os/orchestrate", { method: "POST", token, body });
+}
+
 // --- Agent runs ---
 
 export function fetchOsAgentRun(token, runId) {
