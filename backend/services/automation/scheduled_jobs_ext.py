@@ -649,7 +649,6 @@ async def process_recurring_invoices() -> int:
             )
             .eq("is_recurring", True)
             .lte("next_invoice_date", today_str)
-            .filter("next_invoice_date", "not.is", "null")
             .neq("status", "cancelled")
             .limit(BATCH_LIMIT)
             .execute()
