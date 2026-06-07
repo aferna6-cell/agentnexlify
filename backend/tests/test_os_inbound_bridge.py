@@ -126,6 +126,43 @@ def _patch_helpers(
     return calls
 
 
+class _EmptyQuery:
+    """Supabase query-builder stub whose ``execute`` returns no rows.
+
+    Mirrors the fluent ``.select().eq().limit().execute()`` chain so
+    ``get_bridge_config`` exercises its "missing row -> defaults" path.
+    """
+
+    def select(self, *a, **k):
+        return self
+
+    def eq(self, *a, **k):
+        return self
+
+    def limit(self, *a, **k):
+        return self
+
+    def execute(self):
+        return type("_Result", (), {"data": []})()
+
+
+def test_widget_bridge_defaults_off(monkeypatch, fake_db):
+    """Regression: a tenant with no bridge config must NOT have the widget
+    bridged into Agent OS. Agent OS is a dashboard tool — defaulting the
+    public customer widget on hijacked every visitor reply. Opt-in only.
+    """
+    monkeypatch.setattr(
+        os_inbound_bridge, "tenant_table", lambda db, table, client_id: _EmptyQuery()
+    )
+
+    cfg = os_inbound_bridge.get_bridge_config(fake_db, "tenant-no-config")
+    assert cfg["widget_enabled"] is False
+    assert (
+        os_inbound_bridge.is_bridge_enabled(fake_db, "tenant-no-config", "widget")
+        is False
+    )
+
+
 @pytest.mark.asyncio
 async def test_bridge_widget_toggle_off_skips_everything(monkeypatch, fake_db):
     _patch_toggle(monkeypatch, enabled=False)

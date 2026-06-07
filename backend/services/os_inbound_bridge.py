@@ -48,7 +48,12 @@ InboundKind = Literal["auto_reply", "normal", "system_notice"]
 
 _BRIDGE_PROVIDER = "os_inbound_bridges"
 _DEFAULT_CONFIG: dict[str, Any] = {
-    "widget_enabled": True,
+    # Agent OS is a DASHBOARD tool for our clients — it must never answer the
+    # public customer-facing chat widget unless a tenant explicitly opts in.
+    # Defaulting this on hijacked the widget: every visitor message got routed
+    # to the owner-assistant orchestrator and mirrored back over the tenant's
+    # real customer reply. Opt-in only.
+    "widget_enabled": False,
     "email_enabled": False,
     "sms_enabled": False,
     "facebook_enabled": False,
