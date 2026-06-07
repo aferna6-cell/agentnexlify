@@ -11,6 +11,7 @@ vi.mock("../utils/api/os", () => ({
   listOsThreads: vi.fn(),
   createOsThread: vi.fn(),
   fetchOsThreadMessages: vi.fn(),
+  orchestrateOsTurn: vi.fn(),
   postOsMessage: vi.fn(),
   fetchOsUsage: vi.fn(),
 }));
@@ -32,6 +33,7 @@ import {
   listOsThreads,
   createOsThread,
   fetchOsThreadMessages,
+  orchestrateOsTurn,
   postOsMessage,
   fetchOsUsage,
 } from "../utils/api/os";
@@ -46,6 +48,7 @@ beforeEach(() => {
   fetchOsThreadMessages
     .mockReset()
     .mockResolvedValue({ messages: [], agent_runs: [] });
+  orchestrateOsTurn.mockReset();
   postOsMessage.mockReset();
   fetchOsUsage.mockReset().mockResolvedValue({ cap_reached: false });
 });
@@ -130,7 +133,7 @@ describe("AgentOS shell", () => {
     listOsThreads.mockResolvedValueOnce([
       { id: "t1", title: "Task one", created_at: NOW },
     ]);
-    postOsMessage.mockResolvedValueOnce({
+    orchestrateOsTurn.mockResolvedValueOnce({
       user_message: { id: "u1", role: "user", content: "do the thing" },
       assistant_message: { id: "a1", role: "assistant", content: "on it" },
       agent_runs: [],
@@ -146,14 +149,41 @@ describe("AgentOS shell", () => {
     fireEvent.click(screen.getByText("Send"));
     await waitFor(() => expect(screen.getByText("on it")).toBeInTheDocument());
     expect(screen.getByText("do the thing")).toBeInTheDocument();
-    expect(postOsMessage).toHaveBeenCalledWith("jwt", "t1", "do the thing");
+    expect(orchestrateOsTurn).toHaveBeenCalledWith("jwt", "t1", "do the thing");
+  });
+
+  it("falls back to the legacy turn endpoint when orchestrate 404s", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "t1", title: "Task one", created_at: NOW },
+    ]);
+    const err = new Error("not found");
+    err.status = 404;
+    orchestrateOsTurn.mockRejectedValueOnce(err);
+    postOsMessage.mockResolvedValueOnce({
+      user_message: { id: "u1", role: "user", content: "legacy path" },
+      assistant_message: { id: "a1", role: "assistant", content: "legacy reply" },
+      agent_runs: [],
+    });
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Task one")).toBeInTheDocument(),
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      { target: { value: "legacy path" } },
+    );
+    fireEvent.click(screen.getByText("Send"));
+    await waitFor(() =>
+      expect(screen.getByText("legacy reply")).toBeInTheDocument(),
+    );
+    expect(postOsMessage).toHaveBeenCalledWith("jwt", "t1", "legacy path");
   });
 
   it("sends on Enter without shift", async () => {
     listOsThreads.mockResolvedValueOnce([
       { id: "t1", title: "Task one", created_at: NOW },
     ]);
-    postOsMessage.mockResolvedValueOnce({
+    orchestrateOsTurn.mockResolvedValueOnce({
       user_message: { id: "u1", role: "user", content: "via enter" },
       assistant_message: { id: "a1", role: "assistant", content: "got it" },
       agent_runs: [],
@@ -176,7 +206,7 @@ describe("AgentOS shell", () => {
     ]);
     const err = new Error("too many");
     err.status = 429;
-    postOsMessage.mockRejectedValueOnce(err);
+    orchestrateOsTurn.mockRejectedValueOnce(err);
     render(<AgentOS />);
     await waitFor(() =>
       expect(screen.getByText("Task one")).toBeInTheDocument(),

@@ -2,6 +2,20 @@
 
 Every database schema change. Claude Code checks this when working with database queries.
 
+---
+
+## 131_os_engine_telemetry.sql (2026-06-06)
+
+**What:** Two `client_id`-scoped tables for the Agent OS engine's run record (the parts `os_agent_runs` doesn't capture):
+- `os_routing_decision` — one row per routing decision (classifier, decision, chosen_agent, confidence, alternates JSONB, accepted/changed_to). Powers `/admin/routing`.
+- `os_model_call_log` — one row per model call (purpose, model, input/output tokens, cost_usd, ok, error). Powers `/admin/costs`. Offline/failed calls logged at cost 0.
+
+Both: `run_id` nullable UUID (no FK; references `os_agent_runs.id` when a run fired), RLS deny-public, index on `(client_id, created_at DESC)`.
+
+**Backend wiring:** `backend/services/agent_os_bridge.py::_persist_telemetry` (best-effort, never breaks the turn) writes both from the orchestration RunRecordBundle. `tenant_scope._TENANT_COLUMN_OVERRIDES` maps both to `client_id`. Mappers `map_routing_decision_row` + `map_model_call_row` unit-tested in `backend/tests/test_agent_os_bridge.py`.
+
+**Applied:** NO — pending deploy. Apply via `mcp__supabase__apply_migration` when the Agent OS engine path goes live.
+
 ## Migration History
 
 ### 001 — Initial Schema

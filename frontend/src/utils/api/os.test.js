@@ -10,6 +10,7 @@ import {
   createOsThread,
   fetchOsThreadMessages,
   postOsMessage,
+  orchestrateOsTurn,
   fetchOsAgentRun,
   reportOsRunBug,
   editOsDeliverable,
@@ -82,6 +83,25 @@ describe("os threads api", () => {
       body: { content: "do the thing" },
     });
     expect(result).toBe(API_RESPONSE);
+  });
+
+  it("orchestrateOsTurn posts thread_id + content to the engine", async () => {
+    const result = await orchestrateOsTurn(TOKEN, "t1", "draft a quote");
+    expect(request).toHaveBeenCalledWith("/api/v1/os/orchestrate", {
+      method: "POST",
+      token: TOKEN,
+      body: { thread_id: "t1", content: "draft a quote" },
+    });
+    expect(result).toBe(API_RESPONSE);
+  });
+
+  it("orchestrateOsTurn includes force_agent_id when given", async () => {
+    await orchestrateOsTurn(TOKEN, "t1", "draft a quote", "sales");
+    expect(request).toHaveBeenCalledWith("/api/v1/os/orchestrate", {
+      method: "POST",
+      token: TOKEN,
+      body: { thread_id: "t1", content: "draft a quote", force_agent_id: "sales" },
+    });
   });
 });
 

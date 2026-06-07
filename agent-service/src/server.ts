@@ -13,6 +13,8 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { runAgent } from './runner.ts';
+import { runOrchestration } from './agent-os-runtime/orchestrate.ts';
+import type { SharedContext } from './agent-os/types/agent.ts';
 
 const PORT = parseInt(process.env.PORT ?? '3100', 10);
 
@@ -50,6 +52,45 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   try {
     if (req.method === 'GET' && req.url === '/health') {
       json(res, 200, { status: 'ok' });
+      return;
+    }
+
+    // Agent OS orchestration. FastAPI (the data plane) authenticates the tenant,
+    // assembles its SharedContext from Supabase, and POSTs it here; agent-service
+    // runs the engine and returns the result + a record for FastAPI to persist.
+    // agent-service never touches a database.
+    if (req.method === 'POST' && req.url === '/orchestrate') {
+      const raw = await readBody(req);
+      let body: { accountId?: unknown; ask?: unknown; context?: unknown; forceAgentId?: unknown };
+      try {
+        body = JSON.parse(raw) as typeof body;
+      } catch {
+        json(res, 400, { error: 'invalid JSON body' });
+        return;
+      }
+      if (typeof body.accountId !== 'string' || !body.accountId.trim()) {
+        json(res, 400, { error: 'accountId must be a non-empty string' });
+        return;
+      }
+      if (typeof body.ask !== 'string' || !body.ask.trim()) {
+        json(res, 400, { error: 'ask must be a non-empty string' });
+        return;
+      }
+      if (typeof body.context !== 'object' || body.context === null) {
+        json(res, 400, { error: 'context must be the tenant SharedContext object' });
+        return;
+      }
+      if (body.forceAgentId !== undefined && typeof body.forceAgentId !== 'string') {
+        json(res, 400, { error: 'forceAgentId must be a string when provided' });
+        return;
+      }
+      const out = await runOrchestration({
+        accountId: body.accountId,
+        ask: body.ask,
+        context: body.context as SharedContext,
+        forceAgentId: body.forceAgentId,
+      });
+      json(res, 200, out);
       return;
     }
 
