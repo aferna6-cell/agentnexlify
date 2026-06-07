@@ -3,14 +3,23 @@
  *
  * Renders an os_agent_runs row's thought_process array as a vertical
  * step timeline so the owner can watch the worker agent reason through
- * a task. Each step is {step, label, status, detail, at}.
+ * a task.
+ *
+ * Tolerates two trace shapes:
+ *   v1 (legacy worker): {step, label, status: "done"|"running", detail, at}
+ *   v2 (agent-service):  {ordinal, step, status: "work"|"completed", description, dataSnapshot}
+ * Primary text prefers `description` (v2) then `label` (v1); status colors
+ * cover both vocabularies so old and new runs both render.
  */
 import React from "react";
 
 const STEP_COLORS = {
   done: "#22c55e",
+  completed: "#22c55e",
   running: "var(--accent)",
+  work: "var(--accent)",
   failed: "#ef4444",
+  fallback: "#f59e0b",
   pending: "var(--text-muted)",
 };
 
@@ -102,7 +111,7 @@ export default function AgentRunFlowchart({ run }) {
             const dot = STEP_COLORS[step.status] || STEP_COLORS.pending;
             const last = idx === steps.length - 1;
             return (
-              <div key={step.step ?? idx} style={{ display: "flex", gap: 10 }}>
+              <div key={step.ordinal ?? idx} style={{ display: "flex", gap: 10 }}>
                 <div
                   style={{
                     display: "flex",
@@ -147,7 +156,7 @@ export default function AgentRunFlowchart({ run }) {
                         color: "var(--text-primary)",
                       }}
                     >
-                      {step.label || `Step ${idx + 1}`}
+                      {step.description || step.label || `Step ${idx + 1}`}
                     </span>
                     {step.at && (
                       <span

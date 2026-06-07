@@ -66,6 +66,41 @@ describe("AgentRunFlowchart", () => {
     expect(screen.getByText("Drafting")).toBeInTheDocument();
   });
 
+  it("renders the v2 agent-service trace shape (description/ordinal/status)", () => {
+    render(
+      <AgentRunFlowchart
+        run={{
+          agent_name: "operations",
+          status: "succeeded",
+          thought_process: [
+            {
+              runId: "r1",
+              ordinal: 0,
+              step: "route",
+              status: "work",
+              description: "Routing to the Operations agent",
+            },
+            {
+              runId: "r1",
+              ordinal: 2,
+              step: "load_business_profile",
+              status: "completed",
+              description:
+                "Loaded business profile (businessName, ownerName, city)",
+              dataSnapshot: ["businessName", "ownerName", "city"],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(
+      screen.getByText("Routing to the Operations agent"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Loaded business profile (businessName, ownerName, city)"),
+    ).toBeInTheDocument();
+  });
+
   it("renders the error block on a failed run", () => {
     render(
       <AgentRunFlowchart
