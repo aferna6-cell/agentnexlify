@@ -509,8 +509,10 @@ export default function AgentOS() {
               const meta = ROLE_META[m.role] || ROLE_META.assistant;
               const run = m.agent_run_id ? runMap[m.agent_run_id] : null;
               const showFlowchart = m.role === "assistant" && run;
-              const showDraftButton =
-                m.role === "agent" && run && run.deliverable;
+              // The engine writes a single assistant message carrying the run +
+              // its deliverable (no separate "agent" message), so gate the
+              // Review button on the deliverable itself, not the message role.
+              const showDraftButton = Boolean(run && run.deliverable);
               return (
                 <div
                   key={m.id}
