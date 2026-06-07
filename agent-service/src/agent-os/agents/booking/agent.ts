@@ -5,6 +5,7 @@ import { finishBody } from "../_format.ts";
 import { generateDraft } from "../../lib/draft.ts";
 import type { AgentOutput } from "../../types/agent.ts";
 import { examples } from "./examples.ts";
+import { extractSlot } from "./extract-slot.ts";
 
 const Input = z.object({
   customer_name: z.string().optional(),
@@ -67,7 +68,12 @@ export const booking = defineAgent(
         : serviceType
       : undefined;
     const subject = params.subject?.trim() || servicePhrase || "your appointment";
-    const slot = params.offered_slot?.trim() || params.requested_day?.trim();
+    // Prefer orchestrator-provided params; fall back to parsing the owner's own
+    // words (F-04) so "...Thursday at 10:30 AM..." isn't dropped as "none".
+    const slot =
+      params.offered_slot?.trim() ||
+      params.requested_day?.trim() ||
+      extractSlot(ownerAsk);
     const constraints = (params.scheduling_constraints ?? []).map((c) => c.trim()).filter(Boolean);
     const mode = resolveMode(params.mode, ownerAsk);
 
