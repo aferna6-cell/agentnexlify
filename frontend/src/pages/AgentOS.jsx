@@ -16,6 +16,7 @@ import {
   createOsThread,
   fetchOsThreadMessages,
   orchestrateOsTurn,
+  postOsMessage,
   fetchOsUsage,
 } from "../utils/api/os";
 import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
@@ -187,7 +188,18 @@ export default function AgentOS() {
         setActiveThreadId(thread.id);
         threadId = thread.id;
       }
-      const result = await orchestrateOsTurn(token, threadId, content);
+      let result;
+      try {
+        result = await orchestrateOsTurn(token, threadId, content);
+      } catch (err) {
+        // Engine route missing (old backend) or unavailable — fall back to the
+        // legacy turn endpoint so the dashboard never breaks during rollout.
+        if (err.status === 404 || err.status === 503) {
+          result = await postOsMessage(token, threadId, content);
+        } else {
+          throw err;
+        }
+      }
       setMessages((prev) => [
         ...prev,
         result.user_message,

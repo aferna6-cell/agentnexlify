@@ -12,13 +12,14 @@ os_threads under the same /api/v1/os prefix (distinct paths, no shadowing).
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services import agent_os_bridge, agent_sdk_client
+from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,9 @@ async def get_context(claims: dict = Depends(_get_current_tenant)):
 
 @router.post("/orchestrate")
 async def orchestrate(
-    req: OrchestrateRequest, claims: dict = Depends(_get_current_tenant)
+    req: OrchestrateRequest,
+    background_tasks: BackgroundTasks,
+    claims: dict = Depends(_get_current_tenant),
 ):
     client_id = claims["tenant_id"]
     db = get_service_supabase()
@@ -65,22 +68,26 @@ async def orchestrate(
         .data[0]
     )
 
-    context = agent_os_bridge.assemble_shared_context(db, client_id)
-
-    out = await run_in_threadpool(
-        agent_sdk_client.orchestrate_sync,
-        client_id,
-        req.content,
-        context,
-        force_agent_id=req.force_agent_id,
-    )
-    if out is None:
-        # agent-service unconfigured or errored — the user message is already
-        # saved; surface a clear unavailable state rather than a silent failure.
-        raise HTTPException(
-            status_code=503,
-            detail="Agent OS engine unavailable (AGENT_SERVICE_URL not set or request failed)",
+    # Engine path (when AGENT_SERVICE_URL is set + force routing requested).
+    if agent_sdk_client.is_configured():
+        context = agent_os_bridge.assemble_shared_context(db, client_id)
+        out = await run_in_threadpool(
+            agent_sdk_client.orchestrate_sync,
+            client_id,
+            req.content,
+            context,
+            force_agent_id=req.force_agent_id,
         )
+        if out is not None:
+            persisted = agent_os_bridge.persist_orchestration(
+                db, client_id, req.thread_id, out
+            )
+            return {"user_message": user_message, **persisted}
 
-    persisted = agent_os_bridge.persist_orchestration(db, client_id, req.thread_id, out)
-    return {"user_message": user_message, **persisted}
+    # Fallback: engine unconfigured or errored. Run the shared turn-runner (which
+    # itself prefers the engine when configured, else the legacy orchestrator) so
+    # the dashboard works regardless of AGENT_SERVICE_URL or deploy order — never
+    # a 503. The user message is already inserted, per process_user_turn's contract.
+    return await process_user_turn(
+        db, client_id, req.thread_id, user_message, background_tasks
+    )
