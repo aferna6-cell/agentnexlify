@@ -1,0 +1,60 @@
+{
+  "run": 52,
+  "date": "2026-06-07",
+  "evidence_sources_checked": [
+    "git log --since=3 days ago",
+    "git log --since=7 days ago --grep=fix",
+    "ops/routines/logs/nightly-commit-review-2026-06-07.md",
+    "docs/dev-knowledge/bug-patterns.md",
+    "docs/dev-knowledge/customer-gaps.md",
+    "knowledge-base/INDEX.md",
+    ".claude/skills/nightly-commit-review/SKILL.md",
+    "backend/routers/billing.py",
+    "agent-service/src/auth.ts",
+    "scripts/hooks/pre-commit",
+    "subconscious/runs/2026-06-05-pm/winning-concept.md"
+  ],
+  "evidence_summary": "Nightly 2026-06-07 covered 4 commits: Agent OS engine (7a621a1, 7640 lines), agent-service auth hardening (abccdc3), widget hijack fix (2287f6b), docs update. GH #206 filed (auth.ts timing-safe). KEY FINDING: SKILL.md:69 has stale blocker 'Blocked 2026-06-01' preventing Item A from firing for 2 nightly cycles. Em-dash fixed 2026-06-05 (8db33df). billing.py:263 still missing 15000+25000. check_project_invariants.py NOT in pre-commit. check-widget-sync.sh MISSING. email_sequences.py 1255L. Moratorium day 37.",
+  "ideas_count": 5,
+  "ideas_titles": [
+    "Remove stale Item A blocker from SKILL.md:69",
+    "Fix auth.ts timing-safe token comparison (GH #206)",
+    "Add Item B block to nightly SKILL.md",
+    "Merge PR #183 (billing fix, run 51 repeat)",
+    "Confirm migration 131 applied to production"
+  ],
+  "top_3_debated": [
+    "Idea 1: Remove stale Item A blocker",
+    "Idea 2: Fix auth.ts timing-safe comparison",
+    "Idea 3: Add Item B block to SKILL.md"
+  ],
+  "debate_verdicts": {
+    "Idea 1": "SURVIVES → WINNER (3 rounds)",
+    "Idea 2": "WEAKENED → Bonus B (Railway private network mitigates; human-required)",
+    "Idea 3": "WEAKENED → Bonus A (pre-push scope ambiguity; include in same human edit)"
+  },
+  "winner": "Remove stale Item A blocker from nightly-commit-review SKILL.md:69 — 1-line deletion unlocks autonomous Check 10 wiring tonight",
+  "winner_category": "workflow / code_health",
+  "confidence": "HIGH",
+  "implementation_effort": "S (~1 min human)",
+  "autonomous_path": true,
+  "autonomous_fires": "2026-06-07 02:37 AM (next nightly cycle)",
+  "rejected": [],
+  "weakened": [
+    "Fix auth.ts timing-safe comparison — Bonus B",
+    "Add Item B block to SKILL.md — Bonus A"
+  ],
+  "governance_corrections": {
+    "run_51_status": "pending_approval (billing.py:263 confirmed still missing 15000+25000 — PR #183 not merged)",
+    "moratorium_day": 37,
+    "pending_count_adjustment": "No corrections this run. Implementation_lag unchanged."
+  },
+  "new_parking_lot": [],
+  "questions_for_next_run": [
+    "Did Item A fire tonight? (git log for ci(pre-commit): wire check_project_invariants.py)",
+    "Was PR #183 merged? (grep 15000 billing.py)",
+    "Was auth.ts timing-safe fix applied (GH #206 closed)?",
+    "Was migration 131 verified applied to production Supabase?",
+    "Was Item B block added to SKILL.md?"
+  ]
+}
