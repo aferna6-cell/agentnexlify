@@ -22,6 +22,20 @@ logger = logging.getLogger(__name__)
 
 _AGENT_SERVICE_URL: str = os.getenv("AGENT_SERVICE_URL", "").rstrip("/")
 
+# Optional shared secret. When set, it is sent as the X-Agent-Token header on
+# every call and agent-service rejects requests without a matching value. This
+# is defense-in-depth on top of Railway private networking: even if the service
+# ever gets a public domain, it is not an open credit-burn endpoint. Unset =
+# no header sent (dev parity / local runs), matching agent-service's open mode.
+_AGENT_SERVICE_TOKEN: str = os.getenv("AGENT_SERVICE_TOKEN", "")
+
+
+def _auth_headers() -> dict[str, str]:
+    """Return the X-Agent-Token header when a shared secret is configured."""
+    if _AGENT_SERVICE_TOKEN:
+        return {"X-Agent-Token": _AGENT_SERVICE_TOKEN}
+    return {}
+
 # Inner timeout passed to the Node service (it aborts the query at this point).
 # Outer HTTP timeout is 2 s longer so the node process has time to return the
 # error response before the httpx socket closes.
@@ -60,6 +74,7 @@ def run_agent_sync(
         resp = httpx.post(
             endpoint,
             json={"prompt": prompt, "timeout_ms": int(timeout * 1000)},
+            headers=_auth_headers(),
             # Outer HTTP timeout is agent timeout + buffer for response encoding.
             timeout=timeout + 2.0,
         )
@@ -119,7 +134,7 @@ def orchestrate_sync(
     if force_agent_id:
         body["forceAgentId"] = force_agent_id
     try:
-        resp = httpx.post(endpoint, json=body, timeout=timeout)
+        resp = httpx.post(endpoint, json=body, headers=_auth_headers(), timeout=timeout)
         resp.raise_for_status()
         return resp.json()
     except httpx.TimeoutException:

@@ -14,9 +14,23 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { runAgent } from './runner.ts';
 import { runOrchestration } from './agent-os-runtime/orchestrate.ts';
+import { isTokenAuthorized } from './auth.ts';
 import type { SharedContext } from './agent-os/types/agent.ts';
 
 const PORT = parseInt(process.env.PORT ?? '3100', 10);
+
+// Optional shared secret. When AGENT_SERVICE_TOKEN is set, every request to a
+// compute route must carry a matching X-Agent-Token header. This is
+// defense-in-depth on top of Railway private networking: even with a public
+// domain, the engine is not an open endpoint anyone can drive to burn credits.
+// Unset = open mode (local dev / parity with the prior behavior). /health is
+// never guarded so Railway's healthcheck keeps working.
+const AGENT_SERVICE_TOKEN = process.env.AGENT_SERVICE_TOKEN ?? '';
+
+/** True when the request is authorized (token unset, or header matches). */
+function isAuthorized(req: IncomingMessage): boolean {
+  return isTokenAuthorized(req.headers['x-agent-token'], AGENT_SERVICE_TOKEN);
+}
 
 async function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,6 +66,12 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   try {
     if (req.method === 'GET' && req.url === '/health') {
       json(res, 200, { status: 'ok' });
+      return;
+    }
+
+    // All compute routes below require the shared secret when one is configured.
+    if (!isAuthorized(req)) {
+      json(res, 401, { error: 'unauthorized' });
       return;
     }
 
