@@ -1,0 +1,49 @@
+{
+  "date": "2026-06-07-pm",
+  "run": 52,
+  "winner": "Fix timing-safe token comparison in agent-service/src/auth.ts (GH #206)",
+  "confidence": "HIGH",
+  "ideas_count": 5,
+  "debate_verdicts": {
+    "Fix timing-safe token (GH #206)": "SURVIVES → WINNER",
+    "Merge PR #183 (GH #181 billing fix)": "WEAKENED → Bonus A",
+    "Restore autonomous channel via AUTONOMOUS-EXECUTABLE": "SURVIVES → embedded in winning-concept.md"
+  },
+  "moratorium": {
+    "active": true,
+    "day": 37,
+    "pending_approvals": 16,
+    "max_pending_approvals": 2
+  },
+  "key_finding": "Autonomous channel for Check 10 was broken because run 51 winning-concept.md lacked AUTONOMOUS-EXECUTABLE label. Nightly trigger reads only most-recent winning-concept.md. Restored by embedding AUTONOMOUS-EXECUTABLE in this run's winning-concept.md — should fire on nightly 2026-06-08.",
+  "autonomous_items": [
+    {
+      "label": "AUTONOMOUS-EXECUTABLE",
+      "item": "Check 10 — wire check_project_invariants.py into pre-commit hook",
+      "precondition": "Script exits 0 since em-dash fix 8db33df (2026-06-05)"
+    }
+  ],
+  "bonus_items": [
+    {
+      "label": "Bonus A",
+      "item": "Merge PR #183 to close GH #181 billing gap in AMOUNT_TO_PLAN",
+      "effort": "~10 min human"
+    },
+    {
+      "label": "Bonus B",
+      "item": "Create GH issue for migration 131 production apply",
+      "effort": "~5 min human"
+    }
+  ],
+  "files_written": [
+    "subconscious/runs/2026-06-07-pm/ideas/ideas.md",
+    "subconscious/runs/2026-06-07-pm/debate/debate-log.md",
+    "subconscious/runs/2026-06-07-pm/winning-concept.md",
+    "subconscious/runs/2026-06-07-pm/improvement-backlog.md",
+    "subconscious/runs/2026-06-07-pm/run-summary.json"
+  ],
+  "state_updated": [
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl"
+  ]
+}
