@@ -2396,3 +2396,14 @@ https://claude.ai/code/session_01Pq5RE4T8AuCMyBgP4np8pQ
 **Author:** Claude
 **Files Changed:** frontend/src/pages/IntegrationsPage.jsx,frontend/src/pages/SettingsInboundChannels.jsx,frontend/src/pages/settings/MessagingSettingsCards.jsx,ops/routines/logs/nightly-commit-review-2026-06-05.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix: Agent OS no longer hijacks the public chat widget (#204)
+
+Flip os_inbound_bridge _DEFAULT_CONFIG widget_enabled to False so Agent OS is opt-in and stays dashboard-only. Adds regression test pinning the default to off.
+**Date:** 2026-06-07
+**Commit:** 2287f6b
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_inbound_bridge.py,backend/tests/test_os_inbound_bridge.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
