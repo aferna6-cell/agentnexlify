@@ -85,11 +85,11 @@ async def list_pending_deliverables(claims: dict = Depends(_get_current_tenant))
     items = []
     for row in result.data or []:
         deliverable = row.get("deliverable") or {}
-        # Skip legacy v1-shape drafts (have 'format', lack 'channel'). Migration
-        # 132 rejects the historical backlog; this keeps the queue v2-only if the
-        # engine ever falls back to a legacy worker.
-        if deliverable.get("format") and not deliverable.get("channel"):
-            continue
+        # The historical v1 backlog was rejected once by migration 132, so it no
+        # longer matches the pending_approval filter above. Live in-process
+        # os_workers deliverables are channel-less by design (run_worker writes
+        # {title, format, body}); they are valid pending drafts and must surface
+        # here, otherwise the approval queue is always empty in production.
         items.append(
             {
                 "run_id": row.get("id"),
