@@ -14,7 +14,6 @@ Focus areas:
 """
 
 import base64
-import zlib
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +24,6 @@ from backend.services.document_drafting import (
     _safe_filename,
     draft_document,
 )
-
 
 # A minimal real DOCX (ZIP archive) for tests — just needs the PK magic
 # header for the magic-byte validator to pass.
@@ -58,7 +56,10 @@ class TestExtractJson:
 
 class TestSafeFilename:
     def test_strips_path(self):
-        assert _safe_filename("/mnt/session/outputs/quote.pdf", "default.pdf") == "quote.pdf"
+        assert (
+            _safe_filename("/mnt/session/outputs/quote.pdf", "default.pdf")
+            == "quote.pdf"
+        )
 
     def test_strips_backslash_path(self):
         assert _safe_filename(r"C:\evil\haha.xlsx", "default.xlsx") == "haha.xlsx"
@@ -77,7 +78,9 @@ class TestSafeFilename:
         assert "$" not in result
 
     def test_normal_name_preserved(self):
-        assert _safe_filename("acme-quote-2026.docx", "d.docx") == "acme-quote-2026.docx"
+        assert (
+            _safe_filename("acme-quote-2026.docx", "d.docx") == "acme-quote-2026.docx"
+        )
 
 
 def _fake_supabase(tenant: dict, insert_result: dict | None = None):
@@ -138,8 +141,13 @@ class TestPlanGate:
         tenant = {"id": "t1", "business_name": "Shop", "plan": "free"}
         db = _fake_supabase(tenant)
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient") as client_cls,
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient"
+            ) as client_cls,
         ):
             with pytest.raises(DocumentDraftingError, match="not eligible"):
                 draft_document(
@@ -153,7 +161,9 @@ class TestPlanGate:
 
     def test_missing_tenant_raises(self):
         db = _fake_supabase(None)
-        with patch("backend.services.document_drafting.get_service_supabase", return_value=db):
+        with patch(
+            "backend.services.document_drafting.get_service_supabase", return_value=db
+        ):
             with pytest.raises(DocumentDraftingError, match="tenant .* not found"):
                 draft_document(
                     tenant_id="nope",
@@ -225,7 +235,10 @@ class TestFullFlow:
             "kind": "quote",
             "file_type": "docx",
             "file_name": "acme-quote.docx",
-            "draft_metadata": {"file_size_bytes": len(_FAKE_DOCX_BYTES), "session_id": "sess_1"},
+            "draft_metadata": {
+                "file_size_bytes": len(_FAKE_DOCX_BYTES),
+                "session_id": "sess_1",
+            },
         }
         db = _fake_supabase(tenant, insert_result=inserted_row)
 
@@ -239,9 +252,18 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             result = draft_document(
                 tenant_id="t1",
@@ -249,7 +271,11 @@ class TestFullFlow:
                 kind="quote",
                 customer={"name": "Bob", "email": "bob@example.com"},
                 line_items=[
-                    {"description": "Driveway pressure wash", "qty": 1, "unit_price": 300},
+                    {
+                        "description": "Driveway pressure wash",
+                        "qty": 1,
+                        "unit_price": 300,
+                    },
                 ],
                 notes="Residential job",
             )
@@ -293,9 +319,18 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             result = draft_document(
                 tenant_id="t1",
@@ -307,6 +342,51 @@ class TestFullFlow:
 
         assert result["id"] == "doc_pdf"
 
+    def test_logs_document_drafted_activity(self):
+        """A successful draft emits an activity_log row so the dashboard
+        AI-employee card surfaces document drafting."""
+        tenant = {"id": "t1", "business_name": "Shop", "plan": "professional"}
+        inserted = {"id": "doc_log", "kind": "quote", "file_type": "docx"}
+        db = _fake_supabase(tenant, insert_result=inserted)
+
+        reply = (
+            '{"file_name": "q.docx", "file_type": "docx", '
+            '"total": 200, "summary": "ok", '
+            f'"content_base64": "{_FAKE_DOCX_B64}"}}'
+        )
+        mock_client, mock_handle = _mock_agent_session(reply)
+
+        with (
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
+            patch("backend.services.document_drafting.log_activity") as mock_log,
+        ):
+            draft_document(
+                tenant_id="t1",
+                lead_id="lead_7",
+                kind="quote",
+                customer={"name": "Bob", "email": "bob@example.com"},
+                line_items=[{"description": "A", "qty": 1, "unit_price": 200}],
+            )
+
+        mock_log.assert_called_once()
+        kwargs = mock_log.call_args.kwargs
+        assert kwargs["tenant_id"] == "t1"
+        assert kwargs["activity_type"] == "document_drafted"
+        assert kwargs["lead_id"] == "lead_7"
+        assert kwargs["metadata"]["document_id"] == "doc_log"
+        assert kwargs["metadata"]["kind"] == "quote"
+
     def test_reply_missing_content_base64_raises(self):
         tenant = {"id": "t1", "business_name": "Shop", "plan": "professional"}
         db = _fake_supabase(tenant)
@@ -315,9 +395,18 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             with pytest.raises(DocumentDraftingError, match="missing content_base64"):
                 draft_document(
@@ -339,9 +428,18 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             with pytest.raises(DocumentDraftingError, match="invalid file_type"):
                 draft_document(
@@ -367,9 +465,18 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             with pytest.raises(DocumentDraftingError, match="do not look like a docx"):
                 draft_document(
@@ -404,14 +511,21 @@ class TestFullFlow:
             '"total": 10, "summary": "ok", '
             f'"content_base64": "{bad_b64}"}}'
         )
-        mock_client, mock_handle = _mock_agent_session(
-            reply, tool_result_text=good_b64
-        )
+        mock_client, mock_handle = _mock_agent_session(reply, tool_result_text=good_b64)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             result = draft_document(
                 tenant_id="t1",
@@ -447,9 +561,18 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             result = draft_document(
                 tenant_id="t1",
@@ -473,12 +596,15 @@ class TestFullFlow:
         escaping matches the real wire format.
         """
         import json as _json
+
         tenant = {"id": "t1", "business_name": "Shop", "plan": "growth"}
         inserted = {"id": "doc_ws"}
         db = _fake_supabase(tenant, insert_result=inserted)
 
         # Insert real whitespace into the base64 to mimic a wrapping agent.
-        wrapped = "\n".join(_FAKE_DOCX_B64[i:i + 20] for i in range(0, len(_FAKE_DOCX_B64), 20))
+        wrapped = "\n".join(
+            _FAKE_DOCX_B64[i : i + 20] for i in range(0, len(_FAKE_DOCX_B64), 20)
+        )
         reply = _json.dumps(
             {
                 "file_name": "x.docx",
@@ -491,9 +617,18 @@ class TestFullFlow:
         mock_client, mock_handle = _mock_agent_session(reply)
 
         with (
-            patch("backend.services.document_drafting.get_service_supabase", return_value=db),
-            patch("backend.services.document_drafting.ManagedAgentsClient", return_value=mock_client),
-            patch("backend.services.document_drafting.document_drafter", return_value=mock_handle),
+            patch(
+                "backend.services.document_drafting.get_service_supabase",
+                return_value=db,
+            ),
+            patch(
+                "backend.services.document_drafting.ManagedAgentsClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "backend.services.document_drafting.document_drafter",
+                return_value=mock_handle,
+            ),
         ):
             result = draft_document(
                 tenant_id="t1",

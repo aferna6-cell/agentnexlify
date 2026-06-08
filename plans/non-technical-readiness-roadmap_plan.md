@@ -29,16 +29,18 @@ install + payments) and **trust signals** (silent failures, generic agent).
 
 ## The blockers, sequenced (worst-leverage-first within dependency order)
 
-### Item 1 — Activity-log parity  ⏱ S  ·  no dependencies  ·  QUICK WIN FIRST
-**Problem:** email-sequences, appointment-booker, document-drafter emit no `activity_log`
-row → the "what your AI did today" card (`Dashboard/AutomationActivityCard.jsx`) shows
-empty for 3 of 4 automations. The product's core pitch looks broken.
-**Scope:** add an `activity_log` insert at each automation's success path
-(`backend/services/email_sequences.py`, appointment-booking confirm in
-`routers/appointments.py`/`widget_booking.py`, `services/document_drafting.py`). Mirror
-the row shape already used by missed-call text-back. No schema change (table exists).
-**Plan coverage:** NONE yet — only `audit-ops-automations-2026-05-01.md` gap #1 names it.
-Write a 1-page spec first.
+### Item 1 — Activity-log parity  ⏱ S  ·  no dependencies  ·  QUICK WIN FIRST  ·  ✅ DONE 2026-06-08
+**Problem (corrected 2026-06-08):** original claim ("3 of 4 automations silent") was
+partly stale. Verified against code: email-sequences ALREADY logs `email_sequence_sent`
+(`routers/email_sequences.py:1019,1188`); `widget_booking.py` handles `orders`, not
+appointments. The two REAL gaps were appointment booking and document drafting.
+**What shipped:** `appointment_booked` now emitted from `services/booking.py::create_appointment`
+(single chokepoint — covers both widget + dashboard booking endpoints DRY); `document_drafted`
+emitted from `services/document_drafting.py::draft_document` success path, plus a matching
+`EVENT_LABELS` entry in `Dashboard/AutomationActivityCard.jsx` (`appointment_booked` label
+already existed). Mirrors the row shape used by missed-call text-back. No schema change.
+Phone numbers never written to activity metadata. Tests: `test_booking_overlap.py`,
+`test_document_drafting.py`.
 **Why first:** cheapest, makes the dashboard honest, zero dependencies, high trust.
 
 ### Item 2 — WordPress plugin (one-click widget install)  ⏱ L  ·  #1 BLOCKER

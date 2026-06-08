@@ -2,10 +2,8 @@
 
 import sys
 from pathlib import Path
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, datetime, timezone
 from unittest.mock import patch, MagicMock
-
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -13,10 +11,7 @@ from backend.services.booking import (
     generate_available_slots,
     create_appointment,
     link_appointment_to_lead,
-    get_business_hours,
-    DEFAULT_HOURS,
 )
-
 
 # ── Test fixtures ────────────────────────────────────────────
 
@@ -24,13 +19,13 @@ from backend.services.booking import (
 MOCK_CONFIG = {
     "timezone": "America/New_York",
     "hours": {
-        "monday":    {"enabled": True, "start": "09:00", "end": "17:00"},
-        "tuesday":   {"enabled": True, "start": "09:00", "end": "17:00"},
+        "monday": {"enabled": True, "start": "09:00", "end": "17:00"},
+        "tuesday": {"enabled": True, "start": "09:00", "end": "17:00"},
         "wednesday": {"enabled": True, "start": "09:00", "end": "17:00"},
-        "thursday":  {"enabled": True, "start": "09:00", "end": "17:00"},
-        "friday":    {"enabled": True, "start": "09:00", "end": "17:00"},
-        "saturday":  {"enabled": False, "start": "09:00", "end": "17:00"},
-        "sunday":    {"enabled": False, "start": "09:00", "end": "17:00"},
+        "thursday": {"enabled": True, "start": "09:00", "end": "17:00"},
+        "friday": {"enabled": True, "start": "09:00", "end": "17:00"},
+        "saturday": {"enabled": False, "start": "09:00", "end": "17:00"},
+        "sunday": {"enabled": False, "start": "09:00", "end": "17:00"},
     },
     "slot_duration_minutes": 30,
     "buffer_minutes": 0,
@@ -91,6 +86,7 @@ class TestSlotGeneration:
         mock_hours.return_value = MOCK_CONFIG
 
         from zoneinfo import ZoneInfo
+
         tz = ZoneInfo("America/New_York")
         target = date(2027, 3, 15)  # Monday
 
@@ -103,9 +99,14 @@ class TestSlotGeneration:
         mock_table.eq.return_value = mock_table
         mock_table.gte.return_value = mock_table
         mock_table.lte.return_value = mock_table
-        mock_table.execute.return_value = MagicMock(data=[
-            {"start_time": booked_start.isoformat(), "end_time": booked_end.isoformat()},
-        ])
+        mock_table.execute.return_value = MagicMock(
+            data=[
+                {
+                    "start_time": booked_start.isoformat(),
+                    "end_time": booked_end.isoformat(),
+                },
+            ]
+        )
         mock_db.return_value.table.return_value = mock_table
 
         slots = generate_available_slots("tenant-1", target)
@@ -145,15 +146,16 @@ class TestOverlapDetection:
         s_start = datetime.fromisoformat(slot_start_utc)
         s_end = datetime.fromisoformat(slot_end_utc)
         return any(
-            s_start < b_end and s_end > b_start
-            for b_start, b_end in booked_ranges
+            s_start < b_end and s_end > b_start for b_start, b_end in booked_ranges
         )
 
     def test_no_overlap(self):
-        booked = [(
-            datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
-            datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
-        )]
+        booked = [
+            (
+                datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
+            )
+        ]
         # Slot at 15:00-15:30 — no overlap
         assert not self._check_overlap(
             "2027-03-15T15:00:00+00:00",
@@ -162,10 +164,12 @@ class TestOverlapDetection:
         )
 
     def test_exact_overlap(self):
-        booked = [(
-            datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
-            datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
-        )]
+        booked = [
+            (
+                datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
+            )
+        ]
         # Same slot — full overlap
         assert self._check_overlap(
             "2027-03-15T14:00:00+00:00",
@@ -174,10 +178,12 @@ class TestOverlapDetection:
         )
 
     def test_partial_overlap_start(self):
-        booked = [(
-            datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
-            datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
-        )]
+        booked = [
+            (
+                datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
+            )
+        ]
         # Slot 13:45-14:15 overlaps the start
         assert self._check_overlap(
             "2027-03-15T13:45:00+00:00",
@@ -186,10 +192,12 @@ class TestOverlapDetection:
         )
 
     def test_partial_overlap_end(self):
-        booked = [(
-            datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
-            datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
-        )]
+        booked = [
+            (
+                datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
+            )
+        ]
         # Slot 14:15-14:45 overlaps the end
         assert self._check_overlap(
             "2027-03-15T14:15:00+00:00",
@@ -198,10 +206,12 @@ class TestOverlapDetection:
         )
 
     def test_adjacent_no_overlap(self):
-        booked = [(
-            datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
-            datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
-        )]
+        booked = [
+            (
+                datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
+            )
+        ]
         # Slot starts exactly when booked ends — NOT an overlap
         assert not self._check_overlap(
             "2027-03-15T14:30:00+00:00",
@@ -211,10 +221,14 @@ class TestOverlapDetection:
 
     def test_multiple_booked_ranges(self):
         booked = [
-            (datetime(2027, 3, 15, 10, 0, tzinfo=timezone.utc),
-             datetime(2027, 3, 15, 10, 30, tzinfo=timezone.utc)),
-            (datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
-             datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc)),
+            (
+                datetime(2027, 3, 15, 10, 0, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 10, 30, tzinfo=timezone.utc),
+            ),
+            (
+                datetime(2027, 3, 15, 14, 0, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 14, 30, tzinfo=timezone.utc),
+            ),
         ]
         # Slot overlapping second booking
         assert self._check_overlap(
@@ -230,10 +244,12 @@ class TestOverlapDetection:
         )
 
     def test_slot_containing_booking(self):
-        booked = [(
-            datetime(2027, 3, 15, 14, 10, tzinfo=timezone.utc),
-            datetime(2027, 3, 15, 14, 20, tzinfo=timezone.utc),
-        )]
+        booked = [
+            (
+                datetime(2027, 3, 15, 14, 10, tzinfo=timezone.utc),
+                datetime(2027, 3, 15, 14, 20, tzinfo=timezone.utc),
+            )
+        ]
         # Slot fully contains the booking
         assert self._check_overlap(
             "2027-03-15T14:00:00+00:00",
@@ -257,10 +273,13 @@ class TestLeadLinkage:
         mock_table.execute.return_value = MagicMock(data=[{"id": "lead-123"}])
         mock_db.return_value.table.return_value = mock_table
 
-        result = link_appointment_to_lead("tenant-1", {
-            "customer_email": "john@test.com",
-            "customer_name": "John",
-        })
+        result = link_appointment_to_lead(
+            "tenant-1",
+            {
+                "customer_email": "john@test.com",
+                "customer_name": "John",
+            },
+        )
         assert result == "lead-123"
 
     @patch("backend.services.booking.get_service_supabase")
@@ -291,11 +310,14 @@ class TestLeadLinkage:
         mock_table.insert.return_value = mock_table
         mock_db.return_value.table.return_value = mock_table
 
-        result = link_appointment_to_lead("tenant-1", {
-            "customer_email": "new@test.com",
-            "customer_name": "New Person",
-            "customer_phone": "+15551234567",
-        })
+        result = link_appointment_to_lead(
+            "tenant-1",
+            {
+                "customer_email": "new@test.com",
+                "customer_name": "New Person",
+                "customer_phone": "+15551234567",
+            },
+        )
         assert result == "new-lead-456"
 
         # Verify insert was called with client_id (not tenant_id)
@@ -321,15 +343,19 @@ class TestCreateAppointment:
         mock_table.insert.return_value = mock_table
         mock_table.execute.side_effect = [
             MagicMock(data=[]),
-            MagicMock(data=[{
-                "id": "appt-001",
-                "tenant_id": "tenant-1",
-                "customer_name": "John",
-                "customer_email": "john@test.com",
-                "start_time": "2027-03-15T14:00:00+00:00",
-                "end_time": "2027-03-15T14:30:00+00:00",
-                "status": "confirmed",
-            }]),
+            MagicMock(
+                data=[
+                    {
+                        "id": "appt-001",
+                        "tenant_id": "tenant-1",
+                        "customer_name": "John",
+                        "customer_email": "john@test.com",
+                        "start_time": "2027-03-15T14:00:00+00:00",
+                        "end_time": "2027-03-15T14:30:00+00:00",
+                        "status": "confirmed",
+                    }
+                ]
+            ),
         ]
         mock_db.return_value.table.return_value = mock_table
 
@@ -348,3 +374,54 @@ class TestCreateAppointment:
         insert_call = mock_table.insert.call_args[0][0]
         assert insert_call["status"] == "confirmed"
         assert insert_call["tenant_id"] == "tenant-1"
+
+    @patch("backend.services.booking.log_activity")
+    @patch("backend.services.booking._send_appointment_confirmation")
+    @patch("backend.services.booking.link_appointment_to_lead")
+    @patch("backend.services.booking.get_service_supabase")
+    def test_logs_appointment_booked_activity(
+        self, mock_db, mock_link, mock_confirm, mock_log
+    ):
+        """Booking an appointment emits an activity_log row so the dashboard
+        AI-employee card is honest, not empty."""
+        mock_link.return_value = "lead-99"
+        mock_table = MagicMock()
+        for method in ["select", "eq", "neq", "lt", "gt", "limit", "insert", "update"]:
+            getattr(mock_table, method).return_value = mock_table
+        mock_table.execute.side_effect = [
+            MagicMock(data=[]),
+            MagicMock(
+                data=[
+                    {
+                        "id": "appt-001",
+                        "tenant_id": "tenant-1",
+                        "customer_name": "John",
+                        "customer_email": "john@test.com",
+                        "start_time": "2027-03-15T14:00:00+00:00",
+                        "end_time": "2027-03-15T14:30:00+00:00",
+                        "status": "confirmed",
+                    }
+                ]
+            ),
+            MagicMock(data=[]),  # lead-link update
+        ]
+        mock_db.return_value.table.return_value = mock_table
+
+        create_appointment(
+            tenant_id="tenant-1",
+            customer_name="John",
+            customer_email="john@test.com",
+            customer_phone="+12345557890",
+            start_time="2027-03-15T14:00:00+00:00",
+            end_time="2027-03-15T14:30:00+00:00",
+        )
+
+        mock_log.assert_called_once()
+        kwargs = mock_log.call_args.kwargs
+        assert kwargs["tenant_id"] == "tenant-1"
+        assert kwargs["activity_type"] == "appointment_booked"
+        assert kwargs["lead_id"] == "lead-99"
+        assert "John" in kwargs["description"]
+        assert kwargs["metadata"]["appointment_id"] == "appt-001"
+        # Never log the raw phone number in activity metadata.
+        assert "+12345557890" not in str(kwargs["metadata"])
