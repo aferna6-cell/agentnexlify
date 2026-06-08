@@ -18,6 +18,7 @@ from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
 from backend.services.activity import get_activity_events, get_activity_totals
+from backend.services.retry_worker import filter_stuck_pending
 
 
 class AutomationConfigUpdate(BaseModel):
@@ -32,6 +33,7 @@ router = APIRouter(prefix="/api/v1", tags=["automations"])
 # ------------------------------------------------------------------
 # Twilio Signature Validation
 # ------------------------------------------------------------------
+
 
 def _compute_twilio_signature(auth_token: str, url: str, params: dict[str, str]) -> str:
     """Compute the expected Twilio request signature.
@@ -98,8 +100,7 @@ async def verify_twilio_request(request: Request) -> None:
 
     if not hmac.compare_digest(expected, signature):
         logger.warning(
-            "Twilio webhook signature mismatch (path=%s, client=%s, "
-            "url_used=%s)",
+            "Twilio webhook signature mismatch (path=%s, client=%s, " "url_used=%s)",
             request.url.path,
             request.client.host if request.client else "unknown",
             url,
@@ -112,6 +113,7 @@ async def verify_twilio_request(request: Request) -> None:
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
+
 
 def _get_automation(tenant_id: str, automation_type: str) -> dict | None:
     """Fetch a single automation by tenant + type."""
@@ -130,6 +132,7 @@ def _get_automation(tenant_id: str, automation_type: str) -> dict | None:
 # ------------------------------------------------------------------
 # Activity Feed
 # ------------------------------------------------------------------
+
 
 @router.get("/automations/{tenant_id}/activity")
 async def get_automation_activity(
@@ -154,7 +157,9 @@ async def get_automation_activity(
         try:
             since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid 'since' datetime format. Use ISO8601.")
+            raise HTTPException(
+                status_code=400, detail="Invalid 'since' datetime format. Use ISO8601."
+            )
 
     events = get_activity_events(
         tenant_id=tenant_id,
@@ -168,8 +173,43 @@ async def get_automation_activity(
 
 
 # ------------------------------------------------------------------
+# Pending automations (durable retry queue — Phase 4)
+# ------------------------------------------------------------------
+
+
+@router.get("/automations/{tenant_id}/pending")
+async def get_pending_automations(
+    tenant_id: str,
+    limit: int = Query(default=50, ge=1, le=200),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Return automations stuck in the retry queue for a tenant.
+
+    Stuck = status 'failed' (exhausted retries) OR status 'pending' for >1h.
+    Drained by backend/services/retry_worker.py on the 60s automation tick.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+
+    db = get_service_supabase()
+    result = (
+        db.table("pending_automations")
+        .select("*")
+        .eq("tenant_id", tenant_id)
+        .in_("status", ["pending", "failed"])
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = [r for r in (result.data or []) if isinstance(r, dict)]
+    stuck = filter_stuck_pending(rows)
+    return {"pending": stuck, "count": len(stuck)}
+
+
+# ------------------------------------------------------------------
 # Automation CRUD
 # ------------------------------------------------------------------
+
 
 @router.get("/automations/{tenant_id}")
 async def list_automations(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
@@ -188,7 +228,11 @@ async def list_automations(tenant_id: str, claims: dict = Depends(_get_current_t
 
 
 @router.post("/automations/{tenant_id}/{automation_id}/toggle")
-async def toggle_automation(tenant_id: str, automation_id: str, claims: dict = Depends(require_role("owner", "admin"))):
+async def toggle_automation(
+    tenant_id: str,
+    automation_id: str,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
     """Enable or disable an automation."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Tenant mismatch")
@@ -207,15 +251,22 @@ async def toggle_automation(tenant_id: str, automation_id: str, claims: dict = D
     current = result.data[0]
     new_state = not current["is_enabled"]
 
-    db.table("automations").update({
-        "is_enabled": new_state,
-    }).eq("id", automation_id).execute()
+    db.table("automations").update(
+        {
+            "is_enabled": new_state,
+        }
+    ).eq("id", automation_id).execute()
 
     return {"id": automation_id, "is_enabled": new_state}
 
 
 @router.put("/automations/{tenant_id}/{automation_id}/config")
-async def update_automation_config(tenant_id: str, automation_id: str, body: AutomationConfigUpdate, claims: dict = Depends(require_role("owner", "admin"))):
+async def update_automation_config(
+    tenant_id: str,
+    automation_id: str,
+    body: AutomationConfigUpdate,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
     """Update an automation's config JSON."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Tenant mismatch")
@@ -233,8 +284,10 @@ async def update_automation_config(tenant_id: str, automation_id: str, body: Aut
     if not result.data:
         raise HTTPException(status_code=404, detail="Automation not found")
 
-    db.table("automations").update({
-        "config": body.config,
-    }).eq("id", automation_id).execute()
+    db.table("automations").update(
+        {
+            "config": body.config,
+        }
+    ).eq("id", automation_id).execute()
 
     return {"id": automation_id, "config": body.config}

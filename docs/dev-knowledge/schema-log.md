@@ -1037,3 +1037,16 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Backend wiring:** `backend/services/os_outbound_mirror.py::_outbound_log_already_sent` + `_outbound_log_record` helpers; `_mirror_sms`, `_mirror_email`, `_mirror_facebook` each gained pre-check + post-insert calls; dispatcher threads `db` through. Tests: `tests/test_agent_os.py::TestOutboundMirrorIdempotency` (9 cases — replay skip per channel, channel-scope correctness, success records row, pre-check DB failure falls through, post-insert DB failure preserves mirrored).
 
 **Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 8 columns match schema, 3 indexes present (`os_outbound_log_pkey`, `os_outbound_log_dedup_uniq`, `os_outbound_log_client_sent_idx`), RLS enabled, `os_outbound_log_deny_public` policy in place.
+
+### 133 — pending_automations (Phase 4, Durable Retry Queue)
+**Date:** 2026-06-08
+**Branch:** claude/gap-3-research-worker-87IXF
+Durable retry queue drained by `backend/services/retry_worker.py` on the 60s automation tick. Schema: `id UUID PK`, `tenant_id UUID NOT NULL REFERENCES tenants ON DELETE CASCADE`, `automation_type TEXT NOT NULL`, `payload_json JSONB DEFAULT '{}'`, `status TEXT DEFAULT 'pending' CHECK (pending|processing|done|failed)`, `retry_count INT DEFAULT 0`, `scheduled_for TIMESTAMPTZ DEFAULT now()`, `created_at`, `updated_at`. Index `idx_pending_automations_due ON (status, scheduled_for)` backs the drain query; `idx_pending_automations_tenant_status ON (tenant_id, status, created_at DESC)` backs the `/pending` endpoint. RLS enabled + `pending_automations_tenant_isolation` policy (`tenant_id = auth.uid()`).
+
+**Tenant column:** `tenant_id` (NOT client_id) — matches sibling `missed_call_texts` (migration 111) and all twilio_webhooks.py code. Spec §693 said client_id; code wins (fill-instructions-before-guessing).
+
+**Why:** missed-call text-back sends can fail (Twilio outage, rate limit). Phase 1 only logged the failure. This queue re-runs failed automations with exponential backoff 30s/2min/10min, max 3 attempts. Each attempt emits a Sentry breadcrumb. Rows that exhaust retries (status='failed') or sit pending >1h surface via `GET /api/v1/automations/{tenant_id}/pending`.
+
+**Backend wiring:** `retry_worker.drain_pending_automations()` added to the 60s `core_tasks` in `backend/main.py::_automation_loop`. `twilio_webhooks.py` failure branch enqueues `automation_type='missed_call_text'` with `{to_phone, body}`. Endpoint `GET /automations/{tenant_id}/pending` in `automations.py` uses `filter_stuck_pending`. Tests: `backend/tests/test_retry_worker.py` (8 cases — backoff contract, enqueue, drain success/retry/terminal/unknown-type, breadcrumb, stuck filter).
+
+**Applied:** NO — pending PR review/merge. CREATE TABLE IF NOT EXISTS; additive, safe to apply via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`) at merge time.

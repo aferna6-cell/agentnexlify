@@ -315,6 +315,7 @@ async def _automation_loop():
         schedule_automation_check,
     )
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
+    from backend.services.retry_worker import drain_pending_automations
 
     tick = 0
     while True:
@@ -330,6 +331,7 @@ async def _automation_loop():
                 _safe_run("process_pending_steps", process_pending_steps),
                 _safe_run("check_no_response_leads", check_no_response_leads),
                 _safe_run("send_appointment_reminders", send_appointment_reminders),
+                _safe_run("drain_pending_automations", drain_pending_automations),
             ]
 
             # Every 5 min: notifications, reminders, scheduled content, campaign recovery

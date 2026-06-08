@@ -394,9 +394,10 @@ async def handle_missed_call(request: Request):
             )
 
     else:
-        # Phase 1: log warning only. Phase 4 will add pending_automations retry queue.
+        # Send failed — log the failed attempt and enqueue a durable retry
+        # (Phase 4: retry_worker drains with 30s/2min/10min backoff, max 3).
         logger.warning(
-            "Text-back send FAILED for tenant %s caller=%s — skipping row insert",
+            "Text-back send FAILED for tenant %s caller=%s — enqueuing retry",
             tenant_id,
             caller,
         )
@@ -409,6 +410,11 @@ async def handle_missed_call(request: Request):
             template_id=template_id,
             status="failed",
             lead_id=lead_id,
+        )
+        enqueue_pending_automation(
+            tenant_id=tenant_id,
+            automation_type="missed_call_text",
+            payload={"to_phone": caller, "body": message},
         )
 
     return PlainTextResponse("OK")
