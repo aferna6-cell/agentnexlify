@@ -52,20 +52,24 @@ conversational teammate over the business, not a 70-page dashboard.
 - 115 OS tests pass; `tests/test_os_mvp_e2e.py` drives the full loop. **MVP works end-to-end.**
 
 **The rehaul is structured as three connector groups** (`docs/agent-os-rehaul-partner-brief.md`,
-specs in `specs/agent-os-connectors-*`):
+specs in `specs/agent-os-connectors-*`). **PR #177 merged to `main` 2026-05-27** — all three groups
+ship today (correction: an earlier draft of this doc predated the merge and claimed Group A unmerged /
+Group B unstarted; both wrong, verified against `origin/main` 2026-06-08):
 
 | Group | Purpose | State |
 |---|---|---|
-| **A — Inbound** | Get *every* customer message (widget + email + SMS + Facebook) into `os_threads` so the OS hears all channels, not just the widget's ~30% | **7 of 8 phases shipped** on branch `claude/agent-os-grill-resume-cHznV` / draft **PR #177**. Phase 8 = verification + merge. Not in `main` yet. |
-| **B — Actions** | Let the OS *act back out*: send SMS/email replies, book calendar slots, write CRM, escalate — with per-tenant approval/auto-send gate | **NOT STARTED.** Specced only. |
-| **C — Sync** | Keep the OS inbox consistent with existing dashboard surfaces (mirror replies back to widget/SMS/email stores) | **Partial** — `os_outbound_mirror.py` + `_mirror_to_channel` exist; full bi-directional sync not done. |
+| **A — Inbound** | Get *every* customer message (widget + email + SMS + Facebook) into `os_threads` so the OS hears all channels, not just the widget's ~30% | **Shipped + merged.** `routers/os_inbound.py` + migrations 124/125. Full inbound suite tests pass. |
+| **B — Actions** | Let the OS *act back out*: send SMS/email replies, book calendar slots, write CRM, escalate — with per-tenant approval/auto-send gate | **Built + merged.** 8 handlers in `os_actions/` (calendar/crm/email/gbp/sms/social_facebook/social_instagram/widget), approval gate (`routers/os_deliverables.py`), per-tenant auto-send (migration 128), idempotency (migration 126), 52 tests. Unproven against live provider creds (see §6). |
+| **C — Sync** | Keep the OS inbox consistent with existing dashboard surfaces (mirror replies back to widget/SMS/email stores) | **Shipped.** `routers/os_sync.py` + migrations 127/129, background tick. |
 
-**One-line state:** the OS can **hear** (Group A nearly done), **think/route + remember** (shipped), and
-**draft** (workers shipped, grounded in real read-only data) — but it **cannot act** (Group B unbuilt)
-and isn't fully **consistent** across surfaces (Group C partial). And it all lives on an unmerged branch.
+**One-line state:** the OS can **hear** (Group A merged), **think/route + remember** (merged), **draft**
+(workers merged, grounded in real read-only data), and **act** (Group B merged behind the approval /
+auto-send gate). It does **not** yet **learn** from outcomes (no loop), has **no Research or Sight
+worker**, does only **single-step delegation**, and isn't yet the front door.
 
-**Maturity estimate: ~40–50% of the way to "Amazon Quick for SMB."** The skeleton — the hard part — is
-largely built.
+**Maturity estimate: ~65–75% of the way to "Amazon Quick for SMB."** Know / Decide / Act all ship and
+are merged. The open frontier is **Learn** (the 4th verb) plus the two dormant pillars and multi-step.
+Full done-vs-todo breakdown: `plans/agent-os-north-star_plan.md`.
 
 ---
 
@@ -73,16 +77,16 @@ largely built.
 
 | Quick Suite pillar | Agent OS equivalent | State | Distance |
 |---|---|---|---|
-| **Quick Index** (connect everything) | Group A inbound connectors + Group C sync + `os_memory` + `tenant_profile`/widget KB | Group A ~done, C partial, memory semantic-only | **Medium — ears built, sync + unified index incomplete** |
-| **Take action** (the defining property) | Group B action connectors | **Missing** | **The critical gap** |
+| **Quick Index** (connect everything) | Group A inbound connectors + Group C sync + `os_memory` + `tenant_profile`/widget KB | Group A + C merged, memory semantic-only | **Small — ears + sync built; unified index partial (no graph)** |
+| **Take action** (the defining property) | Group B action connectors | **Built + merged** — 8 handlers behind approval/auto-send gate | **Small — proven against live providers is the remaining step** |
 | **Quick Research** | A `researcher` worker fusing widget KB + web (the `deep_researcher` Managed Agent type exists but is NOT an OS worker) | Missing as a worker | **Small — registry add; tools exist** |
 | **Quick Sight** (NL BI) | An `analyst` worker over the read-only `WorkerTools` data (the `data_analyst` Managed Agent type exists but is NOT an OS worker) | Missing as a worker | **Small — data tools already built** |
-| **Quick Flows** (simple NL automation) | orchestrator delegate → draft → approve, + an NL→`automation_rule` compiler onto the existing engine (14 triggers / 9 actions) | Drafts yes; no persist-and-run compiler | **Small–Medium** |
+| **Quick Flows** (simple NL automation) | orchestrator delegate → draft → approve, + an NL→`automation_rule` compiler onto the existing engine (14 triggers / 9 actions) | Drafts + actions yes; no persist-and-run compiler | **Small–Medium** |
 | **Quick Automate** (complex multi-step) | multi-worker orchestration (chain workers in one request) | Early — one delegate per turn | **Medium — orchestrator plans a sequence, not a single route** |
 
-**The pattern:** Agent OS is *already the right architecture*. Most remaining work is **wiring and
-exposure**, not net-new platform. Two pillars (Research, Sight) are dormant agents waiting for a worker
-shell. The defining gap is that the OS can't act yet.
+**The pattern:** Agent OS is *already the right architecture* and the action layer is already merged.
+Remaining work is **proving Act works live, adding Learn, exposing two dormant pillars, and multi-step** —
+not net-new platform. The defining gap is no longer "can't act"; it's "doesn't yet learn from acting."
 
 ---
 
@@ -91,18 +95,20 @@ shell. The defining gap is that the OS can't act yet.
 > Principle: the OS skeleton exists — give it hands, add the missing brains, then make it the front door.
 > Subtract page-sprawl as the OS absorbs it. Don't rebuild what's shipped.
 
-### Phase 0 — Land the foundation (unblock everything)
-- Finish Group A **Phase 8** verification; merge **PR #177** to `main` so the OS is shippable and compounds.
-- File the separate GH issue for the **21 pre-existing CI failures** (inherited from `main`, not branch
-  regressions per `plans/agent-os-next-steps_plan.md`) — don't merge into a red baseline.
-- Lock the **runtime decision**: DIY (`advisor_executor.py` pattern) vs Managed Agents. Partner brief §8
-  recommends **DIY** for margin + per-tenant model swap. Decide before Group B.
+> **Status correction (2026-06-08):** Phase 0 (merge) and Phase 1 (Group B) below are **DONE** — PR #177
+> merged 2026-05-27. The live path now starts at "prove Act works end-to-end." Full sequenced plan with
+> verified done-vs-todo: `plans/agent-os-north-star_plan.md`. The phases are retained here for the
+> strategic narrative.
 
-### Phase 1 — Give it hands (Group B action connectors) · CRITICAL PATH
-Already specced (`specs/agent-os-connectors-actions_spec.md`). Outbound SMS/email reply, calendar booking,
-CRM lead write, escalate — behind the approval-gate / per-tenant auto-send toggle. **This is the single
-highest-leverage step.** It converts the OS from "drafts" to "does" — Amazon Quick's whole premise is
-*answering questions AND taking action.* Until this ships, the OS is a smart inbox, not a teammate.
+### Phase 0 — Land the foundation (DONE)
+- ~~Finish Group A Phase 8; merge PR #177~~ **Merged to `main` 2026-05-27.** Foundation + Groups A/B/C all ship.
+- Runtime decision (DIY `advisor_executor.py` vs Managed Agents) — DIY recommended per partner brief §8.
+
+### Phase 1 — Give it hands (Group B action connectors) (BUILT + MERGED)
+8 handlers shipped (`os_actions/`): SMS/email reply, calendar booking, CRM write, GBP + social posts,
+widget message — behind the approval gate / per-tenant auto-send toggle, with DB-level idempotency and
+52 tests. **Remaining:** prove each handler in one live round-trip against real provider creds
+(M365/Resend/Twilio/GBP/Meta) — this is now Phase 1 of the build plan. "Merged" ≠ "fired in anger."
 
 ### Phase 2 — Add the two missing pillars as workers (low blast radius)
 - **Sight:** an `analyst` worker on top of `WorkerTools` (already has the read methods). NL question →
@@ -151,12 +157,12 @@ lock-in — once a tenant routes email + SMS + FB through it, ripping it out mea
 
 ## 6. Risks & honest caveats
 
-- **Group B is the make-or-break.** No actions = no agentic teammate, just a smart inbox. Sequence it first
-  after the merge.
-- **The whole thing is on an unmerged branch.** Until PR #177 lands in `main`, none of this compounds —
-  Phase 0 is not optional.
+- **"Merged" is not "works against live providers."** Group B's 52 tests are unit-level; no handler has a
+  verified round-trip with real M365/Resend/Twilio/GBP/Meta creds. Proving Act end-to-end is the first live step.
+- **The OS doesn't learn yet.** Actions fire and write `os_action_runs`, but no outcome (reply / booking /
+  conversion) is captured and fed back. The "Learn" verb of the north star has zero code — the real frontier.
 - **Orchestrator does one delegate per turn.** Quick Automate's multi-step workflows need the orchestrator
-  to plan a sequence; that's a real design step (Phase 3), not just wiring.
+  to plan a sequence; that's a real design step, not just wiring.
 - **Don't fix-and-audit in one session.** Phase C cleanup is a separate audit-only session per the P0 plan
   (half-finished-refactor risk).
 - **Router sprawl (~80 routers) is asset + liability.** Great action surface for Group B to wrap; the
@@ -167,13 +173,16 @@ lock-in — once a tenant routes email + SMS + FB through it, ripping it out mea
 ## 7. One-line answer to "where is Agent OS and how do we get to Amazon Quick for SMB"
 
 Agent OS already has the Amazon-Quick shape — a single orchestrator that hears the business, remembers,
-and delegates to workers — and it's ~40–50% built: it can hear (Group A), think, and draft, but it
-**can't act yet (Group B), has no Research or Sight worker, does only single-step delegation, and isn't
-merged.** Getting to "Amazon Quick for small business" means: **merge the foundation, give it hands
-(Group B), add the two dormant pillars as workers, teach it multi-step automation, and make the OS chat
-the product's front door** — turning a draft assistant into a teammate that runs the shop.
+delegates to workers, and acts back out — and it's ~65–75% built and **merged to `main`**: it can hear
+(Group A), think, draft, and act (Group B, behind the approval/auto-send gate), but it **doesn't learn
+from outcomes yet, has no Research or Sight worker, and does only single-step delegation.** Getting to
+"Amazon Quick for small business" means: **prove the action layer works live, build the learning loop,
+add the two dormant pillars as workers, teach it multi-step automation, and make the OS chat the
+product's front door** — turning a teammate that acts into one that also learns. Sequenced build plan:
+`plans/agent-os-north-star_plan.md`.
 
 ---
 
-*Grounded in a full codebase capability map + direct read of the Agent OS source (2026-06-08). Maturity
-tags reflect what ships today, not docs.*
+*Grounded in a full codebase capability map + direct read of the Agent OS source on `origin/main`
+(2026-06-08). State assessment corrected after confirming PR #177 merged 2026-05-27 — Groups A/B/C all
+ship. Maturity tags reflect what's merged today, not docs. Build sequencing: `plans/agent-os-north-star_plan.md`.*
