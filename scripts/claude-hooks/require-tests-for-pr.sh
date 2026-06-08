@@ -7,9 +7,20 @@ REPO_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 # Drain stdin
 cat < /dev/stdin > /dev/null 2>&1
 
-echo "Running test suite before PR creation..."
-
 cd "$REPO_DIR"
+
+# Docs-only exemption: if the branch changes no executable code vs the default
+# branch, skip the test + build gate. A markdown/doc PR can't break tests, and
+# a blanket gate here false-blocks doc PRs (e.g. when pytest isn't installed).
+DEFAULT_BRANCH="$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')"
+DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
+CHANGED_FILES="$(git diff --name-only "origin/${DEFAULT_BRANCH}...HEAD" 2>/dev/null)"
+if [ -n "$CHANGED_FILES" ] && ! echo "$CHANGED_FILES" | grep -qE '\.(py|js|jsx|ts|tsx|mjs|cjs|sql)$'; then
+    echo "Docs-only change (no code files vs ${DEFAULT_BRANCH}). Skipping test gate."
+    exit 0
+fi
+
+echo "Running test suite before PR creation..."
 
 # Run Python tests
 if ls tests/test_*.py &>/dev/null; then
