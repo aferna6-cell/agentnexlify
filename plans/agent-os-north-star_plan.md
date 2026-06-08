@@ -55,7 +55,7 @@ This is the corrected picture. All paths below are present on `origin/main`.
 - **`backend/routers/os_sync.py`** + `migrations/127_os_sync_state.sql`, `129_chat_messages_os_mirror.sql`. Outbound mirror back to channel stores. Background tick.
 
 ### Tests
-- `test_os_actions.py` (52 tests), `test_os_workers_tools.py`, `test_os_sync.py`, plus the inbound suite. OS MVP runs end-to-end.
+- `test_os_actions.py` (61 tests), `test_os_workers_tools.py`, `test_os_sync.py`, plus the inbound suite. OS MVP runs end-to-end.
 
 **Corrected maturity: ~65–75% of the way to the north star.** Know, Decide, and Act
 all ship today and are merged. The skeleton, the action layer, and the approval/auto-send
@@ -67,7 +67,7 @@ gate — the hard parts — are done.
 
 | # | Gap | North-star verb | Why it matters | Size |
 |---|---|---|---|---|
-| 1 | **End-to-end hardening of Group B** | Act | 8 handlers exist + 52 tests, but no verified live round-trip per handler against real provider creds (M365/Resend/Twilio/GBP/Meta). "Builds + tests pass" ≠ "sends a real email to a real lead." | M |
+| 1 | **End-to-end hardening of Group B** | Act | 8 handlers exist + 61 tests, but no verified live round-trip per handler against real provider creds (M365/Resend/Twilio/GBP/Meta). "Builds + tests pass" ≠ "sends a real email to a real lead." | M |
 | 2 | **Learning loop** (action → outcome → memory) | **Learn** | The north star's 4th verb has **zero code**. Actions fire and write `os_action_runs`, but no outcome is captured (did the lead reply? book? convert?) and fed back. Without this, the OS never gets better — it's stateless per task. | M–L |
 | 3 | **Research worker** | Know/Decide | Quick Research pillar. `deep_researcher` Managed Agent type exists but is NOT an OS worker. No `os_workers/researcher.py`. | S |
 | 4 | **Analyst worker** (NL BI) | Know/Decide | Quick Sight pillar. `data_analyst` Managed Agent type exists but is NOT an OS worker. `WorkerTools` already has the read methods. No `os_workers/analyst.py`. | S |
@@ -89,6 +89,19 @@ anything new, take each of the 8 handlers through one real round-trip in a contr
 tenant: queue → approve → `run_action` → real provider call → `os_action_runs` succeeded
 → verify idempotency replay is a no-op. Document any handler that fails. This converts
 "built" into "trusted" and is the cheapest high-value step because the code already exists.
+
+**Status (2026-06-08):** prep done, live verification NOT done.
+- ✅ Closed the test-coverage hole: Instagram (two-step Graph) + GBP handlers had zero
+  behavioral `_run` tests — only SPEC sanity. Added 9 tests (`test_os_actions.py` now 61),
+  mirroring the Facebook httpx-stub pattern: success path + each distinct failure stage
+  (`validate`, `connector`, `ig_create_container`, `ig_publish`, `gbp_api`).
+- ✅ Wrote the live round-trip runbook: `docs/agent-os-act-verification.md` — per handler:
+  connector/creds, deliverable to approve, expected `os_action_runs` row, provider-side
+  effect, rollback, plus failure-stage triage table.
+- ☐ **The actual 8 live round-trips remain unrun.** They need real provider creds in
+  staging (M365/Resend/Twilio/GBP/Meta) and a human to observe inbox/phone/calendar/page.
+  Cannot run from the dev container (no creds → every send fails at `stage='connector'`).
+  Phase 1 closes only when the runbook's 8-row PASS table is filled against staging.
 
 ### Phase 2 — Close the learning loop (gap #2) · the north star's 4th verb
 This is the piece the user explicitly wants ("memory to reference and learn") and the

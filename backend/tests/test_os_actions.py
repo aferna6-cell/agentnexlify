@@ -918,9 +918,12 @@ def test_facebook_post_records_graph_4xx_as_failed():
 
 
 # ---------------------------------------------------------------------------
-# social.instagram.post — registry-only contract (full Graph two-step
-# integration is too thin to mock-test usefully; behavior is covered by
-# logging and the live-integration smoke). We still assert SPEC sanity.
+# social.instagram.post — handler contract
+#
+# IG publishes in two Graph calls: POST /{ig_user_id}/media (create container)
+# then POST /{ig_user_id}/media_publish. ``_IGStubClient`` routes by URL so a
+# single stub can return distinct responses for each leg — letting us cover the
+# success path AND the two distinct failure points (container vs publish).
 # ---------------------------------------------------------------------------
 
 
@@ -933,8 +936,146 @@ def test_instagram_post_spec_is_well_formed():
     assert callable(SPEC.run)
 
 
+def _ig_resp(status_code: int, payload: dict):
+    resp = MagicMock()
+    resp.status_code = status_code
+    raw = json.dumps(payload).encode()
+    resp.content = raw
+    resp.text = raw.decode()
+    resp.json.return_value = payload
+    return resp
+
+
+class _IGStubClient:
+    """httpx.AsyncClient stand-in that routes POSTs by URL leg.
+
+    ``container_resp`` is returned for the ``/media`` create call, ``publish_resp``
+    for the ``/media_publish`` call. Either may be None to assert that leg is
+    never reached.
+    """
+
+    container_resp = None
+    publish_resp = None
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+    async def post(self, url, data=None):
+        if url.endswith("/media_publish"):
+            assert self.publish_resp is not None, "publish leg should not be reached"
+            return self.publish_resp
+        return self.container_resp
+
+
+def test_instagram_post_rejects_non_https_image():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    extractor = AsyncMock(
+        return_value={"caption": "hi", "image_url": "http://insecure/x.jpg"}
+    )
+    with patch.object(ig_action, "_extract_post", extractor):
+        result = asyncio.run(ig_action._run(_action_ctx({"body": "post draft"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "validate"
+
+
+def test_instagram_post_rejects_when_account_not_connected():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    extractor = AsyncMock(
+        return_value={"caption": "hi", "image_url": "https://cdn/x.jpg"}
+    )
+    loader = MagicMock(return_value=None)
+    with patch.object(ig_action, "_extract_post", extractor), patch.object(
+        ig_action, "_load_ig_account", loader
+    ):
+        result = asyncio.run(ig_action._run(_action_ctx({"body": "post draft"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "connector"
+
+
+def test_instagram_post_succeeds_on_two_step_2xx():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    extractor = AsyncMock(
+        return_value={"caption": "Launch day", "image_url": "https://cdn/x.jpg"}
+    )
+    loader = MagicMock(return_value={"ig_user_id": "ig-1", "access_token": "tok"})
+
+    stub = type(
+        "_Stub",
+        (_IGStubClient,),
+        {
+            "container_resp": _ig_resp(200, {"id": "container-123"}),
+            "publish_resp": _ig_resp(200, {"id": "media-456"}),
+        },
+    )
+    with patch.object(ig_action, "_extract_post", extractor), patch.object(
+        ig_action, "_load_ig_account", loader
+    ), patch.object(ig_action.httpx, "AsyncClient", stub):
+        result = asyncio.run(ig_action._run(_action_ctx({"body": "post draft"})))
+    assert result.status == "succeeded"
+    assert result.response_payload["media_id"] == "media-456"
+    assert result.response_payload["creation_id"] == "container-123"
+
+
+def test_instagram_post_fails_when_container_create_4xx():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    extractor = AsyncMock(
+        return_value={"caption": "x", "image_url": "https://cdn/x.jpg"}
+    )
+    loader = MagicMock(return_value={"ig_user_id": "ig-1", "access_token": "tok"})
+
+    stub = type(
+        "_Stub",
+        (_IGStubClient,),
+        {
+            "container_resp": _ig_resp(400, {"error": {"message": "bad image"}}),
+            "publish_resp": None,  # publish must never be reached
+        },
+    )
+    with patch.object(ig_action, "_extract_post", extractor), patch.object(
+        ig_action, "_load_ig_account", loader
+    ), patch.object(ig_action.httpx, "AsyncClient", stub):
+        result = asyncio.run(ig_action._run(_action_ctx({"body": "post draft"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "ig_create_container"
+    assert (result.error_detail or {}).get("status_code") == 400
+
+
+def test_instagram_post_fails_when_publish_4xx():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    extractor = AsyncMock(
+        return_value={"caption": "x", "image_url": "https://cdn/x.jpg"}
+    )
+    loader = MagicMock(return_value={"ig_user_id": "ig-1", "access_token": "tok"})
+
+    stub = type(
+        "_Stub",
+        (_IGStubClient,),
+        {
+            "container_resp": _ig_resp(200, {"id": "container-123"}),
+            "publish_resp": _ig_resp(400, {"error": {"message": "rate limited"}}),
+        },
+    )
+    with patch.object(ig_action, "_extract_post", extractor), patch.object(
+        ig_action, "_load_ig_account", loader
+    ), patch.object(ig_action.httpx, "AsyncClient", stub):
+        result = asyncio.run(ig_action._run(_action_ctx({"body": "post draft"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "ig_publish"
+
+
 # ---------------------------------------------------------------------------
-# gbp.post — registry-only contract
+# gbp.post — handler contract
 # ---------------------------------------------------------------------------
 
 
@@ -945,6 +1086,97 @@ def test_gbp_post_spec_is_well_formed():
     assert SPEC.worker == "campaign"
     assert "google_business_profile" in SPEC.required_connectors
     assert callable(SPEC.run)
+
+
+def _gbp_stub_client(resp):
+    class _StubClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            return resp
+
+    return _StubClient
+
+
+def test_gbp_post_rejects_empty_summary():
+    from backend.services.os_actions import gbp as gbp_action
+
+    extractor = AsyncMock(return_value={"summary": "", "topic_type": "STANDARD"})
+    with patch.object(gbp_action, "_extract_post", extractor):
+        result = asyncio.run(gbp_action._run(_action_ctx({"body": "draft"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "validate"
+
+
+def test_gbp_post_rejects_when_not_connected():
+    from backend.services.os_actions import gbp as gbp_action
+
+    extractor = AsyncMock(return_value={"summary": "Open late Friday"})
+    loader = MagicMock(return_value=None)
+    with patch.object(gbp_action, "_extract_post", extractor), patch.object(
+        gbp_action, "_load_gbp", loader
+    ):
+        result = asyncio.run(gbp_action._run(_action_ctx({"body": "draft"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "connector"
+
+
+def test_gbp_post_succeeds_on_2xx():
+    from backend.services.os_actions import gbp as gbp_action
+
+    extractor = AsyncMock(
+        return_value={"summary": "Open late Friday", "topic_type": "STANDARD"}
+    )
+    loader = MagicMock(
+        return_value={
+            "access_token": "tok",
+            "account_id": "acc-1",
+            "location_id": "loc-1",
+        }
+    )
+    fake_resp = MagicMock()
+    fake_resp.status_code = 200
+    fake_resp.content = b'{"name":"accounts/acc-1/locations/loc-1/localPosts/9"}'
+    fake_resp.json.return_value = {
+        "name": "accounts/acc-1/locations/loc-1/localPosts/9"
+    }
+    with patch.object(gbp_action, "_extract_post", extractor), patch.object(
+        gbp_action, "_load_gbp", loader
+    ), patch.object(gbp_action.httpx, "AsyncClient", _gbp_stub_client(fake_resp)):
+        result = asyncio.run(gbp_action._run(_action_ctx({"body": "draft"})))
+    assert result.status == "succeeded"
+    assert result.response_payload["name"].endswith("/localPosts/9")
+
+
+def test_gbp_post_records_4xx_as_failed():
+    from backend.services.os_actions import gbp as gbp_action
+
+    extractor = AsyncMock(return_value={"summary": "Open late Friday"})
+    loader = MagicMock(
+        return_value={
+            "access_token": "tok",
+            "account_id": "acc-1",
+            "location_id": "loc-1",
+        }
+    )
+    fake_resp = MagicMock()
+    fake_resp.status_code = 403
+    fake_resp.content = b'{"error":"insufficient scope"}'
+    fake_resp.text = '{"error":"insufficient scope"}'
+    with patch.object(gbp_action, "_extract_post", extractor), patch.object(
+        gbp_action, "_load_gbp", loader
+    ), patch.object(gbp_action.httpx, "AsyncClient", _gbp_stub_client(fake_resp)):
+        result = asyncio.run(gbp_action._run(_action_ctx({"body": "draft"})))
+    assert result.status == "failed"
+    assert (result.error_detail or {}).get("stage") == "gbp_api"
+    assert (result.error_detail or {}).get("status_code") == 403
 
 
 # ---------------------------------------------------------------------------
