@@ -16,7 +16,7 @@ from backend.services.tenant_scope import tenant_select, tenant_table
 
 logger = logging.getLogger(__name__)
 
-VALID_KINDS = {"fact", "preference", "decision", "conversation_summary"}
+VALID_KINDS = {"fact", "preference", "decision", "conversation_summary", "outcome"}
 
 # embedding is excluded — 512 floats never need to reach the client.
 _PUBLIC_COLUMNS = (

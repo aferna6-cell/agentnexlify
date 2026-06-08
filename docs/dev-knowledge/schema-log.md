@@ -4,6 +4,20 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 133_os_action_outcomes.sql (2026-06-08)
+
+**What:** One `client_id`-scoped table backing the Agent OS learning loop (north-star gap #2 — the "Learn" verb). `os_action_outcomes` records one pending row per succeeded lead-targeting action and settles it deterministically after a fixed window into an outcome + memory entry.
+
+Schema: `id UUID PK`, `client_id UUID NOT NULL`, `action_run_id UUID NOT NULL REFERENCES os_action_runs ON DELETE CASCADE`, `action_type TEXT NOT NULL`, `lead_id UUID REFERENCES leads ON DELETE SET NULL`, `recipient TEXT`, `lead_status_at_send TEXT`, `sent_at TIMESTAMPTZ NOT NULL DEFAULT now()`, `settle_by TIMESTAMPTZ NOT NULL`, `status TEXT NOT NULL DEFAULT 'pending'` (`pending|resolved`), `outcome TEXT` (`booked|converted|no_response`), `created_at`, `resolved_at`.
+
+Indexes: UNIQUE `(action_run_id)` (one outcome per run — replay protection), `(status, settle_by)` (scheduler sweep), `(client_id, status)`. RLS enabled + `os_action_outcomes_deny_public` policy (service-role only). Tenant column is `client_id` (registered in `tenant_scope._TENANT_COLUMN_OVERRIDES`).
+
+**Why:** the OS schema has no `lead_id` on action runs — recipient lives in `os_action_runs.request_payload`. Capture resolves recipient → lead by a deterministic per-action-type join (email.send/calendar.event.create → `leads.email`, sms.send → `leads.phone`). No recipient match → no row (lead-targeting only; broadcast actions never capture). After `RESOLVE_WINDOW_DAYS = 3`, the hourly tick computes a deterministic outcome: `booked` (an `appointments` row for `lead_id` created after `sent_at`) > `converted` (lead `status` transitioned to `closed` from a non-`closed` status at send) > `no_response`. The outcome is written back to `os_memory_entries` (kind `outcome`, source `learn:outcome`, deduped by `source_ref='outcome:<action_run_id>'`) so the orchestrator's `search_memory` recalls it.
+
+**Backend wiring:** `backend/services/os_learning.py` (new module — `record_action_outcome_pending`, `resolve_due_outcomes`, `resolve_all_due_outcomes`). Capture call added to `os_actions/__init__.py::run_action` after a succeeded run (best-effort, never breaks the action). Settle tick added to `main.py` (`tick % 60 == 0` → `resolve_all_due_outcomes`, cross-tenant sweep mirroring `run_due_syncs`). `os_memory.VALID_KINDS` gained `"outcome"`. Tests: `backend/tests/test_os_learning.py` (21 cases).
+
+**Applied:** YES — 2026-06-08 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 13 columns match schema, table present, RLS enabled.
+
 ## 131_os_engine_telemetry.sql (2026-06-06)
 
 **What:** Two `client_id`-scoped tables for the Agent OS engine's run record (the parts `os_agent_runs` doesn't capture):

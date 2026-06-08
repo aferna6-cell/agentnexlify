@@ -121,6 +121,26 @@ async def run_action(
             "updated_at": now_iso(),
         }
         action_runs.update(update).eq("id", action_run_id).execute()
+
+        if result.status == "succeeded":
+            try:
+                from backend.services.os_learning import (
+                    record_action_outcome_pending,
+                )
+
+                await record_action_outcome_pending(
+                    db,
+                    client_id,
+                    action_run_id,
+                    action_type,
+                    result.request_payload or {},
+                )
+            except Exception:
+                logger.warning(
+                    "os action outcome capture failed action_run_id=%s",
+                    action_run_id,
+                    exc_info=True,
+                )
     except Exception as e:
         logger.exception("os action failed action_run_id=%s", action_run_id)
         try:

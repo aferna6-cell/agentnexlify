@@ -25,6 +25,7 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_backlog_requests": "client_id",
     "os_tenant_usage": "client_id",
     "os_action_runs": "client_id",
+    "os_action_outcomes": "client_id",
     "os_sync_state": "client_id",
     "os_outbound_log": "client_id",
     "os_routing_decision": "client_id",

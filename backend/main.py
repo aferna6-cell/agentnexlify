@@ -373,6 +373,10 @@ async def _automation_loop():
             if tick % 15 == 0:
                 core_tasks.append(_safe_run("os_sync_tick", _os_sync_tick))
 
+            # Every 60 min: Agent OS learning loop — settle due action outcomes
+            if tick % 60 == 0:
+                core_tasks.append(_safe_run("os_outcome_tick", _os_outcome_tick))
+
             # Every 30 min: heavy/infrequent tasks
             if tick % 30 == 0:
                 core_tasks.extend(
