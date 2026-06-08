@@ -45,6 +45,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from backend.models.database import get_service_supabase
+from backend.services.activity import log_activity
 from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
@@ -236,7 +237,10 @@ def _run_drafter_session(
     session_id = session["id"]
     logger.info(
         "document_drafting: session %s created (kind=%s tenant=%s lead=%s)",
-        session_id, kind, tenant_id, lead_id,
+        session_id,
+        kind,
+        tenant_id,
+        lead_id,
     )
 
     stream = client.stream_events(session_id)
@@ -375,9 +379,7 @@ def draft_document(
             kind=kind,
         )
     except ManagedAgentsError as exc:
-        raise DocumentDraftingError(
-            f"drafter session failed: {exc}"
-        ) from exc
+        raise DocumentDraftingError(f"drafter session failed: {exc}") from exc
 
     if not reply_text:
         raise DocumentDraftingError(
@@ -388,9 +390,7 @@ def draft_document(
     # 4. Parse the JSON spec from the final reply
     spec = _extract_json_from_reply(reply_text)
     if not spec:
-        raise DocumentDraftingError(
-            "drafter reply did not contain parseable JSON"
-        )
+        raise DocumentDraftingError("drafter reply did not contain parseable JSON")
 
     file_type = (spec.get("file_type") or "").lower().strip()
     if file_type not in _VALID_FILE_TYPES:
@@ -439,9 +439,7 @@ def draft_document(
     try:
         file_bytes = base64.b64decode(b64, validate=True)
     except Exception as exc:
-        raise DocumentDraftingError(
-            f"content_base64 failed to decode: {exc}"
-        ) from exc
+        raise DocumentDraftingError(f"content_base64 failed to decode: {exc}") from exc
 
     if not file_bytes:
         raise DocumentDraftingError("decoded file_bytes is empty")
@@ -461,7 +459,9 @@ def draft_document(
             )
 
     file_size = len(file_bytes)
-    default_name = f"{kind}-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M')}.{file_type}"
+    default_name = (
+        f"{kind}-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M')}.{file_type}"
+    )
     file_name = _safe_filename(spec.get("file_name") or "", default_name)
 
     # 5. Persist the document row. `file_bytes` is stored inline as a
@@ -505,6 +505,23 @@ def draft_document(
     persisted = insert_res.data[0]
     logger.info(
         "document_drafting: persisted %s (%d bytes, type=%s) as document %s",
-        kind, file_size, file_type, persisted.get("id"),
+        kind,
+        file_size,
+        file_type,
+        persisted.get("id"),
     )
+
+    # Surface on the dashboard AI-employee activity feed (fire-and-forget).
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="document_drafted",
+        description=f"{kind.title()} drafted for {customer.get('name') or 'customer'}",
+        lead_id=lead_id,
+        metadata={
+            "document_id": persisted.get("id"),
+            "kind": kind,
+            "file_type": file_type,
+        },
+    )
+
     return persisted

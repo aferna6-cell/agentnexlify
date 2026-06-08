@@ -1,6 +1,5 @@
 """Appointment booking service — slot generation, conflict detection, lead linkage."""
 
-
 import asyncio
 import hashlib
 import hmac
@@ -11,22 +10,31 @@ from zoneinfo import ZoneInfo
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
+from backend.services.activity import log_activity
 from backend.services.tenant_scope import tenant_table
 
 _RESCHEDULE_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60
 
 logger = logging.getLogger(__name__)
 
-DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+DAY_NAMES = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 DEFAULT_HOURS = {
-    "monday":    {"enabled": True, "start": "09:00", "end": "17:00"},
-    "tuesday":   {"enabled": True, "start": "09:00", "end": "17:00"},
+    "monday": {"enabled": True, "start": "09:00", "end": "17:00"},
+    "tuesday": {"enabled": True, "start": "09:00", "end": "17:00"},
     "wednesday": {"enabled": True, "start": "09:00", "end": "17:00"},
-    "thursday":  {"enabled": True, "start": "09:00", "end": "17:00"},
-    "friday":    {"enabled": True, "start": "09:00", "end": "17:00"},
-    "saturday":  {"enabled": False, "start": "09:00", "end": "17:00"},
-    "sunday":    {"enabled": False, "start": "09:00", "end": "17:00"},
+    "thursday": {"enabled": True, "start": "09:00", "end": "17:00"},
+    "friday": {"enabled": True, "start": "09:00", "end": "17:00"},
+    "saturday": {"enabled": False, "start": "09:00", "end": "17:00"},
+    "sunday": {"enabled": False, "start": "09:00", "end": "17:00"},
 }
 
 
@@ -34,10 +42,7 @@ def get_business_hours(tenant_id: str) -> dict | None:
     """Fetch business hours config for a tenant. Returns None if not configured."""
     db = get_service_supabase()
     result = (
-        tenant_table(db, "business_hours", tenant_id)
-        .select("*")
-        .limit(1)
-        .execute()
+        tenant_table(db, "business_hours", tenant_id).select("*").limit(1).execute()
     )
     return result.data[0] if result.data else None
 
@@ -57,11 +62,7 @@ def upsert_business_hours(tenant_id: str, data: dict) -> dict:
     }
 
     if existing:
-        result = (
-            tenant_table(db, "business_hours", tenant_id)
-            .update(payload)
-            .execute()
-        )
+        result = tenant_table(db, "business_hours", tenant_id).update(payload).execute()
     else:
         result = tenant_table(db, "business_hours", tenant_id).insert(payload).execute()
 
@@ -114,7 +115,11 @@ def generate_available_slots(
     exception = _get_exception_for_date(hours, target_date)
     if exception:
         if exception.get("closed", False):
-            logger.info("slots: date %s is closed (exception override) for tenant %s", target_date, tenant_id)
+            logger.info(
+                "slots: date %s is closed (exception override) for tenant %s",
+                target_date,
+                tenant_id,
+            )
             return []
         # Use override hours for this date
         override_open = exception.get("open")
@@ -155,12 +160,14 @@ def generate_available_slots(
 
         # Skip past slots
         if current > now_local:
-            slots.append({
-                "start": current.strftime("%H:%M"),
-                "end": slot_end.strftime("%H:%M"),
-                "start_utc": current.astimezone(timezone.utc).isoformat(),
-                "end_utc": slot_end.astimezone(timezone.utc).isoformat(),
-            })
+            slots.append(
+                {
+                    "start": current.strftime("%H:%M"),
+                    "end": slot_end.strftime("%H:%M"),
+                    "start_utc": current.astimezone(timezone.utc).isoformat(),
+                    "end_utc": slot_end.astimezone(timezone.utc).isoformat(),
+                }
+            )
 
         current += timedelta(minutes=step)
 
@@ -168,8 +175,12 @@ def generate_available_slots(
         return []
 
     # Fetch existing confirmed appointments for this date range
-    day_start_utc = datetime.combine(target_date, day_start, tzinfo=tz).astimezone(timezone.utc)
-    day_end_utc = datetime.combine(target_date, day_end, tzinfo=tz).astimezone(timezone.utc)
+    day_start_utc = datetime.combine(target_date, day_start, tzinfo=tz).astimezone(
+        timezone.utc
+    )
+    day_end_utc = datetime.combine(target_date, day_end, tzinfo=tz).astimezone(
+        timezone.utc
+    )
 
     db = get_service_supabase()
     booked = (
@@ -195,7 +206,11 @@ def generate_available_slots(
             gcal_busy = get_busy_times(tenant_id, day_start_utc, day_end_utc)
             booked_ranges.extend(gcal_busy)
     except Exception:
-        logger.warning("Failed to fetch Google Calendar busy times for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Failed to fetch Google Calendar busy times for tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
 
     # Filter out slots that overlap with booked appointments
     available = []
@@ -203,8 +218,7 @@ def generate_available_slots(
         s_start = datetime.fromisoformat(slot["start_utc"])
         s_end = datetime.fromisoformat(slot["end_utc"])
         conflict = any(
-            s_start < b_end and s_end > b_start
-            for b_start, b_end in booked_ranges
+            s_start < b_end and s_end > b_start for b_start, b_end in booked_ranges
         )
         if not conflict:
             available.append(slot)
@@ -239,7 +253,9 @@ def create_appointment(
         .execute()
     )
     if existing.data:
-        raise ValueError("This time slot is already booked. Please choose a different time.")
+        raise ValueError(
+            "This time slot is already booked. Please choose a different time."
+        )
 
     payload = {
         "tenant_id": tenant_id,
@@ -256,8 +272,14 @@ def create_appointment(
         result = tenant_table(db, "appointments", tenant_id).insert(payload).execute()
     except Exception as e:
         error_msg = str(e).lower()
-        if "exclude" in error_msg or "overlap" in error_msg or "conflicting" in error_msg:
-            raise ValueError("This time slot was just booked by someone else. Please choose a different time.") from e
+        if (
+            "exclude" in error_msg
+            or "overlap" in error_msg
+            or "conflicting" in error_msg
+        ):
+            raise ValueError(
+                "This time slot was just booked by someone else. Please choose a different time."
+            ) from e
         raise
     appointment = result.data[0]
 
@@ -265,14 +287,31 @@ def create_appointment(
     try:
         lead_id = link_appointment_to_lead(tenant_id, appointment)
         if lead_id:
-            tenant_table(db, "appointments", tenant_id).update({"lead_id": lead_id}).eq("id", appointment["id"]).execute()
+            tenant_table(db, "appointments", tenant_id).update({"lead_id": lead_id}).eq(
+                "id", appointment["id"]
+            ).execute()
             appointment["lead_id"] = lead_id
     except Exception:
-        logger.warning("Failed to link appointment %s to lead", appointment["id"], exc_info=True)
+        logger.warning(
+            "Failed to link appointment %s to lead", appointment["id"], exc_info=True
+        )
+
+    # Surface on the dashboard AI-employee activity feed (fire-and-forget).
+    # Never include the raw phone number in activity metadata.
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="appointment_booked",
+        description=f"Appointment booked with {customer_name}",
+        lead_id=appointment.get("lead_id"),
+        metadata={"appointment_id": appointment["id"], "start_time": start_time},
+    )
 
     # Sync to Google Calendar (best-effort)
     try:
-        from backend.services.google_calendar import create_calendar_event, get_integration
+        from backend.services.google_calendar import (
+            create_calendar_event,
+            get_integration,
+        )
 
         if get_integration(tenant_id):
             google_event_id = create_calendar_event(
@@ -286,10 +325,16 @@ def create_appointment(
                 + (f"\nNotes: {notes}" if notes else ""),
             )
             if google_event_id:
-                tenant_table(db, "appointments", tenant_id).update({"google_event_id": google_event_id}).eq("id", appointment["id"]).execute()
+                tenant_table(db, "appointments", tenant_id).update(
+                    {"google_event_id": google_event_id}
+                ).eq("id", appointment["id"]).execute()
                 appointment["google_event_id"] = google_event_id
     except Exception:
-        logger.warning("Failed to sync appointment %s to Google Calendar", appointment["id"], exc_info=True)
+        logger.warning(
+            "Failed to sync appointment %s to Google Calendar",
+            appointment["id"],
+            exc_info=True,
+        )
 
     # Send confirmation to customer (best-effort, background)
     try:
@@ -299,9 +344,16 @@ def create_appointment(
     except RuntimeError:
         if hasattr(confirmation, "close"):
             confirmation.close()
-        logger.info("No running event loop; skipping async confirmation for %s", appointment["id"])
+        logger.info(
+            "No running event loop; skipping async confirmation for %s",
+            appointment["id"],
+        )
     except Exception:
-        logger.warning("Failed to send appointment confirmation for %s", appointment["id"], exc_info=True)
+        logger.warning(
+            "Failed to send appointment confirmation for %s",
+            appointment["id"],
+            exc_info=True,
+        )
 
     return appointment
 
@@ -321,7 +373,12 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
     from backend.services.twilio_service import send_sms
 
     db = get_service_supabase()
-    tenant = tenant_table(db, "tenants", tenant_id).select("business_name, business_phone").limit(1).execute()
+    tenant = (
+        tenant_table(db, "tenants", tenant_id)
+        .select("business_name, business_phone")
+        .limit(1)
+        .execute()
+    )
     business_name = tenant.data[0]["business_name"] if tenant.data else "Our business"
     business_phone = (tenant.data[0].get("business_phone") or "") if tenant.data else ""
 
@@ -333,6 +390,7 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
     # Parse the start time for display
     try:
         from datetime import datetime
+
         dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
         display_date = dt.strftime("%A, %B %d, %Y")
         display_time = dt.strftime("%I:%M %p")
@@ -367,9 +425,17 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
                 body_html=html_body,
                 tenant_id=tenant_id,
             )
-            logger.info("Sent appointment confirmation email to %s for tenant %s", customer_email, tenant_id)
+            logger.info(
+                "Sent appointment confirmation email to %s for tenant %s",
+                customer_email,
+                tenant_id,
+            )
         except Exception:
-            logger.warning("Failed to send appointment confirmation email to %s", customer_email, exc_info=True)
+            logger.warning(
+                "Failed to send appointment confirmation email to %s",
+                customer_email,
+                exc_info=True,
+            )
 
     # Send SMS confirmation
     if customer_phone:
@@ -380,9 +446,17 @@ async def _send_appointment_confirmation(tenant_id: str, appointment: dict) -> N
                 f"{' Contact us to reschedule: ' + business_phone if business_phone else ''}"
             )
             await send_sms(to=customer_phone, body=sms_body)
-            logger.info("Sent appointment confirmation SMS to %s for tenant %s", customer_phone, tenant_id)
+            logger.info(
+                "Sent appointment confirmation SMS to %s for tenant %s",
+                customer_phone,
+                tenant_id,
+            )
         except Exception:
-            logger.warning("Failed to send appointment confirmation SMS to %s", customer_phone, exc_info=True)
+            logger.warning(
+                "Failed to send appointment confirmation SMS to %s",
+                customer_phone,
+                exc_info=True,
+            )
 
 
 def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
@@ -406,15 +480,21 @@ def link_appointment_to_lead(tenant_id: str, appointment: dict) -> str | None:
         return existing.data[0]["id"]
 
     # Create new lead from appointment booking
-    lead = tenant_table(db, "leads", tenant_id).insert({
-        "client_id": tenant_id,
-        "name": appointment.get("customer_name"),
-        "email": email,
-        "phone": appointment.get("customer_phone"),
-        "status": "appointment_booked",
-        "source": "booking",
-        "conversation_summary": "Created from appointment booking",
-    }).execute()
+    lead = (
+        tenant_table(db, "leads", tenant_id)
+        .insert(
+            {
+                "client_id": tenant_id,
+                "name": appointment.get("customer_name"),
+                "email": email,
+                "phone": appointment.get("customer_phone"),
+                "status": "appointment_booked",
+                "source": "booking",
+                "conversation_summary": "Created from appointment booking",
+            }
+        )
+        .execute()
+    )
 
     return lead.data[0]["id"] if lead.data else None
 
@@ -456,10 +536,12 @@ def create_recurring_series(
         return []
 
     # Mark the parent with recurrence info
-    tenant_table(db, "appointments", tenant_id).update({
-        "recurrence_rule": rule,
-        "recurrence_end_date": end_date_str,
-    }).eq("id", appointment_id).execute()
+    tenant_table(db, "appointments", tenant_id).update(
+        {
+            "recurrence_rule": rule,
+            "recurrence_end_date": end_date_str,
+        }
+    ).eq("id", appointment_id).execute()
 
     # Calculate interval
     parent_start = datetime.fromisoformat(parent["start_time"])
@@ -497,7 +579,9 @@ def create_recurring_series(
         }
 
         try:
-            result = tenant_table(db, "appointments", tenant_id).insert(payload).execute()
+            result = (
+                tenant_table(db, "appointments", tenant_id).insert(payload).execute()
+            )
             if result.data:
                 created.append(result.data[0])
         except Exception:
@@ -511,7 +595,10 @@ def create_recurring_series(
 
     logger.info(
         "Created %d recurring instances for appointment %s (%s until %s)",
-        len(created), appointment_id, rule, end_date_str,
+        len(created),
+        appointment_id,
+        rule,
+        end_date_str,
     )
     return created
 
@@ -569,7 +656,11 @@ def update_appointment(tenant_id: str, appointment_id: str, data: dict) -> dict:
             if gcal_updates:
                 update_calendar_event(tenant_id, google_event_id, **gcal_updates)
         except Exception:
-            logger.warning("Failed to sync appointment update %s to Google Calendar", appointment_id, exc_info=True)
+            logger.warning(
+                "Failed to sync appointment update %s to Google Calendar",
+                appointment_id,
+                exc_info=True,
+            )
 
     return appointment
 
@@ -595,7 +686,11 @@ def cancel_appointment(tenant_id: str, appointment_id: str) -> dict:
 
             delete_calendar_event(tenant_id, existing.data[0]["google_event_id"])
         except Exception:
-            logger.warning("Failed to delete Google Calendar event for appointment %s", appointment_id, exc_info=True)
+            logger.warning(
+                "Failed to delete Google Calendar event for appointment %s",
+                appointment_id,
+                exc_info=True,
+            )
 
     return result
 

@@ -17,6 +17,7 @@ const EVENT_LABELS = {
   sms_conversation: "SMS conversation",
   appointment_booked: "Appointment booked",
   email_sequence_sent: "Follow-up email sent",
+  document_drafted: "Document drafted",
 };
 
 // ----------------------------------------------------------------
