@@ -57,6 +57,21 @@ export default function AgentRunFlowchart({ run }) {
   const meta = RUN_STATUS[status] || RUN_STATUS.queued;
   const inFlight = status === "queued" || status === "running";
 
+  // F-03/F-06: routing transparency. confidence is 0..1 from the engine; show
+  // it as a percent next to the chosen agent and the routing model.
+  const routing = run.routing || null;
+  const confPct =
+    routing && routing.confidence != null
+      ? Math.round(routing.confidence <= 1 ? routing.confidence * 100 : routing.confidence)
+      : null;
+  const routingBits = routing
+    ? [
+        `Routed to ${routing.chosen_agent || routing.decision || "agent"}`,
+        confPct != null ? `${confPct}%` : null,
+        routing.model || null,
+      ].filter(Boolean)
+    : [];
+
   return (
     <div
       style={{
@@ -98,6 +113,18 @@ export default function AgentRunFlowchart({ run }) {
           {meta.label}
         </span>
       </div>
+
+      {routing && (
+        <div
+          style={{
+            fontSize: "0.72rem",
+            color: "var(--text-muted)",
+            marginBottom: steps.length ? 10 : 0,
+          }}
+        >
+          {routingBits.join(" · ")}
+        </div>
+      )}
 
       {steps.length === 0 && inFlight && (
         <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>

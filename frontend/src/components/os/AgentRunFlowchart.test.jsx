@@ -101,6 +101,28 @@ describe("AgentRunFlowchart", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the routing chip when routing data is present", () => {
+    render(
+      <AgentRunFlowchart
+        run={{
+          agent_name: "operations",
+          status: "succeeded",
+          routing: {
+            chosen_agent: "operations",
+            confidence: 0.92,
+            model: "claude-haiku-4-5-20251001",
+          },
+          thought_process: [],
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Routed to operations · 92% · claude-haiku-4-5-20251001",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("renders the error block on a failed run", () => {
     render(
       <AgentRunFlowchart
