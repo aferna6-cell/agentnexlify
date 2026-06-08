@@ -22,6 +22,11 @@ _TRACE_DIR_ENV = "LLM_TRACE_DIR"
 _TRACE_ENABLED_ENV = "LLM_TRACE_ENABLED"
 _DEFAULT_TRACE_DIR = "logs/llm_traces"
 
+# Server-side tools (web_search, web_fetch) can return stop_reason="pause_turn"
+# when Anthropic needs more time mid-turn. Resume by re-sending the in-progress
+# assistant content. Bound the resumes so a stuck loop can't run unbounded.
+_MAX_SERVER_TOOL_RESUMES = 4
+
 
 def _trace_enabled() -> bool:
     flag = os.environ.get(_TRACE_ENABLED_ENV, "1").strip().lower()
@@ -101,7 +106,21 @@ def _safe_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     safe: dict[str, Any] = {}
     for key, value in metadata.items():
         key_l = str(key).lower()
-        if any(token in key_l for token in ("message", "content", "text", "body", "api_key", "token", "secret", "password", "cookie", "authorization")):
+        if any(
+            token in key_l
+            for token in (
+                "message",
+                "content",
+                "text",
+                "body",
+                "api_key",
+                "token",
+                "secret",
+                "password",
+                "cookie",
+                "authorization",
+            )
+        ):
             continue
         if isinstance(value, (str, int, float, bool)) or value is None:
             if isinstance(value, str) and len(value) > 200:
@@ -111,7 +130,10 @@ def _safe_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
         elif isinstance(value, (list, tuple)):
             safe[key] = {"type": type(value).__name__, "len": len(value)}
         elif isinstance(value, dict):
-            safe[key] = {"type": "dict", "keys": sorted(str(k) for k in value.keys())[:20]}
+            safe[key] = {
+                "type": "dict",
+                "keys": sorted(str(k) for k in value.keys())[:20],
+            }
         else:
             safe[key] = {"type": type(value).__name__}
     return safe
@@ -184,21 +206,23 @@ def _log_finish(
         result.stop_reason,
         _safe_metadata(metadata),
     )
-    _write_trace({
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "event": "finish",
-        "id": call_id,
-        "op": operation,
-        "model": model,
-        "duration_ms": duration_ms,
-        "input_tokens": result.input_tokens,
-        "output_tokens": result.output_tokens,
-        "cache_creation_input_tokens": result.cache_creation_input_tokens,
-        "cache_read_input_tokens": result.cache_read_input_tokens,
-        "stop_reason": result.stop_reason,
-        "response_chars": len(result.text),
-        "metadata": _safe_metadata(metadata),
-    })
+    _write_trace(
+        {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "event": "finish",
+            "id": call_id,
+            "op": operation,
+            "model": model,
+            "duration_ms": duration_ms,
+            "input_tokens": result.input_tokens,
+            "output_tokens": result.output_tokens,
+            "cache_creation_input_tokens": result.cache_creation_input_tokens,
+            "cache_read_input_tokens": result.cache_read_input_tokens,
+            "stop_reason": result.stop_reason,
+            "response_chars": len(result.text),
+            "metadata": _safe_metadata(metadata),
+        }
+    )
 
 
 def _log_error(
@@ -227,26 +251,37 @@ def _log_error(
         _safe_metadata(metadata),
         exc_info=True,
     )
-    _write_trace({
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "event": "error",
-        "id": call_id,
-        "op": operation,
-        "model": model,
-        "duration_ms": duration_ms,
-        "error_type": type(exc).__name__,
-        "error": str(exc)[:300],
-        "message_count": len(messages),
-        "role_counts": _message_role_counts(messages),
-        "system_chars": len(system or ""),
-        "message_chars": sum(len(msg.get("content") or "") for msg in messages),
-        "metadata": _safe_metadata(metadata),
-    })
+    _write_trace(
+        {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "event": "error",
+            "id": call_id,
+            "op": operation,
+            "model": model,
+            "duration_ms": duration_ms,
+            "error_type": type(exc).__name__,
+            "error": str(exc)[:300],
+            "message_count": len(messages),
+            "role_counts": _message_role_counts(messages),
+            "system_chars": len(system or ""),
+            "message_chars": sum(len(msg.get("content") or "") for msg in messages),
+            "metadata": _safe_metadata(metadata),
+        }
+    )
 
 
 def _should_retry(exc: Exception) -> bool:
     name = type(exc).__name__.lower()
-    return any(token in name for token in ("ratelimit", "overloaded", "timeout", "apiconnection", "internalserver"))
+    return any(
+        token in name
+        for token in (
+            "ratelimit",
+            "overloaded",
+            "timeout",
+            "apiconnection",
+            "internalserver",
+        )
+    )
 
 
 def call_claude_messages_sync(
@@ -258,12 +293,18 @@ def call_claude_messages_sync(
     temperature: float | None = 0.0,
     output_config: dict[str, Any] | None = None,
     system: str | None = None,
+    tools: list[dict[str, Any]] | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
     max_retries: int = 0,
     retry_delay_seconds: float = 0.75,
 ) -> ClaudeCallResult:
-    """Run a Claude messages.create call with timing and structured logs."""
+    """Run a Claude messages.create call with timing and structured logs.
+
+    ``tools`` enables Anthropic server-side tools (e.g. web_search). When set,
+    a ``pause_turn`` stop reason is resumed automatically by re-sending the
+    in-progress assistant content, bounded by ``_MAX_SERVER_TOOL_RESUMES``.
+    """
     call_id = uuid.uuid4().hex[:12]
     request_temperature = None if _requires_sampling_omission(model) else temperature
     _log_start(
@@ -278,45 +319,73 @@ def call_claude_messages_sync(
         metadata,
     )
     started = time.perf_counter()
-    attempts = 0
+    working_messages: list[dict[str, Any]] = list(messages)
+    resumes = 0
 
-    while True:
-        attempts += 1
-        try:
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=timeout)
-            request_kwargs: dict[str, Any] = {
-                "model": model,
-                "max_tokens": max_tokens,
-                "messages": messages,
-            }
-            if request_temperature is not None:
-                request_kwargs["temperature"] = request_temperature
-            if output_config:
-                request_kwargs["extra_body"] = {"output_config": output_config}
-            if system is not None:
-                request_kwargs["system"] = system
+    def _build_kwargs() -> dict[str, Any]:
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "messages": working_messages,
+        }
+        if request_temperature is not None:
+            kwargs["temperature"] = request_temperature
+        if output_config:
+            kwargs["extra_body"] = {"output_config": output_config}
+        if system is not None:
+            kwargs["system"] = system
+        if tools:
+            kwargs["tools"] = tools
+        return kwargs
 
-            response = client.messages.create(
-                **request_kwargs,
+    while True:  # server-tool pause_turn resume loop
+        attempts = 0
+        while True:  # transient-error retry loop
+            attempts += 1
+            try:
+                client = anthropic.Anthropic(
+                    api_key=settings.anthropic_api_key, timeout=timeout
+                )
+                response = client.messages.create(**_build_kwargs())
+                break
+            except Exception as exc:
+                duration_ms = int((time.perf_counter() - started) * 1000)
+                retryable = _should_retry(exc) and attempts <= max_retries
+                logger.warning(
+                    "llm.call.retry_decision id=%s op=%s attempt=%d max_retries=%d retryable=%s error_type=%s",
+                    call_id,
+                    operation,
+                    attempts,
+                    max_retries,
+                    retryable,
+                    type(exc).__name__,
+                )
+                if retryable:
+                    time.sleep(retry_delay_seconds * attempts)
+                    continue
+                _log_error(
+                    call_id,
+                    operation,
+                    model,
+                    duration_ms,
+                    working_messages,
+                    system,
+                    metadata,
+                    exc,
+                )
+                raise
+
+        if (
+            tools
+            and getattr(response, "stop_reason", None) == "pause_turn"
+            and resumes < _MAX_SERVER_TOOL_RESUMES
+        ):
+            resumes += 1
+            working_messages.append(
+                {"role": "assistant", "content": getattr(response, "content", [])}
             )
-            break
-        except Exception as exc:
-            duration_ms = int((time.perf_counter() - started) * 1000)
-            retryable = _should_retry(exc) and attempts <= max_retries
-            logger.warning(
-                "llm.call.retry_decision id=%s op=%s attempt=%d max_retries=%d retryable=%s error_type=%s",
-                call_id,
-                operation,
-                attempts,
-                max_retries,
-                retryable,
-                type(exc).__name__,
-            )
-            if retryable:
-                time.sleep(retry_delay_seconds * attempts)
-                continue
-            _log_error(call_id, operation, model, duration_ms, messages, system, metadata, exc)
-            raise
+            continue
+        break
 
     duration_ms = int((time.perf_counter() - started) * 1000)
     usage = getattr(response, "usage", None)
@@ -325,7 +394,9 @@ def call_claude_messages_sync(
         duration_ms=duration_ms,
         input_tokens=_extract_usage_value(usage, "input_tokens"),
         output_tokens=_extract_usage_value(usage, "output_tokens"),
-        cache_creation_input_tokens=_extract_usage_value(usage, "cache_creation_input_tokens"),
+        cache_creation_input_tokens=_extract_usage_value(
+            usage, "cache_creation_input_tokens"
+        ),
         cache_read_input_tokens=_extract_usage_value(usage, "cache_read_input_tokens"),
         stop_reason=getattr(response, "stop_reason", None),
         raw_response=response,
@@ -343,6 +414,7 @@ async def call_claude_messages(
     temperature: float | None = 0.0,
     output_config: dict[str, Any] | None = None,
     system: str | None = None,
+    tools: list[dict[str, Any]] | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
 ) -> ClaudeCallResult:
@@ -359,6 +431,7 @@ async def call_claude_messages(
             temperature=temperature,
             output_config=output_config,
             system=system,
+            tools=tools,
             timeout=timeout,
             metadata=metadata,
         ),
