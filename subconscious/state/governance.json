@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-08-pm",
-  "total_runs": 52,
+  "last_run": "2026-06-09-pm",
+  "total_runs": 53,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,15 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx \u2014 pending_approvals corrected 5\u21924. Moratorium still active. Run 10 (2026-04-30): same winner confirmed \u2014 JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 \u2014 wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION \u2014 original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING \u2014 pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 \u2014 numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale \u2014 direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED \u2014 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Create backend/tests/test_os_action_dispatch.py — 5 mock-based tests for queue_action_for_run() (AUTONOMOUS-EXECUTABLE, run 53 winner)",
+      "date": "2026-06-09-pm",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "category": "code_health",
+      "note": "Run 53 winner. AUTONOMOUS-EXECUTABLE. os_action_dispatch.py (85L, Agent OS Phase 4) confirmed zero test coverage (NO_TEST_FILE). Guards idempotency for ALL approved agent actions from both human-click and auto-send paths. PRs #211+#212 currently in review adding Act hardening + research worker on top of this unverified layer. 5 test cases: (1) no action_type → None, (2) unknown action_type → None, (3) idempotent on existing succeeded row, (4) background task queued when BackgroundTasks provided, (5) inline run when background=None. All mockable via unittest.mock, no Supabase fixture needed. Nightly scope confirmed for backend/tests/ additions. Full implementation sketch: subconscious/runs/2026-06-09-pm/winning-concept.md."
+    },
     {
       "title": "Add Check 12 — agent-service timing-safe guard to pre-commit (AUTONOMOUS-EXECUTABLE, WARNING mode, ~12 lines bash) (run 52 winner)",
       "date": "2026-06-08-pm",
@@ -797,11 +806,11 @@
   "implementation_lag_warning": {
     "runs_pending_approval": 16,
     "runs_pending_approval_raw": 16,
-    "runs_pending_approval_note": "Run 52 (2026-06-08-pm): No governance corrections this run. Pending +1 (run 52 winner added, pending_autonomous \u2014 does not increase human-required count). runs_pending 15\u219216. Moratorium day 39. Items A+B still pending_autonomous: PR #200 not merged as of nightly 2026-06-08 (Items A+B did not execute last night). PR #200 open 3 days. Run 52 winner (Check 12) is AUTONOMOUS-EXECUTABLE \u2192 nightly can execute tonight if PR #200 also merges OR independently (Check 12 only needs SKILL.md scope to cover pre-commit bash additions, already confirmed active). Fastest moratorium exit: Merge PR #209 (5 min, security) + PR #200 (5 min, unblocks Items A+B tonight) + PR #183 (10 min, billing) = ~20 min human \u2192 Items A+B + Check 12 auto-execute = pending drops significantly. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181, PRs #209/#200.",
-    "runs_implemented": 14,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 53)",
-    "governance_correction": "Run 52 (2026-06-08-pm): No corrections. Items A+B still pending_autonomous (PR #200 not merged). Run 51 winner still pending_approval (PR #183 not merged).",
-    "note": "Moratorium exit path: Merge PRs #209+#200+#183 (~20 min human) \u2192 Items A+B + Check 12 auto-execute tonight \u2192 email_sequences split unblocked \u2192 pending drops. Three 5-10 min PR merges are the critical path.",
+    "runs_pending_approval_note": "Run 53 (2026-06-09-pm): No governance corrections. Run 52 winner (Check 12) IMPLEMENTED by nightly ca3ce68 \u2014 status already marked implemented in governance. Run 53 winner added as pending_autonomous (does not increase human-required count). Moratorium day 40+. Items A+B still pending_autonomous: PR #200 not merged (7 days). PR #183 (billing) not merged (17 days). PR #209 (security timing fix) not merged (3 days). True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181, PRs #209/#200.",
+    "runs_implemented": 15,
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 54)",
+    "governance_correction": "Run 53 (2026-06-09-pm): runs_implemented 14\u219215 (Check 12 nightly ca3ce68 confirms run 52 implemented). No other corrections. Items A+B still pending_autonomous (PR #200 not merged). Run 51 winner still pending_approval (PR #183 not merged).",
+    "note": "Moratorium exit path: Merge PRs #209+#200+#183 (~20 min human) \u2192 Items A+B + run 53 test file auto-execute tonight \u2192 email_sequences split unblocked \u2192 pending drops. Three 5-10 min PR merges are the critical path.",
     "escalate": true
   },
   "config": {
