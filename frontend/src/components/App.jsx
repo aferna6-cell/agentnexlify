@@ -127,6 +127,9 @@ const TeamActivityPage = lazy(() => import("../pages/TeamActivityPage"));
 const SupportPage = lazy(() => import("../pages/SupportPage"));
 const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
 const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
+const IntegrationHealthDashboard = lazy(
+  () => import("../pages/IntegrationHealthDashboard"),
+);
 
 const pages = {
   dashboard: Dashboard,
@@ -182,6 +185,7 @@ const pages = {
   support: SupportPage,
   admin_analytics: AdminAnalyticsPage,
   admin_promotions: AdminPromotionsPage,
+  integration_health: IntegrationHealthDashboard,
 };
 
 // --------------------------------------------------------------------------
@@ -240,6 +244,7 @@ const PAGE_TO_PATH = {
   support: "/dashboard/support",
   admin_analytics: "/admin/analytics",
   admin_promotions: "/admin/promotions",
+  integration_health: "/dashboard/setup-health",
 };
 
 const PATH_TO_PAGE = Object.fromEntries(

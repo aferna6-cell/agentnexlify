@@ -83,6 +83,7 @@ from backend.routers import (
     webhooks,
     widget_chat,
     widget_config,
+    widget_health,
     widget_lead,
     wizard_analytics,
     ab_tests,
@@ -819,6 +820,7 @@ app.include_router(team.router)
 app.include_router(twilio_webhooks.router)
 app.include_router(widget_chat.router)
 app.include_router(widget_config.router)
+app.include_router(widget_health.router)
 app.include_router(widget_lead.router)
 app.include_router(notifications.router)
 app.include_router(business_page.router)

@@ -182,6 +182,10 @@ class AIFeedbackRequest(BaseModel):
     correction: str | None = Field(None, max_length=2000)
 
 
+class AllowedDomainsRequest(BaseModel):
+    allowed_domains: list[str]
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -287,6 +291,61 @@ async def toggle_online_status(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Failed to update online status")
+
+
+@router.put("/config/{tenant_id}/allowed-domains")
+async def update_allowed_domains(
+    tenant_id: str,
+    body: AllowedDomainsRequest,
+    claims: dict = Depends(_get_jwt_claims),
+):
+    """Update allowed domains for a widget config. Dashboard-only (JWT required).
+
+    Each domain is normalized: strips whitespace, strips leading http(s):// and
+    any path component so only the host is stored. Empty strings are dropped.
+    """
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    normalized: list[str] = []
+    for raw in body.allowed_domains:
+        domain = raw.strip()
+        # Strip scheme
+        for scheme in ("https://", "http://"):
+            if domain.startswith(scheme):
+                domain = domain[len(scheme) :]
+                break
+        # Keep only host (drop path/query/fragment)
+        domain = domain.split("/")[0].strip()
+        if domain:
+            normalized.append(domain)
+
+    try:
+        db = get_service_supabase()
+        result = (
+            db.table("widget_configs")
+            .update({"allowed_domains": normalized})
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Widget config not found")
+        logger.info(
+            "update_allowed_domains: tenant=%s domains=%s",
+            tenant_id,
+            normalized,
+        )
+        return {"allowed_domains": normalized}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "update_allowed_domains FAILED: tenant=%s error=%s",
+            tenant_id,
+            e,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Failed to update allowed domains")
 
 
 @router.post("/upload")
