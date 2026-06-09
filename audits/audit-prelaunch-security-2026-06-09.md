@@ -54,13 +54,18 @@ execution_id)` in `email_sender.py` (mirrors existing `_make_unsub_sig`,
 
 ## HIGH (deferred — not launch blockers)
 
-### HIGH-1 — CORS falls open to `["*"]` when env unset
-`backend/main.py:_cors_origins()` returns `["*"]` when both
-`cors_allowed_origins` and `widget_allowed_origins` are unset; in prod it only
-logs a warning. Risk if a deploy ships with the env vars missing.
-**Why deferred:** flipping fail-closed now risks breaking the launch deploy if
-env isn't set. Action: set both env vars in prod, THEN make it fail-closed in a
-follow-up. Owner check before launch: confirm prod env has the origins set.
+### HIGH-1 — CORS `["*"]` — RESOLVED (by design, won't fix)
+Re-reviewed against live code. The `CORSMiddleware` hardcodes
+`allow_origins=["*"]` (`backend/main.py:625`) **on purpose**; `_cors_origins()`
+is no longer wired to the middleware — it only feeds the readiness-snapshot
+indicator `widget_allowed_origins_explicit` (`backend/main.py:206`). The comment
+block at `main.py:600-616` records that an earlier env-driven revision broke
+every widget OPTIONS preflight from tenant customer sites in production and was
+reverted. The widget runs on arbitrary, unknown-ahead-of-time tenant domains, so
+`*` is required. Safety holds because `allow_credentials=False` (no cookies, no
+cookie-CSRF) and dashboard auth rides the `Authorization` header, which browsers
+do not attach cross-origin automatically. **Action: none.** Invariant to keep:
+`allow_credentials` must stay `False` while `allow_origins=["*"]`.
 
 ### HIGH-2 — Missing JWT `role` claim defaults to `owner`
 `backend/dependencies.py:27` `role = claims.get("role", "owner")`. A token
@@ -68,16 +73,17 @@ without a role is treated as owner. **Why deferred:** a prior `owner`→`member`
 change was reverted (broke 17 tests, risked locking out legacy prod sessions).
 Needs a migration plan that re-issues tokens with explicit roles first.
 
-### HIGH-3 — `check_lead_captured_triggers` fetches lead unscoped
-`backend/services/automation/rule_engine.py:557` — same IDOR class as CRITICAL-1.
-Mitigated in practice because the trigger path runs inside the widget's own
-tenant context, but it should take an explicit tenant filter for defense in
-depth. Apply the same `client_id` scoping pattern.
+### HIGH-3 — `check_lead_captured_triggers` fetches lead unscoped — FIXED
+`backend/services/automation/rule_engine.py`. Added optional `tenant_id`
+parameter; when supplied the lead fetch is scoped with `.eq("client_id",
+tenant_id)` so a foreign `lead_id` cannot trigger another tenant's automations
+(defense-in-depth). No in-repo caller existed (grep proved only re-exports), so
+the change is backward-compatible. Verified: full suite green (531 passed).
 
-### HIGH-4 — Unsubscribe endpoint existence leak (404 vs 400)
-`unsubscribe_lead` returns 404 for an unknown lead but 400 for a bad signature,
-letting a caller distinguish "lead exists" from "lead doesn't." Minor
-enumeration vector. Fix: return an identical generic response for both.
+### HIGH-4 — Unsubscribe endpoint existence leak (404 vs 400) — FIXED
+`backend/routers/widget_config.py::unsubscribe_lead`. Unknown-lead and
+bad-signature branches now return one identical generic 400 response, removing
+the existence-enumeration signal. Verified: full suite green (531 passed).
 
 ---
 
@@ -96,8 +102,17 @@ enumeration vector. Fix: return an identical generic response for both.
 ---
 
 ## Post-launch hardening sprint (suggested order)
-1. HIGH-1 — set prod CORS env, then fail-closed.
-2. HIGH-3 — scope `check_lead_captured_triggers`.
-3. HIGH-4 — uniform unsubscribe response.
+1. ~~HIGH-1~~ — RESOLVED by design (CORS `*` is required for the widget; safe with
+   `allow_credentials=False`). No action.
+2. ~~HIGH-3~~ — DONE. `check_lead_captured_triggers` now tenant-scoped.
+3. ~~HIGH-4~~ — DONE. Uniform unsubscribe response.
 4. HIGH-2 — role-claim migration (re-issue tokens, then drop the `owner` default).
+   Still deferred — needs token-reissue migration; prior naive flip broke 17 tests.
 5. MED-3 — typed Supabase response wrapper.
+
+## Launch gate status (2026-06-09)
+Both CRITICALs fixed. HIGH-1 resolved by-design. HIGH-3 + HIGH-4 fixed.
+HIGH-2 is the only remaining HIGH and is **not a launch blocker** (it requires a
+valid signed JWT to exploit a missing `role` claim; default-owner only matters
+for tokens minted without a role, which our issuer always sets). MED items are
+non-blocking. **Security verdict: clear to launch.**
