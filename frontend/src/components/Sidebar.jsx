@@ -130,6 +130,11 @@ const allNavItems = [
     ),
     label: "Widget",
   },
+  {
+    key: "integration_health",
+    icon: <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />,
+    label: "Setup Health",
+  },
   // Hidden: AI answering service not yet connected to real voice provider
   {
     key: "calls",
@@ -397,6 +402,7 @@ const NAV_GROUPS = [
       "calls",
       "chat_flows",
       "widget",
+      "integration_health",
       "snippets",
       "faq",
     ],
