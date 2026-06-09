@@ -13,6 +13,10 @@
 
 import { test, expect, type Page } from "@playwright/test";
 
+// APIs are fully stubbed, so TLS identity of the target host is irrelevant —
+// lets the suite run against Vercel previews from behind corporate/CI proxies.
+test.use({ ignoreHTTPSErrors: true });
+
 function fakeJwt(): string {
   const b64 = (obj: object) =>
     Buffer.from(JSON.stringify(obj))
