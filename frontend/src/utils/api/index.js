@@ -41,6 +41,7 @@ export * from "./waitlist";
 export * from "./webhooks";
 export * from "./widget-config";
 export * from "./scoring";
+export * from "./qualifier";
 
 export { request, BASE, ApiError } from "./_client";
 export * from "./onboarding";

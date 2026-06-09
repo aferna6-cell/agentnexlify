@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchAgentControlCenter } from "../utils/api/analytics";
 import SkeletonLoader from "../components/SkeletonLoader";
+import AgentQualifierSettings from "../components/AgentQualifierSettings";
 
 const PERIODS = [
   { value: "7d", label: "7 days" },
@@ -499,6 +500,8 @@ export default function AgentControlCenterPage({ onNavigate }) {
           ))}
         </div>
       </section>
+
+      <AgentQualifierSettings tenantId={user?.tenantId} token={token} />
 
       <section className="agent-control-summary-grid">
         <SummaryCard
