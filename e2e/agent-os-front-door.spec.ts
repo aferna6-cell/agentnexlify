@@ -100,3 +100,35 @@ test("deep links to classic pages still work", async ({ page }) => {
     page.getByText("No tasks yet. Start one to hand work to the orchestrator."),
   ).toBeHidden();
 });
+
+test("owner can open the Memory panel and see learned entities", async ({ page }) => {
+  await stubApi(page);
+  // After stubApi: Playwright matches the most recently registered route first.
+  await page.route("**/api/v1/os/graph", (route) =>
+    route.fulfill({
+      json: {
+        nodes: [
+          {
+            id: "n1",
+            entity_type: "customer",
+            name: "Sarah Chen",
+            summary: "Has a pending $680 brake quote",
+            facts: [],
+            mention_count: 3,
+            last_seen_at: "2026-06-09T12:00:00Z",
+          },
+        ],
+        edges: [],
+      },
+    }),
+  );
+  await page.addInitScript((token: string) => {
+    window.localStorage.setItem("anx_token", token);
+    window.localStorage.setItem("anx_tenant_id", "e2e-tenant");
+  }, fakeJwt());
+
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Memory" }).click();
+  await expect(page.getByText("Sarah Chen")).toBeVisible();
+  await expect(page.getByText("Has a pending $680 brake quote")).toBeVisible();
+});

@@ -139,3 +139,16 @@ export function decideOsBacklog(token, requestId, { decision, note }) {
 export function fetchOsUsage(token) {
   return request("/api/v1/os/usage", { token });
 }
+
+// --- Knowledge graph (long-term memory) ---
+
+export function fetchOsGraph(token) {
+  return request("/api/v1/os/graph", { token });
+}
+
+export function forgetOsGraphNode(token, nodeId) {
+  return request(`/api/v1/os/graph/nodes/${nodeId}`, {
+    method: "DELETE",
+    token,
+  });
+}
