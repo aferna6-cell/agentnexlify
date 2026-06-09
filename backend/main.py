@@ -94,6 +94,7 @@ from backend.routers import (
     os_orchestrate,
     os_agent_runs,
     os_deliverables,
+    os_graph,
     os_memory,
     os_backlog,
     os_usage,
@@ -847,6 +848,7 @@ app.include_router(os_threads.router)
 app.include_router(os_orchestrate.router)
 app.include_router(os_agent_runs.router)
 app.include_router(os_deliverables.router)
+app.include_router(os_graph.router)
 app.include_router(os_memory.router)
 app.include_router(os_backlog.router)
 app.include_router(os_usage.router)

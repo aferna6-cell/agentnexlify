@@ -1037,3 +1037,13 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Backend wiring:** `backend/services/os_outbound_mirror.py::_outbound_log_already_sent` + `_outbound_log_record` helpers; `_mirror_sms`, `_mirror_email`, `_mirror_facebook` each gained pre-check + post-insert calls; dispatcher threads `db` through. Tests: `tests/test_agent_os.py::TestOutboundMirrorIdempotency` (9 cases — replay skip per channel, channel-scope correctness, success records row, pre-check DB failure falls through, post-insert DB failure preserves mirrored).
 
 **Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 8 columns match schema, 3 indexes present (`os_outbound_log_pkey`, `os_outbound_log_dedup_uniq`, `os_outbound_log_client_sent_idx`), RLS enabled, `os_outbound_log_deny_public` policy in place.
+
+## Migration 133 — os_graph_memory (2026-06-09)
+
+**Tables:** `os_graph_nodes` (one node per `(client_id, entity_type, normalized_name)` — name, summary, capped JSONB `facts` with provenance, `mention_count`, voyage-3-lite 512d `embedding`, HNSW index) + `os_graph_edges` (typed relations, `observed_count` weight, FK cascade to nodes, unique per `(client_id, from_node, to_node, relation)`). Both RLS deny-public.
+
+**Why:** ADR `planning/decisions/2026-05-25-agent-os-graph-memory.md` deferred the graph layer with revisit triggers; trigger #4 (owner-requested navigable memory view) fired 2026-06-09. Extraction cost stays inside the ADR's concern: ONE Haiku call per owner turn after the reply persists (`backend/services/os_graph_memory.py::accumulate_from_turn`), never per memory write. New facts write through to `os_memory_entries` so semantic recall stays consistent. Retrieval feeds `SharedContext.kb` as `KbEntry {topic, answer}` — zero engine changes.
+
+**Backend wiring:** `os_graph_memory.py` (extract/upsert/retrieve), `os_thread_runner.py` (kb enrichment pre-engine + background accumulation post-persist), `routers/os_graph.py` (GET /api/v1/os/graph, owner-only DELETE /graph/nodes/{id}). Frontend: `components/os/MemoryPanel.jsx` in the Agent OS page. Tests: `tests/test_os_graph_memory.py` (11 cases).
+
+**Applied:** YES — 2026-06-09 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: both tables present with RLS enabled + table comments in place.

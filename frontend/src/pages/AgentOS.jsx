@@ -21,6 +21,7 @@ import {
 } from "../utils/api/os";
 import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
+import MemoryPanel from "../components/os/MemoryPanel";
 
 const POLL_MS = 3000;
 
@@ -81,6 +82,7 @@ export default function AgentOS() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState(null);
   const [panelRunId, setPanelRunId] = useState(null);
+  const [showMemory, setShowMemory] = useState(false);
 
   const scrollRef = useRef(null);
 
@@ -276,6 +278,23 @@ export default function AgentOS() {
             style={{ width: "100%", fontSize: "0.85rem" }}
           >
             New task
+          </button>
+          <button
+            onClick={() => setShowMemory((v) => !v)}
+            aria-pressed={showMemory}
+            style={{
+              width: "100%",
+              marginTop: 6,
+              fontSize: "0.8rem",
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text-muted)",
+              borderRadius: 8,
+              padding: "6px 0",
+              cursor: "pointer",
+            }}
+          >
+            {showMemory ? "Hide memory" : "Memory"}
           </button>
         </div>
         <div
@@ -627,6 +646,11 @@ export default function AgentOS() {
           onClose={() => setPanelRunId(null)}
           onUpdated={handleRunUpdated}
         />
+      )}
+
+      {/* Long-term memory side panel */}
+      {showMemory && (
+        <MemoryPanel token={token} onClose={() => setShowMemory(false)} />
       )}
     </div>
   );

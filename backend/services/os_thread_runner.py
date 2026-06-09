@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from fastapi import BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 
-from backend.services import agent_os_bridge, agent_sdk_client
+from backend.services import agent_os_bridge, agent_sdk_client, os_graph_memory
 from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
@@ -62,8 +62,15 @@ async def process_user_turn(
     user_content = user_message_row["content"]
 
     out = None
+    business_name = ""
     if agent_sdk_client.is_configured():
         context = agent_os_bridge.assemble_shared_context(db, client_id)
+        business_name = (context.get("businessProfile") or {}).get("businessName") or ""
+        # Long-term memory rides in as KbEntry rows — the engine's agents
+        # already consume SharedContext.kb, so no engine change is needed.
+        context["kb"] = await os_graph_memory.graph_kb_entries(
+            db, client_id, user_content
+        )
         out = await run_in_threadpool(
             agent_sdk_client.orchestrate_sync,
             client_id,
@@ -82,6 +89,23 @@ async def process_user_turn(
 
     agent_run = persisted.get("agent_run")
     await _dispatch_auto_send(db, client_id, agent_run, background_tasks)
+
+    # Knowledge-graph accumulation AFTER the reply is persisted — memory
+    # never adds latency to the conversation and never breaks a turn.
+    assistant_text = (assistant_message or {}).get("content")
+    if background_tasks is not None:
+        background_tasks.add_task(
+            os_graph_memory.accumulate_background,
+            client_id,
+            user_content,
+            assistant_text,
+            f"thread:{thread_id}",
+            business_name,
+        )
+    else:
+        await os_graph_memory.accumulate_background(
+            client_id, user_content, assistant_text, f"thread:{thread_id}", business_name
+        )
 
     return {
         "user_message": user_message_row,

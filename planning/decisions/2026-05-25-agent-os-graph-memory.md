@@ -1,7 +1,13 @@
 # Decision — Agent OS graph-memory layer (defer past launch)
 
 **Date:** 2026-05-25
-**Status:** decided — defer
+**Status:** superseded 2026-06-09 — revisit trigger #4 fired (owner requested
+the navigable "what do you know" memory view). Graph layer BUILT: migration
+`133_os_graph_memory.sql`, `backend/services/os_graph_memory.py`,
+`backend/routers/os_graph.py`, MemoryPanel in the dashboard. Cost stayed
+inside this ADR's concern: ONE Haiku call per owner turn (not per memory
+write, not Opus/Sonnet), fired after the reply persists. Semantic layer
+unchanged; new facts write through to `os_memory_entries`.
 **Owner:** Aidan
 **Source:** `specs/agent-os-overhaul_spec.md` Open Questions §4; `plans/agent-os-p0_plan.md` decision #2; `plans/agent-os-next-steps_plan.md` §2
 
