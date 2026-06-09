@@ -9,7 +9,6 @@ from backend.services.email_sender import (
     build_unsubscribe_url,
     send_email,
 )
-from backend.services.sms_rate_limiter import increment_sms_count
 from backend.services.task_utils import safe_create_task
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
@@ -36,7 +35,11 @@ async def evaluate_trigger(
     if lead_id:
         try:
             lead_result = (
-                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id)
+                .select("*")
+                .eq("id", lead_id)
+                .limit(1)
+                .execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -505,7 +508,10 @@ async def _execute_action(
         campaign_id = action_config.get("campaign_id")
         if not campaign_id:
             return {"status": "failed", "reason": "no_campaign_id"}
-        safe_create_task(_send_campaign_for_rule(campaign_id, tenant_id, lead_data), name="campaign_for_rule")
+        safe_create_task(
+            _send_campaign_for_rule(campaign_id, tenant_id, lead_data),
+            name="campaign_for_rule",
+        )
         return {"status": "dispatched", "campaign_id": campaign_id}
 
     elif action_type == "update_lead_score":
@@ -548,13 +554,24 @@ async def _send_campaign_for_rule(
         logger.exception("Failed to send campaign %s for rule automation", campaign_id)
 
 
-async def check_lead_captured_triggers(lead_id: str) -> int:
-    """Check and fire automation rules when a lead is captured."""
+async def check_lead_captured_triggers(
+    lead_id: str, tenant_id: str | None = None
+) -> int:
+    """Check and fire automation rules when a lead is captured.
+
+    When ``tenant_id`` is provided the lead fetch is scoped to that tenant so a
+    foreign ``lead_id`` cannot trigger another tenant's automations
+    (defense-in-depth against IDOR). When omitted, the tenant is derived from
+    the lead's own ``client_id`` (backward-compatible).
+    """
     db = get_service_supabase()
     triggered = 0
 
     try:
-        lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+        lead_query = db.table("leads").select("*").eq("id", lead_id)
+        if tenant_id:
+            lead_query = lead_query.eq("client_id", tenant_id)
+        lead_result = lead_query.limit(1).execute()
         if not lead_result.data:
             return 0
         lead_data = lead_result.data[0]
@@ -611,7 +628,13 @@ async def check_tag_triggers(
     trigger_type = "tag_added" if added else "tag_removed"
 
     try:
-        lead_result = tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+        lead_result = (
+            tenant_table(db, "leads", tenant_id)
+            .select("*")
+            .eq("id", lead_id)
+            .limit(1)
+            .execute()
+        )
         lead_data = lead_result.data[0] if lead_result.data else None
     except Exception:
         logger.exception("check_tag_triggers: failed to load lead %s", lead_id)
@@ -687,7 +710,11 @@ async def check_form_submission_triggers(
     if lead_id:
         try:
             lead_result = (
-                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id)
+                .select("*")
+                .eq("id", lead_id)
+                .limit(1)
+                .execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:
@@ -769,7 +796,11 @@ async def check_appointment_triggers(
     if lead_id:
         try:
             lead_result = (
-                tenant_table(db, "leads", tenant_id).select("*").eq("id", lead_id).limit(1).execute()
+                tenant_table(db, "leads", tenant_id)
+                .select("*")
+                .eq("id", lead_id)
+                .limit(1)
+                .execute()
             )
             lead_data = lead_result.data[0] if lead_result.data else None
         except Exception:

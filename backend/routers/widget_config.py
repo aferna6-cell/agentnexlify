@@ -379,6 +379,13 @@ async def unsubscribe_lead(
     tid: str = Query("", description="Tenant ID", max_length=50),
 ):
     """Public endpoint clicked from email unsubscribe links."""
+    # Identical generic response for unknown-lead and bad-signature cases so an
+    # attacker cannot probe which lead IDs exist (no 404-vs-400 existence leak).
+    invalid_response = HTMLResponse(
+        "<html><body><h2>Invalid unsubscribe link.</h2></body></html>",
+        status_code=400,
+    )
+
     db = get_service_supabase()
     result = (
         db.table("leads")
@@ -388,10 +395,7 @@ async def unsubscribe_lead(
         .execute()
     )
     if not result.data:
-        return HTMLResponse(
-            "<html><body><h2>Lead not found.</h2></body></html>",
-            status_code=404,
-        )
+        return invalid_response
 
     lead = result.data[0]
     lead_tenant_id = str(lead.get("client_id") or "")
