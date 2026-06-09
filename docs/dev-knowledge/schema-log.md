@@ -1050,3 +1050,18 @@ Durable retry queue drained by `backend/services/retry_worker.py` on the 60s aut
 **Backend wiring:** `retry_worker.drain_pending_automations()` added to the 60s `core_tasks` in `backend/main.py::_automation_loop`. `twilio_webhooks.py` failure branch enqueues `automation_type='missed_call_text'` with `{to_phone, body}`. Endpoint `GET /automations/{tenant_id}/pending` in `automations.py` uses `filter_stuck_pending`. Tests: `backend/tests/test_retry_worker.py` (8 cases — backoff contract, enqueue, drain success/retry/terminal/unknown-type, breadcrumb, stuck filter).
 
 **Applied:** NO — pending PR review/merge. CREATE TABLE IF NOT EXISTS; additive, safe to apply via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`) at merge time.
+
+### 135 — tenants.stripe_connect_account_id / stripe_connect_status (Item 5, Stripe Connect scaffold)
+**Date:** 2026-06-09
+**Branch:** claude/gap-3-research-worker-87IXF
+Two additive nullable columns on `tenants`: `stripe_connect_account_id TEXT` (the connected account id `acct_xxx`, NULL = use platform account), `stripe_connect_status TEXT` (pending | active | disconnected, NULL = never connected). App-enforced statuses, not a DB enum, so future states need no migration.
+
+**Architecture decision (Item 5 fork resolved):** Stripe Connect **Standard** (OAuth), account-id only — we store NO secret key (rejected the per-tenant key-vault option to avoid PCI-adjacent secret storage). Zero application fee by default (pass-through, not a marketplace cut). Reversible: disconnect = clear column = automatic fallback to platform account. This is the lowest-liability option; the marketplace-cut variant remains a future product decision, NOT shipped.
+
+**Launch-safe / inert:** gated by `settings.tenant_payments_byok_enabled` (default `False`). With the flag OFF (prod default) `tenant_payments.resolve_invoice_stripe_account()` ALWAYS returns None → invoice payment links use the platform Stripe account exactly as before. Resolver read is resilient: if migration 135 is not applied (columns absent) it returns None instead of raising, so backend is safe to deploy before/with the migration.
+
+**Backend wiring:** `backend/services/tenant_payments.py` (new) — `tenant_payments_enabled()` + `resolve_invoice_stripe_account(db, tenant_id)`. Seam at `backend/routers/invoices.py::_get_or_create_stripe_payment_link` passes `stripe_account=acct_xxx` to `stripe.Price.create` + `stripe.PaymentLink.create` only when a connected account resolves. Tests: `backend/tests/test_tenant_payments.py` (8 cases — flag off ignores active connection + no DB read, flag on returns active id, pending/missing-id/no-row/empty-tenant → None, missing-columns resilient).
+
+**Gated build-out (NOT in this change, documented for next session):** Connect OAuth onboarding router, Settings UI "Connect Stripe" + status/disconnect, `account.updated` webhook to flip status→active on `charges_enabled`, per-account webhook routing for connected-account invoice payments. None ship until the flag flips on intentionally.
+
+**Applied:** NO — additive `ADD COLUMN IF NOT EXISTS`; safe to apply via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`) at merge time. Backend is safe to deploy before it lands (resilient resolver).

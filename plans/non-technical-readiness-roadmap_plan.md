@@ -75,7 +75,16 @@ onboarding; qualifier enable/disable + threshold + reasoning trail in
 **Plan coverage:** NONE — only April audit H1/H2 rows. Write a spec first (write-prd).
 **Dependency:** none hard.
 
-### Item 5 — Stripe Connect (self-serve own payments)  ⏱ M-L  ·  NEEDS DECISION, DO LAST
+### Item 5 — Stripe Connect (self-serve own payments)  ⏱ M-L  ·  SCAFFOLD SHIPPED (flag OFF), build-out gated
+**Decision RESOLVED (2026-06-09):** Stripe Connect **Standard** (OAuth), store account-id
+only (no secret key → no key-vault liability), zero application fee (pass-through, not a
+marketplace cut). Rejected per-tenant key vault. Shipped inert behind
+`tenant_payments_byok_enabled` (default OFF): migration 135 (additive `tenants` columns),
+`backend/services/tenant_payments.py` resolver, seam in `invoices.py`, 8 tests. Prod behavior
+unchanged (platform account) until the flag flips. **Remaining (gated, next session):** Connect
+OAuth onboarding router, Settings "Connect Stripe" UI, `account.updated` webhook, connected-
+account payment webhook routing. See `docs/dev-knowledge/schema-log.md` §135.
+
 **Problem:** Stripe keys are env-vars set at deploy (`config.py:34-49`). Owner can't connect
 their own payment processing without a developer in Railway.
 **Scope:** Stripe Connect OAuth (platform-as-marketplace) OR per-tenant key vault + Settings

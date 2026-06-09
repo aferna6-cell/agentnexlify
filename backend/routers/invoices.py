@@ -13,6 +13,7 @@ from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.stripe_service import ensure_stripe_configured
+from backend.services.tenant_payments import resolve_invoice_stripe_account
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/api/v1/invoices", tags=["invoices"])
 # ---------------------------------------------------------------------------
 # Pydantic Models
 # ---------------------------------------------------------------------------
+
 
 class InvoiceItemModel(BaseModel):
     description: str = Field(..., max_length=500)
@@ -41,7 +43,9 @@ class InvoiceCreate(BaseModel):
     notes: str | None = Field(None, max_length=5000)
     deposit_amount: float = Field(0.0, ge=0)
     is_recurring: bool = False
-    recurrence_interval: str | None = Field(None, pattern="^(weekly|biweekly|monthly|quarterly)$")
+    recurrence_interval: str | None = Field(
+        None, pattern="^(weekly|biweekly|monthly|quarterly)$"
+    )
 
 
 class InvoiceUpdate(BaseModel):
@@ -82,12 +86,14 @@ class ItemTemplateUpdate(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _compute_invoice_totals(items: list[dict], tax_rate: float) -> tuple[float, float, float]:
+
+def _compute_invoice_totals(
+    items: list[dict], tax_rate: float
+) -> tuple[float, float, float]:
     """Return (subtotal, tax_amount, total) from line items and a tax_rate percentage."""
-    subtotal = round(sum(
-        item.get("quantity", 1) * item.get("unit_price", 0)
-        for item in items
-    ), 2)
+    subtotal = round(
+        sum(item.get("quantity", 1) * item.get("unit_price", 0) for item in items), 2
+    )
     tax_amount = round(subtotal * (tax_rate / 100), 2)
     total = round(subtotal + tax_amount, 2)
     return subtotal, tax_amount, total
@@ -118,26 +124,52 @@ async def _get_next_invoice_number(db, tenant_id: str, attempt: int = 0) -> str:
         else:
             seq = 1 + attempt
     except Exception:
-        logger.warning("Could not determine next invoice number for tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Could not determine next invoice number for tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
         seq = 1 + attempt
     prefix = tenant_id[:4].upper()
     return f"INV-{prefix}-{seq:03d}"
 
 
-async def _get_or_create_stripe_payment_link(invoice_id: str, tenant_id: str, invoice_number: str, total: float) -> str | None:
+async def _get_or_create_stripe_payment_link(
+    invoice_id: str, tenant_id: str, invoice_number: str, total: float
+) -> str | None:
     """Create a Stripe Payment Link for the invoice total. Returns the URL or None on failure."""
     try:
         ensure_stripe_configured()
     except RuntimeError:
-        logger.warning("Stripe not configured — cannot create payment link for invoice %s", invoice_id)
+        logger.warning(
+            "Stripe not configured — cannot create payment link for invoice %s",
+            invoice_id,
+        )
         return None
 
     metadata = {"invoice_id": invoice_id, "tenant_id": tenant_id}
+    # Item 5: route to the tenant's own connected Stripe account when they have
+    # one (flag-gated). Returns None in prod today -> charges land on the
+    # platform account exactly as before. Never blocks invoice creation.
+    connect_kwargs: dict = {}
+    try:
+        connect_account = resolve_invoice_stripe_account(
+            get_service_supabase(), tenant_id
+        )
+        if connect_account:
+            connect_kwargs["stripe_account"] = connect_account
+    except Exception:  # noqa: BLE001 — payment routing is best-effort, never fatal
+        logger.warning(
+            "tenant_payments: account resolve failed for tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
     try:
         price = stripe.Price.create(
             unit_amount=int(round(total * 100)),  # cents
             currency="usd",
             product_data={"name": f"Invoice {invoice_number}"},
+            **connect_kwargs,
         )
         payment_link = stripe.PaymentLink.create(
             line_items=[{"price": price.id, "quantity": 1}],
@@ -145,13 +177,18 @@ async def _get_or_create_stripe_payment_link(invoice_id: str, tenant_id: str, in
             payment_intent_data={"metadata": metadata},
             restrictions={"completed_sessions": {"limit": 1}},
             inactive_message="This invoice has already been paid. Contact the business if you need help.",
+            **connect_kwargs,
         )
         return payment_link.url
     except stripe.StripeError as e:
-        logger.warning("Stripe error creating payment link for invoice %s: %s", invoice_id, str(e))
+        logger.warning(
+            "Stripe error creating payment link for invoice %s: %s", invoice_id, str(e)
+        )
         return None
     except Exception:
-        logger.exception("Unexpected error creating Stripe payment link for invoice %s", invoice_id)
+        logger.exception(
+            "Unexpected error creating Stripe payment link for invoice %s", invoice_id
+        )
         return None
 
 
@@ -170,8 +207,14 @@ def _build_invoice_email_html(invoice: dict, business: dict, lead: dict) -> str:
     subtotal = invoice.get("subtotal", 0)
     tax_amount = invoice.get("tax_amount", 0)
 
-    due_section = f"<p style='color:#4b5563;'>Due: <strong>{due_date}</strong></p>" if due_date else ""
-    notes_section = f"<p style='color:#4b5563;margin-top:16px;'>{notes}</p>" if notes else ""
+    due_section = (
+        f"<p style='color:#4b5563;'>Due: <strong>{due_date}</strong></p>"
+        if due_date
+        else ""
+    )
+    notes_section = (
+        f"<p style='color:#4b5563;margin-top:16px;'>{notes}</p>" if notes else ""
+    )
 
     pay_button = ""
     if payment_link:
@@ -259,6 +302,7 @@ def _build_invoice_email_html(invoice: dict, business: dict, lead: dict) -> str:
 # does not mistake the literal path segments for invoice IDs.
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{tenant_id}/stats")
 async def invoice_stats(
     tenant_id: str,
@@ -282,7 +326,11 @@ async def invoice_stats(
     invoices = result.data or []
 
     total_outstanding = round(
-        sum(float(i.get("total", 0)) for i in invoices if i.get("status") in ("sent", "viewed")),
+        sum(
+            float(i.get("total", 0))
+            for i in invoices
+            if i.get("status") in ("sent", "viewed")
+        ),
         2,
     )
     total_paid = round(
@@ -373,18 +421,22 @@ async def create_invoice_from_bid(
     except HTTPException:
         raise
     except Exception:
-        logger.warning("Could not check for existing invoice from bid %s", bid_id, exc_info=True)
+        logger.warning(
+            "Could not check for existing invoice from bid %s", bid_id, exc_info=True
+        )
 
     bid_items_raw = bid.get("items_json") or []
 
     # Normalize bid items to invoice item format
     invoice_items = []
     for item in bid_items_raw:
-        invoice_items.append({
-            "description": item.get("description", ""),
-            "quantity": item.get("quantity", 1),
-            "unit_price": item.get("unit_price", 0),
-        })
+        invoice_items.append(
+            {
+                "description": item.get("description", ""),
+                "quantity": item.get("quantity", 1),
+                "unit_price": item.get("unit_price", 0),
+            }
+        )
 
     subtotal, tax_amount, total = _compute_invoice_totals(invoice_items, 0.0)
     invoice_number = await _get_next_invoice_number(db, tenant_id)
@@ -406,7 +458,9 @@ async def create_invoice_from_bid(
     try:
         result = tenant_table(db, "invoices", tenant_id).insert(data).execute()
     except Exception:
-        logger.exception("Failed to create invoice from bid %s for tenant %s", bid_id, tenant_id)
+        logger.exception(
+            "Failed to create invoice from bid %s for tenant %s", bid_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to create invoice from bid")
 
     if not result.data:
@@ -458,10 +512,14 @@ async def list_invoices(
                 .eq("client_id", tenant_id)
                 .execute()
             )
-            for lead in (leads_result.data or []):
+            for lead in leads_result.data or []:
                 lead_names[lead["id"]] = lead.get("name") or ""
         except Exception:
-            logger.warning("Could not batch-fetch lead names for invoice list, tenant %s", tenant_id, exc_info=True)
+            logger.warning(
+                "Could not batch-fetch lead names for invoice list, tenant %s",
+                tenant_id,
+                exc_info=True,
+            )
 
     for inv in invoices:
         inv["lead_name"] = lead_names.get(inv.get("lead_id", ""), "")
@@ -487,7 +545,9 @@ async def create_invoice(
     subtotal, tax_amount, total = _compute_invoice_totals(items, req.tax_rate)
 
     if req.deposit_amount > total:
-        raise HTTPException(status_code=400, detail="deposit_amount cannot exceed invoice total")
+        raise HTTPException(
+            status_code=400, detail="deposit_amount cannot exceed invoice total"
+        )
 
     db = get_service_supabase()
     invoice_number = await _get_next_invoice_number(db, tenant_id)
@@ -517,22 +577,40 @@ async def create_invoice(
         data["recurrence_interval"] = req.recurrence_interval
         # Set next invoice date based on interval
         from dateutil.relativedelta import relativedelta
+
         base = req.due_date or date.today()
-        intervals = {"weekly": relativedelta(weeks=1), "biweekly": relativedelta(weeks=2), "monthly": relativedelta(months=1), "quarterly": relativedelta(months=3)}
-        data["next_invoice_date"] = (base + intervals.get(req.recurrence_interval, relativedelta(months=1))).isoformat()
+        intervals = {
+            "weekly": relativedelta(weeks=1),
+            "biweekly": relativedelta(weeks=2),
+            "monthly": relativedelta(months=1),
+            "quarterly": relativedelta(months=3),
+        }
+        data["next_invoice_date"] = (
+            base + intervals.get(req.recurrence_interval, relativedelta(months=1))
+        ).isoformat()
 
     # Try insert with retry on invoice_number uniqueness conflict (migration 068)
     result = None
     for retry in range(3):
         if retry > 0:
-            data["invoice_number"] = await _get_next_invoice_number(db, tenant_id, attempt=retry)
+            data["invoice_number"] = await _get_next_invoice_number(
+                db, tenant_id, attempt=retry
+            )
         try:
             result = tenant_table(db, "invoices", tenant_id).insert(data).execute()
             break
         except Exception as exc:
             error_msg = str(exc).lower()
-            if ("unique" in error_msg or "duplicate" in error_msg or "idx_invoices_tenant_number" in error_msg) and retry < 2:
-                logger.warning("Invoice number conflict for tenant %s, retrying (attempt %d)", tenant_id, retry + 1)
+            if (
+                "unique" in error_msg
+                or "duplicate" in error_msg
+                or "idx_invoices_tenant_number" in error_msg
+            ) and retry < 2:
+                logger.warning(
+                    "Invoice number conflict for tenant %s, retrying (attempt %d)",
+                    tenant_id,
+                    retry + 1,
+                )
                 continue
             logger.exception("Failed to create invoice for tenant %s", tenant_id)
             raise HTTPException(status_code=500, detail="Failed to create invoice")
@@ -541,13 +619,17 @@ async def create_invoice(
         raise HTTPException(status_code=500, detail="Failed to create invoice")
 
     invoice = result.data[0]
-    fire_event_background(tenant_id, "invoice.created", {
-        "invoice_id": invoice["id"],
-        "invoice_number": invoice.get("invoice_number"),
-        "total": invoice.get("total"),
-        "status": invoice.get("status"),
-        "lead_id": invoice.get("lead_id"),
-    })
+    fire_event_background(
+        tenant_id,
+        "invoice.created",
+        {
+            "invoice_id": invoice["id"],
+            "invoice_number": invoice.get("invoice_number"),
+            "total": invoice.get("total"),
+            "status": invoice.get("status"),
+            "lead_id": invoice.get("lead_id"),
+        },
+    )
     return invoice
 
 
@@ -586,12 +668,18 @@ async def create_item_template(
     """Create a reusable line item template."""
     verify_tenant(claims, tenant_id)
     db = get_service_supabase()
-    result = tenant_table(db, "invoice_item_templates", tenant_id).insert({
-        "tenant_id": tenant_id,
-        "description": req.description,
-        "unit_price": float(req.unit_price),
-        "category": req.category,
-    }).execute()
+    result = (
+        tenant_table(db, "invoice_item_templates", tenant_id)
+        .insert(
+            {
+                "tenant_id": tenant_id,
+                "description": req.description,
+                "unit_price": float(req.unit_price),
+                "category": req.category,
+            }
+        )
+        .execute()
+    )
     return result.data[0] if result.data else {}
 
 
@@ -632,7 +720,9 @@ async def delete_item_template(
     db = get_service_supabase()
     result = (
         tenant_table(db, "invoice_item_templates", tenant_id)
-        .update({"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()})
+        .update(
+            {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}
+        )
         .eq("id", template_id)
         .eq("tenant_id", tenant_id)
         .execute()
@@ -667,7 +757,9 @@ async def get_invoice(
             .execute()
         )
     except Exception:
-        logger.exception("Failed to fetch invoice %s for tenant %s", invoice_id, tenant_id)
+        logger.exception(
+            "Failed to fetch invoice %s for tenant %s", invoice_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to fetch invoice")
 
     if not result.data:
@@ -689,7 +781,12 @@ async def get_invoice(
             )
             invoice["lead"] = lead_result.data[0] if lead_result.data else None
         except Exception:
-            logger.warning("Could not fetch lead %s for invoice %s", lead_id, invoice_id, exc_info=True)
+            logger.warning(
+                "Could not fetch lead %s for invoice %s",
+                lead_id,
+                invoice_id,
+                exc_info=True,
+            )
             invoice["lead"] = None
     else:
         invoice["lead"] = None
@@ -744,8 +841,12 @@ async def update_invoice(
         new_tax_rate = req.tax_rate
 
     if req.items is not None or req.tax_rate is not None:
-        items_for_calc = new_items if new_items is not None else (existing.get("items_json") or [])
-        subtotal, tax_amount, total = _compute_invoice_totals(items_for_calc, new_tax_rate)
+        items_for_calc = (
+            new_items if new_items is not None else (existing.get("items_json") or [])
+        )
+        subtotal, tax_amount, total = _compute_invoice_totals(
+            items_for_calc, new_tax_rate
+        )
         if new_items is not None:
             updates["items_json"] = new_items
         updates["tax_rate"] = new_tax_rate
@@ -772,7 +873,9 @@ async def update_invoice(
             .execute()
         )
     except Exception:
-        logger.exception("Failed to update invoice %s for tenant %s", invoice_id, tenant_id)
+        logger.exception(
+            "Failed to update invoice %s for tenant %s", invoice_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to update invoice")
 
     if not result.data:
@@ -815,9 +918,13 @@ async def delete_invoice(
         )
 
     try:
-        tenant_table(db, "invoices", tenant_id).delete().eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+        tenant_table(db, "invoices", tenant_id).delete().eq("id", invoice_id).eq(
+            "tenant_id", tenant_id
+        ).execute()
     except Exception:
-        logger.exception("Failed to delete invoice %s for tenant %s", invoice_id, tenant_id)
+        logger.exception(
+            "Failed to delete invoice %s for tenant %s", invoice_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to delete invoice")
 
     return {"deleted": True}
@@ -877,7 +984,11 @@ async def send_invoice(
         if tenant_result.data:
             business = tenant_result.data[0]
     except Exception:
-        logger.warning("Could not fetch tenant info for invoice send, tenant %s", tenant_id, exc_info=True)
+        logger.warning(
+            "Could not fetch tenant info for invoice send, tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
 
     # Fetch lead contact details — leads table uses client_id
     lead: dict = {}
@@ -895,17 +1006,22 @@ async def send_invoice(
             if lead_result.data:
                 lead = lead_result.data[0]
         except Exception:
-            logger.warning("Could not fetch lead %s for invoice send", lead_id, exc_info=True)
+            logger.warning(
+                "Could not fetch lead %s for invoice send", lead_id, exc_info=True
+            )
 
     # Create Stripe Payment Link if not already present
     payment_link_url = invoice.get("stripe_payment_link") or ""
     if not payment_link_url and invoice.get("total", 0) > 0:
-        payment_link_url = await _get_or_create_stripe_payment_link(
-            invoice_id=invoice_id,
-            tenant_id=tenant_id,
-            invoice_number=invoice.get("invoice_number", invoice_id),
-            total=float(invoice.get("total", 0)),
-        ) or ""
+        payment_link_url = (
+            await _get_or_create_stripe_payment_link(
+                invoice_id=invoice_id,
+                tenant_id=tenant_id,
+                invoice_number=invoice.get("invoice_number", invoice_id),
+                total=float(invoice.get("total", 0)),
+            )
+            or ""
+        )
 
     # Build enriched invoice dict for email rendering
     invoice_for_email = {**invoice, "stripe_payment_link": payment_link_url}
@@ -932,9 +1048,13 @@ async def send_invoice(
                 if result.get("success"):
                     email_sent = True
                 else:
-                    errors.append(f"Email failed: {result.get('detail', 'unknown error')}")
+                    errors.append(
+                        f"Email failed: {result.get('detail', 'unknown error')}"
+                    )
             except Exception:
-                logger.exception("Unexpected error sending invoice email for invoice %s", invoice_id)
+                logger.exception(
+                    "Unexpected error sending invoice email for invoice %s", invoice_id
+                )
                 errors.append("Email delivery failed unexpectedly")
 
     if req.method in ("sms", "both"):
@@ -962,7 +1082,9 @@ async def send_invoice(
                 else:
                     errors.append("SMS delivery failed")
             except Exception:
-                logger.exception("Unexpected error sending invoice SMS for invoice %s", invoice_id)
+                logger.exception(
+                    "Unexpected error sending invoice SMS for invoice %s", invoice_id
+                )
                 errors.append("SMS delivery failed unexpectedly")
 
     # Update invoice record: status, sent_at, sent_via, stripe_payment_link
@@ -976,7 +1098,9 @@ async def send_invoice(
         update_data["stripe_payment_link"] = payment_link_url
 
     try:
-        tenant_table(db, "invoices", tenant_id).update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+        tenant_table(db, "invoices", tenant_id).update(update_data).eq(
+            "id", invoice_id
+        ).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.exception("Failed to update invoice %s status after send", invoice_id)
         # Don't raise here — the send may have succeeded, we just failed to update status
@@ -1045,20 +1169,26 @@ async def mark_invoice_paid(
             .execute()
         )
     except Exception:
-        logger.exception("Failed to mark invoice %s as paid for tenant %s", invoice_id, tenant_id)
+        logger.exception(
+            "Failed to mark invoice %s as paid for tenant %s", invoice_id, tenant_id
+        )
         raise HTTPException(status_code=500, detail="Failed to mark invoice as paid")
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
     paid_invoice = result.data[0]
-    fire_event_background(tenant_id, "invoice.paid", {
-        "invoice_id": invoice_id,
-        "invoice_number": paid_invoice.get("invoice_number"),
-        "total": paid_invoice.get("total"),
-        "payment_method": req.payment_method,
-        "lead_id": paid_invoice.get("lead_id"),
-    })
+    fire_event_background(
+        tenant_id,
+        "invoice.paid",
+        {
+            "invoice_id": invoice_id,
+            "invoice_number": paid_invoice.get("invoice_number"),
+            "total": paid_invoice.get("total"),
+            "payment_method": req.payment_method,
+            "lead_id": paid_invoice.get("lead_id"),
+        },
+    )
     return paid_invoice
 
 
@@ -1074,19 +1204,32 @@ async def record_partial_payment(
     db = get_service_supabase()
 
     # Load current invoice
-    inv = tenant_table(db, "invoices", tenant_id).select("total, amount_paid, status").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
+    inv = (
+        tenant_table(db, "invoices", tenant_id)
+        .select("total, amount_paid, status")
+        .eq("id", invoice_id)
+        .eq("tenant_id", tenant_id)
+        .limit(1)
+        .execute()
+    )
     if not inv.data:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
     current = inv.data[0]
     if current["status"] in ("paid", "cancelled"):
-        raise HTTPException(status_code=400, detail=f"Cannot record payment on {current['status']} invoice")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot record payment on {current['status']} invoice",
+        )
 
     total = float(current.get("total") or 0)
     already_paid = float(current.get("amount_paid") or 0)
     remaining = round(total - already_paid, 2)
     if req.amount > remaining + 0.01:
-        raise HTTPException(status_code=400, detail=f"Payment amount exceeds remaining balance of ${remaining:.2f}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Payment amount exceeds remaining balance of ${remaining:.2f}",
+        )
     new_paid = min(round(already_paid + req.amount, 2), total)
 
     update_data = {
@@ -1100,7 +1243,13 @@ async def record_partial_payment(
         if req.payment_method:
             update_data["payment_method"] = req.payment_method
 
-    result = tenant_table(db, "invoices", tenant_id).update(update_data).eq("id", invoice_id).eq("tenant_id", tenant_id).execute()
+    result = (
+        tenant_table(db, "invoices", tenant_id)
+        .update(update_data)
+        .eq("id", invoice_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to record payment")
 
@@ -1134,15 +1283,32 @@ async def bulk_send_invoices(
     # Fetch tenant info once
     business = {}
     try:
-        t = tenant_table(db, "tenants", tenant_id).select("business_name").eq("id", tenant_id).limit(1).execute()
+        t = (
+            tenant_table(db, "tenants", tenant_id)
+            .select("business_name")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
         business = t.data[0] if t.data else {}
     except Exception:
-        logger.warning("Failed to fetch tenant business name for invoice send (tenant %s)", tenant_id, exc_info=True)
+        logger.warning(
+            "Failed to fetch tenant business name for invoice send (tenant %s)",
+            tenant_id,
+            exc_info=True,
+        )
     biz_name = business.get("business_name") or "Your Service Provider"
 
     for invoice_id in req.invoice_ids:
         try:
-            inv = tenant_table(db, "invoices", tenant_id).select("*").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
+            inv = (
+                tenant_table(db, "invoices", tenant_id)
+                .select("*")
+                .eq("id", invoice_id)
+                .eq("tenant_id", tenant_id)
+                .limit(1)
+                .execute()
+            )
             if not inv.data:
                 failed += 1
                 errors.append(f"{invoice_id}: not found")
@@ -1151,18 +1317,29 @@ async def bulk_send_invoices(
             invoice = inv.data[0]
             if invoice["status"] in ("paid", "cancelled"):
                 failed += 1
-                errors.append(f"{invoice.get('invoice_number', invoice_id)}: already {invoice['status']}")
+                errors.append(
+                    f"{invoice.get('invoice_number', invoice_id)}: already {invoice['status']}"
+                )
                 continue
 
             lead_id = invoice.get("lead_id")
             lead = None
             if lead_id:
-                lead_row = tenant_table(db, "leads", tenant_id).select("name, email, phone").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
+                lead_row = (
+                    tenant_table(db, "leads", tenant_id)
+                    .select("name, email, phone")
+                    .eq("id", lead_id)
+                    .eq("client_id", tenant_id)
+                    .limit(1)
+                    .execute()
+                )
                 lead = lead_row.data[0] if lead_row.data else None
 
             if not lead or (not lead.get("email") and not lead.get("phone")):
                 failed += 1
-                errors.append(f"{invoice.get('invoice_number', invoice_id)}: no contact info")
+                errors.append(
+                    f"{invoice.get('invoice_number', invoice_id)}: no contact info"
+                )
                 continue
 
             total = float(invoice.get("total") or 0)
@@ -1173,18 +1350,33 @@ async def bulk_send_invoices(
                         invoice_id, tenant_id, invoice.get("invoice_number", ""), total
                     )
                 except Exception:
-                    logger.warning("Could not create payment link for invoice %s", invoice_id, exc_info=True)
+                    logger.warning(
+                        "Could not create payment link for invoice %s",
+                        invoice_id,
+                        exc_info=True,
+                    )
 
             inv_num = invoice.get("invoice_number", "")
 
             if req.channel in ("email", "both") and lead.get("email"):
                 try:
                     subject = f"Invoice {inv_num} from {biz_name}"
-                    link_html = f'<a href="{payment_link}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Pay ${total:,.2f}</a>' if payment_link else f"<p>Amount due: ${total:,.2f}</p>"
+                    link_html = (
+                        f'<a href="{payment_link}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Pay ${total:,.2f}</a>'
+                        if payment_link
+                        else f"<p>Amount due: ${total:,.2f}</p>"
+                    )
                     html_body = f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'><h2>Invoice {inv_num}</h2><p>Hi {lead.get('name', 'there')},</p><p>You have an invoice from <strong>{biz_name}</strong> for <strong>${total:,.2f}</strong>.</p>{link_html}<p style='color:#6b7280;font-size:12px;margin-top:24px;'>-- {biz_name}</p></div>"
-                    await send_email(to=lead["email"], subject=subject, body_html=html_body, tenant_id=tenant_id)
+                    await send_email(
+                        to=lead["email"],
+                        subject=subject,
+                        body_html=html_body,
+                        tenant_id=tenant_id,
+                    )
                 except Exception:
-                    logger.warning("Failed to email invoice %s", invoice_id, exc_info=True)
+                    logger.warning(
+                        "Failed to email invoice %s", invoice_id, exc_info=True
+                    )
 
             if req.channel in ("sms", "both") and lead.get("phone"):
                 try:
@@ -1193,13 +1385,17 @@ async def bulk_send_invoices(
                         msg += f" Pay here: {payment_link}"
                     await send_sms(to=lead["phone"], body=msg)
                 except Exception:
-                    logger.warning("Failed to SMS invoice %s", invoice_id, exc_info=True)
+                    logger.warning(
+                        "Failed to SMS invoice %s", invoice_id, exc_info=True
+                    )
 
-            tenant_table(db, "invoices", tenant_id).update({
-                "status": "sent",
-                "sent_at": datetime.now(timezone.utc).isoformat(),
-                "sent_via": req.channel,
-            }).eq("id", invoice_id).execute()
+            tenant_table(db, "invoices", tenant_id).update(
+                {
+                    "status": "sent",
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                    "sent_via": req.channel,
+                }
+            ).eq("id", invoice_id).execute()
 
             sent += 1
 

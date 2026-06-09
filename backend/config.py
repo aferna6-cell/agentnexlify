@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     stripe_price_autopilot_monthly: str = ""
     stripe_price_enterprise_monthly: str = ""
     stripe_price_marketing_addon_monthly: str = ""
+    # Item 5 — bring-your-own-Stripe (Connect Standard). OFF by default: invoice
+    # payment links use the platform account until the gated Connect onboarding
+    # flow ships and this is enabled. See backend/services/tenant_payments.py.
+    tenant_payments_byok_enabled: bool = False
     frontend_url: str = "http://localhost:5173"
     api_url: str = "https://agentnexlify-production.up.railway.app"
     cors_allowed_origins: str = ""
