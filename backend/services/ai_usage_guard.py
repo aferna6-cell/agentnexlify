@@ -135,31 +135,48 @@ def reserve_ai_tokens(
     estimated = max(1, int(estimated_tokens))
 
     try:
-        result = get_service_supabase().rpc(
-            "reserve_ai_token_budget",
-            {
-                "p_tenant_id": tenant_id,
-                "p_period_month": policy.period_month,
-                "p_hard_limit_tokens": policy.hard_limit_tokens,
-                "p_estimated_tokens": estimated,
-            },
-        ).execute()
+        result = (
+            get_service_supabase()
+            .rpc(
+                "reserve_ai_token_budget",
+                {
+                    "p_tenant_id": tenant_id,
+                    "p_period_month": policy.period_month,
+                    "p_hard_limit_tokens": policy.hard_limit_tokens,
+                    "p_estimated_tokens": estimated,
+                },
+            )
+            .execute()
+        )
         allowed = _rpc_bool(result.data)
     except Exception:
+        # Fail CLOSED for free/anonymous traffic. The public widget endpoint has
+        # no other cost backstop, so a guard outage must not become unbounded
+        # Anthropic spend. Paid tiers fail OPEN — they are billed for usage and
+        # carry contractual limits, so a brief guard outage should not break a
+        # paying customer's live widget.
+        plan = str(tenant.get("plan") or "free").lower()
+        fail_open = plan not in ("", "free")
         logger.warning(
-            "AI usage guard unavailable; allowing call tenant=%s op=%s",
+            "AI usage guard unavailable; tenant=%s op=%s plan=%s fail_open=%s",
             tenant_id,
             operation,
+            plan,
+            fail_open,
             exc_info=True,
         )
         return AIUsageReservation(
-            allowed=True,
+            allowed=fail_open,
             tenant_id=tenant_id,
             period_month=policy.period_month,
             estimated_tokens=estimated,
             alert_threshold_tokens=policy.alert_threshold_tokens,
             hard_limit_tokens=policy.hard_limit_tokens,
-            reason="guard_unavailable",
+            reason=(
+                "guard_unavailable_failopen"
+                if fail_open
+                else "guard_unavailable_failclosed"
+            ),
         )
 
     if not allowed:
@@ -231,20 +248,28 @@ def record_ai_usage(
         return None
 
     try:
-        response = get_service_supabase().rpc(
-            "record_ai_token_usage",
-            {
-                "p_tenant_id": reservation.tenant_id,
-                "p_period_month": reservation.period_month,
-                "p_reserved_tokens": reservation.estimated_tokens,
-                "p_input_tokens": _usage_value(result.input_tokens),
-                "p_output_tokens": _usage_value(result.output_tokens),
-                "p_cache_creation_input_tokens": _usage_value(result.cache_creation_input_tokens),
-                "p_cache_read_input_tokens": _usage_value(result.cache_read_input_tokens),
-                "p_alert_threshold_tokens": reservation.alert_threshold_tokens,
-                "p_hard_limit_tokens": reservation.hard_limit_tokens,
-            },
-        ).execute()
+        response = (
+            get_service_supabase()
+            .rpc(
+                "record_ai_token_usage",
+                {
+                    "p_tenant_id": reservation.tenant_id,
+                    "p_period_month": reservation.period_month,
+                    "p_reserved_tokens": reservation.estimated_tokens,
+                    "p_input_tokens": _usage_value(result.input_tokens),
+                    "p_output_tokens": _usage_value(result.output_tokens),
+                    "p_cache_creation_input_tokens": _usage_value(
+                        result.cache_creation_input_tokens
+                    ),
+                    "p_cache_read_input_tokens": _usage_value(
+                        result.cache_read_input_tokens
+                    ),
+                    "p_alert_threshold_tokens": reservation.alert_threshold_tokens,
+                    "p_hard_limit_tokens": reservation.hard_limit_tokens,
+                },
+            )
+            .execute()
+        )
     except Exception:
         logger.warning(
             "Failed to record AI usage tenant=%s op=%s session=%s",

@@ -726,6 +726,25 @@ class RequestContextMiddleware:
         scope.setdefault("state", {})
         scope["state"]["request_id"] = request_id
 
+        # Buffer the body for the widget chat POST so the rate limiter can key by
+        # api_key (plan tier) instead of silently falling back to client IP at
+        # free-tier. slowapi's key_func runs before the handler and cannot await
+        # the body, so we read it here, stash bytes on request.state._body, and
+        # replay them to the downstream app.
+        if scope["method"] == "POST" and scope["path"].endswith("/api/v1/widget/chat"):
+            body = b""
+            while True:
+                message = await receive()
+                body += message.get("body", b"")
+                if not message.get("more_body", False):
+                    break
+            scope["state"]["_body"] = body
+
+            async def _buffered_receive():
+                return {"type": "http.request", "body": body, "more_body": False}
+
+            receive = _buffered_receive
+
         headers = Headers(scope=scope)
         auth_header = headers.get("authorization", "")
         tenant_id: str | None = None

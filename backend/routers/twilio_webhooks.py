@@ -15,7 +15,7 @@ from fastapi.responses import PlainTextResponse
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.services.activity import log_activity
+from backend.services.activity import _mask_phone, log_activity
 from backend.services.twilio_service import format_textback_message, send_sms
 
 logger = logging.getLogger(__name__)
@@ -260,16 +260,23 @@ async def handle_missed_call(request: Request):
             logger.warning(
                 "Missed-call replay window exceeded: age=%.0fs caller=%s",
                 age_seconds,
-                caller,
+                _mask_phone(caller),
             )
             return PlainTextResponse("OK")
 
-    logger.info("Missed call from %s to %s (status: %s)", caller, called, call_status)
+    logger.info(
+        "Missed call from %s to %s (status: %s)",
+        _mask_phone(caller),
+        _mask_phone(called),
+        call_status,
+    )
 
     # Find the tenant this call was for
     tenant = _find_tenant_by_phone(called)
     if not tenant:
-        logger.warning("Missed call to %s — no matching tenant found", called)
+        logger.warning(
+            "Missed call to %s — no matching tenant found", _mask_phone(called)
+        )
         return PlainTextResponse("OK")
 
     business_name = tenant.get("business_name") or "us"
@@ -346,7 +353,9 @@ async def handle_missed_call(request: Request):
         sms_sid = None
 
     if sent:
-        logger.info("Text-back sent to %s for tenant %s", caller, tenant_id)
+        logger.info(
+            "Text-back sent to %s for tenant %s", _mask_phone(caller), tenant_id
+        )
 
         # Insert missed_call_texts row
         _insert_missed_call_row(

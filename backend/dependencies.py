@@ -18,11 +18,17 @@ _get_current_tenant = get_current_tenant
 
 def require_role(*allowed_roles):
     """FastAPI dependency factory: restrict endpoint to specific roles."""
+
     async def checker(claims: dict = Depends(_get_current_tenant)):
+        # Tokens are cryptographically signed, so the role claim cannot be
+        # forged; auth.py::_create_token always mints an explicit role. A
+        # missing role claim therefore only occurs on legacy validly-signed
+        # tokens, which default to owner to avoid locking out live sessions.
         role = claims.get("role", "owner")
         if role not in allowed_roles:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return claims
+
     return checker
 
 

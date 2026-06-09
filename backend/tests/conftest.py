@@ -132,6 +132,25 @@ def _stub_supabase_singletons():
         _db_module._public_client = prev_public
 
 
+@pytest.fixture(autouse=True)
+def _clear_widget_cache():
+    """Clear the widget router's module-level TTL cache around every test.
+
+    ``backend.routers.widget_chat_helpers._cache`` is a process-level dict
+    that survives across test modules. Without this, a widget config/tenant
+    cached by the root ``tests/`` suite leaks into ``backend/tests/`` and
+    flips invalid-key assertions (e.g. test_widget_chat) depending on suite
+    order. Clear before and after so each test sees a cold cache.
+    """
+    from backend.routers.widget_chat_helpers import _cache
+
+    _cache.clear()
+    try:
+        yield
+    finally:
+        _cache.clear()
+
+
 @pytest.fixture()
 def client():
     """Unauthenticated test client."""
@@ -190,7 +209,9 @@ def auth_headers():
 @pytest.fixture()
 def auth_headers_for():
     """Factory: Authorization headers for a specific tenant."""
+
     def _make(tenant_id):
         token = _make_auth_token(tenant_id)
         return {"Authorization": f"Bearer {token}"}
+
     return _make
