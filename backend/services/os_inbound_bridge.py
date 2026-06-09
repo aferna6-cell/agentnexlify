@@ -38,6 +38,7 @@ the §Toggle config section below own read/write/upsert.
 import logging
 from typing import Any, Literal
 
+from backend.services import usage_meter
 from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
@@ -426,6 +427,22 @@ async def _bridge_common(
             "user_message": user_message_row,
             "assistant_message": None,
             "action": "skipped_auto_reply",
+            "agent_runs": [],
+        }
+
+    # Plan-tier cap applies on this path too — without it, inbound webhooks
+    # (email/SMS/widget/Facebook) would burn agent runs past the cap that the
+    # dashboard routes enforce. The message is already saved as thread
+    # evidence; only the engine turn is skipped.
+    if usage_meter.cap_reached(db, client_id):
+        logger.warning(
+            "inbound bridge: agent-run cap reached, skipping turn client_id=%s",
+            client_id,
+        )
+        return {
+            "user_message": user_message_row,
+            "assistant_message": None,
+            "action": "skipped_cap_reached",
             "agent_runs": [],
         }
 

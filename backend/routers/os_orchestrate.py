@@ -1,10 +1,14 @@
-"""Agent OS orchestration via the vendored demo engine (Phase 1b).
+"""Agent OS orchestration — one engine path (Phase 4 cutover).
 
-POST /api/v1/os/orchestrate routes one owner turn through the agent-service
-engine instead of the legacy Python orchestrator: insert the user message,
-assemble the tenant's SharedContext from Supabase, call agent-service, and
-persist the returned run record. The widget feeds this as a data source
-(chat_messages -> SharedContext.widgetHistory).
+POST /api/v1/os/orchestrate runs one owner turn through the agent-service
+engine via the shared turn-runner: insert the user message, assemble the
+tenant's SharedContext from Supabase, call agent-service, persist the
+returned run record, and fire tenant-opted auto-send actions. The widget
+feeds this as a data source (chat_messages -> SharedContext.widgetHistory).
+
+When agent-service is unavailable the runner degrades honestly (saved
+message + "engine offline" reply) — never a 503, never the retired legacy
+orchestrator.
 
 client_id is always the JWT tenant_id — never a path/body value. Lives beside
 os_threads under the same /api/v1/os prefix (distinct paths, no shadowing).
@@ -13,12 +17,11 @@ os_threads under the same /api/v1/os prefix (distinct paths, no shadowing).
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
-from backend.services import agent_os_bridge, agent_sdk_client
+from backend.services import agent_os_bridge, usage_meter
 from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
@@ -50,6 +53,13 @@ async def orchestrate(
     client_id = claims["tenant_id"]
     db = get_service_supabase()
 
+    # Plan-tier cap: same gate the chat-shell route applies before each turn.
+    if usage_meter.cap_reached(db, client_id):
+        raise HTTPException(
+            status_code=429,
+            detail="Monthly agent-run limit reached for your plan. Upgrade to continue.",
+        )
+
     # Thread must belong to this tenant.
     thread = (
         tenant_table(db, "os_threads", client_id)
@@ -67,27 +77,13 @@ async def orchestrate(
         .execute()
         .data[0]
     )
+    usage_meter.record_message(db, client_id)
 
-    # Engine path (when AGENT_SERVICE_URL is set + force routing requested).
-    if agent_sdk_client.is_configured():
-        context = agent_os_bridge.assemble_shared_context(db, client_id)
-        out = await run_in_threadpool(
-            agent_sdk_client.orchestrate_sync,
-            client_id,
-            req.content,
-            context,
-            force_agent_id=req.force_agent_id,
-        )
-        if out is not None:
-            persisted = agent_os_bridge.persist_orchestration(
-                db, client_id, req.thread_id, out
-            )
-            return {"user_message": user_message, **persisted}
-
-    # Fallback: engine unconfigured or errored. Run the shared turn-runner (which
-    # itself prefers the engine when configured, else the legacy orchestrator) so
-    # the dashboard works regardless of AGENT_SERVICE_URL or deploy order — never
-    # a 503. The user message is already inserted, per process_user_turn's contract.
     return await process_user_turn(
-        db, client_id, req.thread_id, user_message, background_tasks
+        db,
+        client_id,
+        req.thread_id,
+        user_message,
+        background_tasks,
+        force_agent_id=req.force_agent_id,
     )

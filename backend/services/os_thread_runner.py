@@ -1,20 +1,17 @@
-"""Shared orchestration runner for Agent OS threads.
+"""Shared orchestration runner for Agent OS threads — engine-only (Phase 4).
 
-Extracted from ``backend/routers/os_threads.py::post_message`` so the
-chat-shell router AND the inbound-channel bridges
-(``backend/services/os_inbound_bridge.py``) drive the same orchestrator +
-worker pipeline. The bridge fan-in is the reason this exists: when a
-widget/email/SMS/Facebook message lands in an ``os_thread``, the same
-orchestrate -> answer/delegate/backlog routing has to fire as if the
-owner typed it in the chat shell.
+The chat-shell router (``backend/routers/os_threads.py``), the orchestrate
+endpoint, and the inbound-channel bridges
+(``backend/services/os_inbound_bridge.py``) all drive one user-turn through
+the same path: assemble the tenant's SharedContext, run the vendored Agent OS
+engine in agent-service, persist the result into ``os_*``, mirror the reply
+to the originating channel.
 
-Single source of truth for one user-turn:
-1. Pull thread history.
-2. Run the orchestrator.
-3. Record any orchestrator-detected memory writes.
-4. Persist the resulting assistant turn (delegate -> create agent_run row,
-   answer -> assistant message, backlog -> backlog row + notify).
-5. Bump thread updated_at.
+The legacy Python orchestrator + ``os_workers`` layer is retired (Phase 4 of
+``plans/agent-os-demo-merge_plan.md``). When the engine is unconfigured or
+unreachable the turn degrades honestly: the user message is already saved,
+and the assistant replies that agents are temporarily offline — no silent
+re-route through stale code, never a 503.
 
 Contract: ``user_message_row`` is already inserted into ``os_messages``
 before this runs. Caller owns insertion because inbound bridges need
@@ -27,17 +24,17 @@ from datetime import datetime, timezone
 from fastapi import BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 
-from backend.services import (
-    agent_os_bridge,
-    agent_sdk_client,
-    orchestrator,
-    os_workers,
-)
-from backend.services.email_sender import send_email
+from backend.services import agent_os_bridge, agent_sdk_client
+from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
+
+ENGINE_OFFLINE_REPLY = (
+    "Your message is saved, but the agent engine is temporarily unavailable. "
+    "We'll pick this up as soon as it's back — no need to resend."
+)
 
 
 def _now() -> str:
@@ -50,171 +47,111 @@ async def process_user_turn(
     thread_id: str,
     user_message_row: dict,
     background_tasks: BackgroundTasks | None,
+    force_agent_id: str | None = None,
 ) -> dict:
-    """Run one orchestrator turn for a thread.
+    """Run one engine turn for a thread.
 
     Caller (router OR inbound bridge) must have already inserted the user
-    message row. Returns the same shape that the chat-shell router returns
-    today so the public POST /threads/{id}/messages response stays
-    backwards-compatible.
+    message row. Returns the same shape the chat-shell router has always
+    returned, so POST /threads/{id}/messages stays backwards-compatible.
 
     ``background_tasks=None`` is allowed for fully-background callers
     (e.g. inbound bridges already running inside a BackgroundTask) — in
-    that case worker runs execute inline. The router passes the live
-    BackgroundTasks instance.
+    that case any auto-send action handler runs inline.
     """
     user_content = user_message_row["content"]
 
-    # Prefer the Agent OS engine (the vendored demo framework in agent-service)
-    # when configured. Falls back to the legacy Python orchestrator below on any
-    # failure or when AGENT_SERVICE_URL is unset, so the chat shell AND every
-    # inbound bridge (widget/email/SMS/Facebook) never break mid-cutover — no
-    # half-migration. Delete the legacy path only once the engine is proven live.
+    out = None
     if agent_sdk_client.is_configured():
-        engine_result = await _run_via_engine(
-            db, client_id, thread_id, user_message_row
-        )
-        if engine_result is not None:
-            return engine_result
-
-    history_rows = (
-        tenant_table(db, "os_messages", client_id)
-        .select("role, content")
-        .eq("thread_id", thread_id)
-        .order("created_at", desc=False)
-        .execute()
-    ).data or []
-    # The just-inserted user message is in history; orchestrator expects
-    # prior turns only.
-    history = [
-        row
-        for row in history_rows
-        if row.get("content") != user_content or row.get("role") != "user"
-    ]
-
-    decision = await orchestrator.orchestrate(
-        db, client_id, user_content, history=history
-    )
-    if decision.memory_writes:
-        await orchestrator.record_memory_writes(
-            db, client_id, decision.memory_writes, source=f"thread:{thread_id}"
+        context = agent_os_bridge.assemble_shared_context(db, client_id)
+        out = await run_in_threadpool(
+            agent_sdk_client.orchestrate_sync,
+            client_id,
+            user_content,
+            context,
+            force_agent_id=force_agent_id,
         )
 
-    messages_tbl = tenant_table(db, "os_messages", client_id)
-    agent_runs: list[dict] = []
-
-    if decision.action == "delegate":
-        run = (
-            tenant_table(db, "os_agent_runs", client_id)
-            .insert(
-                {
-                    "thread_id": thread_id,
-                    "agent_name": decision.agent_name,
-                    "status": "queued",
-                    "thought_process": decision.thought_process,
-                }
-            )
-            .execute()
-            .data[0]
-        )
-        agent_runs.append(run)
-        assistant_message = (
-            messages_tbl.insert(
-                {
-                    "thread_id": thread_id,
-                    "role": "assistant",
-                    "content": decision.reply,
-                    "agent_run_id": run["id"],
-                }
-            )
-            .execute()
-            .data[0]
-        )
-        if background_tasks is not None:
-            background_tasks.add_task(
-                os_workers.run_worker,
-                run["id"],
-                client_id,
-                thread_id,
-                decision.agent_name,
-                user_content,
-                decision.deliverable_title or "Draft",
-            )
-        else:
-            # Bridge path: already inside a background task. Run inline so
-            # the worker completes before this function returns.
-            await os_workers.run_worker(
-                run["id"],
-                client_id,
-                thread_id,
-                decision.agent_name,
-                user_content,
-                decision.deliverable_title or "Draft",
-            )
-    elif decision.action == "backlog":
-        _create_backlog(db, client_id, thread_id, user_content, decision)
-        assistant_message = (
-            messages_tbl.insert(
-                {"thread_id": thread_id, "role": "assistant", "content": decision.reply}
-            )
-            .execute()
-            .data[0]
-        )
-        await _notify_owner_no_fit(db, client_id, user_content, decision)
-    else:  # answer
-        assistant_message = (
-            messages_tbl.insert(
-                {"thread_id": thread_id, "role": "assistant", "content": decision.reply}
-            )
-            .execute()
-            .data[0]
-        )
-
-    await _mirror_to_channel(db, client_id, thread_id, assistant_message)
-
-    tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
-        "id", thread_id
-    ).execute()
-
-    return {
-        "user_message": user_message_row,
-        "assistant_message": assistant_message,
-        "action": decision.action,
-        "agent_runs": agent_runs,
-    }
-
-
-async def _run_via_engine(
-    db, client_id: str, thread_id: str, user_message_row: dict
-) -> dict | None:
-    """Route one turn through the agent-service engine.
-
-    Assembles the tenant's SharedContext from Supabase, runs the engine, and
-    persists the returned record into os_*. Returns None to signal the caller
-    to fall back to the legacy orchestrator (engine unconfigured or the HTTP
-    call failed) — so a transient agent-service outage degrades gracefully
-    instead of dropping the turn. Mirrors the reply back to inbound channels,
-    same as the legacy path.
-    """
-    user_content = user_message_row["content"]
-    context = agent_os_bridge.assemble_shared_context(db, client_id)
-    out = await run_in_threadpool(
-        agent_sdk_client.orchestrate_sync, client_id, user_content, context
-    )
     if out is None:
-        return None
+        return await _degrade_offline(db, client_id, thread_id, user_message_row)
 
     persisted = agent_os_bridge.persist_orchestration(db, client_id, thread_id, out)
     assistant_message = persisted.get("assistant_message")
     if assistant_message:
         await _mirror_to_channel(db, client_id, thread_id, assistant_message)
+
     agent_run = persisted.get("agent_run")
+    await _dispatch_auto_send(db, client_id, agent_run, background_tasks)
+
     return {
         "user_message": user_message_row,
         "assistant_message": assistant_message,
         "action": "delegate" if agent_run else "answer",
         "agent_runs": [agent_run] if agent_run else [],
     }
+
+
+async def _degrade_offline(
+    db, client_id: str, thread_id: str, user_message_row: dict
+) -> dict:
+    """Honest fallback when agent-service is unconfigured or unreachable.
+
+    The user message is already persisted; reply that agents are offline,
+    mirror that reply to the originating channel, bump the thread. The next
+    turn retries the engine — nothing is lost, nothing silently re-routes.
+    """
+    logger.warning(
+        "agent engine unavailable: client_id=%s thread=%s configured=%s",
+        client_id,
+        thread_id,
+        agent_sdk_client.is_configured(),
+    )
+    assistant_message = (
+        tenant_table(db, "os_messages", client_id)
+        .insert(
+            {
+                "thread_id": thread_id,
+                "role": "assistant",
+                "content": ENGINE_OFFLINE_REPLY,
+            }
+        )
+        .execute()
+        .data[0]
+    )
+    await _mirror_to_channel(db, client_id, thread_id, assistant_message)
+    tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
+        "id", thread_id
+    ).execute()
+    return {
+        "user_message": user_message_row,
+        "assistant_message": assistant_message,
+        "action": "answer",
+        "agent_runs": [],
+    }
+
+
+async def _dispatch_auto_send(
+    db, client_id: str, agent_run: dict | None, background_tasks: BackgroundTasks | None
+) -> None:
+    """Fire the action handler for a tenant-opted auto-approved run.
+
+    ``persist_orchestration`` only marks a run approved when the engine said
+    no approval is needed AND the tenant opted in (``os_auto_send_enabled``)
+    AND the agent is outside the never-auto-send set. Everything else stays
+    pending and fires through the owner's Approve button instead.
+    """
+    if not agent_run:
+        return
+    if agent_run.get("deliverable_status") != "approved":
+        return
+    if not agent_run.get("action_type"):
+        return
+    try:
+        await queue_action_for_run(db, client_id, agent_run, background_tasks)
+    except Exception:
+        logger.warning(
+            "auto-send dispatch failed run_id=%s", agent_run.get("id"), exc_info=True
+        )
 
 
 async def _mirror_to_channel(
@@ -256,47 +193,3 @@ async def _mirror_to_channel(
             thread_id,
             exc_info=True,
         )
-
-
-def _create_backlog(
-    db, client_id: str, thread_id: str, user_content: str, decision
-) -> None:
-    tenant_table(db, "os_backlog_requests", client_id).insert(
-        {
-            "thread_id": thread_id,
-            "summary": (decision.deliverable_title or user_content)[:200],
-            "detail": user_content,
-            "reason": decision.reason or "No available worker agent fits.",
-        }
-    ).execute()
-
-
-async def _notify_owner_no_fit(db, client_id: str, user_content: str, decision) -> None:
-    """Best-effort owner email when a request lands in the no-fit backlog."""
-    try:
-        tenant = (
-            db.table("tenants")
-            .select("owner_email, business_name")
-            .eq("id", client_id)
-            .limit(1)
-            .execute()
-        )
-        if not tenant.data or not tenant.data[0].get("owner_email"):
-            return
-        owner_email = tenant.data[0]["owner_email"]
-        business = tenant.data[0].get("business_name") or "your business"
-        await send_email(
-            to=owner_email,
-            subject="Agent OS: a request needs your decision",
-            body_html=(
-                f"<p>A request for {business} could not be handled by any "
-                f"current worker agent and was parked in the backlog.</p>"
-                f"<p><strong>Request:</strong> {user_content}</p>"
-                f"<p><strong>Why no fit:</strong> "
-                f"{decision.reason or 'No worker agent matches this task.'}</p>"
-                "<p>Review it in the Agent OS backlog to build, defer, or drop it.</p>"
-            ),
-            tenant_id=client_id,
-        )
-    except Exception:
-        logger.warning("no-fit owner notification failed", exc_info=True)

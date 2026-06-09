@@ -116,7 +116,8 @@ Ordered as tracer-bullet-first: prove the full seam end-to-end on **one** agent 
 - Port `/admin/costs` + `/admin/routing` as React pages reading new FastAPI cost/routing-log endpoints.
 - **Exit:** `/agent-os` in the dashboard is the demo UX, talking to the new core.
 
-### Phase 4 — Cut over + deprecate the old Python agent layer (1 wk)
+### Phase 4 — Cut over + deprecate the old Python agent layer (1 wk) — ✅ DONE 2026-06-09
+> Shipped: engine-only `os_thread_runner` (honest offline fallback, no legacy re-route), `os_workers/` + Python `orchestrator.py` deleted, channel→action mapping + tenant-gated auto-send in `agent_os_bridge`, shared dispatch helper `os_action_dispatch.py`, plan-tier caps in `usage_meter`, inbound-bridge cap gate, owner-only approve. `managed_agents_registry` kept — it powers lead qualification/document drafting/widget chat, distinct from this agent layer.
 - Route widget + OS thread runs through the new core. Keep `managed_agents` as the documented graceful-degradation fallback when `AGENT_SERVICE_URL` is unset (the pattern already exists in `agent_sdk_client.py`).
 - `dead-code-sweep`: retire `os_thread_runner.process_user_turn`, `os_workers/`, Python `orchestrator.orchestrate`, `managed_agents_registry` once the new path is proven. (Separate session per the "don't audit + fix together" rule.)
 - **Exit:** demo framework is the only live agent path; old Python agent logic removed; `os_*` tables/endpoints still the persistence layer.

@@ -123,6 +123,12 @@ def _patch_helpers(
         fake_append_inbound_message,
     )
     monkeypatch.setattr(os_inbound_bridge, "process_user_turn", fake_process_user_turn)
+    # cap_reached is a DB-touching dependency added with the plan-tier cap on
+    # the inbound path (security finding: webhooks bypassed the cap). Stub it
+    # like the other DB helpers; the cap-skip contract has its own test below.
+    monkeypatch.setattr(
+        os_inbound_bridge.usage_meter, "cap_reached", lambda db, client_id: False
+    )
     return calls
 
 
@@ -265,3 +271,31 @@ async def test_bridge_widget_replay_is_idempotent(monkeypatch, fake_db):
     # No additional inserts and no additional orchestrator turn.
     assert len(inserts) == 1
     assert len(calls["process_turn"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_bridge_skips_engine_turn_when_cap_reached(monkeypatch, fake_db):
+    """Plan-tier cap applies to inbound webhooks, same as dashboard routes.
+
+    The message still lands as thread evidence; only the engine turn is
+    skipped (action='skipped_cap_reached', no process_user_turn call).
+    """
+    _patch_toggle(monkeypatch, enabled=True)
+    calls = _patch_helpers(monkeypatch, ingested_refs=set())
+    monkeypatch.setattr(
+        os_inbound_bridge.usage_meter, "cap_reached", lambda db, client_id: True
+    )
+
+    out = await os_inbound_bridge.bridge_widget(
+        db=fake_db,
+        client_id="tenant-1",
+        conversation_id="conv-1",
+        provider_message_id="chatmsg-cap",
+        user_content="book me in",
+    )
+
+    assert out["action"] == "skipped_cap_reached"
+    assert out["agent_runs"] == []
+    # Message was persisted as evidence; engine turn never fired.
+    assert len(calls["append_message"]) == 1
+    assert len(calls["process_turn"]) == 0

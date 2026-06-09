@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
+from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_actions import all_actions, get_action, run_action
 from backend.services.tenant_scope import tenant_table
 
@@ -140,57 +141,19 @@ async def approve_deliverable(
     handler, an ``os_action_runs`` row is created with ``status='queued'``
     and the handler is scheduled via BackgroundTasks. If no action_type is
     set, the deliverable is approved with no side effect (display-only).
+
+    Owner-only: approval can fire a real-world send (SMS/email/widget), the
+    same bar ``retry_action_run`` already enforces.
     """
+    if not _is_owner(claims):
+        raise HTTPException(status_code=403, detail="Owner role required")
+
     client_id = claims["tenant_id"]
     db = get_service_supabase()
     run = _load_run(db, client_id, run_id)
     _require_pending(run)
 
-    action_type = run.get("action_type")
-    action_run_id: str | None = None
-
-    if action_type:
-        handler = get_action(action_type)
-        if handler is None:
-            logger.warning(
-                "approve_deliverable: unknown action_type=%s run_id=%s",
-                action_type,
-                run_id,
-            )
-        else:
-            existing_succeeded = (
-                tenant_table(db, "os_action_runs", client_id)
-                .select("id")
-                .eq("deliverable_id", run_id)
-                .eq("action_type", action_type)
-                .eq("status", "succeeded")
-                .limit(1)
-                .execute()
-            )
-            if existing_succeeded.data:
-                action_run_id = existing_succeeded.data[0]["id"]
-            else:
-                insert_payload = {
-                    "client_id": client_id,
-                    "deliverable_id": run_id,
-                    "action_type": action_type,
-                    "status": "queued",
-                    "request_payload": {},
-                }
-                created = (
-                    tenant_table(db, "os_action_runs", client_id)
-                    .insert(insert_payload)
-                    .execute()
-                )
-                if created.data:
-                    action_run_id = created.data[0]["id"]
-                    background.add_task(
-                        run_action,
-                        action_run_id,
-                        client_id,
-                        run_id,
-                        action_type,
-                    )
+    action_run_id = await queue_action_for_run(db, client_id, run, background)
 
     update_fields = {"deliverable_status": "approved", "updated_at": _now()}
     if action_run_id:
