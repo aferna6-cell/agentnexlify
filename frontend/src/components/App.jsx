@@ -188,7 +188,7 @@ const pages = {
 // URL ↔ page-key routing (supports direct navigation and browser back/forward)
 // --------------------------------------------------------------------------
 const PAGE_TO_PATH = {
-  dashboard: "/dashboard",
+  dashboard: "/dashboard/overview",
   analytics: "/dashboard/analytics",
   control_center: "/dashboard/agent-control",
   agent_os: "/dashboard/agent-os",
@@ -248,7 +248,10 @@ const PATH_TO_PAGE = Object.fromEntries(
 
 function pageFromPath(pathname) {
   if (PATH_TO_PAGE[pathname]) return PATH_TO_PAGE[pathname];
-  if (pathname.startsWith("/dashboard")) return "dashboard";
+  // Front door: bare /dashboard (old bookmarks, post-login) and unknown
+  // /dashboard/* paths land on the Agent OS conversation. The classic
+  // dashboard lives at its own exact path, /dashboard/overview.
+  if (pathname.startsWith("/dashboard")) return "agent_os";
   if (pathname.startsWith("/admin/")) {
     // Map /admin/analytics -> admin_analytics, /admin/promotions -> admin_promotions
     const slug = pathname.replace("/admin/", "").replace(/-/g, "_");
@@ -310,8 +313,10 @@ function TrialBanner({ trialData, onNavigate }) {
 
 export default function App() {
   const { user, token } = useAuth();
+  // Front door: a logged-in user lands on the Agent OS conversation.
+  // Every classic page stays deep-linkable via its exact /dashboard/* path.
   const [currentPage, setCurrentPage] = useState(
-    () => pageFromPath(window.location.pathname) || "dashboard",
+    () => pageFromPath(window.location.pathname) || "agent_os",
   );
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -361,7 +366,7 @@ export default function App() {
   // Sync page state with browser back/forward buttons
   useEffect(() => {
     const onPop = () => {
-      const page = pageFromPath(window.location.pathname) || "dashboard";
+      const page = pageFromPath(window.location.pathname) || "agent_os";
       setCurrentPage(page);
       setPageData(null);
     };

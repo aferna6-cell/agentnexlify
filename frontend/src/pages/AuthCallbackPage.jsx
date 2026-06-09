@@ -27,8 +27,8 @@ export default function AuthCallbackPage() {
 
     localStorage.setItem("anx_token", token);
     localStorage.setItem("anx_tenant_id", tenantId);
-    window.history.replaceState({}, document.title, "/dashboard");
-    navigate("/dashboard", { replace: true });
+    window.history.replaceState({}, document.title, "/dashboard/agent-os");
+    navigate("/dashboard/agent-os", { replace: true });
   }, [navigate]);
 
   return (
