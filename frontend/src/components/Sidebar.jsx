@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { resolveBusinessTypeKey } from "../utils/businessType";
 
 const planLabels = {
   free: "Free",
@@ -200,6 +201,7 @@ const allNavItems = [
     ),
     label: "Job Board",
     roles: ["owner", "admin"],
+    businessTypes: ["home_services", "hvac", "auto_shop"],
   },
   {
     key: "bids",
@@ -208,6 +210,7 @@ const allNavItems = [
     ),
     label: "Bids",
     roles: ["owner", "admin"],
+    businessTypes: ["home_services", "hvac", "auto_shop"],
   },
   {
     key: "invoices",
@@ -241,6 +244,7 @@ const allNavItems = [
     key: "waitlist",
     icon: <Icon d="M12 2v4M12 18v4M8 8h8M6 12h12M8 16h8" />,
     label: "Waitlist",
+    businessTypes: ["restaurant", "salon", "dental", "medical", "fitness"],
   },
   {
     key: "scoring_config",
@@ -602,7 +606,10 @@ export default function Sidebar({
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
-  const businessType = (user?.businessType || "").toLowerCase();
+  // Resolve the raw stored business_type (free-text, e.g. "plumbing", "cafe")
+  // to its canonical industry-pack key so vertical-only pages gate correctly.
+  // item.businessTypes lists canonical keys — see utils/businessType.js.
+  const businessType = resolveBusinessTypeKey(user?.businessType);
   const navItems = allNavItems.filter(
     (item) =>
       !item.hidden &&
