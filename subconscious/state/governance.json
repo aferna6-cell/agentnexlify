@@ -19,10 +19,12 @@
       "title": "Add Check 12 — agent-service timing-safe guard to pre-commit (AUTONOMOUS-EXECUTABLE, WARNING mode, ~12 lines bash) (run 52 winner)",
       "date": "2026-06-08-pm",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
       "autonomous_executable": true,
       "category": "code_health",
-      "note": "Run 52 winner. AUTONOMOUS-EXECUTABLE. Evidence: GH #206 timing attack in auth.ts (=== on X-Agent-Token, filed nightly 2026-06-07) + 2287f6b opt-in/opt-out default bug = 2 security-adjacent incidents in 7 days on agent-service. Python backend: 11 pre-commit guards; agent-service: 0. agent-service growing fast (30+ agents, customer-facing via Agent OS dashboard). Check 12 adds 12-line bash WARNING block to scripts/hooks/pre-commit scanning agent-service/src/**/*.ts for timing-unsafe token comparisons (=== without timingSafeEqual). AUTONOMOUS scope covers bash additions to pre-commit (confirmed 4226ef4 + 061582c precedent). Implementation sketch: subconscious/runs/2026-06-08-pm/winning-concept.md §Steps 1-5. Bonus Actions: Merge PR #209 (security, Bonus A), PR #200 (autonomous chain, Bonus B), PR #183 (billing, Bonus C) — ~20 min combined."
+      "implemented_date": "2026-06-09",
+      "implemented_by": "nightly-commit-review 2026-06-09",
+      "note": "Run 52 winner. IMPLEMENTED by nightly review 2026-06-09 — added Check 12 to scripts/hooks/pre-commit (20-line bash WARNING block). Scans agent-service/src/**/*.ts for (token|secret|key|header)[a-zA-Z]* === patterns without timingSafeEqual. WARNING mode (consistent with Check 11). Bypass: // ok-timing-unsafe comment. PASS on current codebase (auth.ts uses variable 'value' not 'token', covered by GH #206/PR #209). Bonus Actions still pending: Merge PR #209 (security, Bonus A), PR #200 (autonomous chain, Bonus B), PR #183 (billing, Bonus C) — ~20 min combined."
     },
     {
       "title": "Verify and merge PR #183 — close GH #181 (billing.py AMOUNT_TO_PLAN missing 15000→autopilot + 25000→professional) via existing 12-day draft PR (run 51 winner)",

@@ -267,6 +267,26 @@ if [ -f "$BILLING_FILE" ]; then
     fi
 fi
 
+# Check 12: agent-service timing-safe comparison guard
+echo -n "Check 12: agent-service timing-safe comparison guard... "
+if [ -d "agent-service/src" ]; then
+    TIMING_HITS=$(grep -rE "(token|secret|key|header)[a-zA-Z]* ===" agent-service/src/ --include="*.ts" | \
+        grep -v "timingSafeEqual" | grep -v "// ok-timing-unsafe" || true)
+    if [ -n "$TIMING_HITS" ]; then
+        echo -e "${YELLOW}WARNING${NC}"
+        echo "  agent-service may have timing-unsafe token comparisons. Use timingSafeEqual from node:crypto."
+        echo "  Hits:"
+        echo "$TIMING_HITS" | head -5 | sed 's/^/    /'
+        echo "  Fix: import { timingSafeEqual } from 'node:crypto'"
+        echo "  Bypass: add '// ok-timing-unsafe' comment on the line if intentional"
+        WARNINGS=$((WARNINGS + 1))
+    else
+        echo -e "${GREEN}OK${NC}"
+    fi
+else
+    echo -e "${GREEN}OK${NC} (agent-service/src not present, skipped)"
+fi
+
 if [ $ERRORS -gt 0 ]; then
     echo -e "${RED}COMMIT BLOCKED: $ERRORS critical issue(s) found.${NC}"
     echo "Fix the issues above before committing."
