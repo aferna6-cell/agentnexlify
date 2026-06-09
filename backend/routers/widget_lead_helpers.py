@@ -41,21 +41,23 @@ NAME_RE = re.compile(
     re.IGNORECASE,
 )
 # Standalone name: entire message is 1-3 capitalized words (e.g. "John Smith")
-STANDALONE_NAME_RE = re.compile(
-    r"^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){0,2})\.?$"
-)
+STANDALONE_NAME_RE = re.compile(r"^([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){0,2})\.?$")
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}(?![a-zA-Z])")
 PHONE_RE = re.compile(
-    r"(?:\+\d{1,3}[-.\s]?)?"       # optional country code: +1, +44, +91
-    r"\(?\d{2,4}\)?"               # area/city code (2-4 digits, optional parens)
-    r"[-.\s]?\d{2,4}"              # number group 2
-    r"[-.\s]?\d{2,4}"              # number group 3
-    r"(?:[-.\s]?\d{1,4})?"         # optional group 4 (longer intl numbers)
+    r"(?:\+\d{1,3}[-.\s]?)?"  # optional country code: +1, +44, +91
+    r"\(?\d{2,4}\)?"  # area/city code (2-4 digits, optional parens)
+    r"[-.\s]?\d{2,4}"  # number group 2
+    r"[-.\s]?\d{2,4}"  # number group 3
+    r"(?:[-.\s]?\d{1,4})?"  # optional group 4 (longer intl numbers)
 )
 
 SYSTEM_TAGS = [
-    "New Lead", "Pricing Question", "Complaint",
-    "Appointment Request", "Urgent", "Follow-up Needed",
+    "New Lead",
+    "Pricing Question",
+    "Complaint",
+    "Appointment Request",
+    "Urgent",
+    "Follow-up Needed",
 ]
 
 # Map managed-agent schema field → live `leads` table column.
@@ -73,6 +75,7 @@ _ENRICHMENT_FIELD_MAP: dict[str, str] = {
 # ---------------------------------------------------------------------------
 # Extraction helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_lead_info(text: str) -> dict[str, str]:
     """Extract name, email, and phone from a user message via regex."""
@@ -191,7 +194,9 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
     return []
 
 
-def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dict]) -> None:
+def _categorize_conversation(
+    tenant_id: str, session_id: str, messages: list[dict]
+) -> None:
     """Background task: AI auto-categorize conversation into preset business tags."""
     if not messages or len(messages) < 3:
         return
@@ -230,7 +235,11 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
             ),
             messages=[{"role": "user", "content": transcript}],
             timeout=30.0,
-            metadata={"tenant_id": tenant_id, "session_id": session_id, "tag_count": len(available_tags)},
+            metadata={
+                "tenant_id": tenant_id,
+                "session_id": session_id,
+                "tag_count": len(available_tags),
+            },
         )
         raw = resp.text.strip()
         if raw.startswith("```"):
@@ -266,7 +275,9 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
         logger.warning("conversation_categorize: unexpected failure", exc_info=True)
 
 
-def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict]) -> None:
+def _extract_action_items(
+    tenant_id: str, session_id: str, messages: list[dict]
+) -> None:
     """Background task: AI extracts actionable items from conversation."""
     if not messages or len(messages) < 4:
         return
@@ -295,7 +306,11 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
             ),
             messages=[{"role": "user", "content": transcript}],
             timeout=30.0,
-            metadata={"tenant_id": tenant_id, "session_id": session_id, "message_count": len(messages)},
+            metadata={
+                "tenant_id": tenant_id,
+                "session_id": session_id,
+                "message_count": len(messages),
+            },
         )
         raw = resp.text.strip()
         if raw.startswith("```"):
@@ -320,7 +335,11 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
             data: dict[str, Any] = {
                 "tenant_id": tenant_id,
                 "description": str(item["description"])[:500],
-                "priority": item.get("priority", "medium") if item.get("priority") in ("low", "medium", "high") else "medium",
+                "priority": (
+                    item.get("priority", "medium")
+                    if item.get("priority") in ("low", "medium", "high")
+                    else "medium"
+                ),
             }
             if conv_id:
                 data["conversation_id"] = conv_id
@@ -354,7 +373,9 @@ async def _capture_leads_from_session(
     try:
         logger.info(
             "lead_capture START: tenant=%s session=%s conv=%s",
-            tenant_id, session_id, conversation_id,
+            tenant_id,
+            session_id,
+            conversation_id,
         )
         messages = _load_chat_history(tenant_id, session_id, limit=50)
         logger.info("lead_capture: loaded %d messages from session", len(messages))
@@ -368,7 +389,8 @@ async def _capture_leads_from_session(
             if extracted:
                 logger.info(
                     "lead_capture: extracted from message %r → %s",
-                    msg["content"][:80], extracted,
+                    msg["content"][:80],
+                    extracted,
                 )
             combined.update(extracted)
 
@@ -384,18 +406,26 @@ async def _capture_leads_from_session(
         if combined.get("email"):
             logger.info(
                 "lead_capture: dedup check — email=%s client_id=%s",
-                combined["email"], tenant_id,
+                combined["email"],
+                tenant_id,
             )
             try:
                 existing = (
-                    tenant_select(db, "leads", tenant_id, "id, name, phone, areas_of_interest, conversation_summary")
+                    tenant_select(
+                        db,
+                        "leads",
+                        tenant_id,
+                        "id, name, phone, areas_of_interest, conversation_summary",
+                    )
                     .eq("email", combined["email"])
                     .limit(1)
                     .execute()
                 )
             except Exception as dedup_err:
                 logger.error(
-                    "lead_capture: dedup query FAILED: %s", dedup_err, exc_info=True,
+                    "lead_capture: dedup query FAILED: %s",
+                    dedup_err,
+                    exc_info=True,
                 )
                 existing = type("R", (), {"data": []})()
 
@@ -409,12 +439,18 @@ async def _capture_leads_from_session(
                         if not lead.get(db_field):
                             updates[db_field] = combined[field]
                         elif lead[db_field] != combined[field]:
-                            suggestions[db_field] = {"old": lead[db_field], "new": combined[field]}
+                            suggestions[db_field] = {
+                                "old": lead[db_field],
+                                "new": combined[field],
+                            }
                 if combined.get("service_interest"):
                     if not lead.get("areas_of_interest"):
                         updates["areas_of_interest"] = combined["service_interest"]
                     elif lead["areas_of_interest"] != combined["service_interest"]:
-                        suggestions["areas_of_interest"] = {"old": lead["areas_of_interest"], "new": combined["service_interest"]}
+                        suggestions["areas_of_interest"] = {
+                            "old": lead["areas_of_interest"],
+                            "new": combined["service_interest"],
+                        }
                 summary = _build_conversation_summary(messages)
                 if summary and not lead.get("conversation_summary"):
                     updates["conversation_summary"] = summary
@@ -427,11 +463,19 @@ async def _capture_leads_from_session(
                             lead_id=lead["id"],
                             metadata={"suggestions": suggestions, "source": "widget"},
                         )
-                        logger.info("lead_capture: created suggestion for lead %s: %s", lead["id"], list(suggestions.keys()))
+                        logger.info(
+                            "lead_capture: created suggestion for lead %s: %s",
+                            lead["id"],
+                            list(suggestions.keys()),
+                        )
                     except Exception:
-                        logger.warning("lead_capture: failed to create suggestion", exc_info=True)
+                        logger.warning(
+                            "lead_capture: failed to create suggestion", exc_info=True
+                        )
                 if updates:
-                    tenant_update(db, "leads", tenant_id, updates).eq("id", lead["id"]).execute()
+                    tenant_update(db, "leads", tenant_id, updates).eq(
+                        "id", lead["id"]
+                    ).execute()
                     log_activity(
                         tenant_id=tenant_id,
                         activity_type="lead_updated",
@@ -439,29 +483,60 @@ async def _capture_leads_from_session(
                         lead_id=lead["id"],
                         metadata={"source": "widget", "fields": list(updates.keys())},
                     )
-                    logger.info("lead_capture: updated lead %s fields=%s", lead["id"], list(updates.keys()))
-                    fire_event_background(tenant_id, "lead.updated", {
-                        "lead_id": lead["id"],
-                        "updated_fields": list(updates.keys()),
-                        "source": "widget",
-                    })
+                    logger.info(
+                        "lead_capture: updated lead %s fields=%s",
+                        lead["id"],
+                        list(updates.keys()),
+                    )
+                    fire_event_background(
+                        tenant_id,
+                        "lead.updated",
+                        {
+                            "lead_id": lead["id"],
+                            "updated_fields": list(updates.keys()),
+                            "source": "widget",
+                        },
+                    )
                 try:
                     tags = _extract_tags_from_conversation(messages)
                     if tags:
-                        tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead["id"]).execute()
-                        logger.info("lead_capture: tagged existing lead %s with %s", lead["id"], tags)
+                        tenant_update(db, "leads", tenant_id, {"tags": tags}).eq(
+                            "id", lead["id"]
+                        ).execute()
+                        logger.info(
+                            "lead_capture: tagged existing lead %s with %s",
+                            lead["id"],
+                            tags,
+                        )
                 except Exception:
-                    logger.warning("lead_capture: tag extraction failed for lead %s", lead["id"], exc_info=True)
+                    logger.warning(
+                        "lead_capture: tag extraction failed for lead %s",
+                        lead["id"],
+                        exc_info=True,
+                    )
                 if conversation_id:
                     try:
                         from uuid import UUID
+
                         UUID(conversation_id)
-                        tenant_update(db, "conversations", tenant_id, {"lead_captured": True}).eq("id", conversation_id).execute()
-                        logger.info("lead_capture: set lead_captured=true on conversation %s (existing lead)", conversation_id)
+                        tenant_update(
+                            db, "conversations", tenant_id, {"lead_captured": True}
+                        ).eq("id", conversation_id).execute()
+                        logger.info(
+                            "lead_capture: set lead_captured=true on conversation %s (existing lead)",
+                            conversation_id,
+                        )
                     except (ValueError, AttributeError):
-                        logger.warning("lead_capture: conversation_id %r is not a UUID, skipping lead_captured update", conversation_id)
+                        logger.warning(
+                            "lead_capture: conversation_id %r is not a UUID, skipping lead_captured update",
+                            conversation_id,
+                        )
                     except Exception:
-                        logger.warning("lead_capture: failed to update lead_captured on conversation %s", conversation_id, exc_info=True)
+                        logger.warning(
+                            "lead_capture: failed to update lead_captured on conversation %s",
+                            conversation_id,
+                            exc_info=True,
+                        )
                 return
 
         # Extract service interest from conversation context
@@ -485,10 +560,14 @@ async def _capture_leads_from_session(
 
         try:
             from uuid import UUID
+
             UUID(conversation_id)
             lead_fields["conversation_id"] = conversation_id
         except (ValueError, AttributeError):
-            logger.debug("lead_capture: conversation_id %r is not a UUID, omitting", conversation_id)
+            logger.debug(
+                "lead_capture: conversation_id %r is not a UUID, omitting",
+                conversation_id,
+            )
 
         logger.info("lead_capture: inserting new lead with fields=%s", lead_fields)
         try:
@@ -496,14 +575,18 @@ async def _capture_leads_from_session(
         except Exception as insert_err:
             logger.error(
                 "lead_capture: INSERT FAILED: %s — fields were %s",
-                insert_err, lead_fields, exc_info=True,
+                insert_err,
+                lead_fields,
+                exc_info=True,
             )
             return
 
         if result.data:
             lead_id = result.data[0]["id"]
             lead_name = combined.get("name", "New visitor")
-            logger.info("lead_capture: SUCCESS lead_id=%s client_id=%s", lead_id, tenant_id)
+            logger.info(
+                "lead_capture: SUCCESS lead_id=%s client_id=%s", lead_id, tenant_id
+            )
 
             try:
                 log_activity(
@@ -517,32 +600,57 @@ async def _capture_leads_from_session(
                 logger.warning("lead_capture: log_activity failed", exc_info=True)
 
             try:
-                fire_event_background(tenant_id, "lead.created", {
-                    "lead_id": lead_id,
-                    "name": combined.get("name"),
-                    "email": combined.get("email"),
-                    "phone": combined.get("phone"),
-                    "source": "widget",
-                })
+                fire_event_background(
+                    tenant_id,
+                    "lead.created",
+                    {
+                        "lead_id": lead_id,
+                        "name": combined.get("name"),
+                        "email": combined.get("email"),
+                        "phone": combined.get("phone"),
+                        "source": "widget",
+                    },
+                )
             except Exception:
-                logger.warning("lead_capture: fire_event_background failed", exc_info=True)
+                logger.warning(
+                    "lead_capture: fire_event_background failed", exc_info=True
+                )
 
-            logger.info("lead_capture: about to call trigger_sequence for lead %s", lead_id)
+            logger.info(
+                "lead_capture: about to call trigger_sequence for lead %s", lead_id
+            )
             try:
                 from backend.services.automation_engine import trigger_sequence
+
                 await trigger_sequence(tenant_id, lead_id, "new_lead")
-                logger.info("lead_capture: trigger_sequence completed for lead %s", lead_id)
+                logger.info(
+                    "lead_capture: trigger_sequence completed for lead %s", lead_id
+                )
             except Exception:
-                logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
+                logger.warning(
+                    "Failed to trigger automation for lead %s", lead_id, exc_info=True
+                )
 
             try:
                 from backend.routers.email_sequences import enroll_lead_in_sequences
-                await enroll_lead_in_sequences(tenant_id, lead_id)
-                logger.info("lead_capture: enroll_lead_in_sequences completed for lead %s", lead_id)
-            except Exception:
-                logger.warning("lead_capture: enroll_lead_in_sequences failed for lead %s", lead_id, exc_info=True)
 
-            logger.info("SMS_TRIGGER: about to call SMS notification for lead %s email=%s", lead_id, combined.get("email"))
+                await enroll_lead_in_sequences(tenant_id, lead_id)
+                logger.info(
+                    "lead_capture: enroll_lead_in_sequences completed for lead %s",
+                    lead_id,
+                )
+            except Exception:
+                logger.warning(
+                    "lead_capture: enroll_lead_in_sequences failed for lead %s",
+                    lead_id,
+                    exc_info=True,
+                )
+
+            logger.info(
+                "SMS_TRIGGER: about to call SMS notification for lead %s email=%s",
+                lead_id,
+                combined.get("email"),
+            )
             try:
                 await _send_new_lead_sms_notification(tenant_id, lead_name, combined)
             except Exception:
@@ -551,46 +659,80 @@ async def _capture_leads_from_session(
             try:
                 await _send_new_lead_email_notification(tenant_id, lead_name, combined)
             except Exception:
-                logger.error("EMAIL_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
+                logger.error(
+                    "EMAIL_TRIGGER: FAILED for lead %s", lead_id, exc_info=True
+                )
 
             try:
                 tags = _extract_tags_from_conversation(messages)
                 if tags:
-                    tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead_id).execute()
-                    logger.info("lead_capture: tagged new lead %s with %s", lead_id, tags)
+                    tenant_update(db, "leads", tenant_id, {"tags": tags}).eq(
+                        "id", lead_id
+                    ).execute()
+                    logger.info(
+                        "lead_capture: tagged new lead %s with %s", lead_id, tags
+                    )
             except Exception:
-                logger.warning("lead_capture: tag extraction failed for new lead %s", lead_id, exc_info=True)
+                logger.warning(
+                    "lead_capture: tag extraction failed for new lead %s",
+                    lead_id,
+                    exc_info=True,
+                )
 
             try:
-                score_lead_background(lead_id)
+                score_lead_background(lead_id, tenant_id)
             except Exception:
-                logger.warning("Failed to score lead %s in background", lead_id, exc_info=True)
+                logger.warning(
+                    "Failed to score lead %s in background", lead_id, exc_info=True
+                )
 
             if conversation_id:
                 try:
                     from uuid import UUID
+
                     UUID(conversation_id)
-                    tenant_update(db, "conversations", tenant_id, {"lead_captured": True}).eq("id", conversation_id).execute()
-                    logger.info("lead_capture: set lead_captured=true on conversation %s", conversation_id)
+                    tenant_update(
+                        db, "conversations", tenant_id, {"lead_captured": True}
+                    ).eq("id", conversation_id).execute()
+                    logger.info(
+                        "lead_capture: set lead_captured=true on conversation %s",
+                        conversation_id,
+                    )
                 except (ValueError, AttributeError):
-                    logger.warning("lead_capture: conversation_id %r is not a UUID, skipping lead_captured update", conversation_id)
+                    logger.warning(
+                        "lead_capture: conversation_id %r is not a UUID, skipping lead_captured update",
+                        conversation_id,
+                    )
                 except Exception:
-                    logger.warning("lead_capture: failed to update lead_captured on conversation %s", conversation_id, exc_info=True)
+                    logger.warning(
+                        "lead_capture: failed to update lead_captured on conversation %s",
+                        conversation_id,
+                        exc_info=True,
+                    )
         else:
             logger.warning("lead_capture: INSERT returned no data — result=%s", result)
 
     except Exception:
-        logger.error("lead_capture FAILED: session=%s tenant=%s", session_id, tenant_id, exc_info=True)
+        logger.error(
+            "lead_capture FAILED: session=%s tenant=%s",
+            session_id,
+            tenant_id,
+            exc_info=True,
+        )
 
 
 async def _send_new_lead_sms_notification(
     tenant_id: str, lead_name: str, lead_info: dict[str, str]
 ) -> None:
     """Send SMS notification to tenant owner when a new lead is captured."""
-    logger.info("SMS_FUNCTION: entered function tenant=%s lead=%s", tenant_id, lead_name)
+    logger.info(
+        "SMS_FUNCTION: entered function tenant=%s lead=%s", tenant_id, lead_name
+    )
     logger.info(
         "sms_notification: starting for tenant=%s lead=%s info_keys=%s",
-        tenant_id, lead_name, list(lead_info.keys()),
+        tenant_id,
+        lead_name,
+        list(lead_info.keys()),
     )
     db = get_service_supabase()
     result = (
@@ -608,10 +750,14 @@ async def _send_new_lead_sms_notification(
     phone = tenant.get("notification_phone")
     logger.info(
         "sms_notification: tenant=%s sms_enabled=%s phone=%s",
-        tenant_id, sms_enabled, phone,
+        tenant_id,
+        sms_enabled,
+        phone,
     )
     if not sms_enabled or not phone:
-        logger.info("sms_notification: skipping — sms_enabled=%s phone=%s", sms_enabled, phone)
+        logger.info(
+            "sms_notification: skipping — sms_enabled=%s phone=%s", sms_enabled, phone
+        )
         return
 
     contact = lead_info.get("email") or lead_info.get("phone") or "no contact info"
@@ -620,10 +766,13 @@ async def _send_new_lead_sms_notification(
 
     try:
         from backend.services.twilio_service import send_sms
+
         await send_sms(to=phone, body=body)
         logger.info("sms_notification: sent successfully for tenant=%s", tenant_id)
     except Exception:
-        logger.error("sms_notification: FAILED to send for tenant=%s", tenant_id, exc_info=True)
+        logger.error(
+            "sms_notification: FAILED to send for tenant=%s", tenant_id, exc_info=True
+        )
 
 
 async def _send_new_lead_email_notification(
@@ -678,7 +827,9 @@ async def _send_new_lead_email_notification(
     except Exception:
         logger.error(
             "email_notification: FAILED for tenant=%s lead=%s",
-            tenant_id, lead_name, exc_info=True,
+            tenant_id,
+            lead_name,
+            exc_info=True,
         )
 
 
@@ -724,7 +875,8 @@ def _enrich_lead_from_message(
     except ValueError as exc:
         logger.warning(
             "lead_enrichment: structured_extractor parse failed for session=%s: %s",
-            session_id, exc,
+            session_id,
+            exc,
         )
         return
     except Exception:
@@ -764,21 +916,33 @@ def _enrich_lead_from_message(
     try:
         if lookup_email:
             existing = (
-                tenant_select(db, "leads", tenant_id, "id, name, email, phone, areas_of_interest, timeline, budget")
+                tenant_select(
+                    db,
+                    "leads",
+                    tenant_id,
+                    "id, name, email, phone, areas_of_interest, timeline, budget",
+                )
                 .eq("email", lookup_email)
                 .limit(1)
                 .execute()
             )
         else:
             existing = (
-                tenant_select(db, "leads", tenant_id, "id, name, email, phone, areas_of_interest, timeline, budget")
+                tenant_select(
+                    db,
+                    "leads",
+                    tenant_id,
+                    "id, name, email, phone, areas_of_interest, timeline, budget",
+                )
                 .eq("phone", lookup_phone)
                 .limit(1)
                 .execute()
             )
     except Exception:
         logger.warning(
-            "lead_enrichment: lead lookup failed for session=%s", session_id, exc_info=True,
+            "lead_enrichment: lead lookup failed for session=%s",
+            session_id,
+            exc_info=True,
         )
         return
 
@@ -806,11 +970,15 @@ def _enrich_lead_from_message(
     update_payload["enrichment_source"] = "ai"
 
     try:
-        tenant_update(db, "leads", tenant_id, update_payload).eq("id", lead_id).execute()
+        tenant_update(db, "leads", tenant_id, update_payload).eq(
+            "id", lead_id
+        ).execute()
     except Exception:
         logger.warning(
             "lead_enrichment: leads.update failed for lead=%s session=%s",
-            lead_id, session_id, exc_info=True,
+            lead_id,
+            session_id,
+            exc_info=True,
         )
         return
 
@@ -829,5 +997,7 @@ def _enrich_lead_from_message(
     except Exception:
         logger.warning(
             "lead_enrichment: log_activity failed for lead=%s session=%s",
-            lead_id, session_id, exc_info=True,
+            lead_id,
+            session_id,
+            exc_info=True,
         )

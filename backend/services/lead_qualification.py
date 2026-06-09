@@ -51,12 +51,14 @@ logger = logging.getLogger(__name__)
 # credits on drive-by traffic.
 _ELIGIBLE_PLANS = frozenset({"growth", "professional", "autopilot", "enterprise"})
 
-_VALID_RECOMMENDATIONS = frozenset({
-    "hot_call_now",
-    "warm_nurture_sequence",
-    "cold_drop",
-    "disqualify_spam",
-})
+_VALID_RECOMMENDATIONS = frozenset(
+    {
+        "hot_call_now",
+        "warm_nurture_sequence",
+        "cold_drop",
+        "disqualify_spam",
+    }
+)
 
 
 class LeadQualificationError(Exception):
@@ -194,7 +196,9 @@ def _run_qualifier_session(
     session_id = session["id"]
     logger.info(
         "lead_qualification: session %s created for lead %s (tenant %s)",
-        session_id, lead_id, tenant_id,
+        session_id,
+        lead_id,
+        tenant_id,
     )
 
     stream = client.stream_events(session_id)
@@ -243,11 +247,16 @@ def _run_qualifier_session(
     return terminal, "\n".join(c for c in assistant_chunks if c)
 
 
-def qualify_lead(lead_id: str) -> dict[str, Any] | None:
+def qualify_lead(lead_id: str, client_id: str | None = None) -> dict[str, Any] | None:
     """Run the qualifier agent for one lead and persist the result.
 
     Returns the persisted qualification dict, or None if qualification
     was skipped (free tier, missing data, not configured).
+
+    When ``client_id`` is supplied the lead read and write are scoped to that
+    tenant. The service-role key bypasses RLS, so callers handling an
+    externally-influenced ``lead_id`` MUST pass the requesting tenant to stop a
+    cross-tenant read/write (IDOR). ``None`` is for trusted internal callers.
 
     Raises:
         LeadQualificationError: the agent ran but its output could not
@@ -255,14 +264,17 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     """
     db = get_service_supabase()
 
-    # 1. Load lead
-    lead_res = (
+    # 1. Load lead (scoped to the calling tenant when known)
+    lead_query = (
         db.table("leads")
-        .select("id, client_id, name, email, phone, areas_of_interest, timeline, budget")
+        .select(
+            "id, client_id, name, email, phone, areas_of_interest, timeline, budget"
+        )
         .eq("id", lead_id)
-        .limit(1)
-        .execute()
     )
+    if client_id:
+        lead_query = lead_query.eq("client_id", client_id)
+    lead_res = lead_query.limit(1).execute()
     if not lead_res.data:
         logger.warning("lead_qualification: lead %s not found, skipping", lead_id)
         return None
@@ -271,7 +283,9 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     # 2. Load tenant + plan gate
     tenant_id = lead.get("client_id")
     if not tenant_id:
-        logger.warning("lead_qualification: lead %s has no client_id, skipping", lead_id)
+        logger.warning(
+            "lead_qualification: lead %s has no client_id, skipping", lead_id
+        )
         return None
 
     tenant_res = (
@@ -282,7 +296,9 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
         .execute()
     )
     if not tenant_res.data:
-        logger.warning("lead_qualification: tenant %s not found for lead %s", tenant_id, lead_id)
+        logger.warning(
+            "lead_qualification: tenant %s not found for lead %s", tenant_id, lead_id
+        )
         return None
     tenant = tenant_res.data[0]
 
@@ -290,7 +306,8 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     if plan not in _ELIGIBLE_PLANS:
         logger.info(
             "lead_qualification: skipping lead %s — plan %r not eligible",
-            lead_id, plan,
+            lead_id,
+            plan,
         )
         return None
 
@@ -317,7 +334,9 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     except ManagedAgentsError as exc:
         logger.warning(
             "lead_qualification: session failed for lead %s: %s (request_id=%s)",
-            lead_id, exc, exc.request_id,
+            lead_id,
+            exc,
+            exc.request_id,
         )
         return None
 
@@ -325,7 +344,9 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
         logger.warning(
             "lead_qualification: lead %s got no assistant messages "
             "(terminated=%s stop=%s)",
-            lead_id, terminal.terminated, terminal.stop_reason_type,
+            lead_id,
+            terminal.terminated,
+            terminal.stop_reason_type,
         )
         return None
 
@@ -348,7 +369,9 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
         "qualification_recommendation": normalized["recommendation"],
         "qualified_at": datetime.now(timezone.utc).isoformat(),
     }
-    db.table("leads").update(update_payload).eq("id", lead_id).execute()
+    db.table("leads").update(update_payload).eq("id", lead_id).eq(
+        "client_id", tenant_id
+    ).execute()
 
     # 7. Activity log entry (best-effort)
     try:
@@ -368,7 +391,8 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     except Exception:
         logger.warning(
             "lead_qualification: failed to log activity for lead %s",
-            lead_id, exc_info=True,
+            lead_id,
+            exc_info=True,
         )
 
     logger.info(
@@ -381,13 +405,19 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     return normalized
 
 
-def qualify_lead_background(lead_id: str) -> None:
-    """Fire-and-forget wrapper for FastAPI BackgroundTasks."""
+def qualify_lead_background(lead_id: str, client_id: str | None = None) -> None:
+    """Fire-and-forget wrapper for FastAPI BackgroundTasks.
+
+    Pass ``client_id`` so qualification stays scoped to the tenant that owns the
+    lead. The service-role key bypasses RLS, so this is the only guard against a
+    cross-tenant read/write when ``lead_id`` is attacker-influenced (IDOR).
+    """
     try:
-        qualify_lead(lead_id)
+        qualify_lead(lead_id, client_id=client_id)
     except LeadQualificationError as exc:
         logger.warning("lead_qualification: %s", exc)
     except Exception:
         logger.exception(
-            "lead_qualification: unexpected failure for lead %s", lead_id,
+            "lead_qualification: unexpected failure for lead %s",
+            lead_id,
         )

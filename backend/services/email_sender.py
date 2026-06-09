@@ -1,6 +1,5 @@
 """Email sending service using Resend API with template rendering and rate limiting."""
 
-
 import hashlib
 import hmac as _hmac
 import html
@@ -28,18 +27,22 @@ _TEMPLATE_VAR_RE = re.compile(r"\{\{(\w+)\}\}")
 
 def render_template(template: str, context: dict[str, str]) -> str:
     """Replace {{variable}} placeholders with HTML-escaped context values."""
+
     def _replace(match: re.Match) -> str:
         key = match.group(1)
         value = context.get(key, "")
         return html.escape(str(value))
+
     return _TEMPLATE_VAR_RE.sub(_replace, template)
 
 
 def render_sms_template(template: str, context: dict[str, str]) -> str:
     """Replace {{variable}} placeholders with plain-text context values (no HTML escaping)."""
+
     def _replace(match: re.Match) -> str:
         key = match.group(1)
         return str(context.get(key, ""))
+
     return _TEMPLATE_VAR_RE.sub(_replace, template)
 
 
@@ -71,7 +74,7 @@ def build_branded_email_html(
     if powered_by_url:
         footer_block = (
             f'<p><a href="{powered_by_url}" style="color:{primary};text-decoration:none;">'
-            f'{footer_text}</a></p>'
+            f"{footer_text}</a></p>"
         )
 
     return (
@@ -84,8 +87,8 @@ def build_branded_email_html(
         f'{logo_block}<h2 style="color:#fff;margin:0;font-size:20px;">{biz}</h2></td></tr>'
         f'<tr><td style="padding:32px 24px;">{body_html}</td></tr>'
         f'<tr><td style="padding:16px 24px;border-top:1px solid #eee;text-align:center;font-size:12px;color:#999;">'
-        f'{footer_block}</td></tr>'
-        '</table></td></tr></table></body></html>'
+        f"{footer_block}</td></tr>"
+        "</table></td></tr></table></body></html>"
     )
 
 
@@ -96,6 +99,25 @@ def _make_unsub_sig(lead_id: str, tenant_id: str = "") -> str:
     be used to unsubscribe a lead belonging to another tenant.
     """
     msg = f"{lead_id}:{tenant_id}" if tenant_id else lead_id
+    return _hmac.new(
+        settings.api_secret_key.encode(),
+        msg.encode(),
+        hashlib.sha256,
+    ).hexdigest()[:16]
+
+
+def _make_tracking_sig(
+    tenant_id: str, lead_id: str = "", execution_id: str = ""
+) -> str:
+    """HMAC-SHA256 signature for email-open tracking pixels.
+
+    Binds (tenant_id, lead_id, execution_id) so a caller cannot forge open
+    events for an arbitrary tenant. The track/open endpoint writes to
+    email_events under the service-role key, so an unsigned pixel lets anyone
+    inject open events / pollute another tenant's analytics. The signature is
+    the only guard.
+    """
+    msg = f"{tenant_id}:{lead_id}:{execution_id}"
     return _hmac.new(
         settings.api_secret_key.encode(),
         msg.encode(),
@@ -150,14 +172,20 @@ def _reserve_send_quota(tenant_id: str) -> bool:
     try:
         from backend.models.database import get_service_supabase
 
-        result = get_service_supabase().rpc(
-            "reserve_email_send_quota",
-            {"p_tenant_id": tenant_id, "p_daily_limit": DAILY_LIMIT},
-        ).execute()
+        result = (
+            get_service_supabase()
+            .rpc(
+                "reserve_email_send_quota",
+                {"p_tenant_id": tenant_id, "p_daily_limit": DAILY_LIMIT},
+            )
+            .execute()
+        )
         return _coerce_rpc_bool(result.data)
     except Exception:
         if is_production():
-            logger.exception("DB-backed email quota unavailable for tenant %s", tenant_id)
+            logger.exception(
+                "DB-backed email quota unavailable for tenant %s", tenant_id
+            )
             return False
 
         logger.warning(
@@ -177,7 +205,7 @@ def _append_unsubscribe_footer(body_html: str, unsubscribe_url: str) -> str:
         '<div style="margin-top:24px;padding-top:12px;border-top:1px solid #eee;'
         'font-size:11px;color:#999;text-align:center;">'
         f'<a href="{html.escape(unsubscribe_url)}" style="color:#999;">Unsubscribe</a>'
-        '</div>'
+        "</div>"
     )
     # Insert before closing </body> or </html> if present, otherwise append
     for tag in ("</body>", "</html>"):
@@ -186,7 +214,9 @@ def _append_unsubscribe_footer(body_html: str, unsubscribe_url: str) -> str:
     return body_html + footer
 
 
-def _build_tracking_pixel(tenant_id: str, lead_id: str = "", execution_id: str = "") -> str:
+def _build_tracking_pixel(
+    tenant_id: str, lead_id: str = "", execution_id: str = ""
+) -> str:
     """Build a 1x1 tracking pixel <img> tag for email open tracking."""
     base = (settings.api_url or settings.frontend_url).rstrip("/")
     params = f"tid={tenant_id}"
@@ -194,6 +224,7 @@ def _build_tracking_pixel(tenant_id: str, lead_id: str = "", execution_id: str =
         params += f"&lid={lead_id}"
     if execution_id:
         params += f"&eid={execution_id}"
+    params += f"&sig={_make_tracking_sig(tenant_id, lead_id, execution_id)}"
     url = f"{base}/api/v1/widget/track/open?{params}"
     return f'<img src="{html.escape(url)}" width="1" height="1" style="display:none;" alt="" />'
 
@@ -287,8 +318,8 @@ async def send_email_reply(
 
     body_text = body_text or ""
     body_html = (
-        "<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.5;"
-        "white-space:pre-wrap;\">"
+        '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;'
+        'white-space:pre-wrap;">'
         f"{html.escape(body_text)}"
         "</div>"
     )

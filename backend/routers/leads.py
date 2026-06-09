@@ -11,14 +11,23 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase as _get_service_supabase
-from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
+from backend.models.schemas import (
+    LeadScoreResponse,
+    LeadUpdateRequest,
+    ScoreAllResponse,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
 from backend.services.lead_scoring import score_all_leads, score_lead
-from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
+from backend.services.tenant_scope import (
+    tenant_delete,
+    tenant_insert,
+    tenant_select,
+    tenant_update,
+)
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
@@ -52,7 +61,14 @@ async def get_leads(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    _ALLOWED_SORT = {"lead_score", "created_at", "name", "email", "status", "updated_at"}
+    _ALLOWED_SORT = {
+        "lead_score",
+        "created_at",
+        "name",
+        "email",
+        "status",
+        "updated_at",
+    }
     if sort not in _ALLOWED_SORT:
         sort = "lead_score"
 
@@ -79,6 +95,7 @@ async def get_leads(
 
         if search:
             import re
+
             safe_search = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
             if safe_search:
                 query = query.or_(
@@ -120,18 +137,26 @@ async def get_lead_summary(tenant_id: str, claims: dict = Depends(_get_current_t
             "total": len(leads),
             "new": sum(1 for l in leads if l.get("status") == "new"),
             "contacted": sum(1 for l in leads if l.get("status") == "contacted"),
-            "appointment_booked": sum(1 for l in leads if l.get("status") == "appointment_booked"),
+            "appointment_booked": sum(
+                1 for l in leads if l.get("status") == "appointment_booked"
+            ),
             "closed": sum(1 for l in leads if l.get("status") == "closed"),
             "lost": sum(1 for l in leads if l.get("status") == "lost"),
         }
     except Exception:
-        logger.warning("Lead summary query failed for tenant %s", tenant_id, exc_info=True)
-        raise HTTPException(status_code=503, detail="Lead summary query failed — please retry")
+        logger.warning(
+            "Lead summary query failed for tenant %s", tenant_id, exc_info=True
+        )
+        raise HTTPException(
+            status_code=503, detail="Lead summary query failed — please retry"
+        )
 
 
 @router.post("/{tenant_id}/score-all", response_model=ScoreAllResponse)
 @limiter.limit("3/minute")
-async def rescore_all(request: Request, tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+async def rescore_all(
+    request: Request, tenant_id: str, claims: dict = Depends(_get_current_tenant)
+):
     """Re-score all leads for a tenant."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -148,7 +173,7 @@ async def get_lead_score(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     try:
-        result = score_lead(lead_id)
+        result = score_lead(lead_id, client_id=tenant_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Lead not found")
     return LeadScoreResponse(**result)
@@ -176,7 +201,9 @@ async def create_lead(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if not req.name and not req.email and not req.phone:
-        raise HTTPException(status_code=400, detail="At least one of name, email, or phone is required")
+        raise HTTPException(
+            status_code=400, detail="At least one of name, email, or phone is required"
+        )
 
     db = get_service_supabase()
     lead_data = {
@@ -202,11 +229,21 @@ async def create_lead(
         raise HTTPException(status_code=500, detail="Failed to create lead")
 
     lead = result.data[0]
-    log_activity(tenant_id=tenant_id, lead_id=lead["id"], activity_type="lead_created",
-                 description=f"Lead created manually: {req.name or req.email or req.phone}",
-                 metadata={"performed_by": claims.get("team_member_id") or claims.get("tenant_id"),
-                           "performed_by_name": claims.get("name") or claims.get("email") or "Owner"})
-    fire_event_background(tenant_id, "lead.created", {"lead_id": lead["id"], "name": req.name, "source": "manual"})
+    log_activity(
+        tenant_id=tenant_id,
+        lead_id=lead["id"],
+        activity_type="lead_created",
+        description=f"Lead created manually: {req.name or req.email or req.phone}",
+        metadata={
+            "performed_by": claims.get("team_member_id") or claims.get("tenant_id"),
+            "performed_by_name": claims.get("name") or claims.get("email") or "Owner",
+        },
+    )
+    fire_event_background(
+        tenant_id,
+        "lead.created",
+        {"lead_id": lead["id"], "name": req.name, "source": "manual"},
+    )
 
     return lead
 
@@ -231,19 +268,27 @@ async def update_lead(
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    fire_event_background(tenant_id, "lead.updated", {
-        "lead_id": lead_id,
-        "updated_fields": list(updates.keys()),
-        **updates,
-    })
+    fire_event_background(
+        tenant_id,
+        "lead.updated",
+        {
+            "lead_id": lead_id,
+            "updated_fields": list(updates.keys()),
+            **updates,
+        },
+    )
 
     # Fire status-change event when status is explicitly updated
     if "status" in updates:
-        fire_event_background(tenant_id, "lead.status_changed", {
-            "lead_id": lead_id,
-            "new_status": updates["status"],
-            "source": "leads_update",
-        })
+        fire_event_background(
+            tenant_id,
+            "lead.status_changed",
+            {
+                "lead_id": lead_id,
+                "new_status": updates["status"],
+                "source": "leads_update",
+            },
+        )
 
     return result.data[0]
 
@@ -296,6 +341,7 @@ async def send_lead_email(
         raise HTTPException(status_code=400, detail="Lead has no email address")
 
     import html as html_mod
+
     safe_message = html_mod.escape(req.message).replace("\n", "<br>")
 
     # Get business name for email context
@@ -306,7 +352,9 @@ async def send_lead_email(
         .limit(1)
         .execute()
     )
-    business_name = tenant_result.data[0]["business_name"] if tenant_result.data else "Our Team"
+    business_name = (
+        tenant_result.data[0]["business_name"] if tenant_result.data else "Our Team"
+    )
 
     body_html = (
         f"<p>{safe_message}</p>"
@@ -321,7 +369,9 @@ async def send_lead_email(
     )
 
     if not result.get("success"):
-        raise HTTPException(status_code=500, detail=result.get("detail", "Failed to send email"))
+        raise HTTPException(
+            status_code=500, detail=result.get("detail", "Failed to send email")
+        )
 
     # Log activity
     log_activity(
@@ -333,9 +383,16 @@ async def send_lead_email(
 
     # Auto-update lead status from "new" to "contacted"
     try:
-        current = tenant_select(db, "leads", tenant_id, "status").eq("id", lead_id).limit(1).execute()
+        current = (
+            tenant_select(db, "leads", tenant_id, "status")
+            .eq("id", lead_id)
+            .limit(1)
+            .execute()
+        )
         if current.data and current.data[0].get("status") == "new":
-            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq("id", lead_id).execute()
+            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq(
+                "id", lead_id
+            ).execute()
     except Exception:
         logger.warning("Failed to auto-update lead status after email", exc_info=True)
 
@@ -372,6 +429,7 @@ async def send_lead_sms(
         raise HTTPException(status_code=400, detail="Lead has no phone number")
 
     from backend.services.twilio_service import send_sms
+
     success = await send_sms(to=lead["phone"], body=req.message)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to send SMS")
@@ -385,9 +443,16 @@ async def send_lead_sms(
 
     # Auto-update lead status from "new" to "contacted"
     try:
-        current = tenant_select(db, "leads", tenant_id, "status").eq("id", lead_id).limit(1).execute()
+        current = (
+            tenant_select(db, "leads", tenant_id, "status")
+            .eq("id", lead_id)
+            .limit(1)
+            .execute()
+        )
         if current.data and current.data[0].get("status") == "new":
-            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq("id", lead_id).execute()
+            tenant_update(db, "leads", tenant_id, {"status": "contacted"}).eq(
+                "id", lead_id
+            ).execute()
     except Exception:
         logger.warning("Failed to auto-update lead status after SMS", exc_info=True)
 
@@ -395,7 +460,9 @@ async def send_lead_sms(
 
 
 @router.get("/{tenant_id}/duplicates")
-async def find_duplicate_leads(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
+async def find_duplicate_leads(
+    tenant_id: str, claims: dict = Depends(_get_current_tenant)
+):
     """Find potential duplicate leads by email or phone."""
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -430,11 +497,13 @@ async def find_duplicate_leads(tenant_id: str, claims: dict = Depends(_get_curre
         if ids in seen_ids:
             continue
         seen_ids.add(ids)
-        duplicate_sets.append({
-            "match_field": "email" if "@" in key else "phone",
-            "match_value": key,
-            "leads": group,
-        })
+        duplicate_sets.append(
+            {
+                "match_field": "email" if "@" in key else "phone",
+                "match_value": key,
+                "leads": group,
+            }
+        )
 
     return {"duplicates": duplicate_sets}
 
@@ -460,8 +529,12 @@ async def merge_leads(
     db = get_service_supabase()
 
     # Fetch both leads
-    keep_result = tenant_select(db, "leads", tenant_id).eq("id", req.keep_id).limit(1).execute()
-    merge_result = tenant_select(db, "leads", tenant_id).eq("id", req.merge_id).limit(1).execute()
+    keep_result = (
+        tenant_select(db, "leads", tenant_id).eq("id", req.keep_id).limit(1).execute()
+    )
+    merge_result = (
+        tenant_select(db, "leads", tenant_id).eq("id", req.merge_id).limit(1).execute()
+    )
 
     if not keep_result.data:
         raise HTTPException(status_code=404, detail="Primary lead not found")
@@ -472,8 +545,17 @@ async def merge_leads(
     merge = merge_result.data[0]
 
     # Fill in missing fields from merge into keep
-    fillable = ["name", "email", "phone", "lead_type", "areas_of_interest",
-                 "timeline", "budget", "conversation_summary", "next_steps"]
+    fillable = [
+        "name",
+        "email",
+        "phone",
+        "lead_type",
+        "areas_of_interest",
+        "timeline",
+        "budget",
+        "conversation_summary",
+        "next_steps",
+    ]
     updates = {}
     for field in fillable:
         if not keep.get(field) and merge.get(field):
@@ -495,19 +577,25 @@ async def merge_leads(
 
     # Reassign appointments from merge to keep
     try:
-        tenant_update(db, "appointments", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+        tenant_update(db, "appointments", tenant_id, {"lead_id": req.keep_id}).eq(
+            "lead_id", req.merge_id
+        ).execute()
     except Exception:
         logger.warning("Failed to reassign appointments during merge", exc_info=True)
 
     # Reassign activity log entries
     try:
-        tenant_update(db, "activity_log", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+        tenant_update(db, "activity_log", tenant_id, {"lead_id": req.keep_id}).eq(
+            "lead_id", req.merge_id
+        ).execute()
     except Exception:
         logger.warning("Failed to reassign activity_log during merge", exc_info=True)
 
     # Reassign client notes
     try:
-        tenant_update(db, "client_notes", tenant_id, {"lead_id": req.keep_id}).eq("lead_id", req.merge_id).execute()
+        tenant_update(db, "client_notes", tenant_id, {"lead_id": req.keep_id}).eq(
+            "lead_id", req.merge_id
+        ).execute()
     except Exception:
         logger.warning("Failed to reassign client_notes during merge", exc_info=True)
 
@@ -521,7 +609,12 @@ async def merge_leads(
         lead_id=req.keep_id,
     )
 
-    return {"success": True, "kept_id": req.keep_id, "merged_id": req.merge_id, "fields_updated": list(updates.keys())}
+    return {
+        "success": True,
+        "kept_id": req.keep_id,
+        "merged_id": req.merge_id,
+        "fields_updated": list(updates.keys()),
+    }
 
 
 # CSV column name → DB column name mapping
@@ -581,6 +674,7 @@ async def export_leads_csv(
             query = query.eq("assigned_to", assigned_to)
     if search:
         import re
+
         safe_search = re.sub(r"[^a-zA-Z0-9@_ \-+.]", "", search).strip()[:100]
         if safe_search:
             query = query.or_(
@@ -594,9 +688,19 @@ async def export_leads_csv(
     # Build CSV
     output = io.StringIO()
     fields = [
-        "name", "email", "phone", "status", "lead_score", "lead_temperature",
-        "areas_of_interest", "tags", "conversation_summary", "deal_value",
-        "source", "created_at", "updated_at",
+        "name",
+        "email",
+        "phone",
+        "status",
+        "lead_score",
+        "lead_temperature",
+        "areas_of_interest",
+        "tags",
+        "conversation_summary",
+        "deal_value",
+        "source",
+        "created_at",
+        "updated_at",
     ]
     writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
@@ -611,7 +715,9 @@ async def export_leads_csv(
     return Response(
         content=csv_content,
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=leads-export-{tenant_id[:8]}.csv"},
+        headers={
+            "Content-Disposition": f"attachment; filename=leads-export-{tenant_id[:8]}.csv"
+        },
     )
 
 
@@ -653,7 +759,7 @@ async def import_leads_csv(
     if not col_map:
         raise HTTPException(
             status_code=400,
-            detail=f"No recognized columns. Expected: {', '.join(sorted(set(_CSV_FIELD_MAP.values())))}"
+            detail=f"No recognized columns. Expected: {', '.join(sorted(set(_CSV_FIELD_MAP.values())))}",
         )
 
     db = get_service_supabase()
@@ -674,7 +780,11 @@ async def import_leads_csv(
             if val:
                 lead_data[db_col] = val
 
-        if not lead_data.get("email") and not lead_data.get("phone") and not lead_data.get("name"):
+        if (
+            not lead_data.get("email")
+            and not lead_data.get("phone")
+            and not lead_data.get("name")
+        ):
             errors.append({"row": i, "error": "No name, email, or phone"})
             continue
 
@@ -699,7 +809,7 @@ async def import_leads_csv(
                 .in_("email", list(set(all_emails)))
                 .execute()
             )
-            for lead in (existing_result.data or []):
+            for lead in existing_result.data or []:
                 if lead.get("email"):
                     existing_by_email[lead["email"].lower()] = lead["id"]
         except Exception as e:
@@ -712,7 +822,9 @@ async def import_leads_csv(
             updates = {k: v for k, v in lead_data.items() if k != "email"}
             if updates:
                 try:
-                    tenant_update(db, "leads", tenant_id, updates).eq("id", existing_by_email[email]).execute()
+                    tenant_update(db, "leads", tenant_id, updates).eq(
+                        "id", existing_by_email[email]
+                    ).execute()
                 except Exception as e:
                     errors.append({"row": i, "error": str(e)[:100]})
                     continue
@@ -725,12 +837,16 @@ async def import_leads_csv(
             result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
             if result.data:
                 created += 1
-                fire_event_background(tenant_id, "lead.created", {
-                    "lead_id": result.data[0]["id"],
-                    "name": lead_data.get("name"),
-                    "email": lead_data.get("email"),
-                    "source": "csv_import",
-                })
+                fire_event_background(
+                    tenant_id,
+                    "lead.created",
+                    {
+                        "lead_id": result.data[0]["id"],
+                        "name": lead_data.get("name"),
+                        "email": lead_data.get("email"),
+                        "source": "csv_import",
+                    },
+                )
             else:
                 errors.append({"row": i, "error": "Insert returned no data"})
         except Exception as e:
@@ -781,7 +897,9 @@ async def assign_lead(
         raise HTTPException(status_code=404, detail="Lead not found")
 
     # Log the assignment with performing user info
-    member_name = member.data[0]["name"] if req.assigned_to and member.data else "nobody"
+    member_name = (
+        member.data[0]["name"] if req.assigned_to and member.data else "nobody"
+    )
     performer_id = claims.get("team_member_id") or claims.get("tenant_id")
     performer_name = claims.get("name") or claims.get("email") or "Owner"
     try:
@@ -817,7 +935,12 @@ async def list_lead_suggestions(
 
     db = get_service_supabase()
     result = (
-        tenant_select(db, "activity_log", tenant_id, "id, lead_id, description, metadata, created_at")
+        tenant_select(
+            db,
+            "activity_log",
+            tenant_id,
+            "id, lead_id, description, metadata, created_at",
+        )
         .eq("activity_type", "lead_suggestion")
         .order("created_at", desc=True)
         .limit(50)
@@ -841,7 +964,9 @@ async def handle_suggestion(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     if req.action not in ("approve", "dismiss"):
-        raise HTTPException(status_code=400, detail="Action must be 'approve' or 'dismiss'")
+        raise HTTPException(
+            status_code=400, detail="Action must be 'approve' or 'dismiss'"
+        )
 
     db = get_service_supabase()
 
@@ -863,8 +988,15 @@ async def handle_suggestion(
         suggestions = (entry.get("metadata") or {}).get("suggestions", {})
         if suggestions and entry.get("lead_id"):
             updates = {field: s["new"] for field, s in suggestions.items()}
-            tenant_update(db, "leads", tenant_id, updates).eq("id", entry["lead_id"]).execute()
-            logger.info("Approved suggestion %s: updated lead %s with %s", suggestion_id, entry["lead_id"], list(updates.keys()))
+            tenant_update(db, "leads", tenant_id, updates).eq(
+                "id", entry["lead_id"]
+            ).execute()
+            logger.info(
+                "Approved suggestion %s: updated lead %s with %s",
+                suggestion_id,
+                entry["lead_id"],
+                list(updates.keys()),
+            )
 
     # Delete the suggestion (both approve and dismiss)
     tenant_delete(db, "activity_log", tenant_id).eq("id", suggestion_id).execute()
@@ -910,7 +1042,9 @@ async def generate_lead_summary(
 
     messages = conv.data[0]["messages"]
     if len(messages) < 2:
-        raise HTTPException(status_code=400, detail="Conversation too short to summarize")
+        raise HTTPException(
+            status_code=400, detail="Conversation too short to summarize"
+        )
 
     # Build transcript (last 30 messages)
     transcript = "\n".join(
@@ -928,7 +1062,11 @@ async def generate_lead_summary(
             timeout=15.0,
             system="Summarize this customer conversation in 1-2 sentences. Focus on: what the customer needs, any decisions made, and next steps. Be concise.",
             messages=[{"role": "user", "content": transcript[:3000]}],
-            metadata={"tenant_id": tenant_id, "lead_id": lead_id, "message_count": len(messages)},
+            metadata={
+                "tenant_id": tenant_id,
+                "lead_id": lead_id,
+                "message_count": len(messages),
+            },
         )
         summary = resp.text.strip()
     except Exception:
@@ -936,7 +1074,9 @@ async def generate_lead_summary(
         raise HTTPException(status_code=502, detail="AI summary generation failed")
 
     # Save the summary
-    tenant_update(db, "leads", tenant_id, {"conversation_summary": summary}).eq("id", lead_id).execute()
+    tenant_update(db, "leads", tenant_id, {"conversation_summary": summary}).eq(
+        "id", lead_id
+    ).execute()
 
     return {"summary": summary}
 
@@ -958,17 +1098,19 @@ async def get_lead_activity(
 
     # Verify lead exists
     lead = (
-        tenant_select(db, "leads", tenant_id, "id")
-        .eq("id", lead_id)
-        .limit(1)
-        .execute()
+        tenant_select(db, "leads", tenant_id, "id").eq("id", lead_id).limit(1).execute()
     )
     if not lead.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
     # Fetch activity log entries for this lead
     activity = (
-        tenant_select(db, "activity_log", tenant_id, "id, activity_type, description, metadata, created_at")
+        tenant_select(
+            db,
+            "activity_log",
+            tenant_id,
+            "id, activity_type, description, metadata, created_at",
+        )
         .eq("lead_id", lead_id)
         .order("created_at", desc=True)
         .limit(50)
@@ -977,7 +1119,12 @@ async def get_lead_activity(
 
     # Also fetch appointments for this lead
     appointments = (
-        tenant_select(db, "appointments", tenant_id, "id, customer_name, start_time, status, created_at")
+        tenant_select(
+            db,
+            "appointments",
+            tenant_id,
+            "id, customer_name, start_time, status, created_at",
+        )
         .eq("lead_id", lead_id)
         .order("start_time", desc=True)
         .limit(20)
@@ -986,7 +1133,9 @@ async def get_lead_activity(
 
     # Also fetch email events for this lead
     email_events = (
-        tenant_select(db, "email_events", tenant_id, "id, event_type, details, created_at")
+        tenant_select(
+            db, "email_events", tenant_id, "id, event_type, details, created_at"
+        )
         .eq("lead_id", lead_id)
         .order("created_at", desc=True)
         .limit(20)
@@ -996,30 +1145,36 @@ async def get_lead_activity(
     # Merge all into a single timeline
     timeline = []
 
-    for a in (activity.data or []):
-        timeline.append({
-            "type": a.get("activity_type") or "activity",
-            "description": a.get("description") or "",
-            "metadata": a.get("metadata"),
-            "created_at": a["created_at"],
-        })
+    for a in activity.data or []:
+        timeline.append(
+            {
+                "type": a.get("activity_type") or "activity",
+                "description": a.get("description") or "",
+                "metadata": a.get("metadata"),
+                "created_at": a["created_at"],
+            }
+        )
 
-    for appt in (appointments.data or []):
+    for appt in appointments.data or []:
         status = appt.get("status") or "scheduled"
-        timeline.append({
-            "type": f"appointment_{status}",
-            "description": f"Appointment ({status}): {appt.get('customer_name') or 'Customer'} at {appt.get('start_time', '')}",
-            "metadata": {"appointment_id": appt["id"]},
-            "created_at": appt["created_at"],
-        })
+        timeline.append(
+            {
+                "type": f"appointment_{status}",
+                "description": f"Appointment ({status}): {appt.get('customer_name') or 'Customer'} at {appt.get('start_time', '')}",
+                "metadata": {"appointment_id": appt["id"]},
+                "created_at": appt["created_at"],
+            }
+        )
 
-    for ev in (email_events.data or []):
-        timeline.append({
-            "type": f"email_{ev.get('event_type', 'event')}",
-            "description": f"Email {ev.get('event_type', 'event')}",
-            "metadata": ev.get("details"),
-            "created_at": ev["created_at"],
-        })
+    for ev in email_events.data or []:
+        timeline.append(
+            {
+                "type": f"email_{ev.get('event_type', 'event')}",
+                "description": f"Email {ev.get('event_type', 'event')}",
+                "metadata": ev.get("details"),
+                "created_at": ev["created_at"],
+            }
+        )
 
     # Sort by date descending
     timeline.sort(key=lambda x: x.get("created_at") or "", reverse=True)
@@ -1045,7 +1200,10 @@ async def bulk_update_leads(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if not req.status and not req.assigned_to and not req.tags_add:
-        raise HTTPException(status_code=400, detail="Nothing to update. Provide status, assigned_to, or tags_add.")
+        raise HTTPException(
+            status_code=400,
+            detail="Nothing to update. Provide status, assigned_to, or tags_add.",
+        )
 
     db = get_service_supabase()
     updated = 0
@@ -1057,11 +1215,18 @@ async def bulk_update_leads(
             if req.status:
                 update_data["status"] = req.status
             if req.assigned_to is not None:
-                update_data["assigned_to"] = req.assigned_to if req.assigned_to else None
+                update_data["assigned_to"] = (
+                    req.assigned_to if req.assigned_to else None
+                )
 
             if req.tags_add:
                 # Fetch existing tags and merge
-                existing = tenant_select(db, "leads", tenant_id, "tags").eq("id", lead_id).limit(1).execute()
+                existing = (
+                    tenant_select(db, "leads", tenant_id, "tags")
+                    .eq("id", lead_id)
+                    .limit(1)
+                    .execute()
+                )
                 if existing.data:
                     current_tags = existing.data[0].get("tags") or []
                     merged = list(set(current_tags + req.tags_add))
@@ -1103,18 +1268,20 @@ async def debug_lead_capture(
 
     try:
         # Total leads count
-        total_result = (
-            tenant_select(db, "leads", tenant_id, "id", count="exact")
-            .execute()
-        )
+        total_result = tenant_select(
+            db, "leads", tenant_id, "id", count="exact"
+        ).execute()
         total_leads = total_result.count or 0
     except Exception:
-        logger.error("debug_lead_capture: total count failed for %s", tenant_id, exc_info=True)
+        logger.error(
+            "debug_lead_capture: total count failed for %s", tenant_id, exc_info=True
+        )
         total_leads = -1
 
     try:
         # Leads created in the last 7 days
         from datetime import datetime, timedelta, timezone
+
         week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         recent_result = (
             tenant_select(db, "leads", tenant_id, "id", count="exact")
@@ -1123,7 +1290,9 @@ async def debug_lead_capture(
         )
         leads_last_7_days = recent_result.count or 0
     except Exception:
-        logger.error("debug_lead_capture: recent count failed for %s", tenant_id, exc_info=True)
+        logger.error(
+            "debug_lead_capture: recent count failed for %s", tenant_id, exc_info=True
+        )
         leads_last_7_days = -1
 
     try:
@@ -1139,14 +1308,19 @@ async def debug_lead_capture(
         sample_lead_ids = [l["id"] for l in latest_leads]
         has_email_leads = any(l.get("email") for l in latest_leads)
     except Exception:
-        logger.error("debug_lead_capture: sample query failed for %s", tenant_id, exc_info=True)
+        logger.error(
+            "debug_lead_capture: sample query failed for %s", tenant_id, exc_info=True
+        )
         last_lead_created_at = None
         sample_lead_ids = []
         has_email_leads = False
 
     logger.info(
         "debug_lead_capture: tenant=%s total=%s last_7d=%s last_created=%s",
-        tenant_id, total_leads, leads_last_7_days, last_lead_created_at,
+        tenant_id,
+        total_leads,
+        leads_last_7_days,
+        last_lead_created_at,
     )
 
     return {

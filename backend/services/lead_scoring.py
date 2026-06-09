@@ -1,6 +1,5 @@
 """Lead scoring engine — rule-based 0-100 scoring with engagement, intent, recency, and decay."""
 
-
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -13,16 +12,75 @@ logger = logging.getLogger(__name__)
 # Intent keyword lists
 # ---------------------------------------------------------------------------
 
-_PRICING_KEYWORDS = ["price", "pricing", "cost", "fee", "rate", "charge", "quote", "estimate", "budget", "afford"]
-_AVAILABILITY_KEYWORDS = ["available", "availability", "schedule", "appointment", "book", "when can", "open", "slot"]
-_SERVICES_KEYWORDS = ["service", "offer", "provide", "do you", "help with", "looking for", "need", "want"]
-_URGENCY_KEYWORDS = ["urgent", "asap", "today", "tomorrow", "right away", "immediately", "soon", "rush"]
+_PRICING_KEYWORDS = [
+    "price",
+    "pricing",
+    "cost",
+    "fee",
+    "rate",
+    "charge",
+    "quote",
+    "estimate",
+    "budget",
+    "afford",
+]
+_AVAILABILITY_KEYWORDS = [
+    "available",
+    "availability",
+    "schedule",
+    "appointment",
+    "book",
+    "when can",
+    "open",
+    "slot",
+]
+_SERVICES_KEYWORDS = [
+    "service",
+    "offer",
+    "provide",
+    "do you",
+    "help with",
+    "looking for",
+    "need",
+    "want",
+]
+_URGENCY_KEYWORDS = [
+    "urgent",
+    "asap",
+    "today",
+    "tomorrow",
+    "right away",
+    "immediately",
+    "soon",
+    "rush",
+]
 _EMERGENCY_KEYWORDS = [
-    "emergency", "leak", "flood", "flooded", "flooding", "burst", "broken",
-    "no hot water", "no heat", "no power", "overflowing", "sewage",
-    "gas smell", "smoke", "fire", "water damage", "mold",
-    "locked out", "break-in", "alarm", "pain", "severe",
-    "can't wait", "right now", "911", "help me",
+    "emergency",
+    "leak",
+    "flood",
+    "flooded",
+    "flooding",
+    "burst",
+    "broken",
+    "no hot water",
+    "no heat",
+    "no power",
+    "overflowing",
+    "sewage",
+    "gas smell",
+    "smoke",
+    "fire",
+    "water damage",
+    "mold",
+    "locked out",
+    "break-in",
+    "alarm",
+    "pain",
+    "severe",
+    "can't wait",
+    "right now",
+    "911",
+    "help me",
 ]
 
 
@@ -152,12 +210,23 @@ def _compute_decay(
 # ---------------------------------------------------------------------------
 
 
-def score_lead(lead_id: str) -> dict[str, Any]:
-    """Score a single lead and persist the result. Returns scoring details."""
+def score_lead(lead_id: str, client_id: str | None = None) -> dict[str, Any]:
+    """Score a single lead and persist the result. Returns scoring details.
+
+    When ``client_id`` is supplied the lead fetch and write are both scoped to
+    that tenant. The service-role Supabase key bypasses RLS, so passing the
+    caller's tenant here is the only thing preventing a cross-tenant read/write
+    when ``lead_id`` is attacker-influenced (IDOR). Always pass it from request
+    handlers; ``None`` is reserved for trusted internal batch callers that have
+    already constrained the lead set to one tenant.
+    """
     db = get_service_supabase()
 
-    # 1. Fetch lead
-    lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+    # 1. Fetch lead (scoped to the calling tenant when known)
+    lead_query = db.table("leads").select("*").eq("id", lead_id)
+    if client_id:
+        lead_query = lead_query.eq("client_id", client_id)
+    lead_result = lead_query.limit(1).execute()
     if not lead_result.data:
         raise ValueError(f"Lead {lead_id} not found")
     lead = lead_result.data[0]
@@ -222,7 +291,9 @@ def score_lead(lead_id: str) -> dict[str, Any]:
     if eng_bd.get("name"):
         factors.append(f"Has name (+{eng_bd['name']})")
     if eng_bd.get("messages", 0) > 0:
-        factors.append(f"Messages: {eng_bd.get('message_count', 0)} (+{eng_bd['messages']})")
+        factors.append(
+            f"Messages: {eng_bd.get('message_count', 0)} (+{eng_bd['messages']})"
+        )
     if int_bd.get("pricing"):
         factors.append(f"Asked about pricing (+{int_bd['pricing']})")
     if int_bd.get("availability"):
@@ -244,21 +315,32 @@ def score_lead(lead_id: str) -> dict[str, Any]:
         "lead_score": db_score,
         "lead_temperature": temperature,
     }
-    db.table("leads").update(update_payload).eq("id", lead_id).execute()
+    score_update = db.table("leads").update(update_payload).eq("id", lead_id)
+    if client_id:
+        score_update = score_update.eq("client_id", client_id)
+    score_update.execute()
 
     # 8. Store score factors in activity_log for dashboard visibility
     client_id = lead.get("client_id")
     if client_id and factors:
         try:
-            db.table("activity_log").insert({
-                "tenant_id": client_id,
-                "lead_id": lead_id,
-                "activity_type": "lead_scored",
-                "description": f"Lead scored {final_score}/100 ({temperature})",
-                "metadata": {"factors": factors, "score": final_score, "temperature": temperature},
-            }).execute()
+            db.table("activity_log").insert(
+                {
+                    "tenant_id": client_id,
+                    "lead_id": lead_id,
+                    "activity_type": "lead_scored",
+                    "description": f"Lead scored {final_score}/100 ({temperature})",
+                    "metadata": {
+                        "factors": factors,
+                        "score": final_score,
+                        "temperature": temperature,
+                    },
+                }
+            ).execute()
         except Exception:
-            logger.warning("Failed to log score factors for lead %s", lead_id, exc_info=True)
+            logger.warning(
+                "Failed to log score factors for lead %s", lead_id, exc_info=True
+            )
 
     return {
         "lead_id": lead_id,
@@ -285,7 +367,7 @@ def score_all_leads(tenant_id: str) -> dict[str, Any]:
     errors = 0
     for lid in lead_ids:
         try:
-            score_lead(lid)
+            score_lead(lid, client_id=tenant_id)
             scored += 1
         except Exception:
             logger.warning("Failed to score lead %s", lid, exc_info=True)
@@ -299,9 +381,13 @@ def score_all_leads(tenant_id: str) -> dict[str, Any]:
     }
 
 
-def score_lead_background(lead_id: str) -> None:
-    """Fire-and-forget scoring wrapper for BackgroundTasks."""
+def score_lead_background(lead_id: str, client_id: str | None = None) -> None:
+    """Fire-and-forget scoring wrapper for BackgroundTasks.
+
+    Pass ``client_id`` so the underlying scoring stays scoped to the tenant
+    that owns the lead (prevents cross-tenant write under the service-role key).
+    """
     try:
-        score_lead(lead_id)
+        score_lead(lead_id, client_id=client_id)
     except Exception:
         logger.warning("Background scoring failed for lead %s", lead_id, exc_info=True)
