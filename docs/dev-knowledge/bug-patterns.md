@@ -2407,3 +2407,25 @@ Flip os_inbound_bridge _DEFAULT_CONFIG widget_enabled to False so Agent OS is op
 **Author:** aferna6-cell
 **Files Changed:** backend/services/os_inbound_bridge.py,backend/tests/test_os_inbound_bridge.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix: os_graph_nodes/edges missing from tenant_scope overrides + dispatch tests
+
+tenant_scope._TENANT_COLUMN_OVERRIDES lacked entries for os_graph_nodes
+and os_graph_edges (introduced in migration 133 / c8a0460). Both tables
+use client_id but tenant_scope_column() was returning the default
+tenant_id, causing all graph reads and writes to fail in production
+against a non-existent column. Added two-line fix matching the existing
+os_* table pattern.
+
+Also adds test_os_action_dispatch.py (5 tests) covering all execution
+paths of queue_action_for_run() — flagged AUTONOMOUS-EXECUTABLE by
+subconscious run 53.
+
+https://claude.ai/code/session_01GDV9mrXuxrZ6MBG2SP4usd
+**Date:** 2026-06-10
+**Commit:** c6805a5
+**Author:** Claude
+**Files Changed:** backend/services/tenant_scope.py,backend/tests/test_os_action_dispatch.py,ops/routines/logs/nightly-commit-review-2026-06-10.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.

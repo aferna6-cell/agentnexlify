@@ -29,6 +29,8 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_outbound_log": "client_id",
     "os_routing_decision": "client_id",
     "os_model_call_log": "client_id",
+    "os_graph_nodes": "client_id",
+    "os_graph_edges": "client_id",
 }
 
 
