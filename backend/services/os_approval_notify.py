@@ -8,6 +8,7 @@ needs them, throttled so a burst of drafts doesn't flood the inbox.
 Best-effort by design: a notification failure must never break the chat turn.
 """
 
+import html
 import logging
 import time
 
@@ -64,18 +65,24 @@ async def notify_pending_approval(
         )
         pending_count = pending.count or 1
 
-        what = title or f"a {channel or 'message'} draft"
+        # Escape everything interpolated into HTML: the draft title can echo
+        # customer-supplied chat content (HTML-injection vector into the
+        # owner's inbox), and owner/agent names are tenant-supplied.
+        safe_owner = html.escape(rows[0].get("owner_name") or "there")
+        safe_agent = html.escape(agent_name or "assistant")
+        what = html.escape(title) if title else f"a {html.escape(channel or 'message')} draft"
+        count_n = int(pending_count)
         extra = (
-            f"<p>You have {pending_count} items waiting in total.</p>"
-            if pending_count > 1
+            f"<p>You have {count_n} items waiting in total.</p>"
+            if count_n > 1
             else ""
         )
         await send_email(
             to=owner_email,
-            subject=f"Your AI staff needs a quick approval ({pending_count} waiting)",
+            subject=f"Your AI staff needs a quick approval ({count_n} waiting)",
             body_html=(
-                f"<p>Hi {rows[0].get('owner_name') or 'there'},</p>"
-                f"<p>Your <strong>{agent_name}</strong> agent prepared "
+                f"<p>Hi {safe_owner},</p>"
+                f"<p>Your <strong>{safe_agent}</strong> agent prepared "
                 f"<strong>{what}</strong> and is waiting for your go-ahead "
                 "before anything is sent.</p>"
                 f"{extra}"
