@@ -2477,3 +2477,16 @@ https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
 **Rule:** before INSERT/UPDATE touching a column not already used by existing code, verify it on the LIVE schema (`information_schema.columns` via Supabase MCP) — a migration file mentioning the column proves nothing. This is schema-discipline.md's "check the actual Supabase schema" applied to columns that LOOK documented.
 
 **Detection gap to close eventually:** a CI check diffing `information_schema` against expected columns for the hot tables (tenants, leads, conversations).
+
+---
+
+### Hotfix: remove orphaned @xyflow/react manualChunks entry breaking prod frontend build (#229)
+
+vite.config.js manualChunks still referenced the removed @xyflow/react dep — rollup treats manualChunks entries as entry modules, failing the prod Vercel build. Full build output now verified clean.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+**Date:** 2026-06-10
+**Commit:** 66aac38
+**Author:** aferna6-cell
+**Files Changed:** frontend/vite.config.js
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
