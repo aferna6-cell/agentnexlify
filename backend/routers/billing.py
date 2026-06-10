@@ -410,7 +410,7 @@ def _handle_checkout_completed(db, session: dict) -> None:
         db.table("tenants").update(update_data).eq("id", tenant_id).execute()
         log_activity(
             tenant_id=tenant_id,
-            event_type="fraud_alert",
+            activity_type="fraud_alert",
             description=f"Checkout flagged: {fraud_reason}. Subscription paused pending review.",
             metadata={"fraud_reason": fraud_reason, "session_id": session.get("id")},
         )

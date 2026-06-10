@@ -23,7 +23,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
-from backend.services import orchestrator, os_memory, os_workers, usage_meter
+from backend.services import os_memory, usage_meter
 from backend.services.tenant_scope import (
     TenantScopeError,
     tenant_scope_column,
@@ -235,21 +235,6 @@ def patched_db(fake):
 
 
 @contextmanager
-def patched_orchestrator(llm_json=None, raise_llm=False):
-    """Stub the orchestrator's LLM + memory dependencies."""
-    call = AsyncMock()
-    if raise_llm:
-        call.side_effect = RuntimeError("llm unavailable")
-    else:
-        call.return_value = SimpleNamespace(text=llm_json or "")
-    with patch("backend.services.orchestrator.call_claude_messages", call), patch(
-        "backend.services.orchestrator.search_memory", AsyncMock(return_value=[])
-    ), patch(
-        "backend.services.os_memory.embed_text", AsyncMock(return_value=[0.0] * 512)
-    ):
-        yield
-
-
 def _seed_thread(fake, thread_id="thread-001", tenant=_TENANT):
     fake.seed(
         "os_threads",
@@ -483,324 +468,6 @@ class TestOsMemoryService:
 
 # ===========================================================================
 # orchestrator service
-# ===========================================================================
-
-
-class TestOrchestratorParsing:
-    def test_available_agents_includes_generalist(self):
-        assert "generalist" in orchestrator.available_agents()
-
-    def test_parse_decision_plain_json(self):
-        parsed = orchestrator._parse_decision('{"action": "answer"}')
-        assert parsed == {"action": "answer"}
-
-    def test_parse_decision_strips_code_fence(self):
-        parsed = orchestrator._parse_decision('```json\n{"action": "answer"}\n```')
-        assert parsed == {"action": "answer"}
-
-    def test_parse_decision_returns_none_without_braces(self):
-        assert orchestrator._parse_decision("not json at all") is None
-
-    def test_parse_decision_returns_none_on_invalid_json(self):
-        assert orchestrator._parse_decision("{bad json}") is None
-
-    def test_fallback_decision_delegates_to_generalist(self):
-        decision = orchestrator._fallback_decision("do a thing")
-        assert decision.action == "delegate"
-        assert decision.agent_name == "generalist"
-        assert decision.thought_process
-
-
-class TestOrchestrate:
-    async def test_orchestrate_answer(self):
-        fake = FakeSupabase()
-        with patched_orchestrator('{"action": "answer", "reply": "Hello"}'):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "hi")
-        assert decision.action == "answer"
-        assert decision.reply == "Hello"
-        assert decision.agent_name is None
-
-    async def test_orchestrate_delegate(self):
-        fake = FakeSupabase()
-        llm = (
-            '{"action": "delegate", "reply": "On it", '
-            '"agent_name": "generalist", "deliverable_title": "Report"}'
-        )
-        with patched_orchestrator(llm):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "write a report")
-        assert decision.action == "delegate"
-        assert decision.agent_name == "generalist"
-        assert decision.deliverable_title == "Report"
-        assert decision.thought_process
-
-    async def test_orchestrate_unknown_agent_becomes_backlog(self):
-        fake = FakeSupabase()
-        llm = (
-            '{"action": "delegate", "reply": "Hmm", '
-            '"agent_name": "tax_specialist", "reason": "needs a specialist"}'
-        )
-        with patched_orchestrator(llm):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "do my taxes")
-        assert decision.action == "backlog"
-        assert decision.agent_name is None
-
-    async def test_orchestrate_backlog(self):
-        fake = FakeSupabase()
-        llm = '{"action": "backlog", "reply": "No fit", "reason": "nothing fits"}'
-        with patched_orchestrator(llm):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "weird ask")
-        assert decision.action == "backlog"
-        assert decision.reason == "nothing fits"
-
-    async def test_orchestrate_captures_memory_writes(self):
-        fake = FakeSupabase()
-        llm = (
-            '{"action": "answer", "reply": "Noted", '
-            '"memory": [{"kind": "fact", "content": "Open on Sundays"}]}'
-        )
-        with patched_orchestrator(llm):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "we open Sundays")
-        assert decision.memory_writes == [
-            {"kind": "fact", "content": "Open on Sundays"}
-        ]
-
-    async def test_orchestrate_falls_back_on_llm_error(self):
-        fake = FakeSupabase()
-        with patched_orchestrator(raise_llm=True):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "anything")
-        assert decision.action == "delegate"
-        assert decision.agent_name == "generalist"
-
-    async def test_orchestrate_falls_back_on_unparseable_output(self):
-        fake = FakeSupabase()
-        with patched_orchestrator("this is not json"):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "anything")
-        assert decision.action == "delegate"
-
-    async def test_orchestrate_falls_back_on_invalid_action(self):
-        fake = FakeSupabase()
-        with patched_orchestrator('{"action": "explode", "reply": "x"}'):
-            decision = await orchestrator.orchestrate(fake, _TENANT, "anything")
-        assert decision.action == "delegate"
-
-    async def test_orchestrate_passes_history(self):
-        fake = FakeSupabase()
-        history = [
-            {"role": "user", "content": "earlier"},
-            {"role": "assistant", "content": "reply"},
-        ]
-        with patched_orchestrator('{"action": "answer", "reply": "ok"}'):
-            decision = await orchestrator.orchestrate(
-                fake, _TENANT, "now", history=history
-            )
-        assert decision.action == "answer"
-
-
-class TestRunWorker:
-    async def test_run_worker_completes_and_meters(self):
-        fake = FakeSupabase()
-        _seed_run(fake, "run-001")
-        with patch(
-            "backend.services.os_workers.get_service_supabase", return_value=fake
-        ):
-            await os_workers.run_worker(
-                "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
-            )
-        run = fake.store["os_agent_runs"][0]
-        assert run["status"] == "succeeded"
-        assert run["deliverable_status"] == "pending_approval"
-        assert run["deliverable"]["title"] == "My Draft"
-        assert any(m["role"] == "agent" for m in fake.store["os_messages"])
-        assert usage_meter.get_usage(fake, _TENANT).agent_runs == 1
-
-    async def test_run_worker_records_failure(self):
-        fake = FakeSupabase()
-        _seed_run(fake, "run-001")
-        fake.raise_on.add(("os_agent_runs", "select"))
-        with patch(
-            "backend.services.os_workers.get_service_supabase", return_value=fake
-        ):
-            await os_workers.run_worker(
-                "run-001", _TENANT, "thread-001", "generalist", "do it", "Draft"
-            )
-        assert fake.store["os_agent_runs"][0]["status"] == "failed"
-
-    async def test_run_worker_auto_send_marks_approved(self):
-        fake = FakeSupabase()
-        _seed_run(fake, "run-001")
-        fake.seed("tenants", {"id": _TENANT, "os_auto_send_enabled": True})
-        with patch(
-            "backend.services.os_workers.get_service_supabase", return_value=fake
-        ):
-            await os_workers.run_worker(
-                "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
-            )
-        run = fake.store["os_agent_runs"][0]
-        assert run["status"] == "succeeded"
-        assert run["deliverable_status"] == "approved"
-
-    async def test_run_worker_auto_send_default_off(self):
-        fake = FakeSupabase()
-        _seed_run(fake, "run-001")
-        fake.seed("tenants", {"id": _TENANT, "os_auto_send_enabled": False})
-        with patch(
-            "backend.services.os_workers.get_service_supabase", return_value=fake
-        ):
-            await os_workers.run_worker(
-                "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
-            )
-        run = fake.store["os_agent_runs"][0]
-        assert run["deliverable_status"] == "pending_approval"
-
-    async def test_run_worker_persists_action_type_from_worker_result(self):
-        """Worker that returns ``action_type`` must persist it to ``os_agent_runs``.
-
-        Without this, Group B action handlers stay dead — ``approve_deliverable``
-        reads ``run.action_type`` to decide whether to fire a registered handler.
-        """
-        fake = FakeSupabase()
-        _seed_run(fake, "run-001")
-        fake_spec = os_workers.WorkerSpec(
-            name="booking",
-            description="test",
-            run=AsyncMock(
-                return_value=os_workers.WorkerResult(
-                    deliverable={"title": "Booking Reply", "body": "x"},
-                    summary="ready",
-                    action_type="calendar.event.create",
-                )
-            ),
-        )
-        with patch(
-            "backend.services.os_workers.get_service_supabase", return_value=fake
-        ), patch("backend.services.os_workers.get_worker", return_value=fake_spec):
-            await os_workers.run_worker(
-                "run-001", _TENANT, "thread-001", "booking", "do it", "My Draft"
-            )
-        run = fake.store["os_agent_runs"][0]
-        assert run["status"] == "succeeded"
-        assert run["action_type"] == "calendar.event.create"
-
-    async def test_run_worker_skips_action_type_when_worker_omits_it(self):
-        """Workers that omit ``action_type`` must not write the column.
-
-        Preserves existing behavior for catch-all workers (generalist) that have
-        no registered action handler.
-        """
-        fake = FakeSupabase()
-        _seed_run(fake, "run-001")
-        with patch(
-            "backend.services.os_workers.get_service_supabase", return_value=fake
-        ):
-            await os_workers.run_worker(
-                "run-001", _TENANT, "thread-001", "generalist", "do it", "My Draft"
-            )
-        run = fake.store["os_agent_runs"][0]
-        assert run.get("action_type") is None
-
-    async def test_record_memory_writes_persists_entries(self):
-        fake = FakeSupabase()
-        with patch(
-            "backend.services.os_memory.embed_text", AsyncMock(return_value=[0.0])
-        ):
-            await orchestrator.record_memory_writes(
-                fake,
-                _TENANT,
-                [{"kind": "fact", "content": "fact one"}],
-                source="thread:t1",
-            )
-        assert fake.store["os_memory_entries"][0]["content"] == "fact one"
-
-
-# ===========================================================================
-# lead_nurture worker — runtime channel routing (1:N action mapping)
-# ===========================================================================
-
-
-class TestLeadNurtureChannelRouting:
-    """Owner request picks the action_type at worker runtime.
-
-    lead_nurture is a 1:N worker — three registered handlers consume its
-    deliverable: ``email.send``, ``sms.send``, and ``crm.contact_upsert``.
-    The worker chooses one per run; the default keeps the existing
-    email-led follow-up behavior.
-    """
-
-    def test_defaults_to_email_when_no_channel_directive(self):
-        from backend.services.os_workers.lead_nurture import _choose_action_type
-
-        assert _choose_action_type("Follow up with Jane about her quote") == (
-            "email.send"
-        )
-        assert _choose_action_type("") == "email.send"
-
-    def test_explicit_sms_request_routes_to_sms_send(self):
-        from backend.services.os_workers.lead_nurture import _choose_action_type
-
-        assert _choose_action_type("Text this lead about pricing") == "sms.send"
-        assert _choose_action_type("Send an SMS reminder") == "sms.send"
-        assert _choose_action_type("Reach out via text") == "sms.send"
-
-    def test_explicit_crm_note_request_routes_to_crm_upsert(self):
-        from backend.services.os_workers.lead_nurture import _choose_action_type
-
-        assert _choose_action_type("Log a note that they're still thinking") == (
-            "crm.contact_upsert"
-        )
-        assert _choose_action_type("Add a CRM note for Jane") == "crm.contact_upsert"
-
-    def test_email_directive_beats_other_channels(self):
-        from backend.services.os_workers.lead_nurture import _choose_action_type
-
-        assert _choose_action_type("Email Jane and also text her") == "email.send"
-        assert _choose_action_type("Send an email reminder") == "email.send"
-
-
-# ===========================================================================
-# campaign worker — runtime channel routing (1:N action mapping)
-# ===========================================================================
-
-
-class TestCampaignChannelRouting:
-    """Owner request picks the social action at worker runtime.
-
-    campaign is a 1:N worker — three registered handlers consume its
-    deliverable: ``gbp.post``, ``social.instagram.post``,
-    ``social.facebook.post``. Default is GBP (universal SMB reach, no
-    follower base, helps local SEO). Explicit channel directives win.
-    """
-
-    def test_defaults_to_gbp_when_no_channel_directive(self):
-        from backend.services.os_workers.campaign import _choose_action_type
-
-        assert _choose_action_type("Draft a summer sale campaign") == "gbp.post"
-        assert _choose_action_type("") == "gbp.post"
-
-    def test_instagram_directive_routes_to_instagram(self):
-        from backend.services.os_workers.campaign import _choose_action_type
-
-        assert _choose_action_type("Post to Instagram for our sale") == (
-            "social.instagram.post"
-        )
-        assert _choose_action_type("Make an IG post") == "social.instagram.post"
-
-    def test_facebook_directive_routes_to_facebook(self):
-        from backend.services.os_workers.campaign import _choose_action_type
-
-        assert _choose_action_type("Post on Facebook about the event") == (
-            "social.facebook.post"
-        )
-        assert _choose_action_type("Write a FB post") == "social.facebook.post"
-
-    def test_gbp_directive_routes_to_gbp(self):
-        from backend.services.os_workers.campaign import _choose_action_type
-
-        assert _choose_action_type("Create a Google Business post") == "gbp.post"
-        assert _choose_action_type("Draft a GBP update") == "gbp.post"
-
-
-# ===========================================================================
-# Group C: bi-directional mirror (OS assistant → legacy channel store)
 # ===========================================================================
 
 
@@ -1818,58 +1485,6 @@ class TestOutboundMirrorIdempotency:
         assert result["provider"] == "twilio_byo"
 
 
-class TestThreadRunnerMirrorIntegration:
-    """Runner wiring: widget-sourced thread → assistant reply mirrors to chat_messages."""
-
-    def test_widget_sourced_thread_mirrors_assistant_answer(self):
-        fake = FakeSupabase()
-        fake.seed(
-            "os_threads",
-            {
-                "id": "thread-widget-1",
-                "client_id": _TENANT,
-                "source": "widget",
-                "source_metadata": {"session_id": "sess-xyz"},
-                "title": "Widget chat",
-                "updated_at": "2026-05-01T00:00:00+00:00",
-            },
-        )
-        with patched_db(fake), patched_orchestrator(
-            '{"action": "answer", "reply": "Hi from OS"}'
-        ):
-            resp = client.post(
-                "/api/v1/os/threads/thread-widget-1/messages",
-                json={"content": "customer message"},
-                headers=_auth(),
-            )
-        assert resp.status_code == 201
-        chat_rows = fake.store.get("chat_messages", [])
-        assert len(chat_rows) == 1
-        assert chat_rows[0]["session_id"] == "sess-xyz"
-        assert chat_rows[0]["role"] == "assistant"
-        assert chat_rows[0]["content"] == "Hi from OS"
-        assert chat_rows[0]["os_message_id"] == resp.json()["assistant_message"]["id"]
-
-    def test_owner_sourced_thread_does_not_mirror(self):
-        fake = FakeSupabase()
-        _seed_thread(fake)
-        with patched_db(fake), patched_orchestrator(
-            '{"action": "answer", "reply": "owner reply"}'
-        ):
-            resp = client.post(
-                "/api/v1/os/threads/thread-001/messages",
-                json={"content": "hi"},
-                headers=_auth(),
-            )
-        assert resp.status_code == 201
-        assert fake.store.get("chat_messages", []) == []
-
-
-# ===========================================================================
-# tenant_scope (os_* additions)
-# ===========================================================================
-
-
 class TestTenantScope:
     @pytest.mark.parametrize(
         "table",
@@ -1978,129 +1593,72 @@ class TestThreadsRouter:
             resp = client.get("/api/v1/os/threads/missing/messages", headers=_auth())
         assert resp.status_code == 404
 
-    def test_post_message_answer(self):
+    def test_post_message_runs_engine_turn_via_runner(self):
+        """POST /threads/{id}/messages inserts the user message, meters it,
+        and returns the turn-runner result. The runner itself is the seam:
+        its engine-path contracts live in backend/tests/test_os_engine_cutover.py
+        (the legacy orchestrator tests were retired with the Phase 4 cutover)."""
+        from unittest.mock import patch as _patch
+
         fake = FakeSupabase()
         _seed_thread(fake)
-        with patched_db(fake), patched_orchestrator(
-            '{"action": "answer", "reply": "Hello there"}'
+
+        async def fake_turn(db, client_id, thread_id, user_message_row, background_tasks):
+            return {
+                "user_message": user_message_row,
+                "assistant_message": {"role": "assistant", "content": "done"},
+                "action": "answer",
+                "agent_runs": [],
+            }
+
+        with patched_db(fake), _patch(
+            "backend.routers.os_threads.process_user_turn", fake_turn
         ):
             resp = client.post(
                 "/api/v1/os/threads/thread-001/messages",
-                json={"content": "hi"},
+                json={"content": "What came in today?"},
                 headers=_auth(),
             )
-        assert resp.status_code == 201
+        assert resp.status_code == 201, resp.text
         body = resp.json()
         assert body["action"] == "answer"
-        assert body["assistant_message"]["content"] == "Hello there"
-        assert body["agent_runs"] == []
-
-    def test_post_message_delegate_creates_run(self):
-        fake = FakeSupabase()
-        _seed_thread(fake)
-        llm = (
-            '{"action": "delegate", "reply": "On it", '
-            '"agent_name": "generalist", "deliverable_title": "Draft"}'
-        )
-        with patched_db(fake), patched_orchestrator(llm):
-            resp = client.post(
-                "/api/v1/os/threads/thread-001/messages",
-                json={"content": "write a plan"},
-                headers=_auth(),
-            )
-        assert resp.status_code == 201
-        body = resp.json()
-        assert body["action"] == "delegate"
-        assert len(body["agent_runs"]) == 1
-        assert body["agent_runs"][0]["status"] == "queued"
-
-    def test_post_message_backlog_without_owner_email(self):
-        fake = FakeSupabase()
-        _seed_thread(fake)
-        llm = '{"action": "backlog", "reply": "No fit", "reason": "no agent"}'
-        with patched_db(fake), patched_orchestrator(llm):
-            resp = client.post(
-                "/api/v1/os/threads/thread-001/messages",
-                json={"content": "weird request"},
-                headers=_auth(),
-            )
-        assert resp.status_code == 201
-        assert resp.json()["action"] == "backlog"
-        assert len(fake.store["os_backlog_requests"]) == 1
-
-    def test_post_message_backlog_emails_owner(self):
-        fake = FakeSupabase()
-        _seed_thread(fake)
-        fake.seed(
-            "tenants",
-            {
-                "id": _TENANT,
-                "owner_email": "owner@example.com",
-                "business_name": "Test Biz",
-            },
-        )
-        llm = '{"action": "backlog", "reply": "No fit", "reason": "no agent"}'
-        sender = AsyncMock()
-        with patched_db(fake), patched_orchestrator(llm), patch(
-            "backend.services.os_thread_runner.send_email", sender
-        ):
-            resp = client.post(
-                "/api/v1/os/threads/thread-001/messages",
-                json={"content": "weird request"},
-                headers=_auth(),
-            )
-        assert resp.status_code == 201
-        sender.assert_awaited_once()
-
-    def test_post_message_persists_memory_writes(self):
-        fake = FakeSupabase()
-        _seed_thread(fake)
-        llm = (
-            '{"action": "answer", "reply": "Noted", '
-            '"memory": [{"kind": "fact", "content": "Closed Mondays"}]}'
-        )
-        with patched_db(fake), patched_orchestrator(llm):
-            resp = client.post(
-                "/api/v1/os/threads/thread-001/messages",
-                json={"content": "we close Mondays"},
-                headers=_auth(),
-            )
-        assert resp.status_code == 201
-        assert fake.store["os_memory_entries"][0]["content"] == "Closed Mondays"
+        assert body["assistant_message"]["content"] == "done"
+        inserted = [r for r in fake.store.get("os_messages", []) if r.get("role") == "user"]
+        assert inserted and inserted[-1]["content"] == "What came in today?"
 
     def test_post_message_cap_reached_429(self):
+        """Plan cap gates the turn BEFORE any engine work happens."""
+        from unittest.mock import patch as _patch
+
         fake = FakeSupabase()
         _seed_thread(fake)
-        fake.seed(
-            "os_tenant_usage",
-            {
-                "client_id": _TENANT,
-                "cycle_start": usage_meter.current_cycle_start(),
-                "agent_runs": usage_meter.DEFAULT_AGENT_RUN_CAP,
-            },
-        )
-        with patched_db(fake), patched_orchestrator(
-            '{"action": "answer", "reply": "x"}'
-        ):
+        turn_called = []
+
+        async def fake_turn(*a, **kw):
+            turn_called.append(1)
+            return {}
+
+        with patched_db(fake), _patch(
+            "backend.routers.os_threads.process_user_turn", fake_turn
+        ), _patch("backend.routers.os_threads.usage_meter") as meter:
+            meter.cap_reached.return_value = True
             resp = client.post(
                 "/api/v1/os/threads/thread-001/messages",
-                json={"content": "hi"},
+                json={"content": "hello"},
                 headers=_auth(),
             )
         assert resp.status_code == 429
+        assert turn_called == []
 
     def test_post_message_unknown_thread_404(self):
         fake = FakeSupabase()
-        with patched_db(fake), patched_orchestrator(
-            '{"action": "answer", "reply": "x"}'
-        ):
+        with patched_db(fake):
             resp = client.post(
-                "/api/v1/os/threads/missing/messages",
-                json={"content": "hi"},
+                "/api/v1/os/threads/nope/messages",
+                json={"content": "hello"},
                 headers=_auth(),
             )
         assert resp.status_code == 404
-
     def test_post_message_rejects_empty_content(self):
         fake = FakeSupabase()
         _seed_thread(fake)
@@ -2162,7 +1720,9 @@ def _seed_deliverable_run(fake, run_id="run-001", status="pending_approval"):
         fake,
         run_id,
         status="succeeded",
-        deliverable={"title": "Draft", "format": "markdown", "body": "old body"},
+        # v2 draft shape (migration 132 + PR #207): channel, not format. The
+        # pending route intentionally filters v1-shape drafts.
+        deliverable={"title": "Draft", "channel": "email", "body": "old body"},
         deliverable_status=status,
     )
     return run_id

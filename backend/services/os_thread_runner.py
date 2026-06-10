@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from fastapi import BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 
-from backend.services import agent_os_bridge, agent_sdk_client, os_graph_memory
+from backend.services import agent_os_bridge, agent_sdk_client, os_graph_memory, os_kb_feed
 from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
@@ -65,12 +65,15 @@ async def process_user_turn(
     business_name = ""
     if agent_sdk_client.is_configured():
         context = agent_os_bridge.assemble_shared_context(db, client_id)
-        business_name = (context.get("businessProfile") or {}).get("businessName") or ""
-        # Long-term memory rides in as KbEntry rows — the engine's agents
-        # already consume SharedContext.kb, so no engine change is needed.
-        context["kb"] = await os_graph_memory.graph_kb_entries(
-            db, client_id, user_content
-        )
+        profile = context.get("businessProfile") or {}
+        business_name = profile.get("businessName") or ""
+        # Knowledge rides in as KbEntry rows — the engine's agents already
+        # consume SharedContext.kb, so no engine change is needed. Static
+        # business truth first (vertical guidance + FAQs + website), then
+        # learned memory (knowledge graph + semantic hits for this ask).
+        context["kb"] = os_kb_feed.tenant_kb_entries(
+            db, client_id, profile.get("businessType")
+        ) + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
         out = await run_in_threadpool(
             agent_sdk_client.orchestrate_sync,
             client_id,

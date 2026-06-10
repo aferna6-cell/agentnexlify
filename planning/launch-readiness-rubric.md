@@ -25,9 +25,9 @@
 | 1.5 | Business entity registered (LLC / C-corp) + bank + EIN | ? | `[partner-verify]` |
 | 1.6 | Merchant agreement signed (Stripe Connect or direct) | 1 | Stripe live keys active per webhook code. Signed agreement `[partner-verify]` |
 | 1.7 | Written AI-disclosure in widget greeting ("powered by AI") | 2 | `widget/agentnexlify-widget.js` now prepends AI disclosure at runtime when the saved greeting lacks it; `frontend/src/utils/businessPresets.js` seed copy also now identifies the assistant as AI. |
-| 1.8 | DPAs available for customers who ask | 0 | No DPA template in `docs/` |
+| 1.8 | DPAs available for customers who ask | 1 | `docs/legal/dpa-template.md` — roles, subprocessor table, security measures matching shipped controls, SCC/UK addendum incorporation, self-serve deletion + memory Forget referenced. Counsel review pending for score 2. |
 
-**Subtotal:** 11 / 16 × 3 = **33 / 48** (1.5 + 1.6 unknown → scored conservative; 1.3 + 1.4 closed 2026-06-10)
+**Subtotal:** 12 / 16 × 3 = **36 / 48** (1.5 + 1.6 unknown → scored conservative)
 
 ---
 
@@ -40,11 +40,11 @@
 | 2.3 | Webhook signature verification on inbound | 2 | Stripe: `billing.py:116`, `stripe_webhooks.py:40`; Twilio: `twilio_webhooks.py:33`; Resend (svix): `resend_webhooks.py:25` |
 | 2.4 | All secrets in env vars, zero in git history | 2 | Pre-commit hook scans; `.env*` gitignored; no leaks in recent audits |
 | 2.5 | Auth rate-limited on /login, /signup, /reset | 2 | `backend/routers/auth.py:450,479,695,734,803` — `@limiter.limit("5/minute")` |
-| 2.6 | JWT rotation + refresh flow tested | 1 | JWT auth exists (auth.py) but refresh rotation test coverage unknown |
+| 2.6 | JWT rotation + refresh flow tested | 2 | `tests/test_jwt_auth.py` (8 cases): expired/tampered/wrong-secret/alg-none/missing-bearer all 401; valid token claims round-trip; documented that tokens are single-issue until expiry (no refresh endpoint) with proactive client-side expiry logout in AuthContext. 2026-06-10. |
 | 2.7 | Pen test OR automated security scan run (semgrep, snyk) | 1 | `.github/workflows/pr-check.yml` now installs Semgrep and runs `semgrep scan --config auto`. Local 2026-04-20 scan completed under Python 3.12 with UTF-8 enabled and surfaced 50 existing findings that still need triage. |
 | 2.8 | Incident response playbook written | 2 | `docs/incident-response-playbook.md` defines severity, roles, first-15-minute containment, recovery, comms cadence, security rules, and post-incident aftercare. |
 
-**Subtotal:** 14 / 16 × 3 = **42 / 48** — no HIGH-severity zeros in this dimension
+**Subtotal:** 15 / 16 × 3 = **45 / 48** — no HIGH-severity zeros in this dimension
 
 ---
 
@@ -54,14 +54,14 @@
 |---|-----------|-------|-------|
 | 3.1 | Stripe webhook idempotency tested (replay same event twice) | 2 | ✓ 2026-04-17 (commit `8b9dc7b`) — `tests/test_stripe_webhook.py:388` observable-state assertion |
 | 3.2 | Failed-payment dunning flow tested end-to-end | 1 | `tests/test_launch_risk_guardrails.py:75-105` covers `invoice.payment_failed`, persists `billing_dunning_attempt_count`, records the dunning event, and sends email. Still not a full webhook/scheduler integration path. |
-| 3.3 | Proration on upgrade / downgrade tested | 1 | Stripe handles via API; no regression test |
-| 3.4 | Cancellation preserves access until period end | 1 | `billing.py:341` allows `canceled` status; period-end preservation untested |
+| 3.3 | Proration on upgrade / downgrade tested | 2 | `tests/test_billing_plan_changes.py`: upgrade AND downgrade assert `proration_behavior=create_prorations` passed to Stripe; same-plan change rejected; tenant row updates. 2026-06-10. |
+| 3.4 | Cancellation preserves access until period end | 2 | `tests/test_billing_cancellation.py`: cancel sets `cancel_at_period_end=True` (never immediate delete), plan_status NOT flipped at cancel time, downgrade-to-free happens only on the `subscription.deleted` webhook; cancellation reason validated + recorded. 2026-06-10. |
 | 3.5 | Usage metering matches Stripe meter events ±1% | 1 | `monthly_conversation_limit` tracked; reconciliation not automated |
-| 3.6 | Refund flow tested (partial + full) | 1 | `tests/test_launch_risk_guardrails.py:114-270` covers refund creation, idempotent replay, and audit-insert fallback. Partial/full refund matrix is still not explicitly exercised. |
-| 3.7 | Trial → paid transition tested across all plans | 1 | `free_trial_started_at` tracked (auth.py:898); transition test coverage partial |
+| 3.6 | Refund flow tested (partial + full) | 2 | `tests/test_billing_refund_matrix.py`: partial refund passes exact amount to Stripe + audits actual amount; full refund omits amount + audits Stripe's figure; idempotent replay for BOTH paths. Plus prior guardrail coverage. 2026-06-10. |
+| 3.7 | Trial → paid transition tested across all plans | 2 | `tests/test_checkout_trial_to_paid.py` (18 cases): checkout.session.completed for growth/autopilot/professional/enterprise each flips any prior plan (free/trial/growth) to active. Also exposed + fixed a real bug: the fraud-pause path crashed on a `log_activity` kwarg typo (billing.py:413), which would have 500'd the Stripe webhook on every flagged checkout. 2026-06-10. |
 | 3.8 | Invoice generation reconciles against Stripe dashboard | 1 | `invoices` table + `generate_invoice`; reconciliation cron missing |
 
-**Subtotal:** 9 / 16 × 3 = **27 / 48** — no HIGH-severity zeros in this dimension
+**Subtotal:** 13 / 16 × 3 = **39 / 48** — no HIGH-severity zeros in this dimension
 
 ---
 
@@ -169,9 +169,9 @@
 
 | Dimension | Raw | Weighted | Max | HIGH zeros |
 |-----------|-----|----------|-----|------------|
-| 1. Legal | 11 / 16 | 33 | 48 | — |
-| 2. Security | 14 / 16 | 42 | 48 | — |
-| 3. Billing | 9 / 16 | 27 | 48 | — |
+| 1. Legal | 12 / 16 | 36 | 48 | — |
+| 2. Security | 15 / 16 | 45 | 48 | — |
+| 3. Billing | 13 / 16 | 39 | 48 | — |
 | 4. Observability | 6 / 12 | 12 | 24 | — |
 | 5. Load | 6 / 10 | 12 | 20 | — |
 | 6. Data integrity | 8 / 10 | 16 | 20 | — |
@@ -179,13 +179,13 @@
 | 8. Brand | 6 / 10 | 6 | 10 | — |
 | 9. Sales | 5 / 10 | 5 | 10 | — |
 | 10. Risk | 8 / 12 | 16 | 24 | **10.6** |
-| **TOTAL** | — | **173** | **262** | **1 HIGH zero (10.6)** |
+| **TOTAL** | — | **191** | **262** | **1 HIGH zero (10.6)** |
 
-**Score:** 173 / 262 = **66.0%**
+**Score:** 191 / 262 = **72.9%**
 
 ## Verdict — 2026-06-10
 
-🟡 **Soft launch blocked on ONE partner action.** Score 173/262 clears the
+🟡 **Soft launch blocked on ONE partner action.** Score 191/262 clears the
 160 soft-launch threshold; the single remaining blocker is the HIGH-severity
 zero on 10.6 (insurance quote) — a partner phone call. The moment a quote is
 in hand, soft launch (invite-only, design-partner pricing) is GO by this
