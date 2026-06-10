@@ -78,8 +78,11 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
 
       {/* CTA buttons */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <a href="/dashboard" style={{ display: "block", padding: "14px", background: "#6366f1", color: "#fff", borderRadius: 10, fontSize: "1rem", fontWeight: 600, textDecoration: "none" }}>
-          Go to Dashboard →
+        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.88rem", margin: "0 0 4px", lineHeight: 1.5 }}>
+          Your 8 AI department heads are ready — ask them anything about running {wizardData.business_name || "your business"}.
+        </p>
+        <a href="/dashboard/agent-os" style={{ display: "block", padding: "14px", background: "#6366f1", color: "#fff", borderRadius: 10, fontSize: "1rem", fontWeight: 600, textDecoration: "none" }}>
+          Meet your AI staff →
         </a>
         {apiKey && (
           <a

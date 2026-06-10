@@ -22,6 +22,7 @@ import {
 import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import MemoryPanel from "../components/os/MemoryPanel";
+import FirstRunStarters from "../components/os/FirstRunStarters";
 import useIsMobile from "../hooks/useIsMobile";
 
 const POLL_MS = 3000;
@@ -68,7 +69,7 @@ const SOURCE_FILTERS = [
 ];
 
 export default function AgentOS() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState(null);
@@ -86,6 +87,7 @@ export default function AgentOS() {
   const [showMemory, setShowMemory] = useState(false);
 
   const scrollRef = useRef(null);
+  const composerRef = useRef(null);
   const isMobile = useIsMobile();
   const [railOpen, setRailOpen] = useState(false);
 
@@ -595,6 +597,14 @@ export default function AgentOS() {
               Loading conversation...
             </div>
           ) : messages.length === 0 ? (
+            threads.length === 0 && !activeThreadId ? (
+              <FirstRunStarters
+                businessType={user?.businessType || ""}
+                onSelectPrompt={setComposer}
+                composerRef={composerRef}
+                isMobile={isMobile}
+              />
+            ) : (
             <div
               style={{
                 height: "100%",
@@ -624,6 +634,7 @@ export default function AgentOS() {
                 nothing fits.
               </div>
             </div>
+            )
           ) : (
             messages.map((m) => {
               const meta = ROLE_META[m.role] || ROLE_META.assistant;
@@ -711,6 +722,7 @@ export default function AgentOS() {
           }}
         >
           <textarea
+            ref={composerRef}
             value={composer}
             onChange={(e) => setComposer(e.target.value)}
             onKeyDown={handleComposerKey}

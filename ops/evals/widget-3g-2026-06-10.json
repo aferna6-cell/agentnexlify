@@ -1,0 +1,8 @@
+{
+  "profile": "slow-3g (400ms RTT, 400kbps)",
+  "widget_url": "https://agentnexlify-production.up.railway.app/widget/agentnexlify-widget.js",
+  "script_bytes": 66185,
+  "script_under_100kb": true,
+  "launcher_visible_ms": 7182,
+  "gate_pass": true
+}

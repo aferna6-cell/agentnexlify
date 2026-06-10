@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services import usage_meter
+from backend.services.ai_usage_guard import get_ai_usage_status
 
 logger = logging.getLogger(__name__)
 
@@ -30,4 +31,7 @@ async def get_usage(claims: dict = Depends(_get_current_tenant)):
         "output_tokens": snapshot.output_tokens,
         "cap": snapshot.cap,
         "cap_reached": snapshot.cap_reached,
+        # AI token spend vs the guard's thresholds (rubric 5.3): owners see
+        # how close they are to rate-limiting before a turn is refused.
+        "ai_usage": get_ai_usage_status(db, client_id),
     }

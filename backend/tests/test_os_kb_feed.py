@@ -84,3 +84,53 @@ def test_tenant_kb_survives_total_db_failure(monkeypatch):
     entries = feed.tenant_kb_entries(object(), "t1", "salon")
     # guidance still returned; db-backed layers skipped, never raises
     assert entries == feed.VERTICAL_GUIDANCE["salon"]
+
+
+def test_ai_usage_status_shapes_and_thresholds(monkeypatch):
+    """rubric 5.3 — the usage surface reports spend vs guard thresholds."""
+    from backend.services import ai_usage_guard as guard
+
+    class _Q:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def select(self, *_a, **_k):
+            return self
+
+        def eq(self, *_a, **_k):
+            return self
+
+        def limit(self, *_a, **_k):
+            return self
+
+        def execute(self):
+            class R:  # noqa: N801 - tiny local result shim
+                pass
+
+            r = R()
+            r.data = self._rows
+            return r
+
+    class _DB:
+        def __init__(self, tenants, usage):
+            self._t, self._u = tenants, usage
+
+        def table(self, name):
+            return _Q(self._t if name == "tenants" else self._u)
+
+    db = _DB(
+        tenants=[{"ai_monthly_token_alert_threshold": 1000, "ai_monthly_token_hard_limit": 2000}],
+        usage=[{"input_tokens": 900, "output_tokens": 200,
+                "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}],
+    )
+    out = guard.get_ai_usage_status(db, "t1")
+    assert out["total_tokens"] == 1100
+    assert out["alert_reached"] is True
+    assert out["hard_limit_reached"] is False
+
+    class _Boom:
+        def table(self, _):
+            raise RuntimeError("down")
+
+    safe = guard.get_ai_usage_status(_Boom(), "t1")
+    assert safe["hard_limit_reached"] is False and safe["total_tokens"] == 0
