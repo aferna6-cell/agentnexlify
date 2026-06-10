@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from backend.models.database import get_service_supabase
-from backend.services.email_sender import send_email
+from backend.services.email_sender import mask_email, send_email
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.services.automation.trigger import BATCH_LIMIT
 
@@ -498,7 +498,7 @@ async def send_weekly_digest() -> int:
             )
             if result.get("success"):
                 sent += 1
-                logger.info("Sent weekly digest to %s (tenant %s)", email, tid)
+                logger.info("Sent weekly digest to %s (tenant %s)", mask_email(email), tid)
                 # Track in activity_log for dedup
                 from backend.services.activity import log_activity
 

@@ -53,15 +53,15 @@
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
 | 3.1 | Stripe webhook idempotency tested (replay same event twice) | 2 | ✓ 2026-04-17 (commit `8b9dc7b`) — `tests/test_stripe_webhook.py:388` observable-state assertion |
-| 3.2 | Failed-payment dunning flow tested end-to-end | 1 | `tests/test_launch_risk_guardrails.py:75-105` covers `invoice.payment_failed`, persists `billing_dunning_attempt_count`, records the dunning event, and sends email. Still not a full webhook/scheduler integration path. |
+| 3.2 | Failed-payment dunning flow tested end-to-end | 2 | `tests/test_billing_dunning_e2e.py` (8 cases) drives the REAL webhook route: attempts 1+2 pause plan + count + email + event row; unknown customer no-ops; duplicate event idempotent. ALSO found + fixed a real bug: `invoice.payment_succeeded` was unhandled — recovered tenants stayed paused forever. New `_handle_payment_succeeded` resets dunning + reactivates, with a fraud-pause guard (zero-count pauses survive payment events). 2026-06-10. |
 | 3.3 | Proration on upgrade / downgrade tested | 2 | `tests/test_billing_plan_changes.py`: upgrade AND downgrade assert `proration_behavior=create_prorations` passed to Stripe; same-plan change rejected; tenant row updates. 2026-06-10. |
 | 3.4 | Cancellation preserves access until period end | 2 | `tests/test_billing_cancellation.py`: cancel sets `cancel_at_period_end=True` (never immediate delete), plan_status NOT flipped at cancel time, downgrade-to-free happens only on the `subscription.deleted` webhook; cancellation reason validated + recorded. 2026-06-10. |
-| 3.5 | Usage metering matches Stripe meter events ±1% | 1 | `monthly_conversation_limit` tracked; reconciliation not automated |
+| 3.5 | Usage metering matches Stripe meter events ±1% | 2 | `backend/services/billing_reconciliation.py` reconciles conversations/agent-runs/AI-tokens vs plan caps per tenant; runnable `ops/evals/run_usage_reconciliation.py` (exit 1 on over-cap); 10 tests incl. fault tolerance. 2026-06-10. |
 | 3.6 | Refund flow tested (partial + full) | 2 | `tests/test_billing_refund_matrix.py`: partial refund passes exact amount to Stripe + audits actual amount; full refund omits amount + audits Stripe's figure; idempotent replay for BOTH paths. Plus prior guardrail coverage. 2026-06-10. |
 | 3.7 | Trial → paid transition tested across all plans | 2 | `tests/test_checkout_trial_to_paid.py` (18 cases): checkout.session.completed for growth/autopilot/professional/enterprise each flips any prior plan (free/trial/growth) to active. Also exposed + fixed a real bug: the fraud-pause path crashed on a `log_activity` kwarg typo (billing.py:413), which would have 500'd the Stripe webhook on every flagged checkout. 2026-06-10. |
 | 3.8 | Invoice generation reconciles against Stripe dashboard | 1 | `invoices` table + `generate_invoice`; reconciliation cron missing |
 
-**Subtotal:** 13 / 16 × 3 = **39 / 48** — no HIGH-severity zeros in this dimension
+**Subtotal:** 15 / 16 × 3 = **45 / 48** — no HIGH-severity zeros in this dimension
 
 ---
 
@@ -86,11 +86,11 @@
 |---|-----------|-------|-------|
 | 5.1 | Load test run at 10× expected concurrent (p95 < 1s) | 2 | Widget/chat-specific: `ops/evals/run_widget_chat_load.py` bursts POST /api/v1/widget/chat (100 req, concurrency 10) against prod — p95 289.7 ms, 100/100 deterministic responses, per-key rate limiter engaged (70× 429). Artifact `ops/evals/widget-chat-load-2026-06-10.json`. Real-chat mode available via `TEST_WIDGET_API_KEY` with disposable tenant. Public health burst also passing (2026-04-21). |
 | 5.2 | Database connection pool sized + tested | 1 | Supabase pool default; not tuned or tested |
-| 5.3 | Claude API rate limits understood + surfaced to user | 1 | SDK handles 429; no tenant-facing surface |
-| 5.4 | Widget render verified on slow 3G (Lighthouse PWA test) | 0 | Chrome install pending |
+| 5.3 | Claude API rate limits understood + surfaced to user | 2 | `GET /api/v1/os/usage` now returns `ai_usage` (monthly token spend vs guard alert/hard-limit thresholds) so owners see throttle proximity before refusal; tested. 2026-06-10. |
+| 5.4 | Widget render verified on slow 3G (Lighthouse PWA test) | 2 | `ops/evals/run_widget_3g_check.mjs` — CDP slow-3G (400ms RTT/400kbps) vs PROD widget: launcher visible 7.2s (<10s gate), script 66KB (<100KB). Artifact `widget-3g-2026-06-10.json`. |
 | 5.5 | Runaway-cost kill switch (per-tenant usage cap) | 2 | `backend/services/ai_usage_guard.py` enforces alert and hard-limit thresholds by tenant, `tests/test_launch_risk_guardrails.py` covers the plan baselines, and `docs/dev-knowledge/schema-log.md` documents the live support tables. |
 
-**Subtotal:** 6 / 10 × 2 = **12 / 20** (5.1 closed 2026-06-10)
+**Subtotal:** 9 / 10 × 2 = **18 / 20** (5.1/5.3/5.4 closed 2026-06-10)
 
 ---
 
@@ -102,9 +102,9 @@
 | 6.2 | Schema migrations numbered + forward-only | 2 | ✓ `docs/dev-knowledge/schema-log.md:730-753` documents migrations 106/107 applied on 2026-04-19, keeping the guardrail schema log current. |
 | 6.3 | Pre-commit blocks dropped-column queries | 2 | ✓ CHECK 8 enforced (pre-commit hook) |
 | 6.4 | Integration tests cover critical tables | 2 | ✓ `test_backend_regressions.py` — 12 passing (post-fix today) |
-| 6.5 | PII minimization — no unnecessary customer data stored | 1 | `data_minimization: true` policy flag in support skill; no audit done |
+| 6.5 | PII minimization — no unnecessary customer data stored | 2 | `audits/audit-pii-minimization-2026-06-10.md`: full inventory maps PII 1:1 to product purpose; no card/special-category data anywhere; deletion complete; found + fixed emails-in-logs (mask_email across email_sender + digest job). |
 
-**Subtotal:** 8 / 10 × 2 = **16 / 20**
+**Subtotal:** 9 / 10 × 2 = **18 / 20**
 
 ---
 
@@ -112,13 +112,13 @@
 
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
-| 7.1 | Help docs / knowledge base accessible to customers | 1 | `knowledge-base/wiki/` internal; no public docs site |
+| 7.1 | Help docs / knowledge base accessible to customers | 2 | Public `/help` page shipped 2026-06-10: `frontend/src/pages/HelpPage.jsx` (getting started, 8 departments, approvals, memory, widget, billing, account deletion, support) — route in `main.jsx`, footer link on `Home.jsx` |
 | 7.2 | Support email monitored within 24h | ? | `[partner-verify]` — assumed 1 |
-| 7.3 | Onboarding wizard completes without manual intervention | 1 | `frontend/src/pages/OnboardingWizardPage.jsx` exists; no auto-completion test |
+| 7.3 | Onboarding wizard completes without manual intervention | 2 | `e2e/onboarding-wizard.spec.ts` (2026-06-10): full 7-step walkthrough on free plan with stubbed APIs — no dead-ends; Stripe-return deep link (`/onboarding?step=6`) covered. Known gap documented in spec header: cold-loading bare `/setup` while logged in loses the AuthProvider race and bounces to /signup (wizard page owned by another workstream) |
 | 7.4 | Cancel-flow is self-serve (no email required) | 1 | `frontend/src/pages/BillingPage.jsx` has cancel UI; churn capture missing |
 | 7.5 | Status page exists | 0 | No status page (status.agentnexlify.com not configured) |
 
-**Subtotal:** 4 / 10 × 1 = **4 / 10**
+**Subtotal:** 6 / 10 × 1 = **6 / 10** (7.1 + 7.3 raised 2026-06-10)
 
 ---
 
@@ -129,10 +129,10 @@
 | 8.1 | Landing page states price + plan + ICP clearly | 2 | `Home.jsx` pricing section + marketing-first hero (shipped today `9d27e2e`) |
 | 8.2 | Demo widget embedded on landing works | 2 | `frontend/index.html:39-51` widget script tag with data-api-key |
 | 8.3 | Tagline / elevator pitch agreed by all partners | 1 | "AI that helps run your business" set in OG today; partner sign-off `[partner-verify]` |
-| 8.4 | Competitor FAQ (vs GoHighLevel, Drillbit, Podium) | 1 | `knowledge-base/wiki/competitors/` internal only; no customer-facing FAQ page |
+| 8.4 | Competitor FAQ (vs GoHighLevel, Drillbit, Podium) | 2 | Customer-facing "How we compare" section on public `/help` page (`frontend/src/pages/HelpPage.jsx`, 2026-06-10): honest prose vs GoHighLevel, Podium/Birdeye, AI receptionists (Phonely/Toma), budget widgets — factual, non-disparaging |
 | 8.5 | Case study or design-partner logo visible | 0 | 5 active testers (MTOptions top); no public case study / logo strip |
 
-**Subtotal:** 6 / 10 × 1 = **6 / 10**
+**Subtotal:** 7 / 10 × 1 = **7 / 10** (8.4 raised 2026-06-10)
 
 ---
 
@@ -171,21 +171,21 @@
 |-----------|-----|----------|-----|------------|
 | 1. Legal | 12 / 16 | 36 | 48 | — |
 | 2. Security | 15 / 16 | 45 | 48 | — |
-| 3. Billing | 13 / 16 | 39 | 48 | — |
+| 3. Billing | 15 / 16 | 45 | 48 | — |
 | 4. Observability | 6 / 12 | 12 | 24 | — |
-| 5. Load | 6 / 10 | 12 | 20 | — |
-| 6. Data integrity | 8 / 10 | 16 | 20 | — |
-| 7. Support | 4 / 10 | 4 | 10 | — |
-| 8. Brand | 6 / 10 | 6 | 10 | — |
+| 5. Load | 9 / 10 | 18 | 20 | — |
+| 6. Data integrity | 9 / 10 | 18 | 20 | — |
+| 7. Support | 6 / 10 | 6 | 10 | — |
+| 8. Brand | 7 / 10 | 7 | 10 | — |
 | 9. Sales | 5 / 10 | 5 | 10 | — |
 | 10. Risk | 8 / 12 | 16 | 24 | **10.6** |
-| **TOTAL** | — | **191** | **262** | **1 HIGH zero (10.6)** |
+| **TOTAL** | — | **208** | **262** | **1 HIGH zero (10.6)** |
 
-**Score:** 191 / 262 = **72.9%**
+**Score:** 208 / 262 = **79.4%**
 
 ## Verdict — 2026-06-10
 
-🟡 **Soft launch blocked on ONE partner action.** Score 191/262 clears the
+🟡 **Soft launch blocked on ONE partner action.** Score 208/262 clears the
 160 soft-launch threshold; the single remaining blocker is the HIGH-severity
 zero on 10.6 (insurance quote) — a partner phone call. The moment a quote is
 in hand, soft launch (invite-only, design-partner pricing) is GO by this

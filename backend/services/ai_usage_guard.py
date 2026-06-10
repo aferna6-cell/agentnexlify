@@ -286,3 +286,59 @@ def record_ai_usage(
         )
 
     return record
+
+
+def get_ai_usage_status(db: Any, tenant_id: str) -> dict[str, Any]:
+    """Tenant-facing AI usage snapshot for the current month (rubric 5.3).
+
+    Surfaces the same policy the guard enforces — token spend vs the alert
+    and hard-limit thresholds — so the dashboard can show owners how close
+    they are to being rate-limited BEFORE a turn gets refused. Returns a
+    safe zeroed shape on any failure; the usage endpoint must never break.
+    """
+    try:
+        tenant_rows = (
+            db.table("tenants")
+            .select("ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+        policy = resolve_ai_usage_policy(tenant_rows[0] if tenant_rows else {})
+
+        usage_rows = (
+            db.table("tenant_ai_usage_monthly")
+            .select("input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens")
+            .eq("tenant_id", tenant_id)
+            .eq("period_month", current_period_month())
+            .limit(1)
+            .execute()
+        ).data or []
+        row = usage_rows[0] if usage_rows else {}
+        total = sum(
+            int(row.get(col) or 0)
+            for col in (
+                "input_tokens",
+                "output_tokens",
+                "cache_creation_input_tokens",
+                "cache_read_input_tokens",
+            )
+        )
+        return {
+            "period_month": current_period_month(),
+            "total_tokens": total,
+            "alert_threshold": policy.alert_threshold_tokens,
+            "hard_limit": policy.hard_limit_tokens,
+            "alert_reached": total >= policy.alert_threshold_tokens,
+            "hard_limit_reached": total >= policy.hard_limit_tokens,
+        }
+    except Exception:
+        logger.warning("get_ai_usage_status failed tenant=%s", tenant_id, exc_info=True)
+        return {
+            "period_month": current_period_month(),
+            "total_tokens": 0,
+            "alert_threshold": 0,
+            "hard_limit": 0,
+            "alert_reached": False,
+            "hard_limit_reached": False,
+        }

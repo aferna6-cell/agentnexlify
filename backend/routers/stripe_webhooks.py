@@ -20,6 +20,7 @@ from backend.routers.billing import (
     _handle_addon_subscription_updated,
     _handle_checkout_completed,
     _handle_payment_failed,
+    _handle_payment_succeeded,
     _handle_subscription_deleted,
     _handle_subscription_updated,
     _is_marketing_addon_subscription,
@@ -84,6 +85,8 @@ async def stripe_webhook(request: Request):
                 _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_failed":
             await _handle_payment_failed(db, data)
+        elif event_type == "invoice.payment_succeeded":
+            await _handle_payment_succeeded(db, data)
         else:
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:

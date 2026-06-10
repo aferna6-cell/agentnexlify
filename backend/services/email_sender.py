@@ -16,6 +16,14 @@ from backend.services.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
+
+def mask_email(address: str) -> str:
+    """PII minimization: log j***@domain.com, never the full address."""
+    if not address or "@" not in address:
+        return "***"
+    local, _, domain = address.partition("@")
+    return f"{local[:1]}***@{domain}"
+
 # In-memory daily send tracking per tenant (reset at midnight UTC)
 _daily_sends: dict[str, int] = {}
 _last_reset_date: str = ""
@@ -209,7 +217,7 @@ async def send_email(
 ) -> dict[str, Any]:
     """Send an email via Resend. Returns result dict with 'success' and 'detail'."""
     if not settings.resend_api_key:
-        logger.warning("Resend API key not configured, skipping email to %s", to)
+        logger.warning("Resend API key not configured, skipping email to %s", mask_email(to))
         return {"success": False, "detail": "resend_api_key not configured"}
 
     if not _reserve_send_quota(tenant_id):
@@ -252,10 +260,10 @@ async def send_email(
             backoff_base=1.0,
             label=f"resend.send:{to}",
         )
-        logger.info("Email sent to %s for tenant %s", to, tenant_id)
+        logger.info("Email sent to %s for tenant %s", mask_email(to), tenant_id)
         return {"success": True, "detail": "sent", "resend_id": result.get("id", "")}
     except Exception as e:
-        logger.exception("Failed to send email to %s", to)
+        logger.exception("Failed to send email to %s", mask_email(to))
         return {"success": False, "detail": str(e)}
 
 
@@ -280,7 +288,7 @@ async def send_email_reply(
     threading headers.
     """
     if not settings.resend_api_key:
-        logger.warning("Resend API key not configured, skipping reply to %s", to)
+        logger.warning("Resend API key not configured, skipping reply to %s", mask_email(to))
         return {"success": False, "detail": "resend_api_key not configured"}
 
     resend.api_key = settings.resend_api_key
@@ -324,7 +332,7 @@ async def send_email_reply(
             backoff_base=1.0,
             label=f"resend.reply:{to}",
         )
-        logger.info("Email reply sent to %s for tenant %s", to, tenant_id)
+        logger.info("Email reply sent to %s for tenant %s", mask_email(to), tenant_id)
         return {
             "success": True,
             "detail": "sent",

@@ -1182,6 +1182,9 @@ export default function Home() {
               <h4>Company</h4>
               <ul>
                 <li>
+                  <Link to="/help">Help Center</Link>
+                </li>
+                <li>
                   <Link to="/contact">Contact</Link>
                 </li>
                 <li>
