@@ -1,6 +1,7 @@
 import React, { useEffect, lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import CookieConsent from "./components/CookieConsent";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import App from "./components/App";
@@ -151,6 +152,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             {/* Everything else falls to auth-gated dashboard */}
             <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
             </Routes>
+            <CookieConsent />
           </Suspense>
         </BrowserRouter>
       </ErrorBoundary>

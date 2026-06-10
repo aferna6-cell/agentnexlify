@@ -10,7 +10,7 @@
 
 **Go threshold:** ≥ 210 / 262 AND zero criterion scoring 0 in a HIGH-severity dimension (2, 3, 10).
 
-**Last scored:** 2026-04-21 (evidence refresh after contractor-wedge copy pass, MTOptions live measurement, public health burst load sample, refund-policy docs, and widget AI-disclosure update).
+**Last scored:** 2026-06-10 (soft-launch gap sprint: GDPR deletion endpoint, cookie consent, uptime probe fix + GH-issue alerting, widget/chat load test).
 
 ---
 
@@ -20,14 +20,14 @@
 |---|-----------|-------|-------|
 | 1.1 | Terms of service drafted + linked in signup | 2 | `frontend/src/pages/TermsOfService.jsx` (10.5KB); SignupPage.jsx:327 links `/terms`. Legal review unknown `[partner-verify]` |
 | 1.2 | Privacy policy drafted + covers tenant data + PII + AI | 2 | `frontend/src/pages/PrivacyPolicy.jsx` (14.7KB); SignupPage.jsx:328 links `/privacy` |
-| 1.3 | GDPR / CCPA data deletion endpoint works | 0 | No `/api/v1/.../delete-account` endpoint found; no GDPR SAR flow |
-| 1.4 | Cookie/consent banner present where required | 0 | No cookie banner component in `frontend/src/` |
+| 1.3 | GDPR / CCPA data deletion endpoint works | 2 | `POST /api/v1/account/delete` (owner-only, typed-DELETE confirm, 3/hr limit) → `backend/services/account_deletion.py` purges 100+ tenant tables + Stripe customer + tenants row; per-table fault tolerance; `tests/test_account_deletion.py` (4 cases incl. tenant_scope coverage guard). Shipped 2026-06-10. |
+| 1.4 | Cookie/consent banner present where required | 2 | `frontend/src/components/CookieConsent.jsx` mounted globally in `main.jsx`; accept/decline persisted, links `/privacy`. Shipped 2026-06-10. |
 | 1.5 | Business entity registered (LLC / C-corp) + bank + EIN | ? | `[partner-verify]` |
 | 1.6 | Merchant agreement signed (Stripe Connect or direct) | 1 | Stripe live keys active per webhook code. Signed agreement `[partner-verify]` |
 | 1.7 | Written AI-disclosure in widget greeting ("powered by AI") | 2 | `widget/agentnexlify-widget.js` now prepends AI disclosure at runtime when the saved greeting lacks it; `frontend/src/utils/businessPresets.js` seed copy also now identifies the assistant as AI. |
 | 1.8 | DPAs available for customers who ask | 0 | No DPA template in `docs/` |
 
-**Subtotal:** 7 / 16 × 3 = **21 / 48** (1.5 + 1.6 unknown → scored conservative)
+**Subtotal:** 11 / 16 × 3 = **33 / 48** (1.5 + 1.6 unknown → scored conservative; 1.3 + 1.4 closed 2026-06-10)
 
 ---
 
@@ -71,12 +71,12 @@
 |---|-----------|-------|-------|
 | 4.1 | Error alerts fire within 5 min of prod error | 1 | Railway → Slack wired, needs `RAILWAY_TOKEN` per notes |
 | 4.2 | Sentry or equivalent captures unhandled exceptions | 1 | Sentry MCP plugin installed; OAuth pending |
-| 4.3 | Uptime monitor (external) with SLO ≥ 99.5% | 0 | No external monitor (UptimeRobot/Pingdom/BetterUptime) configured |
+| 4.3 | Uptime monitor (external) with SLO ≥ 99.5% | 1 | `public-uptime-watch.yml` probes 4 endpoints every 5 min from GitHub-hosted runners; was failing on a false positive (probe rejected Railway's empty content-type header — fixed 2026-06-10 to judge by JSON body) and now alerts via auto-filed `uptime`-labeled GitHub issue (Slack secret still unset — partner: add `SLACK_ALERT_WEBHOOK_URL`). Score 2 needs a dedicated service (UptimeRobot/BetterUptime) with SLO history. |
 | 4.4 | Key business metrics on a dashboard | 1 | AdminAnalyticsPage.jsx exists; MRR/churn coverage partial |
 | 4.5 | Log retention ≥ 30 days | 0 | Railway default 7d; no log sink configured |
 | 4.6 | Database advisor warnings all resolved | 2 | ✓ Zero as of 2026-04-09 (memory) |
 
-**Subtotal:** 5 / 12 × 2 = **10 / 24**
+**Subtotal:** 6 / 12 × 2 = **12 / 24** (4.3 raised 2026-06-10)
 
 ---
 
@@ -84,13 +84,13 @@
 
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
-| 5.1 | Load test run at 10× expected concurrent (p95 < 1s) | 1 | `ops/evals/run_public_health_load.py` + `ops/evals/public-health-load-2026-04-21.md` establish a reproducible external burst check (100 requests, concurrency 10, p95 291.2 ms). Still not a widget/chat-specific load test. |
+| 5.1 | Load test run at 10× expected concurrent (p95 < 1s) | 2 | Widget/chat-specific: `ops/evals/run_widget_chat_load.py` bursts POST /api/v1/widget/chat (100 req, concurrency 10) against prod — p95 289.7 ms, 100/100 deterministic responses, per-key rate limiter engaged (70× 429). Artifact `ops/evals/widget-chat-load-2026-06-10.json`. Real-chat mode available via `TEST_WIDGET_API_KEY` with disposable tenant. Public health burst also passing (2026-04-21). |
 | 5.2 | Database connection pool sized + tested | 1 | Supabase pool default; not tuned or tested |
 | 5.3 | Claude API rate limits understood + surfaced to user | 1 | SDK handles 429; no tenant-facing surface |
 | 5.4 | Widget render verified on slow 3G (Lighthouse PWA test) | 0 | Chrome install pending |
 | 5.5 | Runaway-cost kill switch (per-tenant usage cap) | 2 | `backend/services/ai_usage_guard.py` enforces alert and hard-limit thresholds by tenant, `tests/test_launch_risk_guardrails.py` covers the plan baselines, and `docs/dev-knowledge/schema-log.md` documents the live support tables. |
 
-**Subtotal:** 5 / 10 × 2 = **10 / 20**
+**Subtotal:** 6 / 10 × 2 = **12 / 20** (5.1 closed 2026-06-10)
 
 ---
 
@@ -161,36 +161,41 @@
 | 10.5 | Dead-man switch: if founder disappears, customers keep service for 30d | 1 | `docs/ops/service-continuity-plan.md` now documents the minimum access inventory and safe partner actions. Still needs credential distribution and real partner rehearsal. |
 | 10.6 | Insurance (E&O / cyber) quoted | ? | `[partner-verify]` — partner action required: get E&O/cyber quote. |
 
-**Subtotal:** 5 / 12 × 2 = **10 / 24** — ⚠️ **3 HIGH-severity zeros (10.2, 10.4, 10.6)**
+**Subtotal:** 6 / 12 × 2 = **12 / 24** (4.3 raised 2026-06-10) — ⚠️ **3 HIGH-severity zeros (10.2, 10.4, 10.6)**
 
 ---
 
-## Scorecard — 2026-04-20
+## Scorecard — 2026-06-10
 
 | Dimension | Raw | Weighted | Max | HIGH zeros |
 |-----------|-----|----------|-----|------------|
-| 1. Legal | 7 / 16 | 21 | 48 | — |
+| 1. Legal | 11 / 16 | 33 | 48 | — |
 | 2. Security | 14 / 16 | 42 | 48 | — |
 | 3. Billing | 9 / 16 | 27 | 48 | — |
-| 4. Observability | 5 / 12 | 10 | 24 | — |
-| 5. Load | 5 / 10 | 10 | 20 | — |
+| 4. Observability | 6 / 12 | 12 | 24 | — |
+| 5. Load | 6 / 10 | 12 | 20 | — |
 | 6. Data integrity | 8 / 10 | 16 | 20 | — |
 | 7. Support | 4 / 10 | 4 | 10 | — |
 | 8. Brand | 6 / 10 | 6 | 10 | — |
 | 9. Sales | 5 / 10 | 5 | 10 | — |
 | 10. Risk | 8 / 12 | 16 | 24 | **10.6** |
-| **TOTAL** | — | **157** | **262** | **1 HIGH zero (10.6)** |
+| **TOTAL** | — | **173** | **262** | **1 HIGH zero (10.6)** |
 
-**Score:** 157 / 262 = **59.9%**
+**Score:** 173 / 262 = **66.0%**
 
-## Verdict — 2026-04-25
+## Verdict — 2026-06-10
 
-🔴 **NO-GO for paid launch.** Stay in design-partner mode.
+🟡 **Soft launch blocked on ONE partner action.** Score 173/262 clears the
+160 soft-launch threshold; the single remaining blocker is the HIGH-severity
+zero on 10.6 (insurance quote) — a partner phone call. The moment a quote is
+in hand, soft launch (invite-only, design-partner pricing) is GO by this
+rubric's own decision rules. Full paid launch still needs 210/262.
 
-- Below 160/262 soft-launch threshold (157)
-- Below 210/262 go threshold (157)
-- **1 HIGH-severity zero** remains in Dimension 10 (10.6 insurance quote) — partner action required
-- 10.2 and 10.4 now closed
+Engineering items closed this cycle (2026-06-10): GDPR deletion endpoint
+(1.3), cookie consent (1.4), uptime probe fixed + GitHub-issue alerting
+(4.3), widget/chat burst load test passing (5.1).
+
+Prior verdict (2026-04-25): NO-GO at 157 — 10.2 and 10.4 closed then
 
 ## Highest-leverage next moves (ordered by leverage per hour)
 
