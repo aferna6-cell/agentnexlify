@@ -18,6 +18,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/admin", tags=["platform-admin"])
 
+# Canonical plan prices (cents/month). Source: CLAUDE.md plan names + prices.
+# growth $99, autopilot $150, professional $250, enterprise $899
+PLAN_PRICE_CENTS: dict[str, int] = {
+    "growth": 9900,
+    "autopilot": 15000,
+    "professional": 25000,
+    "enterprise": 89900,
+}
+
 
 def _admin_secret() -> str:
     admin_secret = getattr(settings, "admin_api_secret_key", "")
@@ -137,15 +146,9 @@ async def get_platform_overview(
             logger.warning("Failed to fetch promoted tenants count", exc_info=True)
 
         # MRR calculation (rough estimate from active plans)
-        PLAN_PRICES = {
-            "growth": 9900,
-            "professional": 15000,
-            "autopilot": 29900,
-            "enterprise": 25000,
-        }
         mrr_cents = 0
         for t in active_paid:
-            mrr_cents += PLAN_PRICES.get(t.get("plan", ""), 0)
+            mrr_cents += PLAN_PRICE_CENTS.get(t.get("plan", ""), 0)
 
         return {
             "total_tenants": total_tenants,
@@ -169,8 +172,8 @@ async def get_platform_overview(
 # --- Monthly Growth Trends ---
 
 
-@limiter.limit("10/minute")
 @router.get("/monthly-growth")
+@limiter.limit("10/minute")
 async def get_monthly_growth(
     request: Request,
     x_api_secret: str | None = Header(None),
@@ -272,21 +275,14 @@ async def get_monthly_growth(
 # --- Weekly Growth (Last 7 Days) ---
 
 
-@limiter.limit("10/minute")
 @router.get("/weekly-growth")
+@limiter.limit("10/minute")
 async def get_weekly_growth(
     request: Request,
     x_api_secret: str | None = Header(None),
 ):
     """Get day-by-day growth for the last 7 days — the quick 'what happened this week' view."""
     _verify_admin_secret(x_api_secret)
-
-    PLAN_PRICES = {
-        "growth": 9900,
-        "professional": 15000,
-        "autopilot": 29900,
-        "enterprise": 25000,
-    }
 
     try:
         db = get_service_supabase()
@@ -328,7 +324,7 @@ async def get_weekly_growth(
                 plan = s.get("plan", "free")
                 if plan != "free":
                     daily_data[key]["paid"] += 1
-                    daily_data[key]["revenue_cents"] += PLAN_PRICES.get(plan, 0)
+                    daily_data[key]["revenue_cents"] += PLAN_PRICE_CENTS.get(plan, 0)
                 else:
                     daily_data[key]["free"] += 1
 
@@ -381,8 +377,8 @@ async def get_weekly_growth(
 # --- Plan Distribution ---
 
 
-@limiter.limit("10/minute")
 @router.get("/plan-distribution")
+@limiter.limit("10/minute")
 async def get_plan_distribution(
     request: Request,
     x_api_secret: str | None = Header(None),
@@ -436,8 +432,8 @@ async def get_plan_distribution(
 # --- Revenue Trends ---
 
 
-@limiter.limit("10/minute")
 @router.get("/revenue-trends")
+@limiter.limit("10/minute")
 async def get_revenue_trends(
     request: Request,
     x_api_secret: str | None = Header(None),
@@ -494,13 +490,6 @@ async def get_revenue_trends(
 
 async def _calculate_live_revenue(db, start_month, now, months):
     """Calculate revenue live from tenant data when no pre-computed aggregates exist."""
-    PLAN_PRICES = {
-        "growth": 9900,
-        "professional": 15000,
-        "autopilot": 29900,
-        "enterprise": 25000,
-    }
-
     # Get all tenants with paid plans
     paid_tenants = (
         db.table("tenants")
@@ -528,7 +517,7 @@ async def _calculate_live_revenue(db, start_month, now, months):
                 continue
 
             if t.get("plan_status") == "active" and t.get("stripe_subscription_id"):
-                month_revenue_cents += PLAN_PRICES.get(t.get("plan", ""), 0)
+                month_revenue_cents += PLAN_PRICE_CENTS.get(t.get("plan", ""), 0)
                 month_subscriptions += 1
 
         monthly_data.append(
@@ -557,8 +546,8 @@ async def _calculate_live_revenue(db, start_month, now, months):
 # --- Promoted / Free Businesses ---
 
 
-@limiter.limit("10/minute")
 @router.get("/promoted-businesses")
+@limiter.limit("10/minute")
 async def get_promoted_businesses(
     request: Request,
     x_api_secret: str | None = Header(None),
@@ -589,8 +578,8 @@ async def get_promoted_businesses(
 # --- Tenant List (Admin View) ---
 
 
-@limiter.limit("10/minute")
 @router.get("/tenants")
+@limiter.limit("10/minute")
 async def list_all_tenants(
     request: Request,
     x_api_secret: str | None = Header(None),
@@ -648,8 +637,8 @@ async def list_all_tenants(
 # --- Industry Breakdown ---
 
 
-@limiter.limit("10/minute")
 @router.get("/industry-breakdown")
+@limiter.limit("10/minute")
 async def get_industry_breakdown(
     request: Request,
     x_api_secret: str | None = Header(None),
@@ -697,3 +686,97 @@ async def get_industry_breakdown(
     except Exception:
         logger.exception("Failed to get industry breakdown")
         raise HTTPException(status_code=500, detail="Failed to load industry breakdown")
+
+
+# --- MRR & Churn Metrics ---
+
+
+@router.get("/mrr-metrics")
+@limiter.limit("10/minute")
+async def get_mrr_metrics(
+    request: Request,
+    x_api_secret: str | None = Header(None),
+):
+    """MRR breakdown, churn rate, and dunning stats for the admin dashboard."""
+    _verify_admin_secret(x_api_secret)
+
+    try:
+        db = get_service_supabase()
+
+        # Active paying tenants (plan != free, plan_status == active)
+        active_result = (
+            db.table("tenants")
+            .select("id, plan, plan_status, billing_dunning_attempt_count")
+            .eq("plan_status", "active")
+            .neq("plan", "free")
+            .execute()
+        )
+        active_tenants = active_result.data or []
+
+        # MRR total and per-plan breakdown
+        mrr_cents = 0
+        mrr_by_plan: dict[str, dict] = {}
+        for t in active_tenants:
+            plan = t.get("plan", "")
+            price = PLAN_PRICE_CENTS.get(plan, 0)
+            mrr_cents += price
+            if plan not in mrr_by_plan:
+                mrr_by_plan[plan] = {"count": 0, "mrr_cents": 0}
+            mrr_by_plan[plan]["count"] += 1
+            mrr_by_plan[plan]["mrr_cents"] += price
+
+        active_paying_count = len(active_tenants)
+
+        # Dunning-paused tenants: plan_status == 'paused' AND billing_dunning_attempt_count > 0
+        try:
+            paused_result = (
+                db.table("tenants")
+                .select("id, billing_dunning_attempt_count")
+                .eq("plan_status", "paused")
+                .gt("billing_dunning_attempt_count", 0)
+                .execute()
+            )
+            dunning_paused_count = len(paused_result.data or [])
+        except Exception:
+            logger.warning("Failed to fetch dunning-paused count", exc_info=True)
+            dunning_paused_count = None
+
+        # Cancellations in the last 30 days
+        cancellations_30d = None
+        churn_rate_30d_pct = None
+        try:
+            thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            cancel_result = (
+                db.table("tenant_cancellation_events")
+                .select("id", count="exact")
+                .gte("created_at", thirty_days_ago)
+                .execute()
+            )
+            cancellations_30d = cancel_result.count or 0
+
+            # Churn rate = cancellations / (active + cancellations) * 100
+            denominator = active_paying_count + cancellations_30d
+            if denominator > 0:
+                churn_rate_30d_pct = round(
+                    cancellations_30d / denominator * 100, 2
+                )
+            else:
+                churn_rate_30d_pct = 0.0
+        except Exception:
+            logger.warning("Failed to fetch cancellation events", exc_info=True)
+
+        return {
+            "mrr_cents": mrr_cents,
+            "mrr_dollars": round(mrr_cents / 100, 2),
+            "active_paying_count": active_paying_count,
+            "mrr_by_plan": mrr_by_plan,
+            "cancellations_30d": cancellations_30d,
+            "churn_rate_30d_pct": churn_rate_30d_pct,
+            "dunning_paused_count": dunning_paused_count,
+        }
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to get MRR metrics")
+        raise HTTPException(status_code=500, detail="Failed to load MRR metrics")

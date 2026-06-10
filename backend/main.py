@@ -64,6 +64,7 @@ from backend.routers import (
     phone,
     pipeline,
     pipeline_automations,
+    pricing_experiment,
     resend_webhooks,
     revenue,
     reviews,
@@ -697,9 +698,13 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
     # Do not log raw widget bodies; they can contain PII and contact details.
     if request.url.path.startswith("/api/v1/widget"):
         logger.error("Widget validation failed; request body redacted")
+    # Pydantic v2 puts the raw exception object in ctx for value_error items
+    # (e.g. a field_validator raising ValueError) — not JSON serializable,
+    # which turned every such 422 into a 500. Strip ctx.
+    errors = [{k: v for k, v in err.items() if k != "ctx"} for err in exc.errors()]
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()},
+        content={"detail": errors},
         headers=_CORS_HEADERS,
     )
 
@@ -856,6 +861,7 @@ app.include_router(os_backlog.router)
 app.include_router(os_usage.router)
 app.include_router(os_inbound.router)
 app.include_router(os_sync_router.router)
+app.include_router(pricing_experiment.router)
 
 
 # --- Static files (widget) ---

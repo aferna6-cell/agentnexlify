@@ -1,5 +1,6 @@
 """Authentication endpoints — register, login, me."""
 
+import html
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -35,7 +36,7 @@ from backend.services.stripe_service import (
     ensure_stripe_configured,
     get_or_create_customer,
 )
-from backend.services.email_sender import send_email
+from backend.services.email_sender import send_email, mask_email
 from backend.services.activity import log_activity
 from backend.services.business_profiles import (
     get_dashboard_business_profile,
@@ -48,6 +49,7 @@ from backend.services.fraud_guard import (
 )
 from backend.services import dashboard_service as _dash_svc
 from backend.services import widget_config_service as _widget_svc
+from backend.services.referral import apply_referral_attribution
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +251,7 @@ def _provision_tenant_account(
         "password_hash": password_hash,
         "city": city,
         "plan": "free",
+        "referral_code": secrets.token_hex(4),  # 8-char unique code for the new tenant
     }
     result = db.table("tenants").insert(tenant_data).execute()
     if not result.data:
@@ -384,6 +387,11 @@ async def register(request: Request, req: RegisterRequest):
         city=req.city,
         phone=req.phone,
         website_url=req.website_url,
+    )
+
+    # Referral attribution (?ref=CODE) — never blocks signup, invalid codes ignored.
+    apply_referral_attribution(
+        get_service_supabase(), new_tenant_id=tenant_id, ref_code=req.ref_code
     )
 
     token = _create_token(
@@ -717,7 +725,7 @@ async def forgot_password(request: Request):
         )
     except Exception:
         logger.error(
-            "DB error during forgot-password lookup for %s", email, exc_info=True
+            "DB error during forgot-password lookup for %s", mask_email(email), exc_info=True
         )
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -756,7 +764,7 @@ async def forgot_password(request: Request):
             to=email,
             subject="Reset your AgentNexLiFy password",
             body_html=(
-                f"<p>Hi {tenant.get('owner_name', 'there')},</p>"
+                f"<p>Hi {html.escape(tenant.get('owner_name') or 'there')},</p>"
                 "<p>Click the link below to reset your password. This link expires in 1 hour.</p>"
                 f'<p><a href="{reset_url}" style="background:#3B82F6;color:white;'
                 'padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">'
@@ -767,7 +775,7 @@ async def forgot_password(request: Request):
             tenant_id=tenant_id,
         )
     except Exception:
-        logger.warning("Failed to send reset email to %s", email, exc_info=True)
+        logger.warning("Failed to send reset email to %s", mask_email(email), exc_info=True)
 
     return {"message": "If that email exists, a reset link has been sent."}
 

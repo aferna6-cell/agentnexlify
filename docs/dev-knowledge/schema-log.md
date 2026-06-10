@@ -1047,3 +1047,13 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Backend wiring:** `os_graph_memory.py` (extract/upsert/retrieve), `os_thread_runner.py` (kb enrichment pre-engine + background accumulation post-persist), `routers/os_graph.py` (GET /api/v1/os/graph, owner-only DELETE /graph/nodes/{id}). Frontend: `components/os/MemoryPanel.jsx` in the Agent OS page. Tests: `tests/test_os_graph_memory.py` (11 cases).
 
 **Applied:** YES — 2026-06-09 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: both tables present with RLS enabled + table comments in place.
+
+## Migration 134 — pricing_ab_events (2026-06-10)
+
+**Table:** `pricing_ab_events` — anonymous marketing-site A/B events. `id UUID PK`, `visitor_id TEXT` (first-party cookie UUID, 8-64 chars, NO PII), `variant TEXT` (`control | variant_b`), `event TEXT` (`view | cta_click`), `plan TEXT` (canonical plan names, nullable), `created_at TIMESTAMPTZ`. Indexes on `(variant, event)` + `created_at`. RLS enabled, service-role-only policy. No tenant FK by design — visitors are pre-signup.
+
+**Why:** launch rubric 9.3 "Pricing page A/B test wired". Experiment `pricing_page_cta_2026_06`: deterministic 50/50 variant by sha256(experiment:visitor_id) — assignment is server-derived and never trusted from the client.
+
+**Backend wiring:** `backend/routers/pricing_experiment.py` (GET variant + POST event, both rate-limited 30/min, event insert fault-tolerant), registered in `main.py`. Frontend: `frontend/src/utils/pricingExperiment.js` (cookie visitor id + variant hook + event tracker), wired to Free-plan CTA in `Home.jsx`. Tests: `backend/tests/test_pricing_experiment.py` (11 cases).
+
+**Applied:** YES — 2026-06-10 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
