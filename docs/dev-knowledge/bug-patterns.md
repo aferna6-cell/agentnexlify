@@ -2442,3 +2442,28 @@ https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/billing.py,backend/services/os_kb_feed.py,backend/services/os_thread_runner.py,backend/tests/test_os_kb_feed.py,docs/legal/dpa-template.md,frontend/src/pages/ActionItemsPage.jsx,frontend/src/pages/AgentControlCenterPage.jsx,frontend/src/pages/Automations/SequenceBuilder.jsx,frontend/src/pages/Automations/SequenceDetail.jsx,frontend/src/pages/Automations/TemplateGallery.jsx,frontend/src/pages/Automations/index.jsx,frontend/src/pages/BidsPage.jsx,frontend/src/pages/CSATPage.jsx,frontend/src/pages/CallsPage.jsx,frontend/src/pages/ChatFlowBuilderPage.jsx,frontend/src/pages/ClientPortalPage.jsx,frontend/src/pages/ContentRepurposePage.jsx,frontend/src/pages/ContentStudioPage.jsx,frontend/src/pages/EmailSequencesPage.jsx,frontend/src/pages/FormBuilderPage.jsx,frontend/src/pages/JobsPage.jsx,frontend/src/pages/MenuPage.jsx,frontend/src/pages/OrdersPage.jsx,frontend/src/pages/PipelineAutomationsPage.jsx,frontend/src/pages/ReviewsPage.jsx,frontend/src/pages/ScoringConfigPage.jsx,frontend/src/pages/SmartListsPage.jsx,frontend/src/pages/SnippetsPage.jsx,frontend/src/pages/TeamActivityPage.jsx,frontend/src/pages/WaitlistPage.jsx,frontend/src/utils/api/calls.js,frontend/src/utils/api/chat-flows.js,frontend/src/utils/api/content.js,frontend/src/utils/api/email-sequences.js,frontend/src/utils/api/forms.js,frontend/src/utils/api/index.js,frontend/src/utils/api/jobs.js,frontend/src/utils/api/menu.js,frontend/src/utils/api/repurpose.js,frontend/src/utils/api/reviews.js,frontend/src/utils/api/scoring.js,frontend/src/utils/api/smart-lists.js,frontend/src/utils/api/waitlist.js,planning/launch-readiness-rubric.md,tests/test_agent_os.py,tests/test_billing_cancellation.py,tests/test_billing_plan_changes.py,tests/test_billing_refund_matrix.py,tests/test_checkout_trial_to_paid.py,tests/test_jwt_auth.py,tests/test_os_mvp_e2e.py,tests/test_os_worker_booking.py,tests/test_os_worker_campaign.py,tests/test_os_worker_customer_question.py,tests/test_os_worker_lead_nurture.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### #224 fix, rubric grind to 208/262 (incl. 2nd billing bug fix), onboarding-as-conversation (#226)
+
+Items 1-3 block:
+
+1. Fix #224 — recurring-invoice automation test fixture lacked PostgREST .filter() support; production code was correct, fake predated it.
+2. Full-launch rubric grind 191 → 208/262 (79.4%):
+   - Found + fixed 2nd real billing bug: invoice.payment_succeeded was unhandled, so dunning-paused tenants stayed paused forever after recovering payment. Added guarded handler that preserves fraud pauses (zero dunning count never auto-clears).
+   - Billing reconciliation service + eval runner (conversations/agent_runs/ai_tokens vs plan caps).
+   - Email masking in logs (mask_email applied to 5 sites + digest line).
+   - AI usage status surfaced in /api/os/usage (alert + hard-limit flags).
+   - Widget slow-3G CDP check vs prod: 7.2s launcher, 66KB — GATE PASS.
+   - PII minimization audit.
+3. Onboarding-as-first-conversation: FirstRunStarters in Agent OS, wizard CTA "Meet your AI staff", /help center page, onboarding-wizard Playwright spec.
+
+Verification: backend/tests 562 passed, root tests/ 855 passed, vitest 79/79, Playwright 9/9, frontend build clean.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+**Date:** 2026-06-10
+**Commit:** 73a89ee
+**Author:** aferna6-cell
+**Files Changed:** audits/audit-pii-minimization-2026-06-10.md,backend/routers/billing.py,backend/routers/os_usage.py,backend/routers/stripe_webhooks.py,backend/services/ai_usage_guard.py,backend/services/automation/scheduled_jobs_ext.py,backend/services/billing_reconciliation.py,backend/services/email_sender.py,backend/tests/test_billing_reconciliation.py,backend/tests/test_os_kb_feed.py,e2e/onboarding-wizard.spec.ts,frontend/src/components/os/FirstRunStarters.jsx,frontend/src/main.jsx,frontend/src/pages/AgentOS.jsx,frontend/src/pages/HelpPage.jsx,frontend/src/pages/Home.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,ops/evals/run_usage_reconciliation.py,ops/evals/run_widget_3g_check.mjs,ops/evals/widget-3g-2026-06-10.json,planning/launch-readiness-rubric.md,tests/test_automation_engine.py,tests/test_billing_dunning_e2e.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
