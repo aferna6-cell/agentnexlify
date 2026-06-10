@@ -61,6 +61,7 @@ const allNavItems = [
       <Icon d="M12 2l3 7h7l-5.5 4.1 2.1 6.9-6.6-4.8-6.6 4.8 2.1-6.9L2 9h7z" />
     ),
     label: "Agent Control",
+    hidden: true,
   },
   {
     key: "agent_os",
@@ -89,6 +90,7 @@ const allNavItems = [
     icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
     label: "Stage Automations",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "calendar",
@@ -110,11 +112,13 @@ const allNavItems = [
       <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4" />
     ),
     label: "Action Items",
+    hidden: true,
   },
   {
     key: "automations",
     icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
     label: "Automations",
+    hidden: true,
   },
   {
     key: "snippets",
@@ -122,6 +126,7 @@ const allNavItems = [
       <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5" />
     ),
     label: "Snippets",
+    hidden: true,
   },
   {
     key: "widget",
@@ -144,6 +149,7 @@ const allNavItems = [
     icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />,
     label: "Chat Flows",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "faq",
@@ -158,6 +164,7 @@ const allNavItems = [
       <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
     ),
     label: "Reviews",
+    hidden: true,
   },
   {
     key: "csat",
@@ -166,6 +173,7 @@ const allNavItems = [
     ),
     label: "CSAT",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "local_seo",
@@ -179,6 +187,7 @@ const allNavItems = [
     label: "Menu",
     roles: ["owner", "admin"],
     businessTypes: ["restaurant"],
+    hidden: true,
   },
   {
     key: "orders",
@@ -187,6 +196,7 @@ const allNavItems = [
     ),
     label: "Orders",
     businessTypes: ["restaurant"],
+    hidden: true,
   },
   {
     key: "jobs",
@@ -195,6 +205,7 @@ const allNavItems = [
     ),
     label: "Job Board",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "bids",
@@ -203,6 +214,7 @@ const allNavItems = [
     ),
     label: "Bids",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "invoices",
@@ -225,28 +237,33 @@ const allNavItems = [
     icon: <Icon d="M3 6h18M3 12h12M3 18h18M19 12l2 2-2 2" />,
     label: "Smart Lists",
     roles: ["owner", "admin", "member"],
+    hidden: true,
   },
   {
     key: "form_builder",
     icon: <Icon d="M9 11H3v10h6V11zM21 3h-6v18h6V3zM15 7H9v4h6V7z" />,
     label: "Forms",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "waitlist",
     icon: <Icon d="M12 2v4M12 18v4M8 8h8M6 12h12M8 16h8" />,
     label: "Waitlist",
+    hidden: true,
   },
   {
     key: "scoring_config",
     icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />,
     label: "Lead Scoring",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "client_portal",
     icon: <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />,
     label: "Client Portal",
+    hidden: true,
   },
   {
     key: "content_studio",
@@ -254,6 +271,7 @@ const allNavItems = [
       <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     ),
     label: "Content Studio",
+    hidden: true,
   },
   {
     key: "marketing_dashboard",
@@ -297,6 +315,7 @@ const allNavItems = [
       <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6M8 14h8M8 18h5" />
     ),
     label: "Email Sequences",
+    hidden: true,
   },
   {
     key: "team",
@@ -313,6 +332,7 @@ const allNavItems = [
     ),
     label: "Team Activity",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "billing",
@@ -382,57 +402,23 @@ const NAV_GROUPS = [
   {
     key: "overview",
     label: "OVERVIEW",
-    items: ["dashboard", "analytics", "control_center", "agent_os"],
+    items: ["agent_os", "dashboard", "analytics"],
   },
   {
     key: "crm",
     label: "CRM",
-    items: ["clients", "pipeline", "smart_lists", "client_portal"],
+    items: ["clients", "pipeline"],
   },
   {
     key: "communications",
     label: "COMMUNICATIONS",
-    items: [
-      "conversations",
-      "calls",
-      "chat_flows",
-      "widget",
-      "snippets",
-      "faq",
-    ],
-  },
-  {
-    key: "marketing",
-    label: "MARKETING",
-    items: [
-      "content_studio",
-      "marketing_dashboard",
-      "local_seo",
-      "social_media",
-      "campaigns",
-      "ab_tests",
-      "automation_rules",
-      "trigger_logs",
-      "email_sequences",
-      "form_builder",
-    ],
+    items: ["conversations", "widget", "faq"],
   },
   {
     key: "operations",
     label: "OPERATIONS",
-    items: [
-      "calendar",
-      "automations",
-      "action_items",
-      "invoices",
-      "documents",
-      "bids",
-      "jobs",
-      "menu",
-      "orders",
-    ],
+    items: ["calendar", "invoices", "documents"],
   },
-  { key: "reviews", label: "REVIEWS", items: ["reviews", "csat"] },
   {
     key: "settings",
     label: "SETTINGS",
@@ -452,9 +438,24 @@ const NAV_GROUPS = [
     label: "ADMIN",
     items: ["admin_analytics", "admin_promotions"],
   },
+  {
+    // Addon-gated pages stay accessible to paying addon customers.
+    // Collapsed by default so they don't clutter the front-door nav.
+    key: "marketing_addon",
+    label: "MARKETING ADD-ON",
+    items: [
+      "marketing_dashboard",
+      "local_seo",
+      "social_media",
+      "campaigns",
+      "ab_tests",
+      "automation_rules",
+      "trigger_logs",
+    ],
+  },
 ];
 
-const DEFAULT_EXPANDED = ["overview", "crm"];
+const DEFAULT_EXPANDED = ["overview", "crm", "communications"];
 
 const ChevronIcon = ({ expanded }) => (
   <svg

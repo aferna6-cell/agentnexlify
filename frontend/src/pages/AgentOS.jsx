@@ -22,6 +22,7 @@ import {
 import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import MemoryPanel from "../components/os/MemoryPanel";
+import useIsMobile from "../hooks/useIsMobile";
 
 const POLL_MS = 3000;
 
@@ -85,6 +86,8 @@ export default function AgentOS() {
   const [showMemory, setShowMemory] = useState(false);
 
   const scrollRef = useRef(null);
+  const isMobile = useIsMobile();
+  const [railOpen, setRailOpen] = useState(false);
 
   const capReached = Boolean(usage?.cap_reached);
   const runMap = Object.fromEntries(runs.map((r) => [r.id, r]));
@@ -172,6 +175,7 @@ export default function AgentOS() {
       setActiveThreadId(thread.id);
       setComposer("");
       setError(null);
+      setRailOpen(false);
     } catch (err) {
       setError(err.message || "Failed to start a conversation");
     }
@@ -256,16 +260,67 @@ export default function AgentOS() {
         background: "var(--bg-primary)",
       }}
     >
-      {/* Thread rail */}
+      {/* Thread rail — fixed full-screen overlay on mobile, 240px column on desktop */}
+      {isMobile && railOpen && (
+        <div
+          onClick={() => setRailOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 59,
+          }}
+        />
+      )}
       <aside
-        style={{
-          width: 240,
-          flexShrink: 0,
-          borderRight: "1px solid var(--border)",
-          display: "flex",
-          flexDirection: "column",
-        }}
+        style={
+          isMobile
+            ? {
+                position: "fixed",
+                inset: 0,
+                zIndex: 60,
+                width: "100%",
+                background: "var(--bg-primary)",
+                display: railOpen ? "flex" : "none",
+                flexDirection: "column",
+              }
+            : {
+                width: 240,
+                flexShrink: 0,
+                borderRight: "1px solid var(--border)",
+                display: "flex",
+                flexDirection: "column",
+              }
+        }
       >
+        {isMobile && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 14px 8px",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Tasks</span>
+            <button
+              onClick={() => setRailOpen(false)}
+              aria-label="Close task list"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "4px 10px",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                fontSize: "0.8rem",
+              }}
+            >
+              Close
+            </button>
+          </div>
+        )}
         <div
           style={{
             padding: "14px 14px 10px",
@@ -374,7 +429,10 @@ export default function AgentOS() {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setActiveThreadId(t.id)}
+                  onClick={() => {
+                    setActiveThreadId(t.id);
+                    if (isMobile) setRailOpen(false);
+                  }}
                   style={{
                     display: "block",
                     width: "100%",
@@ -452,6 +510,49 @@ export default function AgentOS() {
           flexDirection: "column",
         }}
       >
+        {isMobile && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 12px",
+              borderBottom: "1px solid var(--border)",
+              flexShrink: 0,
+            }}
+          >
+            <button
+              onClick={() => setRailOpen(true)}
+              aria-label="Open task list"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "5px 12px",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+              }}
+            >
+              Tasks
+            </button>
+            {activeThreadId && threads.length > 0 && (
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  color: "var(--text-muted)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {threads.find((t) => t.id === activeThreadId)?.title ||
+                  "Untitled task"}
+              </span>
+            )}
+          </div>
+        )}
         {capReached && (
           <div
             style={{

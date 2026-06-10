@@ -13,6 +13,7 @@ import {
   rejectOsDeliverable,
   reportOsRunBug,
 } from "../../utils/api/os";
+import useIsMobile from "../../hooks/useIsMobile";
 
 const DECISION_META = {
   approved: { label: "Approved", color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
@@ -29,6 +30,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
   const status = run?.deliverable_status || "pending_approval";
   const pending = status === "pending_approval";
   const meta = DECISION_META[status] || DECISION_META.pending_approval;
+  const isMobile = useIsMobile();
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -81,16 +83,29 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
 
   return (
     <aside
-      style={{
-        width: 440,
-        maxWidth: "100%",
-        flexShrink: 0,
-        borderLeft: "1px solid var(--border)",
-        background: "var(--bg-primary)",
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-      }}
+      style={
+        isMobile
+          ? {
+              position: "fixed",
+              inset: 0,
+              width: "100%",
+              zIndex: 70,
+              background: "var(--bg-primary)",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+            }
+          : {
+              width: 440,
+              maxWidth: "100%",
+              flexShrink: 0,
+              borderLeft: "1px solid var(--border)",
+              background: "var(--bg-primary)",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+            }
+      }
     >
       <div
         style={{
