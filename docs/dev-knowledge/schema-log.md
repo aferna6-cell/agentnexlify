@@ -1071,3 +1071,9 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Function:** `public.hot_table_columns()` — returns (table_name, column_name) for the 7 hot tables; SECURITY DEFINER, service-role-only EXECUTE. Powers `scripts/check_schema_drift.py` + the `live-drift` CI job (PostgREST doesn't expose information_schema).
 
 **Applied:** YES — 2026-06-10 via Supabase MCP (project `pxserpybmajixqrmzaly`). Verified live: 203 rows / 7 tables.
+
+## Migration 137 — drop marketing_addon_* columns (2026-06-10)
+
+**Dropped from `tenants`:** `marketing_addon_active`, `marketing_addon_grandfathered`, `marketing_addon_started_at`, `marketing_addon_stripe_sub_id` — unread since the add-on retirement (PR #228). Applied ONLY AFTER Railway rolled out #228 (the prior deploy still SELECTed marketing_addon_active in /me). Drift manifest updated to match.
+
+**Applied:** YES — 2026-06-10 via Supabase MCP (project `pxserpybmajixqrmzaly`), post-rollout health verified.
