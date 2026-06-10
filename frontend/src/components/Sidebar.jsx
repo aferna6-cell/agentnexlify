@@ -7,8 +7,6 @@ const planLabels = {
   autopilot: "Growth",
   professional: "Pro",
   enterprise: "Enterprise",
-  foundation: "Starter",
-  operations: "Pro",
 };
 
 const planColors = {
@@ -17,8 +15,6 @@ const planColors = {
   professional: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
   autopilot: { color: "var(--accent)", bg: "var(--accent-dim)" },
   enterprise: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
-  foundation: { color: "var(--accent)", bg: "var(--accent-dim)" },
-  operations: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
 };
 
 const Icon = ({ d, ...props }) => (
@@ -267,14 +263,6 @@ const allNavItems = [
     key: "client_portal",
     icon: <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />,
     label: "Client Portal",
-    hidden: true,
-  },
-  {
-    key: "content_studio",
-    icon: (
-      <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    ),
-    label: "Content Studio",
     hidden: true,
   },
   {

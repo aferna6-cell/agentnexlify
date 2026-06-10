@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from fastapi import BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 
-from backend.services import agent_os_bridge, agent_sdk_client, os_graph_memory, os_kb_feed
+from backend.services import agent_os_bridge, agent_sdk_client, os_approval_notify, os_graph_memory, os_kb_feed
 from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
@@ -92,6 +92,29 @@ async def process_user_turn(
 
     agent_run = persisted.get("agent_run")
     await _dispatch_auto_send(db, client_id, agent_run, background_tasks)
+
+    # Owner notification when a draft is parked for approval — without it,
+    # approvals rot until the owner happens to open the dashboard. Background
+    # + best-effort: never adds latency to or breaks the turn.
+    if agent_run and agent_run.get("deliverable_status") == "pending_approval":
+        deliverable = agent_run.get("deliverable") or {}
+        if background_tasks is not None:
+            background_tasks.add_task(
+                os_approval_notify.notify_pending_approval,
+                db,
+                client_id,
+                agent_name=agent_run.get("agent_name") or "assistant",
+                channel=deliverable.get("channel"),
+                title=deliverable.get("title"),
+            )
+        else:
+            await os_approval_notify.notify_pending_approval(
+                db,
+                client_id,
+                agent_name=agent_run.get("agent_name") or "assistant",
+                channel=deliverable.get("channel"),
+                title=deliverable.get("title"),
+            )
 
     # Knowledge-graph accumulation AFTER the reply is persisted — memory
     # never adds latency to the conversation and never breaks a turn.

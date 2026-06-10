@@ -482,12 +482,14 @@ async def complete_onboarding(
                 "is_active": True,
             })
 
-        for entry in faq_entries:
+        # Batched (audit 2026-06-10): per-row inserts were N+1 — the batched
+        # pattern already used at the wizard-FAQ insert below.
+        if faq_entries:
             try:
-                db.table("faq_entries").insert(entry).execute()
-                faqs_created += 1
+                db.table("faq_entries").insert(faq_entries).execute()
+                faqs_created += len(faq_entries)
             except Exception:
-                logger.exception("Failed to create FAQ entry for tenant %s", tenant_id)
+                logger.exception("Failed to create FAQ entries for tenant %s", tenant_id)
 
         if faqs_created > 0:
             configured["faqs"] = True
