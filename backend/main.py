@@ -93,6 +93,7 @@ from backend.routers import (
     os_threads,
     os_orchestrate,
     os_agent_runs,
+    account_deletion,
     os_deliverables,
     os_graph,
     os_memory,
@@ -847,6 +848,7 @@ app.include_router(zapier.router)
 app.include_router(os_threads.router)
 app.include_router(os_orchestrate.router)
 app.include_router(os_agent_runs.router)
+app.include_router(account_deletion.router)
 app.include_router(os_deliverables.router)
 app.include_router(os_graph.router)
 app.include_router(os_memory.router)
