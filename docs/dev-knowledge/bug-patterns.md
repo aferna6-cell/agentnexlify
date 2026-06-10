@@ -2429,3 +2429,16 @@ https://claude.ai/code/session_01GDV9mrXuxrZ6MBG2SP4usd
 **Author:** Claude
 **Files Changed:** backend/services/tenant_scope.py,backend/tests/test_os_action_dispatch.py,ops/routines/logs/nightly-commit-review-2026-06-10.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Billing/JWT test matrix (rubric 191), webhook bugfix, vertical KB feed, page sweep (#225)
+
+Billing/JWT test matrix closes rubric 2.6 + 3.3/3.4/3.6/3.7 (day total 157->191/262); fixes a real fraud-path webhook bug (log_activity kwarg typo would 500 Stripe webhooks on flagged checkouts); retires legacy OS tests broken since the Phase 4 cutover (pre-existing automation failures filed as #224); adds per-vertical guidance + tenant FAQ/website knowledge into SharedContext.kb with zero engine changes; deletes 37 dead frontend files from the agent-first consolidation. backend 545 / tests 845 / vitest 79.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+**Date:** 2026-06-10
+**Commit:** d168fde
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/billing.py,backend/services/os_kb_feed.py,backend/services/os_thread_runner.py,backend/tests/test_os_kb_feed.py,docs/legal/dpa-template.md,frontend/src/pages/ActionItemsPage.jsx,frontend/src/pages/AgentControlCenterPage.jsx,frontend/src/pages/Automations/SequenceBuilder.jsx,frontend/src/pages/Automations/SequenceDetail.jsx,frontend/src/pages/Automations/TemplateGallery.jsx,frontend/src/pages/Automations/index.jsx,frontend/src/pages/BidsPage.jsx,frontend/src/pages/CSATPage.jsx,frontend/src/pages/CallsPage.jsx,frontend/src/pages/ChatFlowBuilderPage.jsx,frontend/src/pages/ClientPortalPage.jsx,frontend/src/pages/ContentRepurposePage.jsx,frontend/src/pages/ContentStudioPage.jsx,frontend/src/pages/EmailSequencesPage.jsx,frontend/src/pages/FormBuilderPage.jsx,frontend/src/pages/JobsPage.jsx,frontend/src/pages/MenuPage.jsx,frontend/src/pages/OrdersPage.jsx,frontend/src/pages/PipelineAutomationsPage.jsx,frontend/src/pages/ReviewsPage.jsx,frontend/src/pages/ScoringConfigPage.jsx,frontend/src/pages/SmartListsPage.jsx,frontend/src/pages/SnippetsPage.jsx,frontend/src/pages/TeamActivityPage.jsx,frontend/src/pages/WaitlistPage.jsx,frontend/src/utils/api/calls.js,frontend/src/utils/api/chat-flows.js,frontend/src/utils/api/content.js,frontend/src/utils/api/email-sequences.js,frontend/src/utils/api/forms.js,frontend/src/utils/api/index.js,frontend/src/utils/api/jobs.js,frontend/src/utils/api/menu.js,frontend/src/utils/api/repurpose.js,frontend/src/utils/api/reviews.js,frontend/src/utils/api/scoring.js,frontend/src/utils/api/smart-lists.js,frontend/src/utils/api/waitlist.js,planning/launch-readiness-rubric.md,tests/test_agent_os.py,tests/test_billing_cancellation.py,tests/test_billing_plan_changes.py,tests/test_billing_refund_matrix.py,tests/test_checkout_trial_to_paid.py,tests/test_jwt_auth.py,tests/test_os_mvp_e2e.py,tests/test_os_worker_booking.py,tests/test_os_worker_campaign.py,tests/test_os_worker_customer_question.py,tests/test_os_worker_lead_nurture.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
