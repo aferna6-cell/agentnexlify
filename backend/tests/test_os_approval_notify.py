@@ -94,3 +94,23 @@ async def test_db_failure_swallowed():
         db, _TENANT, agent_name="sales", channel="sms", title=None
     )
     assert sent is False  # never raises — turn unaffected
+
+
+@pytest.mark.asyncio
+async def test_html_in_title_is_escaped():
+    """Draft titles can echo customer chat content — must not inject HTML
+    into the owner's email (security review 2026-06-10)."""
+    db = _db()
+    with _patch_runs(1), patch.object(
+        os_approval_notify, "send_email", new=AsyncMock()
+    ) as mock_send:
+        await os_approval_notify.notify_pending_approval(
+            db,
+            _TENANT,
+            agent_name="sales<script>",
+            channel="email",
+            title='<img src=x onerror=alert(1)>',
+        )
+    body = mock_send.call_args.kwargs["body_html"]
+    assert "<img" not in body and "<script>" not in body
+    assert "&lt;img" in body and "sales&lt;script&gt;" in body
