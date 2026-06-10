@@ -89,6 +89,7 @@ class RegisterRequest(BaseModel):
     city: str = ""
     phone: str | None = None
     website_url: str | None = None
+    ref_code: str | None = Field(None, max_length=200, description="Referral code from ?ref= URL param")
 
     @field_validator("email")
     @classmethod

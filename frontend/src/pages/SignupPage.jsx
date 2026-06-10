@@ -43,6 +43,7 @@ export default function SignupPage() {
   const googleEmail = searchParams.get("email") || "";
   const googleName = searchParams.get("name") || "";
   const googleError = searchParams.get("google_error") || "";
+  const refCode = (searchParams.get("ref") || "").trim().slice(0, 200);
   const isGoogleSignup = Boolean(googleSetupToken);
   const [form, setForm] = useState(() => ({
     business_name: "",
@@ -110,6 +111,7 @@ export default function SignupPage() {
             industry: form.industry,
             city: form.city,
             password: form.password,
+            ref_code: refCode || undefined,
           };
 
       const res = await fetch(endpoint, {

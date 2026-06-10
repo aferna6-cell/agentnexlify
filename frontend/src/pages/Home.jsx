@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
+import { usePricingVariant, trackPricingEvent } from "../utils/pricingExperiment";
 import "../styles/home.css";
 
 /* Read email from JWT in localStorage (works outside AuthProvider) */
@@ -399,6 +400,7 @@ function DemoPreview() {
 }
 
 export default function Home() {
+  const pricingVariant = usePricingVariant();
   const [navScrolled, setNavScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
@@ -981,8 +983,14 @@ export default function Home() {
                 <li>Dashboard analytics</li>
                 <li>Community support</li>
               </ul>
-              <Link to="/signup" className="pricing-cta">
-                Get Started {"\u2192"}
+              <Link
+                to="/signup"
+                className="pricing-cta"
+                onClick={() => trackPricingEvent("cta_click", "free")}
+              >
+                {pricingVariant === "variant_b"
+                  ? "Try It Free \u2014 2-Minute Setup \u2192"
+                  : "Get Started \u2192"}
               </Link>
             </div>
 

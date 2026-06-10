@@ -100,6 +100,7 @@ export default function AdminAnalyticsPage() {
   const [planDist, setPlanDist] = useState([]);
   const [revenueTrends, setRevenueTrends] = useState([]);
   const [industryBreakdown, setIndustryBreakdown] = useState([]);
+  const [mrrMetrics, setMrrMetrics] = useState(null);
   const [months, setMonths] = useState(12);
 
   const loadData = useCallback(async () => {
@@ -113,6 +114,7 @@ export default function AdminAnalyticsPage() {
         distRes,
         revenueRes,
         industryRes,
+        mrrRes,
       ] = await Promise.all([
         apiFetch("/overview").catch((err) => {
           console.warn("AdminAnalytics: overview fetch failed:", err);
@@ -138,6 +140,10 @@ export default function AdminAnalyticsPage() {
           console.warn("AdminAnalytics: industry-breakdown fetch failed:", err);
           return null;
         }),
+        apiFetch("/mrr-metrics").catch((err) => {
+          console.warn("AdminAnalytics: mrr-metrics fetch failed:", err);
+          return null;
+        }),
       ]);
 
       if (overviewRes) setOverview(overviewRes);
@@ -147,6 +153,7 @@ export default function AdminAnalyticsPage() {
       if (revenueRes?.revenue_trends)
         setRevenueTrends(revenueRes.revenue_trends);
       if (industryRes?.breakdown) setIndustryBreakdown(industryRes.breakdown);
+      if (mrrRes) setMrrMetrics(mrrRes);
     } catch (err) {
       console.error("Admin analytics load failed:", err.message);
     } finally {
@@ -311,6 +318,72 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* MRR & Churn (rubric 4.4 — key business metrics) */}
+      {mrrMetrics && (
+        <div style={{ ...cardStyle, marginBottom: 24 }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: "1rem", color: "var(--text-primary)" }}>
+            MRR &amp; Churn
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 16 }}>
+            {[
+              { label: "MRR", value: formatCurrency(mrrMetrics.mrr_cents || 0) },
+              { label: "Paying tenants", value: mrrMetrics.active_paying_count ?? 0 },
+              {
+                label: "Churn (30d)",
+                value:
+                  mrrMetrics.churn_rate_30d_pct == null
+                    ? "—"
+                    : `${mrrMetrics.churn_rate_30d_pct}%`,
+                sub: `${mrrMetrics.cancellations_30d ?? 0} cancellations`,
+              },
+              {
+                label: "Dunning paused",
+                value: mrrMetrics.dunning_paused_count ?? "—",
+                sub: "payment failed, plan paused",
+              },
+            ].map((s) => (
+              <div key={s.label}>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 4 }}>
+                  {s.label}
+                </div>
+                <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--accent)" }}>
+                  {s.value}
+                </div>
+                {s.sub && (
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+                    {s.sub}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {mrrMetrics.mrr_by_plan && Object.keys(mrrMetrics.mrr_by_plan).length > 0 ? (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+              <thead>
+                <tr style={{ color: "var(--text-secondary)", textAlign: "left" }}>
+                  <th style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>Plan</th>
+                  <th style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>Tenants</th>
+                  <th style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>MRR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(mrrMetrics.mrr_by_plan).map(([plan, row]) => (
+                  <tr key={plan} style={{ color: "var(--text-primary)" }}>
+                    <td style={{ padding: "6px 8px" }}>{PLAN_LABELS[plan] || plan}</td>
+                    <td style={{ padding: "6px 8px" }}>{row.count}</td>
+                    <td style={{ padding: "6px 8px" }}>{formatCurrency(row.mrr_cents)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+              No paying tenants yet — MRR by plan will appear with the first paid subscription.
+            </div>
+          )}
         </div>
       )}
 
