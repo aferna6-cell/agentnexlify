@@ -51,6 +51,16 @@ const STARTERS_BY_TYPE = {
   ],
 };
 
+// Marketing + operations live in Agent OS (standalone dashboard pages and the
+// marketing add-on were retired 2026-06-10). These starters surface that work
+// conversationally for every vertical.
+const SHARED_STARTERS = [
+  "Plan this week's social media posts",
+  "Draft an email campaign for past customers",
+  "Send an invoice for a finished job",
+  "What's on my calendar this week?",
+];
+
 function getStarters(businessType) {
   const key = (businessType || "").toLowerCase();
   // Match on common substrings for types like "auto_shop", "auto repair", etc.
@@ -63,7 +73,7 @@ function getStarters(businessType) {
 }
 
 export default function FirstRunStarters({ businessType, onSelectPrompt, composerRef, isMobile }) {
-  const starters = getStarters(businessType);
+  const starters = [...getStarters(businessType), ...SHARED_STARTERS];
 
   function handleClick(prompt) {
     onSelectPrompt(prompt);

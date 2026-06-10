@@ -232,9 +232,12 @@ class TestStripeEventRouting:
     @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
-    async def test_marketing_addon_checkout_routed_to_addon_handler(
+    async def test_legacy_marketing_addon_checkout_ignored(
         self, mock_construct, mock_db
     ):
+        """Add-on retired 2026-06-10. A legacy add-on checkout event must be
+        IGNORED — routing it to the main handler would corrupt the tenant's
+        primary plan."""
         from backend.routers.stripe_webhooks import stripe_webhook
 
         event = self._make_event("checkout.session.completed", {
@@ -254,20 +257,20 @@ class TestStripeEventRouting:
         db_client = MagicMock()
         mock_db.return_value = db_client
 
-        with patch("backend.routers.stripe_webhooks._handle_addon_checkout_completed") as mock_addon, \
-             patch("backend.routers.stripe_webhooks._handle_checkout_completed") as mock_plan:
+        with patch("backend.routers.stripe_webhooks._handle_checkout_completed") as mock_plan:
             result = await stripe_webhook(request)
 
         assert result == {"status": "ok"}
-        mock_addon.assert_called_once_with(db_client, event["data"]["object"])
         mock_plan.assert_not_called()
 
     @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
-    async def test_marketing_addon_subscription_updated_routed_to_addon_handler(
+    async def test_legacy_marketing_addon_subscription_updated_ignored(
         self, mock_construct, mock_db
     ):
+        """Legacy add-on subscription update must NOT reach the main plan
+        handler — it would overwrite plan_status from an unrelated sub."""
         from backend.routers.stripe_webhooks import stripe_webhook
 
         event = self._make_event("customer.subscription.updated", {
@@ -287,20 +290,20 @@ class TestStripeEventRouting:
         db_client = MagicMock()
         mock_db.return_value = db_client
 
-        with patch("backend.routers.stripe_webhooks._handle_addon_subscription_updated") as mock_addon, \
-             patch("backend.routers.stripe_webhooks._handle_subscription_updated") as mock_plan:
+        with patch("backend.routers.stripe_webhooks._handle_subscription_updated") as mock_plan:
             result = await stripe_webhook(request)
 
         assert result == {"status": "ok"}
-        mock_addon.assert_called_once_with(db_client, event["data"]["object"])
         mock_plan.assert_not_called()
 
     @patch("backend.routers.stripe_webhooks.get_service_supabase")
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
-    async def test_marketing_addon_subscription_deleted_routed_to_addon_handler(
+    async def test_legacy_marketing_addon_subscription_deleted_ignored(
         self, mock_construct, mock_db
     ):
+        """Legacy add-on cancellation must NOT downgrade the tenant's main
+        plan to free."""
         from backend.routers.stripe_webhooks import stripe_webhook
 
         event = self._make_event("customer.subscription.deleted", {
@@ -319,12 +322,10 @@ class TestStripeEventRouting:
         db_client = MagicMock()
         mock_db.return_value = db_client
 
-        with patch("backend.routers.stripe_webhooks._handle_addon_subscription_deleted") as mock_addon, \
-             patch("backend.routers.stripe_webhooks._handle_subscription_deleted") as mock_plan:
+        with patch("backend.routers.stripe_webhooks._handle_subscription_deleted") as mock_plan:
             result = await stripe_webhook(request)
 
         assert result == {"status": "ok"}
-        mock_addon.assert_called_once_with(db_client, event["data"]["object"])
         mock_plan.assert_not_called()
 
 

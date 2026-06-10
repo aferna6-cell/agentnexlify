@@ -19,22 +19,19 @@ describe("Sidebar navigation (agent-first consolidation)", () => {
         plan: "professional",
         role: "owner",
         businessType: "hvac",
-        marketing_addon_active: false,
       },
     };
   });
 
-  // Contract updated 2026-06-09: the standalone marketing pages that agents
-  // now handle (Content Studio, Email Sequences, Forms, ...) were retired
-  // from the nav. What remains is the PAID marketing add-on set, which must
-  // stay discoverable before activation (upsell path) under its own group.
-  it("keeps the paid marketing add-on discoverable before activation", () => {
+  // Contract updated 2026-06-10: the $49.99 Marketing Suite add-on was
+  // retired — marketing is included with Growth+ and surfaced through Agent
+  // OS, so the standalone marketing group and pages left the nav entirely.
+  it("marketing add-on group and pages are gone from the nav", () => {
     render(
       <Sidebar currentPage="dashboard" onNavigate={vi.fn()} plan="professional" />,
     );
 
-    fireEvent.click(screen.getByText("MARKETING ADD-ON"));
-
+    expect(screen.queryByText("MARKETING ADD-ON")).not.toBeInTheDocument();
     for (const label of [
       "Marketing Dashboard",
       "Local SEO",
@@ -44,7 +41,20 @@ describe("Sidebar navigation (agent-first consolidation)", () => {
       "Automation Rules",
       "Trigger Logs",
     ]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+  });
+
+  // Contract updated 2026-06-10: the OPERATIONS group (Calendar, Invoices,
+  // Documents) was retired from the nav — those jobs route through Agent OS.
+  it("operations group and pages are gone from the nav", () => {
+    render(
+      <Sidebar currentPage="dashboard" onNavigate={vi.fn()} plan="professional" />,
+    );
+
+    expect(screen.queryByText("OPERATIONS")).not.toBeInTheDocument();
+    for (const label of ["Calendar", "Invoices", "Documents"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
     }
   });
 
@@ -72,10 +82,9 @@ describe("Sidebar navigation (agent-first consolidation)", () => {
     );
 
     // Collapsed groups render their items only after expansion.
-    fireEvent.click(screen.getByText("OPERATIONS"));
     fireEvent.click(screen.getByText("SETTINGS"));
 
-    for (const label of ["Agent OS", "Clients", "Calendar", "Conversations", "Billing"]) {
+    for (const label of ["Agent OS", "Clients", "Conversations", "Billing"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });

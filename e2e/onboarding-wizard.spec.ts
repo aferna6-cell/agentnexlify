@@ -25,16 +25,13 @@
  * to — backend/routers/auth.py:1256) must land on the Plan step.
  *
  * Route choice: the spec drives /onboarding, the canonical authenticated
- * entry (and the Stripe return target). /onboarding wraps the wizard in
- * OnboardingRoute (main.jsx), which holds rendering while `token` exists but
- * `user` is still null. The bare /setup route mounts OnboardingWizardPage
- * directly and LOSES that race on a cold load: the wizard's own child effect
- * (`if (user === null) navigate("/signup")`) runs before AuthProvider's
- * parent effect resolves the user, so a logged-in owner who refreshes /setup
- * is bounced to /signup. Known gap in OnboardingWizardPage.jsx (owned by
- * another workstream at time of writing) — asserted up to here per the
- * "document what can't be driven" rule; /setup is intentionally not used for
- * the authenticated walkthrough.
+ * entry (and the Stripe return target). Both /onboarding AND /setup now wrap
+ * the wizard in OnboardingRoute (main.jsx), which holds rendering while
+ * `token` exists but `user` is still null. The /setup cold-load race (a
+ * logged-in owner refreshing /setup got bounced to /signup before
+ * AuthProvider parsed the token) was fixed 2026-06-10 — guarded route +
+ * the wizard's own redirect now requires `!token`. Regression-covered by
+ * the "/setup cold load" test below.
  *
  * Run: npx playwright test e2e/onboarding-wizard.spec.ts
  * (webServer in playwright.config.ts serves the built frontend on :4173)
@@ -173,4 +170,16 @@ test("unauthenticated visitor on /onboarding is sent to signup", async ({
   await stubApi(page);
   await page.goto("/onboarding");
   await expect(page).toHaveURL(/\/signup/, { timeout: 15000 });
+});
+
+test("logged-in owner cold-loading /setup lands on the wizard, not /signup", async ({
+  page,
+}) => {
+  await stubApi(page);
+  await loginAs(page);
+  await page.goto("/setup");
+  // The race fix: AuthProvider needs a tick to parse the token; the route
+  // must hold (render nothing) instead of bouncing to /signup.
+  await expect(page.getByText(/business/i).first()).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/setup");
 });

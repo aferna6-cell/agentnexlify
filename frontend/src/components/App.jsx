@@ -10,9 +10,10 @@ import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
 import { fetchOsPendingDeliverables } from "../utils/api/os";
 import LoginPage from "./LoginPage";
-import MarketingAddonUpsell, {
-  MARKETING_ADDON_GATED_KEYS,
-} from "./MarketingAddonUpsell";
+import MarketingUpsell, {
+  MARKETING_GATED_KEYS,
+  MARKETING_PLANS,
+} from "./MarketingUpsell";
 import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
@@ -324,10 +325,12 @@ export default function App() {
 
   const PageComponent = pages[currentPage] || Dashboard;
 
-  // Marketing Suite add-on gate - block 7 pages when tenant lacks the add-on.
-  // Backend enforces via addon_gate dependency; this is the UI half (answer #5 = C).
-  const marketingAddonGated =
-    MARKETING_ADDON_GATED_KEYS.has(currentPage) && !user.marketing_addon_active;
+  // Marketing plan gate — add-on retired 2026-06-10; marketing pages are
+  // included with Growth (autopilot) and above. Backend enforces via
+  // plan_gate dependency; this is the UI half.
+  const marketingGated =
+    MARKETING_GATED_KEYS.has(currentPage) &&
+    !MARKETING_PLANS.has(activePlan || user.plan);
 
   return (
     <div className="app">
@@ -360,8 +363,8 @@ export default function App() {
         <main className="content">
           {loading ? (
             <SkeletonLoader />
-          ) : marketingAddonGated ? (
-            <MarketingAddonUpsell pageKey={currentPage} />
+          ) : marketingGated ? (
+            <MarketingUpsell pageKey={currentPage} onNavigate={handleNavigate} />
           ) : (
             <PageErrorBoundary pageKey={currentPage}>
               <Suspense fallback={<SkeletonLoader />}>

@@ -1057,3 +1057,11 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Backend wiring:** `backend/routers/pricing_experiment.py` (GET variant + POST event, both rate-limited 30/min, event insert fault-tolerant), registered in `main.py`. Frontend: `frontend/src/utils/pricingExperiment.js` (cookie visitor id + variant hook + event tracker), wired to Free-plan CTA in `Home.jsx`. Tests: `backend/tests/test_pricing_experiment.py` (11 cases).
 
 **Applied:** YES — 2026-06-10 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+## Migration 135 — referral columns + backfill (2026-06-10)
+
+**Columns added to `tenants`:** `referral_code TEXT UNIQUE`, `referred_by UUID REFERENCES tenants(id)`, `referral_discount_pct INTEGER DEFAULT 0`. Backfilled `referral_code` for all 7 existing tenants (md5-derived 8-char codes).
+
+**Why:** URGENT prod fix — repo migration 001 lists these columns but the live schema never had them; the referral wiring shipped in PR #227 made `/register` insert a nonexistent column (signup 500). See bug-patterns.md entry "Migration files ≠ live schema".
+
+**Applied:** YES — 2026-06-10 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 7/7 tenants have codes.

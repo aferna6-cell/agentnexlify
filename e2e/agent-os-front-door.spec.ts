@@ -58,7 +58,7 @@ async function stubApi(page: Page) {
     }),
   );
   await page.route("**/api/v1/auth/me", (route) =>
-    route.fulfill({ json: { plan: "growth", marketing_addon_active: false } }),
+    route.fulfill({ json: { plan: "growth" } }),
   );
 }
 
@@ -150,7 +150,7 @@ test("mobile: Agent OS renders with Tasks drawer and composer", async ({ browser
   // Mobile chrome: Tasks drawer toggle + the composer, with no horizontal overflow.
   const drawerToggle = page.getByRole("button", { name: "Open task list" });
   await expect(drawerToggle).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole("button", { name: /send/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

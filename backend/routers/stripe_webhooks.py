@@ -15,15 +15,12 @@ from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.services.idempotency import check_and_record, record_response
 from backend.routers.billing import (
-    _handle_addon_checkout_completed,
-    _handle_addon_subscription_deleted,
-    _handle_addon_subscription_updated,
     _handle_checkout_completed,
     _handle_payment_failed,
     _handle_payment_succeeded,
     _handle_subscription_deleted,
     _handle_subscription_updated,
-    _is_marketing_addon_subscription,
+    _is_legacy_marketing_addon,
 )
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -69,18 +66,18 @@ async def stripe_webhook(request: Request):
             metadata = data.get("metadata") or {}
             if metadata.get("invoice_id") and metadata.get("tenant_id"):
                 _handle_invoice_payment(db, data)
-            elif _is_marketing_addon_subscription(data):
-                _handle_addon_checkout_completed(db, data)
+            elif _is_legacy_marketing_addon(data):
+                logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
                 _handle_checkout_completed(db, data)
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
-            if _is_marketing_addon_subscription(data):
-                _handle_addon_subscription_updated(db, data)
+            if _is_legacy_marketing_addon(data):
+                logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
             else:
                 _handle_subscription_updated(db, data)
         elif event_type == "customer.subscription.deleted":
-            if _is_marketing_addon_subscription(data):
-                _handle_addon_subscription_deleted(db, data)
+            if _is_legacy_marketing_addon(data):
+                logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
             else:
                 _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_failed":

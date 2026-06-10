@@ -850,7 +850,7 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         db.table("tenants")
         .select(
             "id, owner_email, business_name, plan, city, owner_name, "
-            "business_type, marketing_addon_active, marketing_addon_grandfathered"
+            "business_type, referral_code"
         )
         .eq("id", claims["tenant_id"])
         .limit(1)
@@ -868,8 +868,7 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         city=t.get("city"),
         owner_name=t.get("owner_name"),
         business_type=t.get("business_type"),
-        marketing_addon_active=bool(t.get("marketing_addon_active")),
-        marketing_addon_grandfathered=bool(t.get("marketing_addon_grandfathered")),
+        referral_code=t.get("referral_code"),
     )
 
 

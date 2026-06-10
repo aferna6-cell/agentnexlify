@@ -38,10 +38,12 @@ export default function OnboardingWizardPage() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to signup if not authenticated
+  // Redirect to signup only when there is no token at all. With a token
+  // present, user is null for a tick while AuthContext parses it — bouncing
+  // on that tick sent logged-in users cold-loading /setup to /signup.
   useEffect(() => {
-    if (user === null) navigate("/signup", { replace: true });
-  }, [user, navigate]);
+    if (user === null && !token) navigate("/signup", { replace: true });
+  }, [user, token, navigate]);
 
   // Check URL params for Stripe return (e.g. ?step=6)
   const urlParams = new URLSearchParams(window.location.search);
