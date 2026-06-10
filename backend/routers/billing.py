@@ -504,6 +504,46 @@ def _safe_invoice_snapshot(invoice: dict) -> dict[str, Any]:
     }
 
 
+async def _handle_payment_succeeded(db, invoice: dict) -> None:
+    """Dunning recovery: a successful invoice payment un-pauses the tenant.
+
+    Resets billing_dunning_attempt_count and restores plan_status to active —
+    but ONLY when the tenant was paused BY dunning (attempt_count > 0). A
+    fraud-flagged checkout also sets plan_status='paused' with a zero dunning
+    count; that pause must survive payment events and clear only via manual
+    review. Without this handler, a tenant whose card recovered after
+    failures stayed paused forever (found by tests/test_billing_dunning_e2e.py).
+    """
+    customer_id = invoice.get("customer")
+    if not customer_id:
+        return
+
+    result = (
+        db.table("tenants")
+        .select("id, plan_status, billing_dunning_attempt_count")
+        .eq("stripe_customer_id", customer_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        return
+
+    tenant = result.data[0]
+    dunning_count = int(tenant.get("billing_dunning_attempt_count") or 0)
+    if dunning_count <= 0:
+        return  # not a dunning pause (or nothing to recover) — leave untouched
+
+    update: dict[str, Any] = {"billing_dunning_attempt_count": 0}
+    if tenant.get("plan_status") == "paused":
+        update["plan_status"] = "active"
+    db.table("tenants").update(update).eq("id", tenant["id"]).execute()
+    logger.info(
+        "Tenant %s payment recovered after %d dunning attempt(s); plan restored",
+        tenant["id"],
+        dunning_count,
+    )
+
+
 async def _handle_payment_failed(db, invoice: dict) -> None:
     customer_id = invoice.get("customer")
     if not customer_id:
