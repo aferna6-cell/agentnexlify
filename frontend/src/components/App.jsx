@@ -66,7 +66,6 @@ const ClientList = lazy(() => import("../pages/Dashboard/ClientList"));
 const ClientProfile = lazy(() => import("../pages/Dashboard/ClientProfile"));
 const Calendar = lazy(() => import("../pages/Calendar"));
 const Availability = lazy(() => import("../pages/Availability"));
-const AutomationsPage = lazy(() => import("../pages/Automations"));
 const ConversationsPage = lazy(() => import("../pages/ConversationsPage"));
 const WidgetPage = lazy(() => import("../pages/WidgetPage"));
 const FaqManagerPage = lazy(() => import("../pages/FaqManagerPage"));
@@ -77,29 +76,12 @@ const SettingsInboundChannels = lazy(
 );
 const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
-const AgentControlCenterPage = lazy(
-  () => import("../pages/AgentControlCenterPage"),
-);
 const AgentOS = lazy(() => import("../pages/AgentOS"));
 const TeamPage = lazy(() => import("../pages/TeamPage"));
 const BusinessPageSettings = lazy(
   () => import("../pages/BusinessPageSettings"),
 );
-const ReviewsPage = lazy(() => import("../pages/ReviewsPage"));
-const ContentStudioPage = lazy(() => import("../pages/ContentStudioPage"));
-const ContentRepurposePage = lazy(
-  () => import("../pages/ContentRepurposePage"),
-);
-const MenuPage = lazy(() => import("../pages/MenuPage"));
-const OrdersPage = lazy(() => import("../pages/OrdersPage"));
-const JobsPage = lazy(() => import("../pages/JobsPage"));
-const ActionItemsPage = lazy(() => import("../pages/ActionItemsPage"));
-const SnippetsPage = lazy(() => import("../pages/SnippetsPage"));
-const ChatFlowBuilderPage = lazy(() => import("../pages/ChatFlowBuilderPage"));
 const MCPSetupPage = lazy(() => import("../pages/MCPSetupPage"));
-const BidsPage = lazy(() => import("../pages/BidsPage"));
-const ClientPortalPage = lazy(() => import("../pages/ClientPortalPage"));
-const CallsPage = lazy(() => import("../pages/CallsPage"));
 const LocalSEOPage = lazy(() => import("../pages/LocalSEOPage"));
 const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
 const MarketingCampaignsPage = lazy(
@@ -111,19 +93,9 @@ const MarketingDashboardPage = lazy(
 const ABTestsPage = lazy(() => import("../pages/ABTestsPage"));
 const AutomationRulesPage = lazy(() => import("../pages/AutomationRulesPage"));
 const TriggerLogsPage = lazy(() => import("../pages/TriggerLogsPage"));
-const EmailSequencesPage = lazy(() => import("../pages/EmailSequencesPage"));
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
 const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
-const PipelineAutomationsPage = lazy(
-  () => import("../pages/PipelineAutomationsPage"),
-);
-const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
-const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
-const CSATPage = lazy(() => import("../pages/CSATPage"));
-const WaitlistPage = lazy(() => import("../pages/WaitlistPage"));
-const ScoringConfigPage = lazy(() => import("../pages/ScoringConfigPage"));
-const TeamActivityPage = lazy(() => import("../pages/TeamActivityPage"));
 const SupportPage = lazy(() => import("../pages/SupportPage"));
 const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
 const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
@@ -131,7 +103,6 @@ const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
 const pages = {
   dashboard: Dashboard,
   analytics: AnalyticsPage,
-  control_center: AgentControlCenterPage,
   agent_os: AgentOS,
   leads: LeadsPage,
   clients: ClientList,
@@ -139,7 +110,6 @@ const pages = {
   calendar: Calendar,
   availability: Availability,
   conversations: ConversationsPage,
-  automations: AutomationsPage,
   widget: WidgetPage,
   faq: FaqManagerPage,
   team: TeamPage,
@@ -148,19 +118,7 @@ const pages = {
   settings: SettingsPage,
   inbound_channels: SettingsInboundChannels,
   business_page: BusinessPageSettings,
-  reviews: ReviewsPage,
-  content_studio: ContentStudioPage,
-  content_repurpose: ContentRepurposePage,
-  menu: MenuPage,
-  orders: OrdersPage,
-  jobs: JobsPage,
-  action_items: ActionItemsPage,
-  snippets: SnippetsPage,
-  chat_flows: ChatFlowBuilderPage,
   mcp_setup: MCPSetupPage,
-  bids: BidsPage,
-  client_portal: ClientPortalPage,
-  calls: CallsPage,
   local_seo: LocalSEOPage,
   social_media: SocialMediaPage,
   campaigns: MarketingCampaignsPage,
@@ -168,17 +126,9 @@ const pages = {
   ab_tests: ABTestsPage,
   automation_rules: AutomationRulesPage,
   trigger_logs: TriggerLogsPage,
-  email_sequences: EmailSequencesPage,
   invoices: InvoicesPage,
   documents: DocumentsPage,
   pipeline: PipelinePage,
-  pipeline_automations: PipelineAutomationsPage,
-  smart_lists: SmartListsPage,
-  form_builder: FormBuilderPage,
-  csat: CSATPage,
-  waitlist: WaitlistPage,
-  scoring_config: ScoringConfigPage,
-  team_activity: TeamActivityPage,
   support: SupportPage,
   admin_analytics: AdminAnalyticsPage,
   admin_promotions: AdminPromotionsPage,
@@ -190,17 +140,14 @@ const pages = {
 const PAGE_TO_PATH = {
   dashboard: "/dashboard/overview",
   analytics: "/dashboard/analytics",
-  control_center: "/dashboard/agent-control",
   agent_os: "/dashboard/agent-os",
   leads: "/dashboard/leads",
   clients: "/dashboard/clients",
   client_profile: "/dashboard/client-profile",
   pipeline: "/dashboard/pipeline",
-  pipeline_automations: "/dashboard/pipeline-automations",
   calendar: "/dashboard/calendar",
   availability: "/dashboard/availability",
   conversations: "/dashboard/conversations",
-  automations: "/dashboard/automations",
   widget: "/dashboard/widget",
   faq: "/dashboard/faq",
   team: "/dashboard/team",
@@ -209,18 +156,7 @@ const PAGE_TO_PATH = {
   settings: "/dashboard/settings",
   inbound_channels: "/dashboard/inbound-channels",
   business_page: "/dashboard/business-page",
-  reviews: "/dashboard/reviews",
-  content_studio: "/dashboard/content-studio",
-  menu: "/dashboard/menu",
-  orders: "/dashboard/orders",
-  jobs: "/dashboard/jobs",
-  action_items: "/dashboard/action-items",
-  snippets: "/dashboard/snippets",
-  chat_flows: "/dashboard/chat-flows",
   mcp_setup: "/dashboard/mcp-setup",
-  bids: "/dashboard/bids",
-  client_portal: "/dashboard/client-portal",
-  calls: "/dashboard/calls",
   local_seo: "/dashboard/local-seo",
   social_media: "/dashboard/social-media",
   campaigns: "/dashboard/campaigns",
@@ -228,15 +164,8 @@ const PAGE_TO_PATH = {
   ab_tests: "/dashboard/ab-tests",
   automation_rules: "/dashboard/automation-rules",
   trigger_logs: "/dashboard/trigger-logs",
-  email_sequences: "/dashboard/sequences",
   invoices: "/dashboard/invoices",
   documents: "/dashboard/documents",
-  smart_lists: "/dashboard/smart-lists",
-  form_builder: "/dashboard/forms",
-  csat: "/dashboard/csat",
-  waitlist: "/dashboard/waitlist",
-  scoring_config: "/dashboard/scoring",
-  team_activity: "/dashboard/team-activity",
   support: "/dashboard/support",
   admin_analytics: "/admin/analytics",
   admin_promotions: "/admin/promotions",

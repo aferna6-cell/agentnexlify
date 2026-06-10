@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { fetchOsGraph, forgetOsGraphNode } from "../../utils/api/os";
+import useIsMobile from "../../hooks/useIsMobile";
 
 const TYPE_LABELS = {
   customer: "Customers",
@@ -26,6 +27,7 @@ export default function MemoryPanel({ token, onClose }) {
   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(() => {
     if (!token) return;
@@ -62,15 +64,28 @@ export default function MemoryPanel({ token, onClose }) {
   return (
     <aside
       aria-label="Agent OS memory"
-      style={{
-        width: 340,
-        flexShrink: 0,
-        borderLeft: "1px solid var(--border)",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--bg-primary)",
-        minHeight: 0,
-      }}
+      style={
+        isMobile
+          ? {
+              position: "fixed",
+              inset: 0,
+              width: "100%",
+              zIndex: 70,
+              display: "flex",
+              flexDirection: "column",
+              background: "var(--bg-primary)",
+              minHeight: 0,
+            }
+          : {
+              width: 340,
+              flexShrink: 0,
+              borderLeft: "1px solid var(--border)",
+              display: "flex",
+              flexDirection: "column",
+              background: "var(--bg-primary)",
+              minHeight: 0,
+            }
+      }
     >
       <div
         style={{

@@ -132,3 +132,48 @@ test("owner can open the Memory panel and see learned entities", async ({ page }
   await expect(page.getByText("Sarah Chen")).toBeVisible();
   await expect(page.getByText("Has a pending $680 brake quote")).toBeVisible();
 });
+
+test("mobile: Agent OS renders with Tasks drawer and composer", async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 667 },
+    ignoreHTTPSErrors: true,
+  });
+  const page = await context.newPage();
+  await stubApi(page);
+  await page.addInitScript((token: string) => {
+    window.localStorage.setItem("anx_token", token);
+    window.localStorage.setItem("anx_tenant_id", "e2e-tenant");
+  }, fakeJwt());
+
+  await page.goto("/dashboard");
+
+  // Mobile chrome: Tasks drawer toggle + the composer, with no horizontal overflow.
+  const drawerToggle = page.getByRole("button", { name: "Open task list" });
+  await expect(drawerToggle).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("button", { name: /send/i })).toBeVisible();
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  // Drawer opens and shows the New task action.
+  await drawerToggle.click();
+  await expect(page.getByRole("button", { name: "New task" })).toBeVisible();
+  await context.close();
+});
+
+test("retired dashboard routes land on the Agent OS front door", async ({ page }) => {
+  await stubApi(page);
+  await page.addInitScript((token: string) => {
+    window.localStorage.setItem("anx_token", token);
+    window.localStorage.setItem("anx_tenant_id", "e2e-tenant");
+  }, fakeJwt());
+
+  // /dashboard/sequences was the Email Sequences page — retired; its job
+  // routes through the Marketing department now.
+  await page.goto("/dashboard/sequences");
+  await expect(
+    page.getByText("No tasks yet. Start one to hand work to the orchestrator."),
+  ).toBeVisible({ timeout: 15000 });
+});
