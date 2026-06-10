@@ -236,7 +236,7 @@ def mock_supabase():
         yield client
 
 
-async def _allow_marketing_addon_for_tests():
+async def _allow_marketing_access_for_tests():
     return {
         "tenant_id": "test-tenant",
         "email": "test@example.com",
@@ -248,24 +248,25 @@ async def _allow_marketing_addon_for_tests():
 
 @pytest.fixture(autouse=True)
 def _allow_marketing_addon_gate_for_endpoint_tests():
-    """Keep legacy marketing endpoint tests focused on endpoint behavior.
+    """Keep marketing endpoint tests focused on endpoint behavior.
 
-    The add-on gate has dedicated tests; broad router tests should not need
+    The plan gate (require_marketing_access — replaced the retired add-on
+    gate 2026-06-10) has dedicated tests; broad router tests should not need
     real Supabase state just to enter the endpoint under test.
     """
     from backend.main import app
-    from backend.services.addon_gate import require_marketing_addon
+    from backend.services.plan_gate import require_marketing_access
 
     sentinel = object()
-    previous = app.dependency_overrides.get(require_marketing_addon, sentinel)
-    app.dependency_overrides[require_marketing_addon] = _allow_marketing_addon_for_tests
+    previous = app.dependency_overrides.get(require_marketing_access, sentinel)
+    app.dependency_overrides[require_marketing_access] = _allow_marketing_access_for_tests
     try:
         yield
     finally:
         if previous is sentinel:
-            app.dependency_overrides.pop(require_marketing_addon, None)
+            app.dependency_overrides.pop(require_marketing_access, None)
         else:
-            app.dependency_overrides[require_marketing_addon] = previous
+            app.dependency_overrides[require_marketing_access] = previous
 
 
 @pytest.fixture(autouse=True)

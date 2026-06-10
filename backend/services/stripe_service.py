@@ -17,17 +17,7 @@ _PLACEHOLDER_PRICE_IDS = {
     "price_professional_monthly",
     "price_autopilot_monthly",
     "price_enterprise_monthly",
-    "price_marketing_addon_monthly",
 }
-
-
-MARKETING_ADDON_PRICE_ID = ""  # set in _ensure_initialized below
-
-
-# Stripe metadata key used to distinguish add-on subscriptions from primary
-# plan subscriptions in webhook handlers.
-STRIPE_ADDON_METADATA_KEY = "addon"
-STRIPE_ADDON_MARKETING_VALUE = "marketing"
 
 
 def _price_id(env_value: str, fallback: str) -> str:
@@ -44,13 +34,6 @@ PLAN_PRICES: dict[str, dict[str, str]] = {
     "autopilot": {"monthly": _price_id(settings.stripe_price_autopilot_monthly, "price_autopilot_monthly")},
     "enterprise": {"monthly": _price_id(settings.stripe_price_enterprise_monthly, "price_enterprise_monthly")},
 }
-
-
-def get_marketing_addon_price_id() -> str:
-    """Return configured Stripe price id for Marketing Suite add-on."""
-    return _price_id(
-        settings.stripe_price_marketing_addon_monthly, "price_marketing_addon_monthly"
-    )
 
 
 def ensure_plan_prices_configured(plan: str) -> dict[str, str]:
@@ -101,59 +84,7 @@ def _ensure_initialized() -> None:
                 "Set STRIPE_PRICE_* env vars before enabling live checkout.",
                 ", ".join(placeholder_plans),
             )
-        if get_marketing_addon_price_id() in _PLACEHOLDER_PRICE_IDS:
-            logger.warning(
-                "Marketing add-on Stripe price uses placeholder. "
-                "Set STRIPE_PRICE_MARKETING_ADDON_MONTHLY before enabling add-on checkout."
-            )
         _warned_placeholder_prices = True
-
-
-def create_marketing_addon_checkout_session(
-    tenant_id: str,
-    customer_id: str,
-    success_url: str,
-    cancel_url: str,
-) -> stripe.checkout.Session:
-    """Create a Stripe Checkout session for the Marketing Suite add-on.
-
-    Creates a SEPARATE subscription from the primary plan (answer #4 = A).
-    Subscription metadata[addon]=marketing so webhook can distinguish it.
-    """
-    ensure_stripe_configured()
-    price_id = get_marketing_addon_price_id()
-    if price_id in _PLACEHOLDER_PRICE_IDS:
-        raise RuntimeError(
-            "STRIPE_PRICE_MARKETING_ADDON_MONTHLY is not configured."
-        )
-    if not price_id.startswith("price_"):
-        raise RuntimeError(
-            "STRIPE_PRICE_MARKETING_ADDON_MONTHLY should look like price_..."
-        )
-
-    return stripe.checkout.Session.create(
-        mode="subscription",
-        customer=customer_id,
-        line_items=[{"price": price_id, "quantity": 1}],
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={
-            "tenant_id": tenant_id,
-            STRIPE_ADDON_METADATA_KEY: STRIPE_ADDON_MARKETING_VALUE,
-        },
-        subscription_data={
-            "metadata": {
-                "tenant_id": tenant_id,
-                STRIPE_ADDON_METADATA_KEY: STRIPE_ADDON_MARKETING_VALUE,
-            },
-        },
-    )
-
-
-def cancel_marketing_addon_subscription(subscription_id: str) -> stripe.Subscription:
-    """Cancel the add-on subscription at period end (no immediate revocation)."""
-    ensure_stripe_configured()
-    return stripe.Subscription.modify(subscription_id, cancel_at_period_end=True)
 
 
 def get_or_create_customer(

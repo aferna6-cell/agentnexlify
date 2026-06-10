@@ -2467,3 +2467,13 @@ https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
 **Author:** aferna6-cell
 **Files Changed:** audits/audit-pii-minimization-2026-06-10.md,backend/routers/billing.py,backend/routers/os_usage.py,backend/routers/stripe_webhooks.py,backend/services/ai_usage_guard.py,backend/services/automation/scheduled_jobs_ext.py,backend/services/billing_reconciliation.py,backend/services/email_sender.py,backend/tests/test_billing_reconciliation.py,backend/tests/test_os_kb_feed.py,e2e/onboarding-wizard.spec.ts,frontend/src/components/os/FirstRunStarters.jsx,frontend/src/main.jsx,frontend/src/pages/AgentOS.jsx,frontend/src/pages/HelpPage.jsx,frontend/src/pages/Home.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,ops/evals/run_usage_reconciliation.py,ops/evals/run_widget_3g_check.mjs,ops/evals/widget-3g-2026-06-10.json,planning/launch-readiness-rubric.md,tests/test_automation_engine.py,tests/test_billing_dunning_e2e.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+## Migration files ≠ live schema — verify columns against the LIVE DB (2026-06-10)
+
+**What happened:** `migrations/001_initial_schema.sql` lists `tenants.referral_code / referred_by / referral_discount_pct`, so the referral feature (PR #227) trusted the file and shipped a tenant INSERT including `referral_code`. The LIVE database never had those columns — every production signup 500'd until migration 135 added them (~1 hour window; `signup_attempts` confirmed zero signups were hit).
+
+**Root cause:** repo migration files and the live schema diverged (001 was evidently never applied as written, or columns were dropped). Tests didn't catch it because fake supabase mocks accept any column.
+
+**Rule:** before INSERT/UPDATE touching a column not already used by existing code, verify it on the LIVE schema (`information_schema.columns` via Supabase MCP) — a migration file mentioning the column proves nothing. This is schema-discipline.md's "check the actual Supabase schema" applied to columns that LOOK documented.
+
+**Detection gap to close eventually:** a CI check diffing `information_schema` against expected columns for the hot tables (tenants, leads, conversations).

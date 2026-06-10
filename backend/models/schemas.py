@@ -178,8 +178,7 @@ class MeResponse(BaseModel):
     city: str | None = None
     owner_name: str | None = None
     business_type: str | None = None
-    marketing_addon_active: bool = False
-    marketing_addon_grandfathered: bool = False
+    referral_code: str | None = None
 
 
 class WidgetConfigDetail(BaseModel):

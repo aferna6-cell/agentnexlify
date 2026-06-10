@@ -7,8 +7,6 @@ const planLabels = {
   autopilot: "Growth",
   professional: "Pro",
   enterprise: "Enterprise",
-  foundation: "Starter",
-  operations: "Pro",
 };
 
 const planColors = {
@@ -17,8 +15,6 @@ const planColors = {
   professional: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
   autopilot: { color: "var(--accent)", bg: "var(--accent-dim)" },
   enterprise: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
-  foundation: { color: "var(--accent)", bg: "var(--accent-dim)" },
-  operations: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
 };
 
 const Icon = ({ d, ...props }) => (
@@ -98,6 +94,7 @@ const allNavItems = [
       <Icon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18" />
     ),
     label: "Calendar",
+    hidden: true,
   },
   {
     key: "conversations",
@@ -180,6 +177,7 @@ const allNavItems = [
     icon: <Icon d="M11 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM21 21l-4.35-4.35" />,
     label: "Local SEO",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "menu",
@@ -223,6 +221,7 @@ const allNavItems = [
     ),
     label: "Invoices",
     roles: ["owner", "admin", "member"],
+    hidden: true,
   },
   {
     key: "documents",
@@ -231,6 +230,7 @@ const allNavItems = [
     ),
     label: "Documents",
     roles: ["owner", "admin"],
+    hidden: true,
   },
   {
     key: "smart_lists",
@@ -266,17 +266,10 @@ const allNavItems = [
     hidden: true,
   },
   {
-    key: "content_studio",
-    icon: (
-      <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    ),
-    label: "Content Studio",
-    hidden: true,
-  },
-  {
     key: "marketing_dashboard",
     icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />,
     label: "Marketing Dashboard",
+    hidden: true,
   },
   {
     key: "social_media",
@@ -284,6 +277,7 @@ const allNavItems = [
       <Icon d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
     ),
     label: "Social Media",
+    hidden: true,
   },
   {
     key: "campaigns",
@@ -291,16 +285,19 @@ const allNavItems = [
       <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6" />
     ),
     label: "Campaigns",
+    hidden: true,
   },
   {
     key: "ab_tests",
     icon: <Icon d="M3 3h8v8H3zM13 13h8v8h-8zM13 3h8v8h-8zM3 13h8v8H3z" />,
     label: "A/B Tests",
+    hidden: true,
   },
   {
     key: "automation_rules",
     icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
     label: "Automation Rules",
+    hidden: true,
   },
   {
     key: "trigger_logs",
@@ -308,6 +305,7 @@ const allNavItems = [
       <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M8 11h8M8 15h6" />
     ),
     label: "Trigger Logs",
+    hidden: true,
   },
   {
     key: "email_sequences",
@@ -415,11 +413,6 @@ const NAV_GROUPS = [
     items: ["conversations", "widget", "faq"],
   },
   {
-    key: "operations",
-    label: "OPERATIONS",
-    items: ["calendar", "invoices", "documents"],
-  },
-  {
     key: "settings",
     label: "SETTINGS",
     items: [
@@ -437,21 +430,6 @@ const NAV_GROUPS = [
     key: "admin",
     label: "ADMIN",
     items: ["admin_analytics", "admin_promotions"],
-  },
-  {
-    // Addon-gated pages stay accessible to paying addon customers.
-    // Collapsed by default so they don't clutter the front-door nav.
-    key: "marketing_addon",
-    label: "MARKETING ADD-ON",
-    items: [
-      "marketing_dashboard",
-      "local_seo",
-      "social_media",
-      "campaigns",
-      "ab_tests",
-      "automation_rules",
-      "trigger_logs",
-    ],
   },
 ];
 

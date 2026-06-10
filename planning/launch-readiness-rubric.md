@@ -98,7 +98,7 @@
 
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
-| 6.1 | Daily automated backup verified restorable | 1 | Supabase daily backups; restore drill not performed |
+| 6.1 | Daily automated backup verified restorable | 1 | Logical restore drill PERFORMED 2026-06-10 (`docs/ops/restore-drill-2026-06-10.md`): 4 critical tables round-tripped into a scratch schema, counts exact (7/25/0/2282), cleaned up. Score 2 needs the 10-min dashboard step in that runbook: verify Supabase's own daily backup restores to a new project. |
 | 6.2 | Schema migrations numbered + forward-only | 2 | ✓ `docs/dev-knowledge/schema-log.md:730-753` documents migrations 106/107 applied on 2026-04-19, keeping the guardrail schema log current. |
 | 6.3 | Pre-commit blocks dropped-column queries | 2 | ✓ CHECK 8 enforced (pre-commit hook) |
 | 6.4 | Integration tests cover critical tables | 2 | ✓ `test_backend_regressions.py` — 12 passing (post-fix today) |
@@ -114,7 +114,7 @@
 |---|-----------|-------|-------|
 | 7.1 | Help docs / knowledge base accessible to customers | 2 | Public `/help` page shipped 2026-06-10: `frontend/src/pages/HelpPage.jsx` (getting started, 8 departments, approvals, memory, widget, billing, account deletion, support) — route in `main.jsx`, footer link on `Home.jsx` |
 | 7.2 | Support email monitored within 24h | ? | `[partner-verify]` — assumed 1 |
-| 7.3 | Onboarding wizard completes without manual intervention | 2 | `e2e/onboarding-wizard.spec.ts` (2026-06-10): full 7-step walkthrough on free plan with stubbed APIs — no dead-ends; Stripe-return deep link (`/onboarding?step=6`) covered. Known gap documented in spec header: cold-loading bare `/setup` while logged in loses the AuthProvider race and bounces to /signup (wizard page owned by another workstream) |
+| 7.3 | Onboarding wizard completes without manual intervention | 2 | `e2e/onboarding-wizard.spec.ts` (2026-06-10): full 7-step walkthrough on free plan with stubbed APIs — no dead-ends; Stripe-return deep link (`/onboarding?step=6`) covered. The /setup cold-load gap is FIXED 2026-06-10: /setup now routes through OnboardingRoute (same guard as /onboarding) and the wizard redirect requires !token; regression test in the spec (4/4 pass) |
 | 7.4 | Cancel-flow is self-serve (no email required) | 2 | Stale note corrected 2026-06-10: BillingPage.jsx:320-334 already renders a 7-reason picker + detail field posting to `/api/v1/auth/billing/cancel`, which validates the reason server-side (auth.py:1409) and records it (tests/test_billing_cancellation.py). Fully self-serve, churn captured. |
 | 7.5 | Status page exists | 0 | No status page (status.agentnexlify.com not configured) |
 
@@ -143,7 +143,7 @@
 | 9.1 | Inbound lead capture on marketing site | 2 | `Contact.jsx` form + `widget_lead.py` + embedded widget on landing |
 | 9.2 | Outbound email domain warmed + SPF/DKIM/DMARC clean | 1 | Resend DNS pending per rubric note |
 | 9.3 | Pricing page A/B test wired (Growthbook / equiv) | 2 | Experiment `pricing_page_cta_2026_06`: deterministic server-side variant (`backend/routers/pricing_experiment.py`), anonymous cookie visitor id, view + cta_click events to `pricing_ab_events` (migration 134, applied), Free-plan CTA copy varies on Home.jsx; 11 tests. 2026-06-10. |
-| 9.4 | Referral / affiliate tracking | 2 | End-to-end: `?ref=CODE` captured on SignupPage → `RegisterRequest.ref_code` → `backend/services/referral.py` validates vs tenants.referral_code + referral promo, writes referred_by + discount; every new tenant gets a referral_code at signup; invalid codes silently ignored, signup never blocked; 6 tests. 2026-06-10. |
+| 9.4 | Referral / affiliate tracking | 2 | End-to-end: `?ref=CODE` captured on SignupPage → `RegisterRequest.ref_code` → `backend/services/referral.py` validates vs tenants.referral_code + referral promo, writes referred_by + discount; every new tenant gets a referral_code at signup; invalid codes silently ignored, signup never blocked; 6 tests; tenants see + copy their share link on BillingPage (ReferralCard, /me returns referral_code). CORRECTION 2026-06-10 evening: migrations/001 listed referral columns but the LIVE schema never had them — the wiring in PR #227 made /register insert a nonexistent column (signup 500). Migration 135 added the columns + backfilled within the hour; signup_attempts confirms zero signups hit the broken window. |
 | 9.5 | Cold-outreach templates + partner assignment | 0 | No outreach template set or partner assignment rules |
 
 **Subtotal:** 7 / 10 × 1 = **7 / 10** (9.3 + 9.4 closed 2026-06-10)

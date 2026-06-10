@@ -22,7 +22,7 @@ from backend.models.local_seo import (
     SEOAuditResponse,
     SEOProfileResponse,
 )
-from backend.services.addon_gate import require_marketing_addon
+from backend.services.plan_gate import require_marketing_access
 from backend.services.local_seo_execute import (
     execute_analyze_seo_profile,
     execute_competitor_analysis,
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/seo",
     tags=["local-seo"],
-    dependencies=[Depends(require_marketing_addon)],
+    dependencies=[Depends(require_marketing_access)],
 )
 
 

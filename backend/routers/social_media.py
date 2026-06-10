@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant, get_business_context, verify_tenant
 from backend.models.database import get_service_supabase
-from backend.services.addon_gate import require_marketing_addon
+from backend.services.plan_gate import require_marketing_access
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.social_media_ai import (
     PLATFORM_LIMITS,
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/social",
     tags=["social-media"],
-    dependencies=[Depends(require_marketing_addon)],
+    dependencies=[Depends(require_marketing_access)],
 )
 
 # Re-export for tests that import from the router module (Rule 10: never change tests).
