@@ -152,45 +152,16 @@ def _compute_decay(
 # ---------------------------------------------------------------------------
 
 
-def score_lead(lead_id: str) -> dict[str, Any]:
-    """Score a single lead and persist the result. Returns scoring details."""
-    db = get_service_supabase()
+def _compute_lead_score(
+    lead: dict[str, Any],
+    messages: list[dict[str, Any]],
+    last_message_at: str | None,
+) -> dict[str, Any]:
+    """Pure scoring: lead row + its messages in, scoring details out.
 
-    # 1. Fetch lead
-    lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
-    if not lead_result.data:
-        raise ValueError(f"Lead {lead_id} not found")
-    lead = lead_result.data[0]
-
-    # 2. Fetch conversation messages via chat_messages (canonical store).
-    # Live schema dropped conversations.messages JSONB — messages live in
-    # chat_messages, linked by tenant_id + session_id.
-    messages: list[dict[str, Any]] = []
-    last_message_at: str | None = None
-    conv_id = lead.get("conversation_id")
-    tenant_id = lead.get("client_id")
-    if conv_id:
-        conv_result = (
-            db.table("conversations")
-            .select("session_id, last_message_at")
-            .eq("id", conv_id)
-            .limit(1)
-            .execute()
-        )
-        if conv_result.data:
-            session_id = conv_result.data[0].get("session_id")
-            last_message_at = conv_result.data[0].get("last_message_at")
-            if session_id and tenant_id:
-                msg_result = (
-                    db.table("chat_messages")
-                    .select("role, content, created_at")
-                    .eq("tenant_id", tenant_id)
-                    .eq("session_id", session_id)
-                    .order("created_at")
-                    .execute()
-                )
-                messages = msg_result.data or []
-
+    Shared by score_lead (single fetch) and score_all_leads (batch fetch) so
+    the batch path never re-queries per lead.
+    """
     # 3. Count user messages
     user_msg_count = sum(1 for m in messages if m.get("role") == "user")
 
@@ -238,30 +209,8 @@ def score_lead(lead_id: str) -> dict[str, Any]:
     if dec_bd.get("total", 0) > 0:
         factors.append(f"Inactivity decay (-{dec_bd['total']})")
 
-    # 7. Persist score + temperature + factors
-    db_score = max(1, min(10, round(final_score / 10)))
-    update_payload = {
-        "lead_score": db_score,
-        "lead_temperature": temperature,
-    }
-    db.table("leads").update(update_payload).eq("id", lead_id).execute()
-
-    # 8. Store score factors in activity_log for dashboard visibility
-    client_id = lead.get("client_id")
-    if client_id and factors:
-        try:
-            db.table("activity_log").insert({
-                "tenant_id": client_id,
-                "lead_id": lead_id,
-                "activity_type": "lead_scored",
-                "description": f"Lead scored {final_score}/100 ({temperature})",
-                "metadata": {"factors": factors, "score": final_score, "temperature": temperature},
-            }).execute()
-        except Exception:
-            logger.warning("Failed to log score factors for lead %s", lead_id, exc_info=True)
-
     return {
-        "lead_id": lead_id,
+        "lead_id": lead.get("id"),
         "score": final_score,
         "raw_score": raw_score,
         "temperature": temperature,
@@ -275,27 +224,148 @@ def score_lead(lead_id: str) -> dict[str, Any]:
     }
 
 
-def score_all_leads(tenant_id: str) -> dict[str, Any]:
-    """Re-score all leads for a tenant. Returns summary."""
+def _persist_score(db, lead: dict[str, Any], details: dict[str, Any]) -> dict[str, Any] | None:
+    """Write lead_score/lead_temperature; return the activity_log row (unsent)."""
+    db_score = max(1, min(10, round(details["score"] / 10)))
+    db.table("leads").update({
+        "lead_score": db_score,
+        "lead_temperature": details["temperature"],
+    }).eq("id", lead["id"]).execute()
+
+    client_id = lead.get("client_id")
+    if client_id and details["factors"]:
+        return {
+            "tenant_id": client_id,
+            "lead_id": lead["id"],
+            "activity_type": "lead_scored",
+            "description": f"Lead scored {details['score']}/100 ({details['temperature']})",
+            "metadata": {
+                "factors": details["factors"],
+                "score": details["score"],
+                "temperature": details["temperature"],
+            },
+        }
+    return None
+
+
+def score_lead(lead_id: str) -> dict[str, Any]:
+    """Score a single lead and persist the result. Returns scoring details."""
     db = get_service_supabase()
-    result = db.table("leads").select("id").eq("client_id", tenant_id).execute()
-    lead_ids = [r["id"] for r in (result.data or [])]
+
+    # 1. Fetch lead
+    lead_result = db.table("leads").select("*").eq("id", lead_id).limit(1).execute()
+    if not lead_result.data:
+        raise ValueError(f"Lead {lead_id} not found")
+    lead = lead_result.data[0]
+
+    # 2. Fetch conversation messages via chat_messages (canonical store).
+    # Live schema dropped conversations.messages JSONB — messages live in
+    # chat_messages, linked by tenant_id + session_id.
+    messages: list[dict[str, Any]] = []
+    last_message_at: str | None = None
+    conv_id = lead.get("conversation_id")
+    tenant_id = lead.get("client_id")
+    if conv_id:
+        conv_result = (
+            db.table("conversations")
+            .select("session_id, last_message_at")
+            .eq("id", conv_id)
+            .limit(1)
+            .execute()
+        )
+        if conv_result.data:
+            session_id = conv_result.data[0].get("session_id")
+            last_message_at = conv_result.data[0].get("last_message_at")
+            if session_id and tenant_id:
+                msg_result = (
+                    db.table("chat_messages")
+                    .select("role, content, created_at")
+                    .eq("tenant_id", tenant_id)
+                    .eq("session_id", session_id)
+                    .order("created_at")
+                    .execute()
+                )
+                messages = msg_result.data or []
+
+    details = _compute_lead_score(lead, messages, last_message_at)
+    activity_row = _persist_score(db, lead, details)
+    if activity_row:
+        try:
+            db.table("activity_log").insert(activity_row).execute()
+        except Exception:
+            logger.warning("Failed to log score factors for lead %s", lead_id, exc_info=True)
+    return details
+
+
+def score_all_leads(tenant_id: str) -> dict[str, Any]:
+    """Re-score all leads for a tenant. Returns summary.
+
+    Batch reads (audit 2026-06-10 HIGH): 3 queries total instead of 3 per
+    lead — leads, their conversations, and the tenant's chat_messages are
+    fetched up front and joined in memory. Score updates stay per-lead
+    (PostgREST has no multi-value bulk update); activity_log rows are
+    inserted in one batch.
+    """
+    db = get_service_supabase()
+    result = db.table("leads").select("*").eq("client_id", tenant_id).execute()
+    leads = result.data or []
+
+    # Batch-fetch conversations for all leads with one.
+    conv_ids = [l["conversation_id"] for l in leads if l.get("conversation_id")]
+    conv_by_id: dict[str, dict[str, Any]] = {}
+    if conv_ids:
+        conv_result = (
+            db.table("conversations")
+            .select("id, session_id, last_message_at")
+            .in_("id", conv_ids)
+            .execute()
+        )
+        conv_by_id = {c["id"]: c for c in (conv_result.data or [])}
+
+    # Batch-fetch this tenant's chat messages for the sessions in play.
+    session_ids = [c["session_id"] for c in conv_by_id.values() if c.get("session_id")]
+    msgs_by_session: dict[str, list[dict[str, Any]]] = {}
+    if session_ids:
+        msg_result = (
+            db.table("chat_messages")
+            .select("session_id, role, content, created_at")
+            .eq("tenant_id", tenant_id)
+            .in_("session_id", session_ids)
+            .order("created_at")
+            .execute()
+        )
+        for m in msg_result.data or []:
+            msgs_by_session.setdefault(m["session_id"], []).append(m)
 
     scored = 0
     errors = 0
-    for lid in lead_ids:
+    activity_rows: list[dict[str, Any]] = []
+    for lead in leads:
         try:
-            score_lead(lid)
+            conv = conv_by_id.get(lead.get("conversation_id")) or {}
+            messages = msgs_by_session.get(conv.get("session_id"), [])
+            details = _compute_lead_score(lead, messages, conv.get("last_message_at"))
+            activity_row = _persist_score(db, lead, details)
+            if activity_row:
+                activity_rows.append(activity_row)
             scored += 1
         except Exception:
-            logger.warning("Failed to score lead %s", lid, exc_info=True)
+            logger.warning("Failed to score lead %s", lead.get("id"), exc_info=True)
             errors += 1
+
+    if activity_rows:
+        try:
+            db.table("activity_log").insert(activity_rows).execute()
+        except Exception:
+            logger.warning(
+                "Failed to batch-log score factors for tenant %s", tenant_id, exc_info=True
+            )
 
     return {
         "tenant_id": tenant_id,
         "scored": scored,
         "errors": errors,
-        "total": len(lead_ids),
+        "total": len(leads),
     }
 
 

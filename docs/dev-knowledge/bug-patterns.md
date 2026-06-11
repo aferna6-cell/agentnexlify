@@ -3420,6 +3420,13 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Files Changed:** backend/main.py,backend/routers/auth.py,backend/routers/embed_instructions.py,backend/routers/onboarding.py,backend/tests/test_embed_instructions.py,e2e/onboarding-wizard.spec.ts,frontend/src/pages/OnboardingWizardPage.jsx,frontend/src/pages/SignupPage.jsx,frontend/src/pages/wizard/WizardExpressSetup.jsx,frontend/src/pages/wizard/WizardStepCustomize.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,frontend/src/pages/wizard/WizardStepPlan.jsx,frontend/src/utils/api/onboarding.js
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
 
+## tests/ and backend/tests/ cannot share one pytest process (2026-06-11)
+
+**Symptom:** `pytest backend/tests/ tests/` in a single invocation fails ~160 tests that pass when each suite runs alone.
+
+**Cause:** the two conftests install conflicting app-level fixtures (backend/tests stubs the Supabase singletons + threadpool autouse; tests/ has its own mock layer). Import order across the combined session poisons one side.
+
+**Rule:** always run them as separate processes — `pytest backend/tests/` then `pytest tests/` (CI already does). Never "fix" a failure that only reproduces in the combined run.
 ---
 
 ### Hide platform-admin pages from tenant sidebar (#236)

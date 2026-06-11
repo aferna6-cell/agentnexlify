@@ -134,3 +134,76 @@ def test_ai_usage_status_shapes_and_thresholds(monkeypatch):
 
     safe = guard.get_ai_usage_status(_Boom(), "t1")
     assert safe["hard_limit_reached"] is False and safe["total_tokens"] == 0
+
+
+def test_thin_knowledge_emits_gap_nudge():
+    """Express-path self-healing: empty crawl + no FAQs -> staff is told
+    which basics to gather from the owner, conversationally."""
+    from unittest.mock import MagicMock
+
+    db = MagicMock()
+    empty = MagicMock(data=[])
+    # tenant_table chains (faq_entries, website_content) return no rows
+    chain = MagicMock()
+    chain.select.return_value = chain
+    chain.eq.return_value = chain
+    chain.order.return_value = chain
+    chain.limit.return_value = chain
+    chain.execute.return_value = empty
+
+    def fake_tenant_table(_db, _table, _cid):
+        return chain
+
+    import backend.services.os_kb_feed as feed_mod
+
+    orig = feed_mod.tenant_table
+    feed_mod.tenant_table = fake_tenant_table
+    try:
+        # tenants row missing city/phone/services; no business_hours row
+        db.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+            data=[{"city": "", "phone": "", "business_services": []}]
+        )
+        entries = feed_mod.tenant_kb_entries(db, "t1", "salon")
+    finally:
+        feed_mod.tenant_table = orig
+
+    gap = [e for e in entries if "setup gaps" in e["topic"]]
+    assert len(gap) == 1
+    assert "services" in gap[0]["answer"]
+    assert "ONE of these" in gap[0]["answer"]
+
+
+def test_healthy_knowledge_emits_no_gap_nudge():
+    from unittest.mock import MagicMock
+
+    db = MagicMock()
+    chain = MagicMock()
+    chain.select.return_value = chain
+    chain.eq.return_value = chain
+    chain.order.return_value = chain
+    chain.limit.return_value = chain
+
+    def fake_tenant_table(_db, table, _cid):
+        if table == "faq_entries":
+            chain.execute.return_value = MagicMock(
+                data=[{"question": f"q{i}", "answer": "a"} for i in range(5)]
+            )
+        else:
+            chain.execute.return_value = MagicMock(
+                data=[{"url": "https://x.com", "extracted_text": "lots of text", "crawl_status": "completed"}]
+            )
+        return chain
+
+    import backend.services.os_kb_feed as feed_mod
+
+    orig = feed_mod.tenant_table
+    feed_mod.tenant_table = fake_tenant_table
+    try:
+        db.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+            data=[{"city": "Austin", "phone": "555", "business_services": ["cuts"]}]
+        )
+        entries = feed_mod.tenant_kb_entries(db, "t1", "salon")
+    finally:
+        feed_mod.tenant_table = orig
+
+    assert not [e for e in entries if "setup gaps" in e["topic"]]

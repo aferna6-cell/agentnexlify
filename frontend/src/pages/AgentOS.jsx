@@ -23,6 +23,7 @@ import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
+import OsInsightsCard from "../components/os/OsInsightsCard";
 import ComposerAttachments from "../components/os/ComposerAttachments";
 import useIsMobile from "../hooks/useIsMobile";
 
@@ -589,6 +590,9 @@ export default function AgentOS() {
           ref={scrollRef}
           style={{ flex: 1, overflowY: "auto", padding: 20 }}
         >
+          {!activeThreadId && (
+            <OsInsightsCard token={token} onSuggestion={setComposer} />
+          )}
           {error && (
             <div
               style={{

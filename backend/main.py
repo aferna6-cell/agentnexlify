@@ -26,6 +26,7 @@ from backend.routers import (
     analytics,
     appointments,
     auth,
+    auth_billing,
     automations,
     bids,
     billing,
@@ -101,6 +102,7 @@ from backend.routers import (
     os_graph,
     os_memory,
     os_backlog,
+    os_insights,
     os_usage,
     os_inbound,
     os_sync as os_sync_router,
@@ -321,6 +323,7 @@ async def _automation_loop():
         schedule_automation_check,
     )
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
+    from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
 
     tick = 0
     while True:
@@ -394,6 +397,7 @@ async def _automation_loop():
                         _safe_run("send_weekly_digest", send_weekly_digest),
                         _safe_run("send_birthday_greetings", send_birthday_greetings),
                         _safe_run("send_daily_briefings", send_daily_briefings),
+                        _safe_run("run_opportunity_scan", _run_opportunity_scan),
                     ]
                 )
 
@@ -785,6 +789,7 @@ app.add_middleware(RequestContextMiddleware)
 app.include_router(analytics.router)
 app.include_router(appointments.router)
 app.include_router(auth.router)
+app.include_router(auth_billing.router)
 app.include_router(conversations.router)
 app.include_router(faq.router)
 app.include_router(automations.router)
@@ -863,6 +868,7 @@ app.include_router(os_deliverables.router)
 app.include_router(os_graph.router)
 app.include_router(os_memory.router)
 app.include_router(os_backlog.router)
+app.include_router(os_insights.router)
 app.include_router(os_usage.router)
 app.include_router(os_files.router)
 app.include_router(os_inbound.router)

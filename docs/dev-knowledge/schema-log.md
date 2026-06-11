@@ -1087,3 +1087,21 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Why:** Agent OS composer attachments + image generation (rate-limited: uploads 20/hr + 50/day per tenant; image gen 10/hr + 20/day). Backend: `backend/routers/os_files.py`, `backend/services/image_gen.py`. Also added `os_uploads` to GDPR purge list in `backend/services/account_deletion.py`.
 
 **Applied:** YES — 2026-06-11 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`); bucket verified live.
+
+## Migration 139 — reconcile migration-001 stale DDL (2026-06-11)
+
+**Guarded no-op on prod**: ADD COLUMN IF NOT EXISTS for `leads.client_id/status/areas_of_interest` + `conversations.client_id`; DROP IF EXISTS the 001-era names (`tenant_id`, `service_interest`, `lead_stage`) that never existed live. Purpose: fresh-DB replays of migrations/ now converge on the live shape (audit 2026-06-10 addendum CRITICAL — same failure class as the referral-columns incident).
+
+**Applied:** YES — 2026-06-11 via Supabase MCP (verified no-op).
+
+## Migration 140 — drift guard expanded to full schema (2026-06-11)
+
+**Function:** `hot_table_columns()` now returns every public BASE TABLE's columns (was 7 hard-coded hot tables). Coverage scoped by `ops/schema/expected-columns.json` (regenerated: 113 tables) so the function never needs another migration. Still SECURITY DEFINER, service-role-only.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP.
+
+## Migration 141 — tenants.os_auto_send_rules (2026-06-11)
+
+**Column:** `os_auto_send_rules JSONB NOT NULL DEFAULT '{}'` — per-agent auto-send overrides (gap G6), e.g. `{"booking": true}`. Gate logic in `agent_os_bridge.resolve_deliverable_status`: per-agent rule beats global `os_auto_send_enabled`; NEVER_AUTO_SEND_AGENTS (invoicing, payments, complaints) cannot be overridden. Updated via PUT /api/v1/auth/settings/{tenant_id} with shape validation.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP. Manifest updated.

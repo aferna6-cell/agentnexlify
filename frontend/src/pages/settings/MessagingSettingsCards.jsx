@@ -246,6 +246,19 @@ export function NoShowRecoveryCard({
   );
 }
 
+// Per-agent auto-send rules (gap G6). Agents handling money or complaints
+// (invoicing, payments, complaints) ALWAYS require approval — the backend
+// never-auto-send set cannot be overridden, so they're not listed here.
+const AUTO_SEND_AGENTS = [
+  { key: "generalist", label: "General assistant" },
+  { key: "customer_question", label: "Customer questions (FAQ answers)" },
+  { key: "booking", label: "Booking & scheduling" },
+  { key: "lead_nurture", label: "Lead follow-ups" },
+  { key: "marketing", label: "Marketing drafts" },
+  { key: "campaign", label: "Campaigns" },
+  { key: "operations", label: "Operations" },
+];
+
 export function AgentOSAutoSendCard({
   form,
   setForm,
@@ -254,14 +267,24 @@ export function AgentOSAutoSendCard({
   saving,
   saved,
 }) {
+  const rules = form.os_auto_send_rules || {};
+  const setRule = (agent, value) => {
+    setForm((f) => ({
+      ...f,
+      os_auto_send_rules: { ...(f.os_auto_send_rules || {}), [agent]: value },
+    }));
+    setSaved(false);
+  };
+
   return (
     <div className="settings-card">
       <h3>Agent OS Auto-Send</h3>
       <p className="settings-card-desc">
-        When OFF (default), every Agent OS worker deliverable waits for your
-        approval before any customer-facing action fires. When ON, deliverables
-        are auto-approved as soon as the worker completes - no review gate. Only
-        turn ON once you trust the workers and prompts.
+        When OFF (default), every Agent OS deliverable waits for your approval
+        before any customer-facing action fires. Give standing instructions
+        like you would to human staff: let trusted agents (e.g. FAQ answers at
+        2 AM) send freely while everything else still asks first. Invoicing,
+        payments, and complaint handling always require your approval.
       </p>
       <CheckboxSettingRow
         id="os-auto-send-toggle"
@@ -273,8 +296,45 @@ export function AgentOSAutoSendCard({
           }));
           setSaved(false);
         }}
-        label="Skip approval - auto-send worker deliverables"
+        label="Auto-send everything (per-agent rules below override this)"
       />
+      <div style={{ marginTop: "0.75rem", paddingLeft: "0.25rem" }}>
+        <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.375rem" }}>
+          Per-agent rules
+        </div>
+        {AUTO_SEND_AGENTS.map(({ key, label }) => {
+          const value = rules[key]; // true | false | undefined (= follow global)
+          return (
+            <div
+              key={key}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.375rem 0", gap: "0.75rem" }}
+            >
+              <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>{label}</span>
+              <select
+                value={value === true ? "auto" : value === false ? "approve" : "default"}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "default") {
+                    setForm((f) => {
+                      const next = { ...(f.os_auto_send_rules || {}) };
+                      delete next[key];
+                      return { ...f, os_auto_send_rules: next };
+                    });
+                    setSaved(false);
+                  } else {
+                    setRule(key, v === "auto");
+                  }
+                }}
+                style={{ fontSize: "0.8125rem", padding: "0.25rem 0.5rem", background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+              >
+                <option value="default">Follow global</option>
+                <option value="auto">Auto-send</option>
+                <option value="approve">Always ask me</option>
+              </select>
+            </div>
+          );
+        })}
+      </div>
       <SaveButton
         saving={saving}
         saved={saved}

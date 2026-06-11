@@ -47,6 +47,9 @@ def test_client(mock_settings):
         patch("backend.models.database.get_supabase", return_value=db_mock),
         patch("backend.routers.auth.get_service_supabase", return_value=db_mock),
         patch("backend.routers.auth.settings", mock_settings),
+        # billing endpoints moved to auth_billing (2026-06-11 god-file split)
+        patch("backend.routers.auth_billing.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.auth_billing.settings", mock_settings),
         patch(
             "backend.services.fraud_guard.get_service_supabase", return_value=db_mock
         ),
@@ -454,10 +457,10 @@ class TestPasswordReset:
 class TestBillingCheckout:
     """Test Stripe checkout session creation from the auth router."""
 
-    @patch("backend.routers.auth.ensure_plan_prices_configured")
-    @patch("backend.routers.auth.ensure_stripe_configured")
-    @patch("backend.routers.auth.stripe.checkout.Session.create")
-    @patch("backend.routers.auth.get_or_create_customer")
+    @patch("backend.routers.auth_billing.ensure_plan_prices_configured")
+    @patch("backend.routers.auth_billing.ensure_stripe_configured")
+    @patch("backend.routers.auth_billing.stripe.checkout.Session.create")
+    @patch("backend.routers.auth_billing.get_or_create_customer")
     def test_billing_checkout_returns_checkout_url(
         self,
         mock_customer,

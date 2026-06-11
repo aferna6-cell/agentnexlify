@@ -91,7 +91,6 @@ const MarketingCampaignsPage = lazy(
 const MarketingDashboardPage = lazy(
   () => import("../pages/MarketingDashboardPage"),
 );
-const ABTestsPage = lazy(() => import("../pages/ABTestsPage"));
 const AutomationRulesPage = lazy(() => import("../pages/AutomationRulesPage"));
 const TriggerLogsPage = lazy(() => import("../pages/TriggerLogsPage"));
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
@@ -124,7 +123,6 @@ const pages = {
   social_media: SocialMediaPage,
   campaigns: MarketingCampaignsPage,
   marketing_dashboard: MarketingDashboardPage,
-  ab_tests: ABTestsPage,
   automation_rules: AutomationRulesPage,
   trigger_logs: TriggerLogsPage,
   invoices: InvoicesPage,
@@ -162,7 +160,6 @@ const PAGE_TO_PATH = {
   social_media: "/dashboard/social-media",
   campaigns: "/dashboard/campaigns",
   marketing_dashboard: "/dashboard/marketing",
-  ab_tests: "/dashboard/ab-tests",
   automation_rules: "/dashboard/automation-rules",
   trigger_logs: "/dashboard/trigger-logs",
   invoices: "/dashboard/invoices",

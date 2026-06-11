@@ -66,11 +66,11 @@ def _make_active_sub(sub_id="sub_test_123", current_period_end=9999999999):
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.log_activity")
-@patch("backend.routers.auth.stripe.Subscription.modify")
-@patch("backend.routers.auth.stripe.Subscription.list")
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.log_activity")
+@patch("backend.routers.auth_billing.stripe.Subscription.modify")
+@patch("backend.routers.auth_billing.stripe.Subscription.list")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_cancel_sets_cancel_at_period_end_true(
     mock_db_factory,
     _mock_ensure,
@@ -79,7 +79,7 @@ async def test_cancel_sets_cancel_at_period_end_true(
     mock_log,
 ):
     """billing_cancel must pass cancel_at_period_end=True to Stripe, not delete the sub."""
-    from backend.routers.auth import billing_cancel
+    from backend.routers.auth_billing import billing_cancel
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
@@ -115,11 +115,11 @@ async def test_cancel_sets_cancel_at_period_end_true(
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.log_activity")
-@patch("backend.routers.auth.stripe.Subscription.modify")
-@patch("backend.routers.auth.stripe.Subscription.list")
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.log_activity")
+@patch("backend.routers.auth_billing.stripe.Subscription.modify")
+@patch("backend.routers.auth_billing.stripe.Subscription.list")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_cancel_does_not_set_plan_status_immediately(
     mock_db_factory,
     _mock_ensure,
@@ -134,7 +134,7 @@ async def test_cancel_does_not_set_plan_status_immediately(
     which is handled by _handle_subscription_deleted. This is what preserves access
     until the end of the billing period.
     """
-    from backend.routers.auth import billing_cancel
+    from backend.routers.auth_billing import billing_cancel
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
@@ -174,11 +174,11 @@ async def test_cancel_does_not_set_plan_status_immediately(
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.log_activity")
-@patch("backend.routers.auth.stripe.Subscription.modify")
-@patch("backend.routers.auth.stripe.Subscription.list")
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.log_activity")
+@patch("backend.routers.auth_billing.stripe.Subscription.modify")
+@patch("backend.routers.auth_billing.stripe.Subscription.list")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_cancel_records_cancellation_reason_in_events_table(
     mock_db_factory,
     _mock_ensure,
@@ -187,7 +187,7 @@ async def test_cancel_records_cancellation_reason_in_events_table(
     mock_log,
 ):
     """billing_cancel should insert a row in tenant_cancellation_events."""
-    from backend.routers.auth import billing_cancel
+    from backend.routers.auth_billing import billing_cancel
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
@@ -281,15 +281,15 @@ def test_subscription_deleted_via_customer_id_lookup():
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_cancel_requires_valid_reason(
     mock_db_factory,
     _mock_ensure,
 ):
     """billing_cancel must return 400 if reason is missing or invalid."""
     from fastapi import HTTPException
-    from backend.routers.auth import billing_cancel
+    from backend.routers.auth_billing import billing_cancel
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
