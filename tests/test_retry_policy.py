@@ -67,11 +67,12 @@ async def test_run_geo_score_ai_uses_single_retry(mock_call, mock_settings):
     assert mock_call.await_args.kwargs["max_retries"] == 1
 
 
-def test_content_repurposer_sync_path_uses_single_retry():
+def test_content_repurposer_async_path_uses_single_retry():
     from backend.services.content_repurposer import repurpose
 
     with patch(
-        "backend.services.content_repurposer.call_claude_messages_sync"
+        "backend.services.content_repurposer.call_claude_messages",
+        new_callable=AsyncMock,
     ) as mock_call:
         mock_call.return_value = MagicMock(text='{"x_thread": []}')
 
@@ -82,4 +83,4 @@ def test_content_repurposer_sync_path_uses_single_retry():
         )
 
         assert result == {"x_thread": []}
-        assert mock_call.call_args.kwargs["max_retries"] == 1
+        assert mock_call.await_args.kwargs["max_retries"] == 1

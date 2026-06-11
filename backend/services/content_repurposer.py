@@ -15,7 +15,7 @@ import httpx
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from backend.models.database import get_service_supabase
-from backend.services.llm_runtime import call_claude_messages_sync
+from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
 
@@ -262,7 +262,7 @@ async def repurpose(
 
     user_prompt = f"Source title: {title}\n\nSource content:\n{source_content[:30_000]}"
 
-    result = call_claude_messages_sync(
+    result = await call_claude_messages(
         operation="content.repurpose",
         model="claude-sonnet-4-6",
         max_tokens=16000,
