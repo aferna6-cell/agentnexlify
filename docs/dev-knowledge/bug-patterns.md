@@ -3419,3 +3419,488 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/main.py,backend/routers/auth.py,backend/routers/embed_instructions.py,backend/routers/onboarding.py,backend/tests/test_embed_instructions.py,e2e/onboarding-wizard.spec.ts,frontend/src/pages/OnboardingWizardPage.jsx,frontend/src/pages/SignupPage.jsx,frontend/src/pages/wizard/WizardExpressSetup.jsx,frontend/src/pages/wizard/WizardStepCustomize.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,frontend/src/pages/wizard/WizardStepPlan.jsx,frontend/src/utils/api/onboarding.js
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Hide platform-admin pages from tenant sidebar (#236)
+
+* audit: repositioning analysis — Agent OS as Quick-Suite-for-SMBs, status + ranked gaps
+
+Maps current state of agentnexlify + Agent-Nexlify-OS against the
+'agentic workspace for non-technical SMB owners' positioning.
+Findings: v2 engine vendored (PRs #203-208) but Phase 4 cutover,
+real send, and conversational dashboard surface remain; launch
+rubric still NO-GO. 14 gaps ranked P0-P2 with 6-week sequence.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Agent OS Phase 4: engine-only cutover, real send, plan caps, front door
+
+Make the product real — the vendored TS engine is now the only agent path:
+
+- os_thread_runner rewritten engine-only; legacy Python orchestrator.py +
+  os_workers/ deleted (Phase 4 of plans/agent-os-demo-merge_plan.md). Engine
+  outage degrades honestly (saved message + offline reply), never a silent
+  re-route or 503.
+- Real send: agent_os_bridge maps draft channel -> action_type
+  (sms.send / email.send / widget.message); new shared
+  services/os_action_dispatch.py is the single dispatch path for human
+  approval AND tenant-opted auto-send (idempotent, inline-capable).
+- Auto-send safety: drafts auto-approve only when engine says no approval
+  needed AND tenants.os_auto_send_enabled AND agent outside
+  NEVER_AUTO_SEND_AGENTS; all failure paths land pending_approval.
+- Plan gating: usage_meter caps are plan-tier aware (free 25 .. enterprise
+  10000); engine path meters runs+tokens.
+- Security review fixes: inbound webhooks (email/SMS/widget/FB) now respect
+  the plan cap (was bypassable); deliverable approve is owner-only (matches
+  retry_action_run).
+- Front door: logged-in users land on /dashboard/agent-os; classic dashboard
+  moved to /dashboard/overview, every page still deep-linkable. Post-login
+  redirect updated.
+- Tests: backend 522 passed (new test_os_engine_cutover.py + cap-skip
+  contract); agent-service 25/25 incl. 2-tenant isolation gate; vitest 77;
+  new Playwright e2e/agent-os-front-door.spec.ts 3/3 in Chromium.
+- test_os_inbound_bridge._patch_helpers stubs the new cap_reached dependency
+  (same hermetic contract as the other DB helpers); the cap behavior has its
+  own dedicated test.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* e2e: ignore HTTPS errors in front-door spec (stubbed APIs; enables proxy/CI runs)
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Agent OS knowledge graph: long-term memory per tenant (migration 133)
+
+ADR 2026-05-25 deferred the graph layer with revisit triggers; trigger #4
+(owner-requested navigable memory) fired. Built within the ADR's cost bound:
+ONE Haiku call per owner turn, after the reply persists — never blocks the
+conversation, never per-write LLM spend.
+
+- migrations/133_os_graph_memory.sql — os_graph_nodes + os_graph_edges,
+  RLS deny-public, HNSW. APPLIED to live Supabase 2026-06-09.
+- services/os_graph_memory.py — extraction (Haiku, hostile-input-safe
+  parsing), node/edge upsert with fact dedup + capped history, semantic
+  write-through to os_memory_entries, KbEntry retrieval shaping.
+- os_thread_runner.py — memory feeds SharedContext.kb before each engine
+  turn (zero engine changes); accumulation runs as a background task after.
+- routers/os_graph.py — GET /api/v1/os/graph; owner-only forget endpoint.
+- frontend MemoryPanel.jsx — 'what the OS knows' view with per-entity
+  Forget; wired into AgentOS page (new component file, page stays thin).
+- Tests: backend 533 passed (11 new); Playwright 4/4 incl. Memory panel.
+- ADR + schema-log updated to record the trigger firing.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Agent-first dashboard: mobile Agent OS + retire 18 standalone pages
+
+Mobile (the Agent OS page was a fixed 3-column desktop layout):
+- new hooks/useIsMobile.js (matchMedia, safe without matchMedia: jsdom/SSR)
+- thread rail becomes a full-screen Tasks drawer behind an 'Open task list'
+  toggle; Deliverable + Memory panels render as full-screen overlays;
+  chat column takes full width, composer stays visible, no horizontal
+  overflow at 375px (asserted in e2e)
+- global sidebar collapses behind a hamburger below 768px
+
+Consolidation (jobs route through the Agent OS departments now):
+- 18 nav surfaces retired via hidden flag: Agent Control, Stage
+  Automations, Action Items, Automations, Snippets, Calls, Chat Flows,
+  Reviews, CSAT, Menu, Orders, Job Board, Bids, Smart Lists, Forms,
+  Waitlist, Lead Scoring, Client Portal, Content Studio, Email Sequences,
+  Team Activity
+- pages map / PAGE_TO_PATH / lazy imports pruned to 31 keys; retired URLs
+  fall through to the Agent OS front door
+- the PAID marketing add-on set (7 pages per MARKETING_ADDON_GATED_KEYS)
+  stays discoverable pre-activation under its own MARKETING ADD-ON group —
+  paying addon customers lose nothing
+- backend APIs untouched: agents' action handlers still use them
+
+Sidebar.test.jsx contract updated: old test asserted retired pages
+(Content Studio, Email Sequences, Forms) under the old MARKETING group;
+new contract = addon set discoverable pre-activation + retired pages
+absent + core surfaces reachable. Deliberate feature removal per this
+commit, not a test-to-fit edit.
+
+Verified: vitest 79/79, build clean, Playwright 6/6 (mobile 375px run:
+drawer + composer visible, scrollWidth overflow <=1px; retired route ->
+front door).
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Soft-launch rubric sprint: GDPR deletion, cookie consent, uptime fix, chat load test
+
+Closes the four engineering zeros blocking soft launch (rubric rescored
+157 -> 173/262; sole remaining blocker is the 10.6 insurance quote, a
+partner phone call):
+
+- 1.3 GDPR/CCPA: POST /api/v1/account/delete (owner-only, typed-DELETE
+  confirm, 3/hr limit) -> services/account_deletion.py purges 100+ tenant
+  tables (children-first, per-table fault tolerance, re-runnable), closes
+  the Stripe customer, deletes the tenants row. 4 tests incl. a
+  tenant_scope coverage guard so new os_* tables can't be silently missed.
+- 1.4 Cookie consent: CookieConsent.jsx mounted globally; accept/decline
+  persisted; links /privacy.
+- 4.3 Uptime: public_uptime_probe.py judged health by content-type header
+  and false-positived on Railway's empty header from GitHub runners (every
+  run red since). Now judges by JSON body with header as diagnostic detail;
+  workflow alerts via auto-filed 'uptime' GitHub issue since the Slack
+  secret is unset.
+- 5.1 Load: ops/evals/run_widget_chat_load.py — widget/chat burst vs prod:
+  p95 289.7ms, 100/100 deterministic, rate limiter engaged (70x 429).
+  Artifact widget-chat-load-2026-06-10.json. Real-chat mode behind
+  TEST_WIDGET_API_KEY.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* docs: DPA template for customers who ask (rubric 1.8)
+
+Controller/processor roles, subprocessor table (Supabase/Railway/Vercel/
+Anthropic/Stripe/Twilio/Resend/Voyage), security measures matching shipped
+controls, data-subject rights incl. self-serve deletion endpoint + Agent OS
+memory Forget, SCC/UK addendum incorporation. Counsel review pending —
+scored 1 until reviewed.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Billing+JWT test matrix, billing webhook bugfix, legacy OS test retirement (rubric -> 191)
+
+Rubric criteria closed (evidence in planning/launch-readiness-rubric.md):
+- 3.3 proration (upgrade+downgrade assert create_prorations)
+- 3.4 period-end access (cancel_at_period_end=True, downgrade only on
+  subscription.deleted webhook)
+- 3.6 refund matrix (partial amount-exact + full, idempotent replay both)
+- 3.7 trial->paid (18 cases across all four plan names)
+- 2.6 JWT (expired/tampered/wrong-secret/alg-none/missing-bearer all 401;
+  no-refresh-endpoint contract documented)
+- 1.8 DPA template (committed earlier; scored 1 pending counsel)
+
+REAL BUG found by 3.7 tests and fixed: billing.py:413 fraud-pause path
+called log_activity(event_type=...) but the function takes activity_type —
+TypeError on every fraud-flagged checkout, which would 500 the Stripe
+webhook after pausing the plan. One-word fix; fraud branch now executes.
+
+Legacy OS test retirement (root tests/ has been collection-broken since the
+Phase 4 cutover deleted os_workers/ + Python orchestrator — missed because
+verification ran backend/tests/ only):
+- deleted tests/test_os_mvp_e2e.py + 4 test_os_worker_* files (subjects gone)
+- tests/test_agent_os.py: removed orchestrator/worker classes +
+  patched_orchestrator helper; replaced legacy post_message tests with
+  seam tests of the NEW contract (runner invoked, cap gates before engine,
+  unknown thread 404); fixed deliverables fixture to the v2 draft shape
+  (channel, not format) that the pending route requires since migration 132
+- checkout tests stub the fraud guard for happy paths (fraud branch has its
+  own coverage in backend/tests/test_fraud_guard.py)
+
+Suites: backend/tests 545 passed; tests/ 845 passed + 2 pre-existing
+automation failures identical to main, filed as #224.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Tenant knowledge feed + vertical guidance into agent context; retired-page sweep
+
+- services/os_kb_feed.py: SharedContext.kb now carries static business
+  truth — per-vertical operating guidance (auto/home-services/salon/dental/
+  realestate packs delivered through context, zero engine changes), tenant
+  faq_entries (seeded per industry at onboarding), and crawled website text.
+  Layered ahead of graph+semantic memory in os_thread_runner; failures
+  never break a turn. Tests: backend/tests/test_os_kb_feed.py.
+- Dead-code sweep of the 21 pages retired in the agent-first consolidation:
+  37 files deleted (25 page files incl. Automations/ tree, 12 orphaned
+  utils/api modules) after import-graph verification; kept everything
+  reachable from main.jsx routes, Dashboard/ and settings/ subtrees, and
+  marketing-addon pages. Build clean, vitest 79/79.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Fix #224 fixture rot; rubric 5.3/5.4/6.5; onboarding-as-first-conversation
+
+- #224: recurring-invoice tests failed because the fake query class predated
+  the PostgREST .filter('not.is') fix — added .filter to the fake; all 25
+  automation tests pass. Claim/rollback logic was correct all along.
+- 5.4: ops/evals/run_widget_3g_check.mjs — prod widget under slow-3G CDP
+  throttling: launcher visible 7.2s (<10s gate), 66KB script (<100KB). PASS
+  artifact committed.
+- 6.5: PII-minimization audit (audits/audit-pii-minimization-2026-06-10.md);
+  finding fixed: email_sender logged full recipient addresses at 5 sites —
+  mask_email() redaction (j***@domain.com).
+- 5.3: GET /api/v1/os/usage now returns ai_usage (monthly token spend vs
+  guard alert/hard-limit thresholds) via ai_usage_guard.get_ai_usage_status;
+  tested incl. fail-safe shape.
+- Item 3 (onboarding-as-conversation): wizard completion CTA -> 'Meet your
+  AI staff' at /dashboard/agent-os; FirstRunStarters component gives
+  zero-thread owners vertical-tailored starter prompts (auto/dental/salon/
+  restaurant/medical/default), click-to-compose; verified build + vitest
+  79/79 + playwright 6/6.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Items 1-3 block: #224 fix, full-launch grind to 208/262, onboarding-as-conversation
+
+Item 1 — #224 root-caused + fixed: the recurring-invoice tests' fake query
+class predated the PostgREST .filter('not.is') syntax fix; production logic
+was correct (claim-lost + rollback both pass, 25/25). Closes #224.
+
+Item 2 — rubric 191 -> 208/262 (79.4%):
+- 3.2 dunning e2e (8 cases vs the real webhook route) — and a SECOND real
+  billing bug found+fixed: invoice.payment_succeeded was unhandled, so
+  tenants whose cards recovered after failures stayed paused forever. New
+  billing._handle_payment_succeeded resets dunning + reactivates, guarded so
+  fraud pauses (zero dunning count) survive payment events. Both sides tested.
+- 3.5 usage reconciliation service + runnable report + 10 tests
+- 5.3 ai_usage (token spend vs guard thresholds) on GET /api/v1/os/usage
+- 5.4 slow-3G widget check vs prod: launcher 7.2s, 66KB script — gate PASS
+- 6.5 PII-minimization audit; emails now masked in send/digest logs
+- 7.1 public /help page (+ Home footer link), 8.4 'How we compare' section
+- 7.3 onboarding wizard e2e (3 Playwright cases, no dead-ends)
+
+Item 3 — onboarding flows into the conversation: wizard completion CTA
+'Meet your AI staff' -> /dashboard/agent-os; first-run starter prompts
+tailored per vertical (FirstRunStarters component); Agent OS leads the nav.
+
+Suites: backend/tests 562 passed; tests/ 855 passed (incl. un-xfailed
+dunning recovery); vitest 79; Playwright 9/9 (front-door 6 + wizard 3).
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Close all code-shaped launch-rubric items: 221/262, dims 2/3/5 complete
+
+Rubric items closed (each 1→2):
+- 2.7 Semgrep triage: 41 findings triaged (audits/audit-semgrep-triage-2026-06-10.md).
+  3 real, fixed: Dockerfile now runs as non-root appuser; raw emails in auth.py
+  forgot-password logs masked via mask_email; owner_name html.escape'd in reset
+  email. 38 justified FP/accepts (CORS wildcard intentional w/ credentials off).
+- 3.8 Invoice reconciliation: backend/services/invoice_reconciliation.py +
+  ops/evals/run_invoice_reconciliation.py + 18 tests.
+- 4.4 MRR/churn dashboard: GET /api/v1/admin/mrr-metrics (MRR by plan, 30d churn,
+  dunning-paused) + AdminAnalyticsPage section + 14 tests. Replaced 3 WRONG inline
+  plan-price maps with canonical PLAN_PRICE_CENTS (professional was 15000c, enterprise 25000c).
+- 5.2 DB pool: audits/audit-db-connection-pool-2026-06-10.md + prod burst eval
+  (150 req @ c25, 0 failures, p95 1393ms).
+- 7.4 corrected stale rubric note — reason picker already shipped in BillingPage.
+- 9.3 Pricing A/B: pricing_page_cta_2026_06 experiment — deterministic server-side
+  variant, anonymous cookie visitor id, pricing_ab_events table (MIGRATION 134,
+  applied live via Supabase MCP), Free CTA variant on Home.jsx, 11 tests.
+- 9.4 Referral: ?ref= capture on SignupPage -> RegisterRequest.ref_code ->
+  referral.py attribution (referred_by + discount), referral_code minted at
+  signup, 6 tests.
+
+Latent bugs found + fixed:
+- admin_analytics rate limits NEVER enforced: @limiter.limit above @router.get
+  registers the unwrapped handler. Order fixed on all 9 endpoints; new test file
+  resets shared limiter state between tests (limit is now real — tests tripped it,
+  proving the fix; fixture change justified, not a contract change).
+- Global 422 handler returned 500 whenever a field_validator raised ValueError:
+  pydantic v2 puts the exception object in ctx -> not JSON serializable. ctx
+  stripped in main.py handler.
+
+Rubric rescored 208 -> 221/262 (84.4%), stale lines fixed (dim-10 subtotal,
+verdict, next-moves). Sole blocker for soft AND paid launch: 10.6 insurance
+quote (partner call).
+
+Verification: backend/tests 608 passed (+46), tests/ 855 passed, vitest 79/79,
+frontend build clean, migration 134 applied, prod pool burst PASS.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Retire marketing add-on into Agent OS, remove Operations nav, items 1-4 (setup race, referral surface, A/B readout, restore drill)
+
+MARKETING ADD-ON RETIRED ($49.99/mo product removed; features now included
+with Growth/autopilot+ and surfaced through Agent OS):
+- backend: plan_gate.require_marketing_access replaces addon_gate on all 6
+  marketing routers (ab_tests, automation_rules, local_seo,
+  marketing_analytics, marketing_campaigns, social_media); addon checkout/
+  cancel endpoints + handlers deleted from billing.py; stripe_service addon
+  helpers + price config removed; /me no longer returns addon flags.
+- webhook safety: _is_legacy_marketing_addon guard IGNORES events from any
+  legacy add-on subscription — routing them to main handlers would overwrite
+  the tenant's primary plan_status.
+- frontend: MarketingUpsell (plan-based) replaces MarketingAddonUpsell;
+  BillingPage add-on section removed; AuthContext addon fields removed.
+- TEST CONTRACT CHANGES (justified — product removed by owner directive
+  2026-06-10): test_addon_gate.py -> test_plan_gate.py; webhook addon-routing
+  tests now assert legacy events are IGNORED (stricter where it matters);
+  Sidebar.test.jsx asserts marketing + operations groups are GONE;
+  front-door spec Send locator made exact (new starter made /send/i ambiguous
+  — contract unchanged).
+
+OPERATIONS NAV GROUP REMOVED: Calendar/Invoices/Documents hidden (routes kept
+for deep links); jobs route through Agent OS. FirstRunStarters gained shared
+marketing + operations starters (social posts, email campaign, invoice,
+calendar).
+
+ITEM 1 — /setup cold-load auth race FIXED: /setup now routes through
+OnboardingRoute; wizard redirect requires !token; regression e2e added (4/4).
+
+ITEM 2 — referral surface: /me returns referral_code; ReferralCard on
+BillingPage with copy-link. PROD INCIDENT FOUND + FIXED: migrations/001 lists
+referral columns the LIVE schema never had -> PR #227's signup wiring made
+/register 500. MIGRATION 135 (applied live) adds referral_code/referred_by/
+referral_discount_pct + backfills codes; signup_attempts confirms zero
+signups hit the window. Bug pattern logged (migration files != live schema).
+
+ITEM 3 — pricing A/B readout: ops/evals/run_pricing_ab_report.py (unique
+viewers/clickers/conversion per variant, low-sample warning) + 3 tests.
+
+ITEM 4 — restore drill: logical restore performed live (4 critical tables
+round-tripped to scratch schema, counts exact, cleaned up);
+docs/ops/restore-drill-2026-06-10.md documents the 10-min dashboard PITR step
+that fully closes rubric 6.1 (kept at 1 honestly).
+
+Rubric notes updated (7.3 gap fixed, 9.4 correction, 6.1 evidence).
+
+Verification: backend/tests 611 passed, tests/ 859 passed, vitest 80/80,
+Playwright 17 passed, build clean, migrations 134+135 applied live.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Schema-drift CI guard, audit + follow-ups, small-business gap analysis + approval notifications
+
+ITEM 1 — Schema-drift guard (prevents the migration-files-vs-live-schema bug
+class that 500'd prod signups today): migration 136 hot_table_columns() RPC
+(service-role only, APPLIED LIVE, 203 rows/7 tables verified);
+ops/schema/expected-columns.json ground-truthed from live;
+scripts/check_schema_drift.py (stdlib-only, --update/--strict, graceful skip
+without creds); live-drift job added to schema-sync-check.yml (repo already
+has SUPABASE secrets); 6 tests incl. the exact incident shape.
+
+ITEM 2 — Architecture audit (audits/audit-architecture-2026-06-10.md: lean
+pass + delegated deep-audit addendum) + safe follow-ups executed:
+- onboarding.py:485 per-FAQ insert N+1 batched (one-line, pattern from 13
+  lines below)
+- @xyflow/react removed (zero imports — orphaned by Chat Flows prune)
+- redundant duplicate migrations/135_backfill_referral_codes.sql deleted
+  (never applied; 135_referral_columns covers backfill)
+- ContentStudioPage.jsx deleted (zero references anywhere) + its hidden nav
+  entry; retired plan-name display entries (foundation/operations) dropped
+  from Sidebar (JWTs expire in 24h — no legacy tokens remain)
+- migration 137 STAGED ONLY (drop marketing_addon_* columns) — header warns
+  DO NOT APPLY until the add-on-removal commit is deployed; the currently
+  deployed /me still selects marketing_addon_active.
+
+GAP ANALYSIS (planning/gap-analysis-small-business-2026-06-10.md): 8 gaps
+ranked vs a hired office manager; G1 (approvals rot silently — trust killer)
+FIXED: backend/services/os_approval_notify.py emails the owner the moment a
+draft parks in pending_approval (pending count, review link, 30-min
+throttle), wired as background task in os_thread_runner; 4 tests. G2-G8
+sequenced: weekly value digest > pricing decision > platform install cards >
+proactive suggestions > granular auto-send > voice.
+
+Verification: backend/tests 621 passed (+10), tests/ 859 passed, vitest
+80/80, Playwright 17 passed, build clean, migration 136 applied + verified.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Fix prod frontend build: remove @xyflow/react manualChunks entry orphaned by dependency removal
+
+The dep was uninstalled in #228 but vite.config.js still declared it as a
+manual chunk — rollup treats manualChunks entries as entry modules, so the
+Vercel build failed (Could not resolve entry module "@xyflow/react").
+Local verification missed it by tailing only the build's last line; full
+output now checked.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Apply migration 137 (drop marketing_addon columns) post-rollout; sync drift manifest
+
+Sequencing per audit C1: applied only after Railway deployed the add-on
+removal (#228). Health verified after drop. expected-columns.json updated so
+the live-drift CI job stays green.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Escape HTML in approval-notification email (security review finding)
+
+Draft titles can echo customer-supplied widget chat content; owner/agent
+names are tenant-supplied. All interpolations into body_html now go through
+html.escape (pending count coerced to int). Regression test asserts an
+injected <img onerror> title arrives escaped.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* checkpoint: OS attachments UI + in-flight agent work (home redo, os_files, connectors)
+
+Checkpoint while three background agents finish their workstreams — NOT yet
+verified as a whole. Final commit on this branch will carry full test results.
+Contains: ComposerAttachments + AgentOS wiring (vitest 80/80 at time of
+commit), partial os_files.py/migration 138, connector guards in progress.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Home redo + OS uploads/image-gen + Instagram connector (frontend, tests)
+
+- Home.jsx rewritten for Agent OS positioning (hero, dept cards, demo
+  tabs); FAQ plan labels corrected to current pricing
+- Agent OS composer attachments: ComposerAttachments wired in prior
+  checkpoint; backend os_files router (rate-limited uploads + image
+  generation, 503 until provider key set) — MIGRATION 138 applied live
+  (os_uploads table + os-uploads storage bucket); os_uploads added to
+  GDPR purge list (caught by coverage test)
+- Instagram Business connector: channels_instagram router registered,
+  frontend api utils + IntegrationsPage tile (platform_configured
+  gating, connect/disconnect, callback toast), 11 endpoint tests
+- Test updates justified per Rule 10: /m365/auth now intentionally 503s
+  when the Azure app is unconfigured (graceful connector guard added
+  this goal) — happy-path test now patches platform credentials and a
+  new test pins the 503 contract; /m365/status gained additive
+  platform_configured field — exact-equality assert relaxed to subset
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Signup overhaul: 4-field form, express setup, Agent OS-first wizard
+
+Funnel data (wizard_events): 4 tenants entered the wizard, 0 completed
+step 1. Redesign around the Agent OS as the product:
+
+- SignupPage: 8 fields -> 4 (business, name, email, password w/ show
+  toggle). Industry/website/city/phone move to /setup where they were
+  asked again anyway. Fixed password hint: backend requires 10+ chars
+  with upper/lower/digit, form said "min 8" and let invalid passwords
+  submit.
+- Express setup (new step 0 of /setup): website URL + industry, one
+  click -> auto-KB crawl + industry pack + widget defaults server-side
+  -> straight to /dashboard/agent-os. "Customize step by step" keeps
+  the full wizard; "Skip for now" exits to Agent OS.
+- Wizard reorder: Plan moves to step 5; widget steps (Customize 6,
+  Embed 7) are the optional tail with "Skip - go to Agent OS" links.
+  Customize now persists its own settings (it runs after Plan, which
+  previously did the only save). Stripe return URLs updated
+  (success ?step=6, cancel ?step=5).
+- Embed escape hatch: POST /api/v1/onboarding/{t}/email-embed (new
+  router, rate-limited 5/hr, html-escaped) emails the snippet +
+  platform steps to whoever manages the owner's site; embed step gains
+  the form + WordPress/Wix/Squarespace/GoDaddy accordion guides.
+- WizardStepPlan pricing was WRONG: showed Professional $150 and
+  Enterprise $250; canonical is Starter $99 (growth), Growth $150
+  (autopilot), Professional $250, Enterprise $899 sales-led. Users
+  would have been charged more than the card said.
+- onboarding /complete: city now optional (express path has none) -
+  location FAQ + tenants.city write guarded on presence.
+- Welcome email recast to Agent OS framing, CTA -> /dashboard/agent-os.
+
+Test changes justified per Rule 10: e2e/onboarding-wizard.spec.ts
+encoded the old step order and entry screen - this goal intentionally
+changed that contract (express chooser at step 0, Plan=5, widget steps
+optional). Spec updated to the new contract + 3 new tests (chooser,
+express path, Stripe success leg). New backend tests:
+test_embed_instructions.py (6).
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+* Hide platform-admin pages from tenant sidebar
+
+Every tenant saw the ADMIN nav group (Platform Analytics, Free &
+Discounts) even though the data behind both pages is gated by the
+platform admin secret. Remove the nav group + items; the pages and
+backend routers stay intact and reachable by direct URL
+(/admin/analytics, /admin/promotions) for platform-owner use.
+
+https://claude.ai/code/session_01BNUyN9eJd8oXLQPrRbNChP
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-06-11
+**Commit:** fc662b4
+**Author:** aferna6-cell
+**Files Changed:** frontend/src/components/Sidebar.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
