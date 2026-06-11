@@ -768,6 +768,7 @@ async def update_settings(
         "noshow_recovery_enabled",
         "os_auto_send_enabled",
         "os_auto_send_rules",
+        "voice_ai_enabled",
     }
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if not updates:
@@ -811,7 +812,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     result = (
         db.table("tenants")
         .select(
-            "id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled, os_auto_send_enabled, os_auto_send_rules"
+            "id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled, os_auto_send_enabled, os_auto_send_rules, voice_ai_enabled"
         )
         .eq("id", tenant_id)
         .limit(1)

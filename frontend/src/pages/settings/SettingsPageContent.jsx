@@ -13,6 +13,7 @@ import {
   DailyBriefingCard,
   GoogleReviewLinkCard,
   MissedCallTextBackCard,
+  VoiceAICard,
   NoShowRecoveryCard,
   SmsNotificationsCard,
 } from "./MessagingSettingsCards";
@@ -73,6 +74,7 @@ export default function SettingsPageContent(props) {
       <DailyBriefingCard {...formProps} {...saveProps} />
       <NoShowRecoveryCard {...formProps} {...saveProps} />
       <AgentOSAutoSendCard {...formProps} {...saveProps} />
+      <VoiceAICard plan={props.livePlan} {...formProps} {...saveProps} />
       <MissedCallTextBackCard {...formProps} {...saveProps} />
       <PhoneProvisioningCard
         provisionedPhone={props.provisionedPhone}

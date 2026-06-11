@@ -345,6 +345,50 @@ export function AgentOSAutoSendCard({
   );
 }
 
+export function VoiceAICard({
+  form,
+  setForm,
+  setSaved,
+  handleSave,
+  saving,
+  saved,
+  plan,
+}) {
+  const planEligible = ["professional", "enterprise"].includes(plan || "");
+  return (
+    <div className="settings-card">
+      <h3>AI Phone Answering</h3>
+      <p className="settings-card-desc">
+        When ON, your AI staff answers calls to your business number live —
+        speaking with callers, answering questions from your knowledge base,
+        and capturing lead details. When OFF, callers reach voicemail and your
+        AI staff transcribes the message, summarizes it, and drafts a text-back
+        for your approval. Live answering requires the Professional plan.
+      </p>
+      <CheckboxSettingRow
+        id="voice-ai-toggle"
+        checked={form.voice_ai_enabled}
+        disabled={!planEligible}
+        onChange={(e) => {
+          setForm((f) => ({ ...f, voice_ai_enabled: e.target.checked }));
+          setSaved(false);
+        }}
+        label={
+          planEligible
+            ? "Answer calls live with AI"
+            : "Answer calls live with AI (Professional plan required)"
+        }
+      />
+      <SaveButton
+        saving={saving}
+        saved={saved}
+        onSave={handleSave}
+        style={{ marginTop: "0.75rem" }}
+      />
+    </div>
+  );
+}
+
 export function MissedCallTextBackCard({
   form,
   setForm,

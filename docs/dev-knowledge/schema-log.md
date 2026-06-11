@@ -1111,3 +1111,9 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Constraint:** `tenants_business_type_check` rebuilt with `financial_services` added to the 27-value allowlist (gap G8 — MTOptions vertical depth). Same migration moved MTOptions from `other` to `financial_services`. Powers the financial_services guidance pack (os_kb_feed), tailored Agent OS starters, FAQ seeds, and the express-setup dropdown entry.
 
 **Applied:** YES — 2026-06-11 via Supabase MCP; MTOptions row verified moved.
+
+## Migration 143 — tenants.voice_ai_enabled (2026-06-11)
+
+**Column:** `voice_ai_enabled BOOLEAN NOT NULL DEFAULT false` — voice mode switch for inbound Twilio calls (gap G3). false (default) = voicemail mode: greeting + Record → transcription → AI summary → lead → Agent OS callback-text draft through the approval flow. true = live AI answering (Gather speech loop with vertical guidance), plan-gated to professional/enterprise in `backend/routers/calls.py`. Settings via PUT /api/v1/auth/settings + VoiceAICard UI.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP. Manifest updated.
