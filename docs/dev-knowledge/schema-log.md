@@ -1077,3 +1077,13 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Dropped from `tenants`:** `marketing_addon_active`, `marketing_addon_grandfathered`, `marketing_addon_started_at`, `marketing_addon_stripe_sub_id` — unread since the add-on retirement (PR #228). Applied ONLY AFTER Railway rolled out #228 (the prior deploy still SELECTed marketing_addon_active in /me). Drift manifest updated to match.
 
 **Applied:** YES — 2026-06-10 via Supabase MCP (project `pxserpybmajixqrmzaly`), post-rollout health verified.
+
+## Migration 138 — os_uploads + os-uploads storage bucket (2026-06-11)
+
+**Table:** `os_uploads` — Agent OS file/image uploads + AI-generated images. `id UUID PK`, `client_id UUID NOT NULL REFERENCES tenants(id)` (tenant col is **client_id**, registered in `tenant_scope.py` overrides), `kind TEXT CHECK ('upload'|'generated')`, `filename TEXT`, `content_type TEXT`, `size_bytes BIGINT`, `storage_path TEXT`, `public_url TEXT`, `vision_summary TEXT` (Haiku description of uploaded images), `prompt TEXT` (for generated), `created_at TIMESTAMPTZ`. 3 indexes (client_id, created_at, kind). RLS enabled, service-role-only.
+
+**Storage bucket:** `os-uploads` — public, 10MB file limit, MIME allowlist (png/jpeg/webp/gif/pdf). Created via SQL insert into `storage.buckets`.
+
+**Why:** Agent OS composer attachments + image generation (rate-limited: uploads 20/hr + 50/day per tenant; image gen 10/hr + 20/day). Backend: `backend/routers/os_files.py`, `backend/services/image_gen.py`. Also added `os_uploads` to GDPR purge list in `backend/services/account_deletion.py`.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`); bucket verified live.

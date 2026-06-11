@@ -2267,7 +2267,15 @@ class TestM365OAuthRoutes:
     """
 
     def test_m365_auth_returns_authorization_url(self):
-        with patch(
+        from backend.config import settings as _settings
+
+        # /m365/auth now 503s when the Azure app isn't configured, so the
+        # happy path requires platform credentials to be present.
+        with patch.object(_settings, "m365_client_id", "azure-app-id"), patch.object(
+            _settings, "m365_client_secret", "azure-secret"
+        ), patch.object(
+            _settings, "m365_redirect_uri", "https://api.test/m365/callback"
+        ), patch(
             "backend.routers.integrations.m365_calendar.build_authorization_url",
             return_value="https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x&state=signed-state",
         ) as build_url:
@@ -2277,6 +2285,16 @@ class TestM365OAuthRoutes:
         assert "auth_url" in body
         assert "login.microsoftonline.com" in body["auth_url"]
         build_url.assert_called_once()
+
+    def test_m365_auth_503_when_platform_unconfigured(self):
+        from backend.config import settings as _settings
+
+        with patch.object(_settings, "m365_client_id", ""), patch.object(
+            _settings, "m365_client_secret", ""
+        ), patch.object(_settings, "m365_redirect_uri", ""):
+            resp = client.get("/api/v1/integrations/m365/auth", headers=_auth())
+        assert resp.status_code == 503
+        assert resp.json()["detail"]["error"] == "m365_not_configured"
 
     def test_m365_auth_requires_authentication(self):
         resp = client.get("/api/v1/integrations/m365/auth")
@@ -2361,7 +2379,12 @@ class TestM365OAuthRoutes:
             resp = client.get("/api/v1/integrations/m365/status", headers=_auth())
         assert resp.status_code == 200
         body = resp.json()
-        assert body == {"connected": False, "email": None, "calendar_name": None}
+        # Status gained platform_configured (2026-06-11) — assert the
+        # disconnected contract as a subset rather than exact equality.
+        assert body["connected"] is False
+        assert body["email"] is None
+        assert body["calendar_name"] is None
+        assert "platform_configured" in body
 
     def test_m365_status_returns_connected_with_metadata(self):
         with patch(

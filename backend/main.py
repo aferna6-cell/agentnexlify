@@ -33,6 +33,7 @@ from backend.routers import (
     business_page,
     calls,
     channels_facebook,
+    channels_instagram,
     chat_flows,
     client_portal,
     clients,
@@ -845,6 +846,7 @@ app.include_router(revenue.router)
 app.include_router(smart_lists.router)
 app.include_router(forms.router)
 app.include_router(channels_facebook.router)
+app.include_router(channels_instagram.router)
 app.include_router(pipeline_automations.router)
 app.include_router(scoring_config.router)
 app.include_router(waitlist.router)
