@@ -22,7 +22,7 @@ async def send_weekly_intelligence_briefs() -> int:
 
     Returns count of briefs sent.
     """
-    from backend.services.llm_runtime import call_claude_messages_sync
+    from backend.services.llm_runtime import call_claude_messages
 
     db = get_service_supabase()
     now = datetime.now(timezone.utc)
@@ -213,7 +213,7 @@ Write a brief, actionable weekly intelligence summary (3-5 bullet points). Focus
 
 Keep it concise, professional, and encouraging. Use actual numbers. No fluff."""
 
-            response = call_claude_messages_sync(
+            response = await call_claude_messages(
                 operation="automation.weekly_intelligence_brief",
                 model="claude-sonnet-4-6",
                 max_tokens=500,

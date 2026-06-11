@@ -345,8 +345,14 @@ async def call_claude_messages(
     system: str | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
+    max_retries: int = 0,
+    retry_delay_seconds: float = 0.75,
 ) -> ClaudeCallResult:
-    """Async wrapper for Claude messages.create that avoids blocking the event loop."""
+    """Async wrapper for Claude messages.create that avoids blocking the event loop.
+
+    Retries (and their backoff sleeps) run inside the executor thread, so the
+    event loop stays free even when max_retries > 0.
+    """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
         None,
@@ -361,5 +367,7 @@ async def call_claude_messages(
             system=system,
             timeout=timeout,
             metadata=metadata,
+            max_retries=max_retries,
+            retry_delay_seconds=retry_delay_seconds,
         ),
     )

@@ -13,6 +13,7 @@ from backend.services.llm_runtime import (
     _requires_sampling_omission,
     _safe_metadata,
     _should_retry,
+    call_claude_messages,
     call_claude_messages_sync,
 )
 
@@ -207,3 +208,47 @@ def test_call_claude_messages_sync_retries_transient_failures():
         assert result.text == "Recovered"
         assert mock_client.messages.create.call_count == 2
         mock_sleep.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_call_claude_messages_async_accepts_and_passes_retry_params():
+    """Regression: async wrapper must accept max_retries/retry_delay_seconds.
+
+    Before the passthrough existed, local_seo_ai + orchestrator call sites that
+    passed max_retries=1 raised TypeError at runtime (masked by their except
+    blocks). The retry sleep runs inside the executor thread, off the loop.
+    """
+
+    class RateLimitError(Exception):
+        pass
+
+    fake_usage = SimpleNamespace(
+        input_tokens=10,
+        output_tokens=5,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=0,
+    )
+    fake_response = SimpleNamespace(
+        content=[SimpleNamespace(text="Recovered async")],
+        usage=fake_usage,
+        stop_reason="end_turn",
+    )
+
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls, \
+         patch("backend.services.llm_runtime.time.sleep") as mock_sleep:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [RateLimitError("slow down"), fake_response]
+
+        result = await call_claude_messages(
+            operation="unit.retry_async",
+            model="claude-sonnet-4-6",
+            max_tokens=32,
+            messages=[{"role": "user", "content": "hello"}],
+            max_retries=1,
+            retry_delay_seconds=0.5,
+        )
+
+        assert result.text == "Recovered async"
+        assert mock_client.messages.create.call_count == 2
+        mock_sleep.assert_called_once_with(0.5)

@@ -5604,3 +5604,25 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/routers/auth.py,backend/routers/calls.py,backend/services/voice_recovery.py,backend/tests/test_voice_recovery.py,docs/dev-knowledge/schema-log.md,frontend/src/pages/SettingsPage.jsx,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/settings/SettingsPageContent.jsx,migrations/143_voice_ai_enabled.sql,ops/schema/expected-columns.json,tests/test_calls.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+## 2026-06-11 — async wrapper missing kwargs = silent TypeError in callers
+
+**Pattern:** `call_claude_messages_sync` gained `max_retries`/`retry_delay_seconds`,
+but the async wrapper `call_claude_messages` never got the passthrough. Four
+async call sites (local_seo_ai.py x3, automation/orchestrator.py:468) passed
+`max_retries=1` anyway → every call raised
+`TypeError: unexpected keyword argument 'max_retries'` at runtime, swallowed
+by surrounding try/except → geo-scoring + orchestrator AI silently degraded.
+Tests passed because they mock the wrapper itself.
+
+**Rule:** when adding kwargs to a sync runtime function, add them to its async
+wrapper in the same commit, and grep async callers for the new kwarg. A mocked
+wrapper test proves nothing about the wrapper's signature — add at least one
+test that exercises the real wrapper (mock only the SDK client).
+
+**Related:** sync LLM calls inside `async def` block the event loop —
+content_repurposer.repurpose and send_weekly_intelligence_briefs both called
+`call_claude_messages_sync` directly (60s timeout + retry sleep on the loop).
+Migrated to `await call_claude_messages(...)`; retries/sleeps now run in the
+executor thread. Sync helpers via `background_tasks.add_task` are fine
+(Starlette runs sync tasks in a threadpool).
