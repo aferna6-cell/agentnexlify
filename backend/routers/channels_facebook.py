@@ -55,6 +55,7 @@ class FacebookStatusResponse(BaseModel):
     connected: bool
     page_name: str | None = None
     page_id: str | None = None
+    platform_configured: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -465,6 +466,9 @@ async def facebook_connection_status(
     """Check whether this tenant has a connected Facebook Page."""
     verify_tenant(claims, tenant_id)
 
+    platform_configured = bool(
+        getattr(settings, "facebook_app_id", "") and getattr(settings, "facebook_app_secret", "")
+    )
     db = get_service_supabase()
     try:
         result = (
@@ -481,16 +485,17 @@ async def facebook_connection_status(
             tenant_id,
             exc_info=True,
         )
-        return FacebookStatusResponse(connected=False)
+        return FacebookStatusResponse(connected=False, platform_configured=platform_configured)
 
     if not result.data:
-        return FacebookStatusResponse(connected=False)
+        return FacebookStatusResponse(connected=False, platform_configured=platform_configured)
 
     meta = result.data[0].get("metadata") or {}
     return FacebookStatusResponse(
         connected=True,
         page_name=meta.get("page_name"),
         page_id=meta.get("page_id"),
+        platform_configured=platform_configured,
     )
 
 

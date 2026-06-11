@@ -98,6 +98,10 @@ class Settings(BaseSettings):
     voyage_api_key: str = ""
     openrouter_api_key: str = ""
 
+    # Agent OS image generation
+    image_gen_provider: str = ""  # "openai" supported
+    image_gen_api_key: str = ""
+
     facebook_app_id: str = ""
     facebook_app_secret: str = ""
     facebook_verify_token: str = ""

@@ -23,6 +23,7 @@ import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
+import ComposerAttachments from "../components/os/ComposerAttachments";
 import useIsMobile from "../hooks/useIsMobile";
 
 const POLL_MS = 3000;
@@ -78,6 +79,7 @@ export default function AgentOS() {
   const [usage, setUsage] = useState(null);
 
   const [composer, setComposer] = useState("");
+  const [attachments, setAttachments] = useState([]);
   const [sending, setSending] = useState(false);
   const [sourceFilter, setSourceFilter] = useState("all");
   const [loadingThreads, setLoadingThreads] = useState(true);
@@ -184,8 +186,19 @@ export default function AgentOS() {
   };
 
   const handleSend = async () => {
-    const content = composer.trim();
+    let content = composer.trim();
     if (!content || sending || capReached) return;
+    // Fold attachments into the message so the AI staff sees them and the
+    // thread keeps a durable reference (URLs live in Supabase Storage).
+    if (attachments.length > 0) {
+      const blocks = attachments.map((a) => {
+        let block = `[Attached: ${a.filename} — ${a.public_url}]`;
+        if (a.vision_summary) block += `\n[Image description: ${a.vision_summary}]`;
+        return block;
+      });
+      content = `${content}\n\n${blocks.join("\n")}`;
+      setAttachments([]);
+    }
     setSending(true);
     setError(null);
     try {
@@ -712,6 +725,13 @@ export default function AgentOS() {
         </div>
 
         {/* Composer */}
+        <ComposerAttachments
+          token={token}
+          attachments={attachments}
+          setAttachments={setAttachments}
+          composerText={composer}
+          disabled={sending || capReached}
+        />
         <div
           style={{
             borderTop: "1px solid var(--border)",

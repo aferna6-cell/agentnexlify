@@ -79,6 +79,14 @@ def _decode_state(state: str) -> str:
 @router.get("/google/auth")
 async def google_auth(claims: dict = Depends(_get_current_tenant)):
     """Generate Google OAuth authorization URL."""
+    if not (settings.google_client_id and settings.google_client_secret and settings.google_redirect_uri):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "google_calendar_not_configured",
+                "message": "Google Calendar connection isn't set up on this platform yet.",
+            },
+        )
     tenant_id: str = claims["tenant_id"]
     state = _encode_state(tenant_id)
     redirect_uri = settings.google_redirect_uri
@@ -157,16 +165,25 @@ async def google_callback(
 async def google_status(claims: dict = Depends(_get_current_tenant)):
     """Check whether the tenant has a connected Google Calendar integration."""
     tenant_id: str = claims["tenant_id"]
+    platform_configured = bool(
+        settings.google_client_id and settings.google_client_secret and settings.google_redirect_uri
+    )
     integration = get_integration(tenant_id)
 
     if not integration:
-        return {"connected": False, "email": None, "calendar_name": None}
+        return {
+            "connected": False,
+            "email": None,
+            "calendar_name": None,
+            "platform_configured": platform_configured,
+        }
 
     meta = integration.get("metadata") or {}
     return {
         "connected": True,
         "email": meta.get("email"),
         "calendar_name": meta.get("calendar_name"),
+        "platform_configured": platform_configured,
     }
 
 
@@ -217,6 +234,14 @@ def _fetch_m365_profile(access_token: str) -> dict:
 @router.get("/m365/auth")
 async def m365_auth(claims: dict = Depends(_get_current_tenant)):
     """Generate Microsoft 365 OAuth authorization URL."""
+    if not (settings.m365_client_id and settings.m365_client_secret and settings.m365_redirect_uri):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "m365_not_configured",
+                "message": "Microsoft 365 connection isn't set up on this platform yet.",
+            },
+        )
     tenant_id: str = claims["tenant_id"]
     state = _encode_state(tenant_id)
     redirect_uri = settings.m365_redirect_uri
@@ -293,16 +318,25 @@ async def m365_callback(
 async def m365_status(claims: dict = Depends(_get_current_tenant)):
     """Check whether the tenant has a connected Microsoft 365 integration."""
     tenant_id: str = claims["tenant_id"]
+    platform_configured = bool(
+        settings.m365_client_id and settings.m365_client_secret and settings.m365_redirect_uri
+    )
     integration = m365_calendar.get_integration(tenant_id)
 
     if not integration:
-        return {"connected": False, "email": None, "calendar_name": None}
+        return {
+            "connected": False,
+            "email": None,
+            "calendar_name": None,
+            "platform_configured": platform_configured,
+        }
 
     meta = integration.get("metadata") or {}
     return {
         "connected": True,
         "email": meta.get("email"),
         "calendar_name": meta.get("calendar_name"),
+        "platform_configured": platform_configured,
     }
 
 
@@ -414,6 +448,9 @@ async def hubspot_callback(
 async def hubspot_status(claims: dict = Depends(_get_current_tenant)):
     """Check whether the tenant has a connected HubSpot integration."""
     tenant_id: str = claims["tenant_id"]
+    platform_configured = bool(
+        settings.hubspot_client_id and settings.hubspot_client_secret and settings.hubspot_redirect_uri
+    )
     integration = hubspot_tenant.get_integration(tenant_id)
 
     if not integration:
@@ -422,6 +459,7 @@ async def hubspot_status(claims: dict = Depends(_get_current_tenant)):
             "portal_id": None,
             "hub_domain": None,
             "user": None,
+            "platform_configured": platform_configured,
         }
 
     meta = integration.get("metadata") or {}
@@ -430,6 +468,7 @@ async def hubspot_status(claims: dict = Depends(_get_current_tenant)):
         "portal_id": meta.get("portal_id"),
         "hub_domain": meta.get("hub_domain"),
         "user": meta.get("user"),
+        "platform_configured": platform_configured,
     }
 
 

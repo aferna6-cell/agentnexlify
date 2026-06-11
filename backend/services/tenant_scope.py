@@ -31,6 +31,7 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_model_call_log": "client_id",
     "os_graph_nodes": "client_id",
     "os_graph_edges": "client_id",
+    "os_uploads": "client_id",
 }
 
 
