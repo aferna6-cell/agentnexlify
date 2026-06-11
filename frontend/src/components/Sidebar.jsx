@@ -382,18 +382,10 @@ const allNavItems = [
     ),
     label: "Support",
   },
-  {
-    key: "admin_analytics",
-    icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />,
-    label: "Platform Analytics",
-  },
-  {
-    key: "admin_promotions",
-    icon: (
-      <Icon d="M12 2l3 7h7l-5.5 4.1 2.1 6.9-6.6-4.8-6.6 4.8 2.1-6.9L2 9h7z" />
-    ),
-    label: "Free & Discounts",
-  },
+  // Platform-admin pages (admin_analytics, admin_promotions) are deliberately
+  // NOT in the sidebar — every tenant saw the ADMIN section even though the
+  // data behind it is admin-secret-gated. Reach them by direct URL:
+  // /admin/analytics and /admin/promotions (routes still wired in App.jsx).
 ];
 
 const NAV_GROUPS = [
@@ -425,11 +417,6 @@ const NAV_GROUPS = [
       "inbound_channels",
       "support",
     ],
-  },
-  {
-    key: "admin",
-    label: "ADMIN",
-    items: ["admin_analytics", "admin_promotions"],
   },
 ];
 
