@@ -160,6 +160,48 @@ VERTICAL_GUIDANCE: dict[str, list[dict]] = {
             ),
         },
     ],
+    "financial_services": [
+        {
+            "topic": "industry: how subscription trading services talk",
+            "answer": (
+                "Subscribers buy confidence and clarity. Be precise about what "
+                "the service does (alerts, entries/exits, position management) "
+                "and never promise returns. Trials convert on responsiveness: "
+                "answer 'how do alerts arrive' and 'what do I do with one' "
+                "concretely. Lapsed trials get ONE friendly check-in, not a drip."
+            ),
+        },
+        {
+            "topic": "industry: compliance discipline",
+            "answer": (
+                "This is an alerts/education service, NOT personalized "
+                "financial advice. Never tell a specific person what THEY "
+                "should buy or sell, never predict guaranteed outcomes, and "
+                "include 'trading involves risk' framing when performance "
+                "comes up. Refunds/cancellations get handled graciously and "
+                "fast — disputes in this niche turn into chargebacks."
+            ),
+        },
+        {
+            "topic": "industry: common questions",
+            "answer": (
+                "How alerts are delivered (SMS/email/app), what markets are "
+                "covered, win-rate/track-record questions (answer with "
+                "documented history, never projections), trial terms, how to "
+                "cancel, position sizing guidance (educational only). Price "
+                "objections: compare to one losing trade avoided."
+            ),
+        },
+        {
+            "topic": "industry: follow-up etiquette",
+            "answer": (
+                "Trial users: check in day 3 ('seen the alerts? any questions "
+                "reading them?') and day 8 (before trial ends). Cancelled "
+                "subscribers: win-back after a strong documented month, not "
+                "weekly. Market-event days are natural touch-points."
+            ),
+        },
+    ],
     "_default": [
         {
             "topic": "industry: small-business basics",
@@ -196,6 +238,12 @@ _TYPE_ALIASES = {
     "chiropractic": "dental",
     "real_estate": "realestate",
     "realestate": "realestate",
+    "financial_services": "financial_services",
+    "finance": "financial_services",
+    "trading": "financial_services",
+    "trading_alerts": "financial_services",
+    "investing": "financial_services",
+    "investment": "financial_services",
 }
 
 

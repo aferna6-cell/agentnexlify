@@ -333,6 +333,33 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
             "category": "Policy",
         },
     ],
+    "financial_services": [
+        {
+            "question": "How do I receive the trading alerts?",
+            "answer": "Alerts are delivered the moment they trigger so you can act quickly. Ask us about delivery options (SMS, email) and we'll get you set up.",
+            "category": "Service",
+        },
+        {
+            "question": "Do you offer a free trial?",
+            "answer": "Yes — try the full alert service free before committing. Ask us here and we'll get your trial started today.",
+            "category": "Trial",
+        },
+        {
+            "question": "Is this financial advice?",
+            "answer": "No. Our alerts are for educational and informational purposes only and are not personalized financial advice. Trading involves risk, and past performance does not guarantee future results.",
+            "category": "Disclaimer",
+        },
+        {
+            "question": "What is your track record?",
+            "answer": "We publish our documented alert history so you can review real results. Ask us and we'll point you to the latest performance log.",
+            "category": "Performance",
+        },
+        {
+            "question": "How do I cancel my subscription?",
+            "answer": "You can cancel anytime — no lock-in. Message us here or use your account page and we'll take care of it right away.",
+            "category": "Billing",
+        },
+    ],
     "fitness": [
         {
             "question": "What memberships do you offer?",
@@ -377,6 +404,11 @@ def seed_industry_faqs(
         "plumbing": "plumbing",
         "hvac": "hvac",
         "real_estate": "realestate",
+        # not in _BUSINESS_PROFILES, so resolve_business_profile_key would
+        # collapse it to "default" — map it straight to its FAQ pack
+        "financial_services": "financial_services",
+        "trading": "financial_services",
+        "trading_alerts": "financial_services",
     }.get(raw_industry, normalized)
     faqs = INDUSTRY_FAQS.get(faq_key, [])
     if not faqs:

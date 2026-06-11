@@ -28,6 +28,7 @@ const INDUSTRIES = [
   { value: "cleaning", label: "Cleaning Services" },
   { value: "dental", label: "Dental" },
   { value: "electrical", label: "Electrical" },
+  { value: "financial_services", label: "Financial Services / Trading" },
   { value: "fitness", label: "Fitness" },
   { value: "food_truck", label: "Food Truck" },
   { value: "hvac", label: "HVAC" },

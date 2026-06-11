@@ -50,6 +50,10 @@ def test_client(mock_settings):
         # billing endpoints moved to auth_billing (2026-06-11 god-file split)
         patch("backend.routers.auth_billing.get_service_supabase", return_value=db_mock),
         patch("backend.routers.auth_billing.settings", mock_settings),
+        patch("backend.routers.auth_google.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.auth_google.settings", mock_settings),
+        patch("backend.routers.auth_password_reset.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.auth_password_reset.settings", mock_settings),
         patch(
             "backend.services.fraud_guard.get_service_supabase", return_value=db_mock
         ),
@@ -348,9 +352,9 @@ class TestPasswordReset:
     """Test forgot/reset password flows."""
 
     @patch(
-        "backend.routers.auth.secrets.token_urlsafe", return_value="fixed-reset-token"
+        "backend.routers.auth_password_reset.secrets.token_urlsafe", return_value="fixed-reset-token"
     )
-    @patch("backend.routers.auth.send_email", new_callable=AsyncMock)
+    @patch("backend.routers.auth_password_reset.send_email", new_callable=AsyncMock)
     def test_forgot_password_existing_email_sends_reset_link(
         self, mock_send_email, _mock_token, test_client
     ):
@@ -384,7 +388,7 @@ class TestPasswordReset:
         assert kwargs["to"] == "owner@example.com"
         assert "fixed-reset-token" in kwargs["body_html"]
 
-    @patch("backend.routers.auth.send_email", new_callable=AsyncMock)
+    @patch("backend.routers.auth_password_reset.send_email", new_callable=AsyncMock)
     def test_forgot_password_unknown_email_returns_generic_message(
         self, mock_send_email, test_client
     ):
@@ -542,7 +546,7 @@ class TestGoogleOAuth:
         assert params["scope"] == ["openid email profile"]
         assert "state" in params
 
-    @patch("backend.routers.auth.httpx.AsyncClient")
+    @patch("backend.routers.auth_google.httpx.AsyncClient")
     def test_google_callback_existing_owner_redirects_to_dashboard(
         self, mock_async_client, test_client, mock_settings
     ):
@@ -552,7 +556,7 @@ class TestGoogleOAuth:
         mock_settings.api_url = "https://api.example.com"
         mock_settings.frontend_url = "https://app.example.com"
 
-        from backend.routers.auth import _encode_google_state
+        from backend.routers.auth_google import _encode_google_state
 
         state = _encode_google_state("login")
 
@@ -602,7 +606,7 @@ class TestGoogleOAuth:
     def test_google_register_creates_account(self, mock_send_email, test_client):
         client, db_mock = test_client
 
-        from backend.routers.auth import _encode_google_setup_token
+        from backend.routers.auth_google import _encode_google_setup_token
 
         setup_token = _encode_google_setup_token(
             email="owner@example.com",

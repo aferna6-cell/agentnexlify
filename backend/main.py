@@ -27,6 +27,8 @@ from backend.routers import (
     appointments,
     auth,
     auth_billing,
+    auth_google,
+    auth_password_reset,
     automations,
     bids,
     billing,
@@ -790,6 +792,8 @@ app.include_router(analytics.router)
 app.include_router(appointments.router)
 app.include_router(auth.router)
 app.include_router(auth_billing.router)
+app.include_router(auth_google.router)
+app.include_router(auth_password_reset.router)
 app.include_router(conversations.router)
 app.include_router(faq.router)
 app.include_router(automations.router)
