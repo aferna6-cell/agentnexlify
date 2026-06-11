@@ -54,6 +54,7 @@ export default function SettingsPage({ onNavigate }) {
     noshow_recovery_enabled: true,
     os_auto_send_enabled: false,
     os_auto_send_rules: {},
+    voice_ai_enabled: false,
     website_url: "",
     textback_enabled: false,
     textback_message:
@@ -116,6 +117,7 @@ export default function SettingsPage({ onNavigate }) {
         noshow_recovery_enabled: tenant.noshow_recovery_enabled !== false,
         os_auto_send_enabled: tenant.os_auto_send_enabled || false,
         os_auto_send_rules: tenant.os_auto_send_rules || {},
+        voice_ai_enabled: tenant.voice_ai_enabled || false,
         website_url: tenant.website_url || "",
         textback_enabled: tenant.textback_enabled || false,
         textback_message:

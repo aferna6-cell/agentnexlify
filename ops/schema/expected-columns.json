@@ -1380,6 +1380,7 @@
     "textback_message",
     "textback_quiet_end",
     "textback_quiet_start",
+    "voice_ai_enabled",
     "website_url"
   ],
   "waitlist_entries": [

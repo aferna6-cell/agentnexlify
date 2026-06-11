@@ -92,6 +92,8 @@ class TestVoiceIncoming:
             "business_name": "Acme Plumbing",
             "owner_email": "owner@acme.com",
             "notification_phone": "+15551234567",
+            "plan": "professional",
+            "voice_ai_enabled": True,
         }
 
         form_data = urlencode({
@@ -177,6 +179,97 @@ class TestVoiceIncoming:
         assert "&lt;Plumbing&gt;" in body
         assert "&amp; Co" in body
         assert "Bob&apos;s" in body
+
+
+    @patch("backend.routers.calls._find_tenant_by_phone")
+    def test_incoming_call_defaults_to_voicemail_mode(self, mock_find):
+        """G3: live AI answering is opt-in — without voice_ai_enabled the
+        caller reaches voicemail (Record), feeding the recovery pipeline."""
+        mock_find.return_value = {
+            "id": "tenant-001",
+            "business_name": "Acme Plumbing",
+            "owner_email": "owner@acme.com",
+            "notification_phone": "+15551234567",
+            "plan": "professional",
+            # voice_ai_enabled absent/false
+        }
+        form_data = urlencode({
+            "From": "+15559998888",
+            "To": "+15551234567",
+            "CallSid": "CA321voicemail",
+        })
+        resp = client.post(
+            "/api/v1/calls/voice/incoming",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert resp.status_code == 200
+        body = resp.text
+        assert "<Record" in body
+        assert "voice/recording-complete" in body
+        assert "<Gather" not in body
+
+    @patch("backend.routers.calls._find_tenant_by_phone")
+    def test_incoming_call_ai_mode_requires_plan(self, mock_find):
+        """voice_ai_enabled on a growth-plan tenant still gets voicemail —
+        AI answering is the Professional-tier feature."""
+        mock_find.return_value = {
+            "id": "tenant-001",
+            "business_name": "Acme Plumbing",
+            "owner_email": "owner@acme.com",
+            "notification_phone": "+15551234567",
+            "plan": "growth",
+            "voice_ai_enabled": True,
+        }
+        form_data = urlencode({
+            "From": "+15559998888",
+            "To": "+15551234567",
+            "CallSid": "CA321plangate",
+        })
+        resp = client.post(
+            "/api/v1/calls/voice/incoming",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert resp.status_code == 200
+        assert "<Record" in resp.text
+        assert "<Gather" not in resp.text
+
+
+class TestCallStatus:
+    """POST /api/v1/calls/voice/call-status — end-of-call finalization hook."""
+
+    @patch("backend.routers.calls._find_tenant_by_phone")
+    def test_non_completed_status_is_noop(self, mock_find):
+        form_data = urlencode({
+            "CallStatus": "ringing",
+            "CallSid": "CAstatus1",
+            "To": "+15551234567",
+        })
+        resp = client.post(
+            "/api/v1/calls/voice/call-status",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert resp.status_code == 200
+        mock_find.assert_not_called()
+
+    @patch("backend.routers.calls._find_tenant_by_phone")
+    def test_completed_status_returns_ok(self, mock_find):
+        mock_find.return_value = {"id": "tenant-001", "business_name": "Acme"}
+        form_data = urlencode({
+            "CallStatus": "completed",
+            "CallSid": "CAstatus2",
+            "To": "+15551234567",
+            "CallDuration": "42",
+        })
+        resp = client.post(
+            "/api/v1/calls/voice/call-status",
+            content=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert resp.status_code == 200
+        mock_find.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
