@@ -1,0 +1,27 @@
+{
+  "date": "2026-06-11",
+  "run": 55,
+  "evidence_summary": "7c8825c (PR #232, Home redo + Instagram connector, 1 day old) introduced `from __future__ import annotations` on line 1 of channels_instagram.py — ALL Instagram endpoints return 422 (CLAUDE.md Critical Invariant #5). Same PR + a5c65b5 introduced 10 em-dash violations across 7 JSX files (most in project history). check_project_invariants.py exits 1 (2 failures). Check 10 (Item A, pre-commit wire) blocked for day 55+. check-widget-sync.sh MISSING day 50+. email_sequences.py 1255L unsplit. PR #183 (billing fix) unmerged 20+ days. Home.jsx 1171L approaching god-class.",
+  "ideas_count": 5,
+  "winner": "Fix channels_instagram.py `from __future__ import annotations` + clear 10 em-dash violations → exits 0 → Check 10 auto-wires tonight",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "rejected": [
+    "Wire Check 10 in WARNING mode (KILLED — contradicts Item A FAIL-mode design; root cause is hooks-not-installed, not mode)"
+  ],
+  "weakened": [
+    "Fix 10 em-dash violations standalone (WEAKENED → Bonus A — value derived only from unlocking Check 10)",
+    "Wire Check 10 WARNING mode (WEAKENED → Parking Lot)",
+    "Create check-widget-sync.sh (Idea 4 → Parking Lot pending_autonomous)",
+    "Home.jsx god-class split (Idea 5 → Parking Lot HUMAN-REQUIRED)"
+  ],
+  "governance_corrections": [
+    "run 54 status: pending_autonomous → superseded (a5c65b5 refactored AgentOS.jsx clearing the 3 targeted violations as a side effect; same PR introduced 8 new violations; nightly had no chance to execute the em-dash fix before supersession)",
+    "runs_implemented stays at 16 (run 54 superseded, not implemented)"
+  ],
+  "moratorium_active": true,
+  "moratorium_day": "41+",
+  "pending_before": 16,
+  "pending_after": 16,
+  "key_finding": "channels_instagram.py is a 444L router with `from __future__ import annotations` on line 1 — every Instagram API endpoint currently returns 422. 1-day-old PR, zero tenant exposure yet. Combined fix (line 1 + 10 em-dashes) restores exits 0 and triggers the 55-day-pending Item A Check 10 auto-wire tonight. First subconscious run where the winner is a production bug fix, not a workflow/guard recommendation."
+}
