@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-11",
-  "total_runs": 55,
+  "last_run": "2026-06-11-pm",
+  "total_runs": 56,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,13 +16,23 @@
   },
   "active_directions": [
     {
-      "title": "Fix channels_instagram.py `from __future__ import annotations` + clear 10 em-dash violations → exits 0 → Check 10 auto-wires tonight (run 55 winner)",
-      "date": "2026-06-11",
+      "title": "Fix 10 em-dash violations → Check 10 auto-wires tonight (run 56 winner)",
+      "date": "2026-06-11-pm",
       "confidence": "HIGH",
       "status": "pending_autonomous",
       "autonomous_executable": true,
       "category": "code_health",
-      "note": "Run 55 winner. AUTONOMOUS-EXECUTABLE. 7c8825c (Instagram connector PR #232, 2026-06-11) introduced `from __future__ import annotations` on line 1 of channels_instagram.py — ALL Instagram endpoints 422 (CLAUDE.md Critical Invariant #5). Same PR + a5c65b5 introduced 10 em-dash violations across 7 JSX files (most in project history). Fix: (1) remove line 1 from channels_instagram.py; (2) replace 10 em-dash chars with hyphens across main.jsx:152, CookieConsent.jsx:5+31, MarketingUpsell.jsx:3, App.jsx:328, Sidebar.test.jsx:27+49, ReferralCard.jsx:24+45, ComposerAttachments.jsx:1 → exits 0 → Item A auto-wires tonight. Full implementation sketch: subconscious/runs/2026-06-11/winning-concept.md."
+      "note": "Run 56 winner. AUTONOMOUS-EXECUTABLE. Run 55 partially implemented: `from __future__ import annotations` FIXED (cleared in b736ca2/b8fdcd2), but 10 em-dash violations remain. Set shifted: Sidebar.jsx:386 NEW (fc662b4 high-velocity sprint side-effect), ComposerAttachments.jsx:1 GONE. Fix: replace 10 em-dash chars with hyphens across main.jsx:152, CookieConsent.jsx:5+31, MarketingUpsell.jsx:3, App.jsx:325, Sidebar.test.jsx:27+49, Sidebar.jsx:386, ReferralCard.jsx:24+45 → exits 0 → Item A auto-wires Check 10 tonight. Full implementation sketch: subconscious/runs/2026-06-11-pm/winning-concept.md."
+    },
+    {
+      "title": "Fix channels_instagram.py `from __future__ import annotations` + clear 10 em-dash violations → exits 0 → Check 10 auto-wires tonight (run 55 winner)",
+      "date": "2026-06-11",
+      "confidence": "HIGH",
+      "status": "partially_implemented",
+      "autonomous_executable": true,
+      "category": "code_health",
+      "partially_implemented_date": "2026-06-11",
+      "note": "Run 55 winner. PARTIALLY IMPLEMENTED. `from __future__ import annotations` FIXED (confirmed — channels_instagram.py line 1 is now docstring, cleared in b736ca2/b8fdcd2). Em-dash violations NOT fixed — 10 violations remain (set shifted: Sidebar.jsx:386 NEW from fc662b4, ComposerAttachments.jsx:1 GONE). Run 56 carries forward em-dash fix as new winner. Original sketch: subconscious/runs/2026-06-11/winning-concept.md."
     },
     {
       "title": "Fix 3 JSX em-dash violations in Agent OS UI copy (MemoryPanel.jsx:180, AgentOS.jsx:197/224) — AUTONOMOUS-EXECUTABLE, unblocks Item A Check 10 wire (run 54 winner)",

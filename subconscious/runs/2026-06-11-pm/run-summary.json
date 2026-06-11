@@ -1,0 +1,62 @@
+{
+  "run": 56,
+  "date": "2026-06-11-pm",
+  "winner": "Fix 10 em-dash violations → Check 10 auto-wires tonight",
+  "winner_category": "code_health",
+  "winner_status": "pending_autonomous",
+  "winner_autonomous_executable": true,
+  "confidence": "HIGH",
+  "moratorium_active": true,
+  "moratorium_day": "41+",
+  "evidence_summary": "Run 55 PARTIALLY implemented: from __future__ in channels_instagram.py FIXED (confirmed), 10 em-dashes NOT fixed. Violation set shifted: Sidebar.jsx:386 NEW (fc662b4 high-velocity sprint), ComposerAttachments.jsx:1 GONE. Net: 10 violations. check_project_invariants exits 1. Check 10 blocked day 55+. 4 large PRs in ~6 hours today (PRs #237-239 + #236): auth split, voice recovery, 8-next-steps consolidation, admin sidebar. High-velocity sprint is introducing violations in real-time.",
+  "ideas_count": 5,
+  "ideas": [
+    {
+      "id": 1,
+      "title": "Fix 10 em-dash violations",
+      "verdict": "SURVIVES → WINNER",
+      "autonomous_executable": true
+    },
+    {
+      "id": 2,
+      "title": "Add tenant isolation tests for os_graph_memory.py",
+      "verdict": "SURVIVES WEAKENED → Parking Lot",
+      "autonomous_executable": true,
+      "roi": 2.1
+    },
+    {
+      "id": 3,
+      "title": "Invoke /god-class-splitter on Home.jsx (1171L)",
+      "verdict": "Not debated → Parking Lot",
+      "autonomous_executable": false
+    },
+    {
+      "id": 4,
+      "title": "AI-to-Human Handoff v1 implementation",
+      "verdict": "WEAKENED → Parking Lot",
+      "autonomous_executable": false,
+      "blocked_by": "moratorium (M-effort)"
+    },
+    {
+      "id": 5,
+      "title": "Fix kb-autopopulate.sh",
+      "verdict": "Not debated → Parking Lot",
+      "autonomous_executable": false
+    }
+  ],
+  "governance_corrections": [
+    "run 55 status: pending_autonomous → partially_implemented (from __future__ FIXED, em-dashes NOT fixed)",
+    "total_runs: 55 → 56",
+    "last_run: 2026-06-11 → 2026-06-11-pm"
+  ],
+  "pending_before": 16,
+  "pending_after": 16,
+  "key_finding": "High-velocity sprint (4 PRs/day) actively introduces violations in real-time — fc662b4 added Sidebar.jsx:386 as a side-effect of a 17-line cosmetic diff. Without Check 10 in pre-commit, every developer commit can introduce violations undetected. Fix tonight → Check 10 auto-wires → self-healing loop activates.",
+  "artifacts": [
+    "subconscious/runs/2026-06-11-pm/ideas/ideas.md",
+    "subconscious/runs/2026-06-11-pm/debate/debate-log.md",
+    "subconscious/runs/2026-06-11-pm/winning-concept.md",
+    "subconscious/runs/2026-06-11-pm/improvement-backlog.md",
+    "subconscious/runs/2026-06-11-pm/run-summary.json"
+  ]
+}
