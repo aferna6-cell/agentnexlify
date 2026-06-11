@@ -1105,3 +1105,9 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Column:** `os_auto_send_rules JSONB NOT NULL DEFAULT '{}'` — per-agent auto-send overrides (gap G6), e.g. `{"booking": true}`. Gate logic in `agent_os_bridge.resolve_deliverable_status`: per-agent rule beats global `os_auto_send_enabled`; NEVER_AUTO_SEND_AGENTS (invoicing, payments, complaints) cannot be overridden. Updated via PUT /api/v1/auth/settings/{tenant_id} with shape validation.
 
 **Applied:** YES — 2026-06-11 via Supabase MCP. Manifest updated.
+
+## Migration 142 — financial_services business_type (2026-06-11)
+
+**Constraint:** `tenants_business_type_check` rebuilt with `financial_services` added to the 27-value allowlist (gap G8 — MTOptions vertical depth). Same migration moved MTOptions from `other` to `financial_services`. Powers the financial_services guidance pack (os_kb_feed), tailored Agent OS starters, FAQ seeds, and the express-setup dropdown entry.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP; MTOptions row verified moved.

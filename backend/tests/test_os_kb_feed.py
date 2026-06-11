@@ -207,3 +207,16 @@ def test_healthy_knowledge_emits_no_gap_nudge():
         feed_mod.tenant_table = orig
 
     assert not [e for e in entries if "setup gaps" in e["topic"]]
+
+
+def test_financial_services_vertical_guidance():
+    """G8: MTOptions vertical — trading aliases hit the financial pack,
+    which must carry the no-financial-advice compliance entry."""
+    import backend.services.os_kb_feed as feed_mod
+
+    for alias in ("financial_services", "trading", "trading_alerts", "investing"):
+        entries = feed_mod.vertical_guidance(alias)
+        topics = " ".join(e["topic"] for e in entries)
+        assert "compliance" in topics, alias
+        answers = " ".join(e["answer"] for e in entries)
+        assert "not personalized" in answers.lower() or "NOT personalized" in answers
