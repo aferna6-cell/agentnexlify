@@ -33,6 +33,7 @@ from backend.routers import (
     business_page,
     calls,
     channels_facebook,
+    channels_instagram,
     chat_flows,
     client_portal,
     clients,
@@ -102,6 +103,7 @@ from backend.routers import (
     os_usage,
     os_inbound,
     os_sync as os_sync_router,
+    os_files,
 )
 
 # --- JSON logging ---
@@ -844,6 +846,7 @@ app.include_router(revenue.router)
 app.include_router(smart_lists.router)
 app.include_router(forms.router)
 app.include_router(channels_facebook.router)
+app.include_router(channels_instagram.router)
 app.include_router(pipeline_automations.router)
 app.include_router(scoring_config.router)
 app.include_router(waitlist.router)
@@ -859,6 +862,7 @@ app.include_router(os_graph.router)
 app.include_router(os_memory.router)
 app.include_router(os_backlog.router)
 app.include_router(os_usage.router)
+app.include_router(os_files.router)
 app.include_router(os_inbound.router)
 app.include_router(os_sync_router.router)
 app.include_router(pricing_experiment.router)

@@ -22,6 +22,9 @@ import {
   fetchFacebookStatus,
   getFacebookAuthUrl,
   disconnectFacebook,
+  fetchInstagramStatus,
+  getInstagramAuthUrl,
+  disconnectInstagram,
   fetchBridgeConfig,
   toggleBridge,
   saveBridgeConfig,
@@ -72,6 +75,47 @@ function FacebookIcon({ size = 40 }) {
         d="M33 24h-6v-4c0-1.1.9-2 2-2h4v-6h-4c-4.4 0-8 3.6-8 8v4h-4v6h4v14h6V30h4l2-6z"
         fill="#fff"
       />
+    </svg>
+  );
+}
+
+/* ── Inline SVG: Instagram glyph ── */
+function InstagramIcon({ size = 40 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id="igGrad" x1="0" y1="48" x2="48" y2="0">
+          <stop offset="0%" stopColor="#FD5949" />
+          <stop offset="50%" stopColor="#D6249F" />
+          <stop offset="100%" stopColor="#285AEB" />
+        </linearGradient>
+      </defs>
+      <rect width="48" height="48" rx="12" fill="url(#igGrad)" />
+      <rect
+        x="12"
+        y="12"
+        width="24"
+        height="24"
+        rx="7"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+      <circle
+        cx="24"
+        cy="24"
+        r="6"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+      <circle cx="31.5" cy="16.5" r="2" fill="#fff" />
     </svg>
   );
 }
@@ -272,6 +316,191 @@ function FacebookMessengerSection({ token }) {
               }}
             >
               {connecting ? "Opening..." : "Connect Facebook"}
+            </button>
+          )
+        )}
+        {!loading && connected && confirmDisconnect && (
+          <button
+            className="btn-secondary"
+            onClick={() => setConfirmDisconnect(false)}
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Instagram Business Section ── */
+function InstagramSection({ token }) {
+  const { user } = useAuth();
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadStatus = useCallback(async () => {
+    if (!user?.tenantId) return;
+    setLoading(true);
+    try {
+      const data = await fetchInstagramStatus(user.tenantId, token);
+      setStatus(data);
+    } catch (err) {
+      console.error("Failed to load Instagram status", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.tenantId, token]);
+
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    setError(null);
+    try {
+      const data = await getInstagramAuthUrl(user.tenantId, token);
+      if (data.auth_url)
+        window.open(data.auth_url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      const msg =
+        err?.message && err.message.includes("503")
+          ? "Instagram connection isn't set up on this platform yet."
+          : "Failed to start Instagram authorization.";
+      setError(msg);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirmDisconnect) {
+      setConfirmDisconnect(true);
+      return;
+    }
+    setDisconnecting(true);
+    setError(null);
+    try {
+      await disconnectInstagram(user.tenantId, token);
+      setConfirmDisconnect(false);
+      await loadStatus();
+    } catch (err) {
+      setError("Failed to disconnect.");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const connected = status?.connected;
+  const platformConfigured = status?.platform_configured !== false;
+
+  return (
+    <div style={{ ...gcStyles.card, marginTop: "1rem" }}>
+      <div style={gcStyles.cardTop}>
+        <div style={gcStyles.iconWrap}>
+          <InstagramIcon size={40} />
+        </div>
+        <div style={gcStyles.cardInfo}>
+          <div style={gcStyles.cardTitle}>
+            Instagram Business
+            {connected && (
+              <span style={gcStyles.connectedBadge}>Connected</span>
+            )}
+          </div>
+          <div style={gcStyles.cardDesc}>
+            Let your AI staff draft and publish Instagram posts. Requires an
+            Instagram Business account linked to a Facebook Page.
+          </div>
+        </div>
+      </div>
+      {loading && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            color: "var(--text-muted)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          Checking connection status...
+        </div>
+      )}
+      {!loading && connected && (
+        <div style={gcStyles.details}>
+          {status?.instagram_username && (
+            <div style={gcStyles.detailRow}>
+              <span style={gcStyles.detailLabel}>Account</span>
+              <span style={gcStyles.detailValue}>
+                @{status.instagram_username}
+              </span>
+            </div>
+          )}
+          {status?.page_name && (
+            <div style={{ ...gcStyles.detailRow, marginTop: "0.375rem" }}>
+              <span style={gcStyles.detailLabel}>Page</span>
+              <span style={gcStyles.detailValue}>{status.page_name}</span>
+            </div>
+          )}
+        </div>
+      )}
+      {!loading && !connected && !platformConfigured && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            color: "var(--text-muted)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          Instagram connection isn't set up on this platform yet.
+        </div>
+      )}
+      {error && (
+        <div className="error-banner" style={{ marginTop: "0.75rem" }}>
+          {error}
+        </div>
+      )}
+      <div style={gcStyles.cardActions}>
+        {!loading && connected ? (
+          <button
+            className="btn-danger"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+          >
+            {disconnecting
+              ? "Disconnecting..."
+              : confirmDisconnect
+                ? "Confirm disconnect?"
+                : "Disconnect"}
+          </button>
+        ) : (
+          !loading && (
+            <button
+              onClick={handleConnect}
+              disabled={connecting || !platformConfigured}
+              style={{
+                background:
+                  connecting || !platformConfigured
+                    ? "var(--bg-secondary)"
+                    : "#D6249F",
+                color: "#fff",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+                padding: "0.5rem 1.125rem",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                cursor:
+                  connecting || !platformConfigured
+                    ? "not-allowed"
+                    : "pointer",
+                opacity: connecting || !platformConfigured ? 0.7 : 1,
+                transition: "opacity 0.15s",
+              }}
+            >
+              {connecting ? "Opening..." : "Connect Instagram"}
             </button>
           )
         )}
@@ -1083,6 +1312,14 @@ export default function IntegrationsPage({ onNavigate }) {
       const timer = setTimeout(() => setToast(null), 5000);
       return () => clearTimeout(timer);
     }
+    if (params.get("instagram_connected") === "true") {
+      setToast("Instagram connected successfully!");
+      const url = new URL(window.location);
+      url.searchParams.delete("instagram_connected");
+      window.history.replaceState({}, "", url.pathname + url.search);
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
     if (params.get("hubspot") === "connected") {
       setToast("HubSpot connected successfully!");
       const url = new URL(window.location);
@@ -1276,6 +1513,7 @@ export default function IntegrationsPage({ onNavigate }) {
           <M365CalendarSection token={token} />
           <HubSpotSection token={token} />
           <FacebookMessengerSection token={token} />
+          <InstagramSection token={token} />
         </>
       )}
 

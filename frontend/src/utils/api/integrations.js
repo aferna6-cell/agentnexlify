@@ -62,6 +62,23 @@ export function disconnectFacebook(tenantId, token) {
   });
 }
 
+// --- Instagram Business ---
+
+export function fetchInstagramStatus(tenantId, token) {
+  return request(`/api/v1/channels/instagram/${tenantId}/status`, { token });
+}
+
+export function getInstagramAuthUrl(tenantId, token) {
+  return request(`/api/v1/channels/instagram/auth`, { token });
+}
+
+export function disconnectInstagram(tenantId, token) {
+  return request(`/api/v1/channels/instagram/${tenantId}/disconnect`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 // --- Agent OS Inbound Bridges ---
 
 export function fetchBridgeConfig(token) {

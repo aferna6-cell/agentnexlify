@@ -59,15 +59,15 @@ function StripeCta({ plan, children }) {
 const faqData = [
   {
     id: "faq-a1",
-    question: "What\u2019s included in each plan?",
+    question: "What’s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free includes the chat widget, customer capture, and FAQ knowledge base. Growth starts at $99/month and includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional is $150/month with the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise is $250/month with AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
+      "Every plan builds on the previous tier. Free includes the chat widget, customer capture, and FAQ knowledge base. Growth is $99/month and includes a 7-day free trial, appointment booking, SMS, auto follow-up, and the AI content writer. Professional is $150/month and adds the full SEO suite, social media scheduling, email and SMS campaigns, and advanced analytics. Enterprise is $250/month and adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
   },
   {
     id: "faq-a2",
     question: "Do I need any technical skills?",
     answer:
-      "Not at all. We handle 100% of the setup, integration, and ongoing management. If you can use email, you can use Agent NexLiFy.",
+      "None. You run your business by talking to your AI staff the way you would a real employee: “follow up with the lead from yesterday,” “draft an invoice for the Hendersons.” The right department picks it up and shows you the work before anything goes out.",
   },
   {
     id: "faq-a3",
@@ -79,7 +79,7 @@ const faqData = [
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Absolutely! Start with our free plan or Growth and upgrade as your business scales. You can change your plan anytime from the Billing page.",
+      "Yes. Start free or on Growth and upgrade as your business grows. You can change your plan anytime from the Billing page.",
   },
   {
     id: "faq-a6",
@@ -88,90 +88,65 @@ const faqData = [
   },
   {
     id: "faq-a7",
-    question: "What if AI makes a mistake?",
+    question: "What if the AI makes a mistake?",
     answer:
-      "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers - you decide how to follow up. Nothing goes out without your approval.",
+      "You stay in control. By default, every email, text, and invoice sits in your approvals queue until you review it. Nothing reaches a customer without your say-so. If you trust a department to handle routine items on its own, you can turn on auto-send in Settings and turn it off any time.",
   },
   {
     id: "faq-a8",
-    question: "How is this different from Zapier or ChatGPT?",
+    question: "How is this different from GoHighLevel or ChatGPT?",
     answer:
-      "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service. We take care of the setup and management so you can focus on your business.",
+      "GoHighLevel is a deep CRM that takes real time to configure. ChatGPT is a general tool you have to build around yourself. AgentNexLiFy is done-for-you: you describe what you need in plain language, an AI department picks it up, and you review the work before it goes out. No pipelines to build, no prompts to write.",
   },
 ];
 
 /* ── Demo slideshow tabs ── */
 const demoTabs = [
-  "Dashboard",
-  "Widget Chat",
-  "Clients",
+  "Agent OS",
+  "Front Desk",
+  "Leads",
   "Automations",
   "Calendar",
 ];
 
 function DemoSlide({ tab }) {
-  if (tab === "Dashboard")
+  if (tab === "Agent OS")
     return (
-      <div className="ds-dashboard">
-        <div className="ds-stats-row">
-          <div className="ds-stat-card">
-            <span className="ds-stat-num">24</span>
-            <span className="ds-stat-lbl">Leads today</span>
+      <div className="ds-agent-os">
+        <div className="ds-os-thread">
+          <div className="ds-os-msg ds-os-msg-user">
+            Follow up with the lead from yesterday who asked about a quote
           </div>
-          <div className="ds-stat-card">
-            <span className="ds-stat-num">8</span>
-            <span className="ds-stat-lbl">Appointments</span>
-          </div>
-          <div className="ds-stat-card accent">
-            <span className="ds-stat-num">96%</span>
-            <span className="ds-stat-lbl">Response rate</span>
-          </div>
-        </div>
-        <div className="ds-cols">
-          <div className="ds-pipeline">
-            <div className="ds-panel-title">Lead Pipeline</div>
-            <div className="ds-lead">
-              <span className="ds-dot green" />
-              <span>Sarah Johnson</span>
-              <span className="ds-tag hot">Hot</span>
+          <div className="ds-os-msg ds-os-msg-bot">
+            <span className="ds-os-dept">Sales</span>
+            Found Mike Chen from yesterday. He asked about kitchen remodel pricing.
+            Here’s a draft follow-up:
+            <div className="ds-os-draft">
+              &ldquo;Hi Mike, just checking in on the kitchen quote we discussed. Happy to answer any questions or schedule a walkthrough—just let me know.&rdquo;
             </div>
-            <div className="ds-lead">
-              <span className="ds-dot blue" />
-              <span>Mike Chen</span>
-              <span className="ds-tag warm">Warm</span>
-            </div>
-            <div className="ds-lead">
-              <span className="ds-dot green" />
-              <span>Emily Davis</span>
-              <span className="ds-tag new">New</span>
+            <div className="ds-os-actions">
+              <span className="ds-os-btn ds-os-btn-approve">Approve &amp; Send</span>
+              <span className="ds-os-btn ds-os-btn-edit">Edit</span>
             </div>
           </div>
-          <div className="ds-activity">
-            <div className="ds-panel-title">Recent Activity</div>
-            <div className="ds-activity-item">
-              <span className="ds-activity-dot" />
-              New lead captured from website
-            </div>
-            <div className="ds-activity-item">
-              <span className="ds-activity-dot" />
-              Follow-up sent to Sarah Johnson
-            </div>
-            <div className="ds-activity-item">
-              <span className="ds-activity-dot" />
-              Appointment booked - Mike Chen
-            </div>
+          <div className="ds-os-msg ds-os-msg-user">
+            What’s on my calendar this week?
+          </div>
+          <div className="ds-os-msg ds-os-msg-bot">
+            <span className="ds-os-dept">Operations</span>
+            3 appointments this week: Mon 9 AM Sarah J., Wed 11 AM James W., Thu 2 PM new consult. 2 invoices outstanding totaling $4,200.
           </div>
         </div>
       </div>
     );
 
-  if (tab === "Widget Chat")
+  if (tab === "Front Desk")
     return (
       <div className="ds-chat">
         <div className="ds-chat-window">
           <div className="ds-chat-header">
             <span className="ds-chat-status" />
-            AI Assistant - Online
+            AI Front Desk &mdash; Online 24/7
           </div>
           <div className="ds-chat-body">
             <div className="ds-msg bot">Hi! How can I help you today?</div>
@@ -179,12 +154,12 @@ function DemoSlide({ tab }) {
               I&apos;d like to schedule a consultation
             </div>
             <div className="ds-msg bot">
-              Of course! I&apos;d be happy to help. What day works best for you?
+              Of course! What day works best for you?
             </div>
             <div className="ds-msg user">How about Thursday at 2pm?</div>
             <div className="ds-msg bot">
-              Thursday at 2:00 PM is available. I&apos;ve booked that for you.
-              You&apos;ll get a confirmation email shortly!
+              Thursday at 2:00 PM is available. Booked! You&apos;ll get a
+              confirmation shortly.
             </div>
           </div>
           <div className="ds-chat-input">
@@ -194,10 +169,10 @@ function DemoSlide({ tab }) {
       </div>
     );
 
-  if (tab === "Clients")
+  if (tab === "Leads")
     return (
       <div className="ds-clients">
-        <div className="ds-panel-title">Clients &amp; Leads</div>
+        <div className="ds-panel-title">Leads &amp; Customers</div>
         <div className="ds-table">
           <div className="ds-table-head">
             <span>Name</span>
@@ -242,7 +217,7 @@ function DemoSlide({ tab }) {
   if (tab === "Automations")
     return (
       <div className="ds-automations">
-        <div className="ds-panel-title">Email Sequence: New Lead Follow-Up</div>
+        <div className="ds-panel-title">Follow-Up Sequence: New Lead</div>
         <div className="ds-sequence">
           <div className="ds-step active">
             <div className="ds-step-badge">1</div>
@@ -389,9 +364,9 @@ function DemoPreview() {
         </div>
         <div className="demo-preview-cta reveal">
           <div className="section-label">Demo</div>
-          <h2 className="section-title">Try Our Demo</h2>
+          <h2 className="section-title">See It In Action</h2>
           <Link to="/demo" className="btn-primary">
-            Book a Demo {"\u2192"}
+            Book a Demo {"→"}
           </Link>
         </div>
       </div>
@@ -492,6 +467,11 @@ export default function Home() {
   return (
     <div className="landing-page">
       <Helmet>
+        <title>AgentNexLiFy &mdash; AI Staff for Small Businesses</title>
+        <meta
+          name="description"
+          content="AgentNexLiFy gives your small business an AI staff that handles sales follow-ups, booking, invoicing, and marketing from one chat. Your website widget captures customers 24/7. Start free."
+        />
         <link rel="canonical" href="https://agentnexlify.com/" />
         <meta
           name="google-site-verification"
@@ -504,7 +484,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "url": "https://agentnexlify.com",
   "logo": "https://agentnexlify.com/logo.png",
-  "description": "Your 24/7 AI employee that answers customers, captures leads, books appointments, and follows up automatically.",
+  "description": "AI staff for small businesses. Handles follow-ups, bookings, invoicing, and marketing from one chat. Website widget captures customers 24/7.",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Clemson",
@@ -525,7 +505,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "AI-powered business automation platform.",
+  "description": "AI-powered business operating system for small businesses.",
   "url": "https://agentnexlify.com",
   "offers": [
     { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
@@ -548,14 +528,13 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Every plan builds on the previous tier. Free includes the chat widget, customer capture, and FAQ knowledge base. Growth starts at $99/month and includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional is $150/month with the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise is $250/month with AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
-    { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "Not at all. We handle 100% of the setup, integration, and ongoing management." } },
-    { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. We also integrate with Twilio for SMS and Stripe for payments." } },
-
-    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely! We suggest starting with Growth and upgrading within a few months as your business scales. You can change your plan anytime from the Billing page." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Free includes the chat widget, customer capture, and FAQ knowledge base. Growth is $99/month with a 7-day free trial, booking, SMS, auto follow-up, and the AI content writer. Professional is $150/month with SEO suite, social media, campaigns, and advanced analytics. Enterprise is $250/month with AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "None. You run your business by talking to your AI staff the way you would a real employee. The right department picks it up and shows you the work before anything goes out." } },
+    { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. Twilio for SMS and Stripe for payments." } },
+    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Start free or on Growth and upgrade as your business grows. Change plans anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
-    { "@type": "Question", "name": "What if AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Emails are drafted for your approval before sending. Your AI assistant helps identify promising customers - you decide how to follow up." } },
-    { "@type": "Question", "name": "How is this different from Zapier or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "Those are tools you have to build and manage yourself. Agent NexLiFy is a done-for-you service." } }
+    { "@type": "Question", "name": "What if the AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Every email, text, and invoice sits in your approvals queue until you review it. Nothing reaches a customer without your say-so." } },
+    { "@type": "Question", "name": "How is this different from GoHighLevel or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "GoHighLevel takes real time to configure. ChatGPT is a general tool you have to build around yourself. AgentNexLiFy is done-for-you: describe what you need in plain language, an AI department picks it up, and you review the work before it goes out." } }
   ]
 }
         `}</script>
@@ -626,27 +605,24 @@ export default function Home() {
         <div className="container">
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
+              <div className="lp-hero-badge reveal">
+                <span className="lp-hero-badge-dot" />
+                AI staff, not another tool to learn
+              </div>
               <h1 className="reveal">
-                Your hardest working employee that dosen't stop. It answers,
-                follows up, and continues to push the buisness forward{" "}
-                <span className="accent-gradient">around the clock.</span>
+                Run your business by{" "}
+                <span className="accent-gradient">talking to your AI staff.</span>
               </h1>
               <p
-                className="reveal"
-                style={{
-                  marginTop: "1rem",
-                  marginBottom: "1.5rem",
-                  color: "var(--text-secondary)",
-                  maxWidth: 560,
-                }}
+                className="lp-hero-sub reveal"
               >
-                Your 24/7 AI front desk that talks to customers, captures leads,
-                books appointments, and follows up automatically. Install in 30
-                seconds. Start free, then from $99/mo.
+                Eight AI departments handle follow-ups, bookings, invoices, and
+                marketing. Your 24/7 website widget captures customers while you
+                sleep. You approve everything from one chat.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
-                  Embed widget free {"\u2192"}
+                  Start free {"→"}
                 </Link>
                 <a href="#how-it-works" className="btn-secondary">
                   See how it works
@@ -654,24 +630,21 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Animated Widget Mockup */}
+            {/* Agent OS chat mockup */}
             <div className="widget-mockup reveal">
               <div className="widget-mockup-header">
                 <div className="widget-mockup-avatar">AI</div>
                 <div className="widget-mockup-header-text">
-                  <div className="widget-mockup-name">Your Business</div>
+                  <div className="widget-mockup-name">Agent OS</div>
                   <div className="widget-mockup-status">
                     <span className="widget-mockup-status-dot"></span>
-                    Online
+                    8 departments ready
                   </div>
                 </div>
               </div>
               <div className="widget-mockup-body">
-                <div className="wm-msg wm-msg-bot">
-                  Hi! How can I help you today?
-                </div>
                 <div className="wm-msg wm-msg-user">
-                  Hi, I&apos;d like to book a reservation for this Saturday
+                  Follow up with yesterday&apos;s leads who asked for a quote
                 </div>
                 <div className="wm-typing" aria-hidden="true">
                   <span></span>
@@ -679,11 +652,14 @@ export default function Home() {
                   <span></span>
                 </div>
                 <div className="wm-msg wm-msg-bot">
-                  I&apos;d love to help! Could I get your name?
+                  Found 3 leads. Drafting follow-ups now&mdash;I&apos;ll show
+                  you each one before anything sends.
                 </div>
-                <div className="wm-msg wm-msg-user">Sarah Johnson</div>
+                <div className="wm-msg wm-msg-user">
+                  Also send an invoice to the Hendersons for the job we finished
+                </div>
                 <div className="wm-msg wm-msg-bot">
-                  Thanks Sarah! Let me check availability for Saturday...
+                  Invoice drafted for $1,840. Ready for your review.
                 </div>
               </div>
             </div>
@@ -697,39 +673,43 @@ export default function Home() {
           <div className="lp-how-header">
             <div className="section-label reveal">How It Works</div>
             <h2 className="section-title reveal">
-              Easy setup in 3 simple steps.
+              One chat. Your whole business.
             </h2>
           </div>
           <div className="lp-how-steps">
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">1</div>
-              <h3>Tell Us About Your Business</h3>
+              <h3>Tell your AI staff about your business</h3>
               <p>
-                Answer a few quick questions about your services, hours, and
-                what you want customers to know.
+                Answer a few questions about your services, prices, and how you
+                work. The system builds a knowledge base so every department
+                knows your business from day one.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">2</div>
-              <h3>Add the Widget</h3>
+              <h3>Add the widget to your website</h3>
               <p>
-                Place the chat widget on your site. We can help with the
-                install, and you do not need to learn new software.
+                One small piece of code goes on your site. Your 24/7 AI front
+                desk answers visitors, captures their details, and books
+                appointments&mdash;even at 11 PM.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
-              <h3>Start Helping Customers</h3>
+              <h3>Talk to your team, approve the work</h3>
               <p>
-                Your assistant starts answering, collecting leads, and following
-                up around the clock. You can review everything anytime.
+                Log in and describe what you need: &ldquo;follow up with this
+                week&apos;s leads,&rdquo; &ldquo;draft an invoice.&rdquo; The
+                right department picks it up. You review and approve before
+                anything goes out.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ============ FEATURES ============ */}
+      {/* ============ FEATURES / DEPARTMENTS ============ */}
       <section
         className="section"
         id="features"
@@ -737,208 +717,152 @@ export default function Home() {
       >
         <div className="container">
           <div className="lp-features-header">
-            <div className="section-label reveal">Features</div>
+            <div className="section-label reveal">Departments</div>
             <h2 className="section-title reveal">
-              Automate your workflows or grow your marketing - one platform
-              handles both.
+              Eight departments. One conversation.
             </h2>
+            <p className="section-subtitle reveal" style={{ margin: "0 auto" }}>
+              Every part of running a small business, handled by AI staff that
+              knows your business and waits for your approval before acting.
+            </p>
           </div>
           <div className="lp-features-grid">
+            {/* Front Desk */}
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  <line x1="11" y1="8" x2="11" y2="14" />
-                  <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
-              </div>
-              <h3>SEO Audit and Optimization</h3>
-              <p>
-                Identify what&apos;s holding your site back and get clear steps
-                to improve your rankings.
-              </p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-              </div>
-              <h3>AI Content Writer</h3>
-              <p>
-                Create blogs, social posts, and marketing content in minutes.
-              </p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                  <polyline points="16 6 12 2 8 6" />
-                  <line x1="12" y1="2" x2="12" y2="15" />
-                </svg>
-              </div>
-              <h3>Social Media Marketing</h3>
-              <p>
-                Plan, schedule, and manage your social presence across
-                platforms.
-              </p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-              </div>
-              <h3>Email and SMS Campaigns</h3>
-              <p>
-                Reach the right people at the right time with targeted
-                campaigns.
-              </p>
-            </div>
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
-              <h3>Customer Capture</h3>
+              <h3>Front Desk Widget</h3>
               <p>
-                Never miss a lead. Your website engages visitors and captures
-                interest 24/7.
+                Answers customer questions on your website 24/7, captures
+                contact details, and books appointments on the spot. Every
+                conversation feeds your AI staff automatically.
               </p>
             </div>
+            {/* Sales */}
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+              </div>
+              <h3>Sales Follow-Up</h3>
+              <p>
+                Drafts follow-up emails and texts for every lead, times them
+                correctly, and moves prospects toward booked work. You approve
+                before anything sends.
+              </p>
+            </div>
+            {/* Operations */}
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
               </div>
-              <h3>Appointment Booking</h3>
-              <p>Let customers book instantly without the back and forth.</p>
+              <h3>Operations</h3>
+              <p>
+                Keeps scheduling, appointments, and day-to-day tasks moving.
+                Ask what&apos;s on your calendar this week and get a plain-English
+                answer in seconds.
+              </p>
             </div>
+            {/* Invoicing */}
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </div>
+              <h3>Invoicing</h3>
+              <p>
+                Drafts invoices, sends payment reminders, and chases overdue
+                balances. Say &ldquo;send an invoice to the Hendersons&rdquo; and it
+                handles the rest.
+              </p>
+            </div>
+            {/* Marketing */}
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+              </div>
+              <h3>Marketing</h3>
+              <p>
+                Writes campaigns, social posts, and promotions in your voice.
+                Schedule posts across platforms without leaving your dashboard.
+              </p>
+            </div>
+            {/* Memory */}
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <ellipse cx="12" cy="5" rx="9" ry="3" />
+                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                </svg>
+              </div>
+              <h3>Business Memory</h3>
+              <p>
+                Learns your customers, prices, preferences, and how you like
+                things done. Less repeating yourself over time. Every fact is
+                visible and editable in the Memory panel.
+              </p>
+            </div>
+            {/* Customer Data */}
+            <div className="lp-feature-card reveal">
+              <div className="lp-feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </div>
-              <h3>Customer Pipeline</h3>
+              <h3>Customer Records</h3>
               <p>
-                All your leads in one place, scored and organized so you know
-                who to focus on.
+                All your leads and customers in one place, scored and organized
+                so you know who to focus on. Pipeline view shows every deal and
+                where it stands.
               </p>
             </div>
+            {/* Approval Control */}
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 11 12 14 22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                 </svg>
               </div>
-              <h3>Analytics and Reporting</h3>
-              <p>Track leads, conversions, and performance in real time.</p>
+              <h3>Approval Control</h3>
+              <p>
+                Nothing reaches a customer until you approve it. Review every
+                email, text, and invoice in your queue. Turn on auto-send for
+                routine items when you&apos;re ready to.
+              </p>
             </div>
+            {/* SEO & Online Presence */}
             <div className="lp-feature-card reveal">
               <div className="lp-feature-icon" aria-hidden="true">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="2" y1="12" x2="22" y2="12" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </div>
-              <h3>Hosted Business Page</h3>
-              <p>Launch a professional online presence in minutes.</p>
+              <h3>SEO and Online Presence</h3>
+              <p>
+                Audits your website, tracks your keyword rankings, and gives
+                you clear steps to show up higher in search. Includes a hosted
+                business page if you need one.
+              </p>
             </div>
           </div>
         </div>
@@ -950,11 +874,11 @@ export default function Home() {
           <div className="lp-pricing-header">
             <div className="section-label reveal">Pricing</div>
             <h2 className="section-title reveal">
-              One platform. Every tool your business needs.
+              AI staff from $0. No setup fees.
             </h2>
             <p className="section-subtitle reveal">
-              CRM, marketing, SEO, social media, and AI automation - all
-              included. Hands-on setup and ongoing support with every plan.
+              Start free and add departments as your business grows. Every paid
+              plan includes hands-on onboarding and ongoing optimization.
             </p>
           </div>
           <div className="lp-pricing-grid">
@@ -989,8 +913,8 @@ export default function Home() {
                 onClick={() => trackPricingEvent("cta_click", "free")}
               >
                 {pricingVariant === "variant_b"
-                  ? "Try It Free \u2014 2-Minute Setup \u2192"
-                  : "Get Started \u2192"}
+                  ? "Try It Free — 2-Minute Setup →"
+                  : "Get Started →"}
               </Link>
             </div>
 
@@ -1022,7 +946,7 @@ export default function Home() {
                 <li>Basic analytics &amp; reporting</li>
                 <li>Email support</li>
               </ul>
-              <StripeCta plan="growth">Get Started {"\u2192"}</StripeCta>
+              <StripeCta plan="growth">Get Started {"→"}</StripeCta>
             </div>
 
             {/* Professional - Most Popular */}
@@ -1054,13 +978,13 @@ export default function Home() {
                 <li>Advanced analytics &amp; insights</li>
                 <li>Priority email &amp; chat support</li>
               </ul>
-              <StripeCta plan="professional">Get Started {"\u2192"}</StripeCta>
+              <StripeCta plan="professional">Get Started {"→"}</StripeCta>
             </div>
 
             {/* Enterprise */}
             <div className="lp-pricing-card reveal">
               <div className="lp-pricing-plan-name">Enterprise</div>
-              <div className="lp-pricing-tagline">Your full AI employee</div>
+              <div className="lp-pricing-tagline">Your full AI staff</div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$250</span>
                 <span className="lp-pricing-period">/month</span>
@@ -1085,7 +1009,7 @@ export default function Home() {
                 <li>Full analytics suite</li>
                 <li>Dedicated account manager</li>
               </ul>
-              <StripeCta plan="enterprise">Get Started {"\u2192"}</StripeCta>
+              <StripeCta plan="enterprise">Get Started {"→"}</StripeCta>
             </div>
           </div>
           <p className="lp-pricing-footer-note reveal">
@@ -1098,10 +1022,15 @@ export default function Home() {
       {/* ============ FINAL CTA ============ */}
       <section className="lp-cta-section" id="cta">
         <div className="container lp-cta-content">
-          <h2 className="section-title reveal">Ready to book more jobs?</h2>
+          <h2 className="section-title reveal">
+            Your AI staff is ready to start today.
+          </h2>
+          <p className="section-subtitle reveal" style={{ margin: "0 auto 32px", textAlign: "center" }}>
+            Free to start. No credit card. Takes 2 minutes to set up.
+          </p>
           <div className="lp-cta-buttons reveal">
             <Link to="/signup" className="btn-primary">
-              Get Started {"\u2192"}
+              Get Started Free {"→"}
             </Link>
             <Link to="/demo" className="btn-secondary">
               Book a Demo
@@ -1170,7 +1099,7 @@ export default function Home() {
                 alt="Agent NexLiFy Logo"
                 className="lp-footer-brand-logo"
               />
-              <p>A friendly AI assistant for your business.</p>
+              <p>AI staff for small businesses. One chat handles everything.</p>
             </div>
             <div className="lp-footer-col">
               <h4>Product</h4>
@@ -1179,7 +1108,7 @@ export default function Home() {
                   <a href="#how-it-works">How It Works</a>
                 </li>
                 <li>
-                  <a href="#features">Features</a>
+                  <a href="#features">Departments</a>
                 </li>
                 <li>
                   <a href="#faq">FAQ</a>
@@ -1225,15 +1154,15 @@ export default function Home() {
       {showFloatingCta && !floatingCtaDismissed && (
         <div className="lp-floating-cta">
           <Link to="/signup" className="lp-floating-cta-link">
-            <span className="floating-cta-full">Try our AI assistant free</span>
-            <span className="floating-cta-short">Try Out Our AI Assistant</span>
+            <span className="floating-cta-full">Start with AI staff free</span>
+            <span className="floating-cta-short">Try Out Our AI Staff</span>
           </Link>
           <button
             className="lp-floating-cta-close"
             onClick={dismissFloatingCta}
             aria-label="Dismiss"
           >
-            {"\u00D7"}
+            {"×"}
           </button>
         </div>
       )}
