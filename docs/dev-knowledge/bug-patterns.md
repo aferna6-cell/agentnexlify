@@ -2925,3 +2925,22 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/config.py,backend/main.py,backend/routers/channels_facebook.py,backend/routers/channels_instagram.py,backend/routers/gbp.py,backend/routers/integrations.py,backend/routers/os_files.py,backend/services/account_deletion.py,backend/services/image_gen.py,backend/services/tenant_scope.py,backend/tests/test_channels_instagram.py,backend/tests/test_os_files.py,docs/dev-knowledge/schema-log.md,frontend/src/components/os/ComposerAttachments.jsx,frontend/src/pages/AgentOS.jsx,frontend/src/pages/Home.jsx,frontend/src/pages/IntegrationsPage.jsx,frontend/src/styles/home.css,frontend/src/utils/api/integrations.js,migrations/138_os_uploads.sql,tests/test_agent_os.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### subconscious: run 2026-06-11 — Fix channels_instagram.py from __future__ + 10 em-dashes → Check 10 auto-wires tonight
+
+Run 55. Winner: AUTONOMOUS-EXECUTABLE production bug fix + em-dash batch.
+7c8825c introduced `from __future__ import annotations` on line 1 of
+channels_instagram.py — ALL Instagram API endpoints currently return 422
+(CLAUDE.md Critical Invariant #5). Same PR + a5c65b5 added 10 em-dash
+violations across 7 JSX files. Combined fix restores check_project_invariants
+exit 0 → triggers Item A (Check 10 pre-commit wire, day 55+ pending) tonight.
+
+Governance: run 54 superseded (a5c65b5 cleared targeted violations as refactor
+side-effect before nightly could execute). runs_implemented stays 16.
+**Date:** 2026-06-11
+**Commit:** ad4f83f
+**Author:** Claude
+**Files Changed:** subconscious/runs/2026-06-11/debate/debate-log.md,subconscious/runs/2026-06-11/ideas/idea-1-fix-future-annotations-instagram.md,subconscious/runs/2026-06-11/ideas/idea-2-wire-check-10-warning-mode.md,subconscious/runs/2026-06-11/ideas/idea-3-fix-10-emdash-violations.md,subconscious/runs/2026-06-11/ideas/idea-4-create-check-widget-sync.md,subconscious/runs/2026-06-11/ideas/idea-5-home-jsx-god-class.md,subconscious/runs/2026-06-11/improvement-backlog.md,subconscious/runs/2026-06-11/run-summary.json,subconscious/runs/2026-06-11/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
