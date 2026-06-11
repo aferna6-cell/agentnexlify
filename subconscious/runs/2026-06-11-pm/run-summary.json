@@ -1,0 +1,70 @@
+{
+  "run": 55,
+  "date": "2026-06-11-pm",
+  "total_runs": 55,
+  "winner": {
+    "title": "Fix check_project_invariants.py false positive (1-line anchor fix) + AUTONOMOUS-EXECUTABLE: fix 10 JSX em-dash violations from PRs #228/232 tonight — unblocks Item A Check 10 wire",
+    "category": "code_health",
+    "confidence": "HIGH",
+    "status": "pending_approval",
+    "autonomous_executable": false,
+    "autonomous_em_dash_batch": true,
+    "implementation_sketch": "subconscious/runs/2026-06-11-pm/winning-concept.md"
+  },
+  "evidence": {
+    "commits_7d": 27,
+    "prs": [
+      "#228 (retire marketing add-on, billing.py refactor)",
+      "#229 (vite hotfix)",
+      "#231 (HTML escaping)",
+      "#232 (Instagram + Agent OS image-gen, 21 files)"
+    ],
+    "check_project_invariants_status": "EXIT 1",
+    "failures": [
+      "FAIL: channels_instagram.py flagged for `from __future__ import annotations` — FALSE POSITIVE (line 209 full-file search catches line 19 warning comment)",
+      "FAIL: 10 em-dash violations in 7 files from PRs #228/232"
+    ],
+    "check_10_wired": false,
+    "widget_sync_status": "PASS (byte-identical)",
+    "check_widget_sync_sh_exists": false,
+    "gh_181_open": true
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Fix check_project_invariants.py false positive + em-dash batch": "SURVIVES → WINNER",
+    "Widget sync guard autonomous failure → human execute": "WEAKENED → Bonus Action B",
+    "Fix GH #181 AMOUNT_TO_PLAN": "KILLED — rejected_paths holds, condition (b) not met"
+  },
+  "governance_corrections": [
+    "run 54 status pending_autonomous → implemented (MemoryPanel.jsx/AgentOS.jsx violations cleared by PR #232)",
+    "runs_implemented 16 → 17",
+    "JSON structure fix: active_directions array declaration was missing from governance.json"
+  ],
+  "parking_lot_additions": [
+    "Check-widget-sync.sh autonomous failure → Bonus Action B (run 50 directive 6 days unexecuted)"
+  ],
+  "moratorium": {
+    "active": true,
+    "day": 41,
+    "max_pending_approvals": 2
+  },
+  "bonus_actions": {
+    "A": "Review and merge PR #183 (billing fix, 18+ day draft) — ~10 min human",
+    "B": "Create scripts/check-widget-sync.sh + wire into pre-push (~10 min human — run 50 autonomous directive 6-day failure confirmed)"
+  },
+  "questions_for_next_run": [
+    "Was check_project_invariants.py:209 false-positive fix applied by human? (grep channels_instagram.py — startswith check present?)",
+    "Did nightly fix the 10 JSX em-dash violations? (check_project_invariants.py exit code — should be 0)",
+    "Did Item A (Check 10) auto-wire in same nightly cycle? (grep scripts/hooks/pre-commit for check_project_invariants)",
+    "Was PR #183 merged? (Bonus Action A)",
+    "Was check-widget-sync.sh created? (Bonus Action B)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-06-11-pm/ideas/ideas.md",
+    "subconscious/runs/2026-06-11-pm/debate/debate-log.md",
+    "subconscious/runs/2026-06-11-pm/winning-concept.md",
+    "subconscious/runs/2026-06-11-pm/improvement-backlog.md",
+    "subconscious/runs/2026-06-11-pm/run-summary.json"
+  ]
+}

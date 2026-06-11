@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-10",
-  "total_runs": 54,
+  "last_run": "2026-06-11-pm",
+  "total_runs": 55,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,13 +16,25 @@
   },
   "active_directions": [
     {
+      "title": "Fix check_project_invariants.py false positive (1-line anchor fix, human ~2 min) + AUTONOMOUS-EXECUTABLE: fix 10 JSX em-dash violations from PRs #228/232 tonight — unblocks Item A Check 10 wire (run 55 winner)",
+      "date": "2026-06-11-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": false,
+      "autonomous_em_dash_batch": true,
+      "category": "code_health",
+      "note": "Run 55 winner. Human executes 1-line Python fix: check_project_invariants.py:209 change from `\"from __future__ import annotations\" in text` (full-file search, false positive) to `any(line.strip().startswith(\"from __future__ import annotations\") for line in text.splitlines())` (anchored to line start). channels_instagram.py:19 has the prohibition as a docstring reminder — causes false positive. 10 JSX em-dash violations from PRs #228/232 (CookieConsent.jsx:5/31, MarketingUpsell.jsx:3, App.jsx:328, Sidebar.test.jsx:27/49, ReferralCard.jsx:24/45, ComposerAttachments.jsx:1, main.jsx:152) — AUTONOMOUS-EXECUTABLE by nightly (same pattern as run 49/8db33df). Both cleared → check_project_invariants.py exits 0 → Item A auto-wires tonight. Implementation sketch: subconscious/runs/2026-06-11-pm/winning-concept.md."
+    },
+    {
       "title": "Fix 3 JSX em-dash violations in Agent OS UI copy (MemoryPanel.jsx:180, AgentOS.jsx:197/224) — AUTONOMOUS-EXECUTABLE, unblocks Item A Check 10 wire (run 54 winner)",
       "date": "2026-06-10",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
       "autonomous_executable": true,
+      "implemented_date": "2026-06-11",
+      "implemented_by": "PR #232 (7c8825c) or nightly review post-run-54 — MemoryPanel.jsx/AgentOS.jsx violations not present in current check_project_invariants.py output",
       "category": "code_health",
-      "note": "Run 54 winner. AUTONOMOUS-EXECUTABLE. c8a0460 (Agent OS knowledge graph, 2026-06-10) introduced 3 em-dash violations: MemoryPanel.jsx:180, AgentOS.jsx:197, AgentOS.jsx:224. check_project_invariants.py exits 1 — blocks Item A (Check 10 pre-commit wire, pending_autonomous since run 22). Same mechanism as run 49 winner (8db33df fixed 5 violations autonomously 2026-06-05). Nightly autonomous channel confirmed active: Check 12 added tonight by ca3ce68. Fix: replace 3 em-dash characters with hyphens → exits 0 → Item A auto-wires tonight → future violations caught at commit. Full implementation sketch: subconscious/runs/2026-06-10/winning-concept.md."
+      "note": "Run 54 winner. IMPLEMENTED — violations from c8a0460 (MemoryPanel.jsx:180, AgentOS.jsx:197/224) no longer appear in check_project_invariants.py output after PR #232 landed. New violations from PR #228/232 (10 in 7 different files) — addressed by run 55 winner. Governance correction applied run 55."
     },
     {
       "title": "Create backend/tests/test_os_action_dispatch.py — 5 mock-based tests for queue_action_for_run() (AUTONOMOUS-EXECUTABLE, run 53 winner)",
@@ -833,13 +845,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 16,
-    "runs_pending_approval_raw": 16,
-    "runs_pending_approval_note": "Run 54 (2026-06-10): Run 53 winner IMPLEMENTED by nightly c6805a5 \u2014 test_os_action_dispatch.py created. Run 54 winner added as pending_autonomous (em-dash fix, does not increase human-required count). Moratorium day 40+. Items A+B still pending_autonomous. PR #183 (billing) not merged (18 days). PR #209 (security timing fix) not merged (4 days). PR #200 (autonomous chain) not merged (8 days). True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181, PRs #209/#200.",
-    "runs_implemented": 16,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 55)",
-    "governance_correction": "Run 54 (2026-06-10): runs_implemented 15\u219216 (c6805a5 confirms run 53 test_os_action_dispatch.py created). Run 53 status corrected pending_autonomous\u2192implemented. New em-dash violations introduced by c8a0460 in Agent OS UI \u2014 same pattern as pre-run-49 violations. Parking lot additions: tenant scope checklist (ROI 2.0), cross-tenant isolation test (ROI 2.1), kb-autopopulate fix (ROI 1.8).",
-    "note": "Moratorium exit path: Merge PRs #209+#200+#183 (~20 min human) \u2192 Items A+B auto-execute tonight + em-dash fix unblocks Check 10 wire \u2192 email_sequences split unblocked \u2192 pending drops. Three 5-10 min PR merges are the critical path.",
+    "runs_pending_approval": 17,
+    "runs_pending_approval_raw": 17,
+    "runs_pending_approval_note": "Run 55 (2026-06-11-pm): Run 54 winner (3 JSX em-dash violations in MemoryPanel.jsx/AgentOS.jsx) IMPLEMENTED \u2014 violations not present in check_project_invariants.py output after PR #232 (governance correction applied). NEW blocker: check_project_invariants.py:209 false positive \u2014 channels_instagram.py:19 warning comment caught by full-file text search. 10 new JSX em-dash violations from PRs #228/232 (7 files). Run 55 winner: 1-line human Python fix + AUTONOMOUS em-dash batch tonight. Moratorium day 41+. Items A+B still pending_autonomous. PR #183 (billing) not merged (19+ days). check-widget-sync.sh MISSING despite run 50 autonomous directive 6 days ago. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181.",
+    "runs_implemented": 17,
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 56)",
+    "governance_correction": "Run 55 (2026-06-11-pm): run 54 status pending_autonomous\u2192implemented (MemoryPanel.jsx/AgentOS.jsx violations not present in check_project_invariants.py output \u2014 cleared by PR #232 or nightly post-run-54). runs_implemented 16\u219217. False positive discovered: check_project_invariants.py:209 `\"from __future__ import annotations\" in text` (full-file search) catches channels_instagram.py:19 warning comment. Fix: per-line startswith check. 10 new JSX em-dash violations from PRs #228/232 in 7 files. Parking lot additions run 55: check-widget-sync.sh autonomous failure \u2192 Bonus Action B.",
+    "note": "Moratorium exit path: Human applies 1-line Python fix to check_project_invariants.py:209 \u2192 nightly fixes 10 JSX em-dashes \u2192 Item A (Check 10) auto-wires tonight. PR #183 merge (~10 min) closes GH #181. Bonus: create check-widget-sync.sh (~10 min). Implementation sketch: subconscious/runs/2026-06-11-pm/winning-concept.md.",
     "escalate": true
   },
   "config": {
