@@ -53,6 +53,7 @@ export default function SettingsPage({ onNavigate }) {
     daily_briefing_enabled: false,
     noshow_recovery_enabled: true,
     os_auto_send_enabled: false,
+    os_auto_send_rules: {},
     website_url: "",
     textback_enabled: false,
     textback_message:
@@ -114,6 +115,7 @@ export default function SettingsPage({ onNavigate }) {
         daily_briefing_enabled: tenant.daily_briefing_enabled || false,
         noshow_recovery_enabled: tenant.noshow_recovery_enabled !== false,
         os_auto_send_enabled: tenant.os_auto_send_enabled || false,
+        os_auto_send_rules: tenant.os_auto_send_rules || {},
         website_url: tenant.website_url || "",
         textback_enabled: tenant.textback_enabled || false,
         textback_message:

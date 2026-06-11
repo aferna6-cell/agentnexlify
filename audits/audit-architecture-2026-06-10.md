@@ -28,7 +28,7 @@ The add-on was removed 2026-06-10; four columns (`marketing_addon_active/_grandf
 ## LOW
 
 **L1.** `widget_chat.py` 1,299 — hot path, working, heavily tested; split only with strong cause.
-**L2.** Sidebar still carries retired plan-name display entries (`foundation`, `operations` in planLabels/planColors) — harmless display fallback for legacy JWTs; delete when JWT TTL guarantees no legacy tokens (24h — could go now, S).
+**L2.** ~~Retired plan-name sidebar entries~~ — already removed by a prior commit (verified absent 2026-06-11).
 **L3.** `tests/` vs `backend/tests/` cross-contamination: combining both suites in ONE pytest process fails 2 widget tests (pre-existing, verified on pre-change tree). CI runs them separately; document or isolate fixtures. Effort: M.
 
 ## Verified non-issues
@@ -59,7 +59,7 @@ The add-on was removed 2026-06-10; four columns (`marketing_addon_active/_grandf
 - `@xyflow/react` dep with zero imports (orphaned by Chat Flows prune) — **REMOVED this session**.
 - Bulk-send N+1s: `invoices.py:1145-1198` (capped at 50), `leads.py:714,866` CSV import writes — batch when next touched.
 - `time.sleep` in retry loops: `llm_runtime.py:316`, `managed_agents.py` (async route already offloads via threadpool — verify llm_runtime callers only).
-- `chat_flows.py` router (454 lines) dormant: registered, no page, no API util — removal candidate, confirm with owner.
+- ~~`chat_flows.py` router removal~~ — WRONG premise (verified 2026-06-11): `widget_chat.py:829` and `dashboard_service.py:223` READ chat_flows; MTOptions has live rows. Router stays.
 
 ### Corrections to the lean pass
 - ABTestsPage IS reachable (App.jsx import, plan-gated) — usage check still warranted before deletion.

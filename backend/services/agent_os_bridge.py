@@ -192,8 +192,10 @@ def resolve_deliverable_status(
 
     A draft may only auto-approve when ALL hold:
     1. the engine itself says it needs no approval,
-    2. the tenant opted in (``tenants.os_auto_send_enabled``, default FALSE),
-    3. the agent is not in the never-auto-send set.
+    2. the tenant opted in — a per-agent rule in
+       ``tenants.os_auto_send_rules`` (e.g. {"booking": true}) wins over the
+       global ``os_auto_send_enabled`` flag (both default to off),
+    3. the agent is not in the never-auto-send set (rules cannot override it).
 
     Any read failure resolves to pending_approval — the safe side.
     """
@@ -202,14 +204,19 @@ def resolve_deliverable_status(
     try:
         resp = (
             db.table("tenants")
-            .select("os_auto_send_enabled")
+            .select("os_auto_send_enabled, os_auto_send_rules")
             .eq("id", client_id)
             .limit(1)
             .execute()
         )
         rows = getattr(resp, "data", None) or []
-        if rows and bool(rows[0].get("os_auto_send_enabled")):
-            return "approved"
+        if rows:
+            rules = rows[0].get("os_auto_send_rules") or {}
+            per_agent = rules.get(agent_name) if isinstance(rules, dict) else None
+            if isinstance(per_agent, bool):
+                return "approved" if per_agent else "pending_approval"
+            if bool(rows[0].get("os_auto_send_enabled")):
+                return "approved"
     except Exception:
         logger.warning(
             "agent_os_bridge: auto-send flag read failed; forcing approval gate",

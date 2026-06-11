@@ -85,20 +85,15 @@ export default function OnboardingWizardPage() {
     saveState(step, wizardData);
   }, [step, wizardData]);
 
-  // Track wizard step entries for drop-off analytics (steps 1-7; the
-  // express chooser at step 0 predates the tracking schema)
+  // Track step entries for drop-off analytics (0 = express chooser, 1-7 wizard)
   const prevStep = useRef(step);
   useEffect(() => {
     if (!user?.tenantId || !token) return;
     if (prevStep.current !== step) {
-      if (prevStep.current >= 1) {
-        trackWizardEvent(user.tenantId, token, prevStep.current, "complete");
-      }
+      trackWizardEvent(user.tenantId, token, prevStep.current, "complete");
       prevStep.current = step;
     }
-    if (step >= 1) {
-      trackWizardEvent(user.tenantId, token, step, "enter");
-    }
+    trackWizardEvent(user.tenantId, token, step, "enter");
   }, [step, user?.tenantId, token]);
 
   const goNext = useCallback((updates = {}) => {

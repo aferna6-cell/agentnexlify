@@ -394,24 +394,12 @@ async def send_weekly_digest() -> int:
                 exc_info=True,
             )
 
-        # Leads captured (uses client_id, NOT tenant_id)
-        leads_count = 0
-        try:
-            leads_result = (
-                db.table("leads")
-                .select("id", count="exact")
-                .eq("client_id", tid)
-                .gte("created_at", week_start)
-                .limit(1)
-                .execute()
-            )
-            leads_count = leads_result.count or 0
-        except Exception:
-            logger.warning(
-                "send_weekly_digest: failed to count leads for tenant %s",
-                tid,
-                exc_info=True,
-            )
+        # Value recap (G2): leads, appointments, invoice $ — shared with
+        # the Agent OS insights card via weekly_value.compute_weekly_value.
+        from backend.services.weekly_value import compute_weekly_value
+
+        value = compute_weekly_value(db, tid)
+        leads_count = value["leads_captured"]
 
         # Top question — most common user message (exclude greetings / single chars)
         top_question = "N/A"
@@ -455,39 +443,59 @@ async def send_weekly_digest() -> int:
             )
 
         # ---- Build branded HTML email ----
-        owner_name = tenant.get("owner_name") or "there"
-        biz_name = tenant.get("business_name") or "Your Business"
+        # html.escape everything user/customer-controlled: top_question is
+        # customer-typed chat content (same injection class as the 2026-06-10
+        # approval-notify fix); business/owner names are tenant input.
+        import html as _html
 
-        subject = f"Your weekly chat report — {biz_name}"
+        owner_name = _html.escape(tenant.get("owner_name") or "there")
+        biz_name = _html.escape(tenant.get("business_name") or "Your Business")
 
-        # Truncate top_question for display
-        display_question = (
+        subject = f"What your AI staff got done — {tenant.get('business_name') or 'your business'}"
+
+        display_question = _html.escape(
             top_question if len(top_question) <= 80 else top_question[:77] + "..."
         )
+
+        def _row(label: str, val: str, last: bool = False) -> str:
+            border = "" if last else "border-bottom:1px solid #334155;"
+            return (
+                f"<tr style='{border}'>"
+                f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>{label}</td>"
+                f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{val}</td></tr>"
+            )
+
+        rows = [
+            _row("Leads captured", str(leads_count)),
+            _row("Appointments booked", str(value["appointments_booked"])),
+            _row(
+                "Invoices sent",
+                f"{value['invoices_sent']} (${value['invoices_sent_total']:,.0f})",
+            ),
+            _row(
+                "Invoices paid",
+                f"{value['invoices_paid']} (${value['invoices_paid_total']:,.0f})",
+            ),
+            _row("Tasks your AI staff completed", str(value["agent_runs_completed"])),
+            _row("Conversations handled", str(conversations)),
+            _row(
+                "Top customer question",
+                f"<span style='font-style:italic;font-size:14px;font-weight:normal;'>&ldquo;{display_question}&rdquo;</span>",
+                last=True,
+            ),
+        ]
 
         body_html = (
             f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
             f"<h2 style='color:#1e293b;'>Hi {owner_name},</h2>"
-            f"<p style='color:#374151;'>Here's how your AI assistant performed this week:</p>"
+            f"<p style='color:#374151;'>Here's what your AI staff at {biz_name} got done this week:</p>"
             f"<table style='border-collapse:collapse;width:100%;max-width:500px;margin:16px 0;"
             f"background:#1e293b;border-radius:8px;overflow:hidden;'>"
-            f"<tr style='border-bottom:1px solid #334155;'>"
-            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Conversations</td>"
-            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{conversations}</td></tr>"
-            f"<tr style='border-bottom:1px solid #334155;'>"
-            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Messages</td>"
-            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{messages}</td></tr>"
-            f"<tr style='border-bottom:1px solid #334155;'>"
-            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Leads Captured</td>"
-            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{leads_count}</td></tr>"
-            f"<tr>"
-            f"<td style='padding:12px 16px;color:#94a3b8;font-weight:600;'>Top Question</td>"
-            f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-style:italic;'>"
-            f"&ldquo;{display_question}&rdquo;</td></tr>"
-            f"</table>"
+            + "".join(rows)
+            + f"</table>"
             f"<p style='margin-top:24px;'>"
-            f"<a href='https://app.agentnexlify.com/analytics' "
-            f"style='color:#3b82f6;font-weight:600;text-decoration:none;'>View full analytics &rarr;</a></p>"
+            f"<a href='https://app.agentnexlify.com/dashboard/agent-os' "
+            f"style='color:#6366f1;font-weight:600;text-decoration:none;'>Ask your AI staff for more &rarr;</a></p>"
             f"<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p>"
             f"</div>"
         )

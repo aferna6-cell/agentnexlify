@@ -13,6 +13,7 @@ import {
   autoGenerateKb,
   completeOnboarding,
   buildWizardPayload,
+  trackWizardEvent,
 } from "../../utils/api/onboarding";
 
 const INDUSTRIES = [
@@ -80,6 +81,7 @@ export default function WizardExpressSetup({ user, token, onCustomize }) {
         }),
       );
 
+      trackWizardEvent(tenantId, token, 0, "complete");
       window.location.href = "/dashboard/agent-os";
     } catch (e) {
       setError(e?.message || "Setup failed — try again or customize step by step.");

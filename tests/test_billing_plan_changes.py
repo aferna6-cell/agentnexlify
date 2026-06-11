@@ -57,12 +57,12 @@ def _make_sub(sub_id="sub_test_123", item_id="si_test_item"):
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.log_activity")
-@patch("backend.routers.auth.stripe.Subscription.modify")
-@patch("backend.routers.auth.stripe.Subscription.list")
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.ensure_plan_prices_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.log_activity")
+@patch("backend.routers.auth_billing.stripe.Subscription.modify")
+@patch("backend.routers.auth_billing.stripe.Subscription.list")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.ensure_plan_prices_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_plan_upgrade_calls_stripe_with_create_prorations(
     mock_db_factory,
     mock_prices,
@@ -72,7 +72,7 @@ async def test_plan_upgrade_calls_stripe_with_create_prorations(
     mock_log,
 ):
     """Upgrading from growth → professional passes proration_behavior='create_prorations'."""
-    from backend.routers.auth import billing_change_plan
+    from backend.routers.auth_billing import billing_change_plan
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
@@ -109,12 +109,12 @@ async def test_plan_upgrade_calls_stripe_with_create_prorations(
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.log_activity")
-@patch("backend.routers.auth.stripe.Subscription.modify")
-@patch("backend.routers.auth.stripe.Subscription.list")
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.ensure_plan_prices_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.log_activity")
+@patch("backend.routers.auth_billing.stripe.Subscription.modify")
+@patch("backend.routers.auth_billing.stripe.Subscription.list")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.ensure_plan_prices_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_plan_downgrade_calls_stripe_with_create_prorations(
     mock_db_factory,
     mock_prices,
@@ -124,7 +124,7 @@ async def test_plan_downgrade_calls_stripe_with_create_prorations(
     mock_log,
 ):
     """Downgrading from enterprise → growth also passes proration_behavior='create_prorations'."""
-    from backend.routers.auth import billing_change_plan
+    from backend.routers.auth_billing import billing_change_plan
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
@@ -160,12 +160,12 @@ async def test_plan_downgrade_calls_stripe_with_create_prorations(
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.log_activity")
-@patch("backend.routers.auth.stripe.Subscription.modify")
-@patch("backend.routers.auth.stripe.Subscription.list")
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.ensure_plan_prices_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.log_activity")
+@patch("backend.routers.auth_billing.stripe.Subscription.modify")
+@patch("backend.routers.auth_billing.stripe.Subscription.list")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.ensure_plan_prices_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_plan_change_updates_tenant_db_immediately(
     mock_db_factory,
     mock_prices,
@@ -180,7 +180,7 @@ async def test_plan_change_updates_tenant_db_immediately(
     deferred to the webhook. This means a downgrade takes effect immediately
     in DB even before Stripe fires the subscription.updated event.
     """
-    from backend.routers.auth import billing_change_plan
+    from backend.routers.auth_billing import billing_change_plan
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
@@ -213,9 +213,9 @@ async def test_plan_change_updates_tenant_db_immediately(
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.ensure_plan_prices_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.ensure_plan_prices_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_plan_change_to_same_plan_rejected(
     mock_db_factory,
     mock_prices,
@@ -223,7 +223,7 @@ async def test_plan_change_to_same_plan_rejected(
 ):
     """Trying to change to the same plan raises 400."""
     from fastapi import HTTPException
-    from backend.routers.auth import billing_change_plan
+    from backend.routers.auth_billing import billing_change_plan
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",

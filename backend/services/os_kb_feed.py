@@ -208,6 +208,8 @@ def tenant_kb_entries(db, client_id: str, business_type: str | None) -> list[dic
     """Static business knowledge as KbEntry rows. [] on any failure."""
     entries: list[dict] = vertical_guidance(business_type)
 
+    faq_count = 0
+    reads_ok = True
     try:
         faqs = (
             tenant_table(db, "faq_entries", client_id)
@@ -215,14 +217,17 @@ def tenant_kb_entries(db, client_id: str, business_type: str | None) -> list[dic
             .limit(_FAQ_CAP)
             .execute()
         ).data or []
+        faq_count = len(faqs)
         entries.extend(
             {"topic": f["question"][:160], "answer": (f.get("answer") or "")[:_FAQ_ANSWER_CAP]}
             for f in faqs
             if f.get("question") and f.get("answer")
         )
     except Exception:
+        reads_ok = False
         logger.warning("os_kb_feed: faq read failed", exc_info=True)
 
+    has_website_text = False
     try:
         sites = (
             tenant_table(db, "website_content", client_id)
@@ -233,6 +238,7 @@ def tenant_kb_entries(db, client_id: str, business_type: str | None) -> list[dic
             .execute()
         ).data or []
         if sites and (sites[0].get("extracted_text") or "").strip():
+            has_website_text = True
             entries.append(
                 {
                     "topic": f"website: {sites[0].get('url', '')}"[:160],
@@ -240,6 +246,72 @@ def tenant_kb_entries(db, client_id: str, business_type: str | None) -> list[dic
                 }
             )
     except Exception:
+        reads_ok = False
         logger.warning("os_kb_feed: website content read failed", exc_info=True)
 
+    # Only diagnose gaps when the reads above actually succeeded — a DB blip
+    # must not masquerade as "the business has no knowledge".
+    if reads_ok:
+        gap_entry = _knowledge_gap_entry(db, client_id, faq_count, has_website_text)
+        if gap_entry:
+            entries.append(gap_entry)
+
     return entries
+
+
+def _knowledge_gap_entry(
+    db, client_id: str, faq_count: int, has_website_text: bool
+) -> dict | None:
+    """Self-healing nudge for thin knowledge (express-setup path).
+
+    Express signup promises "we teach your AI staff automatically" — when the
+    crawl came back empty or basics are missing, the staff should close the
+    gaps conversationally instead of answering badly. Returns a guidance
+    entry listing what to ask the owner for, or None when knowledge is fine.
+    """
+    gaps: list[str] = []
+    if not has_website_text and faq_count < 3:
+        gaps.append("what the business does and which services it offers")
+
+    try:
+        tenant = (
+            db.table("tenants")
+            .select("city, phone, business_services")
+            .eq("id", client_id)
+            .limit(1)
+            .execute()
+        ).data
+        t = tenant[0] if tenant else {}
+        if not (t.get("business_services") or []):
+            gaps.append("the list of services offered (with rough prices if possible)")
+        if not (t.get("city") or "").strip():
+            gaps.append("which city/area the business serves")
+        if not (t.get("phone") or "").strip():
+            gaps.append("the business phone number")
+        hours = (
+            db.table("business_hours")
+            .select("id")
+            .eq("tenant_id", client_id)
+            .limit(1)
+            .execute()
+        ).data
+        if not hours:
+            gaps.append("the business hours")
+    except Exception:
+        # Can't verify — claim nothing rather than fabricate gaps.
+        logger.warning("os_kb_feed: gap detection read failed", exc_info=True)
+        return None
+
+    if not gaps:
+        return None
+    gap_list = "; ".join(dict.fromkeys(gaps))
+    return {
+        "topic": "setup gaps — gather these from the owner",
+        "answer": (
+            "Your knowledge about this business is incomplete. Still missing: "
+            f"{gap_list}. When the owner chats with you, weave ONE of these "
+            "questions naturally into your reply (never interrogate with a "
+            "list) and note the answer so it sticks. Until you know a fact, "
+            "say so plainly instead of guessing."
+        ),
+    }

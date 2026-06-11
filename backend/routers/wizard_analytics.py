@@ -15,7 +15,9 @@ router = APIRouter(prefix="/api/v1/wizard", tags=["wizard"])
 
 
 class WizardEvent(BaseModel):
-    step: int = Field(..., ge=1, le=6)
+    # 0 = express-setup chooser; 1-7 = wizard steps. The old le=6 bound
+    # silently 422'd every step-7 (embed) event since the wizard shipped.
+    step: int = Field(..., ge=0, le=7)
     action: str = Field(..., pattern="^(enter|complete|skip|abandon)$")
 
 

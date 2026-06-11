@@ -46,6 +46,9 @@ def test_client(mock_settings):
         patch("backend.models.database.get_supabase", return_value=db_mock),
         patch("backend.routers.auth.get_service_supabase", return_value=db_mock),
         patch("backend.routers.auth.settings", mock_settings),
+        # billing endpoints moved to auth_billing (2026-06-11 god-file split)
+        patch("backend.routers.auth_billing.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.auth_billing.settings", mock_settings),
         patch("backend.routers.leads.get_service_supabase", return_value=db_mock),
         patch("backend.routers.appointments.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_chat.get_service_supabase", return_value=db_mock),
