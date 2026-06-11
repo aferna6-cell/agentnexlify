@@ -3,38 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
-const PAID_PLANS = new Set(["growth", "professional", "enterprise"]);
+const PAID_PLANS = new Set(["growth", "autopilot", "professional", "enterprise"]);
 
-const INDUSTRIES = [
-  { value: "other", label: "General Business / Not Sure Yet" },
-  { value: "accounting", label: "Accounting" },
-  { value: "auto_shop", label: "Auto Shop" },
-  { value: "bakery", label: "Bakery" },
-  { value: "bar_nightclub", label: "Bar / Nightclub" },
-  { value: "cafe", label: "Café / Coffee Shop" },
-  { value: "catering", label: "Catering" },
-  { value: "chiropractic", label: "Chiropractic" },
-  { value: "cleaning", label: "Cleaning Services" },
-  { value: "dental", label: "Dental" },
-  { value: "electrical", label: "Electrical" },
-  { value: "fitness", label: "Fitness" },
-  { value: "food_truck", label: "Food Truck" },
-  { value: "hvac", label: "HVAC" },
-  { value: "landscaping", label: "Landscaping" },
-  { value: "legal", label: "Legal" },
-  { value: "medical", label: "Medical" },
-  { value: "moving", label: "Moving" },
-  { value: "pest_control", label: "Pest Control" },
-  { value: "photography", label: "Photography" },
-  { value: "plumbing", label: "Plumbing" },
-  { value: "realestate", label: "Real Estate" },
-  { value: "restaurant", label: "Restaurant" },
-  { value: "roofing", label: "Roofing" },
-  { value: "salon", label: "Salon" },
-  { value: "tutoring", label: "Tutoring" },
-  { value: "veterinary", label: "Veterinary" },
-];
-
+// 4 fields and you're in. Industry, website, city, and phone moved into the
+// /setup flow (express or wizard) — asking them twice killed the old funnel.
 export default function SignupPage() {
   const [searchParams] = useSearchParams();
   const requestedPlan = (searchParams.get("plan") || "").toLowerCase();
@@ -49,13 +21,9 @@ export default function SignupPage() {
     business_name: "",
     owner_name: googleName,
     email: googleEmail,
-    phone: "",
-    website_url: "",
-    industry: "other",
-    city: "",
     password: "",
-    confirmPassword: "",
   }));
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -79,13 +47,24 @@ export default function SignupPage() {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
+  function passwordProblem(pw) {
+    if (pw.length < 10) return "Password needs at least 10 characters.";
+    if (!/[A-Z]/.test(pw)) return "Password needs an uppercase letter.";
+    if (!/[a-z]/.test(pw)) return "Password needs a lowercase letter.";
+    if (!/[0-9]/.test(pw)) return "Password needs a number.";
+    return "";
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
 
-    if (!isGoogleSignup && form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
-      return;
+    if (!isGoogleSignup) {
+      const problem = passwordProblem(form.password);
+      if (problem) {
+        setError(problem);
+        return;
+      }
     }
 
     setLoading(true);
@@ -97,19 +76,11 @@ export default function SignupPage() {
         ? {
             setup_token: googleSetupToken,
             business_name: form.business_name,
-            phone: form.phone || undefined,
-            website_url: form.website_url || undefined,
-            industry: form.industry,
-            city: form.city,
           }
         : {
             business_name: form.business_name,
             owner_name: form.owner_name,
             email: form.email,
-            phone: form.phone || undefined,
-            website_url: form.website_url || undefined,
-            industry: form.industry,
-            city: form.city,
             password: form.password,
             ref_code: refCode || undefined,
           };
@@ -122,7 +93,12 @@ export default function SignupPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Registration failed");
+        const detail = data.detail;
+        throw new Error(
+          typeof detail === "string"
+            ? detail
+            : detail?.[0]?.msg || detail?.message || "Registration failed",
+        );
       }
 
       const { token, tenant_id } = await res.json();
@@ -180,10 +156,10 @@ export default function SignupPage() {
       ? "Finishing setup..."
       : "Creating account..."
     : checkoutPlan
-      ? `Continue to ${checkoutPlan[0].toUpperCase()}${checkoutPlan.slice(1)} checkout`
+      ? "Continue to checkout"
       : isGoogleSignup
         ? "Finish Google Signup"
-        : "Get Started Free";
+        : "Meet your AI staff";
 
   return (
     <div className="login-page">
@@ -191,8 +167,8 @@ export default function SignupPage() {
         <h1 className="login-title">AgentNexLiFy</h1>
         <p className="login-subtitle">
           {checkoutPlan
-            ? `Create your account to continue with the ${checkoutPlan[0].toUpperCase()}${checkoutPlan.slice(1)} plan`
-            : "Create your free account"}
+            ? "Create your account to continue to checkout"
+            : "Hire your AI staff in under 2 minutes — free"}
         </p>
         {!isGoogleSignup ? (
           <>
@@ -213,7 +189,7 @@ export default function SignupPage() {
           </>
         ) : (
           <div style={{ marginBottom: "1rem", padding: "0.875rem 1rem", borderRadius: 12, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "var(--text-secondary)" }}>
-            Using Google account <strong style={{ color: "var(--text-primary)" }}>{googleEmail}</strong>. Finish your business setup below.
+            Using Google account <strong style={{ color: "var(--text-primary)" }}>{googleEmail}</strong>. One more field and you're in.
           </div>
         )}
         <form onSubmit={handleSubmit}>
@@ -227,96 +203,65 @@ export default function SignupPage() {
               required
             />
           </div>
-          <div className="login-field">
-            <label>Your Name</label>
-            <input
-              className="login-input"
-              value={form.owner_name}
-              onChange={update("owner_name")}
-              placeholder="Jane Smith"
-              required
-              readOnly={isGoogleSignup}
-            />
-          </div>
-          <div className="login-field">
-            <label>Email</label>
-            <input
-              type="email"
-              className="login-input"
-              value={form.email}
-              onChange={update("email")}
-              placeholder="you@company.com"
-              required
-              readOnly={isGoogleSignup}
-            />
-          </div>
-          <div className="login-field">
-            <label>Phone <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></label>
-            <input
-              type="tel"
-              className="login-input"
-              value={form.phone}
-              onChange={update("phone")}
-              placeholder="(555) 123-4567"
-            />
-          </div>
-          <div className="login-field">
-            <label>Website <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></label>
-            <input
-              type="url"
-              className="login-input"
-              value={form.website_url}
-              onChange={update("website_url")}
-              placeholder="https://yoursite.com"
-            />
-          </div>
-          <div className="login-field">
-            <label>Industry</label>
-            <select
-              className="login-input"
-              value={form.industry}
-              onChange={update("industry")}
-            >
-              {INDUSTRIES.map((i) => (
-                <option key={i.value} value={i.value}>
-                  {i.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="login-field">
-            <label>City</label>
-            <input
-              className="login-input"
-              value={form.city}
-              onChange={update("city")}
-              placeholder="New York"
-            />
-          </div>
           {!isGoogleSignup && (
             <>
               <div className="login-field">
-                <label>Password</label>
+                <label>Your Name</label>
                 <input
-                  type="password"
                   className="login-input"
-                  value={form.password}
-                  onChange={update("password")}
-                  placeholder="Min. 8 characters"
-                  minLength={8}
+                  value={form.owner_name}
+                  onChange={update("owner_name")}
+                  placeholder="Jane Smith"
                   required
                 />
               </div>
               <div className="login-field">
-                <label>Confirm Password</label>
+                <label>Email</label>
                 <input
-                  type="password"
+                  type="email"
                   className="login-input"
-                  value={form.confirmPassword}
-                  onChange={update("confirmPassword")}
-                  placeholder="Re-enter password"
+                  value={form.email}
+                  onChange={update("email")}
+                  placeholder="you@company.com"
                   required
                 />
+              </div>
+              <div className="login-field">
+                <label>Password</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="login-input"
+                    value={form.password}
+                    onChange={update("password")}
+                    placeholder="10+ characters"
+                    minLength={10}
+                    required
+                    style={{ paddingRight: "3.5rem", width: "100%", boxSizing: "border-box" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      padding: "4px",
+                    }}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
+                  At least 10 characters with an uppercase letter, a lowercase letter, and a number.
+                </p>
               </div>
             </>
           )}

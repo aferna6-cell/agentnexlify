@@ -325,17 +325,17 @@ async def _run_signup_side_effects(
             subject="Welcome to AgentNexLiFy!",
             body_html=(
                 f"<h2>Welcome to AgentNexLiFy, {owner_name or 'there'}!</h2>"
-                "<p>Your AI-powered business automation platform is ready to go.</p>"
-                "<p><strong>Here's what to do next:</strong></p>"
+                "<p>Your AI staff is ready. Ask them to send invoices, follow up "
+                "with leads, draft posts, and book appointments &mdash; just by typing.</p>"
+                "<p><strong>Try this first:</strong></p>"
                 "<ol>"
-                "<li>Configure your AI assistant with your business info and FAQs</li>"
-                "<li>Customize your chat widget's appearance</li>"
-                "<li>Embed the widget on your website with one line of code</li>"
+                "<li>Open the Agent OS and say hi to your AI staff</li>"
+                "<li>Ask: &quot;What can you do for my business?&quot;</li>"
+                "<li>Optional: add the chat widget to your website to capture leads 24/7</li>"
                 "</ol>"
-                "<p>Your AI assistant will start capturing leads and booking appointments automatically.</p>"
-                f"<p><a href='{settings.frontend_url}/dashboard' style='background:#3b82f6;color:#fff;'"
+                f"<p><a href='{settings.frontend_url}/dashboard/agent-os' style='background:#6366f1;color:#fff;"
                 "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
-                "Go to Dashboard &rarr;</a></p>"
+                "Meet your AI staff &rarr;</a></p>"
                 "<p>&mdash; The AgentNexLiFy Team</p>"
             ),
             tenant_id=tenant_id,
@@ -1259,8 +1259,9 @@ async def billing_checkout(
     if source == "wizard":
         # Wizard expanded to 7 steps in Onboarding v2 (added auto-KB step at position 2).
         # success → Embed (step 7); cancel → Plan (step 6).
-        success_url = f"{settings.frontend_url}/onboarding?step=7&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{settings.frontend_url}/onboarding?step=6&cancelled=1"
+        # Wizard order (2026-06-11): Plan is step 5; widget steps 6-7 are optional.
+        success_url = f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/onboarding?step=5&cancelled=1"
     else:
         success_url = f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/billing/cancel"

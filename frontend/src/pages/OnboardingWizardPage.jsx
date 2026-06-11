@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { trackWizardEvent } from "../utils/api/onboarding";
+import WizardExpressSetup from "./wizard/WizardExpressSetup";
 import WizardStepBusiness from "./wizard/WizardStepBusiness";
 import WizardStepAutoKB from "./wizard/WizardStepAutoKB";
 import WizardStepServices from "./wizard/WizardStepServices";
@@ -50,8 +51,10 @@ export default function OnboardingWizardPage() {
   const urlStep = parseInt(urlParams.get("step") || "0", 10);
 
   const saved = loadState();
+  // Step 0 = express setup chooser. Fresh visitors land there; an explicit
+  // ?step= (Stripe return) or saved wizard progress goes straight to the step.
   const [step, setStep] = useState(() =>
-    urlStep >= 1 && urlStep <= TOTAL_STEPS ? urlStep : saved?.step || 1,
+    urlStep >= 1 && urlStep <= TOTAL_STEPS ? urlStep : saved?.step ?? 0,
   );
   const [wizardData, setWizardData] = useState(
     () =>
@@ -82,15 +85,20 @@ export default function OnboardingWizardPage() {
     saveState(step, wizardData);
   }, [step, wizardData]);
 
-  // Track wizard step entries for drop-off analytics
+  // Track wizard step entries for drop-off analytics (steps 1-7; the
+  // express chooser at step 0 predates the tracking schema)
   const prevStep = useRef(step);
   useEffect(() => {
     if (!user?.tenantId || !token) return;
     if (prevStep.current !== step) {
-      trackWizardEvent(user.tenantId, token, prevStep.current, "complete");
+      if (prevStep.current >= 1) {
+        trackWizardEvent(user.tenantId, token, prevStep.current, "complete");
+      }
       prevStep.current = step;
     }
-    trackWizardEvent(user.tenantId, token, step, "enter");
+    if (step >= 1) {
+      trackWizardEvent(user.tenantId, token, step, "enter");
+    }
   }, [step, user?.tenantId, token]);
 
   const goNext = useCallback((updates = {}) => {
@@ -109,8 +117,16 @@ export default function OnboardingWizardPage() {
   // Steps 4 and 6 that need the API key will fetch it themselves via the API.
   const apiKey = null;
 
+  // Order (2026-06-11): teach the AI staff (1-4), pick a plan (5), then the
+  // OPTIONAL website-widget steps (6-7). Agent OS is the product; the widget
+  // is one channel, so its steps come last and can be skipped.
   const stepComponents = [
-    null, // index 0 unused â€” wizard is 1-indexed
+    <WizardExpressSetup
+      key="0"
+      user={user}
+      token={token}
+      onCustomize={() => setStep(1)}
+    />,
     <WizardStepBusiness key="1" wizardData={wizardData} onNext={goNext} />,
     <WizardStepAutoKB
       key="2"
@@ -134,21 +150,21 @@ export default function OnboardingWizardPage() {
       token={token}
       tenantId={user.tenantId}
     />,
-    <WizardStepCustomize
+    <WizardStepPlan
       key="5"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
       token={token}
-      tenantId={user?.tenantId}
+      tenantId={user.tenantId}
     />,
-    <WizardStepPlan
+    <WizardStepCustomize
       key="6"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
       token={token}
-      tenantId={user.tenantId}
+      tenantId={user?.tenantId}
     />,
     <WizardStepEmbed
       key="7"
@@ -202,9 +218,11 @@ export default function OnboardingWizardPage() {
         <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#6366f1" }}>
           AgentNexLiFy
         </span>
-        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.85rem" }}>
-          Step {step} of {TOTAL_STEPS}
-        </span>
+        {step >= 1 && (
+          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.85rem" }}>
+            Step {step} of {TOTAL_STEPS} · ~3 minutes
+          </span>
+        )}
       </div>
 
       {/* Step content */}

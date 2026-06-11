@@ -56,7 +56,8 @@ class FaqInput(BaseModel):
 class OnboardingCompleteRequest(BaseModel):
     business_name: str = Field(..., min_length=1, max_length=200)
     business_type: str = Field(..., min_length=1, max_length=50)
-    city: str = Field(..., min_length=1, max_length=100)
+    # city optional since express setup (2026-06-11) — wizard still collects it
+    city: str = Field("", max_length=100)
     phone: str | None = Field(None, max_length=30)
     website_url: str | None = Field(None, max_length=500)
     hours: dict[str, Any] | None = None
@@ -344,10 +345,11 @@ async def complete_onboarding(
     tenant_update: dict[str, Any] = {
         "business_name": req.business_name,
         "business_type": req.business_type,
-        "city": req.city,
         "autopilot_enabled": True,
         "onboarding_completed_at": datetime.now(timezone.utc).isoformat(),
     }
+    if req.city:
+        tenant_update["city"] = req.city
     if req.phone:
         tenant_update["notification_phone"] = req.phone
     if req.website_url:
@@ -465,14 +467,15 @@ async def complete_onboarding(
                 "category": "services",
                 "is_active": True,
             },
-            {
+        ]
+        if req.city:
+            faq_entries.append({
                 "tenant_id": tenant_id,
-                "question": f"Where are you located?",
+                "question": "Where are you located?",
                 "answer": f"We are located in {req.city}. Feel free to contact us for our exact address.",
                 "category": "general",
                 "is_active": True,
-            },
-        ]
+            })
         if req.phone:
             faq_entries.append({
                 "tenant_id": tenant_id,
