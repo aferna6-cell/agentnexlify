@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { demoLogin } from "../utils/api/auth";
 
@@ -14,14 +14,18 @@ import { demoLogin } from "../utils/api/auth";
 export default function DemoLoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState(null);
+  // /demo?vertical=salon picks the industry-matched demo tenant;
+  // backend falls back to plumbing for absent/unknown values.
+  const vertical = searchParams.get("vertical") || "";
 
   useEffect(() => {
     let cancelled = false;
 
     async function startDemo() {
       try {
-        const data = await demoLogin();
+        const data = await demoLogin(vertical);
         if (cancelled) return;
         // Store tenant_id first (mirrors LoginPage behaviour)
         localStorage.setItem("anx_tenant_id", data.tenant_id);
@@ -39,7 +43,7 @@ export default function DemoLoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [login, navigate]);
+  }, [login, navigate, vertical]);
 
   if (error) {
     return (

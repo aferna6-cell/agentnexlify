@@ -21,6 +21,7 @@ import {
 } from "../utils/api/os";
 import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
+import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
 import OsInsightsCard from "../components/os/OsInsightsCard";
@@ -289,6 +290,7 @@ export default function AgentOS() {
         />
       )}
       <aside
+        data-tour="thread-rail"
         style={
           isMobile
             ? {
@@ -706,6 +708,7 @@ export default function AgentOS() {
                   )}
                   {showDraftButton && (
                     <button
+                      data-tour="deliverable-panel"
                       onClick={() => setPanelRunId(run.id)}
                       style={{
                         marginTop: 6,
@@ -789,6 +792,9 @@ export default function AgentOS() {
       {showMemory && (
         <MemoryPanel token={token} onClose={() => setShowMemory(false)} />
       )}
+
+      {/* Demo-only guided tour — visible once per session for role=demo */}
+      <DemoTour />
     </div>
   );
 }

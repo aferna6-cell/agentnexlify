@@ -252,6 +252,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
         {pending ? (
           <div style={{ display: "flex", gap: 8 }}>
             <button
+              data-tour="approve-button"
               className="btn-primary"
               onClick={handleApprove}
               disabled={busy !== null}
