@@ -10,6 +10,7 @@ import {
 import {
   AgentOSAutoSendCard,
   AutoReviewRequestsCard,
+  BrowserNotificationsCard,
   DailyBriefingCard,
   GoogleReviewLinkCard,
   MissedCallTextBackCard,
@@ -65,6 +66,7 @@ export default function SettingsPageContent(props) {
         {...formProps}
         {...saveProps}
       />
+      <BrowserNotificationsCard />
       <GoogleReviewLinkCard
         form={props.form}
         handleChange={props.handleChange}

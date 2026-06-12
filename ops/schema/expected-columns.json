@@ -1053,6 +1053,13 @@
     "variant",
     "visitor_id"
   ],
+  "push_subscriptions": [
+    "created_at",
+    "endpoint",
+    "id",
+    "keys",
+    "tenant_id"
+  ],
   "quote_requests": [
     "claude_summary",
     "client_id",

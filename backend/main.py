@@ -96,6 +96,7 @@ from backend.routers import (
     automation_rules,
     admin_analytics,
     admin_funnel,
+    admin_health,
     admin_promotions,
     zapier,
     os_threads,
@@ -111,6 +112,7 @@ from backend.routers import (
     os_inbound,
     os_sync as os_sync_router,
     os_files,
+    push_subscriptions,
 )
 
 # --- JSON logging ---
@@ -330,6 +332,7 @@ async def _automation_loop():
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
     from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
     from backend.services.demo_reset_job import reset_demo_tenants
+    from backend.services.activation_nudges import send_activation_nudges
 
     tick = 0
     while True:
@@ -408,6 +411,7 @@ async def _automation_loop():
                         _safe_run("send_daily_briefings", send_daily_briefings),
                         _safe_run("run_opportunity_scan", _run_opportunity_scan),
                         _safe_run("reset_demo_tenants", reset_demo_tenants),
+                        _safe_run("send_activation_nudges", send_activation_nudges),
                     ]
                 )
 
@@ -858,6 +862,7 @@ app.include_router(ab_tests.router)
 app.include_router(automation_rules.router)
 app.include_router(admin_analytics.router)
 app.include_router(admin_funnel.router)
+app.include_router(admin_health.router)
 app.include_router(admin_promotions.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)
@@ -887,6 +892,7 @@ app.include_router(os_usage.router)
 app.include_router(os_files.router)
 app.include_router(os_inbound.router)
 app.include_router(os_sync_router.router)
+app.include_router(push_subscriptions.router)
 app.include_router(pricing_experiment.router)
 
 

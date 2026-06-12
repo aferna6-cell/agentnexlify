@@ -13,6 +13,7 @@ import logging
 import time
 
 from backend.config import settings
+from backend.services import os_push_notify
 from backend.services.email_sender import send_email, mask_email
 from backend.services.tenant_scope import tenant_table
 from backend.services.twilio_service import send_sms
@@ -118,7 +119,8 @@ async def notify_pending_approval(
                 sms_body = (
                     f"AgentNexLiFy: your {agent_name or 'assistant'} agent drafted "
                     f"{plain_what} and needs your approval before it sends. "
-                    f"Review: {settings.frontend_url}/dashboard/agent-os"
+                    "Reply YES to send it, NO to dismiss, or review: "
+                    f"{settings.frontend_url}/dashboard/agent-os"
                 )
                 await send_sms(to=phone, body=sms_body, tenant_id=tenant_id)
                 logger.info(
@@ -132,6 +134,17 @@ async def notify_pending_approval(
                     tenant_id,
                     exc_info=True,
                 )
+
+        # Web push leg — free browser notification; no-ops when VAPID keys or
+        # pywebpush are absent. Its own failure never voids the email send.
+        try:
+            await os_push_notify.send_pending_approval_push(db, tenant_id, title=title)
+        except Exception:
+            logger.warning(
+                "os_approval_notify: push leg failed for tenant %s — email already sent",
+                tenant_id,
+                exc_info=True,
+            )
         return True
     except Exception:
         logger.warning(

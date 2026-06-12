@@ -1123,3 +1123,19 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 - Marks the public live-demo sandbox tenant: demo tenants get outbound
   no-ops (email/SMS via demo_guard), restricted "demo" JWT role, nightly
   data reset. Applied live via Supabase MCP 2026-06-12.
+
+## 2026-06-12 — migration 145: push_subscriptions (APPLIED 2026-06-12 via Supabase MCP)
+- New table for Web Push subscriptions (pending-approval browser
+  notifications — free alternative to the SMS leg): `id uuid pk`,
+  `tenant_id uuid not null`, `endpoint text not null unique`,
+  `keys jsonb not null`, `created_at timestamptz default now()` +
+  `idx_push_subscriptions_tenant_id`. RLS enabled, service-role-only access.
+- **Tenant column decision:** uses `tenant_id` (appointments-style). This is
+  a new OS-adjacent table defined fresh — the `client_id` convention applies
+  only to the legacy leads/conversations tables.
+- Backend: `backend/routers/push_subscriptions.py` (subscribe/unsubscribe +
+  public vapid-public-key), `backend/services/os_push_notify.py` (send,
+  pywebpush import-guarded, no-ops without VAPID env keys).
+- **Applied:** NO — file written only; apply via Supabase MCP. Requires
+  Railway env vars VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT
+  (manual step pending) before push actually fires.

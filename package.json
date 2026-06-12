@@ -40,6 +40,7 @@
     "stripe-pricing:check": "python scripts/run_python.py scripts/check_stripe_pricing_config.py",
     "smoke:public": "python scripts/run_python.py scripts/public_smoke.py",
     "test:e2e": "playwright test",
+    "e2e": "playwright test --config e2e/playwright.config.js",
     "check:test-local-refs": "python scripts/run_python.py scripts/check_test_local_refs.py",
     "lint:test-quality": "eslint --no-error-on-unmatched-pattern --config eslint.test-quality.config.cjs \"**/*.test.{js,jsx,ts,tsx}\" \"**/*.spec.{js,jsx,ts,tsx}\" \"**/__tests__/**/*.{js,jsx,ts,tsx}\"",
     "lint:test-quality:staged": "node scripts/lint-test-quality-staged.cjs",
