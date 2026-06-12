@@ -17,6 +17,7 @@ Plan: ``plans/agent-os-connectors-inbound_plan.md`` Phase 3 + 4 + 5
 """
 
 import logging
+from xml.sax import saxutils
 from datetime import datetime, timezone
 from typing import Any, Literal
 from urllib.parse import unquote_plus
@@ -33,6 +34,7 @@ from backend.services import (
     inbound_email_verify,
     inbound_sms_verify,
     os_inbound_bridge,
+    os_sms_approval,
 )
 
 logger = logging.getLogger(__name__)
@@ -328,6 +330,22 @@ async def inbound_sms_webhook(
 
     is_stop = inbound_sms_verify.is_stop_keyword(body_text)
     inbound_kind = "system_notice" if is_stop else "normal"
+
+    # Approve-by-text: an exact command keyword (YES/NO/...) from the
+    # tenant's own notification_phone acts on the newest pending draft and
+    # replies inline via TwiML. Non-commands and non-owner senders fall
+    # through to the normal bridge. Checked before STOP so an owner's "NO"
+    # is a dismissal, not an unsubscribe.
+    owner_reply = await os_sms_approval.handle_owner_sms(
+        db, client_id, from_number, body_text
+    )
+    if owner_reply is not None:
+        return PlainTextResponse(
+            '<?xml version="1.0" encoding="UTF-8"?><Response><Message>'
+            + saxutils.escape(owner_reply)
+            + "</Message></Response>",
+            media_type="application/xml",
+        )
 
     if is_stop and from_number:
         _flip_lead_unsubscribed(db, client_id, from_number)

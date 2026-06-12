@@ -77,3 +77,42 @@ jobs:
           TEST_APP_URL: https://app.agentnexlify.com
           PW_SKIP_WEBSERVER: "1"
         run: npx playwright test e2e/demo-smoke.spec.ts
+
+  # ---------------------------------------------------------------------------
+  # Critical-journey suite — runs daily against production demo sandbox.
+  # advisory (continue-on-error: true) while the suite stabilises.
+  # No secrets needed — demo-login is a public endpoint.
+  # ---------------------------------------------------------------------------
+  critical-journeys:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Advisory: failures are reported but do not block merges or other jobs.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install root deps (Playwright)
+        run: npm ci
+      - name: Install Chromium browser
+        run: npx playwright install chromium
+      - name: Run critical journeys against production
+        env:
+          # Target the live demo sandbox — safe fixture; resets nightly.
+          E2E_BASE_URL: https://app.agentnexlify.com
+          # Skip the Vite webServer — these tests hit live URLs.
+          PW_SKIP_WEBSERVER: "1"
+        run: npm run e2e -- --reporter=list,junit
+      - name: Upload Playwright artifacts on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: journey-traces-${{ github.run_id }}
+          path: |
+            test-results-journeys/
+            playwright-report-journeys/
+          retention-days: 14

@@ -14,6 +14,172 @@
     scriptTag?.src?.replace(/\/widget\/agentnexlify-widget\.js.*$/, "") ||
     "";
 
+  // --- i18n: Language resolution ---
+  // Order: (1) data-language attribute, (2) navigator.language startsWith "es", (3) "en"
+  (function () {
+    const attr = (scriptTag?.getAttribute("data-language") || "").toLowerCase().trim();
+    if (attr === "es" || attr === "en") { window.__anxLang = attr; return; }
+    if (typeof navigator !== "undefined" && navigator.language &&
+        navigator.language.toLowerCase().startsWith("es")) { window.__anxLang = "es"; return; }
+    window.__anxLang = "en";
+  })();
+  const lang = window.__anxLang;
+
+  // --- i18n: UI Strings ---
+  const STRINGS = {
+    en: {
+      // Input area
+      inputPlaceholder: "Type a message...",
+      sendTitle: "Send",
+      attachTitle: "Attach file",
+      contentModePlaceholder: "Paste content, URL, or YouTube link to repurpose...",
+      fillFormFirst: "Fill out the form above to start chatting...",
+      teamMemberWillRespond: "A team member will respond...",
+      trialExpired: "Your free trial has expired.",
+      // Header
+      typicallyReplies: "Typically replies instantly",
+      minimizeTitle: "Minimize",
+      closeTitle: "Close",
+      viewMenuTitle: "View Menu",
+      bookTitle: "Book Appointment",
+      contentModeTitle: "Content Mode",
+      currentlyOffline: "Currently offline",
+      // Errors / notices
+      connectError: "Sorry, I'm having trouble connecting. Please try again in a moment!",
+      fileTooLarge: "File is too large. Please send files under 5 MB.",
+      uploadError: "Sorry, I couldn't upload that file. Please try again.",
+      // Booking
+      backToChat: "Back to chat",
+      selectDate: "Select a Date",
+      back: "Back",
+      availableTimes: "Available Times",
+      loading: "Loading...",
+      noSlots: "No available slots for this date. Please try another day.",
+      yourDetails: "Your Details",
+      labelName: "Name *",
+      labelEmail: "Email *",
+      labelPhone: "Phone",
+      labelReason: "Reason for Visit",
+      labelNotes: "Notes",
+      confirmAppointment: "Confirm Appointment",
+      booking: "Booking...",
+      nameEmailRequired: "Name and email are required.",
+      slotTaken: "This slot was just taken. Please select another time.",
+      bookingError: "Something went wrong. Please try again.",
+      appointmentConfirmed: "Appointment Confirmed!",
+      backToChat2: "Back to Chat",
+      bookingIntentResponse: "I can help you book an appointment! Let me show you our available times.",
+      // Contact form labels/placeholders
+      yourNamePlaceholder: "Your name",
+      yourEmailPlaceholder: "your@email.com",
+      optionalPlaceholder: "(optional)",
+      // Offline form
+      offlineLabelMessage: "Message *",
+      offlineMessagePlaceholder: "How can we help you?",
+      sendMessage: "Send Message",
+      nameEmailMessageRequired: "Name, email, and message are required.",
+      sending: "Sending...",
+      messageSent: "Message Sent!",
+      offlineThankYou: "We'll get back to you soon.",
+      sendAnother: "Send Another Message",
+      genericError: "Something went wrong. Please try again.",
+      // Pre-chat form
+      preChatTitle: "Before we start, tell us a bit about yourself:",
+      startChat: "Start Chat",
+      // Greeting
+      greetingFallback: "How can I help you today?",
+      greetingPrefix: "Hi! I'm the AI assistant for this business. ",
+      // Menu
+      menuOrderHint: "Just tell me what you'd like to order!",
+      // Upgrade
+      upgradeNow: "Upgrade Now",
+      // Powered by
+      poweredBy: "Powered by",
+      // Calendar
+      monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+      dayNames: ["Su","Mo","Tu","We","Th","Fr","Sa"],
+    },
+    es: {
+      // Input area
+      inputPlaceholder: "Escribe tu mensaje…",
+      sendTitle: "Enviar",
+      attachTitle: "Adjuntar archivo",
+      contentModePlaceholder: "Pega contenido, URL o enlace de YouTube para reutilizar…",
+      fillFormFirst: "Completa el formulario de arriba para comenzar a chatear…",
+      teamMemberWillRespond: "Un miembro del equipo te responderá…",
+      trialExpired: "Tu prueba gratuita ha vencido.",
+      // Header
+      typicallyReplies: "Normalmente responde al instante",
+      minimizeTitle: "Minimizar",
+      closeTitle: "Cerrar",
+      viewMenuTitle: "Ver menú",
+      bookTitle: "Agendar una cita",
+      contentModeTitle: "Modo contenido",
+      currentlyOffline: "Actualmente sin conexión",
+      // Errors / notices
+      connectError: "Lo siento, tengo problemas para conectarme. ¡Por favor intenta de nuevo en un momento!",
+      fileTooLarge: "El archivo es demasiado grande. Por favor envía archivos de menos de 5 MB.",
+      uploadError: "Lo siento, no pude subir ese archivo. Por favor intenta de nuevo.",
+      // Booking
+      backToChat: "← Volver al chat",
+      selectDate: "Selecciona una fecha",
+      back: "← Atrás",
+      availableTimes: "Horarios disponibles",
+      loading: "Cargando…",
+      noSlots: "No hay horarios disponibles para este día. Por favor elige otro día.",
+      yourDetails: "Tus datos",
+      labelName: "Nombre *",
+      labelEmail: "Correo electrónico *",
+      labelPhone: "Teléfono",
+      labelReason: "Motivo de la visita",
+      labelNotes: "Notas",
+      confirmAppointment: "Confirmar cita",
+      booking: "Reservando…",
+      nameEmailRequired: "El nombre y el correo electrónico son obligatorios.",
+      slotTaken: "Este horario acaba de ser tomado. Por favor elige otro.",
+      bookingError: "Algo salió mal. Por favor intenta de nuevo.",
+      appointmentConfirmed: "¡Cita confirmada!",
+      backToChat2: "Volver al chat",
+      bookingIntentResponse: "¡Puedo ayudarte a agendar una cita! Permíteme mostrarte los horarios disponibles.",
+      // Contact form labels/placeholders
+      yourNamePlaceholder: "Tu nombre",
+      yourEmailPlaceholder: "tu@correo.com",
+      optionalPlaceholder: "(opcional)",
+      // Offline form
+      offlineLabelMessage: "Mensaje *",
+      offlineMessagePlaceholder: "¿En qué podemos ayudarte?",
+      sendMessage: "Enviar mensaje",
+      nameEmailMessageRequired: "El nombre, el correo electrónico y el mensaje son obligatorios.",
+      sending: "Enviando…",
+      messageSent: "¡Mensaje enviado!",
+      offlineThankYou: "Te responderemos pronto.",
+      sendAnother: "Enviar otro mensaje",
+      genericError: "Algo salió mal. Por favor intenta de nuevo.",
+      // Pre-chat form
+      preChatTitle: "Antes de comenzar, cuéntanos un poco sobre ti:",
+      startChat: "Iniciar chat",
+      // Greeting
+      greetingFallback: "¿En qué puedo ayudarte hoy?",
+      greetingPrefix: "¡Hola! Soy el asistente de IA de este negocio. ",
+      // Menu
+      menuOrderHint: "¡Solo díme qué deseas ordenar!",
+      // Upgrade
+      upgradeNow: "Mejorar plan",
+      // Powered by
+      poweredBy: "Desarrollado por",
+      // Calendar
+      monthNames: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
+      dayNames: ["Do","Lu","Ma","Mi","Ju","Vi","Sá"],
+    },
+  };
+
+  // Shorthand: t(key) returns the string for current language
+  function t(key) {
+    return (STRINGS[lang] && STRINGS[lang][key] !== undefined)
+      ? STRINGS[lang][key]
+      : (STRINGS.en[key] !== undefined ? STRINGS.en[key] : key);
+  }
+
   const SESSION_KEY = "anx_session_id";
   const SESSION_TS_KEY = "anx_session_ts";
   const STATE_KEY = "anx_widget_state";
@@ -762,31 +928,31 @@
             <div id="anx-header-avatar">A</div>
             <div id="anx-header-text">
               <h3 id="anx-title">Aria</h3>
-              <p><span class="anx-header-status"></span>Typically replies instantly</p>
+              <p><span class="anx-header-status"></span>${t('typicallyReplies')}</p>
             </div>
           </div>
           <div id="anx-header-actions">
-            <button id="anx-content-mode-btn" title="Content Mode" style="display:none;position:relative;">&#9998;<span id="anx-content-mode-badge"></span></button>
-            <button id="anx-menu-btn" title="View Menu" style="display:none;">&#127860;</button>
-            <button id="anx-booking-btn" title="Book Appointment">&#128197;</button>
-            <button id="anx-minimize" title="Minimize">&#8722;</button>
-            <button id="anx-close" title="Close">&times;</button>
+            <button id="anx-content-mode-btn" title="${t('contentModeTitle')}" style="display:none;position:relative;">&#9998;<span id="anx-content-mode-badge"></span></button>
+            <button id="anx-menu-btn" title="${t('viewMenuTitle')}" style="display:none;">&#127860;</button>
+            <button id="anx-booking-btn" title="${t('bookTitle')}">&#128197;</button>
+            <button id="anx-minimize" title="${t('minimizeTitle')}">&#8722;</button>
+            <button id="anx-close" title="${t('closeTitle')}">&times;</button>
           </div>
         </div>
         <div id="anx-menu-panel" style="display:none;"></div>
         <div id="anx-booking"></div>
         <div id="anx-messages"></div>
         <div id="anx-input-area">
-          <button id="anx-attach" title="Attach file">
+          <button id="anx-attach" title="${t('attachTitle')}">
             <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
           <input type="file" id="anx-file-input" accept="image/*,.pdf,.doc,.docx" />
-          <textarea id="anx-input" placeholder="Type a message..." rows="1"></textarea>
-          <button id="anx-send" title="Send">
+          <textarea id="anx-input" placeholder="${t('inputPlaceholder')}" rows="1"></textarea>
+          <button id="anx-send" title="${t('sendTitle')}">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div id="anx-powered">Powered by <a href="https://agentnexlify.com" target="_blank" rel="noopener">AgentNexLiFy</a></div>
+        <div id="anx-powered">${t('poweredBy')} <a href="https://agentnexlify.com" target="_blank" rel="noopener">AgentNexLiFy</a></div>
       </div>
     `;
 
@@ -992,7 +1158,7 @@
         html += `</div>`;
       }
     }
-    html += `<div class="anx-menu-order-hint">Just tell me what you'd like to order!</div>`;
+    html += `<div class="anx-menu-order-hint">${t('menuOrderHint')}</div>`;
     panel.innerHTML = html;
   }
 
@@ -1277,10 +1443,7 @@
       input.value = "";
       input.style.height = "auto";
       addMessage("user", text);
-      addMessage(
-        "assistant",
-        "I can help you book an appointment! Let me show you our available times.",
-      );
+      addMessage("assistant", t('bookingIntentResponse'));
       setTimeout(() => showBooking("date"), 500);
       return;
     }
@@ -1302,19 +1465,16 @@
       // Handle handoff to team member
       if (data.handoff) {
         const inputEl = document.getElementById("anx-input");
-        if (inputEl) inputEl.placeholder = "A team member will respond...";
+        if (inputEl) inputEl.placeholder = t('teamMemberWillRespond');
       }
 
       // Handle trial expiry
       if (data.trial_expired) {
-        disableWidgetInput("Your free trial has expired.");
+        disableWidgetInput(t('trialExpired'));
       }
     } catch (e) {
       hideTyping();
-      addMessage(
-        "assistant",
-        "Sorry, I'm having trouble connecting. Please try again in a moment!",
-      );
+      addMessage("assistant", t('connectError'));
       console.error("AgentNexLiFy: Send failed", e);
     } finally {
       isLoading = false;

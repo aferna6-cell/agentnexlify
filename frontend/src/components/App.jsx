@@ -99,6 +99,7 @@ const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
 const SupportPage = lazy(() => import("../pages/SupportPage"));
 const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
+const AdminHealthPage = lazy(() => import("../pages/AdminHealthPage"));
 const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
 
 const pages = {
@@ -131,6 +132,7 @@ const pages = {
   pipeline: PipelinePage,
   support: SupportPage,
   admin_analytics: AdminAnalyticsPage,
+  admin_health: AdminHealthPage,
   admin_promotions: AdminPromotionsPage,
 };
 
@@ -167,6 +169,7 @@ const PAGE_TO_PATH = {
   documents: "/dashboard/documents",
   support: "/dashboard/support",
   admin_analytics: "/admin/analytics",
+  admin_health: "/admin/health",
   admin_promotions: "/admin/promotions",
 };
 

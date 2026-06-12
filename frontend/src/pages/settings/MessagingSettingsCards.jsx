@@ -1,3 +1,13 @@
+import { useEffect, useState } from "react";
+
+import { useAuth } from "../../context/AuthContext";
+import {
+  disablePushNotifications,
+  enablePushNotifications,
+  fetchVapidPublicKey,
+  getExistingSubscription,
+  pushSupported,
+} from "../../utils/pushNotifications";
 import { CheckboxSettingRow, SaveButton } from "./shared";
 
 export function SmsNotificationsCard({
@@ -39,6 +49,89 @@ export function SmsNotificationsCard({
         onSave={handleSave}
         style={{ marginTop: "0.75rem" }}
       />
+    </div>
+  );
+}
+
+export function BrowserNotificationsCard() {
+  const { user, token } = useAuth();
+  const [vapidKey, setVapidKey] = useState(null);
+  const [subscribed, setSubscribed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!pushSupported()) return undefined;
+    fetchVapidPublicKey()
+      .then((key) => {
+        if (cancelled || !key) return;
+        setVapidKey(key);
+        return getExistingSubscription().then((sub) => {
+          if (!cancelled) setSubscribed(Boolean(sub));
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Hidden entirely when push is unsupported or the backend has no VAPID keys.
+  if (!vapidKey) return null;
+
+  const handleToggle = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      if (subscribed) {
+        await disablePushNotifications(user.tenantId, token);
+        setSubscribed(false);
+      } else {
+        await enablePushNotifications(user.tenantId, token, vapidKey);
+        setSubscribed(true);
+      }
+    } catch (err) {
+      setError(
+        err?.message === "permission-denied"
+          ? "Notifications are blocked for this site. Allow them in your browser settings, then try again."
+          : "Could not update browser notifications. Try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="settings-card">
+      <h3>Browser Notifications</h3>
+      <p className="settings-card-desc">
+        Get a notification on this device when your AI staff drafts something
+        that needs your approval. Free — no SMS charges.
+      </p>
+      <button
+        className="btn btn-secondary"
+        onClick={handleToggle}
+        disabled={busy}
+        style={{ marginTop: "0.25rem" }}
+      >
+        {busy
+          ? "Working..."
+          : subscribed
+            ? "Disable browser notifications"
+            : "Enable browser notifications"}
+      </button>
+      {error && (
+        <p
+          style={{
+            color: "var(--red, #f87171)",
+            fontSize: "0.8125rem",
+            marginTop: "0.5rem",
+          }}
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }

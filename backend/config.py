@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     sentry_dsn: str = ""
 
+    # Web Push (VAPID) — pending-approval browser notifications. All three
+    # optional: push silently no-ops when unset (pending manual Railway env
+    # step). vapid_subject is a mailto: or https: URI per RFC 8292.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = ""
+
     # Inbound email webhooks (Agent OS connectors — Phase 4).
     # Postmark: HMAC-SHA256 over raw body using this secret, sent as
     # X-Postmark-Webhook-Hmac. Mailgun: HMAC-SHA256 over timestamp+token
