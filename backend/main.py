@@ -94,6 +94,7 @@ from backend.routers import (
     ab_tests,
     automation_rules,
     admin_analytics,
+    admin_funnel,
     admin_promotions,
     zapier,
     os_threads,
@@ -852,6 +853,7 @@ app.include_router(marketing_analytics.router)
 app.include_router(ab_tests.router)
 app.include_router(automation_rules.router)
 app.include_router(admin_analytics.router)
+app.include_router(admin_funnel.router)
 app.include_router(admin_promotions.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)

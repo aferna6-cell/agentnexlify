@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.services.industry_faqs import INDUSTRY_FAQS
 
-_DEPTH_BAR = {"plumbing": 8, "hvac": 8, "home_services": 8, "dental": 8, "realestate": 8}
+_DEPTH_BAR = {"plumbing": 8, "hvac": 8, "home_services": 8, "dental": 8, "realestate": 8, "salon": 8}
 
 
 def test_home_trades_meet_depth_bar():

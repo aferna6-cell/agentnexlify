@@ -150,6 +150,36 @@ VERTICAL_GUIDANCE: dict[str, list[dict]] = {
                 "cadence reads as caring, not pushy."
             ),
         },
+        {
+            "topic": "industry: no-show prevention",
+            "answer": (
+                "Take a deposit for any appointment 90 minutes or longer — "
+                "color, balayage, extensions, bridal. Send a day-before "
+                "confirmation (text preferred; include stylist name and service). "
+                "Repeat no-shows: offer a prepay-only booking policy, framed as "
+                "holding their preferred slot — never punitive in tone."
+            ),
+        },
+        {
+            "topic": "industry: new-client experience",
+            "answer": (
+                "First-timers need a short consultation before the service: "
+                "lifestyle, hair history, maintenance tolerance. For chemical "
+                "services, ask about at-home color or recent treatments — "
+                "this prevents surprises at the chair. Patch tests for "
+                "color-sensitized clients should be offered 48 hours ahead."
+            ),
+        },
+        {
+            "topic": "industry: seasonal demand peaks",
+            "answer": (
+                "Prom (April-May), wedding season (May-October), and holidays "
+                "(Thanksgiving through New Year) book out fast. Message the "
+                "client list 6-8 weeks before each peak with a 'slots filling "
+                "up — book now' nudge. Offer package add-ons (trial runs, "
+                "extensions consultations) during the build-up weeks."
+            ),
+        },
     ],
     "dental": [
         {

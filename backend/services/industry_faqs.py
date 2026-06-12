@@ -318,6 +318,16 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
             "answer": "Yes! We offer bridal hair, updos, and makeup services for weddings and special events. Book a consultation to discuss your look.",
             "category": "Services",
         },
+        {
+            "question": "Do you require a deposit?",
+            "answer": "We do require a deposit for appointments over 90 minutes — color corrections, balayage, and extensions included. The deposit is applied to your service and can be rescheduled with at least 24 hours notice.",
+            "category": "Policy",
+        },
+        {
+            "question": "What should I do before my first appointment?",
+            "answer": "Come in with clean, dry hair unless your stylist asks otherwise. Bring inspiration photos — the more specific the better. For color services, let us know your color history and any recent at-home treatments so we can plan accurately.",
+            "category": "About",
+        },
     ],
     "auto_shop": [
         {
