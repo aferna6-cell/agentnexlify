@@ -15,7 +15,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.config import settings
-from backend.dependencies import require_role
+from backend.dependencies import require_role, block_demo_role
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.services.activity import log_activity
 from backend.services.stripe_service import (
@@ -27,7 +27,11 @@ from backend.services.stripe_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/auth", tags=["billing"])
+router = APIRouter(
+    prefix="/api/v1/auth",
+    tags=["billing"],
+    dependencies=[Depends(block_demo_role)],
+)
 
 
 def get_service_supabase():

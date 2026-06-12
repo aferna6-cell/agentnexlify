@@ -13,14 +13,18 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.account_deletion import delete_tenant_account
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/account", tags=["account"])
+router = APIRouter(
+    prefix="/api/v1/account",
+    tags=["account"],
+    dependencies=[Depends(block_demo_role)],
+)
 
 
 class AccountDeleteRequest(BaseModel):

@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.services.activity import log_activity
 from backend.services.fraud_guard import guard_checkout_for_fraud
 from backend.services.stripe_service import (
@@ -26,7 +26,11 @@ from backend.services.stripe_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
+router = APIRouter(
+    prefix="/api/v1/billing",
+    tags=["billing"],
+    dependencies=[Depends(block_demo_role)],
+)
 
 
 class AdminRefundRequest(BaseModel):

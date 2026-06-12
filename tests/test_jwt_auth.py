@@ -108,15 +108,14 @@ async def test_tampered_token_returns_401(mock_settings):
     from backend.services.auth_service import get_current_tenant
 
     valid_token = _make_token()
-    # Flip last char of signature to corrupt it
     parts = valid_token.split(".")
     assert len(parts) == 3
     sig = parts[2]
-    # Replace the last character with a different one
-    if sig[-1] == "A":
-        bad_sig = sig[:-1] + "B"
-    else:
-        bad_sig = sig[:-1] + "A"
+    # Flip the FIRST char of the signature. Flipping the last char is flaky:
+    # the final base64 quantum has unused padding bits the decoder ignores,
+    # so depending on the (timestamp-varying) signature the tampered token
+    # could decode to identical bytes and verify fine.
+    bad_sig = ("B" if sig[0] == "A" else "A") + sig[1:]
     tampered_token = ".".join([parts[0], parts[1], bad_sig])
 
     with pytest.raises(HTTPException) as exc_info:

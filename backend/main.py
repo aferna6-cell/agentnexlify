@@ -28,6 +28,7 @@ from backend.routers import (
     auth,
     auth_billing,
     auth_google,
+    auth_demo,
     auth_password_reset,
     automations,
     bids,
@@ -328,6 +329,7 @@ async def _automation_loop():
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
     from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
+    from backend.services.demo_reset_job import reset_demo_tenants
 
     tick = 0
     while True:
@@ -405,6 +407,7 @@ async def _automation_loop():
                         _safe_run("send_birthday_greetings", send_birthday_greetings),
                         _safe_run("send_daily_briefings", send_daily_briefings),
                         _safe_run("run_opportunity_scan", _run_opportunity_scan),
+                        _safe_run("reset_demo_tenants", reset_demo_tenants),
                     ]
                 )
 
@@ -799,6 +802,7 @@ app.include_router(auth.router)
 app.include_router(auth_billing.router)
 app.include_router(auth_google.router)
 app.include_router(auth_password_reset.router)
+app.include_router(auth_demo.router)
 app.include_router(conversations.router)
 app.include_router(faq.router)
 app.include_router(automations.router)

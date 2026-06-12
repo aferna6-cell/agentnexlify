@@ -145,9 +145,14 @@ export default function LoginPage() {
           </div>
         </form>
         <p className="login-footer">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link to="/signup" className="login-link">
             Sign up free
+          </Link>
+        </p>
+        <p className="login-footer" style={{ marginTop: "0.5rem" }}>
+          <Link to="/demo" className="login-link" style={{ fontWeight: 400, color: "var(--text-secondary)" }}>
+            Try the live demo &rarr; no signup needed
           </Link>
         </p>
       </div>

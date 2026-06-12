@@ -9,6 +9,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
 import { fetchOsPendingDeliverables } from "../utils/api/os";
+import DemoBanner from "./DemoBanner";
 import LoginPage from "./LoginPage";
 import MarketingUpsell, {
   MARKETING_GATED_KEYS,
@@ -345,6 +346,7 @@ export default function App() {
           minWidth: 0,
         }}
       >
+        <DemoBanner />
         <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
         <div
           style={{

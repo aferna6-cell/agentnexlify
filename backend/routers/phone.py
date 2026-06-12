@@ -16,11 +16,15 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.dependencies import require_role
+from backend.dependencies import require_role, block_demo_role
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/phone", tags=["phone"])
+router = APIRouter(
+    prefix="/api/v1/phone",
+    tags=["phone"],
+    dependencies=[Depends(block_demo_role)],
+)
 
 # Twilio API base
 _TWILIO_BASE = "https://api.twilio.com/2010-04-01/Accounts"
