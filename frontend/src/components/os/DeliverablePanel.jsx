@@ -224,6 +224,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
             disabled={!dirty || busy !== null}
             style={{
               marginTop: 10,
+              minHeight: 44,
               background: "transparent",
               border: "1px solid var(--border)",
               borderRadius: 8,
@@ -254,7 +255,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
               className="btn-primary"
               onClick={handleApprove}
               disabled={busy !== null}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minHeight: 44 }}
             >
               {busy === "approve" ? "Approving..." : "Approve"}
             </button>
@@ -263,6 +264,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
               disabled={busy !== null}
               style={{
                 flex: 1,
+                minHeight: 44,
                 background: "transparent",
                 border: "1px solid rgba(239,68,68,0.4)",
                 borderRadius: 8,

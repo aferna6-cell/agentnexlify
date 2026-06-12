@@ -828,6 +828,42 @@ def _seed_volatile(db: Any, tenant_id: str) -> dict:
         except Exception:
             logger.exception("_seed_volatile: os_agent_runs insert failed (non-fatal)")
 
+    # 9. Welcome thread — mirrors what real signup creates for every new tenant.
+    #    Async function called synchronously here (event loop may or may not be
+    #    running when _seed_volatile is called).  Use asyncio.run() as the safe
+    #    fallback, catching all exceptions so this never breaks the seed.
+    try:
+        import asyncio
+        from backend.services.welcome_thread import create_welcome_thread
+
+        coro = create_welcome_thread(
+            db,
+            tenant_id=tenant_id,
+            business_name=_DEMO_BUSINESS_NAME,
+            business_type="plumbing",
+            website_url=None,
+        )
+        try:
+            loop = asyncio.get_running_loop()
+            # Already inside an event loop — schedule and run directly via task
+            import concurrent.futures
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            welcome_id = future.result(timeout=10)
+        except RuntimeError:
+            # No running loop — use asyncio.run()
+            welcome_id = asyncio.run(coro)
+
+        if welcome_id:
+            seeded["welcome_thread"] = 1
+            logger.info("_seed_volatile: welcome_thread inserted id=%s", welcome_id)
+        else:
+            seeded["welcome_thread"] = 0
+    except Exception:
+        logger.warning(
+            "_seed_volatile: welcome_thread creation failed (non-fatal)", exc_info=True
+        )
+        seeded.setdefault("welcome_thread", 0)
+
     logger.info(
         "_seed_volatile: seeded for tenant_id=%s: %s", tenant_id, seeded
     )
