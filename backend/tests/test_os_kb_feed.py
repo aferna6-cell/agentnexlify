@@ -209,6 +209,27 @@ def test_healthy_knowledge_emits_no_gap_nudge():
     assert not [e for e in entries if "setup gaps" in e["topic"]]
 
 
+def test_home_services_vertical_guidance():
+    """Home-services depth: all trade aliases hit the home pack, which must
+    carry emergency triage (incl. the gas-smell safety line), quoting
+    discipline, and maintenance-plan guidance."""
+    import backend.services.os_kb_feed as feed_mod
+
+    for alias in ("plumbing", "hvac", "roofing", "electrical", "landscaping", "contractor", "home_services"):
+        entries = feed_mod.vertical_guidance(alias)
+        assert entries == feed_mod.VERTICAL_GUIDANCE["home_services"], alias
+
+    topics = " ".join(e["topic"] for e in feed_mod.VERTICAL_GUIDANCE["home_services"])
+    assert "emergency triage" in topics
+    assert "quoting discipline" in topics
+    assert "maintenance plans" in topics
+    answers = " ".join(e["answer"] for e in feed_mod.VERTICAL_GUIDANCE["home_services"])
+    # Safety invariant: gas smell -> leave the house, utility/911 before us
+    assert "gas smell" in answers
+    assert "911" in answers
+    assert len(feed_mod.VERTICAL_GUIDANCE["home_services"]) >= 6
+
+
 def test_financial_services_vertical_guidance():
     """G8: MTOptions vertical — trading aliases hit the financial pack,
     which must carry the no-financial-advice compliance entry."""

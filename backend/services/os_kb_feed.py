@@ -87,6 +87,41 @@ VERTICAL_GUIDANCE: dict[str, list[dict]] = {
                 "cold snaps -> plumbing/HVAC)."
             ),
         },
+        {
+            "topic": "industry: emergency triage",
+            "answer": (
+                "True emergencies: active water leak, no heat in winter, no AC "
+                "in extreme heat, sewage backup, gas smell. For gas smell or "
+                "sparking electrical, tell the caller to leave the house and "
+                "call their utility/911 FIRST, then us. For leaks, walk them "
+                "to the shut-off valve. Emergency calls get same-day language "
+                "and a heads-up that after-hours rates may apply — say it "
+                "upfront, never as a surprise on the invoice."
+            ),
+        },
+        {
+            "topic": "industry: quoting discipline",
+            "answer": (
+                "Give a range until someone has seen the job — a confident "
+                "wrong number costs more than an honest range. Ask for photos, "
+                "address, and access details before promising anything. "
+                "Permits: bigger jobs (electrical panels, water heaters, "
+                "structural) often need them; folding permit handling into the "
+                "quote is a selling point. Mention licensing and insurance "
+                "without being asked — homeowners comparing bids notice."
+            ),
+        },
+        {
+            "topic": "industry: maintenance plans and seasonal work",
+            "answer": (
+                "Maintenance plans (seasonal tune-ups, priority scheduling, "
+                "repair discounts) turn one-time jobs into recurring revenue — "
+                "offer them at the end of every successful job, not in the "
+                "first message. Seasonal rhythm: spring AC tune-ups, fall "
+                "furnace checks, pre-winter pipe insulation, post-storm roof "
+                "and gutter inspections."
+            ),
+        },
     ],
     "salon": [
         {
