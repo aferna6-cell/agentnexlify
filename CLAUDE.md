@@ -38,7 +38,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - `docs/dev-knowledge/` — bug-patterns.md, schema-log.md, architecture-decisions.md
 - `knowledge-base/` — LLM-compiled wiki (`raw/`, `wiki/`, pgvector embeddings)
 - `.claude/` — config, rules, skills, agents, commands, hooks
-- `_archive/`, `public/` — **legacy, do not touch**. `landing-page-v2/` is the LIVE marketing site (Vercel project `agentnexlify` deploys it) — edit deliberately, content-only changes preferred
+- `_archive/`, `public/` — **legacy, do not touch**. `landing-page-v2/` deploys via Vercel project `agentnexlify` — edit deliberately, content-only changes preferred. **WARNING (found 2026-06-12): agentnexlify.com + www are attached to the separate, stale `agentnexlify-site` Vercel project — landing-page-v2 edits do NOT reach the public domain until the domains are moved to the `agentnexlify` project in the Vercel dashboard (its prod URLs are also auth-protected + latest deploy BLOCKED — check spend limits/protection).**
 
 ### Plan names + prices
 - `free`, `growth` ($99/mo Starter), `autopilot` ($150/mo Growth), `professional` ($250/mo Pro), `enterprise` ($899/mo)
