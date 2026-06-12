@@ -956,7 +956,7 @@ async def send_invoice(
                     f"from {biz_name} is ready. Please contact us to complete payment."
                 )
             try:
-                ok = await send_sms(to=recipient_phone, body=sms_body)
+                ok = await send_sms(to=recipient_phone, body=sms_body, tenant_id=tenant_id)
                 if ok:
                     sms_sent = True
                 else:
@@ -1214,7 +1214,7 @@ async def bulk_send_invoices(
                     msg = f"Hi {lead.get('name', 'there')}! Invoice {inv_num} for ${total:,.2f} from {biz_name}."
                     if payment_link:
                         msg += f" Pay here: {payment_link}"
-                    await send_sms(to=lead["phone"], body=msg)
+                    await send_sms(to=lead["phone"], body=msg, tenant_id=tenant_id)
                 except Exception:
                     logger.warning("Failed to SMS invoice %s", invoice_id, exc_info=True)
 

@@ -34,7 +34,7 @@ export default function DemoBanner() {
         nightly.
       </span>
       <a
-        href="/signup"
+        href="/signup?from=demo"
         style={{
           background: "var(--accent)",
           color: "var(--accent-contrast)",

@@ -22,7 +22,7 @@ describe("DemoBanner", () => {
     ).toBeInTheDocument();
     const cta = screen.getByRole("link", { name: /start your free account/i });
     expect(cta).toBeInTheDocument();
-    expect(cta).toHaveAttribute("href", "/signup");
+    expect(cta).toHaveAttribute("href", "/signup?from=demo");
   });
 
   it("does not render when user.role is owner", () => {

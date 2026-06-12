@@ -1130,6 +1130,7 @@ async def widget_chat(
                 await send_sms(
                     owner_phone,
                     f"[{tenant.get('business_name') or 'Business'}] A customer requested to speak with a team member. Check your inbox.",
+                    tenant_id=tenant.get("id"),
                 )
         except Exception:
             logger.warning("Failed to send handoff SMS notification", exc_info=True)

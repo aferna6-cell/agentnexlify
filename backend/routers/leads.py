@@ -372,7 +372,7 @@ async def send_lead_sms(
         raise HTTPException(status_code=400, detail="Lead has no phone number")
 
     from backend.services.twilio_service import send_sms
-    success = await send_sms(to=lead["phone"], body=req.message)
+    success = await send_sms(to=lead["phone"], body=req.message, tenant_id=tenant_id)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to send SMS")
 

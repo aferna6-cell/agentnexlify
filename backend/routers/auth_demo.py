@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.routers.auth import _JWT_ALGORITHM, _jwt_secret
+from backend.services.activity import log_activity
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,13 @@ async def demo_login(request: Request):
         "exp": datetime.now(timezone.utc) + timedelta(hours=_DEMO_TOKEN_HOURS),
     }
     token = jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
+
+    # Conversion analytics: count demo sessions/day. Swallows errors.
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="demo_login",
+        description="Public live-demo session started",
+    )
 
     return DemoLoginResponse(
         tenant_id=tenant_id,

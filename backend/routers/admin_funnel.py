@@ -137,6 +137,31 @@ async def get_wizard_funnel(
     completed = len(step_tenants[7])
     completion_rate = round(completed / started, 4) if started > 0 else 0.0
 
+    # Live-demo conversion: sessions (activity_log demo_login rows) vs
+    # signups attributed via the wizard demo_referral event. Failures
+    # degrade to zeros — the funnel itself must still load.
+    demo_sessions = 0
+    demo_signups = 0
+    try:
+        sessions = (
+            db.table("activity_log")
+            .select("id")
+            .eq("activity_type", "demo_login")
+            .gte("created_at", since)
+            .execute()
+        )
+        demo_sessions = len(sessions.data or [])
+        referrals = (
+            db.table("wizard_events")
+            .select("tenant_id")
+            .eq("action", "demo_referral")
+            .gte("created_at", since)
+            .execute()
+        )
+        demo_signups = len({r.get("tenant_id") for r in (referrals.data or []) if r.get("tenant_id")})
+    except Exception:
+        logger.warning("Failed to load demo conversion stats", exc_info=True)
+
     return {
         "window_days": window_days,
         "steps": steps,
@@ -145,5 +170,10 @@ async def get_wizard_funnel(
             "started": started,
             "completed": completed,
             "completion_rate": completion_rate,
+        },
+        "demo": {
+            "sessions": demo_sessions,
+            "signups": demo_signups,
+            "conversion_rate": round(demo_signups / demo_sessions, 4) if demo_sessions else 0.0,
         },
     }

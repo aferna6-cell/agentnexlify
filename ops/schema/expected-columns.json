@@ -1,5 +1,5 @@
 {
-  "_comment": "Expected columns for ALL public tables, ground-truthed against the LIVE Supabase schema 2026-06-11 (post-migration 140 \u2014 drift guard expanded from 7 hot tables to full schema). scripts/check_schema_drift.py diffs this against hot_table_columns() RPC. Regenerate with: python scripts/check_schema_drift.py --update",
+  "_comment": "Expected columns for ALL public tables, ground-truthed against the LIVE Supabase schema 2026-06-12 (post-migration 144 \u2014 drift guard expanded from 7 hot tables to full schema). scripts/check_schema_drift.py diffs this against hot_table_columns() RPC. Regenerate with: python scripts/check_schema_drift.py --update",
   "ab_test_sends": [
     "ab_test_id",
     "campaign_send_id",

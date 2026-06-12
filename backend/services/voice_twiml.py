@@ -11,7 +11,11 @@ MAX_VOICE_ROUNDS = 3
 
 
 def _xml_escape(text: str) -> str:
-    """Escape text for safe inclusion in XML."""
+    """Escape text for safe inclusion in XML.
+
+    Deliberately NOT stdlib html.escape: TwiML wants XML named entities
+    (&apos; for '), while html.escape emits HTML-numeric &#x27;.
+    """
     return (
         text
         .replace("&", "&amp;")
