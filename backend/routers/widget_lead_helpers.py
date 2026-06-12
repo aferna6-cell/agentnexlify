@@ -11,6 +11,7 @@ It breaks FastAPI's parameter introspection — Pydantic body models and
 BackgroundTasks get treated as query params, causing 422 errors.
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -446,7 +447,7 @@ async def _capture_leads_from_session(
                         "source": "widget",
                     })
                 try:
-                    tags = _extract_tags_from_conversation(messages)
+                    tags = await asyncio.to_thread(_extract_tags_from_conversation, messages)
                     if tags:
                         tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead["id"]).execute()
                         logger.info("lead_capture: tagged existing lead %s with %s", lead["id"], tags)
@@ -554,7 +555,7 @@ async def _capture_leads_from_session(
                 logger.error("EMAIL_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
 
             try:
-                tags = _extract_tags_from_conversation(messages)
+                tags = await asyncio.to_thread(_extract_tags_from_conversation, messages)
                 if tags:
                     tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead_id).execute()
                     logger.info("lead_capture: tagged new lead %s with %s", lead_id, tags)

@@ -114,3 +114,60 @@ async def test_html_in_title_is_escaped():
     body = mock_send.call_args.kwargs["body_html"]
     assert "<img" not in body and "<script>" not in body
     assert "&lt;img" in body and "sales&lt;script&gt;" in body
+
+
+def _db_with_sms(phone="+15551230000", enabled=True):
+    db = MagicMock()
+    tenants = MagicMock()
+    tenants.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[{
+            "owner_email": "owner@biz.com", "owner_name": "Pat", "business_name": "Biz",
+            "notification_phone": phone, "sms_notifications_enabled": enabled,
+        }]
+    )
+    db.table.return_value = tenants
+    return db
+
+
+@pytest.mark.asyncio
+async def test_sms_leg_sent_when_opted_in():
+    db = _db_with_sms()
+    with _patch_runs(1), patch.object(
+        os_approval_notify, "send_email", new=AsyncMock()
+    ), patch.object(os_approval_notify, "send_sms", new=AsyncMock()) as mock_sms:
+        sent = await os_approval_notify.notify_pending_approval(
+            db, _TENANT, agent_name="lead_nurture", channel="sms", title="Callback draft"
+        )
+    assert sent is True
+    kwargs = mock_sms.call_args.kwargs
+    assert kwargs["to"] == "+15551230000"
+    assert "Callback draft" in kwargs["body"]
+    assert "approval" in kwargs["body"]
+    assert kwargs["tenant_id"] == _TENANT
+
+
+@pytest.mark.asyncio
+async def test_sms_leg_skipped_when_disabled():
+    db = _db_with_sms(enabled=False)
+    with _patch_runs(1), patch.object(
+        os_approval_notify, "send_email", new=AsyncMock()
+    ), patch.object(os_approval_notify, "send_sms", new=AsyncMock()) as mock_sms:
+        sent = await os_approval_notify.notify_pending_approval(
+            db, _TENANT, agent_name="lead_nurture", channel="sms", title=None
+        )
+    assert sent is True
+    mock_sms.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_sms_failure_does_not_void_email_send():
+    db = _db_with_sms()
+    with _patch_runs(1), patch.object(
+        os_approval_notify, "send_email", new=AsyncMock()
+    ), patch.object(
+        os_approval_notify, "send_sms", new=AsyncMock(side_effect=RuntimeError("twilio down"))
+    ):
+        sent = await os_approval_notify.notify_pending_approval(
+            db, _TENANT, agent_name="lead_nurture", channel="sms", title="x"
+        )
+    assert sent is True

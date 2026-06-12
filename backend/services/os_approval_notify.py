@@ -15,6 +15,7 @@ import time
 from backend.config import settings
 from backend.services.email_sender import send_email, mask_email
 from backend.services.tenant_scope import tenant_table
+from backend.services.twilio_service import send_sms
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,10 @@ async def notify_pending_approval(
     try:
         result = (
             db.table("tenants")
-            .select("owner_email, owner_name, business_name")
+            .select(
+                "owner_email, owner_name, business_name, "
+                "notification_phone, sms_notifications_enabled"
+            )
             .eq("id", tenant_id)
             .limit(1)
             .execute()
@@ -102,6 +106,32 @@ async def notify_pending_approval(
             tenant_id,
             pending_count,
         )
+
+        # SMS leg — the owner is usually away from email when a customer is
+        # waiting. Opt-in via sms_notifications_enabled + notification_phone
+        # (same toggle that gates missed-call texts). Shares the email's
+        # 30-min throttle window; its own failure never voids the email send.
+        phone = rows[0].get("notification_phone")
+        if phone and rows[0].get("sms_notifications_enabled"):
+            try:
+                plain_what = title or f"a {channel or 'message'} draft"
+                sms_body = (
+                    f"AgentNexLiFy: your {agent_name or 'assistant'} agent drafted "
+                    f"{plain_what} and needs your approval before it sends. "
+                    f"Review: {settings.frontend_url}/dashboard/agent-os"
+                )
+                await send_sms(to=phone, body=sms_body, tenant_id=tenant_id)
+                logger.info(
+                    "os_approval_notify: SMS sent for tenant %s (phone ...%s)",
+                    tenant_id,
+                    str(phone)[-4:],
+                )
+            except Exception:
+                logger.warning(
+                    "os_approval_notify: SMS leg failed for tenant %s — email already sent",
+                    tenant_id,
+                    exc_info=True,
+                )
         return True
     except Exception:
         logger.warning(
