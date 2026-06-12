@@ -60,6 +60,20 @@ jobs:
           TEST_BACKEND_URL: https://agentnexlify-production.up.railway.app
           TEST_PUBLIC_URL: https://www.agentnexlify.com
           TEST_WIDGET_API_KEY: ${{ secrets.TEST_WIDGET_API_KEY }}
+          # Prod smoke never builds the frontend; without this flag the
+          # Playwright webServer tries to boot Vite and dies ("vite: not
+          # found") — which silently failed every scheduled run pre-2026-06-12.
+          PW_SKIP_WEBSERVER: "1"
         # Spec self-skips every test when TEST_WIDGET_API_KEY is empty,
         # so this stays green-but-skipped until the secret is added.
         run: npx playwright test e2e/widget-smoke.spec.js
+      - name: Run live-demo smoke against production
+        # Always runs (even if widget smoke failed) — no secrets needed,
+        # demo-login is public. A failure here means the demo front door
+        # is broken or the nightly seed didn't run.
+        if: always()
+        env:
+          TEST_BACKEND_URL: https://agentnexlify-production.up.railway.app
+          TEST_APP_URL: https://app.agentnexlify.com
+          PW_SKIP_WEBSERVER: "1"
+        run: npx playwright test e2e/demo-smoke.spec.ts
