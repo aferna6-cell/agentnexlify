@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_phone_number: str = ""
+    twilio_webhook_sync_enabled: bool = True
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
