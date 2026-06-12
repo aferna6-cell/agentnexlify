@@ -28,12 +28,18 @@ same-day in the demo-hardening PR (see git log); remaining items are open.
 
 ## HIGH
 
-- [ ] **Demo outbound guard is per-call-site, not a true chokepoint.** Effort: M
-  With send_sms now guarded, enumerate remaining non-chokepoint senders
-  (Twilio voice dial-out in calls.py, direct httpx/Resend) and route them
-  through guarded functions or add the guard. block_demo_role covers the four
-  money/destructive routers but not messaging routers — those rely on the
-  send-level guards.
+- [x] **Demo outbound guard chokepoint sweep.** CLOSED 2026-06-12 (same-day
+  follow-up PR). Full channel matrix:
+  | Channel | Status |
+  |---|---|
+  | Email (send_email + send_email_reply, sole Resend callers) | GUARDED |
+  | SMS (send_sms) | GUARDED at all 7 demo-reachable router sites; scheduled-job sites covered by fake 555 numbers + no seeded automations + nightly reset |
+  | Agent OS actions (sms/email/social/calendar/crm/gbp) | GUARDED at dispatch (simulated-success) |
+  | Tenant webhooks (fire_event/fire_event_background) | GUARDED — demo events never POST to visitor-configured URLs |
+  | Outbound voice calls | NONE EXIST (no Twilio Calls.json/dial-out anywhere) |
+  | Direct social posting (gbp.py, social_media, fb messenger) | UNREACHABLE — requires connected OAuth tokens the demo tenant never has; fails closed |
+  | Stripe / phone purchase / account deletion | 403 via block_demo_role |
+  | AI token burn | widget: ai_usage_guard w/ explicit demo caps; Agent OS: 250/day demo turn cap |
 
 - [ ] **`voice_call_summary.py` has no dedicated degradation tests.** Effort: M
   The "never raise into a webhook path" contract is untested in isolation.

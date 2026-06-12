@@ -293,6 +293,12 @@ async def send_email_reply(
     Empty values are tolerated — the reply still sends, just without
     threading headers.
     """
+    from backend.services.demo_guard import is_demo_tenant
+
+    if is_demo_tenant(tenant_id):
+        logger.info("demo tenant %s: email reply to %s suppressed (demo no-op)", tenant_id, mask_email(to))
+        return {"success": True, "detail": "demo_noop", "demo": True}
+
     if not settings.resend_api_key:
         logger.warning("Resend API key not configured, skipping reply to %s", mask_email(to))
         return {"success": False, "detail": "resend_api_key not configured"}
