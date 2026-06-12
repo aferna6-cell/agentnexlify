@@ -1,0 +1,46 @@
+{
+  "run": 57,
+  "date": "2026-06-12-pm",
+  "mode": "moratorium_ci_enforcement",
+  "moratorium_active": true,
+  "moratorium_day": "43+",
+  "winner": "Add from __future__ CI enforcement to pr-check.yml (AUTONOMOUS-EXECUTABLE, ~8 lines YAML)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "ideas_count": 5,
+  "evidence_summary": "PR #254 landed 31 files (3500 insertions, 6 features) — 2 new from __future__ violations in routers/ despite Check 2 FAIL-mode existing. Root cause confirmed: pre-commit reads $STAGED_FILES on local machines only, GitHub PR merges and agent commits bypass entirely. Check 2 also scoped to *routers*.py (misses services/). Result: 4→8 infected files in 24h. check_project_invariants exits 1 with 3 failures (from __future__ + 8 JSX em-dashes + third). Run 56 winner (Check 13) not executed by nightly d12bd21. 13 E2E journeys added but red (fixture tenant gap, may self-resolve). email_sequences.py 1255L, check-widget-sync.sh MISSING 50+ days.",
+  "debate_verdicts": {
+    "Idea 1 - CI from __future__ enforcement": "SURVIVES → WINNER",
+    "Idea 2 - Fix 8 JSX em-dashes": "WEAKENED → Bonus Action A",
+    "Idea 3 - Remove from __future__ from 8 backend files": "Bonus Action B (human)",
+    "Idea 4 - Fix E2E fixture tenant gap": "Parking Lot (may self-resolve)",
+    "Idea 5 - Python line deletion nightly scope": "KILLED — CI enforcement is better mechanism"
+  },
+  "bonus_actions": [
+    "Fix 8 JSX em-dash violations (AUTONOMOUS-EXECUTABLE, CookieConsent:31, MarketingUpsell:3, App.jsx:329, Sidebar.test.jsx:27/49, Sidebar.jsx:386, DemoBanner.jsx:4/7)",
+    "Remove from __future__ from 8 backend files (HUMAN-REQUIRED ~5 min: auth_billing.py, auth_google.py, auth_password_reset.py, channels_instagram.py, embed_instructions.py, push_subscriptions.py, activation_nudges.py, branding_helpers.py)"
+  ],
+  "key_finding": "Check 2 (pre-commit FAIL-mode) is bypassed by ALL non-local commit paths: GitHub PR merges, Claude agent commits, nightly autonomous commits. CI enforcement catches violations regardless of commit source. First CI-level Python quality gate in 57 runs.",
+  "pending_before": 16,
+  "pending_after": 16,
+  "rejected": ["Nightly Python line deletion scope extension (Idea 5)"],
+  "next_run_questions": [
+    "Did nightly implement CI YAML step (pr-check.yml)?",
+    "Did Check 13 (run 56) execute?",
+    "Did Bonus A (em-dashes) execute? Does invariants exit 0?",
+    "Are 13 E2E journeys green?",
+    "What is the third invariant failure?"
+  ],
+  "governance_corrections": [
+    "from __future__ infection count updated: 4 files (run 56) → 8 files now (push_subscriptions.py + activation_nudges.py added by PR #254)",
+    "run 55 remains pending_autonomous — nightly d12bd21 still did not execute it"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-06-12-pm/ideas/ideas.md",
+    "subconscious/runs/2026-06-12-pm/debate/debate-log.md",
+    "subconscious/runs/2026-06-12-pm/winning-concept.md",
+    "subconscious/runs/2026-06-12-pm/improvement-backlog.md",
+    "subconscious/runs/2026-06-12-pm/run-summary.json"
+  ]
+}
