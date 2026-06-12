@@ -1117,3 +1117,9 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 **Column:** `voice_ai_enabled BOOLEAN NOT NULL DEFAULT false` — voice mode switch for inbound Twilio calls (gap G3). false (default) = voicemail mode: greeting + Record → transcription → AI summary → lead → Agent OS callback-text draft through the approval flow. true = live AI answering (Gather speech loop with vertical guidance), plan-gated to professional/enterprise in `backend/routers/calls.py`. Settings via PUT /api/v1/auth/settings + VoiceAICard UI.
 
 **Applied:** YES — 2026-06-11 via Supabase MCP. Manifest updated.
+
+## 2026-06-12 — migration 144: tenants.is_demo
+- `tenants.is_demo BOOLEAN NOT NULL DEFAULT false` + partial index `idx_tenants_is_demo`.
+- Marks the public live-demo sandbox tenant: demo tenants get outbound
+  no-ops (email/SMS via demo_guard), restricted "demo" JWT role, nightly
+  data reset. Applied live via Supabase MCP 2026-06-12.

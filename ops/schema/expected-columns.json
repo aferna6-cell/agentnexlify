@@ -1352,6 +1352,7 @@
     "google_place_id",
     "google_review_link",
     "id",
+    "is_demo",
     "last_monthly_report_at",
     "mcp_api_key",
     "mcp_enabled",

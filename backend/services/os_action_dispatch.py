@@ -61,6 +61,29 @@ async def queue_action_for_run(
     if existing_succeeded.data:
         return existing_succeeded.data[0]["id"]
 
+    # Live-demo sandbox: record the action as succeeded without executing,
+    # so visitors see the full approve -> sent flow with nothing leaving
+    # the system (no SMS, no email, no third-party calls, no spend).
+    from backend.services.demo_guard import is_demo_tenant
+
+    if is_demo_tenant(client_id):
+        created = (
+            tenant_table(db, "os_action_runs", client_id)
+            .insert(
+                {
+                    "client_id": client_id,
+                    "deliverable_id": run_id,
+                    "action_type": action_type,
+                    "status": "succeeded",
+                    "request_payload": {},
+                    "result": {"demo": True, "detail": "demo mode — action simulated, nothing sent"},
+                }
+            )
+            .execute()
+        )
+        logger.info("demo tenant %s: action %s simulated for run %s", client_id, action_type, run_id)
+        return created.data[0]["id"] if created.data else None
+
     created = (
         tenant_table(db, "os_action_runs", client_id)
         .insert(

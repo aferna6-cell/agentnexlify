@@ -32,5 +32,6 @@ export * from "./webhooks";
 export * from "./widget-config";
 
 export { request, BASE, ApiError } from "./_client";
+export * from "./auth";
 export * from "./onboarding";
 export * from "./os";

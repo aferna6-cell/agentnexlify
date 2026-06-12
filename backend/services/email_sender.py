@@ -216,6 +216,12 @@ async def send_email(
     execution_id: str = "",
 ) -> dict[str, Any]:
     """Send an email via Resend. Returns result dict with 'success' and 'detail'."""
+    from backend.services.demo_guard import is_demo_tenant
+
+    if is_demo_tenant(tenant_id):
+        logger.info("demo tenant %s: email to %s suppressed (demo no-op)", tenant_id, mask_email(to))
+        return {"success": True, "detail": "demo_noop", "demo": True}
+
     if not settings.resend_api_key:
         logger.warning("Resend API key not configured, skipping email to %s", mask_email(to))
         return {"success": False, "detail": "resend_api_key not configured"}
