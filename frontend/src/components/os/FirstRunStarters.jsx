@@ -24,6 +24,13 @@ const STARTERS_BY_TYPE = {
     "Draft a reminder for tomorrow's appointments",
     "What do you know about my business so far?",
   ],
+  // Home services trades: plumbing, HVAC, roofing, electrical, landscaping, GCs
+  home: [
+    "Follow up on my open estimates",
+    "Did we miss any calls? Draft the callback texts",
+    "What came in from the widget today?",
+    "Draft a check-in for jobs we finished last month",
+  ],
   dental: [
     "What came in from the widget today?",
     "Draft a reminder for patients due for a check-up",
@@ -72,6 +79,14 @@ function getStarters(businessType) {
   const key = (businessType || "").toLowerCase();
   // Match on common substrings for types like "auto_shop", "auto repair", etc.
   if (key.includes("restaurant") || key.includes("food") || key.includes("cafe")) return STARTERS_BY_TYPE.restaurant;
+  // Home trades must match BEFORE auto: auto matches "repair", which would
+  // otherwise swallow "roof repair" / "appliance repair" businesses
+  if (
+    key.includes("plumb") || key.includes("hvac") || key.includes("heating") ||
+    key.includes("cooling") || key.includes("roof") || key.includes("electric") ||
+    key.includes("landscap") || key.includes("contractor") || key.includes("handyman") ||
+    key.includes("home_services") || key.includes("home services")
+  ) return STARTERS_BY_TYPE.home;
   if (key.includes("auto") || key.includes("mechanic") || key.includes("repair")) return STARTERS_BY_TYPE.auto;
   if (key.includes("dental") || key.includes("dentist")) return STARTERS_BY_TYPE.dental;
   if (key.includes("medical") || key.includes("doctor") || key.includes("clinic") || key.includes("health")) return STARTERS_BY_TYPE.medical;

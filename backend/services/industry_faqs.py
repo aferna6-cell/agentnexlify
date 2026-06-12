@@ -39,6 +39,21 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
             "answer": "We serve the local area. Contact us to confirm we can service your location.",
             "category": "About",
         },
+        {
+            "question": "How often should I have my system serviced?",
+            "answer": "We recommend a tune-up twice a year — cooling in spring, heating in fall. Regular maintenance keeps energy bills down, prevents mid-season breakdowns, and protects your manufacturer warranty.",
+            "category": "Services",
+        },
+        {
+            "question": "Do you offer maintenance plans?",
+            "answer": "Yes, we offer maintenance plans that include seasonal tune-ups, priority scheduling, and discounts on repairs. Ask us for plan details and pricing.",
+            "category": "Pricing",
+        },
+        {
+            "question": "How long does a new system installation take?",
+            "answer": "Most residential installations are completed in one day. Larger or more complex jobs can take longer — we'll give you a clear timeline with your estimate.",
+            "category": "Services",
+        },
     ],
     "plumbing": [
         {
@@ -65,6 +80,21 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
             "question": "Do you give free estimates?",
             "answer": "Yes, we provide free estimates for most plumbing jobs. Contact us to schedule an estimate.",
             "category": "Pricing",
+        },
+        {
+            "question": "How much does a typical repair cost?",
+            "answer": "It depends on the job, and we'd rather see it before quoting a number. Send us a photo and a short description and we'll give you an honest range — no surprise charges once work starts.",
+            "category": "Pricing",
+        },
+        {
+            "question": "Do you repair or replace water heaters?",
+            "answer": "Yes, we repair and replace both tank and tankless water heaters. If yours is leaking, not heating, or over 10 years old, tell us the brand and roughly how old it is and we'll advise repair vs. replace.",
+            "category": "Services",
+        },
+        {
+            "question": "What should I do while I wait for the plumber?",
+            "answer": "For active leaks, shut off the nearest fixture valve or your home's main water shut-off and avoid using the affected fixture. If you smell gas near a water heater, leave the house and call your gas utility first.",
+            "category": "Services",
         },
     ],
     "home_services": [
@@ -97,6 +127,16 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
             "question": "Do you stand behind your work?",
             "answer": "Yes. We want every customer to feel confident in the work we do, and we can explain warranty coverage for labor and parts before the job starts.",
             "category": "Policy",
+        },
+        {
+            "question": "What payment methods do you accept?",
+            "answer": "We accept all major payment methods. For larger projects we can discuss payment schedules tied to project milestones — ask when you get your estimate.",
+            "category": "Pricing",
+        },
+        {
+            "question": "Do I need to be home during the work?",
+            "answer": "For most exterior work, no — we just need access to the work area. For interior work, we'll coordinate a time that works for you, and we always confirm before arriving.",
+            "category": "Services",
         },
     ],
     "dental": [
