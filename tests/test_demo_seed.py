@@ -282,8 +282,8 @@ class TestResetDemoTenantsTimeWindow:
         ) as mock_dt, patch(
             "backend.services.demo_reset_job.get_service_supabase"
         ) as mock_db, patch(
-            "backend.services.demo_reset_job.ensure_demo_tenant",
-            return_value="demo-tid",
+            "backend.services.demo_reset_job.ensure_demo_tenants",
+            return_value={"plumbing": "demo-tid"},
         ), patch(
             "backend.services.demo_reset_job.reset_demo_tenant",
             return_value={"deleted": {}, "seeded": {}},
@@ -318,8 +318,8 @@ class TestResetDemoTenantsDedup:
         ) as mock_dt, patch(
             "backend.services.demo_reset_job.get_service_supabase"
         ) as mock_db, patch(
-            "backend.services.demo_reset_job.ensure_demo_tenant",
-            return_value="demo-tid",
+            "backend.services.demo_reset_job.ensure_demo_tenants",
+            return_value={"plumbing": "demo-tid"},
         ) as mock_ensure, patch(
             "backend.services.demo_reset_job.reset_demo_tenant",
         ) as mock_reset:
@@ -335,3 +335,40 @@ class TestResetDemoTenantsDedup:
 
         assert result == 0
         mock_reset.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# ensure_demo_tenants — multi-vertical
+# ---------------------------------------------------------------------------
+
+class TestEnsureDemoTenantsMultiVertical:
+    """The plural API must manage one tenant per vertical definition."""
+
+    def test_returns_existing_tenants_without_reseeding(self):
+        from unittest.mock import MagicMock, patch
+        from backend.services.demo_seed import ensure_demo_tenants, _DEMO_VERTICALS
+
+        existing = [
+            {"id": f"tid-{v}", "owner_email": cfg["owner_email"], "business_type": v}
+            for v, cfg in _DEMO_VERTICALS.items()
+        ]
+        db = MagicMock()
+        table = MagicMock()
+        for m in ["select", "eq", "limit"]:
+            getattr(table, m).return_value = table
+        table.execute.return_value = MagicMock(data=existing)
+        db.table.return_value = table
+
+        with patch("backend.services.demo_seed._seed_demo_tenant") as mock_seed:
+            result = ensure_demo_tenants(db)
+
+        assert set(result.keys()) == set(_DEMO_VERTICALS.keys())
+        mock_seed.assert_not_called()
+
+    def test_covers_all_three_verticals(self):
+        from backend.services.demo_seed import _DEMO_VERTICALS
+
+        assert set(_DEMO_VERTICALS.keys()) == {"plumbing", "salon", "financial_services"}
+        for vertical, cfg in _DEMO_VERTICALS.items():
+            assert "(DEMO)" in cfg["business_name"], vertical
+            assert cfg["owner_email"] == f"demo-{vertical}@agentnexlify-demo.local", vertical

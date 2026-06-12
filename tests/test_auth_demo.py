@@ -95,6 +95,59 @@ class TestDemoLogin:
         resp = client.post("/api/v1/auth/demo-login")
         assert resp.status_code == 404
 
+    def test_vertical_param_selects_matching_demo_tenant(self, test_client):
+        """?vertical=salon must look up the salon demo tenant by its
+        owner_email convention (demo-salon@agentnexlify-demo.local)."""
+        client, db = test_client
+        eq_calls = []
+
+        def mock_table(name):
+            table = MagicMock()
+            for m in ["select", "limit"]:
+                getattr(table, m).return_value = table
+
+            def record_eq(col, val):
+                eq_calls.append((col, val))
+                return table
+
+            table.eq.side_effect = record_eq
+            table.execute.return_value = MagicMock(data=[{
+                "id": "demo-salon-1", "business_name": "Luxe & Co. Salon (DEMO)",
+                "plan": "professional", "business_type": "salon",
+            }] if name == "tenants" else [])
+            return table
+
+        db.table = mock_table
+        resp = client.post("/api/v1/auth/demo-login?vertical=salon")
+        assert resp.status_code == 200
+        assert resp.json()["business_name"] == "Luxe & Co. Salon (DEMO)"
+        assert ("owner_email", "demo-salon@agentnexlify-demo.local") in eq_calls
+
+    def test_unknown_vertical_falls_back_to_plumbing(self, test_client):
+        client, db = test_client
+        eq_calls = []
+
+        def mock_table(name):
+            table = MagicMock()
+            for m in ["select", "limit"]:
+                getattr(table, m).return_value = table
+
+            def record_eq(col, val):
+                eq_calls.append((col, val))
+                return table
+
+            table.eq.side_effect = record_eq
+            table.execute.return_value = MagicMock(data=[{
+                "id": "demo-t1", "business_name": "Reliable Plumbing Co. (DEMO)",
+                "plan": "professional", "business_type": "plumbing",
+            }])
+            return table
+
+        db.table = mock_table
+        resp = client.post("/api/v1/auth/demo-login?vertical=spaceships")
+        assert resp.status_code == 200
+        assert ("owner_email", "demo-plumbing@agentnexlify-demo.local") in eq_calls
+
 
 class TestDemoRoleBlocks:
     def test_demo_role_blocked_on_billing(self, test_client):
