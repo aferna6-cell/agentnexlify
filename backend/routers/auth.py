@@ -269,6 +269,24 @@ async def _run_signup_side_effects(
                 exc_info=True,
             )
 
+    try:
+        from backend.services.welcome_thread import create_welcome_thread
+
+        db = get_service_supabase()
+        await create_welcome_thread(
+            db,
+            tenant_id=tenant_id,
+            business_name=business_name,
+            business_type=industry,
+            website_url=website_url,
+        )
+    except Exception:
+        logger.warning(
+            "Welcome thread creation failed for new tenant %s",
+            tenant_id,
+            exc_info=True,
+        )
+
 
 # ── Industry FAQ Seeds ───────────────────────────────────────
 # Moved to backend/services/industry_faqs.py

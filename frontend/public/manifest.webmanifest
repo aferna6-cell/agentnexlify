@@ -1,0 +1,23 @@
+{
+  "name": "AgentNexLiFy",
+  "short_name": "AgentNexLiFy",
+  "description": "AI-powered business automation dashboard",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "675x426",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
