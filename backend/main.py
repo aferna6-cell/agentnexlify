@@ -326,6 +326,7 @@ async def _automation_loop():
     )
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
+    from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
 
     tick = 0
     while True:
@@ -389,6 +390,9 @@ async def _automation_loop():
                 core_tasks.extend(
                     [
                         _safe_run("send_monthly_reports", send_monthly_reports),
+                        _safe_run(
+                            "sync_twilio_webhooks", sync_twilio_number_webhooks
+                        ),
                         _safe_run(
                             "process_recurring_invoices", process_recurring_invoices
                         ),
