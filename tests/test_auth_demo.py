@@ -202,6 +202,28 @@ class TestDemoOutboundGuards:
         assert ok is False
         mock_guard.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_send_email_reply_noops_for_demo_tenant(self):
+        from backend.services import email_sender
+
+        with patch("backend.services.demo_guard.is_demo_tenant", return_value=True):
+            result = await email_sender.send_email_reply(
+                to="customer@example.com", subject="Re: hi", body_text="reply",
+                tenant_id="demo-t1",
+            )
+        assert result == {"success": True, "detail": "demo_noop", "demo": True}
+
+    @pytest.mark.asyncio
+    async def test_webhook_dispatch_suppressed_for_demo_tenant(self):
+        """Demo data must never be POSTed to visitor-configured URLs."""
+        from backend.services import webhook_dispatcher as wd
+
+        event = next(iter(wd.SUPPORTED_EVENTS))
+        with patch("backend.services.demo_guard.is_demo_tenant", return_value=True), \
+             patch.object(wd, "get_service_supabase") as mock_db:
+            await wd.fire_event("demo-t1", event, {"lead_id": "x"})
+        mock_db.assert_not_called()
+
     def test_demo_daily_turn_cap_reached(self):
         from backend.routers import os_orchestrate as orch
 
