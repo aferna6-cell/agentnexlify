@@ -202,6 +202,25 @@ class TestDemoOutboundGuards:
         assert ok is False
         mock_guard.assert_not_called()
 
+    def test_demo_daily_turn_cap_reached(self):
+        from backend.routers import os_orchestrate as orch
+
+        table = MagicMock()
+        for m in ["select", "eq", "gte", "limit"]:
+            getattr(table, m).return_value = table
+        table.execute.return_value = MagicMock(count=orch._DEMO_DAILY_TURN_CAP)
+        with patch.object(orch, "tenant_table", return_value=table):
+            assert orch._demo_turns_exhausted(MagicMock(), "demo-t1") is True
+        table.execute.return_value = MagicMock(count=3)
+        with patch.object(orch, "tenant_table", return_value=table):
+            assert orch._demo_turns_exhausted(MagicMock(), "demo-t1") is False
+
+    def test_demo_daily_turn_cap_fails_open(self):
+        from backend.routers import os_orchestrate as orch
+
+        with patch.object(orch, "tenant_table", side_effect=RuntimeError("db down")):
+            assert orch._demo_turns_exhausted(MagicMock(), "demo-t1") is False
+
     def test_demo_guard_fails_open_on_db_error(self):
         from backend.services import demo_guard
         demo_guard.clear_cache()
