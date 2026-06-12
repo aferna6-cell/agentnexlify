@@ -16,6 +16,7 @@ export default function SignupPage() {
   const googleName = searchParams.get("name") || "";
   const googleError = searchParams.get("google_error") || "";
   const refCode = (searchParams.get("ref") || "").trim().slice(0, 200);
+  const fromDemo = searchParams.get("from") === "demo";
   const isGoogleSignup = Boolean(googleSetupToken);
   const [form, setForm] = useState(() => ({
     business_name: "",
@@ -104,7 +105,24 @@ export default function SignupPage() {
       const { token, tenant_id } = await res.json();
       localStorage.setItem("anx_token", token);
       localStorage.setItem("anx_tenant_id", tenant_id);
-      trackEvent("sign_up", { method: isGoogleSignup ? "google" : "email", plan: checkoutPlan || "free" });
+      trackEvent("sign_up", {
+        method: isGoogleSignup ? "google" : "email",
+        plan: checkoutPlan || "free",
+        source: fromDemo ? "demo" : "direct",
+      });
+
+      if (fromDemo) {
+        // Demo-to-signup attribution (fire-and-forget; readable via the
+        // admin funnel readout). Never blocks the signup flow.
+        fetch(`${API_BASE}/api/v1/wizard/${tenant_id}/event`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ step: 0, action: "demo_referral" }),
+        }).catch(() => {});
+      }
 
       if (checkoutPlan) {
         const checkoutRes = await fetch(`${API_BASE}/api/v1/auth/billing/checkout`, {

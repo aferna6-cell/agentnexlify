@@ -37,7 +37,6 @@ const OnboardingWizardPage = lazy(() => import("./pages/OnboardingWizardPage"));
 const DemoLoginPage = lazy(() => import("./pages/DemoLoginPage"));
 
 
-const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
 
 /* Minimal loading spinner for lazy-loaded public pages */
 function PageLoader() {
@@ -168,8 +167,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 );
 
-/* Redirect to external URL (Calendly) */
-function RedirectExternal({ url }) {
-  useEffect(() => { window.location.href = url; }, [url]);
-  return null;
-}

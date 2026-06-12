@@ -178,6 +178,30 @@ class TestDemoOutboundGuards:
         assert inserted["result"]["demo"] is True
         mock_run.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_send_sms_noops_for_demo_tenant(self):
+        """The audit CRITICAL: widget 'talk to human' handoff must never
+        fire a real SMS for demo visitors."""
+        from backend.services import twilio_service
+
+        with patch("backend.services.demo_guard.is_demo_tenant", return_value=True):
+            ok = await twilio_service.send_sms(
+                to="+15551234567", body="hi", tenant_id="demo-t1"
+            )
+        assert ok is True  # success-shaped no-op
+
+    @pytest.mark.asyncio
+    async def test_send_sms_unaffected_without_tenant_context(self):
+        """Call sites without tenant context keep existing behavior
+        (here: unconfigured Twilio -> False), no demo lookup attempted."""
+        from backend.services import twilio_service
+
+        with patch("backend.services.demo_guard.is_demo_tenant") as mock_guard, \
+             patch.object(twilio_service.settings, "twilio_account_sid", ""):
+            ok = await twilio_service.send_sms(to="+15551234567", body="hi")
+        assert ok is False
+        mock_guard.assert_not_called()
+
     def test_demo_guard_fails_open_on_db_error(self):
         from backend.services import demo_guard
         demo_guard.clear_cache()

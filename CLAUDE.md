@@ -38,7 +38,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - `docs/dev-knowledge/` — bug-patterns.md, schema-log.md, architecture-decisions.md
 - `knowledge-base/` — LLM-compiled wiki (`raw/`, `wiki/`, pgvector embeddings)
 - `.claude/` — config, rules, skills, agents, commands, hooks
-- `_archive/`, `landing-page-v2/`, `public/` — **legacy, do not touch**
+- `_archive/`, `public/` — **legacy, do not touch**. `landing-page-v2/` is the LIVE marketing site (Vercel project `agentnexlify` deploys it) — edit deliberately, content-only changes preferred
 
 ### Plan names + prices
 - `free`, `growth` ($99/mo Starter), `autopilot` ($150/mo Growth), `professional` ($250/mo Pro), `enterprise` ($899/mo)

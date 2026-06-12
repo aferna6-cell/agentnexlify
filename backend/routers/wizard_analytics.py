@@ -18,7 +18,10 @@ class WizardEvent(BaseModel):
     # 0 = express-setup chooser; 1-7 = wizard steps. The old le=6 bound
     # silently 422'd every step-7 (embed) event since the wizard shipped.
     step: int = Field(..., ge=0, le=7)
-    action: str = Field(..., pattern="^(enter|complete|skip|abandon)$")
+    # demo_referral: fired once at signup when the visitor came from the
+    # public live-demo banner CTA. admin_funnel only counts action="enter"
+    # for funnel steps, so referral events never pollute step counts.
+    action: str = Field(..., pattern="^(enter|complete|skip|abandon|demo_referral)$")
 
 
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
