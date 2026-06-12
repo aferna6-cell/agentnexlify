@@ -17,6 +17,9 @@ export default function SignupPage() {
   const googleError = searchParams.get("google_error") || "";
   const refCode = (searchParams.get("ref") || "").trim().slice(0, 200);
   const fromDemo = searchParams.get("from") === "demo";
+  // Vertical toured in the demo — pre-selects the industry so onboarding
+  // (FAQs, starters, widget defaults) matches what the visitor just saw.
+  const demoVertical = (searchParams.get("vertical") || "").trim().slice(0, 50);
   const isGoogleSignup = Boolean(googleSetupToken);
   const [form, setForm] = useState(() => ({
     business_name: "",
@@ -84,6 +87,7 @@ export default function SignupPage() {
             email: form.email,
             password: form.password,
             ref_code: refCode || undefined,
+            industry: demoVertical || undefined,
           };
 
       const res = await fetch(endpoint, {

@@ -25,6 +25,15 @@ describe("DemoBanner", () => {
     expect(cta).toHaveAttribute("href", "/signup?from=demo");
   });
 
+  it("carries the demo vertical into the signup link", () => {
+    useAuth.mockReturnValue({
+      user: { role: "demo", tenantId: "demo-tenant-1", businessType: "salon" },
+    });
+    render(<DemoBanner />);
+    const cta = screen.getByRole("link", { name: /start your free account/i });
+    expect(cta).toHaveAttribute("href", "/signup?from=demo&vertical=salon");
+  });
+
   it("does not render when user.role is owner", () => {
     useAuth.mockReturnValue({
       user: { role: "owner", tenantId: "tenant-abc" },

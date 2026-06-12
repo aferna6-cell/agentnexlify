@@ -12,6 +12,12 @@ export default function DemoBanner() {
 
   if (!user || user.role !== "demo") return null;
 
+  // Carry the toured vertical into signup so the new account starts in the
+  // same industry the visitor just explored (salon demo -> salon onboarding).
+  const signupHref = user.businessType
+    ? `/signup?from=demo&vertical=${encodeURIComponent(user.businessType)}`
+    : "/signup?from=demo";
+
   return (
     <div
       data-testid="demo-banner"
@@ -34,7 +40,7 @@ export default function DemoBanner() {
         nightly.
       </span>
       <a
-        href="/signup?from=demo"
+        href={signupHref}
         style={{
           background: "var(--accent)",
           color: "var(--accent-contrast)",
