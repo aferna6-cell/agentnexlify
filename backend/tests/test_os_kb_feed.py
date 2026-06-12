@@ -230,6 +230,22 @@ def test_home_services_vertical_guidance():
     assert len(feed_mod.VERTICAL_GUIDANCE["home_services"]) >= 6
 
 
+def test_salon_vertical_guidance():
+    """Salon depth: all trade aliases hit the salon pack, which must carry
+    no-show prevention, new-client experience, and seasonal demand peaks."""
+    import backend.services.os_kb_feed as feed_mod
+
+    for alias in ("salon", "spa", "barbershop", "nails"):
+        entries = feed_mod.vertical_guidance(alias)
+        assert entries == feed_mod.VERTICAL_GUIDANCE["salon"], alias
+
+    topics = " ".join(e["topic"] for e in feed_mod.VERTICAL_GUIDANCE["salon"])
+    assert "no-show prevention" in topics
+    assert "new-client experience" in topics
+    assert "seasonal demand peaks" in topics
+    assert len(feed_mod.VERTICAL_GUIDANCE["salon"]) >= 6
+
+
 def test_financial_services_vertical_guidance():
     """G8: MTOptions vertical — trading aliases hit the financial pack,
     which must carry the no-financial-advice compliance entry."""

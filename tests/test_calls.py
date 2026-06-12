@@ -808,12 +808,12 @@ class TestGenerateCallSummary:
     """Unit tests for _generate_call_summary."""
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.voice_call_summary.log_activity")
+    @patch("backend.services.voice_call_summary.get_service_supabase")
+    @patch("backend.services.voice_call_summary.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_parses_json_response(self, mock_call_claude, mock_db, mock_activity):
         """Summary should parse Claude's JSON response and update the call."""
-        from backend.routers.calls import _generate_call_summary
+        from backend.services.voice_call_summary import _generate_call_summary
 
         mock_call_claude.return_value = MagicMock(
             text='{"summary": "Caller asked about pricing.", "action_items": ["Send quote by Friday"], "sentiment": "positive", "follow_up": "Email pricing sheet"}',
@@ -885,11 +885,11 @@ class TestGenerateCallSummary:
         assert activity_kwargs["metadata"]["action_item_count"] == 1
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.voice_call_summary.get_service_supabase")
+    @patch("backend.services.voice_call_summary.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_skips_empty_transcript(self, mock_call_claude, mock_db):
         """Empty transcript should skip summary generation."""
-        from backend.routers.calls import _generate_call_summary
+        from backend.services.voice_call_summary import _generate_call_summary
 
         result = await _generate_call_summary(
             call_id="call-001",
@@ -902,11 +902,11 @@ class TestGenerateCallSummary:
         mock_db.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.services.voice_call_summary.get_service_supabase")
+    @patch("backend.services.voice_call_summary.call_claude_messages", new_callable=AsyncMock)
     async def test_summary_skips_whitespace_transcript(self, mock_call_claude, mock_db):
         """Whitespace-only transcript should skip summary generation."""
-        from backend.routers.calls import _generate_call_summary
+        from backend.services.voice_call_summary import _generate_call_summary
 
         result = await _generate_call_summary(
             call_id="call-001",
@@ -928,11 +928,11 @@ class TestInsertCallActionItems:
     """Unit tests for _insert_call_action_items."""
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.services.voice_call_summary.log_activity")
+    @patch("backend.services.voice_call_summary.get_service_supabase")
     async def test_inserts_action_items(self, mock_db, mock_activity):
         """Should insert each action item into action_items table."""
-        from backend.routers.calls import _insert_call_action_items
+        from backend.services.voice_call_summary import _insert_call_action_items
 
         mock_client = MagicMock()
         mock_db.return_value = mock_client
@@ -954,11 +954,11 @@ class TestInsertCallActionItems:
         assert call_args.kwargs["tenant_id"] == "tenant-001"
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.services.voice_call_summary.log_activity")
+    @patch("backend.services.voice_call_summary.get_service_supabase")
     async def test_skips_empty_items(self, mock_db, mock_activity):
         """Empty item list should not insert anything."""
-        from backend.routers.calls import _insert_call_action_items
+        from backend.services.voice_call_summary import _insert_call_action_items
 
         result = await _insert_call_action_items(
             tenant_id="tenant-001",
@@ -973,11 +973,11 @@ class TestInsertCallActionItems:
         mock_activity.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.services.voice_call_summary.log_activity")
+    @patch("backend.services.voice_call_summary.get_service_supabase")
     async def test_sets_high_priority(self, mock_db, mock_activity):
         """Call action items should always be high priority."""
-        from backend.routers.calls import _insert_call_action_items
+        from backend.services.voice_call_summary import _insert_call_action_items
 
         mock_client = MagicMock()
         mock_db.return_value = mock_client
