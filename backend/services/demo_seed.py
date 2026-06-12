@@ -587,6 +587,10 @@ def _seed_demo_tenant(db: Any) -> str | None:
                 "plan": "professional",
                 "plan_status": "active",
                 "is_demo": True,
+                # Conservative AI token budget: caps widget-chat Claude spend
+                # for the public demo (ai_usage_guard honors these overrides).
+                "ai_monthly_token_alert_threshold": 150_000,
+                "ai_monthly_token_hard_limit": 400_000,
             })
             .execute()
         )

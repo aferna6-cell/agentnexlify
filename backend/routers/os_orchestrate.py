@@ -15,6 +15,7 @@ os_threads under the same /api/v1/os prefix (distinct paths, no shadowing).
 """
 
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -22,12 +23,38 @@ from pydantic import BaseModel, Field
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services import agent_os_bridge, usage_meter
+from backend.services.demo_guard import is_demo_tenant
 from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+
+# Live-demo sandbox: hard daily turn budget shared by all demo visitors.
+# Self-resets at midnight UTC (like the nightly data reset) and is checked
+# BEFORE the plan-tier monthly cap so the demo never shows an "upgrade"
+# message. Bounds Claude token burn from the public demo.
+_DEMO_DAILY_TURN_CAP = 250
+
+
+def _demo_turns_exhausted(db, client_id: str) -> bool:
+    """True when the demo tenant has used today's turn budget. Fails open."""
+    try:
+        today = datetime.now(timezone.utc).date().isoformat()
+        result = (
+            tenant_table(db, "os_messages", client_id)
+            .select("id", count="exact")
+            .eq("role", "user")
+            .gte("created_at", f"{today}T00:00:00+00:00")
+            .limit(1)
+            .execute()
+        )
+        used = result.count or 0
+        return used >= _DEMO_DAILY_TURN_CAP
+    except Exception:
+        logger.warning("demo turn-cap check failed for %s — allowing turn", client_id, exc_info=True)
+        return False
 
 
 class OrchestrateRequest(BaseModel):
@@ -52,6 +79,15 @@ async def orchestrate(
 ):
     client_id = claims["tenant_id"]
     db = get_service_supabase()
+
+    if is_demo_tenant(client_id) and _demo_turns_exhausted(db, client_id):
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "The live demo has reached today's activity limit — it resets "
+                "overnight. Start your free account to keep going."
+            ),
+        )
 
     # Plan-tier cap: same gate the chat-shell route applies before each turn.
     if usage_meter.cap_reached(db, client_id):
