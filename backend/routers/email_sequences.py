@@ -272,48 +272,43 @@ async def list_sequences(
         logger.exception("Failed to list email sequences for tenant %s", tenant_id)
         raise HTTPException(status_code=500, detail="Failed to list sequences")
 
-    # Enrich each sequence with step_count and enrollment_count
-    enriched = []
+    # Enrich each sequence with step_count and enrollment_count.
+    # Two bulk queries (not 2N) — tally counts per sequence_id in Python.
+    seq_ids = [seq["id"] for seq in sequences]
+    step_counts = _count_by_sequence_id(db, "email_sequence_steps", seq_ids)
+    enroll_counts = _count_by_sequence_id(db, "email_sequence_enrollments", seq_ids)
+
     for seq in sequences:
-        seq_id = seq["id"]
+        seq["step_count"] = step_counts.get(seq["id"], 0)
+        seq["enrollment_count"] = enroll_counts.get(seq["id"], 0)
 
-        try:
-            step_count_res = (
-                db.table("email_sequence_steps")
-                .select("id", count="exact")
-                .eq("sequence_id", seq_id)
-                .execute()
-            )
-            seq["step_count"] = (
-                step_count_res.count if step_count_res.count is not None else 0
-            )
-        except Exception:
-            logger.warning(
-                "Failed to fetch step count for sequence %s", seq_id, exc_info=True
-            )
-            seq["step_count"] = 0
+    return {"sequences": sequences, "total": len(sequences)}
 
-        try:
-            enroll_count_res = (
-                db.table("email_sequence_enrollments")
-                .select("id", count="exact")
-                .eq("sequence_id", seq_id)
-                .execute()
-            )
-            seq["enrollment_count"] = (
-                enroll_count_res.count if enroll_count_res.count is not None else 0
-            )
-        except Exception:
-            logger.warning(
-                "Failed to fetch enrollment count for sequence %s",
-                seq_id,
-                exc_info=True,
-            )
-            seq["enrollment_count"] = 0
 
-        enriched.append(seq)
+def _count_by_sequence_id(db, table: str, seq_ids: list[str]) -> dict[str, int]:
+    """Return {sequence_id: row_count} for the given table in a single query.
 
-    return {"sequences": enriched, "total": len(enriched)}
+    Replaces the per-sequence ``count="exact"`` round-trips that made
+    ``list_sequences`` O(N) DB calls (GH #112). Fetches only the
+    ``sequence_id`` column for the tenant's sequences and tallies in Python.
+    """
+    if not seq_ids:
+        return {}
+    counts: dict[str, int] = {}
+    try:
+        res = (
+            db.table(table)
+            .select("sequence_id")
+            .in_("sequence_id", seq_ids)
+            .execute()
+        )
+        for row in res.data or []:
+            sid = row.get("sequence_id")
+            if sid is not None:
+                counts[sid] = counts.get(sid, 0) + 1
+    except Exception:
+        logger.warning("Failed to bulk-count %s by sequence_id", table, exc_info=True)
+    return counts
 
 
 @router.post("", status_code=201)
@@ -767,27 +762,27 @@ async def list_enrollments(
         logger.exception("Failed to fetch enrollments for sequence %s", sequence_id)
         raise HTTPException(status_code=500, detail="Failed to list enrollments")
 
-    # Attach lead info (name, email)
-    enriched = []
-    for enrollment in enrollments:
-        lead_id = enrollment["lead_id"]
+    # Attach lead info (name, email) — one bulk query, not N+1 (GH #112).
+    lead_ids = list({e["lead_id"] for e in enrollments if e.get("lead_id")})
+    leads_by_id: dict[str, dict] = {}
+    if lead_ids:
         try:
-            lead_result = (
+            leads_res = (
                 db.table("leads")
                 .select("id, name, email, phone, status")
-                .eq("id", lead_id)
-                .limit(1)
+                .in_("id", lead_ids)
                 .execute()
             )
-            enrollment["lead"] = lead_result.data[0] if lead_result.data else None
+            leads_by_id = {row["id"]: row for row in (leads_res.data or [])}
         except Exception:
             logger.warning(
-                "Failed to fetch lead %s for enrollment listing", lead_id, exc_info=True
+                "Failed to bulk-fetch leads for enrollment listing", exc_info=True
             )
-            enrollment["lead"] = None
-        enriched.append(enrollment)
 
-    return {"enrollments": enriched, "total": len(enriched)}
+    for enrollment in enrollments:
+        enrollment["lead"] = leads_by_id.get(enrollment.get("lead_id"))
+
+    return {"enrollments": enrollments, "total": len(enrollments)}
 
 
 @router.post("/{sequence_id}/enroll")
@@ -871,39 +866,16 @@ async def enroll_lead(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/internal/process-sequences")
-async def process_sequences(
-    x_internal_key: str = Header(..., alias="x-internal-key"),
-):
-    """Process pending email sequence sends whose scheduled_for <= now().
+async def _process_pending_sends(db, due_sends: list[dict]) -> dict:
+    """Process a batch of due email-sequence sends. Shared by the HTTP endpoint
+    (`process_sequences`) and the automation-loop callable
+    (`run_sequence_processor`) so a fix to the per-send logic lands once (GH #113).
 
-    Protected by x-internal-key header. Intended to be called by the
-    automation loop or an external cron job.
+    Per send: load step -> load lead -> CAN-SPAM unsubscribe check -> render
+    template -> send -> log activity + bump runs_total -> complete enrollment on
+    the last step. Returns {processed, sent, failed, skipped}.
     """
-    if x_internal_key != settings.api_secret_key:
-        raise HTTPException(status_code=401, detail="Invalid internal key")
-
-    db = get_service_supabase()
-    now_iso = datetime.now(timezone.utc).isoformat()
-
-    try:
-        due_result = (
-            db.table("email_sequence_sends")
-            .select("*")
-            .eq("status", "pending")
-            .lte("scheduled_for", now_iso)
-            .limit(200)
-            .execute()
-        )
-        due_sends = due_result.data or []
-    except Exception:
-        logger.exception("Failed to query pending email sequence sends")
-        raise HTTPException(status_code=500, detail="Failed to query pending sends")
-
-    processed = 0
-    sent = 0
-    failed = 0
-    skipped = 0
+    processed = sent = failed = skipped = 0
 
     for send_row in due_sends:
         send_id = send_row["id"]
@@ -1066,6 +1038,43 @@ async def process_sequences(
     }
 
 
+def _query_due_sends(db) -> list[dict]:
+    """Fetch up to 200 pending sends whose scheduled_for has elapsed."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    due_result = (
+        db.table("email_sequence_sends")
+        .select("*")
+        .eq("status", "pending")
+        .lte("scheduled_for", now_iso)
+        .limit(200)
+        .execute()
+    )
+    return due_result.data or []
+
+
+@router.post("/internal/process-sequences")
+async def process_sequences(
+    x_internal_key: str = Header(..., alias="x-internal-key"),
+):
+    """Process pending email sequence sends whose scheduled_for <= now().
+
+    Protected by x-internal-key header. Intended to be called by the
+    automation loop or an external cron job.
+    """
+    if x_internal_key != settings.api_secret_key:
+        raise HTTPException(status_code=401, detail="Invalid internal key")
+
+    db = get_service_supabase()
+
+    try:
+        due_sends = _query_due_sends(db)
+    except Exception:
+        logger.exception("Failed to query pending email sequence sends")
+        raise HTTPException(status_code=500, detail="Failed to query pending sends")
+
+    return await _process_pending_sends(db, due_sends)
+
+
 def _update_send_status(
     db,
     send_id: str,
@@ -1086,149 +1095,28 @@ def _update_send_status(
 
 
 async def run_sequence_processor() -> dict:
-    """Standalone callable for the automation loop (no HTTP context needed)."""
+    """Standalone callable for the automation loop (no HTTP context needed).
+
+    Shares the per-send logic with the HTTP endpoint via
+    ``_process_pending_sends`` (GH #113)."""
     db = get_service_supabase()
-    now_iso = datetime.now(timezone.utc).isoformat()
     try:
-        due_result = (
-            db.table("email_sequence_sends")
-            .select("*")
-            .eq("status", "pending")
-            .lte("scheduled_for", now_iso)
-            .limit(200)
-            .execute()
-        )
-        due_sends = due_result.data or []
+        due_sends = _query_due_sends(db)
     except Exception:
         logger.exception("run_sequence_processor: failed to query pending sends")
         return {"processed": 0, "sent": 0, "failed": 0, "skipped": 0}
 
-    processed = sent = failed = skipped = 0
-    for send_row in due_sends:
-        send_id = send_row["id"]
-        step_id = send_row["step_id"]
-        lead_id = send_row["lead_id"]
-        tenant_id = send_row["tenant_id"]
-        enrollment_id = send_row["enrollment_id"]
-        processed += 1
-        try:
-            step_result = (
-                db.table("email_sequence_steps")
-                .select("subject, body, email_type, step_order, sequence_id")
-                .eq("id", step_id)
-                .limit(1)
-                .execute()
-            )
-            if not step_result.data:
-                _update_send_status(db, send_id, "skipped", error="step not found")
-                skipped += 1
-                continue
-            step = step_result.data[0]
-        except Exception:
-            _update_send_status(db, send_id, "failed", error="step load error")
-            failed += 1
-            continue
-        try:
-            lead_result = (
-                db.table("leads")
-                .select("id, name, email, unsubscribed")
-                .eq("id", lead_id)
-                .limit(1)
-                .execute()
-            )
-            if not lead_result.data:
-                _update_send_status(db, send_id, "skipped", error="lead not found")
-                skipped += 1
-                continue
-            lead = lead_result.data[0]
-        except Exception:
-            _update_send_status(db, send_id, "failed", error="lead load error")
-            failed += 1
-            continue
-        # CAN-SPAM: never send to unsubscribed leads
-        if lead.get("unsubscribed"):
-            _update_send_status(db, send_id, "skipped", error="unsubscribed")
-            skipped += 1
-            continue
-        lead_email = lead.get("email", "")
-        if not lead_email:
-            _update_send_status(db, send_id, "skipped", error="no email address")
-            skipped += 1
-            continue
-        try:
-            biz_row = (
-                db.table("tenants")
-                .select("business_name")
-                .eq("id", tenant_id)
-                .limit(1)
-                .execute()
-            )
-            _biz = (biz_row.data[0].get("business_name") or "") if biz_row.data else ""
-        except Exception:
-            _biz = ""
-        _ctx = {
-            "name": lead.get("name") or "there",
-            "email": lead_email,
-            "business_name": _biz,
-        }
-        try:
-            result = await send_email(
-                to=lead_email,
-                subject=render_template(step["subject"], _ctx),
-                body_html=render_template(step["body"], _ctx),
-                tenant_id=tenant_id,
-                unsubscribe_url=build_unsubscribe_url(lead_id, tenant_id),
-                lead_id=lead_id,
-            )
-            if result.get("success"):
-                _update_send_status(
-                    db, send_id, "sent", sent_at=datetime.now(timezone.utc).isoformat()
-                )
-                sent += 1
-                log_activity(
-                    tenant_id=tenant_id,
-                    activity_type="email_sequence_sent",
-                    description=f"Follow-up email sent to {lead.get('name') or lead_email}",
-                    lead_id=lead_id,
-                    metadata={
-                        "send_id": send_id,
-                        "step_id": step_id,
-                        "step_order": step.get("step_order"),
-                        "sequence_id": step.get("sequence_id"),
-                        "enrollment_id": enrollment_id,
-                    },
-                )
-                _increment_runs_total(tenant_id, "email_sequence")
-            else:
-                _update_send_status(
-                    db, send_id, "failed", error=result.get("detail", "send failed")
-                )
-                failed += 1
-        except Exception:
-            logger.exception(
-                "run_sequence_processor: exception sending send=%s", send_id
-            )
-            _update_send_status(db, send_id, "failed", error="send exception")
-            failed += 1
-            continue
-        try:
-            _maybe_complete_enrollment(db, enrollment_id, step["sequence_id"])
-        except Exception:
-            logger.warning(
-                "run_sequence_processor: completion check failed for enrollment %s",
-                enrollment_id,
-                exc_info=True,
-            )
+    result = await _process_pending_sends(db, due_sends)
 
-    if processed:
+    if result["processed"]:
         logger.info(
             "run_sequence_processor: processed=%d sent=%d failed=%d skipped=%d",
-            processed,
-            sent,
-            failed,
-            skipped,
+            result["processed"],
+            result["sent"],
+            result["failed"],
+            result["skipped"],
         )
-    return {"processed": processed, "sent": sent, "failed": failed, "skipped": skipped}
+    return result
 
 
 def _maybe_complete_enrollment(db, enrollment_id: str, sequence_id: str) -> None:
