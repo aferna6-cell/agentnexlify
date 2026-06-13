@@ -5,14 +5,16 @@ on:
     - cron: "0 9 * * 1" # Monday 9 AM UTC
   pull_request:
     paths:
-      - "backend/services/lead_qualifier.py"
+      - "backend/services/lead_qualification.py"
+      - "backend/services/qualification_rubrics.py"
       - "backend/tests/evals/lead_qualifier_golden.json"
       - "backend/tests/evals/test_lead_qualifier_golden.py"
+      - "backend/tests/evals/test_lead_qualifier_structure.py"
+  workflow_dispatch:
 
 jobs:
   eval:
     runs-on: ubuntu-latest
-    continue-on-error: true # eval failures are warnings, not blockers
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -24,5 +26,19 @@ jobs:
           python-version: "3.11"
       - name: Install backend deps
         run: pip install -r backend/requirements.txt
-      - name: Run lead qualifier golden eval
+
+      # Always: deterministic, free. Golden dataset shape + qualifier symbols.
+      # Blocking — a renamed symbol or malformed golden row fails the PR here
+      # instead of surfacing on the Monday cron.
+      - name: Structural check (offline, free)
+        run: python -m pytest backend/tests/evals/test_lead_qualifier_structure.py -v --tb=short
+
+      # Schedule only: live golden eval burns Anthropic credits, so it runs
+      # weekly, not per-PR. Non-blocking — score regressions are warnings.
+      - name: Live golden eval (weekly)
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          RUN_LEAD_QUALIFIER_EVAL: "1"
+          LEAD_QUALIFIER_AGENT_ID: ${{ secrets.LEAD_QUALIFIER_AGENT_ID }}
         run: python -m pytest backend/tests/evals/test_lead_qualifier_golden.py -v --tb=short
