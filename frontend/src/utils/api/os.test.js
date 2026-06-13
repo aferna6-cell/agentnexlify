@@ -96,12 +96,13 @@ describe("os threads api", () => {
   });
 
   it("orchestrateOsTurn includes force_agent_id when given", async () => {
-    await orchestrateOsTurn(TOKEN, "t1", "draft a quote", "sales");
+    const result = await orchestrateOsTurn(TOKEN, "t1", "draft a quote", "sales");
     expect(request).toHaveBeenCalledWith("/api/v1/os/orchestrate", {
       method: "POST",
       token: TOKEN,
       body: { thread_id: "t1", content: "draft a quote", force_agent_id: "sales" },
     });
+    expect(result).toBe(API_RESPONSE);
   });
 });
 
