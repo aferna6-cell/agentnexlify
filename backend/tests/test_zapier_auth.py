@@ -336,6 +336,33 @@ class TestGetNewLeads:
         )
         assert resp.status_code == 402
 
+    def test_cancelled_subscription_blocked(self, mock_supabase):
+        # GH #107: a churned tenant (paid plan, plan_status='cancelled') must
+        # lose Zapier access even though the plan tier still gates open.
+        from backend.services.api_key_auth import generate_api_key
+
+        client = _make_client()
+        raw, key_hash, key_prefix = generate_api_key()
+
+        key_row = {
+            "id": _KEY_ID,
+            "client_id": _CLIENT_ID,
+            "key_hash": key_hash,
+            "key_prefix": key_prefix,
+        }
+        mock_supabase.table.return_value.select.return_value.eq.return_value.is_.return_value.execute.return_value.data = [key_row]
+        # paid plan but cancelled subscription
+        mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [
+            {"id": _CLIENT_ID, "plan": "growth", "plan_status": "cancelled"}
+        ]
+
+        resp = client.get(
+            "/api/zapier/leads/new",
+            params={"since": "2026-01-01T00:00:00Z"},
+            headers=self._key_auth_headers(raw),
+        )
+        assert resp.status_code == 402
+
     def test_invalid_key_returns_401(self, mock_supabase):
         client = _make_client()
         mock_supabase.table.return_value.select.return_value.eq.return_value.is_.return_value.execute.return_value.data = []
