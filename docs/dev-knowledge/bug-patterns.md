@@ -17930,3 +17930,19 @@ https://claude.ai/code/session_016QzX7ngVLw4RDGXUoM9A9F
 **Author:** Claude
 **Files Changed:** subconscious/runs/2026-06-13/debate/debate-log.md,subconscious/runs/2026-06-13/ideas/ideas.md,subconscious/runs/2026-06-13/improvement-backlog.md,subconscious/runs/2026-06-13/run-summary.json,subconscious/runs/2026-06-13/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Launch-readiness P0–P3: invariant gate, CI restore, live-path bug fixes, dep CVEs (#257)
+
+P0a: green the launch-readiness invariant gate (widget cp, em-dashes, AST __future__ check).
+P0b: restore CI - schema-sync issues:write, remove stray .worktrees gitlink, fix stale demo-smoke e2e, restore agent-config-security paths, add fraud/twilio to coverage pytest, anchor __future__ grep, add behavioral assertions to 5 test-quality-flagged tests, strip trailing whitespace, re-enable PR Validation pull_request+push triggers.
+P1: fraud_guard no_payment_required + None-charge handling (#93/#94), Stripe webhook ordered-except (#99), twilio phone->tenant TTL cache + drop limit(50) (#98).
+P3: clear 11 npm CVEs via vite 8 / vitest 4 / react-router 7.17 in demo-platform + frontend.
+
+Full PR Validation gate green on the re-enabled trigger.
+**Date:** 2026-06-13
+**Commit:** 3234597
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/agent-config-security.yml,.github/workflows/pr-check.yml,.github/workflows/schema-sync-check.yml,.gitignore,.worktrees/issue-62,backend/routers/stripe_webhooks.py,backend/routers/twilio_webhooks.py,backend/services/fraud_guard.py,backend/tests/test_fraud_guard.py,backend/tests/test_twilio_webhooks.py,demo-platform/package-lock.json,demo-platform/package.json,e2e/demo-smoke.spec.ts,frontend/package-lock.json,frontend/package.json,frontend/src/components/App.jsx,frontend/src/components/CookieConsent.jsx,frontend/src/components/DemoBanner.jsx,frontend/src/components/MarketingUpsell.jsx,frontend/src/components/Sidebar.jsx,frontend/src/components/Sidebar.test.jsx,frontend/src/components/billing/ReferralCard.jsx,frontend/src/components/os/ComposerAttachments.jsx,frontend/src/components/os/DemoTour.jsx,frontend/src/components/os/FirstRunStarters.jsx,frontend/src/components/os/MemoryPanel.jsx,frontend/src/components/os/OsInsightsCard.jsx,frontend/src/context/AuthContext.jsx,frontend/src/main.jsx,frontend/src/pages/AdminAnalyticsPage.jsx,frontend/src/pages/AdminHealthPage.jsx,frontend/src/pages/AgentOS.jsx,frontend/src/pages/AgentOS.test.jsx,frontend/src/pages/DemoLoginPage.jsx,frontend/src/pages/Home.jsx,frontend/src/pages/OnboardingWizardPage.jsx,frontend/src/pages/SignupPage.jsx,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/wizard/WizardExpressSetup.jsx,frontend/src/pages/wizard/WizardStepCustomize.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,frontend/src/utils/api/auth.js,frontend/src/utils/api/os.test.js,frontend/src/utils/pricingExperiment.js,frontend/src/utils/pushNotifications.js,frontend/vite.config.js,landing-page-v2/widget/agentnexlify-widget.js,scripts/check_project_invariants.py,tests/test_activation_nudges.py,tests/test_auth_demo.py,tests/test_stripe_webhook.py,tests/test_voice_call_summary.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
