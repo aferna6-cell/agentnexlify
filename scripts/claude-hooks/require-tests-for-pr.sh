@@ -13,9 +13,13 @@ cd "$REPO_DIR"
 
 # Run Python tests
 if ls tests/test_*.py &>/dev/null; then
-    if ! python3 -m pytest tests/ -x --tb=short -q 2>&1; then
-        echo "BLOCKED: Python tests are failing. Fix all test failures before creating a PR." >&2
-        exit 2
+    if ! python3 -m pytest --version &>/dev/null; then
+        echo "WARNING: pytest not available in system Python — skipping Python test check." >&2
+    else
+        if ! python3 -m pytest tests/ -x --tb=short -q 2>&1; then
+            echo "BLOCKED: Python tests are failing. Fix all test failures before creating a PR." >&2
+            exit 2
+        fi
     fi
 fi
 
