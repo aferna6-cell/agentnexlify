@@ -7,6 +7,7 @@ We auto-text the caller and track the SMS conversation.
 import hashlib
 import hmac
 import logging
+import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
@@ -66,28 +67,66 @@ def _verify_twilio_signature(request: Request, body: bytes) -> bool:
     return hmac.compare_digest(signature, expected_b64)
 
 
-def _find_tenant_by_phone(phone: str) -> dict | None:
-    """Look up tenant by their configured notification_phone or Twilio number."""
+# Per-worker cache of SMS-enabled tenants, keyed by last-10-digit phone.
+# Mirrors the existing 5-min widget/config cache pattern (CLAUDE.md). A 60s TTL
+# keeps newly-configured notification numbers fresh enough for SMS/voice
+# routing while turning the former O(N) per-webhook scan into an O(1) lookup,
+# and removes the limit(50) that silently dropped tenants past the 50th. (GH #98)
+_TENANT_PHONE_SELECT = (
+    "id, business_name, notification_phone, sms_notifications_enabled, plan, "
+    "textback_enabled, textback_message, textback_quiet_start, textback_quiet_end"
+)
+_TENANT_PHONE_INDEX: dict[str, dict] = {}
+_TENANT_PHONE_INDEX_AT: float = 0.0
+_TENANT_PHONE_INDEX_TTL = 60.0
+
+
+def _phone_key(phone: str | None) -> str:
+    """Last 10 digits with all separators stripped — the match key.
+
+    Equivalent to the previous endswith(last-10) heuristic but order-free.
+    """
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    return digits[-10:]
+
+
+def _refresh_tenant_phone_index() -> None:
+    """Rebuild the phone->tenant index from all SMS-enabled tenants (no cap)."""
+    global _TENANT_PHONE_INDEX, _TENANT_PHONE_INDEX_AT
     db = get_service_supabase()
     result = (
         db.table("tenants")
-        .select(
-            "id, business_name, notification_phone, sms_notifications_enabled, plan, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end"
-        )
+        .select(_TENANT_PHONE_SELECT)
         .eq("sms_notifications_enabled", True)
-        .limit(50)
         .execute()
     )
+    index: dict[str, dict] = {}
     for tenant in result.data or []:
-        if tenant.get("notification_phone"):
-            # Normalize for comparison (strip spaces, dashes)
-            norm_tenant = tenant["notification_phone"].replace(" ", "").replace("-", "")
-            norm_phone = phone.replace(" ", "").replace("-", "")
-            if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(
-                norm_tenant[-10:]
-            ):
-                return tenant
-    return None
+        key = _phone_key(tenant.get("notification_phone"))
+        if key:
+            index[key] = tenant
+    _TENANT_PHONE_INDEX = index
+    _TENANT_PHONE_INDEX_AT = time.monotonic()
+
+
+def _find_tenant_by_phone(phone: str) -> dict | None:
+    """Look up a tenant by configured notification_phone (last-10-digit match).
+
+    Backed by a per-worker 60s cache so inbound SMS/voice webhooks no longer run
+    an O(N) scan per request and no longer silently drop tenants past a
+    limit(50) cap. (GH #98)
+    """
+    key = _phone_key(phone)
+    if not key:
+        return None
+    now = time.monotonic()
+    if not _TENANT_PHONE_INDEX or (now - _TENANT_PHONE_INDEX_AT) > _TENANT_PHONE_INDEX_TTL:
+        try:
+            _refresh_tenant_phone_index()
+        except Exception:
+            # Never let a lookup failure 500 the webhook; degrade to no-match.
+            logger.warning("Failed to refresh tenant phone index", exc_info=True)
+    return _TENANT_PHONE_INDEX.get(key)
 
 
 def _get_automation(tenant_id: str, automation_type: str) -> dict | None:

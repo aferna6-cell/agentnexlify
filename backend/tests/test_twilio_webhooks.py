@@ -82,10 +82,26 @@ def _wire_tenant_lookup(mock_supabase, tenant: dict | None = TENANT_ROW):
         mock_supabase.table.return_value
         .select.return_value
         .eq.return_value
-        .limit.return_value
         .execute.return_value
     ) = result
     return result
+
+
+@pytest.fixture(autouse=True)
+def _reset_tenant_phone_index():
+    """Clear the per-worker phone->tenant cache between tests.
+
+    _find_tenant_by_phone (GH #98) caches SMS-enabled tenants at module scope
+    with a 60s TTL. Without resetting, one test's wired tenant would leak into
+    the next (e.g. test_no_matching_tenant would still see a cached row).
+    """
+    import backend.routers.twilio_webhooks as tw
+
+    tw._TENANT_PHONE_INDEX = {}
+    tw._TENANT_PHONE_INDEX_AT = 0.0
+    yield
+    tw._TENANT_PHONE_INDEX = {}
+    tw._TENANT_PHONE_INDEX_AT = 0.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -112,7 +128,7 @@ class TestHandleMissedCallCharacterization:
         activity_result = MagicMock()
         activity_result.data = []
 
-        mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = tenant_result
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = tenant_result
         mock_supabase.table.return_value.insert.return_value.execute.return_value = insert_result
 
         with patch("backend.routers.twilio_webhooks.send_sms", new_callable=AsyncMock) as mock_sms:
@@ -165,7 +181,7 @@ class TestHandleMissedCallCharacterization:
         _patch_sig_verify(monkeypatch)
         no_tenant = MagicMock()
         no_tenant.data = []
-        mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = no_tenant
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = no_tenant
 
         with patch("backend.routers.twilio_webhooks.send_sms", new_callable=AsyncMock) as mock_sms:
             resp = client.post(
@@ -182,7 +198,7 @@ class TestHandleMissedCallCharacterization:
         tenant_no_textback = {**TENANT_ROW, "textback_enabled": False}
         result = MagicMock()
         result.data = [tenant_no_textback]
-        mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = result
+        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = result
 
         with patch("backend.routers.twilio_webhooks.send_sms", new_callable=AsyncMock) as mock_sms:
             resp = client.post(
@@ -358,3 +374,68 @@ class TestHandleMissedCallExtensions:
         sms_body_arg = mock_sms.call_args[1].get("body") or mock_sms.call_args[0][1] if len(mock_sms.call_args[0]) > 1 else mock_sms.call_args[1].get("body", "")
         # Just verify SMS was sent — personalization message checked in integration
         assert mock_sms.called
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GH #98 — _find_tenant_by_phone TTL cache + correctness (no limit(50))
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestFindTenantByPhoneCache:
+    """Phone->tenant lookup is cached per-worker and no longer caps at 50 rows."""
+
+    def _wire(self, mock_supabase, rows):
+        result = MagicMock()
+        result.data = rows
+        (
+            mock_supabase.table.return_value
+            .select.return_value
+            .eq.return_value
+            .execute.return_value
+        ) = result
+
+    def test_finds_tenant_among_more_than_50(self, mock_supabase):
+        # GH #98: the old limit(50) silently dropped tenants past index 50.
+        # The target tenant sits at position 75 and must still be found.
+        import backend.routers.twilio_webhooks as tw
+
+        target = {**TENANT_ROW, "id": "t-75", "notification_phone": "+15557770075"}
+        rows = [
+            {**TENANT_ROW, "id": f"t-{i}", "notification_phone": f"+1555000{i:04d}"}
+            for i in range(75)
+        ] + [target]
+        self._wire(mock_supabase, rows)
+
+        found = tw._find_tenant_by_phone("+15557770075")
+        assert found is not None and found["id"] == "t-75"
+
+    def test_normalizes_separators(self, mock_supabase):
+        import backend.routers.twilio_webhooks as tw
+
+        row = {**TENANT_ROW, "id": "t-sep", "notification_phone": "(555) 777-0099"}
+        self._wire(mock_supabase, [row])
+        # Inbound formatted differently but same last-10 digits.
+        found = tw._find_tenant_by_phone("+1 555-777-0099")
+        assert found is not None and found["id"] == "t-sep"
+
+    def test_caches_within_ttl(self, mock_supabase):
+        # Second lookup inside the TTL must not re-query the DB.
+        import backend.routers.twilio_webhooks as tw
+
+        self._wire(mock_supabase, [TENANT_ROW])
+        tw._find_tenant_by_phone(CALLED)
+        calls_after_first = mock_supabase.table.call_count
+        tw._find_tenant_by_phone(CALLED)
+        assert mock_supabase.table.call_count == calls_after_first
+
+    def test_unknown_phone_returns_none(self, mock_supabase):
+        import backend.routers.twilio_webhooks as tw
+
+        self._wire(mock_supabase, [TENANT_ROW])
+        assert tw._find_tenant_by_phone("+19998887777") is None
+
+    def test_blank_phone_returns_none_without_query(self, mock_supabase):
+        import backend.routers.twilio_webhooks as tw
+
+        before = mock_supabase.table.call_count
+        assert tw._find_tenant_by_phone("") is None
+        assert mock_supabase.table.call_count == before

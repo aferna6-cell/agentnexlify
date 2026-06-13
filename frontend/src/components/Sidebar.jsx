@@ -383,7 +383,7 @@ const allNavItems = [
     label: "Support",
   },
   // Platform-admin pages (admin_analytics, admin_promotions) are deliberately
-  // NOT in the sidebar — every tenant saw the ADMIN section even though the
+  // NOT in the sidebar - every tenant saw the ADMIN section even though the
   // data behind it is admin-secret-gated. Reach them by direct URL:
   // /admin/analytics and /admin/promotions (routes still wired in App.jsx).
 ];

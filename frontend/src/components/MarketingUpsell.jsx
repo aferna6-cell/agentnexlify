@@ -1,6 +1,6 @@
 /* Plan upsell for marketing features.
  *
- * The $49.99 Marketing Suite add-on was retired 2026-06-10 — these features
+ * The $49.99 Marketing Suite add-on was retired 2026-06-10 - these features
  * are included with the Growth plan (autopilot) and above, and the primary
  * way to use them is through your AI marketing staff in Agent OS.
  */

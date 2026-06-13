@@ -1,11 +1,11 @@
 // frontend/src/pages/wizard/WizardExpressSetup.jsx
 //
 // The first screen of /setup. Two doors:
-//   1. "Set up automatically" — website URL (optional) + industry, one click.
+//   1. "Set up automatically" - website URL (optional) + industry, one click.
 //      Crawls the site into the knowledge base, applies the industry pack and
 //      widget defaults server-side, then drops the owner straight into the
 //      Agent OS. Under 2 minutes, zero technical steps.
-//   2. "Customize step by step" — the full 7-step wizard for people who want it.
+//   2. "Customize step by step" - the full 7-step wizard for people who want it.
 // Funnel data (2026-06-11): 0 of 4 tenants ever completed wizard step 1, so
 // the express door is the default emphasis.
 import { useState } from "react";
@@ -66,7 +66,7 @@ export default function WizardExpressSetup({ user, token, onCustomize }) {
         try {
           await autoGenerateKb(tenantId, token, normalizeUrl(url));
         } catch (e) {
-          // Crawl failure is non-fatal — industry pack still applies below.
+          // Crawl failure is non-fatal - industry pack still applies below.
           console.warn("Express setup: auto-KB failed", e?.message);
         }
       }
@@ -85,7 +85,7 @@ export default function WizardExpressSetup({ user, token, onCustomize }) {
       trackWizardEvent(tenantId, token, 0, "complete");
       window.location.href = "/dashboard/agent-os";
     } catch (e) {
-      setError(e?.message || "Setup failed — try again or customize step by step.");
+      setError(e?.message || "Setup failed - try again or customize step by step.");
       setWorking(false);
       setStatus("");
     }
@@ -107,7 +107,7 @@ export default function WizardExpressSetup({ user, token, onCustomize }) {
         </div>
 
         <label style={labelStyle}>
-          Your website <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>(optional — we'll read it for you)</span>
+          Your website <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>(optional - we'll read it for you)</span>
           <input
             style={inputStyle}
             value={websiteUrl}
@@ -183,7 +183,7 @@ export default function WizardExpressSetup({ user, token, onCustomize }) {
         href="/dashboard/agent-os"
         style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", textDecoration: "none" }}
       >
-        Skip for now — go to Agent OS
+        Skip for now - go to Agent OS
       </a>
     </div>
   );

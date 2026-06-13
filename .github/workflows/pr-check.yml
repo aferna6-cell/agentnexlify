@@ -1,11 +1,13 @@
 name: PR Validation
 
-# DISABLED 2026-05-26: repo-level GHA infra failure since 2026-05-24T20:00Z.
-# Every PR/push run completes in <5s with conclusion=failure (pre-checkout
-# startup failure, not a step failing). Restore by re-adding `pull_request`
-# and `push` triggers below once GH Actions billing/quota/runner permissions
-# are confirmed healthy. See PR #177 body for diagnostic checklist.
+# Re-enabled 2026-06-13: the 2026-05-26 GHA infra failure (sub-5s pre-checkout
+# startup failures) has cleared - sibling workflows run with real durations and
+# a full workflow_dispatch run of this file passed green on the branch
+# (run 27474501085). Restores PR-gating for every PR + push to main.
 on:
+  pull_request:
+  push:
+    branches: [main]
   workflow_dispatch: {}
 
 jobs:
@@ -84,8 +86,11 @@ jobs:
         run: |
           ERRORS=0
 
-          # __future__ annotations in routers
-          if grep -r "from __future__ import annotations" backend/routers/ 2>/dev/null; then
+          # __future__ annotations in routers. Anchor to an actual import
+          # statement (optional leading whitespace) so docstrings/comments that
+          # merely DOCUMENT the rule ("no `from __future__ import annotations`")
+          # are not false-positives. Mirrors scripts/check_project_invariants.py.
+          if grep -rnE "^[[:space:]]*from __future__ import annotations" backend/routers/ 2>/dev/null; then
             echo "::error::from __future__ import annotations found in router files. This breaks FastAPI request parsing."
             ERRORS=$((ERRORS + 1))
           fi
@@ -131,7 +136,7 @@ jobs:
 
       - name: Run backend tests with coverage
         run: |
-          python -m pytest tests backend/tests/test_local_seo_handlers.py backend/tests/test_billing_amount_to_plan.py -q --cov=backend --cov-report=xml:coverage-python.xml
+          python -m pytest tests backend/tests/test_local_seo_handlers.py backend/tests/test_billing_amount_to_plan.py backend/tests/test_fraud_guard.py backend/tests/test_twilio_webhooks.py -q --cov=backend --cov-report=xml:coverage-python.xml
 
       - name: Audit backend Python dependencies
         continue-on-error: true

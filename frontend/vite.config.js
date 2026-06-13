@@ -15,11 +15,16 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate heavy vendor libs into their own cacheable chunks
-          recharts: ["recharts"],
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
-          purify: ["dompurify"],
+        // Vite 8 (rolldown) requires manualChunks to be a function, not an object
+        manualChunks(id) {
+          if (id.includes("node_modules/recharts")) return "recharts";
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/react-router")
+          )
+            return "react-vendor";
+          if (id.includes("node_modules/dompurify")) return "purify";
         },
       },
     },

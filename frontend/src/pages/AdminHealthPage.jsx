@@ -56,9 +56,9 @@ async function apiFetch(path) {
 }
 
 function formatDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return " - ";
   return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -106,7 +106,7 @@ export default function AdminHealthPage() {
     try {
       const data = await apiFetch("/tenant-health");
       const list = Array.isArray(data) ? data : [];
-      // Backend already sorts red first — re-sort defensively.
+      // Backend already sorts red first - re-sort defensively.
       list.sort(
         (a, b) =>
           (HEALTH_ORDER[a.health] ?? 3) - (HEALTH_ORDER[b.health] ?? 3) ||
@@ -195,7 +195,7 @@ export default function AdminHealthPage() {
               fontSize: "0.9rem",
             }}
           >
-            Every tenant, red first — leads activity and stuck approval drafts
+            Every tenant, red first - leads activity and stuck approval drafts
           </p>
         </div>
         <div style={{ display: "flex", gap: 16 }}>
@@ -322,7 +322,7 @@ export default function AdminHealthPage() {
                         color: "var(--text-secondary)",
                       }}
                     >
-                      {PLAN_LABELS[t.plan] || t.plan || "—"}
+                      {PLAN_LABELS[t.plan] || t.plan || " - "}
                     </td>
                     <td
                       style={{

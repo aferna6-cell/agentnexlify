@@ -1,4 +1,4 @@
-/* Composer attachments for Agent OS — file/image upload + image generation.
+/* Composer attachments for Agent OS - file/image upload + image generation.
  *
  * Uploads go to POST /api/v1/os/uploads (10MB cap, rate-limited server-side).
  * "Generate image" sends the current composer text as the prompt to
@@ -28,10 +28,10 @@ export default function ComposerAttachments({
     if (status === 413) return "File is too large (10MB max).";
     if (status === 415 || status === 400) return "That file type isn't supported.";
     if (status === 429)
-      return body?.detail?.message || body?.detail || "Upload limit reached — try again later.";
+      return body?.detail?.message || body?.detail || "Upload limit reached - try again later.";
     if (status === 503)
-      return "Image generation isn't configured yet — ask your admin to add a provider key.";
-    return "Something went wrong — try again.";
+      return "Image generation isn't configured yet - ask your admin to add a provider key.";
+    return "Something went wrong - try again.";
   };
 
   const handleFile = async (event) => {
@@ -59,7 +59,7 @@ export default function ComposerAttachments({
       }
       setAttachments((prev) => [...prev, body]);
     } catch {
-      setError("Upload failed — check your connection.");
+      setError("Upload failed - check your connection.");
     } finally {
       setBusy(false);
     }
@@ -92,7 +92,7 @@ export default function ComposerAttachments({
         { ...body, content_type: "image/png", filename: "generated-image.png" },
       ]);
     } catch {
-      setError("Image generation failed — try again.");
+      setError("Image generation failed - try again.");
     } finally {
       setBusy(false);
     }

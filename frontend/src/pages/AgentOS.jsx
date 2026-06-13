@@ -194,7 +194,7 @@ export default function AgentOS() {
     // thread keeps a durable reference (URLs live in Supabase Storage).
     if (attachments.length > 0) {
       const blocks = attachments.map((a) => {
-        let block = `[Attached: ${a.filename} — ${a.public_url}]`;
+        let block = `[Attached: ${a.filename} - ${a.public_url}]`;
         if (a.vision_summary) block += `\n[Image description: ${a.vision_summary}]`;
         return block;
       });
@@ -215,7 +215,7 @@ export default function AgentOS() {
       try {
         result = await orchestrateOsTurn(token, threadId, content);
       } catch (err) {
-        // Engine route missing (old backend) or unavailable — fall back to the
+        // Engine route missing (old backend) or unavailable - fall back to the
         // legacy turn endpoint so the dashboard never breaks during rollout.
         if (err.status === 404 || err.status === 503) {
           result = await postOsMessage(token, threadId, content);
@@ -242,7 +242,7 @@ export default function AgentOS() {
         setError("Monthly agent-run cap reached for this billing cycle.");
         refreshUsage();
       } else if (err.status === 503) {
-        setError("Agent OS engine is not connected yet — try again shortly.");
+        setError("Agent OS engine is not connected yet - try again shortly.");
       } else {
         setError(err.message || "Failed to send message");
       }
@@ -277,7 +277,7 @@ export default function AgentOS() {
         background: "var(--bg-primary)",
       }}
     >
-      {/* Thread rail — fixed full-screen overlay on mobile, 240px column on desktop */}
+      {/* Thread rail - fixed full-screen overlay on mobile, 240px column on desktop */}
       {isMobile && railOpen && (
         <div
           onClick={() => setRailOpen(false)}
@@ -793,7 +793,7 @@ export default function AgentOS() {
         <MemoryPanel token={token} onClose={() => setShowMemory(false)} />
       )}
 
-      {/* Demo-only guided tour — visible once per session for role=demo */}
+      {/* Demo-only guided tour - visible once per session for role=demo */}
       <DemoTour />
     </div>
   );

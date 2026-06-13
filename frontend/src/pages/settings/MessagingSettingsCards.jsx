@@ -153,7 +153,7 @@ export function BrowserNotificationsCard() {
       <h3>Browser Notifications</h3>
       <p className="settings-card-desc">
         Get a notification on this device when your AI staff drafts something
-        that needs your approval. Free — no SMS charges.
+        that needs your approval. Free - no SMS charges.
       </p>
       <button
         className="btn btn-secondary"
@@ -386,7 +386,7 @@ export function NoShowRecoveryCard({
 }
 
 // Per-agent auto-send rules (gap G6). Agents handling money or complaints
-// (invoicing, payments, complaints) ALWAYS require approval — the backend
+// (invoicing, payments, complaints) ALWAYS require approval - the backend
 // never-auto-send set cannot be overridden, so they're not listed here.
 const AUTO_SEND_AGENTS = [
   { key: "generalist", label: "General assistant" },
@@ -498,7 +498,7 @@ export function VoiceAICard({
     <div className="settings-card">
       <h3>AI Phone Answering</h3>
       <p className="settings-card-desc">
-        When ON, your AI staff answers calls to your business number live —
+        When ON, your AI staff answers calls to your business number live -
         speaking with callers, answering questions from your knowledge base,
         and capturing lead details. When OFF, callers reach voicemail and your
         AI staff transcribes the message, summarizes it, and drafts a text-back

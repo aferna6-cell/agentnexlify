@@ -176,6 +176,9 @@ describe("AgentOS shell", () => {
     await waitFor(() =>
       expect(screen.getByText("legacy reply")).toBeInTheDocument(),
     );
+    // Behavioral assertion (not just the mock-interaction check below): the
+    // legacy assistant reply is rendered after the orchestrate 404 fallback.
+    expect(screen.getByText("legacy reply")).toBeInTheDocument();
     expect(postOsMessage).toHaveBeenCalledWith("jwt", "t1", "legacy path");
   });
 

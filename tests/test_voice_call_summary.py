@@ -88,7 +88,9 @@ class TestFinalizeAiCallDegradation:
             "backend.services.voice_call_summary._generate_call_summary",
             new_callable=AsyncMock,
         ) as mock_summary:
-            await _finalize_ai_call(db, "t1", "CA123", 60)
+            result = await _finalize_ai_call(db, "t1", "CA123", 60)
+        # Idempotent no-op: a completed call returns early (None), no summary.
+        assert result is None
         mock_summary.assert_not_awaited()
 
     @pytest.mark.asyncio

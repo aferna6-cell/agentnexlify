@@ -150,7 +150,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/biz/:slug" element={<BusinessPage />} />
             {/* /setup - onboarding wizard for new tenants. Routed through
                 OnboardingRoute (same as /onboarding): mounting the wizard
-                bare lost the AuthProvider race on cold load — user is null
+                bare lost the AuthProvider race on cold load - user is null
                 for a tick while the token parses, and the wizard's own
                 redirect bounced logged-in users to /signup. */}
             <Route path="/setup" element={<AuthProvider><OnboardingRoute /></AuthProvider>} />

@@ -66,7 +66,7 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
       <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Optional: customize your website chat</h2>
       <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32, fontSize: "0.9rem" }}>
         Your AI staff is already working in the Agent OS. This styles the
-        optional chat widget for your website — match it to your brand, or skip it.
+        optional chat widget for your website - match it to your brand, or skip it.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 32 }}>
@@ -133,7 +133,7 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
       </div>
       <div style={{ textAlign: "center" }}>
         <a href="/dashboard/agent-os" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", textDecoration: "none" }}>
-          Skip — go to Agent OS
+          Skip - go to Agent OS
         </a>
       </div>
     </div>

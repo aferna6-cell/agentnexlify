@@ -40,7 +40,7 @@ export default function OnboardingWizardPage() {
   const navigate = useNavigate();
 
   // Redirect to signup only when there is no token at all. With a token
-  // present, user is null for a tick while AuthContext parses it — bouncing
+  // present, user is null for a tick while AuthContext parses it - bouncing
   // on that tick sent logged-in users cold-loading /setup to /signup.
   useEffect(() => {
     if (user === null && !token) navigate("/signup", { replace: true });

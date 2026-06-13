@@ -122,7 +122,7 @@ function DemoSlide({ tab }) {
             Found Mike Chen from yesterday. He asked about kitchen remodel pricing.
             Here’s a draft follow-up:
             <div className="ds-os-draft">
-              &ldquo;Hi Mike, just checking in on the kitchen quote we discussed. Happy to answer any questions or schedule a walkthrough—just let me know.&rdquo;
+              &ldquo;Hi Mike, just checking in on the kitchen quote we discussed. Happy to answer any questions or schedule a walkthrough - just let me know.&rdquo;
             </div>
             <div className="ds-os-actions">
               <span className="ds-os-btn ds-os-btn-approve">Approve &amp; Send</span>
@@ -913,7 +913,7 @@ export default function Home() {
                 onClick={() => trackPricingEvent("cta_click", "free")}
               >
                 {pricingVariant === "variant_b"
-                  ? "Try It Free — 2-Minute Setup →"
+                  ? "Try It Free - 2-Minute Setup →"
                   : "Get Started →"}
               </Link>
             </div>

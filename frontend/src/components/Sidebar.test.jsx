@@ -24,7 +24,7 @@ describe("Sidebar navigation (agent-first consolidation)", () => {
   });
 
   // Contract updated 2026-06-10: the $49.99 Marketing Suite add-on was
-  // retired — marketing is included with Growth+ and surfaced through Agent
+  // retired - marketing is included with Growth+ and surfaced through Agent
   // OS, so the standalone marketing group and pages left the nav entirely.
   it("marketing add-on group and pages are gone from the nav", () => {
     render(
@@ -46,7 +46,7 @@ describe("Sidebar navigation (agent-first consolidation)", () => {
   });
 
   // Contract updated 2026-06-10: the OPERATIONS group (Calendar, Invoices,
-  // Documents) was retired from the nav — those jobs route through Agent OS.
+  // Documents) was retired from the nav - those jobs route through Agent OS.
   it("operations group and pages are gone from the nav", () => {
     render(
       <Sidebar currentPage="dashboard" onNavigate={vi.fn()} plan="professional" />,

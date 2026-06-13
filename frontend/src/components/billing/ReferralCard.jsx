@@ -21,7 +21,7 @@ export default function ReferralCard() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      /* clipboard unavailable — link is still selectable below */
+      /* clipboard unavailable - link is still selectable below */
     }
   };
 
@@ -42,7 +42,7 @@ export default function ReferralCard() {
         Know another business owner who could use an AI staff?
       </div>
       <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 14 }}>
-        Share your link — signups through it are credited to your account.
+        Share your link - signups through it are credited to your account.
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <code

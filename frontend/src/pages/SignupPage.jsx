@@ -6,7 +6,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-prod
 const PAID_PLANS = new Set(["growth", "autopilot", "professional", "enterprise"]);
 
 // 4 fields and you're in. Industry, website, city, and phone moved into the
-// /setup flow (express or wizard) — asking them twice killed the old funnel.
+// /setup flow (express or wizard) - asking them twice killed the old funnel.
 export default function SignupPage() {
   const [searchParams] = useSearchParams();
   const requestedPlan = (searchParams.get("plan") || "").toLowerCase();
@@ -17,7 +17,7 @@ export default function SignupPage() {
   const googleError = searchParams.get("google_error") || "";
   const refCode = (searchParams.get("ref") || "").trim().slice(0, 200);
   const fromDemo = searchParams.get("from") === "demo";
-  // Vertical toured in the demo — pre-selects the industry so onboarding
+  // Vertical toured in the demo - pre-selects the industry so onboarding
   // (FAQs, starters, widget defaults) matches what the visitor just saw.
   const demoVertical = (searchParams.get("vertical") || "").trim().slice(0, 50);
   const isGoogleSignup = Boolean(googleSetupToken);
@@ -190,7 +190,7 @@ export default function SignupPage() {
         <p className="login-subtitle">
           {checkoutPlan
             ? "Create your account to continue to checkout"
-            : "Hire your AI staff in under 2 minutes — free"}
+            : "Hire your AI staff in under 2 minutes - free"}
         </p>
         {!isGoogleSignup ? (
           <>
