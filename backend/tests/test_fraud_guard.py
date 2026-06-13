@@ -107,6 +107,38 @@ class TestCheckoutFraud:
         })
         assert result is None
 
+    def test_allows_no_payment_required(self):
+        # GH #93: 100%-off coupons, free trials and $0 checkouts arrive with
+        # payment_status="no_payment_required". That is legitimate and must not
+        # be flagged as fraud (no payment_intent is present either).
+        result = guard_checkout_for_fraud({
+            "payment_status": "no_payment_required",
+            "payment_intent": None,
+        })
+        assert result is None
+
+    @patch("backend.services.fraud_guard.stripe.PaymentIntent.retrieve")
+    def test_handles_empty_charges_list(self, mock_retrieve):
+        # GH #94: charges.data present but empty -> [0] previously raised
+        # IndexError and 500'd the webhook. Should pass permissively.
+        mock_retrieve.return_value = {"charges": {"data": []}}
+        result = guard_checkout_for_fraud({
+            "payment_status": "paid",
+            "payment_intent": "pi_test",
+        })
+        assert result is None
+
+    @patch("backend.services.fraud_guard.stripe.PaymentIntent.retrieve")
+    def test_handles_null_charges(self, mock_retrieve):
+        # GH #94: newer Stripe API may not expand charges on the PaymentIntent
+        # (latest_charge instead) -> charges is absent/None. Must not raise.
+        mock_retrieve.return_value = {"id": "pi_test"}
+        result = guard_checkout_for_fraud({
+            "payment_status": "paid",
+            "payment_intent": "pi_test",
+        })
+        assert result is None
+
 
 class TestVelocityLimits:
     def _make_request(self, ip="1.2.3.4"):
