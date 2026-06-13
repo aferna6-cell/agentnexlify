@@ -4,6 +4,21 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## widget_health service (2026-06-13) — NO NEW MIGRATION
+
+Ported from PR #212 / GH #215. `backend/services/widget_health.py` probes existing tables:
+- `widget_configs.tenant_id` + `widget_configs.allowed_domains` — existed since migration 001
+- `integrations.tenant_id` + `integrations.provider` — migration 109
+- `activity_log.tenant_id` — migration 004
+- `leads.client_id` (NOT tenant_id) + `conversations.client_id` (NOT tenant_id) — invariant
+- `appointments.tenant_id`
+
+New endpoint `PUT /api/v1/widget/config/{tenant_id}/allowed-domains` writes back to `widget_configs.allowed_domains` (TEXT[] column, migration 001).
+
+Applied: N/A — no migration needed.
+
+---
+
 ## 131_os_engine_telemetry.sql (2026-06-06)
 
 **What:** Two `client_id`-scoped tables for the Agent OS engine's run record (the parts `os_agent_runs` doesn't capture):

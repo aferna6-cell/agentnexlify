@@ -114,6 +114,7 @@ from backend.routers import (
     os_sync as os_sync_router,
     os_files,
     push_subscriptions,
+    widget_health,
 )
 
 # --- JSON logging ---
@@ -896,6 +897,7 @@ app.include_router(os_inbound.router)
 app.include_router(os_sync_router.router)
 app.include_router(push_subscriptions.router)
 app.include_router(pricing_experiment.router)
+app.include_router(widget_health.router)
 
 
 # --- Static files (widget) ---
