@@ -1,0 +1,83 @@
+{
+  "run_id": "2026-06-13-pm",
+  "date": "2026-06-13",
+  "run_number": 58,
+  "winner": {
+    "title": "Wire check_project_invariants.py into pre-commit as Check 10",
+    "category": "code_health",
+    "confidence": "HIGH",
+    "autonomous": true,
+    "label": "AUTONOMOUS-EXECUTABLE",
+    "status": "pending_autonomous"
+  },
+  "evidence_summary": "PR #257 (3234597) cleared all 3 check_project_invariants.py failures — widget sync drift, em-dashes, from __future__ — as part of launch-readiness P0 sweep. check_project_invariants.py exits 0 for first time in 50+ days. GH #181 billing fix confirmed (AMOUNT_TO_PLAN has 15000→autopilot + 25000→professional since PR #255 ca718ab). Launch-readiness sprint: 50 commits in 7 days (PRs #249–#257). email_sequences.py still 1255L. check-widget-sync.sh still missing. AI-to-Human Handoff still Critical/open.",
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas": [
+    {
+      "title": "Wire check_project_invariants.py into pre-commit as Check 10",
+      "verdict": "WINNER",
+      "confidence": "HIGH"
+    },
+    {
+      "title": "Create scripts/check-widget-sync.sh + wire to pre-push hook",
+      "verdict": "PARKING_LOT",
+      "reason": "Deferred to run 59 if Check 10 wires successfully tonight"
+    },
+    {
+      "title": "Invoke /god-class-splitter on email_sequences.py",
+      "verdict": "WEAKENED → PARKING_LOT",
+      "reason": "Wrong sprint timing; M-effort refactor mid-launch-sprint"
+    },
+    {
+      "title": "AI-to-Human Handoff v1 via Agent OS infrastructure",
+      "verdict": "WEAKENED → PARKING_LOT",
+      "reason": "Launch sprint + recent alerting bug (PR #256); #1 priority post-sprint"
+    },
+    {
+      "title": "Fix kb-autopopulate.sh broken fallback",
+      "verdict": "PARKING_LOT",
+      "reason": "35+ days broken; lower urgency than Check 10"
+    }
+  ],
+  "governance_corrections": [
+    {
+      "run": 57,
+      "item": "widget sync drift fix",
+      "old_status": "pending_autonomous",
+      "new_status": "implemented",
+      "evidence": "PR #257 (3234597) — landing-page-v2/widget updated +202 lines"
+    },
+    {
+      "run": 55,
+      "item": "from __future__ + em-dashes removal",
+      "old_status": "pending_autonomous",
+      "new_status": "implemented",
+      "evidence": "PR #257 — check_project_invariants.py exits 0 confirms both cleared"
+    },
+    {
+      "run": 56,
+      "item": "Check 13 from __future__ guard",
+      "old_status": "pending_autonomous",
+      "new_status": "partially_implemented",
+      "evidence": "CHECK 2 grep anchored in PR #257; AST-level in check_project_invariants.py; separate Check 13 block not added"
+    },
+    {
+      "run": 51,
+      "item": "billing PR #183 AMOUNT_TO_PLAN fix",
+      "old_status": "pending_approval",
+      "new_status": "implemented",
+      "evidence": "billing.py:263 confirmed 15000→autopilot + 25000→professional since PR #255 (ca718ab)"
+    }
+  ],
+  "key_condition_change": "check_project_invariants.py exits 0 — first time since 2026-04-25 (50+ days). All 3 prior blockers (widget sync, em-dash, from __future__) cleared by PR #257.",
+  "blocked_items_cleared": 4,
+  "moratorium_status": "active",
+  "next_run_questions": [
+    "Did Check 10 wire successfully tonight (grep scripts/hooks/pre-commit for check_project_invariants)?",
+    "Has any new invariant violation appeared post-PR #257?",
+    "Is the launch-readiness sprint winding down — can AI-to-Human Handoff begin?",
+    "Was email_sequences.py split attempted post-sprint?",
+    "Did check-widget-sync.sh get created as autonomous bonus?"
+  ]
+}
