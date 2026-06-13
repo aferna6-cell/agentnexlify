@@ -3,7 +3,25 @@
 Branch: `claude/gap-3-research-worker-87IXF` (draft PR #212). Assessment only —
 no merge executed. Produced for goal "complete items 1–5", item 2.
 
-## Verdict: NOT mergeable as-is. Clean text, but 3 migration collisions block it.
+## CORRECTION (later same day): histories are UNRELATED — no clean rebase/merge
+
+A merge attempt revealed `git merge-base origin/main <branch>` = **NO COMMON
+ANCESTOR**. `origin/main` was squashed to a fresh root on 2026-06-10 (`#231` is now
+the root); gap-3 branched off the *old* main (~05-27, two roots 05-23/05-27) and was
+never rebased. They share file **content** (why the tree-merge shows few conflicts)
+but **disjoint history**. Consequences:
+
+- `git merge` refuses ("unrelated histories"); a rebase would replay 92 commits
+  against a non-ancestor — both impractical.
+- `--allow-unrelated-histories` 3-way-merges every shared file against an empty base
+  → spurious conflicts across the whole tree. Do not.
+- **Correct path: cherry-pick / re-apply #212's features individually off current
+  main**, as reviewed slices — not a single rebase. Start with self-contained pieces
+  (`wordpress-plugin/` is a standalone PHP plugin, zero backend coupling). Features
+  whose migrations pair with shared-file code (qualifier rubrics, integration-health)
+  come as full CI-gated slices. The migration-collision analysis below still applies.
+
+## Verdict: NOT mergeable as-is. Unrelated histories + 3 migration collisions.
 
 | Check | Result |
 |---|---|
